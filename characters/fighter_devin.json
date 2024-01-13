@@ -7,29 +7,22 @@
         { "name": "Wisdom", "value": 12 },
         { "name": "Charisma", "value": 10 }
     ],
-    "abilityProficiencies": ["Strength", "Constitution"],
     "alignment": "Neutral Good",
-    "armorClass": 16,
-    "attacks": [
-        { "name": "Longbow", "damage": "1d8+3", "damageType": "piercing", "hitBonus": 7, "range": "150", "type": "Action" },
-        { "name": "Scimitar", "damage": "1d8+3", "damageType": "slashing", "hitBonus": 5, "range": "5", "type": "Action" },
-        { "name": "Scimitar", "damage": "1d8", "damageType": "slashing", "hitBonus": 5, "range": "5", "type": "Bonus Action" }
-    ],
     "attacksPerAction": 1,
     "bonusActions": [
         { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP" }
     ],
     "class": "Fighter",
-    "hitDice": 10,
     "immunities": [],
+    "inventory": {
+        "backpack": [],
+        "equiped": ["Chain Mail","Longbow","Scimitar","Scimitar"]
+    },
     "languages": ["Common", "Elvish"],
     "level": 3,
     "name": "Devin",
-    "proficiency": 2,
     "race": "Human",
-    "reactions": [
-        { "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" }
-    ],
+    "reactions": [],
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "skillProficiencies": ["Intimidation", "Perception", "Survival"],

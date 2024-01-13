@@ -2,32 +2,27 @@
 import React from 'react'
 import './char-sheet.css'
 
-function CharSheet({stats}) {
+import { actions } from './data/actions.js';
+import { passiveSkills } from './data/passive-skills.js';
+import { skills } from './data/skills.js';
+
+function CharSheet({ classes, equipment, stats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
-    // Rule based objects
-    const actions = ['Attack', 'Cast a Spell', 'Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide', 'Improvise', 'Ready', 'Search', 'Shove', 'Use an Object'];
-    const passiveSkills = ['Insight', 'Investigation', 'Perception'];
-    const skills = [
-        { name: 'Acrobatics', ability: 'Dexterity' },
-        { name: 'Animal Handling', ability: 'Wisdom' },
-        { name: 'Arcana', ability: 'Intelligence' },
-        { name: 'Athletics', ability: 'Strength' },
-        { name: 'Deception', ability: 'Charisma' },
-        { name: 'History', ability: 'Intelligence' },
-        { name: 'Insight', ability: 'Wisdom' },
-        { name: 'Intimidation', ability: 'Charisma' },
-        { name: 'Investigation', ability: 'Intelligence' },
-        { name: 'Medicine', ability: 'Wisdom' },
-        { name: 'Nature', ability: 'Intelligence' },
-        { name: 'Perception', ability: 'Wisdom' },
-        { name: 'Performance', ability: 'Charisma' },
-        { name: 'Persuasion', ability: 'Charisma' },
-        { name: 'Religion', ability: 'Intelligence' },
-        { name: 'Sleight of Hand', ability: 'Dexterity' },
-        { name: 'Stealth', ability: 'Dexterity' },
-        { name: 'Survival', ability: 'Wisdom' }
-    ];
-    // Add all character calculated stats
+    // Get abilityProficiencies and hitDice from class
+    const characterClass = classes.find((characterClass) => characterClass.name === stats.class);
+    stats.abilityProficiencies = characterClass.saving_throws.map((savingThrow) => {
+         switch (savingThrow) {
+            case 'STR': return 'Strength';
+            case 'DEX': return 'Dexterity';
+            case 'CON': return 'Constitution';
+            case 'INT': return 'Intelligence';
+            case 'WIS': return 'Wisdom';
+            case 'CHA': return 'Charisma';
+         }
+    });
+    stats.hitDice = characterClass.hit_die;
+    // Calculated additional stats
+    stats.proficiency = Math.floor((stats.level-1) / 4 + 2);
     stats.senses = [];
     stats.abilities = stats.abilities.map((ability) => {
         ability.proficient = stats.abilityProficiencies.includes(ability.name);
@@ -49,11 +44,73 @@ function CharSheet({stats}) {
         });
         return ability
     });
-    stats.initiative = stats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
+    const strengthBonus = stats.abilities.find((ability) => ability.name === 'Strength').bonus;
+    const dexterityBonus = stats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
+    stats.initiative = dexterityBonus;
     stats.hitPoints = 31;
     const constitutionBonus = stats.abilities.find((ability) => ability.name === 'Constitution').bonus;
     // Full hit dice at level 1, half hit dice +1 at each level after level 1, constitution bonus add for each level
     stats.hitPoints = stats.hitDice + ((stats.hitDice / 2 + 1) * (stats.level - 1)) + (constitutionBonus * stats.level);
+    // Find armor in the character's equipment and calculate Armor Class
+    let armorName = stats.inventory.equiped.find(itemName => {
+        let item = equipment.find((item) => item.name === itemName);
+        return item.equipment_category === 'Armor';
+    });
+    if(armorName) {
+        let armor = equipment.find((item) => item.name === armorName);
+        stats.armorClass = armor.armor_class.base;
+    } else {
+        stats.armorClass = 10 + dexterityBonus // Unarmored
+    }
+    stats.attacks = [];
+    // Find ranged weapon in the character's equipment and add it to attacks
+    let rangedWeaponName = stats.inventory.equiped.find(itemName => {
+        let item = equipment.find((item) => item.name === itemName);
+        return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
+    });
+    if(rangedWeaponName) {
+        let rangedWeapon = equipment.find((item) => item.name === rangedWeaponName);
+        stats.attacks.push({
+            "name": rangedWeapon.name,
+            "damage": `${rangedWeapon.damage.damage_dice}+${dexterityBonus}`,
+            "damageType": rangedWeapon.damage.damage_type,
+            "hitBonus": dexterityBonus + stats.proficiency,
+            "range": rangedWeapon.range.normal,
+            "type": "Action"
+        });
+    }
+    // Find main hand weapon in the character's equipment and add it to attacks
+    let meleeWeaponNames = stats.inventory.equiped.filter(itemName => {
+        let item = equipment.find((item) => item.name === itemName);
+        return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
+    });
+    if(meleeWeaponNames) {
+        let mainHandWeapon = equipment.find((item) => item.name === meleeWeaponNames[0]);
+        stats.attacks.push({
+            "name": mainHandWeapon.name,
+            "damage": `${mainHandWeapon.damage.damage_dice}+${dexterityBonus}`,
+            "damageType": mainHandWeapon.damage.damage_type,
+            "hitBonus": Math.max(strengthBonus,dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
+            "range": mainHandWeapon.range.normal,
+            "type": "Action"
+        });
+        if(meleeWeaponNames.length > 1) {
+            // There is also an offhand weapon
+            let offHandWeapon = equipment.find((item) => item.name === meleeWeaponNames[1]);
+            stats.attacks.push({
+                "name": offHandWeapon.name,
+                "damage": `${offHandWeapon.damage.damage_dice}+${dexterityBonus}`,
+                "damageType": offHandWeapon.damage.damage_type,
+                "hitBonus": Math.max(strengthBonus,dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
+                "range": offHandWeapon.range.normal,
+                "type": "Bonus Action"
+            });
+        }
+    }
+    // Add base reactions to reaction list
+    if(!stats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
+        stats.reactions.push({ "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" });
+    }
 
     return (
         <div className='root'>
@@ -94,7 +151,7 @@ function CharSheet({stats}) {
             <b>Languages: </b>{stats.languages.join(', ')}<br />
             <hr />
             <div>
-                <b>Action Attacks: </b>
+                <b>Action Attacks: </b>{stats.attacksPerAction} per action
                 <div className='attacks'>
                     <div className='left'><b>Name</b></div>
                     <div><b>Range</b></div>
