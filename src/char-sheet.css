@@ -1,0 +1,41 @@
+.abilities {
+    display: grid;
+    grid-template-columns: 90px 60px 60px 50px auto;
+    text-align: right;
+}
+.abilities > div {
+    padding-right: 10px;
+}
+.attacks {
+    display: grid;
+    grid-template-columns: 90px 60px 40px 80px 50px;
+    text-align: right;
+}
+.attacks > div {
+    padding-right: 10px;
+}
+b {
+    color: lightgreen;
+}
+hr {
+    margin-bottom: 15px;
+    margin-top: 15px;
+}
+.left {
+    text-align: left;
+}
+.name {
+    color: lightgreen;
+    font-size: 1.5em;
+    font-weight: 900;
+    margin-bottom: -10px;
+}
+.root {
+    background-color: #111;
+    color: #eee;
+    font-size: 14px;
+    padding: 10px;
+}
+.summary {
+    margin-bottom: 10px;
+}
