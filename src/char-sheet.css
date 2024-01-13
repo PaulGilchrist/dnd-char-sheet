@@ -8,7 +8,7 @@
 }
 .attacks {
     display: grid;
-    grid-template-columns: 90px 60px 40px 80px 50px;
+    grid-template-columns: 120px 80px 40px 80px 50px;
     text-align: center;
 }
 .attacks > div {
@@ -16,6 +16,7 @@
 }
 b {
     color: lightgreen;
+    font-weight: 600;
 }
 hr {
     margin-bottom: 15px;
@@ -34,8 +35,13 @@ hr {
     background-color: #111;
     color: #eee;
     font-size: 14px;
-    max-width: 850px;
+    max-width: 800px;
     padding: 10px;
+}
+.sectionHeader {
+    color: lightgreen;    
+    font-size: 1.05em;
+    font-weight: 800;
 }
 .spells {
     display: grid;

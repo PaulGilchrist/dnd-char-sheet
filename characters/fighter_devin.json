@@ -15,8 +15,8 @@
     "class": "Fighter",
     "immunities": [],
     "inventory": {
-        "backpack": [],
-        "equiped": ["Chain Mail","Longbow","Scimitar","Scimitar"]
+        "backpack": ["Blanket","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],
+        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"]
     },
     "languages": ["Common", "Elvish"],
     "level": 3,

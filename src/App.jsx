@@ -50,7 +50,7 @@ function App() {
 
     return (
         <div>
-            {stats && <CharSheet classes={classes} equipment={equipment} spells={spells} stats={stats}></CharSheet>}
+            {stats && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={stats}></CharSheet>}
             <button onClick={handleButtonClick}>Upload JSON File</button>
         </div>
     )
