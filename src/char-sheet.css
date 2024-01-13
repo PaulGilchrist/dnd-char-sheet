@@ -1,7 +1,7 @@
 .abilities {
     display: grid;
     grid-template-columns: 90px 60px 60px 50px auto;
-    text-align: right;
+    text-align: center;
 }
 .abilities > div {
     padding-right: 10px;
@@ -9,7 +9,7 @@
 .attacks {
     display: grid;
     grid-template-columns: 90px 60px 40px 80px 50px;
-    text-align: right;
+    text-align: center;
 }
 .attacks > div {
     padding-right: 10px;
@@ -34,7 +34,16 @@ hr {
     background-color: #111;
     color: #eee;
     font-size: 14px;
+    max-width: 850px;
     padding: 10px;
+}
+.spells {
+    display: grid;
+    grid-template-columns: auto auto auto auto auto auto auto auto;
+    text-align: center;
+}
+.spells > div {
+    padding-right: 10px;
 }
 .summary {
     margin-bottom: 10px;

@@ -5,7 +5,16 @@ import CharSheet from './char-sheet'
 function App() {
     const [classes, setClasses] = React.useState([]);
     const [equipment, setEquipment] = React.useState([]);
+    const [spells, setSpells] = React.useState([]);
     const [stats, setStats] = React.useState(null);
+
+    React.useEffect(() => {
+        fetch('/dnd-char-sheet/data/classes.json')
+            .then(response => response.json())
+            .then(data => {
+                setClasses(data);
+            });
+    }, []);
 
     React.useEffect(() => {
         fetch('/dnd-char-sheet/data/equipment.json')
@@ -16,10 +25,10 @@ function App() {
     }, []);
 
     React.useEffect(() => {
-        fetch('/dnd-char-sheet/data/classes.json')
+        fetch('/dnd-char-sheet/data/spells.json')
             .then(response => response.json())
             .then(data => {
-                setClasses(data);
+                setSpells(data);
             });
     }, []);
 
@@ -41,7 +50,7 @@ function App() {
 
     return (
         <div>
-            {stats && <CharSheet classes={classes} equipment={equipment} stats={stats}></CharSheet>}
+            {stats && <CharSheet classes={classes} equipment={equipment} spells={spells} stats={stats}></CharSheet>}
             <button onClick={handleButtonClick}>Upload JSON File</button>
         </div>
     )

@@ -6,24 +6,23 @@ import { actions } from './data/actions.js';
 import { passiveSkills } from './data/passive-skills.js';
 import { skills } from './data/skills.js';
 
-function CharSheet({ classes, equipment, stats }) {
+function CharSheet({ classes, equipment, spells, stats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
     // Get abilityProficiencies and hitDice from class
     const characterClass = classes.find((characterClass) => characterClass.name === stats.class);
     stats.abilityProficiencies = characterClass.saving_throws.map((savingThrow) => {
-         switch (savingThrow) {
+        switch (savingThrow) {
             case 'STR': return 'Strength';
             case 'DEX': return 'Dexterity';
             case 'CON': return 'Constitution';
             case 'INT': return 'Intelligence';
             case 'WIS': return 'Wisdom';
             case 'CHA': return 'Charisma';
-         }
+        }
     });
     stats.hitDice = characterClass.hit_die;
     // Calculated additional stats
-    stats.proficiency = Math.floor((stats.level-1) / 4 + 2);
-    stats.senses = [];
+    stats.proficiency = Math.floor((stats.level - 1) / 4 + 2);
     stats.abilities = stats.abilities.map((ability) => {
         ability.proficient = stats.abilityProficiencies.includes(ability.name);
         ability.bonus = Math.floor((ability.value - 10) / 2);
@@ -34,11 +33,13 @@ function CharSheet({ classes, equipment, stats }) {
             skill.bonus = skill.proficient ? ability.bonus + stats.proficiency : ability.bonus;
             if (passiveSkills.includes(skill.name)) {
                 // Add skill based senses
-                const sense = {
+                const newSense = {
                     name: `passive ${skill.name}`,
                     value: 10 + skill.bonus
                 }
-                stats.senses.push(sense);
+                if (!stats.senses.find((sense) => sense.name === newSense.name)) {
+                    stats.senses.push(newSense);
+                }
             }
             return skill
         });
@@ -56,7 +57,7 @@ function CharSheet({ classes, equipment, stats }) {
         let item = equipment.find((item) => item.name === itemName);
         return item.equipment_category === 'Armor';
     });
-    if(armorName) {
+    if (armorName) {
         let armor = equipment.find((item) => item.name === armorName);
         stats.armorClass = armor.armor_class.base;
     } else {
@@ -68,7 +69,7 @@ function CharSheet({ classes, equipment, stats }) {
         let item = equipment.find((item) => item.name === itemName);
         return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
     });
-    if(rangedWeaponName) {
+    if (rangedWeaponName) {
         let rangedWeapon = equipment.find((item) => item.name === rangedWeaponName);
         stats.attacks.push({
             "name": rangedWeapon.name,
@@ -84,32 +85,43 @@ function CharSheet({ classes, equipment, stats }) {
         let item = equipment.find((item) => item.name === itemName);
         return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
     });
-    if(meleeWeaponNames) {
+    if (meleeWeaponNames) {
         let mainHandWeapon = equipment.find((item) => item.name === meleeWeaponNames[0]);
         stats.attacks.push({
             "name": mainHandWeapon.name,
             "damage": `${mainHandWeapon.damage.damage_dice}+${dexterityBonus}`,
             "damageType": mainHandWeapon.damage.damage_type,
-            "hitBonus": Math.max(strengthBonus,dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
+            "hitBonus": Math.max(strengthBonus, dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
             "range": mainHandWeapon.range.normal,
             "type": "Action"
         });
-        if(meleeWeaponNames.length > 1) {
+        if (meleeWeaponNames.length > 1) {
             // There is also an offhand weapon
             let offHandWeapon = equipment.find((item) => item.name === meleeWeaponNames[1]);
             stats.attacks.push({
                 "name": offHandWeapon.name,
                 "damage": `${offHandWeapon.damage.damage_dice}+${dexterityBonus}`,
                 "damageType": offHandWeapon.damage.damage_type,
-                "hitBonus": Math.max(strengthBonus,dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
+                "hitBonus": Math.max(strengthBonus, dexterityBonus) + stats.proficiency, // Assumes using finesse if dex build
                 "range": offHandWeapon.range.normal,
                 "type": "Bonus Action"
             });
         }
     }
     // Add base reactions to reaction list
-    if(!stats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
+    if (!stats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
         stats.reactions.push({ "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" });
+    }
+    // Add spell details
+    console.log(stats.spells);
+    if(stats.spells && stats.spells.length > 0) {
+        stats.spells = stats.spells.map(spellSummary => {
+            let spellDetail = spells.find((spellDetail) => spellDetail.name === spellSummary.name);
+            if(spellDetail) {
+                return {...spellDetail, prepared: spellSummary.prepared};
+            }
+            return spellSummary;
+        });
     }
 
     return (
@@ -123,14 +135,14 @@ function CharSheet({ classes, equipment, stats }) {
             <b>Speed: </b>{stats.speed} ft.<br />
             <hr />
             <div className='abilities'>
-                <div className='left'><b>Ability</b></div>
+                <div><b>Ability</b></div>
                 <div><b>Score</b></div>
                 <div><b>Bonus</b></div>
                 <div><b>Save</b></div>
                 <div className='left'><b>Skills</b></div>
                 {stats.abilities.map((ability) => {
                     return <React.Fragment key={ability.name}>
-                        <div className='left'>{ability.name}</div>
+                        <div>{ability.name}</div>
                         <div>{ability.value}</div>
                         <div>{signFormatter.format(ability.bonus)}</div>
                         <div>{signFormatter.format(ability.save)}</div>
@@ -165,7 +177,7 @@ function CharSheet({ classes, equipment, stats }) {
                             <div>{attack.range} ft.</div>
                             <div>{signFormatter.format(attack.hitBonus)}</div>
                             <div>{attack.damage}</div>
-                            <div>{attack.damageType}</div>
+                            <div className='left'>{attack.damageType}</div>
                         </React.Fragment>;
                     })}
                 </div>
@@ -189,21 +201,62 @@ function CharSheet({ classes, equipment, stats }) {
                             <div>{attack.range} ft.</div>
                             <div>{signFormatter.format(attack.hitBonus)}</div>
                             <div>{attack.damage}</div>
-                            <div>{attack.damageType}</div>
+                            <div className='left'>{attack.damageType}</div>
                         </React.Fragment>;
                     })}
                 </div>
-                <br />
-                <b>Bonus Actions:</b>
-                {stats.bonusActions.map((bonusAction) => {
-                    return <div key={bonusAction.name}><b>{bonusAction.name}:</b> {bonusAction.description}</div>;
-                })}
+                {(stats.bonusActions > 0) && <div>
+                    <b>Bonus Actions:</b>
+                    {stats.bonusActions.map((bonusAction) => {
+                        return <div key={bonusAction.name}><b>{bonusAction.name}:</b> {bonusAction.description}</div>;
+                    })}
+                </div>}
             </div>
             <hr />
             <b>Reactions: </b>
             {stats.reactions.map((reaction) => {
                 return <div key={reaction.name}><b>{reaction.name}:</b> {reaction.description}</div>;
             })}
+            <hr />
+            <b>Special Actions: </b>
+            {stats.specialActions.map((specialAction) => {
+                return <div key={specialAction.name}><b>{specialAction.name}:</b> {specialAction.description}</div>;
+            })}
+            <hr />
+            {(stats.spells && stats.spells.length > 0) && <div className='spells'>
+                <div className='left'><b>Spell</b></div>
+                <div><b>Level</b></div>
+                <div><b>Prepared</b></div>
+                <div><b>Time</b></div>
+                <div><b>Range</b></div>
+                <div><b>Effect</b></div>
+                <div><b>Duration</b></div>
+                <div className='left'><b>Notes</b></div>
+                {stats.spells.map((spell) => {
+                    let notes = [];
+                    if(spell.ritual) notes.push('Ritual');
+                    if(spell.concentration) notes.push('Concentration');
+                    if(spell.components) notes.push(spell.components.join('/'));
+                    let effect = 'Utility';
+                    if(spell.damage) {
+                        if(spell.damage.damage_at_slot_level) {
+                            effect = `${spell.damage.damage_at_slot_level[Object.keys(spell.damage.damage_at_slot_level)[0]]} ${spell.damage.damage_type}`
+                        } else if (spell.damage.damage_at_character_level) {
+                            effect = `${spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]]} ${spell.damage.damage_type}`
+                        }
+                    }
+                    return <React.Fragment key={spell.name}>
+                        <div className='left'>{spell.name}</div>
+                        <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
+                        <div>{spell.prepared ? 'prepared' : ''}</div>
+                        <div>{spell.casting_time}</div>
+                        <div>{spell.range}</div>
+                        <div>{effect}</div>
+                        <div>{spell.duration}</div>
+                        <div className='left'>{notes.join(', ')}</div>
+                    </React.Fragment>;
+                })}
+            </div>}
         </div>
     )
 }
