@@ -11,7 +11,7 @@
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
-    "immunities": [],
+    "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Mail","Clothes, Common","Holy Symbol","Longbow","Longsword","Shield"]

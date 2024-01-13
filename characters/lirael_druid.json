@@ -1,0 +1,47 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 8 },
+        { "name": "Dexterity", "value": 15 },
+        { "name": "Constitution", "value": 14 },
+        { "name": "Intelligence", "value": 10 },
+        { "name": "Wisdom", "value": 16 },
+        { "name": "Charisma", "value": 12 }
+    ],
+    "alignment": "Neutral Good",
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Druid",
+    "immunities": ["Magical Sleep"],
+    "inventory": {
+        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
+        "equipped": ["Cloak of Elvenkind","Clothes, Traveler's","Leather","Longbow","Quarterstaff","Scimitar"]
+    },
+    "languages": ["Common","Druidic","Elvish","Sylvan"],
+    "level": 3,
+    "name": "Lirael",
+    "race": "Wood Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "specialActions": [
+        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" },
+        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest" }
+    ],
+    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+    "speed": 30,
+    "spells": [
+        {"name": "Druidcraft", "prepared": true},
+        {"name": "Frostbite", "prepared": true},
+        {"name": "Shillelagh", "prepared": true},
+        {"name": "Beast Bond", "prepared": true},
+        {"name": "Detect Magic", "prepared": true},
+        {"name": "Detect Poison and Disease", "prepared": true},
+        {"name": "Ice Knife", "prepared": true},
+        {"name": "Barkskin", "prepared": true},
+        {"name": "Pass Without Trace", "prepared": true},
+        {"name": "Protection from Poison", "prepared": true},
+        {"name": "Spider Climb", "prepared": true}
+    ],
+    "subClass": "Circle of the Land - Forest",
+    "vulnerabilities": []
+}

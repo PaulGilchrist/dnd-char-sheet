@@ -47,6 +47,8 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     });
     const strengthBonus = playerStats.abilities.find((ability) => ability.name === 'Strength').bonus;
     const dexterityBonus = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
+    const wisdomBonus = playerStats.abilities.find((ability) => ability.name === 'Wisdom').bonus;
+ 
     playerStats.initiative = dexterityBonus;
     playerStats.hitPoints = 31;
     const constitutionBonus = playerStats.abilities.find((ability) => ability.name === 'Constitution').bonus;
@@ -60,11 +62,21 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
         }
         return false;
     });
+    let bonus = dexterityBonus;
+    if(playerStats.class === 'Monk') {
+        bonus = dexterityBonus + wisdomBonus;
+    }
     if (armorName) {
         let armor = allEquipment.find((item) => item.name === armorName);
         playerStats.armorClass = armor.armor_class.base;
+        if(armor.armor_class.dex_bonus) {
+            if(armor.armor_class.max_bonus) {
+                bonus = Math.min(armor.armor_class.max_bonus,bonus);
+            }
+            playerStats.armorClass = armor.armor_class.base + bonus;
+        }
     } else {
-        playerStats.armorClass = 10 + dexterityBonus // Unarmored
+        playerStats.armorClass = 10 + bonus // Unarmored
     }
     // Check for an equipped shield, and if found increase AC
     if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
@@ -100,11 +112,12 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     });
     if (meleeWeaponNames) {
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
+        let bonus = Math.max(strengthBonus, dexterityBonus); // Assumes using finesse if dex build
         playerStats.attacks.push({
             "name": mainHandWeapon.name,
-            "damage": `${mainHandWeapon.damage.damage_dice}+${dexterityBonus}`,
+            "damage": `${mainHandWeapon.damage.damage_dice}+${bonus}`,
             "damageType": mainHandWeapon.damage.damage_type,
-            "hitBonus": Math.max(strengthBonus, dexterityBonus) + playerStats.proficiency, // Assumes using finesse if dex build
+            "hitBonus": bonus + playerStats.proficiency, 
             "range": mainHandWeapon.range.normal,
             "type": "Action"
         });
@@ -113,9 +126,9 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
             playerStats.attacks.push({
                 "name": offHandWeapon.name,
-                "damage": `${offHandWeapon.damage.damage_dice}+${dexterityBonus}`,
+                "damage": `${offHandWeapon.damage.damage_dice}+${bonus}`,
                 "damageType": offHandWeapon.damage.damage_type,
-                "hitBonus": Math.max(strengthBonus, dexterityBonus) + playerStats.proficiency, // Assumes using finesse if dex build
+                "hitBonus": bonus + playerStats.proficiency,
                 "range": offHandWeapon.range.normal,
                 "type": "Bonus Action"
             });
@@ -196,8 +209,14 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
                 })}
             </div>
             <hr />
-            {(playerStats.resistances.length > 0) && <b>Resistances: </b>}{(playerStats.resistances.length > 0) && playerStats.resistances.join(', ')}
-            {(playerStats.immunities.length > 0) && <b>Immunities: </b>}{(playerStats.immunities.length > 0) && playerStats.immunities.join(', ')}
+            {(playerStats.resistances.length > 0) && <div>
+                <b>Resistances: </b>
+                {playerStats.resistances.join(', ')}
+            </div>}
+            {(playerStats.immunities.length > 0) && <div>
+                <b>Immunities: </b>
+                {playerStats.immunities.join(', ')}
+            </div>}
             {(playerStats.vulnerabilities.length > 0) && <b>Vulnerabilities: </b>}{(playerStats.vulnerabilities.length > 0) && playerStats.vulnerabilities.join(', ')}
             <div><b>Senses: </b>{playerStats.senses.map((sense) => {
                 return `${sense.name.toLowerCase()} ${sense.value}`;
@@ -230,26 +249,36 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             </div>
             <hr />
             <div>
-                <div className='sectionHeader'>Bonus Action Attacks</div>
-                <div className='attacks'>
-                    <div className='left'><b>Name</b></div>
-                    <div><b>Range</b></div>
-                    <div><b>Hit</b></div>
-                    <div><b>Damage</b></div>
-                    <div className='left'><b>Type</b></div>
-                    {playerStats.attacks.map((attack) => {
-                        if (attack.type != 'Bonus Action') return '';
-                        return <React.Fragment key={attack.name}>
-                            <div className='left'>{attack.name}</div>
-                            <div>{attack.range} ft.</div>
-                            <div>{signFormatter.format(attack.hitBonus)}</div>
-                            <div>{attack.damage}</div>
-                            <div className='left'>{attack.damageType}</div>
-                        </React.Fragment>;
-                    })}
-                </div>
-                {(playerStats.bonusActions > 0) && <div>
-                    <div className='sectionHeader'>Bonus Actions:</div>
+                {playerStats.attacks.find((attack) => attack.type === 'Bonus Action') && <div>
+                    <div className='sectionHeader'>Bonus Action Attacks</div>
+                    <div className='attacks'>
+                        <div className='left'><b>Name</b></div>
+                        <div><b>Range</b></div>
+                        <div><b>Hit</b></div>
+                        <div><b>Damage</b></div>
+                        <div className='left'><b>Type</b></div>
+                        {playerStats.attacks.map((attack) => {
+                            if (attack.type != 'Bonus Action') return '';
+                            return <React.Fragment key={attack.name}>
+                                <div className='left'>{attack.name}</div>
+                                <div>{attack.range} ft.</div>
+                                <div>{signFormatter.format(attack.hitBonus)}</div>
+                                <div>{attack.damage}</div>
+                                <div className='left'>{attack.damageType}</div>
+                            </React.Fragment>;
+                        })}
+                    </div>
+                </div>}
+                {/* No Bonus Action Attacks and only Bonus Actions so the Bonus Actions are the section's header */}
+                {!playerStats.attacks.find((attack) => attack.type === 'Bonus Action') && playerStats.bonusActions.length > 0 && <div>
+                    <div className='sectionHeader'>Bonus Actions</div>
+                </div>}
+                {/* Bonus Action Attacks and Bonus Actions so there has already been a section header and the Bonus Actions are a sub section */}
+                {playerStats.attacks.find((attack) => attack.type === 'Bonus Action') && playerStats.bonusActions.length > 0 && <div>
+                    <br />
+                    <b>Bonus Actions: </b><br />
+                </div>}
+                {(playerStats.bonusActions.length > 0) && <div>
                     {playerStats.bonusActions.map((bonusAction) => {
                         return <div key={bonusAction.name}><b>{bonusAction.name}:</b> {bonusAction.description}</div>;
                     })}

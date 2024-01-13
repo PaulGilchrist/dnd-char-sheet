@@ -1,0 +1,43 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 14 },
+        { "name": "Dexterity", "value": 15 },
+        { "name": "Constitution", "value": 14 },
+        { "name": "Intelligence", "value": 10 },
+        { "name": "Wisdom", "value": 14 },
+        { "name": "Charisma", "value": 8 }
+    ],
+    "alignment": "Neutral Good",
+    "attacksPerAction": 1,
+    "bonusActions": [
+        { "name": "Flurry of Blows", "description": "After you take the Attack action on your turn, you can spend 1 ki point to make two unarmed strikes as a bonus action." },
+        { "name": "Patient Defense", "description": "You can spend 1 ki point to take the Dodge action as a bonus action on your turn." },
+        { "name": "Step of the Wind", "description": "You can spend 1 ki point to take the Disengage or Dash action as a bonus action on your turn, and your jump distance is doubled for the turn." },
+        { "name": "Unarmed Strike", "description": "When you use the Attack action with an unarmed strike or a monk weapon on your turn, you can make one unarmed strike as a bonus action." }
+    ],
+    "class": "Monk",
+    "immunities": [],
+    "inventory": {
+        "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)", "Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Quarterstaff","Dart"]
+    },
+    "languages": ["Common","Halfling","Infernal","Orc"],
+    "level": 3,
+    "name": "Zareth Stonestride",
+    "race": "Half-Orc",
+    "reactions": [
+        { "name": "Deflect Missiles", "description": "Starting at 3rd level, you can use your reaction to deflect or catch the missile when you are hit by a ranged weapon attack. When you do so, the damage you take from the attack is reduced by 1d10 + your Dexterity modifier + your monk level.<br/>If you reduce the damage to 0, you can catch the missile if it is small enough for you to hold in one hand and you have at least one hand free. If you catch a missile in this way, you can spend 1 ki point to make a ranged attack with the weapon or piece of ammunition you just caught, as part of the same reaction. You make this attack with proficiency, regardless of your weapon proficiencies, and the missile counts as a monk weapon for the attack, which has a normal range of 20 feet and a long range of 60 feet." }
+    ],
+    "resistances": [],
+    "senses": [],
+    "specialActions": [
+        { "name": "Ki Points", "description": "You can spend Ki Points to fuel ki features. You have 3 points per short rest and your Ki save DC is 12." },
+        { "name": "Open Hand Technique", "description": "Whenever you hit with one of your Flurry of Blows attacks, you can impose one of the following effects on that target: fall prone if it fails a DEX saving throw (DC 12), get pushed up to 15 ft. if it fails a STR saving throw (DC 12), or it can't take reaction until the end of your next turn." },
+        { "name": "Relentless Endurance", "description": "When you are reduced to 0 HP but not killed, you can drop to 1 HP instead once per long rest." }
+    ],
+    "skillProficiencies": ["Acrobatics","Insight","Intimidation","Medicine","Religion"],
+    "speed": 40,
+    "spells": [],
+    "subClass": "Way of the Open Hand",
+    "vulnerabilities": []
+}
