@@ -5,6 +5,7 @@ function App() {
     // const [stats, setStats] = useState({});
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
     // Rule based objects
+    const actions = ['Attack', 'Cast a Spell', 'Dash', 'Disengage', 'Dodge', 'Grapple', 'Help', 'Hide', 'Improvise', 'Ready', 'Search', 'Shove', 'Use an Object'];
     const passiveSkills = ['Insight', 'Investigation', 'Perception'];
     const skills = [
         { name: 'Acrobatics', ability: 'Dexterity' },
@@ -36,18 +37,29 @@ function App() {
             { name: 'Wisdom', value: 12 },
             { name: 'Charisma', value: 10 }
         ],
-        abilityProficiencies: ['Strength', 'Constitution'],
+        abilityProficiencies: ['Strength', 'Constitution'], // Could get this from class and race
         alignment: 'Neutral Good',
-        armorClass: 16,
+        armorClass: 16, // Could get this from equipment
+        attacks: [
+            { name: 'Longbow', damage: '1d8+3', damageType: 'piercing', hitBonus: 7, range: '150', type: 'Action' },
+            { name: 'Scimitar', damage: '1d8+3', damageType: 'slashing', hitBonus: 5, range: '5', type: 'Action' },
+            { name: 'Scimitar', damage: '1d8', damageType: 'slashing', hitBonus: 5, range: '5', type: 'Bonus Action' }
+        ],
+        attacksPerAction: 1,
+        bonusActions: [
+            { name: 'Second Wind', description: 'Once per short rest, you can use a bonus action to regain 1d10 + 1 HP' }
+        ],
         class: 'Fighter',
-        hitPoints: 31,
+        hitDice: 10, // Could get this from class
         immunities: [],
-        initiative: 2,
         languages: ['Common', 'Elvish'],
         level: 3,
         name: 'Devin',
         proficiency: 2,
         race: 'Human',
+        reactions: [
+            { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' }
+        ],
         resistances: [],
         senses: [{ name: 'Darkvision', value: '60 ft.' }],
         skillProficiencies: ['Intimidation', 'Perception', 'Survival'],
@@ -75,6 +87,11 @@ function App() {
         });
         return ability
     });
+    stats.initiative = stats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
+    stats.hitPoints = 31;
+    const constitutionBonus = stats.abilities.find((ability) => ability.name === 'Constitution').bonus;
+    // Full hit dice at level 1, half hit dice +1 at each level after level 1, constitution bonus add for each level
+    stats.hitPoints = stats.hitDice + ((stats.hitDice / 2 + 1) * (stats.level - 1)) + (constitutionBonus * stats.level);
 
     return (
         <div className='root'>
@@ -113,6 +130,61 @@ function App() {
             }).join(', ')}
             </div>
             <b>Languages: </b>{stats.languages.join(', ')}<br />
+            <hr />
+            <div>
+                <b>Action Attacks: </b>
+                <div className='attacks'>
+                    <div className='left'><b>Name</b></div>
+                    <div><b>Range</b></div>
+                    <div><b>Hit</b></div>
+                    <div><b>Damage</b></div>
+                    <div className='left'><b>Type</b></div>
+                    {stats.attacks.map((attack) => {
+                        if (attack.type != 'Action') return '';
+                        return <Fragment key={attack.name}>
+                            <div className='left'>{attack.name}</div>
+                            <div>{attack.range} ft.</div>
+                            <div>{signFormatter.format(attack.hitBonus)}</div>
+                            <div>{attack.damage}</div>
+                            <div>{attack.damageType}</div>
+                        </Fragment>;
+                    })}
+                </div>
+                <br />
+                <b>Base Actions: </b><br />
+                {actions.join(', ')}
+            </div>
+            <hr />
+            <div>
+                <b>Bonus Action Attacks: </b>
+                <div className='attacks'>
+                    <div className='left'><b>Name</b></div>
+                    <div><b>Range</b></div>
+                    <div><b>Hit</b></div>
+                    <div><b>Damage</b></div>
+                    <div className='left'><b>Type</b></div>
+                    {stats.attacks.map((attack) => {
+                        if (attack.type != 'Bonus Action') return '';
+                        return <Fragment key={attack.name}>
+                            <div className='left'>{attack.name}</div>
+                            <div>{attack.range} ft.</div>
+                            <div>{signFormatter.format(attack.hitBonus)}</div>
+                            <div>{attack.damage}</div>
+                            <div>{attack.damageType}</div>
+                        </Fragment>;
+                    })}
+                </div>
+                <br />
+                <b>Bonus Actions:</b>
+                {stats.bonusActions.map((bonusAction) => {
+                    return <div key={bonusAction.name}><b>{bonusAction.name}:</b> {bonusAction.description}</div>;
+                })}
+            </div>
+            <hr />
+            <b>Reactions: </b>
+            {stats.reactions.map((reaction) => {
+                return <div key={reaction.name}><b>{reaction.name}:</b> {reaction.description}</div>;
+            })}
         </div>
     )
 }
