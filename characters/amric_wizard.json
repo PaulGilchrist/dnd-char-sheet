@@ -35,9 +35,9 @@
         {"name": "Burning Hands", "prepared": true},
         {"name": "Charm Person", "prepared": true},
         {"name": "Detect Magic", "prepared": false},
-        {"name": "Disquise Self", "prepared": true},
+        {"name": "Disguise Self", "prepared": true},
         {"name": "Find Familiar", "prepared": false},
-        {"name": "Identity", "prepared": false},
+        {"name": "Identify", "prepared": false},
         {"name": "Magic Missile", "prepared": true},
         {"name": "Shield", "prepared": true}
     ],

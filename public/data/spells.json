@@ -5564,6 +5564,54 @@
         ]
     },
     {
+        "index": "ice-knife",
+        "name": "Ice Knife",
+        "desc": [
+            "You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 cold damage."
+        ],
+        "higher_level": [
+            "When you cast this spell using a spell slot of 2nd level or higher, the cold damage increases by 1d6 for each slot level above 1st."
+        ],
+        "range": "60 feet",
+        "components": [
+            "S",
+            "M"
+        ],
+        "material": "A drop of water or a piece of ice",
+        "ritual": false,
+        "duration": "Instantaneous",
+        "concentration": false,
+        "casting_time": "1 action",
+        "level": 1,
+        "damage": {
+            "damage_type": "Piercing",
+            "damage_at_slot_level": {
+                "1": "1d10+1d6",
+                "2": "1d10+2d6",
+                "3": "1d10+3d6",
+                "4": "1d10+4d6",
+                "5": "1d10+5d6",
+                "6": "1d10+6d6",
+                "7": "1d10+7d6",
+                "8": "1d10+8d6",
+                "9": "1d10+9d6"
+            }
+        },
+        "dc": {
+            "dc_type": "DEX",
+            "dc_success": "1d10"
+        },
+        "area_of_effect": {
+            "type": "cylinder",
+            "size": 5
+        },
+        "school": "Conjuration",
+        "classes": [
+            "Druid"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "ice-storm",
         "name": "Ice Storm",
         "desc": [
