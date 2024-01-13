@@ -62,21 +62,25 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
         }
         return false;
     });
-    let bonus = dexterityBonus;
+    let addedBonus = 0;
     if(playerStats.class === 'Monk') {
-        bonus = dexterityBonus + wisdomBonus;
+        addedBonus += wisdomBonus;
+    } 
+    if(playerStats.fightingStyle === 'Defense') {
+        addedBonus += 1;
     }
     if (armorName) {
         let armor = allEquipment.find((item) => item.name === armorName);
-        playerStats.armorClass = armor.armor_class.base;
+        playerStats.armorClass = armor.armor_class.base + addedBonus;
         if(armor.armor_class.dex_bonus) {
+            let armorBonus = dexterityBonus;
             if(armor.armor_class.max_bonus) {
-                bonus = Math.min(armor.armor_class.max_bonus,bonus);
+                armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
             }
-            playerStats.armorClass = armor.armor_class.base + bonus;
+            playerStats.armorClass = armor.armor_class.base + armorBonus + addedBonus;
         }
     } else {
-        playerStats.armorClass = 10 + bonus // Unarmored
+        playerStats.armorClass = 10 + dexterityBonus + addedBonus // Unarmored
     }
     // Check for an equipped shield, and if found increase AC
     if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
@@ -93,11 +97,15 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     });
     if (rangedWeaponName) {
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
+        let toHitBonus = dexterityBonus + playerStats.proficiency;
+        if(playerStats.fightingStyle === 'Archery') {
+            toHitBonus = dexterityBonus + playerStats.proficiency + 2;
+        }
         playerStats.attacks.push({
             "name": rangedWeapon.name,
             "damage": `${rangedWeapon.damage.damage_dice}+${dexterityBonus}`,
             "damageType": rangedWeapon.damage.damage_type,
-            "hitBonus": dexterityBonus + playerStats.proficiency,
+            "hitBonus": toHitBonus,
             "range": rangedWeapon.range.normal,
             "type": "Action"
         });
@@ -113,9 +121,13 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     if (meleeWeaponNames) {
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
         let bonus = Math.max(strengthBonus, dexterityBonus); // Assumes using finesse if dex build
+        let damage = mainHandWeapon.damage.damage_dice;
+        if(playerStats.fightingStyle === 'Dueling' && meleeWeaponNames.length == 1) { // No dual wielding
+            damage = mainHandWeapon.damage.damage_dice + 2;
+        }
         playerStats.attacks.push({
             "name": mainHandWeapon.name,
-            "damage": `${mainHandWeapon.damage.damage_dice}+${bonus}`,
+            "damage": `${damage}+${bonus}`,
             "damageType": mainHandWeapon.damage.damage_type,
             "hitBonus": bonus + playerStats.proficiency, 
             "range": mainHandWeapon.range.normal,
@@ -124,15 +136,38 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
         if (meleeWeaponNames.length > 1) {
             // There is also an offhand weapon
             let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
+            let damage = offHandWeapon.damage.damage_dice;
+            if(playerStats.fightingStyle === 'Two-Weapon Fighting') {
+                damage = `${offHandWeapon.damage.damage_dice}+${bonus}`;
+            }
             playerStats.attacks.push({
                 "name": offHandWeapon.name,
-                "damage": `${offHandWeapon.damage.damage_dice}+${bonus}`,
+                "damage": damage,
                 "damageType": offHandWeapon.damage.damage_type,
                 "hitBonus": bonus + playerStats.proficiency,
                 "range": offHandWeapon.range.normal,
                 "type": "Bonus Action"
             });
         }
+    }
+    // If we have a Monk, then their hands are a weapon
+    if(playerStats.class === 'Monk') {
+        playerStats.attacks.push({
+            "name": 'Unarmed Strike',
+            "damage": `1d4+${dexterityBonus}`,
+            "damageType": 'Bludgeoning',
+            "hitBonus": dexterityBonus + playerStats.proficiency, 
+            "range": 5,
+            "type": "Action"
+        });
+        playerStats.attacks.push({
+            "name": 'Unarmed Strike',
+            "damage": `1d4+${dexterityBonus}`,
+            "damageType": 'Bludgeoning',
+            "hitBonus": dexterityBonus + playerStats.proficiency, 
+            "range": 5,
+            "type": "Bonus Action"
+        });
     }
     // Add spell details
     if(playerStats.spells && playerStats.spells.length > 0) {
@@ -174,12 +209,17 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             }
         });
     }
+    // Add fighting stype special actions
+    if(playerStats.fightingStyle === 'Great Weapon Fighting' && !playerStats.specialActions.find((specialAction) => specialAction.name === 'Great Weapon Fighting')) {
+        playerStats.specialActions.push({ "name": "Great Weapon Fighting", "description": "When you roll a 1 or 2 on a damage die for an attack you make with a melee weapon that you are wielding with two hands, you can reroll the die and must use the new roll, even if the new roll is a 1 or a 2. The weapon must have the two-handed or versatile property for you to gain this benefit." });
+    } else if(playerStats.fightingStyle === 'Protection' && !playerStats.specialActions.find((specialAction) => specialAction.name === 'Protection')) {
+        playerStats.specialActions.push({ "name": "Protection", "description": "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield." });
+    }
     // Add base reactions to reaction list
     if (!playerStats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
         playerStats.reactions.push({ "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" });
     }
     
-
     return (
         <div className='root'>
             <div className='name'>{playerStats.name}</div>

@@ -13,6 +13,7 @@
         { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP" }
     ],
     "class": "Fighter",
+    "fightingStyle": "Archery",
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],

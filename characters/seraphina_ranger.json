@@ -11,6 +11,7 @@
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Ranger",
+    "fightingStyle": "Archery",
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)", "Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
