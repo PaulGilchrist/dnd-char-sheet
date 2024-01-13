@@ -1,0 +1,47 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 14 },
+        { "name": "Dexterity", "value": 10 },
+        { "name": "Constitution", "value": 14 },
+        { "name": "Intelligence", "value": 10 },
+        { "name": "Wisdom", "value": 16 },
+        { "name": "Charisma", "value": 10 }
+    ],
+    "alignment": "Neutral Good",
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Cleric",
+    "immunities": [],
+    "inventory": {
+        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Arrows","Chain Mail","Clothes, Common","Holy Symbol","Longbow","Longsword","Shield"]
+    },
+    "languages": ["Common", "Elvish"],
+    "level": 3,
+    "name": "Valena",
+    "race": "Wood Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "specialActions": [
+        { "name": "Channel Divinity", "description": "You can channel divine energy to fuel magical effects a number of times per short rest" }
+    ],
+    "skillProficiencies": ["Animal Handling","Medicine","Perception","Religion","Survival"],
+    "speed": 35,
+    "spells": [
+        {"name": "Mending", "prepared": true},
+        {"name": "Sacred Flame", "prepared": true},
+        {"name": "Spare the Dying", "prepared": true},
+        {"name": "Bless", "prepared": true},
+        {"name": "Cure Wounds", "prepared": true},
+        {"name": "Detect Magic", "prepared": true},
+        {"name": "Guiding Bolt", "prepared": true},
+        {"name": "Healing Word", "prepared": true},
+        {"name": "Inflict Wounds", "prepared": true},
+        {"name": "Lesser Restoration", "prepared": true},
+        {"name": "Prayer of Healing", "prepared": true},
+        {"name": "Spiritual Weapon", "prepared": true}
+    ],
+    "subClass": "Life",
+    "vulnerabilities": []
+}

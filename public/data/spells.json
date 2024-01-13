@@ -9271,14 +9271,14 @@
         "damage": {
             "damage_type": "Force",
             "damage_at_slot_level": {
-                "2": "1d8 + MOD",
-                "3": "1d8 + MOD",
-                "4": "2d8 + MOD",
-                "5": "2d8 + MOD",
-                "6": "3d8 + MOD",
-                "7": "3d8 + MOD",
-                "8": "4d8 + MOD",
-                "9": "4d8 + MOD"
+                "2": "1d8",
+                "3": "1d8",
+                "4": "2d8",
+                "5": "2d8",
+                "6": "3d8",
+                "7": "3d8",
+                "8": "4d8",
+                "9": "4d8"
             }
         },
         "school": "Evocation",

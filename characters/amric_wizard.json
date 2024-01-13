@@ -26,7 +26,7 @@
     "specialActions": [
         { "name": "Arcane Recovery", "description": "Once per day when you finish a short rest, you can choose expended spell slots to recover - up to a combined level of 1, and none of the slots can be 6th level or higher" }
     ],
-    "skillProficiencies": ["Arcana", "History", "Investigation", "Medicine", "Perception"],
+    "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
     "speed": 30,
     "spells": [
         {"name": "Fire Bolt", "prepared": true},
@@ -41,5 +41,6 @@
         {"name": "Magic Missile", "prepared": true},
         {"name": "Shield", "prepared": true}
     ],
+    "subClass": "",
     "vulnerabilities": []
 }

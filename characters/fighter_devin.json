@@ -25,10 +25,11 @@
     "reactions": [],
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
-    "skillProficiencies": ["Intimidation", "Perception", "Survival"],
+    "skillProficiencies": ["Intimidation","Perception","Survival"],
     "specialActions": [
         { "name": "Action Surge", "description": "You can take one additional action on your turn. This can be used 1 times per short rest" }
     ],
     "speed": 30,
+    "subClass": "Champion",
     "vulnerabilities": []
 }

@@ -55,7 +55,10 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
         let item = allEquipment.find((item) => item.name === itemName);
-        return item.equipment_category === 'Armor';
+        if(item) {
+            return item.equipment_category === 'Armor';
+        }
+        return false;
     });
     if (armorName) {
         let armor = allEquipment.find((item) => item.name === armorName);
@@ -63,11 +66,18 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     } else {
         playerStats.armorClass = 10 + dexterityBonus // Unarmored
     }
+    // Check for an equipped shield, and if found increase AC
+    if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
+        playerStats.armorClass = playerStats.armorClass + 2;
+    }
     playerStats.attacks = [];
     // Find ranged weapon in the character's equipment and add it to attacks
     let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
         let item = allEquipment.find((item) => item.name === itemName);
-        return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
+        if(item) {
+            return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
+        }
+        return false;
     });
     if (rangedWeaponName) {
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
@@ -83,7 +93,10 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
     // Find main hand weapon in the character's equipment and add it to attacks
     let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
         let item = allEquipment.find((item) => item.name === itemName);
-        return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
+        if(item) {
+            return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
+        }
+        return false;
     });
     if (meleeWeaponNames) {
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
@@ -108,10 +121,6 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             });
         }
     }
-    // Add base reactions to reaction list
-    if (!playerStats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
-        playerStats.reactions.push({ "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" });
-    }
     // Add spell details
     if(playerStats.spells && playerStats.spells.length > 0) {
         playerStats.spells = playerStats.spells.map(spellSummary => {
@@ -121,7 +130,7 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             }
             return spellSummary;
         });
-        // Find spells that are damage based and prepared and add them to attacks
+        // Find spells that are actions, damage based and prepared and add them to attacks
         let spells = playerStats.spells.filter(spell => spell.damage && spell.prepared);
         spells.forEach(spell => {
             if(!playerStats.attacks.find((attack) => attack.name === spell.name)) {
@@ -137,16 +146,31 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
                     "damageType": spell.damage.damage_type,
                     "hitBonus": playerStats.abilities.find((ability) => ability.name === characterClass.spell_casting_ability).bonus,
                     "range": spell.range,
-                    "type": "Action"
+                    "type": spell.casting_time === "1 action" ? "Action" : "Bonus Action"
+                });
+            }
+        });
+        // Find spells that are reactions and prepared and add them to attacks
+        spells = playerStats.spells.filter(spell => spell.casting_time === '1 reaction' && spell.prepared);
+        spells.forEach(spell => {
+            if(!playerStats.reactions.find((reaction) => reaction.name === spell.name)) {
+                playerStats.reactions.push({
+                    "name": spell.name,
+                    "description": spell.desc
                 });
             }
         });
     }
+    // Add base reactions to reaction list
+    if (!playerStats.reactions.find((reaction) => reaction.name === 'Opportunity Attack')) {
+        playerStats.reactions.push({ "name": "Opportunity Attack", "description": "Can attack creature that moves out of your reach" });
+    }
+    
 
     return (
         <div className='root'>
             <div className='name'>{playerStats.name}</div>
-            <div className='summary'>{playerStats.race} {playerStats.class} (level {playerStats.level}), {playerStats.alignment}</div>
+            <div className='summary'>{playerStats.race} {playerStats.class} ({playerStats.subClass ? `${playerStats.subClass.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <b>Armor Class: </b>{playerStats.armorClass}<br />
             <b>Hit Points: </b>{playerStats.hitPoints}<br />
             <b>Proficiency: </b>+{playerStats.proficiency}<br />

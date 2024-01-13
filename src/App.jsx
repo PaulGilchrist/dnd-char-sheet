@@ -51,7 +51,7 @@ function App() {
     return (
         <div>
             {stats && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={stats}></CharSheet>}
-            <button onClick={handleButtonClick}>Upload JSON File</button>
+            <button className="no-print" onClick={handleButtonClick}>Upload JSON File</button>
         </div>
     )
 }
