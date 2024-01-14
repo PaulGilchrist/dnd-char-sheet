@@ -31,6 +31,9 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
         ability.skills = ability.skills.map((skill) => {
             skill.proficient = playerStats.skillProficiencies.includes(skill.name);
             skill.bonus = skill.proficient ? ability.bonus + playerStats.proficiency : ability.bonus;
+            if(playerStats.expertise && playerStats.expertise.includes(skill.name)) {
+                skill.bonus += playerStats.proficiency; // Rogues can double their proficiency for two selected areas of expertise
+            }
             if (passiveSkills.includes(skill.name)) {
                 // Add skill based senses
                 const newSense = {

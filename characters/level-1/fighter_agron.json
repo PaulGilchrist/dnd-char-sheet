@@ -20,16 +20,14 @@
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"]
     },
     "languages": ["Common", "Elvish"],
-    "level": 3,
-    "name": "Devin",
+    "level": 1,
+    "name": "Agron",
     "race": "Human",
     "reactions": [],
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
-    "skillProficiencies": ["Intimidation","Perception","Survival"],
-    "specialActions": [
-        { "name": "Action Surge", "description": "You can take one additional action on your turn. This can be used 1 times per short rest" }
-    ],
+    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
+    "specialActions": [],
     "speed": 30,
     "subClass": "Champion",
     "vulnerabilities": []
