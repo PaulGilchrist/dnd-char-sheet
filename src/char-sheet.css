@@ -15,7 +15,7 @@
     padding-right: 10px;
 }
 b {
-    color: lightgreen;
+    color: var(--heading-color);
     font-weight: 600;
 }
 hr {
@@ -26,20 +26,17 @@ hr {
     text-align: left;
 }
 .name {
-    color: lightgreen;
+    color: var(--heading-color);
     font-size: 1.5em;
     font-weight: 900;
     margin-bottom: -10px;
 }
 .root {
-    background-color: #111;
-    color: #eee;
-    font-size: 14px;
     max-width: 800px;
     padding: 10px;
 }
 .sectionHeader {
-    color: lightgreen;    
+    color: var(--heading-color);    
     font-size: 1.05em;
     font-weight: 800;
 }
@@ -53,4 +50,15 @@ hr {
 }
 .summary {
     margin-bottom: 10px;
+}
+@media print {
+    b {
+        color: var(--print-heading-color);
+    }
+    .name {
+        color: var(--print-heading-color);
+    }
+    .sectionHeader {
+        color: var(--print-heading-color);    
+    }
 }

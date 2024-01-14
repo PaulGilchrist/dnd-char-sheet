@@ -1,5 +1,11 @@
-@media print {
-    .no-print {
-        display: none;
-    }
+button {
+    margin: 10px;
+}
+
+.active {
+    background-color: green;
+}
+
+.inactive {
+    background-color: grey;
 }
