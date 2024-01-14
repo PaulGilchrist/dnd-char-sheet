@@ -50,8 +50,8 @@ function App() {
                 reader.readAsText(files[i]);
                 readers.push(reader);
             }
-            setActiveCharacter(null);
-            setCharacters([]);
+            if(activeCharacter) setActiveCharacter(null);
+            if(characters.length > 0) setCharacters([]);
             Promise.all(
                 readers.map((reader) => reader.onload = (event) => {
                     const data = JSON.parse(event.target.result);
