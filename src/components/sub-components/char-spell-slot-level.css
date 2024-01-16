@@ -1,0 +1,25 @@
+.level > .header {
+    text-align: center;
+}
+.level {
+    margin-right: 5px;
+    width: 28px;
+}
+.level > .slots {
+    border-radius: 2px;
+    border: 1px solid #555;
+    width: 100%;
+}
+.level > .slots > .row {
+    display: grid;
+    grid-template-columns: auto auto;
+    margin: 0;
+}
+.slot {
+    height: 10px;
+    margin: 2px;
+    width: 10px;
+}
+.slot.active {
+    background-color: blue;
+}

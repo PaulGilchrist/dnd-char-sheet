@@ -20,7 +20,7 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             <CharActions allEquipment={allEquipment} allSpells={allSpells} characterClass={characterClass} playerStats={playerStats}></CharActions><hr />
             <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions>
-            <CharSpells allSpells={allSpells} playerStats={playerStats}></CharSpells><hr />
+            <CharSpells allSpells={allSpells} characterClass={characterClass} playerStats={playerStats}></CharSpells><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
         </div>
     )

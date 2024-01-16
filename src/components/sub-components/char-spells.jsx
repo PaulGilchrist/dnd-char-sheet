@@ -2,8 +2,9 @@
 import React from 'react'
 
 import './char-spells.css'
+import CharSpellSlots from './char-spell-slots'
 
-function CharSpells({ allSpells, playerStats }) {
+function CharSpells({ allSpells, characterClass, playerStats }) {
     // Add spell details
     let spells = [];
     if(playerStats.spells && playerStats.spells.length > 0) {
@@ -20,6 +21,7 @@ function CharSpells({ allSpells, playerStats }) {
         <div>
             {(playerStats.spells && playerStats.spells.length > 0) && <div>
                 <hr />
+                <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
                 <div className='spells'>
                     <div className='left'><b>Spell</b></div>
                     <div><b>Level</b></div>
