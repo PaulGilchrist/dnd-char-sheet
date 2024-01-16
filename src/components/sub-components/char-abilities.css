@@ -6,10 +6,3 @@
 .abilities > div {
     padding-right: 10px;
 }
-b {
-    color: var(--heading-color);
-    font-weight: 600;
-}
-.left {
-    text-align: left;
-}

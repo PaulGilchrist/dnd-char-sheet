@@ -15,6 +15,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+b {
+    color: var(--heading-color);
+    font-weight: 600;
+}
 body {
     margin: 0;
 }
@@ -35,6 +39,14 @@ button:hover {
 button:focus,
 button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
+}
+.left {
+    text-align: left;
+}
+.sectionHeader {
+    color: var(--heading-color);    
+    font-size: 1.05em;
+    font-weight: 800;
 }
 @media (prefers-color-scheme: light) {
     :root {

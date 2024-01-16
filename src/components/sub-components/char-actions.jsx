@@ -3,7 +3,7 @@ import React from 'react'
 
 import './char-actions.css'
 
-import { actions } from './data/actions.js';
+import { actions } from '../../data/actions.js';
 
 function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });

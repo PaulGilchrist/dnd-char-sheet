@@ -3,8 +3,8 @@ import React from 'react'
 
 import './char-abilities.css'
 
-import { passiveSkills } from './data/passive-skills.js';
-import { skills } from './data/skills.js';
+import { passiveSkills } from '../../data/passive-skills.js';
+import { skills } from '../../data/skills.js';
 
 function CharAbilities({ characterClass, playerStats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });

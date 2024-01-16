@@ -1,0 +1,8 @@
+.spells {
+    display: grid;
+    grid-template-columns: auto auto auto auto auto auto auto auto;
+    text-align: center;
+}
+.spells > div {
+    padding-right: 10px;
+}

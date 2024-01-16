@@ -1,0 +1,8 @@
+.attacks {
+    display: grid;
+    grid-template-columns: 120px 80px 40px 80px 50px;
+    text-align: center;
+}
+.attacks > div {
+    padding-right: 10px;
+}

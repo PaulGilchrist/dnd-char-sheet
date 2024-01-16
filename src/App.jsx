@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
-import CharSheet from './char-sheet'
+import CharSheet from './components/char-sheet'
 
 function App() {
     const [activeCharacter, setActiveCharacter] = React.useState(null);
     const [characters, setCharacters] = React.useState([]);
     const [classes, setClasses] = React.useState([]);
     const [equipment, setEquipment] = React.useState([]);
+    const [showButton, setShowButton] = useState(false);
     const [spells, setSpells] = React.useState([]);
 
     React.useEffect(() => {
@@ -33,6 +34,13 @@ function App() {
             });
     }, []);
 
+    useEffect(() => {
+        // Do not allow uploading character until everything is ready
+        if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+            setShowButton(true);
+        }
+    }, [classes, equipment, spells]);
+
     const handleCharacterClick = (character) => {
         setActiveCharacter(character);
     }
@@ -50,8 +58,8 @@ function App() {
                 reader.readAsText(files[i]);
                 readers.push(reader);
             }
-            if(activeCharacter) setActiveCharacter(null);
-            if(characters.length > 0) setCharacters([]);
+            if (activeCharacter) setActiveCharacter(null);
+            if (characters.length > 0) setCharacters([]);
             Promise.all(
                 readers.map((reader) => reader.onload = (event) => {
                     const data = JSON.parse(event.target.result);
@@ -61,13 +69,13 @@ function App() {
         };
         input.click();
     }
-    if(characters.length > 0 && !activeCharacter) {
+    if (characters.length > 0 && !activeCharacter) {
         setActiveCharacter(characters[0]);
     }
     return (
         <div>
             {characters.length > 0 && characters.map((character) => { return (<button key={character.name} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{character.name}</button>) })}
-            <button className="inactive no-print" onClick={handleUploadClick}>Upload Characters</button>
+            {showButton && <button className="inactive no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
         </div>
     )
