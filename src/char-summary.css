@@ -1,0 +1,13 @@
+b {
+    color: var(--heading-color);
+    font-weight: 600;
+}
+.name {
+    color: var(--heading-color);
+    font-size: 1.5em;
+    font-weight: 900;
+    margin-bottom: -10px;
+}
+.summary {
+    margin-bottom: 10px;
+}

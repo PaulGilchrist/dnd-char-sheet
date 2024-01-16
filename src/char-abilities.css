@@ -1,0 +1,15 @@
+.abilities {
+    display: grid;
+    grid-template-columns: 90px 60px 60px 50px auto;
+    text-align: center;
+}
+.abilities > div {
+    padding-right: 10px;
+}
+b {
+    color: var(--heading-color);
+    font-weight: 600;
+}
+.left {
+    text-align: left;
+}

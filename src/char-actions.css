@@ -10,27 +10,11 @@ b {
     color: var(--heading-color);
     font-weight: 600;
 }
-hr {
-    margin-bottom: 15px;
-    margin-top: 15px;
-}
 .left {
     text-align: left;
-}
-.root {
-    max-width: 800px;
-    padding: 10px;
 }
 .sectionHeader {
     color: var(--heading-color);    
     font-size: 1.05em;
     font-weight: 800;
-}
-.spells {
-    display: grid;
-    grid-template-columns: auto auto auto auto auto auto auto auto;
-    text-align: center;
-}
-.spells > div {
-    padding-right: 10px;
 }

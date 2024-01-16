@@ -1,6 +1,5 @@
 :root {
     --heading-color: lightgreen;
-    --print-heading-color: black;
 
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
@@ -51,6 +50,9 @@ button:focus-visible {
 }
 
 @media print {
+    :root {
+        --heading-color: black;
+    }
     .no-print {
         display: none;
     }
