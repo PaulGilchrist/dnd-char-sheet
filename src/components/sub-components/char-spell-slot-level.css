@@ -23,3 +23,8 @@
 .slot.active {
     background-color: blue;
 }
+.slot.inactive {
+    border: 1px solid blue;
+    height: 8px;
+    width: 8px;
+}

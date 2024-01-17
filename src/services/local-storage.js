@@ -1,5 +1,6 @@
 const storage = {
     get: (name, propertyName) => {
+        // console.log(`${name} ${propertyName}`);
         const json = localStorage.getItem(name);
         if(json) {
             const value = JSON.parse(json)[propertyName];
@@ -10,6 +11,7 @@ const storage = {
         return null;
     },
     set: (name, propertyName, value) => {
+        // console.log(`${name} ${propertyName} ${value}`);
         const json = localStorage.getItem(name);
         let objValue = {};
         if(json) { 
