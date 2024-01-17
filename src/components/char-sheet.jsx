@@ -22,6 +22,7 @@ function CharSheet({ allClasses, allEquipment, allSpells, playerStats }) {
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions>
             <CharSpells allSpells={allSpells} characterClass={characterClass} playerStats={playerStats}></CharSpells><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
+            <br/>
         </div>
     )
 }
