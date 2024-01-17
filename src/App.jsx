@@ -14,7 +14,8 @@ function App() {
         fetch('/dnd-char-sheet/data/classes.json')
             .then(response => response.json())
             .then(data => {
-                setClasses(data);
+                // console.log('Classes');
+                setClasses(data);                
             });
     }, []);
 
@@ -22,6 +23,7 @@ function App() {
         fetch('/dnd-char-sheet/data/equipment.json')
             .then(response => response.json())
             .then(data => {
+                // console.log('Equipment');
                 setEquipment(data);
             });
     }, []);
@@ -30,6 +32,7 @@ function App() {
         fetch('/dnd-char-sheet/data/spells.json')
             .then(response => response.json())
             .then(data => {
+                // console.log('Spells');
                 setSpells(data);
             });
     }, []);
@@ -37,6 +40,7 @@ function App() {
     useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+            console.log('Classes, Equipment, Spells');
             setShowButton(true);
         }
     }, [classes, equipment, spells]);
@@ -46,6 +50,8 @@ function App() {
     }
 
     const handleUploadClick = async () => {
+        if (activeCharacter) setActiveCharacter(null);
+        if (characters.length > 0) setCharacters([]);
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
@@ -58,8 +64,6 @@ function App() {
                 reader.readAsText(files[i]);
                 readers.push(reader);
             }
-            if (activeCharacter) setActiveCharacter(null);
-            if (characters.length > 0) setCharacters([]);
             await Promise.all(
                 readers.map(async (reader) => {
                     await new Promise((resolve) => {
