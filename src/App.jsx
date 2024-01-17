@@ -75,7 +75,7 @@ function App() {
     return (
         <div>
             {characters.length > 0 && characters.map((character) => { return (<button key={character.name} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{character.name}</button>) })}
-            {showButton && <button className="inactive no-print" onClick={handleUploadClick}>Upload Characters</button>}
+            {showButton && <button className="upload no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
         </div>
     )

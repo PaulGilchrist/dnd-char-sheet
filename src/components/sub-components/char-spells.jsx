@@ -1,10 +1,14 @@
 /* eslint-disable react/prop-types */
-import React from 'react'
+import React, { useState } from 'react'
+
 
 import './char-spells.css'
 import CharSpellSlots from './char-spell-slots'
 
 function CharSpells({ allSpells, characterClass, playerStats }) {
+
+    const [spellDescription, setSpellDescription] = React.useState(null);
+
     // Add spell details
     let spells = [];
     if(playerStats.spells && playerStats.spells.length > 0) {
@@ -16,10 +20,23 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
             return {...spell};
         });
     }
+
+    const showDescription = (spell) => {
+        let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
+        if(spell.higher_level) {
+            html += `<br/>${spell.higher_level}`;
+        }
+        setSpellDescription(html);
+    }
+
+    const clearDescription = () => {
+        setSpellDescription(null);
+    }
     
     return (
         <div>
             {(playerStats.spells && playerStats.spells.length > 0) && <div>
+                {spellDescription && (<div className="spell-popup" dangerouslySetInnerHTML={{ __html: spellDescription }} onClick={() => clearDescription()}></div>)}
                 <hr />
                 <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
                 <div className='spells'>
@@ -44,7 +61,7 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
                             }
                         }
                         return <React.Fragment key={spell.name}>
-                            <div className='left'>{spell.name}</div>
+                            <div className='left spell-name' onClick={() => showDescription(spell)}>{spell.name}</div>
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                             <div>{spell.prepared ? 'prepared' : spell.ritual ? 'ritual' : ''}</div>
                             <div>{spell.casting_time}</div>

@@ -1,11 +1,14 @@
 button {
+    color: #aaa;
     margin: 10px;
 }
 
 .active {
     background-color: green;
+    color: #fff;
 }
 
-.inactive {
+.upload {
     background-color: grey;
+    color: #000;
 }
