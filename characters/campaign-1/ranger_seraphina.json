@@ -15,7 +15,8 @@
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)", "Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Studded Leather","Longbow","Longsword","Dagger"]
+        "equipped": ["Arrows","Studded Leather","Longbow","Longsword","Dagger"],
+        "gold": 10
     },
     "languages": ["Common","Elvish","Goblin","Orc"],
     "level": 3,

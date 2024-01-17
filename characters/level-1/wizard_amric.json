@@ -14,7 +14,8 @@
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Quarterstaff","Dagger"]
+        "equipped": ["Quarterstaff","Dagger"],
+        "gold": 10
     },
     "languages": ["Common", "Elvish"],
     "level": 1,

@@ -17,7 +17,8 @@
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"]
+        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
+        "gold": 10
     },
     "languages": ["Common", "Elvish"],
     "level": 1,

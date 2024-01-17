@@ -15,7 +15,8 @@
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)", "Rope, Silk (50 feet)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Studded Leather","Clothes, Common","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"]
+        "equipped": ["Arrows","Studded Leather","Clothes, Common","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
+        "gold": 10
     },
     "languages": ["Common", "Elvish", "Thieves' Cant"],
     "level": 1,

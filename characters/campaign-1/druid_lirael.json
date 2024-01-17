@@ -14,7 +14,8 @@
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Cloak of Elvenkind","Clothes, Traveler's","Leather","Longbow","Quarterstaff","Scimitar"]
+        "equipped": ["Cloak of Elvenkind","Clothes, Traveler's","Leather","Longbow","Quarterstaff","Scimitar"],
+        "gold": 30
     },
     "languages": ["Common","Druidic","Elvish","Sylvan"],
     "level": 3,

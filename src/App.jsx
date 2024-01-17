@@ -45,12 +45,12 @@ function App() {
         setActiveCharacter(character);
     }
 
-    const handleUploadClick = () => {
+    const handleUploadClick = async () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
         input.multiple = true;
-        input.onchange = (event) => {
+        input.onchange = async (event) => {
             const files = event.target.files;
             const readers = [];
             for (let i = 0; i < files.length; i++) {
@@ -60,15 +60,20 @@ function App() {
             }
             if (activeCharacter) setActiveCharacter(null);
             if (characters.length > 0) setCharacters([]);
-            Promise.all(
-                readers.map((reader) => reader.onload = (event) => {
-                    const data = JSON.parse(event.target.result);
-                    setCharacters((characters) => [...characters, data]);
+            await Promise.all(
+                readers.map(async (reader) => {
+                    await new Promise((resolve) => {
+                        reader.onload = (event) => {
+                            const data = JSON.parse(event.target.result);
+                            setCharacters((characters) => [...characters, data]);
+                            resolve();
+                        };
+                    });
                 })
             );
         };
         input.click();
-    }
+    };
     if (characters.length > 0 && !activeCharacter) {
         setActiveCharacter(characters[0]);
     }

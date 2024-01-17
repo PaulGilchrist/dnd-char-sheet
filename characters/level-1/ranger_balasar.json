@@ -15,7 +15,8 @@
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Rations (5 days)", "Rope, Silk (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Studded Leather","Longbow","Scimitar","Scimitar"]
+        "equipped": ["Arrows","Studded Leather","Longbow","Scimitar","Scimitar"],
+        "gold": 10
     },
     "languages": ["Common","Elvish","Orc","Undercommon"],
     "level": 1,

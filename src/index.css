@@ -40,6 +40,9 @@ button:focus,
 button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
 }
+.clickable {
+    cursor: pointer;
+}
 .left {
     text-align: left;
 }
@@ -47,6 +50,9 @@ button:focus-visible {
     color: var(--heading-color);    
     font-size: 1.05em;
     font-weight: 800;
+}
+.text-muted {
+    opacity: 0.5;
 }
 @media (prefers-color-scheme: light) {
     :root {

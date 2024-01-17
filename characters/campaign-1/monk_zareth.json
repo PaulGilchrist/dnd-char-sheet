@@ -19,7 +19,8 @@
     "immunities": [],
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)", "Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Quarterstaff","Dart"]
+        "equipped": ["Quarterstaff","Dart"],
+        "gold": 199
     },
     "languages": ["Common","Halfling","Infernal","Orc"],
     "level": 3,
