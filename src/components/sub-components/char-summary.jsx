@@ -88,7 +88,7 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
             <div className='name'>{playerStats.name}</div>
             <div className='summary'>{playerStats.race} {playerStats.class} ({playerStats.subClass ? `${playerStats.subClass.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <b>Armor Class: </b>{armorClass}<br />
-            <div className="clickable" onClick={handleInputToggleCurrentHitPoints}><b>Hit Points: </b>{hitPoints}/<HiddenInput handleInputToggle={handleInputToggleCurrentHitPoints} handleValueChange={(value) => handleValueChangeCurrentHitPoints(value)} showInput={showInputCurrentHitPoints} value={currentHitPoints}></HiddenInput> <span className="text-muted">(max/current)</span></div>
+            <div className="clickable" onClick={handleInputToggleCurrentHitPoints} onKeyDown={handleInputToggleCurrentHitPoints} tabIndex={0}><b>Hit Points: </b>{hitPoints}/<HiddenInput handleInputToggle={handleInputToggleCurrentHitPoints} handleValueChange={(value) => handleValueChangeCurrentHitPoints(value)} showInput={showInputCurrentHitPoints} value={currentHitPoints}></HiddenInput> <span className="text-muted">(max/current)</span></div>
             <b>Proficiency: </b>+{proficiency}<br />
             <b>Initiative: </b>+{initiative}<br />
             <b>Speed: </b>{playerStats.speed} ft.<br />

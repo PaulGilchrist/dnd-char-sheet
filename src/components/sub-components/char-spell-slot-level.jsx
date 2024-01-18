@@ -24,7 +24,7 @@ function CharSpellSlotLevel({ level, totalSlots, playerStats }) {
     }
 
     return (
-        <div className='level' onClick={handleClick}>
+        <div className='level clickable' onClick={handleClick} onKeyDown={handleClick} tabIndex="0">
             <div className='header'>{level}</div>
             <div className='slots'>
                 <div className='row'>

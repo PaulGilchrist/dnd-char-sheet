@@ -14,6 +14,7 @@ function HiddenInput({ handleInputToggle, handleValueChange, showInput, value })
         handleValueChange(event.target.value);
     };
     const handleKeyDown = (event) => {
+        event.stopPropagation();
         if (event.key === "Enter") {
             handleChange(event);
             handleInputToggle();
@@ -28,14 +29,14 @@ function HiddenInput({ handleInputToggle, handleValueChange, showInput, value })
             {
                 showInput ? (
                     <input
-                        type="number"
-                        value={value}
                         min="0"
                         onBlur={handleInputToggle}
                         onChange={handleChange}
                         onClick={handleStopPropagation}
                         onKeyDown={handleKeyDown}
                         ref={inputRef}
+                        type="number"
+                        value={value}
                     />
                 ) : (
                     value

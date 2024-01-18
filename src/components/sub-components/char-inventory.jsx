@@ -27,7 +27,7 @@ function CharInventory({ playerStats }) {
             <div className='sectionHeader'>Inventory</div>
             <div><b>Backpack:</b> {playerStats.inventory.backpack.join(', ')}</div>
             <div><b>Equipped:</b> {playerStats.inventory.equipped.join(', ')}</div>
-            <div className="clickable" onClick={handleInputToggleGold}><b>Gold:</b> <HiddenInput handleInputToggle={handleInputToggleGold} handleValueChange={(value) => handleValueChangeGold(value)} showInput={showInputGold} value={gold}></HiddenInput></div>
+            <div className="clickable" onClick={handleInputToggleGold} onKeyDown={handleInputToggleGold} tabIndex={0}><b>Gold:</b> <HiddenInput handleInputToggle={handleInputToggleGold} handleValueChange={(value) => handleValueChangeGold(value)} showInput={showInputGold} value={gold}></HiddenInput></div>
         </div>
     )
 }
