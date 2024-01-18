@@ -29,6 +29,10 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
 
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
+        // Does this item have a magic bonus?
+        if(itemName.charAt(0) === "+") {
+            itemName = itemName.substring(3);
+        }        
         let item = allEquipment.find((item) => item.name === itemName);
         if(item) {
             return item.equipment_category === 'Armor';
@@ -44,20 +48,30 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
     }
     let armorClass;
     if(armorName) {
+        // Does this item have a magic bonus?
+        let magicBonus = 0;
+        if(armorName.charAt(0) === '+') {
+            magicBonus = Number(armorName.charAt(1));
+            armorName = armorName.substring(3);
+        }
         let armor = allEquipment.find((item) => item.name === armorName);
-        armorClass = armor.armor_class.base + addedBonus;
+        armorClass = armor.armor_class.base + addedBonus + magicBonus;
         if(armor.armor_class.dex_bonus) {
             let armorBonus = dexterityBonus;
             if(armor.armor_class.max_bonus) {
                 armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
             }
-            armorClass = armor.armor_class.base + armorBonus + addedBonus;
+            armorClass = armor.armor_class.base + armorBonus + addedBonus + magicBonus;
         }
     } else {
-        armorClass = 10 + dexterityBonus + addedBonus // Unarmored
+        armorClass = 10 + dexterityBonus + addedBonus// Unarmored
     }
-    // Check for an equipped shield, and if found increase AC
-    if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
+    // Check for an equipped magical shield, and if found increase AC
+    let shield = playerStats.inventory.equipped.find(item => item.substring(3) === 'Shield');
+    if(shield) {
+        armorClass += 2 + Number(shield.charAt(1));
+    } else if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
+        // Non-magical shield
         armorClass += 2;
     }
 
@@ -68,7 +82,6 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
     const handleInputToggleCurrentHitPoints = () => {
         setShowInputCurrentHitPoints((showInputCurrentHitPoints) => !showInputCurrentHitPoints);
     };
-
 
     return (
         <div>

@@ -15,21 +15,31 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     const attacks = [];
     // Find ranged weapon in the character's equipment and add it to attacks
     let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
+        // Does this item have a magic bonus?
+        if(itemName.charAt(0) === "+") {
+            itemName = itemName.substring(3);
+        }
         let item = allEquipment.find((item) => item.name === itemName);
         if (item) {
             return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
         }
         return false;
     });
-    if (rangedWeaponName) {
+    if(rangedWeaponName) {
+        // Does this item have a magic bonus?
+        let magicBonus = 0;
+        if(rangedWeaponName.charAt(0) === '+') {
+            magicBonus = Number(rangedWeaponName.charAt(1));
+            rangedWeaponName = rangedWeaponName.substring(3);
+        }
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
-        let toHitBonus = dexterityBonus + proficiency;
+        let toHitBonus = dexterityBonus + proficiency + magicBonus;
         if (playerStats.fightingStyle === 'Archery') {
-            toHitBonus = dexterityBonus + proficiency + 2;
+            toHitBonus += 2;
         }
         attacks.push({
-            "name": rangedWeapon.name,
-            "damage": `${rangedWeapon.damage.damage_dice}+${dexterityBonus}`,
+            "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${rangedWeapon.name}`,
+            "damage": `${rangedWeapon.damage.damage_dice}+${dexterityBonus + magicBonus}`,
             "damageType": rangedWeapon.damage.damage_type,
             "hitBonus": toHitBonus,
             "range": rangedWeapon.range.normal,
@@ -38,6 +48,10 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     }
     // Find main hand weapon in the character's equipment and add it to attacks
     let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
+        // Does this item have a magic bonus?
+        if(itemName.charAt(0) === '+') {
+            itemName = itemName.substring(3);
+        }
         let item = allEquipment.find((item) => item.name === itemName);
         if (item) {
             return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
@@ -45,14 +59,20 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
         return false;
     });
     if (meleeWeaponNames) {
+        // Does this item have a magic bonus?
+        let magicBonus = 0;
+        if(meleeWeaponNames[0].charAt(0) === '+') {
+            magicBonus = Number(meleeWeaponNames[0].charAt(1));
+            meleeWeaponNames[0] = meleeWeaponNames[0].substring(3);
+        }
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
-        let bonus = Math.max(strengthBonus, dexterityBonus); // Assumes using finesse if dex build
+        let bonus = Math.max(strengthBonus, dexterityBonus) + magicBonus; // Assumes using finesse if dex build
         let damage = mainHandWeapon.damage.damage_dice;
         if (playerStats.fightingStyle === 'Dueling' && meleeWeaponNames.length == 1) { // No dual wielding
             damage = mainHandWeapon.damage.damage_dice + 2;
         }
         attacks.push({
-            "name": mainHandWeapon.name,
+            "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${mainHandWeapon.name}`,
             "damage": `${damage}+${bonus}`,
             "damageType": mainHandWeapon.damage.damage_type,
             "hitBonus": bonus + proficiency,
@@ -61,16 +81,23 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
         });
         if (meleeWeaponNames.length > 1) {
             // There is also an offhand weapon
+            magicBonus = 0;
+            if(meleeWeaponNames[1].charAt(0) === "+") {
+                magicBonus = Number(meleeWeaponNames[1].charAt(1));
+                meleeWeaponNames[1] = meleeWeaponNames[1].substring(3);
+            }
             let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
             let damage = offHandWeapon.damage.damage_dice;
             if (playerStats.fightingStyle === 'Two-Weapon Fighting') {
-                damage = `${offHandWeapon.damage.damage_dice}+${bonus}`;
+                damage = `${offHandWeapon.damage.damage_dice}+${bonus + magicBonus}`;
+            } else if(magicBonus > 0) {
+                damage = `${offHandWeapon.damage.damage_dice}+${magicBonus}`;
             }
             attacks.push({
-                "name": offHandWeapon.name,
+                "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${offHandWeapon.name}`,
                 "damage": damage,
                 "damageType": offHandWeapon.damage.damage_type,
-                "hitBonus": bonus + proficiency,
+                "hitBonus": bonus + proficiency + magicBonus,
                 "range": offHandWeapon.range.normal,
                 "type": "Bonus Action"
             });

@@ -1,4 +1,3 @@
-# To Do
+# Dungeons and Dragons Character Sheet
 
-* Magic Items
-* Load multiple characters at once into separate tabs
+Load entire party at once, print or track changes like hit points, gold, or spell slots online

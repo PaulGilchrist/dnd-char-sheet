@@ -40,7 +40,6 @@ function App() {
     useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
-            console.log('Classes, Equipment, Spells');
             setShowButton(true);
         }
     }, [classes, equipment, spells]);
@@ -58,6 +57,7 @@ function App() {
         input.multiple = true;
         input.onchange = async (event) => {
             const files = event.target.files;
+            console.log(files)
             const readers = [];
             for (let i = 0; i < files.length; i++) {
                 const reader = new FileReader();
