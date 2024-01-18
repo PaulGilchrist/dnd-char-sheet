@@ -72,6 +72,7 @@ function App() {
                     });
                 })
             );
+            input.value = null;
         };
         input.click();
     };
