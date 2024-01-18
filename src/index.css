@@ -1,5 +1,5 @@
 :root {
-    --heading-color: lightgreen;
+    --theme-highlight-color: lightgreen;
 
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
@@ -16,7 +16,7 @@
     -moz-osx-font-smoothing: grayscale;
 }
 b {
-    color: var(--heading-color);
+    color: var(--theme-highlight-color);
     font-weight: 600;
 }
 body {
@@ -47,7 +47,7 @@ button:focus-visible {
     text-align: left;
 }
 .sectionHeader {
-    color: var(--heading-color);    
+    color: var(--theme-highlight-color);    
     font-size: 1.05em;
     font-weight: 800;
 }
@@ -69,7 +69,7 @@ button:focus-visible {
 
 @media print {
     :root {
-        --heading-color: black;
+        --theme-highlight-color: black;
     }
     .no-print {
         display: none;

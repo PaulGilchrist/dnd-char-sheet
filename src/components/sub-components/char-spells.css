@@ -1,7 +1,7 @@
 .spell-popup {
     align-items: center;
     background-color: rgba(0, 20, 0, 0.97);
-    border: 1px solid lightgreen;
+    border: 1px solid var(--theme-highlight-color);
     border-radius: 10px;
     bottom: 0;
     color: #ffffff;
