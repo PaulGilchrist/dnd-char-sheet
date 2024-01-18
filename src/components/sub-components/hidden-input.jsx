@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
+import './hidden-input.css'
 
 function HiddenInput({ handleInputToggle, handleValueChange, showInput, value }) {
     const inputRef = React.useRef(null);
