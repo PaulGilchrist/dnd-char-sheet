@@ -10,7 +10,7 @@
     "alignment": "Neutral Good",
     "attacksPerAction": 1,
     "bonusActions": [
-        { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP" }
+        { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 3 HP" }
     ],
     "class": "Fighter",
     "fightingStyle": "Archery",
@@ -29,7 +29,8 @@
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "specialActions": [
-        { "name": "Action Surge", "description": "You can take one additional action on your turn. This can be used 1 times per short rest" }
+        { "name": "Action Surge", "description": "You can take one additional action on your turn. This can be used 1 times per short rest." },
+        { "name": "Improved Critical", "description": "Your weapon attacks score a critical hit on a roll of 19 or 20." }
     ],
     "speed": 30,
     "subClass": "Champion",
