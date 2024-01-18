@@ -28,3 +28,11 @@
     height: 8px;
     width: 8px;
 }
+@media print {
+    .slot.active {
+        background-color: black;
+    }
+    .slot.inactive {
+        background-color: black;
+    }
+}
