@@ -21,10 +21,10 @@
     width: 10px;
 }
 .slot.active {
-    background-color: blue;
+    background-color: lightgreen;
 }
 .slot.inactive {
-    border: 1px solid blue;
+    border: 1px solid lightgreen;
     height: 8px;
     width: 8px;
 }
