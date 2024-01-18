@@ -15,9 +15,12 @@
     overflow-y: auto;
     padding: 10px;
     /* pointer-events: none; */
-    position: fixed;
+    position: absolute;
     right: 0;
     top: 0;
+}
+.spell-popup-parent {
+    position: relative;
 }
 .spell-name {
     cursor: pointer;
@@ -30,3 +33,19 @@
 .spells > div {
     padding-right: 10px;
 }
+@media (max-width: 767px) {
+    .spell-popup {
+        max-width: 80%;
+    }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+    .spell-popup {
+        max-width: 60%;
+    }
+}
+@media (min-width: 1025px) {
+    .spell-popup {
+        max-width: 40%;
+    }
+}
+

@@ -37,7 +37,7 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
     
     return (
         <div>
-            {(playerStats.spells && playerStats.spells.length > 0) && <div>
+            {(playerStats.spells && playerStats.spells.length > 0) && <div className="spell-popup-parent">
                 {spellDescription && (<div className="spell-popup" dangerouslySetInnerHTML={{ __html: spellDescription }} onClick={() => clearDescription()}></div>)}
                 <hr />
                 <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
