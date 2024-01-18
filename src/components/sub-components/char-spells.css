@@ -1,6 +1,6 @@
 .spell-popup {
     align-items: center;
-    background-color: rgba(0, 20, 0, 0.97);
+    background-color: rgba(0, 25, 0, 0.97);
     border: 1px solid var(--theme-highlight-color);
     border-radius: 10px;
     bottom: 0;
@@ -40,12 +40,12 @@
 }
 @media (min-width: 768px) and (max-width: 1024px) {
     .spell-popup {
-        max-width: 60%;
+        max-width: 70%;
     }
 }
 @media (min-width: 1025px) {
     .spell-popup {
-        max-width: 40%;
+        max-width: 60%;
     }
 }
 
