@@ -22,11 +22,13 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
     }
 
     const showDescription = (spell) => {
-        let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
-        if(spell.higher_level) {
-            html += `<br/>${spell.higher_level}`;
+        if(spell.desc) {
+            let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
+            if(spell.higher_level) {
+                html += `<br/>${spell.higher_level}`;
+            }
+            setSpellDescription(html);
         }
-        setSpellDescription(html);
     }
 
     const clearDescription = () => {

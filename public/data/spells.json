@@ -818,6 +818,30 @@
         ]
     },
     {
+        "index": "beast-bond",
+        "name": "Beast Bond",
+        "desc": [
+            "You establish a telepathic link with one beast you touch that is friendly to you or charmed by you. The spell fails if the beast’s Intelligence is 4 or higher. Until the spell ends, the link is active while you and the beast are within line of sight of each other. Through the link, the beast can understand your telepathic messages to it, and it can telepathically communicate simple emotions and concepts back to you. While the link is active, the beast gains advantage on attack rolls against any creature within 5 feet of you that you can see."
+        ],
+        "range": "Touch",
+        "components": [
+            "V",
+            "S",
+            "M"
+        ],
+        "materials": "A bit of fur wrapped in a cloth",
+        "ritual": false,
+        "duration": "Up to 10 minutes",
+        "concentration": true,
+        "casting_time": "1 action",
+        "level": 1,
+        "school": "Divination",
+        "classes": [
+            "Druid"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "bestow-curse",
         "name": "Bestow Curse",
         "desc": [
@@ -4467,6 +4491,45 @@
         "school": "Evocation",
         "classes": [
             "Wizard"
+        ],
+        "subclasses": []
+    },
+    {
+        "index": "frostbite",
+        "name": "Frostbite",
+        "desc": [
+            "You cause numbing frost to form on one creature that you can see within range. The target must make a Constitution saving throw. On a failed save, the target takes 1d6 cold damage, and it has disadvantage on the next weapon attack roll it makes before the end of its next turn."
+        ],
+        "higher_level": [
+            "The spell's damage increases by 1d6 when you reach 5th level (2d6), 11th level (3d6), and 17th level (4d6)."
+        ],
+        "range": "60 ft.",
+        "components": [
+            "V",
+            "S"
+        ],
+        "material": "",
+        "ritual": false,
+        "duration": "Instantaneous",
+        "concentration": false,
+        "casting_time": "1 action",
+        "level": 0,
+        "damage": {
+            "damage_type": "Cold",
+            "damage_at_slot_level": {
+                "1": "1d6",
+                "5": "2d6",
+                "11": "3d6",
+                "17": "4d6"
+            }
+        },
+        "dc": {
+            "dc_type": "CON",
+            "dc_success": "none"
+        },
+        "school": "Evocation",
+        "classes": [
+            "Druid"
         ],
         "subclasses": []
     },
