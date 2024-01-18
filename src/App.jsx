@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import './App.css'
 import CharSheet from './components/char-sheet'
 
@@ -7,14 +7,13 @@ function App() {
     const [characters, setCharacters] = React.useState([]);
     const [classes, setClasses] = React.useState([]);
     const [equipment, setEquipment] = React.useState([]);
-    const [showButton, setShowButton] = useState(false);
+    const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
 
     React.useEffect(() => {
         fetch('/dnd-char-sheet/data/classes.json')
             .then(response => response.json())
             .then(data => {
-                // console.log('Classes');
                 setClasses(data);                
             });
     }, []);
@@ -23,7 +22,6 @@ function App() {
         fetch('/dnd-char-sheet/data/equipment.json')
             .then(response => response.json())
             .then(data => {
-                // console.log('Equipment');
                 setEquipment(data);
             });
     }, []);
@@ -32,12 +30,11 @@ function App() {
         fetch('/dnd-char-sheet/data/spells.json')
             .then(response => response.json())
             .then(data => {
-                // console.log('Spells');
                 setSpells(data);
             });
     }, []);
 
-    useEffect(() => {
+    React.useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
             setShowButton(true);
@@ -49,8 +46,8 @@ function App() {
     }
 
     const handleUploadClick = async () => {
-        if (activeCharacter) setActiveCharacter(null);
-        if (characters.length > 0) setCharacters([]);
+        setActiveCharacter(null);
+        setCharacters([]);
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.json';
