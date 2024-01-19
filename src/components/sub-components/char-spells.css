@@ -1,25 +1,21 @@
-.spell-popup {
-    align-items: center;
+.spell-popup { /* must have a parent that has position relative */
     background-color: rgba(0, 25, 0, 0.97);
     border: 1px solid var(--theme-highlight-color);
     border-radius: 10px;
-    bottom: 0;
     color: #ffffff;
     cursor: pointer;
     font-size: 1.0em;
-    justify-content: center;
-    left: 0;
-    margin: auto;
-    max-height: fit-content;
-    max-width: 40%;
-    overflow-y: auto;
+    height: fit-content;
+    width: 60%;
+    left: 50%;
+    overflow-y: visible;
     padding: 10px;
-    /* pointer-events: none; */
     position: absolute;
-    right: 0;
-    top: 0;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 .spell-popup-parent {
+    overflow: visible;
     position: relative;
 }
 .spell-name {
@@ -35,17 +31,17 @@
 }
 @media (max-width: 767px) {
     .spell-popup {
-        max-width: 80%;
+        width: 80%;
     }
 }
 @media (min-width: 768px) and (max-width: 1024px) {
     .spell-popup {
-        max-width: 70%;
+        width: 70%;
     }
 }
 @media (min-width: 1025px) {
     .spell-popup {
-        max-width: 60%;
+        width: 60%;
     }
 }
 
