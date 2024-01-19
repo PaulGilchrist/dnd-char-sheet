@@ -7,7 +7,9 @@
         { "name": "Wisdom", "value": 16 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
@@ -41,5 +43,6 @@
         {"name": "Inflict Wounds", "prepared": true}
     ],
     "subClass": "Life",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Longbow","Longsword","Shortsword","Simple Weapons"]
 }

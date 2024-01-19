@@ -7,7 +7,9 @@
         { "name": "Wisdom", "value": 12 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Ranger",
@@ -37,5 +39,6 @@
         {"name": "Hunter's Mark", "prepared": true}
     ],
     "subClass": "",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
 }

@@ -7,7 +7,9 @@
         { "name": "Wisdom", "value": 14 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Chaotic Good",
+    "armorProficiencies": ["Light Armor"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Rogue",
@@ -32,5 +34,6 @@
     "speed": 30,
     "spells": [],
     "subClass": "Theif",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Crossbow, hand","Longsword","Rapier","Shortsword","Simple Weapons"]
 }

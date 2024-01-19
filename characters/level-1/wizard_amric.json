@@ -7,7 +7,9 @@
         { "name": "Wisdom", "value": 12 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Neutral Good",
+    "armorProficiencies": [],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Wizard",
@@ -17,7 +19,7 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "languages": ["Common", "Elvish"],
+    "languages": ["Common","Dwarvish","Elvish","Gnomish","Halfling"],
     "level": 1,
     "name": "Amric",
     "race": "High Elf",
@@ -43,5 +45,6 @@
         {"name": "Shield", "prepared": true}
     ],
     "subClass": "",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Crossbow, light","Dagger","Dart","Longbow","Longsword","Quarterstaff","Shortbow","Shortsword","Sling"]
 }

@@ -7,7 +7,9 @@
         { "name": "Wisdom", "value": 12 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [
         { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP" }
@@ -31,5 +33,6 @@
     "specialActions": [],
     "speed": 30,
     "subClass": "Champion",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
 }
