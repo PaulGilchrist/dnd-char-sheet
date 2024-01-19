@@ -50,14 +50,14 @@ function CharAbilities({ characterClass, playerStats }) {
 
     return (
         <div className='abilities'>
-            <div><b>Ability</b></div>
+            <div className='left'><b>Ability</b></div>
             <div><b>Score</b></div>
             <div><b>Bonus</b></div>
             <div><b>Save</b></div>
             <div className='left'><b>Skills</b></div>
             {abilities.map((ability) => {
                 return <React.Fragment key={ability.name}>
-                    <div>{ability.name}</div>
+                    <div className='left'>{ability.name}</div>
                     <div>{ability.value}</div>
                     <div>{signFormatter.format(ability.bonus)}</div>
                     <div>{signFormatter.format(ability.save)}</div>

@@ -7,6 +7,7 @@
         { "name": "Wisdom", "value": 12 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [],
     "alignment": "Neutral Good",
     "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,

@@ -2,3 +2,8 @@
     max-width: 800px;
     padding: 10px;
 }
+@media print {
+    .char-sheet {
+        padding: 0;
+    }
+}

@@ -7,6 +7,9 @@
         { "name": "Wisdom", "value": 15 },
         { "name": "Charisma", "value": 10 }
     ],
+    "actions": [
+        { "name": "Wild Shape", "description": "Magically assume the shape of a beast that you have seen before twice per short rest." }
+    ],
     "alignment": "Neutral Good",
     "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
@@ -27,8 +30,7 @@
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "specialActions": [
         { "name": "Loraleth's Cat", "description": "AC 14, HP 4, Speed 40 ft." },
-        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" },
-        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest" }
+        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" }
     ],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
     "speed": 30,

@@ -43,6 +43,10 @@ button:focus-visible {
 .clickable {
     cursor: pointer;
 }
+hr {
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
 .left {
     text-align: left;
 }

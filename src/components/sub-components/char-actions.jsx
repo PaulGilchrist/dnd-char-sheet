@@ -156,7 +156,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     return (
         <div>
             <div>
-                <span className='sectionHeader'>Action Attacks </span>({playerStats.attacksPerAction} per action)
+                <span className='sectionHeader'>Actions</span>{ playerStats.attacksPerAction > 1 && (<span> {playerStats.attacksPerAction} attacks per turn</span>)}
                 <div className='attacks'>
                     <div className='left'><b>Name</b></div>
                     <div><b>Range</b></div>
@@ -175,13 +175,15 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
                     })}
                 </div>
                 <br />
-                <b>Base Actions: </b><br />
-                {actions.join(', ')}
+                {playerStats.actions.map((action) => {
+                    return <div key={action.name}><b>{action.name}:</b> {action.description}</div>;
+                })}
+                <div><b>Base Actions:</b> {actions.join(', ')}</div>
             </div>
             <hr />
             <div>
                 {attacks.find((attack) => attack.type === 'Bonus Action') && <div>
-                    <div className='sectionHeader'>Bonus Action Attacks</div>
+                    <div className='sectionHeader'>Bonus Actions</div>
                     <div className='attacks'>
                         <div className='left'><b>Name</b></div>
                         <div><b>Range</b></div>

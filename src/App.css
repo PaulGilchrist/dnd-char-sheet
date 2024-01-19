@@ -1,6 +1,7 @@
 button {
     color: #aaa;
-    margin: 10px;
+    margin-left: 10px;
+    margin-top: 10px;
 }
 
 .active {
