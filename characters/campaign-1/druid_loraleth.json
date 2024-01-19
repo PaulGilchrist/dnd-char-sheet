@@ -8,6 +8,7 @@
         { "name": "Charisma", "value": 10 }
     ],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Druid",
@@ -25,9 +26,9 @@
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "specialActions": [
+        { "name": "Loraleth's Cat", "description": "AC 14, HP 4, Speed 40 ft." },
         { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" },
-        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest" },
-        { "name": "Loraleth's Cat", "description": "AC 14, HP 4, Speed 40 ft." }
+        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest" }
     ],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
     "speed": 30,
@@ -43,5 +44,6 @@
         {"name": "Spike Growth", "prepared": true}
     ],
     "subClass": "Circle of the Land - Coast",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Club","Dagger","Dart","Javelin","Longbow","Longsword","Mace","Quarterstaff","Scimitar","Shortsword","Sickle","Sling","Spear"]
 }

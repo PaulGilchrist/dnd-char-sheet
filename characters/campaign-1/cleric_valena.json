@@ -8,6 +8,7 @@
         { "name": "Charisma", "value": 10 }
     ],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
@@ -25,7 +26,10 @@
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "specialActions": [
-        { "name": "Channel Divinity", "description": "You can channel divine energy to fuel magical effects a number of times per short rest" }
+        { "name": "Channel Divinity: Preserve Life", "description": "As an action, you can restore 15 HP. Choose any creatures within 30 ft. of you, and divide those hit points among them. This feature can restore a creature to no more than half of its hit point maximum. You can’t use this feature on an undead or a construct." },
+        { "name": "Channel Divinity: Turn Undead", "description": "As an action, you present your holy symbol and speak a prayer censuring the undead. Each undead that can see or hear you within 30 feet of you must make a WIS saving throw (DC 13). If the creature fails its saving throw, it is turned for 1 minute or until it takes any damage. A turned creature must spend its turns trying to move as far away from you as it can, and it can’t willingly move to a space within 30 feet of you. It also can’t take reactions. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If there’s nowhere to move, the creature can use the Dodge action." },
+        { "name": "Disciple of Life", "description": "Whenever you use a spell of 1st level or higher to restore HP, the creature regains additional HP equal to 2 + the spell's level." },
+        { "name": "Mask of the Wild", "description": "You can attempt to hide even when you are only lightly obscured." }
     ],
     "skillProficiencies": ["Animal Handling","Medicine","Perception","Religion","Survival"],
     "speed": 35,
@@ -45,5 +49,6 @@
         {"name": "Spiritual Weapon", "prepared": true}
     ],
     "subClass": "Life",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Longbow","Longsword","Shortsword","Simple Weapons"]
 }

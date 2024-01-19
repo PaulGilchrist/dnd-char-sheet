@@ -13,10 +13,9 @@ function CharSummary2({ playerStats }) {
                 {playerStats.immunities.join(', ')}
             </div>}
             {(playerStats.vulnerabilities.length > 0) && <b>Vulnerabilities: </b>}{(playerStats.vulnerabilities.length > 0) && playerStats.vulnerabilities.join(', ')}
-            <div><b>Senses: </b>{playerStats.senses.map((sense) => {
-                return `${sense.name.toLowerCase()} ${sense.value}`;
-            }).join(', ')}
-            </div>
+            <div><b>Senses: </b>{playerStats.senses.map((sense) => { return `${sense.name.toLowerCase()} ${sense.value}`;}).join(', ')}</div>
+            <div><b>Armor Proficiencies: </b>{playerStats.armorProficiencies.join(', ')}</div>
+            <div><b>Weapon Proficiencies: </b>{playerStats.weaponProficiencies.join(', ')}</div>
             <b>Languages: </b>{playerStats.languages.join(', ')}<br />
         </div>
     )

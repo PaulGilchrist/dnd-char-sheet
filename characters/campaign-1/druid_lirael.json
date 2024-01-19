@@ -8,6 +8,7 @@
         { "name": "Charisma", "value": 12 }
     ],
     "alignment": "Neutral Good",
+    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Druid",
@@ -25,8 +26,9 @@
     "resistances": [],
     "senses": [{ "name": "Darkvision", "value": "60 ft." }],
     "specialActions": [
-        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" },
-        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest" }
+        { "name": "Mask of the Wild", "description": "You can attempt to hide even when you are only lightly obscured." },
+        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover." },
+        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest." }
     ],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
     "speed": 30,
@@ -44,5 +46,6 @@
         {"name": "Spider Climb", "prepared": true}
     ],
     "subClass": "Circle of the Land - Forest",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Club","Dagger","Dart","Javelin","Longbow","Longsword","Mace","Quarterstaff","Scimitar","Shortsword","Sickle","Sling","Spear"]
 }

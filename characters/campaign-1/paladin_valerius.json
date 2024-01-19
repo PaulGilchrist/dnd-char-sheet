@@ -8,6 +8,7 @@
         { "name": "Charisma", "value": 15 }
     ],
     "alignment": "Lawful Good",
+    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
     "attacksPerAction": 1,
     "bonusActions": [
         { "name": "Channel Divinity: Vow of Enmity", "description": "You can choose a creature you can see within 10 ft. of you and gain advantage on attack rolls against it for 1 minute or until it drops to 0 HP or falls unconscious." }
@@ -45,5 +46,6 @@
         {"name": "Protection from Evil and Good", "prepared": true}
     ],
     "subClass": "Beast Master",
-    "vulnerabilities": []
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
 }
