@@ -1,0 +1,47 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 12 },
+        { "name": "Dexterity", "value": 16 },
+        { "name": "Constitution", "value": 14 },
+        { "name": "Intelligence", "value": 8 },
+        { "name": "Wisdom", "value": 14 },
+        { "name": "Charisma", "value": 12 }
+    ],
+    "actions": [
+        { "name": "Primeval Awareness", "description": "Expend one ranger spell slot (1 minute per level of spell slot) to sense whether any aberrations, celestials, dragons, elementals, fey, fiends, or undead are present within 1 mile of you (or within up to 6 miles if you are in your favored terrain). This feature doesn't reveal the creatures' location or number." }
+    ],
+    "alignment": "Neutral Good",
+    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Ranger",
+    "fightingStyle": "Archery",
+    "immunities": ["Magical Sleep"],
+    "inventory": {
+        "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)", "Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Arrows","Studded Leather","Longbow","Longsword","Dagger","Ring of Command"],
+        "gold": 10
+    },
+    "languages": ["Common","Elvish","Goblin","Orc"],
+    "level": 3,
+    "name": "Seraphina Windrunner",
+    "race": "Half-Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "specialActions": [
+        { "name": "Favored Enemy", "description": "Humanoids - You have advantage on Survival checks to track your favored enemies, as well as on INT checks to recall information about them." },
+        { "name": "Natural Explorer", "description": "Forest - You have a favored terrain type. Your proficiency bonus is doubled for proficient skills when you make an INT or WIS check related to it. While traveling for an hour or more in your chosen terrain, difficult terrain doesn't slow your group's travel, your group can't become lost except by magical means, you remain alert to danger even when you are engaged in another activity, you can move stealthily at a normal pace (while alone), you find twice as much food while foraging, and while tracking creatures, you learn the exact number, sizes, and how long ago they passed through the area." },
+        { "name": "Beast Master", "description": "You gain a beast companion that accompanies you on your adventures and is trained to fight alongside you. The beast obeys your commands and takes its turn on your initiative. On your turn, you can command the beast where to move (no action required by you) or take the Attack, Dash, Disengage, or Help action. If you don't issue a command, the beast takes the Dodge action." }
+    ],
+    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
+    "speed": 30,
+    "spells": [
+        {"name": "Detect Magic", "prepared": true},
+        {"name": "Goodberry", "prepared": true},
+        {"name": "Hunter's Mark", "prepared": true}
+    ],
+    "subClass": "Beast Master",
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
+}

@@ -1,0 +1,51 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 12 },
+        { "name": "Dexterity", "value": 10 },
+        { "name": "Constitution", "value": 13 },
+        { "name": "Intelligence", "value": 15 },
+        { "name": "Wisdom", "value": 15 },
+        { "name": "Charisma", "value": 10 }
+    ],
+    "actions": [
+        { "name": "Wild Shape", "description": "Magically assume the shape of a beast that you have seen before twice per short rest." }
+    ],
+    "alignment": "Neutral Good",
+    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Druid",
+    "immunities": ["Magical Sleep"],
+    "inventory": {
+        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Arrows","Chain Shirt","Cloak of Cats","Longbow","Scimitar","Dagger"],
+        "gold": 8
+    },
+    "languages": ["Celestial","Common","Druidic","Elvish","Primordial","Undercommon"],
+    "level": 3,
+    "name": "Loraleth Fundraea",
+    "race": "High Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "specialActions": [
+        { "name": "Loraleth's Cat", "description": "AC 14, HP 4, Speed 40 ft." },
+        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover" }
+    ],
+    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+    "speed": 30,
+    "spells": [
+        {"name": "Guidance", "prepared": true},
+        {"name": "Mending", "prepared": true},
+        {"name": "Produce Flame", "prepared": true},
+        {"name": "Shocking Grasp", "prepared": true},
+        {"name": "Cure Wounds", "prepared": true},
+        {"name": "Ice Knife", "prepared": true},
+        {"name": "Mirror Image", "prepared": true},
+        {"name": "Misty Step", "prepared": true},
+        {"name": "Spike Growth", "prepared": true}
+    ],
+    "subClass": "Circle of the Land - Coast",
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Club","Dagger","Dart","Javelin","Longbow","Longsword","Mace","Quarterstaff","Scimitar","Shortsword","Sickle","Sling","Spear"]
+}

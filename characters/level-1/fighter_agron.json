@@ -1,0 +1,38 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 13 },
+        { "name": "Dexterity", "value": 16 },
+        { "name": "Constitution", "value": 16 },
+        { "name": "Intelligence", "value": 10 },
+        { "name": "Wisdom", "value": 12 },
+        { "name": "Charisma", "value": 10 }
+    ],
+    "actions": [],
+    "alignment": "Neutral Good",
+    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
+    "attacksPerAction": 1,
+    "bonusActions": [
+        { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP" }
+    ],
+    "class": "Fighter",
+    "fightingStyle": "Archery",
+    "immunities": [],
+    "inventory": {
+        "backpack": ["Blanket","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],
+        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
+        "gold": 10
+    },
+    "languages": ["Common", "Elvish"],
+    "level": 1,
+    "name": "Agron",
+    "race": "Human",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
+    "specialActions": [],
+    "speed": 30,
+    "subClass": "Champion",
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
+}

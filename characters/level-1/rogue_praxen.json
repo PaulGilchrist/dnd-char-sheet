@@ -1,0 +1,39 @@
+{
+    "abilities": [
+        { "name": "Strength", "value": 10 },
+        { "name": "Dexterity", "value": 16 },
+        { "name": "Constitution", "value": 14 },
+        { "name": "Intelligence", "value": 12 },
+        { "name": "Wisdom", "value": 14 },
+        { "name": "Charisma", "value": 10 }
+    ],
+    "actions": [],
+    "alignment": "Chaotic Good",
+    "armorProficiencies": ["Light Armor"],
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Rogue",
+    "expertise": ["Sleight of Hand","Thieves' Tools"],
+    "immunities": ["Magical Sleep"],
+    "inventory": {
+        "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)", "Rope, Silk (50 feet)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Arrows","Studded Leather","Clothes, Common","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
+        "gold": 10
+    },
+    "languages": ["Common", "Elvish", "Thieves' Cant"],
+    "level": 1,
+    "name": "Praxen",
+    "race": "Half-Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
+    "specialActions": [
+        { "name": "Sneak Attack", "description": "Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack with a finesse or ranged weapon if you have advantage on the attack roll. You don’t need advantage on the attack roll if another enemy of the target is within 5 ft. of it, that enemy isn’t incapacitated, and you don’t have disadvantage on the attack roll." }
+    ],
+    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
+    "speed": 30,
+    "spells": [],
+    "subClass": "Theif",
+    "vulnerabilities": [],
+    "weaponProficiencies": ["Crossbow, hand","Longsword","Rapier","Shortsword","Simple Weapons"]
+}
