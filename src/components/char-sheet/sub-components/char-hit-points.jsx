@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../services/local-storage'
+import storage from '../../../services/local-storage'
 import HiddenInput from './hidden-input'
 
 function CharHitPoints({ characterClass, playerStats }) {

@@ -1,6 +1,10 @@
 import React from 'react'
+import { saveAs } from 'file-saver';
 import './App.css'
-import CharSheet from './components/char-sheet'
+import CharSheet from './components/char-sheet/char-sheet'
+import Initiative from './components/initiative/initiative'
+import Utils from './services/utils'
+
 
 function App() {
     const [activeCharacter, setActiveCharacter] = React.useState(null);
@@ -14,7 +18,7 @@ function App() {
         fetch('/dnd-char-sheet/data/classes.json')
             .then(response => response.json())
             .then(data => {
-                setClasses(data);                
+                setClasses(data);
             });
     }, []);
     React.useEffect(() => {
@@ -32,13 +36,40 @@ function App() {
             });
     }, []);
     React.useEffect(() => {
+        setActiveCharacter(null);
+        setCharacters([]);
+        const urls = [
+            '/dnd-char-sheet/characters/campaign/cleric_valena.json',
+            '/dnd-char-sheet/characters/campaign/druid_lirael.json',
+            '/dnd-char-sheet/characters/campaign/druid_loraleth.json',
+            '/dnd-char-sheet/characters/campaign/fighter_devin.json',
+            '/dnd-char-sheet/characters/campaign/monk_zareth.json',
+            '/dnd-char-sheet/characters/campaign/paladin_valerius.json',
+            '/dnd-char-sheet/characters/campaign/ranger_seraphina.json'
+        ];
+        const promises = urls.map(url => fetch(url).then(response => response.json()));
+        Promise.all(promises)
+            .then(data => {
+                setCharacters(data);
+            })
+            .catch(error => {
+                console.log(error);
+            });
+    }, []);
+    React.useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
             setShowButton(true);
         }
     }, [classes, equipment, spells]);
+    React.useEffect(() => {
+        setActiveCharacter(characters[0]);
+    }, [characters]);
     const handleCharacterClick = (character) => {
         setActiveCharacter(character);
+    }
+    const handleInitiativeClick = () => {
+        setActiveCharacter(null);
     }
     const handleUploadChange = async (event) => {
         const files = event.target.files;
@@ -60,20 +91,27 @@ function App() {
             })
         );
     };
+    const handleSaveClick = async () => {
+        let fileName = `${activeCharacter.class}-${Utils.getFirstName(activeCharacter.name)}.json`;
+        fileName = fileName.toLowerCase();
+        const json = JSON.stringify(activeCharacter, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        saveAs(blob, fileName);
+    };
     const handleUploadClick = async () => {
         setActiveCharacter(null);
         setCharacters([]);
         inputRef.current.click();
     };
-    if (characters.length > 0 && !activeCharacter) {
-        setActiveCharacter(characters[0]);
-    }
     return (
-        <div>
+        <div className="app">
             <input type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
-            {characters.length > 0 && characters.map((character) => { return (<button key={character.name} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{character.name}</button>) })}
-            {showButton && <button className="clickable upload no-print" onClick={handleUploadClick}>Upload Characters</button>}
-            {activeCharacter && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
+            {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
+            {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
+            {activeCharacter != null && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
+            {characters.length > 0 && activeCharacter == null && <Initiative characters={characters}></Initiative>}
+            <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>
+            <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>
         </div>
     )
 }

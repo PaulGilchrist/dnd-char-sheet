@@ -2,9 +2,9 @@ const storage = {
     get: (name, propertyName) => {
         // console.log(`${name} ${propertyName}`);
         const json = localStorage.getItem(name);
-        if(json) {
+        if (json) {
             const value = JSON.parse(json)[propertyName];
-            if(value) {
+            if (value) {
                 return value;
             }
         }
@@ -14,12 +14,12 @@ const storage = {
         // console.log(`${name} ${propertyName} ${value}`);
         const json = localStorage.getItem(name);
         let objValue = {};
-        if(json) { 
+        if (json) {
             objValue = JSON.parse(json);
         }
         objValue[propertyName] = value;
         localStorage.setItem(name, JSON.stringify(objValue));
-}
+    }
 }
 
 export default storage

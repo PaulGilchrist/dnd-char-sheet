@@ -1,0 +1,7 @@
+.initiative {
+    padding: 10px;
+}
+.initiative-row {
+    display: grid;
+    grid-template-columns: 100px 50px;
+}

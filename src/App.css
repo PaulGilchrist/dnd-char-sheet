@@ -1,15 +1,21 @@
+
+.app {
+    padding-bottom: 10px;
+}
 button {
     color: #aaa;
     margin-left: 10px;
     margin-top: 10px;
 }
-
-.active {
+button.active {
     background-color: green;
     color: #fff;
 }
-
-.upload {
+button.download {
+    background-color: darkgreen;
+    color: #eee;
+}
+button.mutted {
     background-color: grey;
     color: #000;
 }
