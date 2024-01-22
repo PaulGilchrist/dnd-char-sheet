@@ -36,29 +36,29 @@ function App() {
             });
     }, []);
     React.useEffect(() => {
-        setActiveCharacter(null);
-        setCharacters([]);
-        const urls = [
-            '/dnd-char-sheet/characters/campaign/cleric_valena.json',
-            '/dnd-char-sheet/characters/campaign/druid_lirael.json',
-            '/dnd-char-sheet/characters/campaign/druid_loraleth.json',
-            '/dnd-char-sheet/characters/campaign/fighter_devin.json',
-            '/dnd-char-sheet/characters/campaign/monk_zareth.json',
-            '/dnd-char-sheet/characters/campaign/paladin_valerius.json',
-            '/dnd-char-sheet/characters/campaign/ranger_seraphina.json'
-        ];
-        const promises = urls.map(url => fetch(url).then(response => response.json()));
-        Promise.all(promises)
-            .then(data => {
-                setCharacters(data);
-            })
-            .catch(error => {
-                console.log(error);
-            });
-    }, []);
+        if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+            const urls = [
+                '/dnd-char-sheet/characters/campaign/cleric_valena.json',
+                '/dnd-char-sheet/characters/campaign/druid_lirael.json',
+                '/dnd-char-sheet/characters/campaign/druid_loraleth.json',
+                '/dnd-char-sheet/characters/campaign/fighter_devin.json',
+                '/dnd-char-sheet/characters/campaign/monk_zareth.json',
+                '/dnd-char-sheet/characters/campaign/paladin_valerius.json',
+                '/dnd-char-sheet/characters/campaign/ranger_seraphina.json'
+            ];
+            const promises = urls.map(url => fetch(url).then(response => response.json()));
+            Promise.all(promises)
+                .then(data => {
+                    setCharacters(data);
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+    }, [classes, equipment, spells]);
     React.useEffect(() => {
         // Do not allow uploading character until everything is ready
-        if (document.readyState === 'complete' && classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+        if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
             setShowButton(true);
         }
     }, [classes, equipment, spells]);
