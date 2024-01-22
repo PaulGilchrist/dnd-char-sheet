@@ -1,11 +1,19 @@
 /* eslint-disable react/prop-types */
+import React from 'react'
 import './char-summary.css'
 
+import storage from '../../../services/local-storage'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
 import CharMonkKi from './char-monk-ki'
 
 function CharSummary({ allEquipment, characterClass, playerStats }) {
+    const [hasInspiration, setHasInspiration] = React.useState(false);
+    React.useEffect(() => {
+        let value = storage.get(playerStats.name, 'hasInspiration');
+        setHasInspiration(value ? value : false);
+    }, [playerStats]);
+
     const dexterityBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Dexterity').value - 10) / 2);
     const wisdomBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Wisdom').value - 10) / 2);
 
@@ -60,6 +68,12 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
         armorClass += 2;
     }
 
+    const handleToggleInspiraction = () => {
+        const newValue = !hasInspiration;
+        storage.set(playerStats.name, 'hasInspiration', newValue);
+        setHasInspiration(newValue);
+    }
+
     return (
         <div>
             <div className='name'>{playerStats.name}</div>
@@ -75,7 +89,10 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
                     <b>Initiative: </b>+{initiative}<br/>
                     <CharGold playerStats={playerStats}></CharGold>
                 </div>
-                <CharMonkKi playerStats={playerStats}></CharMonkKi>
+                <div>
+                    <b>Inspiration: </b><input type="checkbox" checked={hasInspiration} onChange={handleToggleInspiraction}/><br/>
+                    {playerStats.class == 'Monk' && playerStats.level > 2 && <CharMonkKi playerStats={playerStats}></CharMonkKi>}
+                </div>
             </div>
         </div>           
     )
