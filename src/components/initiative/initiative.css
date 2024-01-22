@@ -1,5 +1,10 @@
 .initiative {
+    font-size: 1.5em;
     padding: 10px;
+}
+.initiative input {
+    font-size: 1.0em;
+    margin-top: 3px;
 }
 .initiative-row {
     display: grid;
