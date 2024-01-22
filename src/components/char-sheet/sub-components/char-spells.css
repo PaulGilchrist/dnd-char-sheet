@@ -1,3 +1,10 @@
+.spell-abilities {
+    align-items: center;
+    display: grid;
+    grid-template-columns: auto auto auto auto auto;
+    margin-bottom: 0px;
+    margin-top: -10px;
+}
 .spell-popup { /* must have a parent that has position relative */
     background-color: rgba(0, 25, 0, 0.97);
     border: 1px solid var(--theme-highlight-color);

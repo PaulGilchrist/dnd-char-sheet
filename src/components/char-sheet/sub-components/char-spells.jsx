@@ -10,8 +10,11 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
     const [spellDescription, setSpellDescription] = React.useState(null);
 
     // Add spell details
+    const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
     let spells = [];
+    let bonus = 0;
     if(playerStats.spells && playerStats.spells.length > 0) {
+        bonus = Math.floor((playerStats.abilities.find((ability) => ability.name === characterClass.spell_casting_ability).value - 10) / 2);
         spells = playerStats.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
             if(spellDetail) {
@@ -40,7 +43,13 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
             {(playerStats.spells && playerStats.spells.length > 0) && <div className="spell-popup-parent">
                 {spellDescription && (<div className="spell-popup" dangerouslySetInnerHTML={{ __html: spellDescription }} onClick={() => clearDescription()}></div>)}
                 <hr />
-                <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
+                <div className='spell-abilities'>
+                    <div className="sectionHeader">Spells</div>
+                    <div><b>Attack (to hit):</b> +{bonus+proficiency}</div>
+                    <div><b>Modifier:</b> +{bonus}</div>
+                    <div><b>Save DC:</b> {8+bonus+proficiency}</div>
+                    <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
+                </div>
                 <div className='spells'>
                     <div className='left'><b>Spell</b></div>
                     <div><b>Level</b></div>

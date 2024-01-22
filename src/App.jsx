@@ -110,8 +110,8 @@ function App() {
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
             {characters.length > 0 && activeCharacter == null && <Initiative characters={characters}></Initiative>}
-            <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>
-            <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>
+            {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
+            {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>}
         </div>
     )
 }

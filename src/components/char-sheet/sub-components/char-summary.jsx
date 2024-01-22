@@ -3,6 +3,7 @@ import './char-summary.css'
 
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
+import CharMonkKi from './char-monk-ki'
 
 function CharSummary({ allEquipment, characterClass, playerStats }) {
     const dexterityBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Dexterity').value - 10) / 2);
@@ -64,12 +65,17 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
             <div className='name'>{playerStats.name}</div>
             <div className='summary'>{playerStats.race} {playerStats.class} ({playerStats.subClass ? `${playerStats.subClass.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <div className='summaryGrid'>
-                <div><b>Armor Class: </b>{armorClass}</div>
-                <div><b>Proficiency: </b>+{proficiency}</div>
-                <CharHitPoints characterClass={characterClass} playerStats={playerStats}></CharHitPoints>
-                <div><b>Initiative: </b>+{initiative}</div>
-                <div><b>Speed: </b>{playerStats.speed} ft.</div>
-                <CharGold playerStats={playerStats}></CharGold>
+                <div>
+                    <b>Armor Class: </b>{armorClass}<br/>
+                    <CharHitPoints characterClass={characterClass} playerStats={playerStats}></CharHitPoints>
+                    <b>Speed: </b>{playerStats.speed} ft.<br/>
+                </div>
+                <div>
+                    <b>Proficiency: </b>+{proficiency}<br/>
+                    <b>Initiative: </b>+{initiative}<br/>
+                    <CharGold playerStats={playerStats}></CharGold>
+                </div>
+                <CharMonkKi playerStats={playerStats}></CharMonkKi>
             </div>
         </div>           
     )
