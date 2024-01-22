@@ -27,7 +27,7 @@ function CharKiPoints({ playerStats }) {
 
     return (
         <div className="clickable" onClick={handleInputToggle} onKeyDown={handleInputToggle} tabIndex={0}>
-            <b>Ki Points:</b> {playerStats.level}/<HiddenInput handleInputToggle={handleInputToggle} handleValueChange={(value) => handleValueChange(value)} showInput={showInput} value={value}></HiddenInput> <span className="text-muted">(max/current)</span>
+            <b>Ki Points:</b> {playerStats.level}/<HiddenInput handleInputToggle={handleInputToggle} handleValueChange={(value) => handleValueChange(value)} showInput={showInput} value={value}></HiddenInput> <span className="text-muted">(max/cur)</span>
         </div>
     )
 }
