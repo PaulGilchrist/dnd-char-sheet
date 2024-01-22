@@ -85,6 +85,7 @@ function App() {
                     reader.onload = (event) => {
                         const data = JSON.parse(event.target.result);
                         setCharacters((characters) => [...characters, data]);
+                        setActiveCharacter(characters[0]);
                         resolve();
                     };
                 });
@@ -99,8 +100,6 @@ function App() {
         saveAs(blob, fileName);
     };
     const handleUploadClick = async () => {
-        setActiveCharacter(null);
-        setCharacters([]);
         inputRef.current.click();
     };
     return (
