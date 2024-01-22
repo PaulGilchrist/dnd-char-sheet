@@ -1,6 +1,8 @@
 html {
-    -webkit-text-size-adjust: none; /* or 100% */
+    -webkit-text-size-adjust: none;
+    /* or 100% */
 }
+
 :root {
     --theme-highlight-color: lightgreen;
     background-color: #111;
@@ -67,6 +69,12 @@ hr {
 
 .text-muted {
     opacity: 0.5;
+}
+
+@media only screen and (orientation: portrait) {
+    body {
+        transform: rotate(90deg);
+    }
 }
 
 @media (prefers-color-scheme: light) {
