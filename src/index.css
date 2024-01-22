@@ -73,6 +73,8 @@ hr {
 
 @media only screen and (orientation: portrait) { /* and (max-width: 767px) */
     body {
+        width: 100vh;
+        height: 100vw;
         transform: rotate(90deg);
         transform-origin: top left;
     }
