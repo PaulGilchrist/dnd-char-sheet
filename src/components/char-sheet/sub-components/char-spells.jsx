@@ -3,12 +3,11 @@ import React from 'react'
 
 
 import './char-spells.css'
+import CharPopup from './char-popup'
 import CharSpellSlots from './char-spell-slots'
 
 function CharSpells({ allSpells, characterClass, playerStats }) {
-
-    const [spellDescription, setSpellDescription] = React.useState(null);
-
+    const [popupHtml, setPopupHtml] = React.useState(null);
     // Add spell details
     const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
     let spells = [];
@@ -24,24 +23,20 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
         });
     }
 
-    const showDescription = (spell) => {
+    const showPopup = (spell) => {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
             if(spell.higher_level) {
                 html += `<br/>${spell.higher_level}`;
             }
-            setSpellDescription(html);
+            setPopupHtml(html);
         }
-    }
-
-    const clearDescription = () => {
-        setSpellDescription(null);
     }
     
     return (
         <div>
             {(playerStats.spells && playerStats.spells.length > 0) && <div className="spell-popup-parent">
-                {spellDescription && (<div className="spell-popup" dangerouslySetInnerHTML={{ __html: spellDescription }} onClick={() => clearDescription()}></div>)}
+                {popupHtml && (<CharPopup html={popupHtml} onClick={() => setPopupHtml(null)}></CharPopup>)}
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader">Spells</div>
@@ -72,7 +67,7 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
                             }
                         }
                         return <React.Fragment key={spell.name}>
-                            <div className='left spell-name' onClick={() => showDescription(spell)}>{spell.name}</div>
+                            <div className='left spell-name' onClick={() => showPopup(spell)}>{spell.name}</div>
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                             <div>{spell.prepared ? 'prepared' : spell.ritual ? 'ritual' : ''}</div>
                             <div>{spell.casting_time}</div>

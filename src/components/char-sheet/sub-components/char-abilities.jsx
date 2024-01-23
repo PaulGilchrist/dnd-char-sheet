@@ -3,10 +3,12 @@ import React from 'react'
 
 import './char-abilities.css'
 
+import CharPopup from './char-popup'
 import { passiveSkills } from '../../../data/passive-skills.js';
 import { skills } from '../../../data/skills.js';
 
-function CharAbilities({ characterClass, playerStats }) {
+function CharAbilities({ allAbilityScores, characterClass, playerStats }) {
+    const [popupHtml, setPopupHtml] = React.useState(null);
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
     const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
 
@@ -48,23 +50,33 @@ function CharAbilities({ characterClass, playerStats }) {
         return mappedAbility
     });
 
+    const showPopup = (name) => {
+        const abilityScore = allAbilityScores.find((abilityScore) => abilityScore.full_name === name);
+        if(abilityScore) {
+            setPopupHtml(`<h3>${name}</h3>${abilityScore.desc}<br/>`);
+        }
+    }
+
     return (
-        <div className='abilities'>
-            <div className='left'><b>Ability</b></div>
-            <div><b>Score</b></div>
-            <div><b>Bonus</b></div>
-            <div><b>Save</b></div>
-            <div className='left'><b>Skills</b></div>
+        <div className='abilities-popup-parent'>
+            {popupHtml && (<CharPopup html={popupHtml} onClick={() => setPopupHtml(null)}></CharPopup>)}
+            <div className='abilities'>
+                <div className='left'><b>Ability</b></div>
+                <div><b>Score</b></div>
+                <div><b>Bonus</b></div>
+                <div><b>Save</b></div>
+                <div className='left'><b>Skills</b></div>
+            </div>
             {abilities.map((ability) => {
-                return <React.Fragment key={ability.name}>
-                    <div className='left'>{ability.name}</div>
+                return <div key={ability.name} className='abilities'>
+                    <div className='clickable left' onClick={() => showPopup(ability.name)}>{ability.name}</div>
                     <div>{ability.value}</div>
                     <div>{signFormatter.format(ability.bonus)}</div>
                     <div>{signFormatter.format(ability.save)}</div>
                     <div className='left'>{ability.skills.map((skill) => {
                         return `${skill.name}  ${signFormatter.format(skill.bonus)}`;
                     }).join(', ')}</div>
-                </React.Fragment>;
+                </div>;
             })}
         </div>
     )

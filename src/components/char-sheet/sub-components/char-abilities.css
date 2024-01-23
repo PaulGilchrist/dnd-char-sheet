@@ -6,3 +6,7 @@
 .abilities > div {
     padding-right: 10px;
 }
+.abilities-popup-parent {
+    overflow: visible;
+    position: relative;
+}

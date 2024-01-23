@@ -7,6 +7,7 @@ import Utils from './services/utils'
 
 
 function App() {
+    const [abilityScores, setAbilityScores] = React.useState(null);
     const [activeCharacter, setActiveCharacter] = React.useState(null);
     const [characters, setCharacters] = React.useState([]);
     const [classes, setClasses] = React.useState([]);
@@ -14,6 +15,13 @@ function App() {
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const inputRef = React.useRef(null);
+    React.useEffect(() => {
+        fetch('/dnd-char-sheet/data/ability-scores.json')
+            .then(response => response.json())
+            .then(data => {
+                setAbilityScores(data);
+            });
+    }, []);
     React.useEffect(() => {
         fetch('/dnd-char-sheet/data/classes.json')
             .then(response => response.json())
@@ -55,13 +63,13 @@ function App() {
                     console.log(error);
                 });
         }
-    }, [classes, equipment, spells]);
+    }, [abilityScores, classes, equipment, spells]);
     React.useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
             setShowButton(true);
         }
-    }, [classes, equipment, spells]);
+    }, [abilityScores, classes, equipment, spells]);
     React.useEffect(() => {
         setActiveCharacter(characters[0]);
     }, [characters]);
@@ -107,7 +115,7 @@ function App() {
             <input type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
-            {activeCharacter != null && <CharSheet allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
+            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
             {characters.length > 0 && activeCharacter == null && <Initiative characters={characters}></Initiative>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>}<br/>
