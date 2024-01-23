@@ -11,6 +11,7 @@
     width: 60%;
     left: 50%;
     overflow-y: scroll;
+    overscroll-behavior: contain;
     padding: 10px;
     position: absolute;
     text-align: left;
