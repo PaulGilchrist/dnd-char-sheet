@@ -33,7 +33,7 @@
         { "name": "Disciple of Life", "description": "Whenever you use a spell of 1st level or higher to restore HP, the creature regains additional HP equal to 2 + the spell's level." },
         { "name": "Mask of the Wild", "description": "You can attempt to hide even when you are only lightly obscured." }
     ],
-    "skillProficiencies": ["Animal Handling","Medicine","Perception","Religion","Survival"],
+    "skillProficiencies": ["Animal Handling","Insight","Medicine","Perception","Survival"],
     "speed": 35,
     "spells": [
         {"name": "Guidance", "prepared": true},
