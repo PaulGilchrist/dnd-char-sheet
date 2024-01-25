@@ -1,3 +1,7 @@
+button.reset {
+    color: var(--theme-highlight-color);
+
+}
 .initiative {
     font-size: 1.5em;
     padding: 10px;
@@ -5,6 +9,10 @@
 .initiative input {
     font-size: 1.0em;
     margin-top: 3px;
+}
+.initiative p {
+    font-size: 0.8em;
+    max-width: 600px
 }
 .initiative-row {
     display: grid;
