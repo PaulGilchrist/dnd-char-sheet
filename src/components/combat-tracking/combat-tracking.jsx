@@ -6,82 +6,124 @@ import './combat-tracking.css'
 
 function CombatTracking({ characters }) {
     const [creatures, setCreatures] = React.useState([]);
-    React.useEffect(() => {
-        const numOrMobs = 5
-        const json = localStorage.getItem('combatTrackedCreatures');
-        let creatures = []
-        if (json) {
-            creatures = JSON.parse(json);
-        } else {
-            creatures = characters.map((character) => { return { name: Utils.getFirstName(character.name), initiative: '', notes: '' } });
-            for (let i = 0; i < numOrMobs; i++) {
-                creatures.push({ name: `Mob ${i + 1}`, initiative: '', notes: '' });
-            }
-        }
-        setCreatures(creatures);
-    }, []);
+    const [numOfNpc, setNumOfNpc] = React.useState(5);
 
-    const handleNotesChange = (name, note) => {
-        updateNotes(name, event.target.value);
-    };
-    const handleNotesKeyDown = (event) => {
-        if (event.key === "Enter") {
-            updateNotes(name, event);
+    React.useEffect(() => {
+        const json = localStorage.getItem('combatTrackedCreatures');
+        let creatureList = []
+        if (json) {
+            creatureList = JSON.parse(json);
+            if (!creatureList[0].id) { // For people using the old JSON
+                localStorage.removeItem('combatTrackedCreatures');
+                creatureList = setupCreatures();
+            }
+        } else {
+            creatureList = setupCreatures();
         }
-    };
-    const handleInitiativeChange = (name, event) => {
-        updateInitiative(name, event.target.value);
-    };
-    const handleInitiativeKeyDown = (event) => {
-        if (event.key === "Enter") {
-            updateInitiative(name, event);
-        }
-    };
+        setCreatures(creatureList);
+    }, []);
+    // const countAndFilterNPCs = (objArray, npcCountRequested) => {
+    //     const newObjArray = [...objArray];
+    //     // Add or remove NPC as needed to end with exactly numOfNpc
+    //     let npcCount = 0;
+    //     for (let i = 0; i < newObjArray.length; i++) {
+    //         if (newObjArray[i].type === 'npc') {
+    //             npcCount++;
+    //             if (npcCount > npcCountRequested) {
+    //                 newObjArray.splice(i, 1);
+    //                 i--;
+    //             }
+    //         }
+    //     }
+    //     if (npcCount < npcCountRequested) {
+    //         for (let i = npcCount; i < npcCountRequested; i++) {
+    //             newObjArray.push({ id: Utils.guid(), name: `NPC ${i + 1}`, type: 'npc', initiative: '', notes: '' });
+    //         }
+    //     }
+    //     return newObjArray;
+    // }
     const handleClear = () => {
         if (window.confirm('Are you sure you want to clear all combat status?')) {
-            creatures.forEach((creature) => {
-                creature.initiative = '';
-                creature.notes = '';
-            });
-            creatures.sort((a, b) => a.name.localeCompare(b.name)); // asc
-            localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatures));
-            setCreatures([...creatures]);
+            const resetCreatures = setupCreatures();
+            localStorage.setItem('combatTrackedCreatures', JSON.stringify(resetCreatures));
+            setCreatures([...resetCreatures]);
         }
     };
-    const updateInitiative = (name, value) => {
-        const index = creatures.findIndex(creature => creature.name === name);
-        creatures[index].initiative = value;
-        creatures.sort((a, b) => b.initiative - a.initiative); // desc
-        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatures));
-        setCreatures([...creatures]);
+    const handleInitiativeChange = (name, value) => {
+        const creatureList = [...creatures];
+        const index = creatureList.findIndex((creature) => creature.name === name);
+        creatureList[index].initiative = value;
+        creatureList.sort((a, b) => b.initiative - a.initiative); // desc
+        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        setCreatures(creatureList);
     };
-    const updateNotes = (name, value) => {
-        const index = creatures.findIndex(creature => creature.name === name);
-        creatures[index].notes = value;
-        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatures));
-        setCreatures([...creatures]);
+    const handleNameChange = (name, value) => {
+        const creatureList = [...creatures];
+        const index = creatureList.findIndex((creature) => creature.name === name);
+        creatureList[index].name = value;
+        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        setCreatures(creatureList);
+    };
+    const handleNotesChange = (name, value) => {
+        const creatureList = [...creatures];
+        const index = creatureList.findIndex((creature) => creature.name === name);
+        creatureList[index].notes = value;
+        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        setCreatures(creatureList);
+    };
+    const handleAddNpc = () => {
+        const creatureList = [...creatures];
+        creatureList.push({ id: Utils.guid(), name: `NPC ${numOfNpc + 1}`, type: 'npc', initiative: '', notes: '' });
+        setNumOfNpc(numOfNpc+1);
+        setCreatures(creatureList);
+    };
+    const handleRemoveNpc = () => {
+        const creatureList = [...creatures];
+        for (let i = creatureList.length-1; i >= 0; i--) {
+            if (creatureList[i].type === 'npc') {
+                creatureList.splice(i, 1);
+                break;
+            }
+        }
+        setNumOfNpc(numOfNpc-1);
+        setCreatures(creatureList);
+    };
+    const setupCreatures = () => {
+        const creatureList = characters.map((character) => { return { id: Utils.guid(), name: Utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
+        creatureList.sort((a, b) => a.name.localeCompare(b.name)); // asc
+        for (let i = 0; i < numOfNpc; i++) {
+            creatureList.push({ id: Utils.guid(), name: `NPC ${i + 1}`, type: 'npc', initiative: '', notes: '' });
+        }
+        return creatureList;
     };
     return (
-        <div className='combat'>
+        <div className='combat-tracking'>
             <h4>Combat Tracking</h4>
             <div className='creatures'>
                 <header>Name</header>
-                <header>Initiative</header>
+                <header className="initiative">Initiative</header>
                 <header>Notes</header>
-                {creatures.map((creature) => <React.Fragment key={creature.name}>
-                    <div>{creature.name}</div>
+                {creatures.map((creature) => <React.Fragment key={creature.id}>
+                    {creature.type === 'player' && <div>{creature.name}</div>}
+                    {creature.type === 'npc' && <div>
+                        <input
+                            onChange={(event) => handleNameChange(creature.name, event.target.value)}
+                            tabIndex={0}
+                            type="text"
+                            value={creature.name}
+                            size='10'
+                        />
+                    </div>}
                     <input
                         min="0"
-                        onChange={(event) => handleInitiativeChange(creature.name, event)}
-                        onKeyDown={(event) => handleInitiativeKeyDown(creature.name, event)}
+                        onChange={(event) => handleInitiativeChange(creature.name, event.target.value)}
                         tabIndex={0}
                         type="number"
                         value={creature.initiative}
                     />
                     <input
                         placeholder="hit points, conditions, etc."
-                        onChange={(event) => handleNotesChange(creature.name, event)}
-                        onKeyDown={(event) => handleNotesKeyDown(creature.name, event)}
+                        onChange={(event) => handleNotesChange(creature.name, event.target.value)}
                         tabIndex={0}
                         type="text"
                         value={creature.notes}
@@ -90,6 +132,8 @@ function CombatTracking({ characters }) {
             </div>
             <br />
             <button className='clear' onClick={handleClear}>Clear</button>
+            <button className='clear' onClick={handleAddNpc}>&#8593; NPC</button>
+            <button className='clear' onClick={handleRemoveNpc}>&#8595; NPC</button>
         </div>
     )
 }

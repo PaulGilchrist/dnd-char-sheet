@@ -1,19 +1,25 @@
 button.clear {
     color: var(--color-highlight);
 }
-.combat {
+.combat-tracking {
     font-size: 1.5em;
     padding: 10px;
 }
-.combat input {
+.combat-tracking input {
     font-size: 1.0em;
     margin-top: 3px;
 }
-.combat header {
+.combat-tracking header {
     background-color: var(--background-color-highlight);
     color: var(--color-highlight);
 }
-.combat > .creatures {
+.combat-tracking header.initiative {
+    margin-left: -10px;
+}
+.combat-tracking > .creatures {
     display: grid;
-    grid-template-columns: 100px 100px minmax(auto, 600px);
+    grid-template-columns: 150px 80px minmax(auto, 580px);
+}
+.combat-tracking .npcInput {
+    margin-left: 10px;
 }
