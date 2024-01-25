@@ -129,9 +129,11 @@ function CombatTracking({ characters }) {
                 </React.Fragment>)}
             </div>
             <br />
-            <button onClick={handleClear}>Clear</button>
-            <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
-            <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
+            <div className='combat-tracking-buttons'>
+                <button onClick={handleClear}>Clear</button>
+                <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
+                <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
+            </div>
         </div>
     )
 }

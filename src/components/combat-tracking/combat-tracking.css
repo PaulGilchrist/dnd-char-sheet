@@ -3,6 +3,13 @@
     padding: 10px;
 }
 
+.combat-tracking-buttons {
+    align-items: center;
+    display: grid;
+    grid-template-columns: 100px 140px 240px;
+    max-width: 950px;
+}
+
 .combat-tracking button {
     color: var(--color-highlight);
     margin: 0;
