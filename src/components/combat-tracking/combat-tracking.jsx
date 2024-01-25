@@ -22,26 +22,6 @@ function CombatTracking({ characters }) {
         }
         setCreatures(creatureList);
     }, []);
-    // const countAndFilterNPCs = (objArray, npcCountRequested) => {
-    //     const newObjArray = [...objArray];
-    //     // Add or remove NPC as needed to end with exactly numOfNpc
-    //     let npcCount = 0;
-    //     for (let i = 0; i < newObjArray.length; i++) {
-    //         if (newObjArray[i].type === 'npc') {
-    //             npcCount++;
-    //             if (npcCount > npcCountRequested) {
-    //                 newObjArray.splice(i, 1);
-    //                 i--;
-    //             }
-    //         }
-    //     }
-    //     if (npcCount < npcCountRequested) {
-    //         for (let i = npcCount; i < npcCountRequested; i++) {
-    //             newObjArray.push({ id: Utils.guid(), name: `NPC ${i + 1}`, type: 'npc', initiative: '', notes: '' });
-    //         }
-    //     }
-    //     return newObjArray;
-    // }
     const handleClear = () => {
         if (window.confirm('Are you sure you want to clear all combat status?')) {
             const resetCreatures = setupCreatures();
@@ -81,12 +61,14 @@ function CombatTracking({ characters }) {
         const creatureList = [...creatures];
         for (let i = creatureList.length-1; i >= 0; i--) {
             if (creatureList[i].type === 'npc') {
-                creatureList.splice(i, 1);
+                if (creatureList[i].initiative == '' || window.confirm(`${creatureList[i].name} has initiative assigned.  Remove anyway?`)) {
+                    creatureList.splice(i, 1);
+                    setNumOfNpc(numOfNpc-1);
+                    setCreatures(creatureList);
+                }
                 break;
             }
         }
-        setNumOfNpc(numOfNpc-1);
-        setCreatures(creatureList);
     };
     const setupCreatures = () => {
         const creatureList = characters.map((character) => { return { id: Utils.guid(), name: Utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
@@ -131,9 +113,9 @@ function CombatTracking({ characters }) {
                 </React.Fragment>)}
             </div>
             <br />
-            <button className='clear' onClick={handleClear}>Clear</button>
-            <button className='clear' onClick={handleAddNpc}>&#8593; NPC</button>
-            <button className='clear' onClick={handleRemoveNpc}>&#8595; NPC</button>
+            <button onClick={handleClear}>Clear</button>
+            <button onClick={handleAddNpc}>&#8593; NPC</button>
+            <button onClick={handleRemoveNpc}>&#8595; NPC</button>
         </div>
     )
 }
