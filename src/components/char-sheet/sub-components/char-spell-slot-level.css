@@ -21,10 +21,10 @@
     width: 10px;
 }
 .slot.active {
-    background-color: var(--theme-highlight-color);    ;
+    background-color: var(--color-highlight);    ;
 }
 .slot.inactive {
-    border: 1px solid var(--theme-highlight-color);    ;
+    border: 1px solid var(--color-highlight);    ;
     height: 8px;
     width: 8px;
 }

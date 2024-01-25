@@ -3,7 +3,8 @@ html {
 }
 
 :root {
-    --theme-highlight-color: lightgreen;
+    --color-highlight: lightgreen;
+    --background-color-highlight: #131;
     background-color: #111;
     color: rgba(255, 255, 255, 0.87);
     color-scheme: light dark;
@@ -18,7 +19,7 @@ html {
 }
 
 b {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-weight: 600;
 }
 
@@ -52,37 +53,37 @@ button:focus-visible {
 }
 
 h1 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 2.5em;
     margin: 0;
 }
 
 h2 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 2.0em;
     margin: 0;
 }
 
 h3 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 1.75em;
     margin: 0;
 }
 
 h4 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 1.5em;
     margin: 0;
 }
 
 h5 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 1.25em;
     margin: 0;
 }
 
 h6 {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 1.0em;
     margin: 0;
 }
@@ -97,7 +98,7 @@ hr {
 }
 
 .sectionHeader {
-    color: var(--theme-highlight-color);
+    color: var(--color-highlight);
     font-size: 1.05em;
     font-weight: 800;
 }
@@ -108,7 +109,8 @@ hr {
 
 @media (prefers-color-scheme: light) {
     :root {
-        --theme-highlight-color: darkgreen;
+        --background-color-highlight: #efe;
+        --color-highlight: darkgreen;
         color: #213547;
         background-color: #ffffff;
     }
@@ -124,7 +126,7 @@ hr {
 
 @media print {
     :root {
-        --theme-highlight-color: black;
+        --color-highlight: black;
     }
 
     .no-print {

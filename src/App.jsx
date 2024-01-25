@@ -2,7 +2,7 @@ import React from 'react'
 import { saveAs } from 'file-saver';
 import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
-import Initiative from './components/initiative/initiative'
+import CombatTracking from './components/combat-tracking/combat-tracking'
 import Utils from './services/utils'
 
 
@@ -116,7 +116,7 @@ function App() {
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
-            {characters.length > 0 && activeCharacter == null && <Initiative characters={characters}></Initiative>}
+            {characters.length > 0 && activeCharacter == null && <CombatTracking characters={characters}></CombatTracking>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>}<br/>
         </div>
