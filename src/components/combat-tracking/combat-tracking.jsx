@@ -5,10 +5,15 @@ import Utils from '../../services/utils'
 import './combat-tracking.css'
 
 function CombatTracking({ characters }) {
+    const [combatRound, setCombatRound] = React.useState(1);
     const [creatures, setCreatures] = React.useState([]);
     const [numOfNpc, setNumOfNpc] = React.useState(5);
 
     React.useEffect(() => {
+        const round = localStorage.getItem('combatRound');
+        if(round) {
+            setCombatRound(round);
+        }
         const json = localStorage.getItem('combatTrackedCreatures');
         let creatureList = []
         if (json) {
@@ -27,6 +32,7 @@ function CombatTracking({ characters }) {
             const resetCreatures = setupCreatures();
             localStorage.setItem('combatTrackedCreatures', JSON.stringify(resetCreatures));
             setCreatures([...resetCreatures]);
+            setCombatRound(1);
         }
     };
     const handleInitiativeChange = (name, value) => {
@@ -70,6 +76,16 @@ function CombatTracking({ characters }) {
             }
         }
     };
+    const handleAddCombatRound = () => {
+        const round = combatRound + 1;
+        localStorage.setItem('combatRound', round);
+        setCombatRound(round);
+    };
+    const handleRemoveCombatRound = () => {
+        const round = combatRound - 1;
+        localStorage.setItem('combatRound', round);
+        setCombatRound(round)
+    };
     const setupCreatures = () => {
         const creatureList = characters.map((character) => { return { id: Utils.guid(), name: Utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
         creatureList.sort((a, b) => a.name.localeCompare(b.name)); // asc
@@ -80,7 +96,7 @@ function CombatTracking({ characters }) {
     };
     return (
         <div className='combat-tracking'>
-            <h4>Combat Tracking</h4>
+            <h4>Combat Tracking (round {combatRound})</h4>
             <div className='creatures'>
                 <header>Name</header>
                 <header className="initiative">Initiative</header>
@@ -114,8 +130,8 @@ function CombatTracking({ characters }) {
             </div>
             <br />
             <button onClick={handleClear}>Clear</button>
-            <button onClick={handleAddNpc}>&#8593; NPC</button>
-            <button onClick={handleRemoveNpc}>&#8595; NPC</button>
+            <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
+            <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
         </div>
     )
 }

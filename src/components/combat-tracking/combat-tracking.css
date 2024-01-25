@@ -1,25 +1,53 @@
-.combat-tracking button {
-    color: var(--color-highlight);
-}
 .combat-tracking {
     font-size: 1.5em;
     padding: 10px;
 }
+
+.combat-tracking button {
+    color: var(--color-highlight);
+    margin: 0;
+}
+
 .combat-tracking input {
     font-size: 1.0em;
     margin-top: 3px;
 }
+
 .combat-tracking header {
     background-color: var(--background-color-highlight);
     color: var(--color-highlight);
 }
+
 .combat-tracking header.initiative {
     margin-left: -10px;
 }
-.combat-tracking > .creatures {
+
+.combat-tracking>.creatures {
     display: grid;
     grid-template-columns: 150px 80px minmax(auto, 580px);
 }
-.combat-tracking .npcInput {
-    margin-left: 10px;
+
+.combat-tracking-header {
+    display: flex;
+    align-items: center;
+}
+
+.combat-tracking-title {
+    color: var(--color-highlight);
+    font-size: 1.5em;
+    font-weight: 600;
+}
+
+.combat-tracking-subtitle {
+    font-size: 1.0em;
+    padding: 10px;
+}
+
+.combat-tracking .up-down {
+    margin-left: 20px;
+}
+
+.combat-tracking .up-down button {
+    padding: 5px 7px;
+    margin-left: 2px;
 }
