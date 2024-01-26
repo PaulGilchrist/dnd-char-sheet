@@ -1,4 +1,6 @@
 /* eslint-disable react/prop-types */
+import React from 'react'
+import utils from '../../services/utils'
 import CharAbilities from './sub-components/char-abilities'
 import CharActions from './sub-components/char-actions'
 import CharInventory from './sub-components/char-inventory'
@@ -9,21 +11,25 @@ import CharSummary from './sub-components/char-summary'
 import CharSummary2 from './sub-components/char-summary2'
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allEquipment, allSpells, playerStats }) {
-    const characterClass = allClasses.find((characterClass) => characterClass.name === playerStats.class);
+function CharSheet({ allAbilityScores, allClasses, allEquipment, allSpells, playerSummary }) {
+    const [playerStats, setPlayerStats] = React.useState(null);
+    React.useEffect(() => {
+        const playerStats = utils.getPlayerStats(allClasses, playerSummary);
+        setPlayerStats(playerStats);
+    }, [allClasses, playerSummary]);    
     
     return (
-        <div className='char-sheet'>
-            <CharSummary allEquipment={allEquipment} characterClass={characterClass} playerStats={playerStats}></CharSummary><hr />
-            <CharAbilities allAbilityScores={allAbilityScores} characterClass={characterClass} playerStats={playerStats}></CharAbilities><hr />
+        <div>{playerStats && <div className='char-sheet'>
+            <CharSummary allEquipment={allEquipment} playerStats={playerStats}></CharSummary><hr />
+            <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
-            <CharActions allEquipment={allEquipment} allSpells={allSpells} characterClass={characterClass} playerStats={playerStats}></CharActions><hr />
+            <CharActions allEquipment={allEquipment} allSpells={allSpells} playerStats={playerStats}></CharActions><hr />
             <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions>
-            <CharSpells allSpells={allSpells} characterClass={characterClass} playerStats={playerStats}></CharSpells><hr />
+            <CharSpells allSpells={allSpells} playerStats={playerStats}></CharSpells><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
-        </div>
-    )
+        </div>}
+    </div>)
 }
 
 export default CharSheet

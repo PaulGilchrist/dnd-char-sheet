@@ -1,17 +1,12 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-
+import { actions } from '../../../data/actions';
 import './char-actions.css'
 
-import utils from '../../../services/utils'
-import { actions } from '../../../data/actions';
-
-function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
+function CharActions({ allEquipment, allSpells, playerStats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
-    const strength = utils.getAbility(playerStats, 'Strength');
-    const dexterity = utils.getAbility(playerStats, 'Dexterity');
-    const proficiency = utils.getProficiency(playerStats);
-    // Calculations - Attacks
+    const strength = playerStats.abilities.find((ability) => ability.name === 'Strength');
+    const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
     const attacks = [];
     // Find ranged weapon in the character's equipment and add it to attacks
     let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
@@ -33,7 +28,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             rangedWeaponName = rangedWeaponName.substring(3);
         }
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
-        let toHitBonus = dexterity.bonus + proficiency + magicBonus;
+        let toHitBonus = dexterity.bonus + playerStats.proficiency + magicBonus;
         if (playerStats.fightingStyle === 'Archery') {
             toHitBonus += 2;
         }
@@ -75,7 +70,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${mainHandWeapon.name}`,
             "damage": `${damage}+${bonus}`,
             "damageType": mainHandWeapon.damage.damage_type,
-            "hitBonus": bonus + proficiency,
+            "hitBonus": bonus + playerStats.proficiency,
             "range": mainHandWeapon.range.normal,
             "type": "Action"
         });
@@ -97,7 +92,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
                 "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${offHandWeapon.name}`,
                 "damage": damage,
                 "damageType": offHandWeapon.damage.damage_type,
-                "hitBonus": bonus + proficiency + magicBonus,
+                "hitBonus": bonus + playerStats.proficiency + magicBonus,
                 "range": offHandWeapon.range.normal,
                 "type": "Bonus Action"
             });
@@ -109,7 +104,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             "name": 'Unarmed Strike',
             "damage": `1d4+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
-            "hitBonus": dexterity.bonus + proficiency,
+            "hitBonus": dexterity.bonus + playerStats.proficiency,
             "range": 5,
             "type": "Action"
         });
@@ -117,7 +112,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             "name": 'Unarmed Strike',
             "damage": `1d4+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
-            "hitBonus": dexterity.bonus + proficiency,
+            "hitBonus": dexterity.bonus + playerStats.proficiency,
             "range": 5,
             "type": "Bonus Action"
         });
@@ -141,7 +136,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
                 } else if (spell.damage.damage_at_character_level) {
                     damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
                 }
-                const spellAbility = utils.getAbility(playerStats, characterClass.spell_casting_ability);
+                const spellAbility = playerStats.abilities.find((ability) => ability.name === playerStats.class.spell_casting_ability);
                 attacks.push({
                     "name": spell.name,
                     "damage": damage,

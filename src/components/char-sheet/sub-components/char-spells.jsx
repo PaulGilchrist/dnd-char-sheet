@@ -1,19 +1,17 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import './char-spells.css'
-import utils from '../../../services/utils'
 import CharPopup from './char-popup'
 import CharSpellSlots from './char-spell-slots'
 
-function CharSpells({ allSpells, characterClass, playerStats }) {
+function CharSpells({ allSpells, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     // Add spell details
-    const proficiency = utils.getProficiency(playerStats);
     let spells = [];
     let spellAbility = null;
     if(playerStats.spells && playerStats.spells.length > 0) {
-        spellAbility = utils.getAbility(playerStats, characterClass.spell_casting_ability);
-            spells = playerStats.spells.map(spell => {
+        spellAbility = playerStats.abilities.find((ability) => ability.name === playerStats.class.spell_casting_ability);
+        spells = playerStats.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
             if(spellDetail) {
                 return {...spellDetail, prepared: spell.prepared};
@@ -39,10 +37,10 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader">Spells</div>
-                    <div><b>Attack (to hit):</b> +{spellAbility.bonus+proficiency}</div>
+                    <div><b>Attack (to hit):</b> +{spellAbility.bonus + playerStats.proficiency}</div>
                     <div><b>Modifier:</b> +{spellAbility.bonus}</div>
-                    <div><b>Save DC:</b> {8+spellAbility.bonus+proficiency}</div>
-                    <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
+                    <div><b>Save DC:</b> {8 + spellAbility.bonus + playerStats.proficiency}</div>
+                    <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>
                 <div className='spells'>
                     <div className='left'><b>Spell</b></div>

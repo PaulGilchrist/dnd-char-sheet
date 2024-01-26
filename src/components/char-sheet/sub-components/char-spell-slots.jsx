@@ -3,11 +3,11 @@
 import './char-spell-slots.css'
 import CharSpellSlotLevel from './char-spell-slot-level'
 
-function CharSpellSlots({ characterClass, playerStats }) {
+function CharSpellSlots({ playerStats }) {
 
-    let classLevel = characterClass.class_levels[playerStats.level-1];
+    let classLevel = playerStats.class.class_levels[playerStats.level-1];
     if(!classLevel.spellcasting) {
-        let subclass = characterClass.subclasses.find((subclass) => subclass.name === playerStats.subClass)
+        let subclass = playerStats.class.subclasses.find((subclass) => subclass.name === playerStats.subClass)
         classLevel = subclass.class_levels[playerStats.level-3]
     }
 

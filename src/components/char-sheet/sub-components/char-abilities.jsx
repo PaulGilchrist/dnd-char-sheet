@@ -1,44 +1,11 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-
+import CharPopup from './char-popup'
 import './char-abilities.css'
 
-import utils from '../../../services/utils'
-import CharPopup from './char-popup'
-import { passiveSkills } from '../../../data/passive-skills.js';
-import { skills } from '../../../data/skills.js';
-
-function CharAbilities({ allAbilityScores, characterClass, playerStats }) {
+function CharAbilities({ allAbilityScores, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
-    const proficiency = utils.getProficiency(playerStats);
-    // Calculations - Abilities 
-    const abilityProficiencies = utils.getClassProficiencies(characterClass);
-    const abilities = playerStats.abilities.map((ability) => {
-        const mappedAbility = utils.getAbility(playerStats, ability.name);
-        const proficient = abilityProficiencies.includes(ability.name);
-        mappedAbility.save = proficient ? mappedAbility.bonus + proficiency : mappedAbility.bonus;
-        mappedAbility.skills = skills.filter(skill => skill.ability === ability.name);
-        mappedAbility.skills = mappedAbility.skills.map((skill) => {
-            const proficient = playerStats.skillProficiencies.includes(skill.name);
-            skill.bonus = proficient ? mappedAbility.bonus + proficiency : mappedAbility.bonus;
-            if(playerStats.expertise && playerStats.expertise.includes(skill.name)) {
-                skill.bonus += proficiency; // Rogues can double their proficiency for two selected areas of expertise
-            }
-            if (passiveSkills.includes(skill.name)) {
-                // Add skill based senses
-                const newSense = {
-                    name: `passive ${skill.name}`,
-                    value: 10 + skill.bonus
-                }
-                if (!playerStats.senses.find((sense) => sense.name === newSense.name)) {
-                    playerStats.senses.push(newSense);
-                }
-            }
-            return skill
-        });
-        return mappedAbility
-    });
 
     const showPopup = (name) => {
         const abilityScore = allAbilityScores.find((abilityScore) => abilityScore.full_name === name);
@@ -57,7 +24,7 @@ function CharAbilities({ allAbilityScores, characterClass, playerStats }) {
                 <div><b>Save</b></div>
                 <div className='left'><b>Skills</b></div>
             </div>
-            {abilities.map((ability) => {
+            {playerStats.abilities.map((ability) => {
                 return <div key={ability.name} className='abilities'>
                     <div className='clickable left' onClick={() => showPopup(ability.name)}>{ability.name}</div>
                     <div>{ability.totalScore}</div>

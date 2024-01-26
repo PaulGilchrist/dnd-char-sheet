@@ -3,22 +3,19 @@ import React from 'react'
 import './char-summary.css'
 
 import storage from '../../../services/local-storage'
-import utils from '../../../services/utils'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
 import CharMonkKi from './char-monk-ki'
 
-function CharSummary({ allEquipment, characterClass, playerStats }) {
+function CharSummary({ allEquipment, playerStats }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
     React.useEffect(() => {
         let value = storage.get(playerStats.name, 'hasInspiration');
         setHasInspiration(value ? value : false);
     }, [playerStats]);
-    const dexterity = utils.getAbility(playerStats, 'Dexterity');
-    const wisdom = utils.getAbility(playerStats, 'Wisdom');
-    // Calculations - Character Summary 
-    const initiative = dexterity.bonus;
-    const proficiency = utils.getProficiency(playerStats);
+    const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
+    const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
+
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
         // Does this item have a magic bonus?
@@ -76,16 +73,16 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
     return (
         <div>
             <div className='name'>{playerStats.name}</div>
-            <div className='summary'>{playerStats.race} {playerStats.class} ({playerStats.subClass ? `${playerStats.subClass.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
+            <div className='summary'>{playerStats.race} {playerStats.class.name} ({playerStats.subClass ? `${playerStats.subClass.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <div className='summaryGrid'>
                 <div>
                     <b>Armor Class: </b>{armorClass}<br/>
-                    <CharHitPoints characterClass={characterClass} playerStats={playerStats}></CharHitPoints>
+                    <CharHitPoints playerStats={playerStats}></CharHitPoints>
                     <b>Speed: </b>{playerStats.speed} ft.<br/>
                 </div>
                 <div>
-                    <b>Proficiency: </b>+{proficiency}<br/>
-                    <b>Initiative: </b>+{initiative}<br/>
+                    <b>Proficiency: </b>+{playerStats.proficiency}<br/>
+                    <b>Initiative: </b>+{playerStats.initiative}<br/>
                     <CharGold playerStats={playerStats}></CharGold>
                 </div>
                 <div>
