@@ -1,41 +1,124 @@
 {
     "abilities": [
-        { "name": "Strength", "value": 13 },
-        { "name": "Dexterity", "value": 16 },
-        { "name": "Constitution", "value": 16 },
-        { "name": "Intelligence", "value": 10 },
-        { "name": "Wisdom", "value": 12 },
-        { "name": "Charisma", "value": 10 }
+        {
+            "name": "Strength",
+            "abilityImprovements": 0,
+            "baseScore": 12,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Dexterity",
+            "abilityImprovements": 0,
+            "baseScore": 15,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Constitution",
+            "abilityImprovements": 0,
+            "baseScore": 15,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Intelligence",
+            "abilityImprovements": 0,
+            "baseScore": 9,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Wisdom",
+            "abilityImprovements": 0,
+            "baseScore": 11,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Charisma",
+            "abilityImprovements": 0,
+            "baseScore": 9,
+            "miscBonus": 0,
+            "racialBonus": 1
+        }
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
+    "armorProficiencies": [
+        "Heavy Armor",
+        "Light Armor",
+        "Medium Armor",
+        "Shields"
+    ],
     "attacksPerAction": 1,
     "bonusActions": [
-        { "name": "Second Wind", "description": "Once per short rest, you can use a bonus action to regain 1d10 + 3 HP" }
+        {
+            "name": "Second Wind",
+            "description": "Once per short rest, you can use a bonus action to regain 1d10 + 3 HP"
+        }
     ],
     "class": "Fighter",
     "fightingStyle": "Archery",
     "immunities": [],
     "inventory": {
-        "backpack": ["Blanket","Clothes,Traveler's","Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Scroll or Charm Person"],
+        "backpack": [
+            "Blanket",
+            "Clothes,Traveler's",
+            "Fishing Tackle",
+            "Grappling Hook",
+            "Playing Card Set",
+            "Rations (5 days)",
+            "Rope, Silk (50 feet)",
+            "String",
+            "Waterskin"
+        ],
+        "equipped": [
+            "Chain Mail",
+            "Longbow",
+            "Scimitar",
+            "Scimitar",
+            "Scroll of Fireball",
+            "Scroll or Charm Person"
+        ],
         "gold": 10
     },
-    "languages": ["Common", "Elvish"],
+    "languages": [
+        "Common",
+        "Elvish"
+    ],
     "level": 3,
     "name": "Devin",
     "race": "Human",
     "reactions": [],
     "resistances": [],
-    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
-    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
+    "senses": [
+        {
+            "name": "Darkvision",
+            "value": "60 ft."
+        }
+    ],
+    "skillProficiencies": [
+        "Athletics",
+        "Intimidation",
+        "Perception",
+        "Survival"
+    ],
     "specialActions": [
-        { "name": "Action Surge", "description": "You can take one additional action on your turn. This can be used 1 times per short rest." },
-        { "name": "Improved Critical", "description": "Your weapon attacks score a critical hit on a roll of 19 or 20." }
+        {
+            "name": "Action Surge",
+            "description": "You can take one additional action on your turn. This can be used 1 times per short rest."
+        },
+        {
+            "name": "Improved Critical",
+            "description": "Your weapon attacks score a critical hit on a roll of 19 or 20."
+        }
     ],
     "speed": 30,
     "subClass": "Champion",
     "vulnerabilities": [],
-    "weaponProficiencies": ["Martial Weapons","Simple Weapons"]
+    "weaponProficiencies": [
+        "Martial Weapons",
+        "Simple Weapons"
+    ]
 }

@@ -1,53 +1,184 @@
 {
     "abilities": [
-        { "name": "Strength", "value": 8 },
-        { "name": "Dexterity", "value": 15 },
-        { "name": "Constitution", "value": 14 },
-        { "name": "Intelligence", "value": 10 },
-        { "name": "Wisdom", "value": 16 },
-        { "name": "Charisma", "value": 12 }
+        {
+            "name": "Strength",
+            "abilityImprovements": 0,
+            "baseScore": 8,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Dexterity",
+            "abilityImprovements": 0,
+            "baseScore": 13,
+            "miscBonus": 0,
+            "racialBonus": 2
+        },
+        {
+            "name": "Constitution",
+            "abilityImprovements": 0,
+            "baseScore": 14,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Intelligence",
+            "abilityImprovements": 0,
+            "baseScore": 10,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Wisdom",
+            "abilityImprovements": 0,
+            "baseScore": 15,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Charisma",
+            "abilityImprovements": 0,
+            "baseScore": 12,
+            "miscBonus": 0,
+            "racialBonus": 0
+        }
     ],
     "actions": [
-        { "name": "Wild Shape", "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest." }
+        {
+            "name": "Wild Shape",
+            "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest."
+        }
     ],
     "alignment": "Neutral Good",
-    "armorProficiencies": ["Light Armor","Medium Armor","Shields"],
+    "armorProficiencies": [
+        "Light Armor",
+        "Medium Armor",
+        "Shields"
+    ],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Druid",
-    "immunities": ["Magical Sleep"],
+    "immunities": [
+        "Magical Sleep"
+    ],
     "inventory": {
-        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Cloak of Elvenkind","Clothes, Traveler's","Leather","Longbow","Quarterstaff","Scimitar"],
+        "backpack": [
+            "Mess Kit",
+            "Playing Card Set",
+            "Rations (5 days)",
+            "Rope, Silk (50 feet)",
+            "Small Knife",
+            "Tinderbox",
+            "Torch",
+            "Totem",
+            "Waterskin"
+        ],
+        "equipped": [
+            "Cloak of Elvenkind",
+            "Clothes, Traveler's",
+            "Leather",
+            "Longbow",
+            "Quarterstaff",
+            "Scimitar"
+        ],
         "gold": 30
     },
-    "languages": ["Common","Druidic","Elvish","Sylvan"],
+    "languages": [
+        "Common",
+        "Druidic",
+        "Elvish",
+        "Sylvan"
+    ],
     "level": 3,
     "name": "Lirael",
     "race": "Wood Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
-    "specialActions": [
-        { "name": "Mask of the Wild", "description": "You can attempt to hide even when you are only lightly obscured." },
-        { "name": "Natural Recovery", "description": "Once per long rest during a short rest, you choose expended spell slots to recover." }
+    "senses": [
+        {
+            "name": "Darkvision",
+            "value": "60 ft."
+        }
     ],
-    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+    "specialActions": [
+        {
+            "name": "Mask of the Wild",
+            "description": "You can attempt to hide even when you are only lightly obscured."
+        },
+        {
+            "name": "Natural Recovery",
+            "description": "Once per long rest during a short rest, you choose expended spell slots to recover."
+        }
+    ],
+    "skillProficiencies": [
+        "Animal Handling",
+        "Arcana",
+        "History",
+        "Nature",
+        "Perception"
+    ],
     "speed": 30,
     "spells": [
-        {"name": "Druidcraft", "prepared": true},
-        {"name": "Frostbite", "prepared": true},
-        {"name": "Shillelagh", "prepared": true},
-        {"name": "Beast Bond", "prepared": true},
-        {"name": "Detect Magic", "prepared": true},
-        {"name": "Detect Poison and Disease", "prepared": true},
-        {"name": "Ice Knife", "prepared": true},
-        {"name": "Barkskin", "prepared": true},
-        {"name": "Pass Without Trace", "prepared": true},
-        {"name": "Protection from Poison", "prepared": true},
-        {"name": "Spider Climb", "prepared": true}
+        {
+            "name": "Druidcraft",
+            "prepared": true
+        },
+        {
+            "name": "Frostbite",
+            "prepared": true
+        },
+        {
+            "name": "Shillelagh",
+            "prepared": true
+        },
+        {
+            "name": "Beast Bond",
+            "prepared": true
+        },
+        {
+            "name": "Detect Magic",
+            "prepared": true
+        },
+        {
+            "name": "Detect Poison and Disease",
+            "prepared": true
+        },
+        {
+            "name": "Ice Knife",
+            "prepared": true
+        },
+        {
+            "name": "Barkskin",
+            "prepared": true
+        },
+        {
+            "name": "Pass Without Trace",
+            "prepared": true
+        },
+        {
+            "name": "Protection from Poison",
+            "prepared": true
+        },
+        {
+            "name": "Spider Climb",
+            "prepared": true
+        }
     ],
     "subClass": "Circle of the Land - Forest",
     "vulnerabilities": [],
-    "weaponProficiencies": ["Club","Dagger","Dart","Javelin","Longbow","Longsword","Mace","Quarterstaff","Scimitar","Shortsword","Sickle","Sling","Spear"]
+    "weaponProficiencies": [
+        "Club",
+        "Dagger",
+        "Dart",
+        "Javelin",
+        "Longbow",
+        "Longsword",
+        "Mace",
+        "Quarterstaff",
+        "Scimitar",
+        "Shortsword",
+        "Sickle",
+        "Sling",
+        "Spear"
+    ]
 }
