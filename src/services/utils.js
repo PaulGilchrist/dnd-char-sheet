@@ -7,6 +7,9 @@ const utils = {
         const playerStats = utils.deepCopy(playerSummary);
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         playerStats.class = utils.deepCopy(allClasses.find((characterClass) => characterClass.name === playerSummary.class));
+        playerStats.class.subClass = utils.deepCopy(playerStats.class.subclasses.find((subclass) => subclass.name === playerStats.subClass));
+        delete playerStats.subClass; // We don't need this anymore
+        delete playerStats.class.subclasses; // We don't need these anymore
         playerStats.class.saving_throws = playerStats.class.saving_throws.map((savingThrow) => {
             switch (savingThrow) {
                 case 'STR': return 'Strength';
@@ -48,6 +51,7 @@ const utils = {
             }
             return ability;
         });
+        console.log(playerStats);
         return playerStats;
     },
     getFirstName: (fullName) => {
