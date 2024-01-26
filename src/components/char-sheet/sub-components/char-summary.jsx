@@ -3,6 +3,7 @@ import React from 'react'
 import './char-summary.css'
 
 import storage from '../../../services/local-storage'
+import utils from '../../../services/utils'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
 import CharMonkKi from './char-monk-ki'
@@ -13,13 +14,11 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
         let value = storage.get(playerStats.name, 'hasInspiration');
         setHasInspiration(value ? value : false);
     }, [playerStats]);
-
-    const dexterityBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Dexterity').value - 10) / 2);
-    const wisdomBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Wisdom').value - 10) / 2);
-
+    const dexterity = utils.getAbility(playerStats, 'Dexterity');
+    const wisdom = utils.getAbility(playerStats, 'Wisdom');
     // Calculations - Character Summary 
-    const initiative = dexterityBonus;
-    const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+    const initiative = dexterity.bonus;
+    const proficiency = utils.getProficiency(playerStats);
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
         // Does this item have a magic bonus?
@@ -34,7 +33,7 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
     });
     let addedBonus = 0;
     if(playerStats.class === 'Monk') {
-        addedBonus += wisdomBonus;
+        addedBonus += wisdom.bonus;
     } 
     if(playerStats.fightingStyle === 'Defense') {
         addedBonus += 1;
@@ -50,14 +49,14 @@ function CharSummary({ allEquipment, characterClass, playerStats }) {
         let armor = allEquipment.find((item) => item.name === armorName);
         armorClass = armor.armor_class.base + addedBonus + magicBonus;
         if(armor.armor_class.dex_bonus) {
-            let armorBonus = dexterityBonus;
+            let armorBonus = dexterity.bonus;
             if(armor.armor_class.max_bonus) {
                 armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
             }
             armorClass = armor.armor_class.base + armorBonus + addedBonus + magicBonus;
         }
     } else {
-        armorClass = 10 + dexterityBonus + addedBonus// Unarmored
+        armorClass = 10 + dexterity.bonus + addedBonus// Unarmored
     }
     // Check for an equipped magical shield, and if found increase AC
     let shield = playerStats.inventory.equipped.find(item => item.substring(3) === 'Shield');

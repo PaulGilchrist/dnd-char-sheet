@@ -3,14 +3,14 @@ import React from 'react'
 
 import './char-actions.css'
 
+import utils from '../../../services/utils'
 import { actions } from '../../../data/actions';
 
 function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
-    const strengthBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Strength').value - 10) / 2);
-    const dexterityBonus = Math.floor((playerStats.abilities.find((ability) => ability.name === 'Dexterity').value - 10) / 2);
-    const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
-
+    const strength = utils.getAbility(playerStats, 'Strength');
+    const dexterity = utils.getAbility(playerStats, 'Dexterity');
+    const proficiency = utils.getProficiency(playerStats);
     // Calculations - Attacks
     const attacks = [];
     // Find ranged weapon in the character's equipment and add it to attacks
@@ -33,13 +33,13 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             rangedWeaponName = rangedWeaponName.substring(3);
         }
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
-        let toHitBonus = dexterityBonus + proficiency + magicBonus;
+        let toHitBonus = dexterity.bonus + proficiency + magicBonus;
         if (playerStats.fightingStyle === 'Archery') {
             toHitBonus += 2;
         }
         attacks.push({
             "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${rangedWeapon.name}`,
-            "damage": `${rangedWeapon.damage.damage_dice}+${dexterityBonus + magicBonus}`,
+            "damage": `${rangedWeapon.damage.damage_dice}+${dexterity.bonus + magicBonus}`,
             "damageType": rangedWeapon.damage.damage_type,
             "hitBonus": toHitBonus,
             "range": rangedWeapon.range.normal,
@@ -66,7 +66,7 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
             meleeWeaponNames[0] = meleeWeaponNames[0].substring(3);
         }
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
-        let bonus = Math.max(strengthBonus, dexterityBonus) + magicBonus; // Assumes using finesse if dex build
+        let bonus = Math.max(strength.bonus, dexterity.bonus) + magicBonus; // Assumes using finesse if dex build
         let damage = mainHandWeapon.damage.damage_dice;
         if (playerStats.fightingStyle === 'Dueling' && meleeWeaponNames.length == 1) { // No dual wielding
             damage = mainHandWeapon.damage.damage_dice + 2;
@@ -107,17 +107,17 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
     if (playerStats.class === 'Monk') {
         attacks.push({
             "name": 'Unarmed Strike',
-            "damage": `1d4+${dexterityBonus}`,
+            "damage": `1d4+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
-            "hitBonus": dexterityBonus + proficiency,
+            "hitBonus": dexterity.bonus + proficiency,
             "range": 5,
             "type": "Action"
         });
         attacks.push({
             "name": 'Unarmed Strike',
-            "damage": `1d4+${dexterityBonus}`,
+            "damage": `1d4+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
-            "hitBonus": dexterityBonus + proficiency,
+            "hitBonus": dexterity.bonus + proficiency,
             "range": 5,
             "type": "Bonus Action"
         });
@@ -141,11 +141,12 @@ function CharActions({ allEquipment, allSpells, characterClass, playerStats }) {
                 } else if (spell.damage.damage_at_character_level) {
                     damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
                 }
+                const spellAbility = utils.getAbility(playerStats, characterClass.spell_casting_ability);
                 attacks.push({
                     "name": spell.name,
                     "damage": damage,
                     "damageType": spell.damage.damage_type,
-                    "hitBonus": Math.floor((playerStats.abilities.find((ability) => ability.name === characterClass.spell_casting_ability).value - 10) / 2),
+                    "hitBonus": spellAbility.bonus,
                     "range": spell.range,
                     "type": spell.casting_time === "1 action" ? "Action" : "Bonus Action"
                 });

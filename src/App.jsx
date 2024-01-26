@@ -118,7 +118,7 @@ function App() {
             {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allSpells={spells} playerStats={activeCharacter}></CharSheet>}
             {characters.length > 0 && activeCharacter == null && <CombatTracking characters={characters}></CombatTracking>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
-            {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Initiative</button>}<br/>
+            {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>}<br/>
         </div>
     )
 }

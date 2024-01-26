@@ -1,48 +1,158 @@
 {
     "abilities": [
-        { "name": "Strength", "value": 14 },
-        { "name": "Dexterity", "value": 10 },
-        { "name": "Constitution", "value": 14 },
-        { "name": "Intelligence", "value": 10 },
-        { "name": "Wisdom", "value": 16 },
-        { "name": "Charisma", "value": 10 }
+        {
+            "name": "Strength",
+            "abilityImprovements": 0,
+            "baseScore": 14,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Dexterity",
+            "abilityImprovements": 0,
+            "baseScore": 8,
+            "miscBonus": 0,
+            "racialBonus": 2
+        },
+        {
+            "name": "Constitution",
+            "abilityImprovements": 0,
+            "baseScore": 14,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Intelligence",
+            "abilityImprovements": 0,
+            "baseScore": 10,
+            "miscBonus": 0,
+            "racialBonus": 0
+        },
+        {
+            "name": "Wisdom",
+            "abilityImprovements": 0,
+            "baseScore": 15,
+            "miscBonus": 0,
+            "racialBonus": 1
+        },
+        {
+            "name": "Charisma",
+            "abilityImprovements": 0,
+            "baseScore": 10,
+            "miscBonus": 0,
+            "racialBonus": 0
+        }
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "armorProficiencies": ["Heavy Armor","Light Armor","Medium Armor","Shields"],
+    "armorProficiencies": [
+        "Heavy Armor",
+        "Light Armor",
+        "Medium Armor",
+        "Shields"
+    ],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
-    "immunities": ["Magical Sleep"],
+    "immunities": [
+        "Magical Sleep"
+    ],
     "inventory": {
-        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)", "Rope, Silk (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Mail","Clothes, Common","Holy Symbol","Longbow","Longsword","Shield"],
+        "backpack": [
+            "Mess Kit",
+            "Playing Card Set",
+            "Rations (5 days)",
+            "Rope, Silk (50 feet)",
+            "Tinderbox",
+            "Torch",
+            "Waterskin"
+        ],
+        "equipped": [
+            "Arrows",
+            "Chain Mail",
+            "Clothes, Common",
+            "Holy Symbol",
+            "Longbow",
+            "Longsword",
+            "Shield"
+        ],
         "gold": 10
     },
-    "languages": ["Abyssal", "Celestial", "Common", "Elvish"],
+    "languages": [
+        "Abyssal",
+        "Celestial",
+        "Common",
+        "Elvish"
+    ],
     "level": 1,
     "name": "Seti",
     "race": "Wood Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [{ "name": "Darkvision", "value": "60 ft." }],
-    "specialActions": [
-        { "name": "Mask of the Wild", "description": "You can attempt to hide even when you are only lightly obscured." }
+    "senses": [
+        {
+            "name": "Darkvision",
+            "value": "60 ft."
+        }
     ],
-    "skillProficiencies": ["Insight","Medicine","Perception","Religion","Survival"],
+    "specialActions": [
+        {
+            "name": "Mask of the Wild",
+            "description": "You can attempt to hide even when you are only lightly obscured."
+        }
+    ],
+    "skillProficiencies": [
+        "Insight",
+        "Medicine",
+        "Perception",
+        "Religion",
+        "Survival"
+    ],
     "speed": 35,
     "spells": [
-        {"name": "Guidance", "prepared": true},
-        {"name": "Sacred Flame", "prepared": true},
-        {"name": "Spare the Dying", "prepared": true},
-        {"name": "Bless", "prepared": true},
-        {"name": "Cure Wounds", "prepared": true},
-        {"name": "Detect Magic", "prepared": true},
-        {"name": "Guiding Bolt", "prepared": true},
-        {"name": "Healing Word", "prepared": true},
-        {"name": "Inflict Wounds", "prepared": true}
+        {
+            "name": "Guidance",
+            "prepared": true
+        },
+        {
+            "name": "Sacred Flame",
+            "prepared": true
+        },
+        {
+            "name": "Spare the Dying",
+            "prepared": true
+        },
+        {
+            "name": "Bless",
+            "prepared": true
+        },
+        {
+            "name": "Cure Wounds",
+            "prepared": true
+        },
+        {
+            "name": "Detect Magic",
+            "prepared": true
+        },
+        {
+            "name": "Guiding Bolt",
+            "prepared": true
+        },
+        {
+            "name": "Healing Word",
+            "prepared": true
+        },
+        {
+            "name": "Inflict Wounds",
+            "prepared": true
+        }
     ],
     "subClass": "Life",
     "vulnerabilities": [],
-    "weaponProficiencies": ["Longbow","Longsword","Shortsword","Simple Weapons"]
+    "weaponProficiencies": [
+        "Longbow",
+        "Longsword",
+        "Shortsword",
+        "Simple Weapons"
+    ]
 }

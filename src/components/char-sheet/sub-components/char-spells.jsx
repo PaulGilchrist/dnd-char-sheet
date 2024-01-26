@@ -1,20 +1,19 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-
-
 import './char-spells.css'
+import utils from '../../../services/utils'
 import CharPopup from './char-popup'
 import CharSpellSlots from './char-spell-slots'
 
 function CharSpells({ allSpells, characterClass, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     // Add spell details
-    const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+    const proficiency = utils.getProficiency(playerStats);
     let spells = [];
-    let bonus = 0;
+    let spellAbility = null;
     if(playerStats.spells && playerStats.spells.length > 0) {
-        bonus = Math.floor((playerStats.abilities.find((ability) => ability.name === characterClass.spell_casting_ability).value - 10) / 2);
-        spells = playerStats.spells.map(spell => {
+        spellAbility = utils.getAbility(playerStats, characterClass.spell_casting_ability);
+            spells = playerStats.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
             if(spellDetail) {
                 return {...spellDetail, prepared: spell.prepared};
@@ -40,9 +39,9 @@ function CharSpells({ allSpells, characterClass, playerStats }) {
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader">Spells</div>
-                    <div><b>Attack (to hit):</b> +{bonus+proficiency}</div>
-                    <div><b>Modifier:</b> +{bonus}</div>
-                    <div><b>Save DC:</b> {8+bonus+proficiency}</div>
+                    <div><b>Attack (to hit):</b> +{spellAbility.bonus+proficiency}</div>
+                    <div><b>Modifier:</b> +{spellAbility.bonus}</div>
+                    <div><b>Save DC:</b> {8+spellAbility.bonus+proficiency}</div>
                     <CharSpellSlots characterClass={characterClass} playerStats={playerStats}></CharSpellSlots>
                 </div>
                 <div className='spells'>

@@ -3,6 +3,7 @@ import React from 'react'
 
 import './char-abilities.css'
 
+import utils from '../../../services/utils'
 import CharPopup from './char-popup'
 import { passiveSkills } from '../../../data/passive-skills.js';
 import { skills } from '../../../data/skills.js';
@@ -10,23 +11,12 @@ import { skills } from '../../../data/skills.js';
 function CharAbilities({ allAbilityScores, characterClass, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
-    const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
-
+    const proficiency = utils.getProficiency(playerStats);
     // Calculations - Abilities 
-    const abilityProficiencies = characterClass.saving_throws.map((savingThrow) => {
-        switch (savingThrow) {
-            case 'STR': return 'Strength';
-            case 'DEX': return 'Dexterity';
-            case 'CON': return 'Constitution';
-            case 'INT': return 'Intelligence';
-            case 'WIS': return 'Wisdom';
-            case 'CHA': return 'Charisma';
-        }
-    });
+    const abilityProficiencies = utils.getClassProficiencies(characterClass);
     const abilities = playerStats.abilities.map((ability) => {
-        const mappedAbility = {...ability};
+        const mappedAbility = utils.getAbility(playerStats, ability.name);
         const proficient = abilityProficiencies.includes(ability.name);
-        mappedAbility.bonus = Math.floor((ability.value - 10) / 2);
         mappedAbility.save = proficient ? mappedAbility.bonus + proficiency : mappedAbility.bonus;
         mappedAbility.skills = skills.filter(skill => skill.ability === ability.name);
         mappedAbility.skills = mappedAbility.skills.map((skill) => {
@@ -70,7 +60,7 @@ function CharAbilities({ allAbilityScores, characterClass, playerStats }) {
             {abilities.map((ability) => {
                 return <div key={ability.name} className='abilities'>
                     <div className='clickable left' onClick={() => showPopup(ability.name)}>{ability.name}</div>
-                    <div>{ability.value}</div>
+                    <div>{ability.totalScore}</div>
                     <div>{signFormatter.format(ability.bonus)}</div>
                     <div>{signFormatter.format(ability.save)}</div>
                     <div className='left'>{ability.skills.map((skill) => {
