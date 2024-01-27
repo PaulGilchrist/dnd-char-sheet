@@ -31,7 +31,7 @@ const rules = {
                 if (passiveSkills.includes(skill.name)) {
                     // Add skill based senses
                     const newSense = {
-                        name: `passive ${skill.name}`,
+                        name: `Passive ${skill.name}`,
                         value: 10 + skill.bonus
                     }
                     if (!playerStats.senses.some((sense) => sense.name === newSense.name)) {
@@ -87,6 +87,7 @@ const rules = {
                 }
             });
         }
+        proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
         return proficiencies.sort();
     },
     getRace: (allRaces, playerSummary) => {

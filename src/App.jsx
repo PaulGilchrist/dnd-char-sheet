@@ -54,13 +54,13 @@ function App() {
     React.useEffect(() => {
         if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
             const urls = [
-                // '/dnd-char-sheet/characters/campaign/cleric_valena.json',
-                // '/dnd-char-sheet/characters/campaign/druid_lirael.json',
-                // '/dnd-char-sheet/characters/campaign/druid_loraleth.json',
-                // '/dnd-char-sheet/characters/campaign/fighter_devin.json',
-                // '/dnd-char-sheet/characters/campaign/monk_zareth.json',
-                // '/dnd-char-sheet/characters/campaign/paladin_valerius.json',
-                // '/dnd-char-sheet/characters/campaign/ranger_seraphina.json'
+                '/dnd-char-sheet/characters/campaign/cleric_valena.json',
+                '/dnd-char-sheet/characters/campaign/druid_lirael.json',
+                '/dnd-char-sheet/characters/campaign/druid_loraleth.json',
+                '/dnd-char-sheet/characters/campaign/fighter_devin.json',
+                '/dnd-char-sheet/characters/campaign/monk_zareth.json',
+                '/dnd-char-sheet/characters/campaign/paladin_valerius.json',
+                '/dnd-char-sheet/characters/campaign/ranger_seraphina.json'
             ];
             const promises = urls.map(url => fetch(url).then(response => response.json()));
             Promise.all(promises)

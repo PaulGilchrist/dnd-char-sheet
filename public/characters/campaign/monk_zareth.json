@@ -1,51 +1,14 @@
 {
     "abilities": [
-        {
-            "name": "Strength",
-            "abilityImprovements": 0,
-            "baseScore": 12,
-            "miscBonus": 0,
-            "racialBonus": 2
-        },
-        {
-            "name": "Dexterity",
-            "abilityImprovements": 0,
-            "baseScore": 15,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Constitution",
-            "abilityImprovements": 0,
-            "baseScore": 13,
-            "miscBonus": 0,
-            "racialBonus": 1
-        },
-        {
-            "name": "Intelligence",
-            "abilityImprovements": 0,
-            "baseScore": 10,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Wisdom",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Charisma",
-            "abilityImprovements": 0,
-            "baseScore": 8,
-            "miscBonus": 0,
-            "racialBonus": 0
-        }
+        {"name": "Strength","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
+        {"name": "Constitution","abilityImprovements": 0,"baseScore": 13,"miscBonus": 0},
+        {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
+        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Charisma","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0}
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "armorProficiencies": [],
     "attacksPerAction": 1,
     "bonusActions": [
         {
@@ -68,30 +31,14 @@
     "class": "Monk",
     "immunities": [],
     "inventory": {
-        "backpack": [
-            "Potion of Healing (2)",
-            "Bedroll",
-            "Mess Kit",
-            "Rations (10 days)",
-            "Rope, Hempen (50 feet)",
-            "Tinderbox",
-            "Torch",
-            "Waterskin"
-        ],
-        "equipped": [
-            "Quarterstaff",
-            "Dart"
-        ],
-        "gold": 199
+        "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Quarterstaff","Dart"],
+        "gold": 400
     },
-    "languages": [
-        "Common",
-        "Halfling",
-        "Infernal",
-        "Orc"
-    ],
+    "languages": [],
     "level": 3,
     "name": "Zareth Stonestride",
+    "proficiencies": [],
     "race": "Half-Orc",
     "reactions": [
         {
@@ -123,19 +70,9 @@
             "description": "When you score a critical hit, roll one of the weapon's dice one additional time and add it to the extra damage."
         }
     ],
-    "skillProficiencies": [
-        "Acrobatics",
-        "Insight",
-        "Intimidation",
-        "Medicine",
-        "Religion"
-    ],
-    "speed": 40,
+    "skillProficiencies": ["Acrobatics","Insight","Intimidation","Medicine","Religion"],
     "spells": [],
     "subclass": "Way of the Open Hand",
-    "vulnerabilities": [],
-    "weaponProficiencies": [
-        "Shortsword",
-        "Simple Weapons"
-    ]
+    "subrace": "",
+    "vulnerabilities": []
 }

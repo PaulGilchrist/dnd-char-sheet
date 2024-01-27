@@ -1,47 +1,11 @@
 {
     "abilities": [
-        {
-            "name": "Strength",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 2
-        },
-        {
-            "name": "Dexterity",
-            "abilityImprovements": 0,
-            "baseScore": 10,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Constitution",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Intelligence",
-            "abilityImprovements": 0,
-            "baseScore": 8,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Wisdom",
-            "abilityImprovements": 0,
-            "baseScore": 12,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Charisma",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 1
-        }
+        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
+        {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Intelligence","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
+        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
+        {"name": "Charisma","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0}
     ],
     "actions": [
         {
@@ -58,12 +22,6 @@
         }
     ],
     "alignment": "Lawful Good",
-    "armorProficiencies": [
-        "Heavy Armor",
-        "Light Armor",
-        "Medium Armor",
-        "Shields"
-    ],
     "attacksPerAction": 1,
     "bonusActions": [
         {
@@ -73,41 +31,19 @@
     ],
     "class": "Paladin",
     "fightingStyle": "Defense",
-    "immunities": [
-        "Disease"
-    ],
+    "immunities": ["Disease"],
     "inventory": {
-        "backpack": [
-            "Bedroll",
-            "Light Hammer",
-            "Mess Kit",
-            "Rations (10 days)",
-            "Rope, Hempen (50 feet)",
-            "Tinderbox",
-            "Torch",
-            "Waterskin"
-        ],
-        "equipped": [
-            "Chain Mail",
-            "Shield",
-            "Crossbow, heavy",
-            "Longsword",
-            "Dagger"
-        ],
+        "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger"],
         "gold": 25
     },
-    "languages": [
-        "Common",
-        "Draconic",
-        "Elvish"
-    ],
+    "languages": [],
     "level": 3,
     "name": "Valerius Stormscale",
+    "proficiencies": [],
     "race": "Dragonborn",
     "reactions": [],
-    "resistances": [
-        "Fire"
-    ],
+    "resistances": ["Fire"],
     "senses": [],
     "specialActions": [
         {
@@ -123,39 +59,15 @@
             "description": "You have a pool of healing power that can restore 15 HP per long rest. As an action, you can touch a creature to restore any number of HP remaining in the pool, or 5 HP to either cure a disease or neutralize a poison affecting the creature."
         }
     ],
-    "skillProficiencies": [
-        "Athletics",
-        "History",
-        "Intimidation",
-        "Persuasion"
-    ],
-    "speed": 30,
+    "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
     "spells": [
-        {
-            "name": "Bane",
-            "prepared": true
-        },
-        {
-            "name": "Command",
-            "prepared": true
-        },
-        {
-            "name": "Divine Favor",
-            "prepared": true
-        },
-        {
-            "name": "Hunter's Mark",
-            "prepared": true
-        },
-        {
-            "name": "Protection from Evil and Good",
-            "prepared": true
-        }
+        {"name": "Bane","prepared": true},
+        {"name": "Command","prepared": true},
+        {"name": "Divine Favor","prepared": true},
+        {"name": "Hunter's Mark","prepared": true},
+        {"name": "Protection from Evil and Good","prepared": true}
     ],
     "subclass": "Beast Master",
-    "vulnerabilities": [],
-    "weaponProficiencies": [
-        "Martial Weapons",
-        "Simple Weapons"
-    ]
+    "subrace": "",
+    "vulnerabilities": []
 }
