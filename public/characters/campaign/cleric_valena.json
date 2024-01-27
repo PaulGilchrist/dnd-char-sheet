@@ -175,7 +175,7 @@
             "prepared": true
         }
     ],
-    "subClass": "Life",
+    "subclass": "Life",
     "vulnerabilities": [],
     "weaponProficiencies": [
         "Longbow",

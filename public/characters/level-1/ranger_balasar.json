@@ -1,97 +1,32 @@
 {
     "abilities": [
-        {
-            "name": "Strength",
-            "abilityImprovements": 0,
-            "baseScore": 13,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Dexterity",
-            "abilityImprovements": 0,
-            "baseScore": 15,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Constitution",
-            "abilityImprovements": 0,
-            "baseScore": 15,
-            "miscBonus": 0,
-            "racialBonus": 1
-        },
-        {
-            "name": "Intelligence",
-            "abilityImprovements": 0,
-            "baseScore": 8,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Wisdom",
-            "abilityImprovements": 0,
-            "baseScore": 12,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Charisma",
-            "abilityImprovements": 0,
-            "baseScore": 8,
-            "miscBonus": 0,
-            "racialBonus": 2
-        }
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Charisma", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 }
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "armorProficiencies": [
-        "Light Armor",
-        "Medium Armor",
-        "Shields"
-    ],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Ranger",
     "fightingStyle": "",
-    "immunities": [
-        "Magical Sleep"
-    ],
+    "immunities": ["Magical Sleep"],
     "inventory": {
-        "backpack": [
-            "Mess Kit",
-            "Rations (5 days)",
-            "Rope, Silk (50 feet)",
-            "Tinderbox",
-            "Torch",
-            "Waterskin"
-        ],
-        "equipped": [
-            "Arrows",
-            "Studded Leather",
-            "Longbow",
-            "Scimitar",
-            "Scimitar"
-        ],
+        "backpack": ["Mess Kit", "Rations (5 days)", "Rope, Silk (50 feet)", "Tinderbox", "Torch", "Waterskin"],
+        "equipped": ["Arrows", "Studded Leather", "Longbow", "Scimitar", "Scimitar"],
         "gold": 10
     },
-    "languages": [
-        "Common",
-        "Elvish",
-        "Orc",
-        "Undercommon"
-    ],
+    "languages": [],
     "level": 1,
     "name": "Balasar",
+    "proficiencies": [],
     "race": "Half-Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [
-        {
-            "name": "Darkvision",
-            "value": "60 ft."
-        }
-    ],
+    "senses": [],
     "specialActions": [
         {
             "name": "Favored Enemy",
@@ -102,34 +37,13 @@
             "description": "Forest - You have a favored terrain type. Your proficiency bonus is doubled for proficient skills when you make an INT or WIS check related to it. While traveling for an hour or more in your chosen terrain, difficult terrain doesn't slow your group's travel, your group can't become lost except by magical means, you remain alert to danger even when you are engaged in another activity, you can move stealthily at a normal pace (while alone), you find twice as much food while foraging, and while tracking creatures, you learn the exact number, sizes, and how long ago they passed through the area."
         }
     ],
-    "skillProficiencies": [
-        "Animal Handling",
-        "Insight",
-        "Investigation",
-        "Nature",
-        "Perception",
-        "Stealth",
-        "Survival"
-    ],
-    "speed": 30,
+    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
     "spells": [
-        {
-            "name": "Detect Magic",
-            "prepared": true
-        },
-        {
-            "name": "Goodberry",
-            "prepared": true
-        },
-        {
-            "name": "Hunter's Mark",
-            "prepared": true
-        }
+        {"name": "Detect Magic","prepared": true},
+        {"name": "Goodberry","prepared": true},
+        {"name": "Hunter's Mark","prepared": true}
     ],
-    "subClass": "",
-    "vulnerabilities": [],
-    "weaponProficiencies": [
-        "Martial Weapons",
-        "Simple Weapons"
-    ]
+    "subclass": "",
+    "subrace": "",
+    "vulnerabilities": []
 }

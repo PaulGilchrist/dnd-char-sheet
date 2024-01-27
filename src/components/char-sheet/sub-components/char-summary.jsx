@@ -15,7 +15,7 @@ function CharSummary({ allEquipment, playerStats }) {
     }, [playerStats]);
     const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
     const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
-
+    let speed = playerStats.race.speed;
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
         // Does this item have a magic bonus?
@@ -29,7 +29,7 @@ function CharSummary({ allEquipment, playerStats }) {
         return false;
     });
     let addedBonus = 0;
-    if(playerStats.class === 'Monk') {
+    if(playerStats.class.name === 'Monk') {
         addedBonus += wisdom.bonus;
     } 
     if(playerStats.fightingStyle === 'Defense') {
@@ -73,12 +73,12 @@ function CharSummary({ allEquipment, playerStats }) {
     return (
         <div>
             <div className='name'>{playerStats.name}</div>
-            <div className='summary'>{playerStats.race} {playerStats.class.name} ({playerStats.subClass ? `${playerStats.class.subClass.name.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
+            <div className='summary'>{playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name} {playerStats.class.name} ({playerStats.subclass ? `${playerStats.class.subclass.name.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <div className='summaryGrid'>
                 <div>
                     <b>Armor Class: </b>{armorClass}<br/>
                     <CharHitPoints playerStats={playerStats}></CharHitPoints>
-                    <b>Speed: </b>{playerStats.speed} ft.<br/>
+                    <b>Speed: </b>{speed} ft.<br/>
                 </div>
                 <div>
                     <b>Proficiency: </b>+{playerStats.proficiency}<br/>
@@ -87,7 +87,7 @@ function CharSummary({ allEquipment, playerStats }) {
                 </div>
                 <div>
                     <b>Inspiration: </b><input type="checkbox" checked={hasInspiration} onChange={handleToggleInspiraction}/><br/>
-                    {playerStats.class == 'Monk' && playerStats.level > 2 && <CharMonkKi playerStats={playerStats}></CharMonkKi>}
+                    {playerStats.class.name == 'Monk' && playerStats.level > 2 && <CharMonkKi playerStats={playerStats}></CharMonkKi>}
                 </div>
             </div>
         </div>           

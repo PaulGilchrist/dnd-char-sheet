@@ -115,7 +115,7 @@
         }
     ],
     "speed": 30,
-    "subClass": "Champion",
+    "subclass": "Champion",
     "vulnerabilities": [],
     "weaponProficiencies": [
         "Martial Weapons",

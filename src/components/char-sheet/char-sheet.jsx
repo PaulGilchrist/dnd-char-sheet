@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import utils from '../../services/utils'
+import rules from '../../services/rules'
 import CharAbilities from './sub-components/char-abilities'
 import CharActions from './sub-components/char-actions'
 import CharInventory from './sub-components/char-inventory'
@@ -11,12 +11,12 @@ import CharSummary from './sub-components/char-summary'
 import CharSummary2 from './sub-components/char-summary2'
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allEquipment, allSpells, playerSummary }) {
+function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary }) {
     const [playerStats, setPlayerStats] = React.useState(null);
     React.useEffect(() => {
-        const playerStats = utils.getPlayerStats(allClasses, playerSummary);
+        const playerStats = rules.getPlayerStats(allClasses, allRaces, playerSummary);
         setPlayerStats(playerStats);
-    }, [allClasses, playerSummary]);    
+    }, [allClasses, allRaces, playerSummary]);    
     
     return (
         <div>{playerStats && <div className='char-sheet'>

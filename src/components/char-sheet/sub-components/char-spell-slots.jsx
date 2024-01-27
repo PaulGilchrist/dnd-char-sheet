@@ -7,8 +7,7 @@ function CharSpellSlots({ playerStats }) {
 
     let classLevel = playerStats.class.class_levels[playerStats.level-1];
     if(!classLevel.spellcasting) {
-        let subclass = playerStats.class.subclasses.find((subclass) => subclass.name === playerStats.subClass)
-        classLevel = subclass.class_levels[playerStats.level-3]
+        classLevel = playerStats.class.subclass.class_levels[playerStats.level-3]
     }
 
     return (
