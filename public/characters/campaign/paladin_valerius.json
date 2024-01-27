@@ -37,7 +37,7 @@
         "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger"],
         "gold": 25
     },
-    "languages": [],
+    "languages": ["Elvish"],
     "level": 3,
     "name": "Valerius Stormscale",
     "proficiencies": [],

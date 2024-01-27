@@ -20,22 +20,17 @@
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Cloak of Elvenkind","Leather","Longbow","Quarterstaff","Scimitar"],
+        "equipped": ["Cloak of Elvenkind","Leather","Longbow","Scimitar","Dagger"],
         "gold": 30
     },
-    "languages": [],
+    "languages": ["Druidic","Elvish","Sylvan"],
     "level": 3,
     "name": "Lirael",
     "proficiencies": [],
     "race": "Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [
-        {
-            "name": "Darkvision",
-            "value": "60 ft."
-        }
-    ],
+    "senses": [],
     "specialActions": [
         {
             "name": "Mask of the Wild",
@@ -46,7 +41,7 @@
             "description": "Once per long rest during a short rest, you choose expended spell slots to recover."
         }
     ],
-    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Perception","Stealth"],
     "spells": [
         {"name": "Druidcraft","prepared": true},
         {"name": "Frostbite","prepared": true},

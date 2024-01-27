@@ -99,7 +99,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         }
     }
     // If we have a Monk, then their hands are a weapon
-    if (playerStats.class === 'Monk') {
+    if (playerStats.class.name === 'Monk') {
         attacks.push({
             "name": 'Unarmed Strike',
             "damage": `1d4+${dexterity.bonus}`,

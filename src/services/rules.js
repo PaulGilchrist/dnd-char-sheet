@@ -62,7 +62,7 @@ const rules = {
     },
     getLanguages: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace()
-        let languages = [...playerStats.race.languages];
+        let languages = [...new Set([...playerStats.languages, ...playerStats.race.languages])];
         if(playerStats.race.subrace) {
             languages = [...new Set([...languages, ...playerStats.race.subrace.languages])];
         }
@@ -146,10 +146,6 @@ const rules = {
         playerStats.abilities = rules.getAbilities(playerStats);
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
-
-        // Skill Proficiencies
-        // Attacks per Action
-
         return playerStats;
     }
 }

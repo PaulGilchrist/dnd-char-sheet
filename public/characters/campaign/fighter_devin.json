@@ -24,7 +24,7 @@
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Scroll or Charm Person"],
         "gold": 10
     },
-    "languages": [],
+    "languages": ["Elvish"],
     "level": 3,
     "name": "Devin",
     "proficiencies": [],

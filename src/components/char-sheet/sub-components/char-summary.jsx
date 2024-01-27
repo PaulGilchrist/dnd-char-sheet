@@ -15,7 +15,10 @@ function CharSummary({ allEquipment, playerStats }) {
     }, [playerStats]);
     const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
     const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
-    let speed = playerStats.race.speed;
+    let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
+    if(playerStats.class.name === 'Monk') {
+        speed += 10;
+    }
     // Find armor in the character's equipment and calculate Armor Class
     let armorName = playerStats.inventory.equipped.find(itemName => {
         // Does this item have a magic bonus?

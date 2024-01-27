@@ -337,6 +337,7 @@
                         "bonus": 1
                     }
                 ],
+                "speed": 35,
                 "starting_proficiencies": [],
                 "languages": [],
                 "racial_traits": [
