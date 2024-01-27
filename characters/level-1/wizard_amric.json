@@ -1,166 +1,52 @@
 {
     "abilities": [
-        {
-            "name": "Strength",
-            "abilityImprovements": 0,
-            "baseScore": 9,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Dexterity",
-            "abilityImprovements": 0,
-            "baseScore": 12,
-            "miscBonus": 0,
-            "racialBonus": 2
-        },
-        {
-            "name": "Constitution",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Intelligence",
-            "abilityImprovements": 0,
-            "baseScore": 15,
-            "miscBonus": 0,
-            "racialBonus": 1
-        },
-        {
-            "name": "Wisdom",
-            "abilityImprovements": 0,
-            "baseScore": 12,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Charisma",
-            "abilityImprovements": 0,
-            "baseScore": 10,
-            "miscBonus": 0,
-            "racialBonus": 0
-        }
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "armorProficiencies": [],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Wizard",
     "immunities": [],
     "inventory": {
-        "backpack": [
-            "Blanket",
-            "Case,Map or Scroll",
-            "Clothes,Traveler's",
-            "Fishing Tackle",
-            "Grappling Hook",
-            "Ink (4, 1 oz bottles)",
-            "Ink Pens (2)",
-            "Parchment (20 sheets)",
-            "Playing Card Set",
-            "Rations (5 days)",
-            "Rope, Silk (50 feet)",
-            "String",
-            "Waterskin"
-        ],
-        "equipped": [
-            "Quarterstaff",
-            "Dagger"
-        ],
+        "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
+        "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "languages": [
-        "Common",
-        "Dwarvish",
-        "Elvish",
-        "Gnomish",
-        "Halfling"
-    ],
+    "languages": [],
     "level": 1,
     "name": "Amric",
-    "race": "High Elf",
+    "proficiencies": [],
+    "race": "Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [
-        {
-            "name": "Darkvision",
-            "value": "60 ft."
-        }
-    ],
+    "senses": [],
     "specialActions": [
         {
             "name": "Arcane Recovery",
             "description": "Once per day when you finish a short rest, you can choose expended spell slots to recover - up to a combined level of 1, and none of the slots can be 6th level or higher"
         }
     ],
-    "skillProficiencies": [
-        "Arcana",
-        "History",
-        "Investigation",
-        "Medicine",
-        "Perception"
-    ],
-    "speed": 30,
+    "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
     "spells": [
-        {
-            "name": "Fire Bolt",
-            "prepared": true
-        },
-        {
-            "name": "Mage Hand",
-            "prepared": true
-        },
-        {
-            "name": "Shocking Grasp",
-            "prepared": true
-        },
-        {
-            "name": "Burning Hands",
-            "prepared": true
-        },
-        {
-            "name": "Charm Person",
-            "prepared": true
-        },
-        {
-            "name": "Detect Magic",
-            "prepared": false
-        },
-        {
-            "name": "Disguise Self",
-            "prepared": true
-        },
-        {
-            "name": "Find Familiar",
-            "prepared": false
-        },
-        {
-            "name": "Identify",
-            "prepared": false
-        },
-        {
-            "name": "Magic Missile",
-            "prepared": true
-        },
-        {
-            "name": "Shield",
-            "prepared": true
-        }
+        { "name": "Fire Bolt", "prepared": true },
+        { "name": "Mage Hand", "prepared": true },
+        { "name": "Shocking Grasp", "prepared": true },
+        { "name": "Burning Hands", "prepared": true },
+        { "name": "Charm Person", "prepared": true },
+        { "name": "Detect Magic", "prepared": false },
+        { "name": "Disguise Self", "prepared": true },
+        { "name": "Find Familiar", "prepared": false },
+        { "name": "Identify", "prepared": false },
+        { "name": "Magic Missile", "prepared": true },
+        { "name": "Shield", "prepared": true }
     ],
-    "subClass": "",
-    "vulnerabilities": [],
-    "weaponProficiencies": [
-        "Crossbow, light",
-        "Dagger",
-        "Dart",
-        "Longbow",
-        "Longsword",
-        "Quarterstaff",
-        "Shortbow",
-        "Shortsword",
-        "Sling"
-    ]
+    "subclass": "Evocation",
+    "subrace": "High Elf",
+    "vulnerabilities": []
 }

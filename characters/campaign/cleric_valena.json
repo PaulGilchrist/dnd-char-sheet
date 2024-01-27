@@ -1,47 +1,11 @@
 {
     "abilities": [
-        {
-            "name": "Strength",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Dexterity",
-            "abilityImprovements": 0,
-            "baseScore": 8,
-            "miscBonus": 0,
-            "racialBonus": 2
-        },
-        {
-            "name": "Constitution",
-            "abilityImprovements": 0,
-            "baseScore": 14,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Intelligence",
-            "abilityImprovements": 0,
-            "baseScore": 10,
-            "miscBonus": 0,
-            "racialBonus": 0
-        },
-        {
-            "name": "Wisdom",
-            "abilityImprovements": 0,
-            "baseScore": 15,
-            "miscBonus": 0,
-            "racialBonus": 1
-        },
-        {
-            "name": "Charisma",
-            "abilityImprovements": 0,
-            "baseScore": 10,
-            "miscBonus": 0,
-            "racialBonus": 0
-        }
+        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
+        {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
+        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
+        {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
     "actions": [
         {
@@ -54,55 +18,23 @@
         }
     ],
     "alignment": "Neutral Good",
-    "armorProficiencies": [
-        "Heavy Armor",
-        "Light Armor",
-        "Medium Armor",
-        "Shields"
-    ],
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
-    "immunities": [
-        "Magical Sleep"
-    ],
+    "immunities": ["Magical Sleep"],
     "inventory": {
-        "backpack": [
-            "Mess Kit",
-            "Playing Card Set",
-            "Rations (5 days)",
-            "Rope, Silk (50 feet)",
-            "Small Knife",
-            "Tinderbox",
-            "Torch",
-            "Waterskin"
-        ],
-        "equipped": [
-            "Arrows",
-            "Chain Mail",
-            "Clothes, Common",
-            "Holy Symbol",
-            "Longbow",
-            "Longsword",
-            "Shield"
-        ],
+        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
         "gold": 10
     },
-    "languages": [
-        "Common",
-        "Elvish"
-    ],
+    "languages": [],
     "level": 3,
     "name": "Valena",
-    "race": "Wood Elf",
+    "proficiencies": [],
+    "race": "Elf",
     "reactions": [],
     "resistances": [],
-    "senses": [
-        {
-            "name": "Darkvision",
-            "value": "60 ft."
-        }
-    ],
+    "senses": [],
     "specialActions": [
         {
             "name": "Disciple of Life",
@@ -113,74 +45,23 @@
             "description": "You can attempt to hide even when you are only lightly obscured."
         }
     ],
-    "skillProficiencies": [
-        "Animal Handling",
-        "Insight",
-        "Medicine",
-        "Perception",
-        "Survival"
-    ],
-    "speed": 35,
+    "skillProficiencies": ["Animal Handling","Insight","Medicine","Perception","Survival"],
     "spells": [
-        {
-            "name": "Guidance",
-            "prepared": true
-        },
-        {
-            "name": "Sacred Flame",
-            "prepared": true
-        },
-        {
-            "name": "Spare the Dying",
-            "prepared": true
-        },
-        {
-            "name": "Bless",
-            "prepared": true
-        },
-        {
-            "name": "Cure Wounds",
-            "prepared": true
-        },
-        {
-            "name": "Detect Magic",
-            "prepared": true
-        },
-        {
-            "name": "Guiding Bolt",
-            "prepared": true
-        },
-        {
-            "name": "Healing Word",
-            "prepared": true
-        },
-        {
-            "name": "Inflict Wounds",
-            "prepared": true
-        },
-        {
-            "name": "Aid",
-            "prepared": true
-        },
-        {
-            "name": "Lesser Restoration",
-            "prepared": true
-        },
-        {
-            "name": "Prayer of Healing",
-            "prepared": true
-        },
-        {
-            "name": "Spiritual Weapon",
-            "prepared": true
-        }
+        {"name": "Guidance","prepared": true},
+        {"name": "Sacred Flame","prepared": true},
+        {"name": "Spare the Dying","prepared": true},
+        {"name": "Bless","prepared": true},
+        {"name": "Cure Wounds","prepared": true},
+        {"name": "Detect Magic","prepared": true},
+        {"name": "Guiding Bolt","prepared": true},
+        {"name": "Healing Word","prepared": true},
+        {"name": "Inflict Wounds","prepared": true},
+        {"name": "Aid","prepared": true},
+        {"name": "Lesser Restoration","prepared": true},
+        {"name": "Prayer of Healing","prepared": true},
+        {"name": "Spiritual Weapon","prepared": true}
     ],
-    "subClass": "Life",
-    "vulnerabilities": [],
-    "weaponProficiencies": [
-        "Longbow",
-        "Longsword",
-        "Shortsword",
-        "Simple Weapons"
-    ]
+    "subclass": "Life",
+    "subrace": "Wood Elf",
+    "vulnerabilities": []
 }
