@@ -89,24 +89,21 @@ function App() {
     }
     const handleUploadChange = async (event) => {
         const files = event.target.files;
-        const readers = [];
+        const newCharacters = [];    
         for (let i = 0; i < files.length; i++) {
             const reader = new FileReader();
-            reader.readAsText(files[i]);
-            readers.push(reader);
-        }
-        await Promise.all(
-            readers.map(async (reader) => {
-                await new Promise((resolve) => {
-                    reader.onload = (event) => {
-                        const data = JSON.parse(event.target.result);
-                        setCharacters((characters) => [...characters, data]);
-                        setActiveCharacter(characters[0]);
-                        resolve();
-                    };
-                });
-            })
-        );
+            const file = files[i];    
+            const readPromise = new Promise((resolve) => {
+                reader.onload = (event) => {
+                    const data = JSON.parse(event.target.result);
+                    newCharacters.push(data);
+                    resolve();
+                };
+            });    
+            reader.readAsText(file);    
+            await readPromise;
+        }    
+        setCharacters(newCharacters);
     };
     const handleSaveClick = async () => {
         let fileName = `${activeCharacter.class}-${Utils.getFirstName(activeCharacter.name)}.json`;
@@ -120,7 +117,7 @@ function App() {
     };
     return (
         <div className="app">
-            <input type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
+            <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allRaces={races} allSpells={spells} playerSummary={activeCharacter}></CharSheet>}

@@ -120,7 +120,7 @@ function CombatTracking({ characters }) {
                         value={creature.initiative}
                     />
                     <input
-                        placeholder="hit points, conditions, death saves/failures, etc."
+                        placeholder="hit points, conditions, death saves, exhaustion, etc."
                         onChange={(event) => handleNotesChange(creature.name, event.target.value)}
                         tabIndex={0}
                         type="text"
