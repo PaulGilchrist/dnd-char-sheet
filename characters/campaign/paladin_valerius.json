@@ -62,10 +62,21 @@
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
     "spells": [
         {"name": "Bane","prepared": true},
+        {"name": "Bless","prepared": true},
         {"name": "Command","prepared": true},
+        {"name": "Compelled Duel","prepared": false},
+        {"name": "Cure Wounds","prepared": false},
+        {"name": "Detect Evil and Good","prepared": false},
+        {"name": "Detect Poison and Disease","prepared": false},
         {"name": "Divine Favor","prepared": true},
+        {"name": "Heroism","prepared": false},
         {"name": "Hunter's Mark","prepared": true},
-        {"name": "Protection from Evil and Good","prepared": true}
+        {"name": "Protection from Evil and Good","prepared": true},
+        {"name": "Purify Food and Drink","prepared": false},
+        {"name": "Searing Smite","prepared": true},
+        {"name": "Shield of Faith","prepared": false},
+        {"name": "Thunderous Smite","prepared": false},
+        {"name": "Wrathful Smite","prepared": false}
     ],
     "subclass": "Beast Master",
     "subrace": "",

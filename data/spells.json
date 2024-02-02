@@ -1566,6 +1566,27 @@
         ]
     },
     {
+        "index": "compelled-duel",
+        "name": "Compelled Duel",
+        "desc": [
+            "You attempt to compel a creature into a duel. One creature that you can see within range must make a Wisdom saving throw. On a failed save, the creature is drawn to you, compelled by your divine demand. For the duration, it has disadvantage on attack rolls against creatures other than you, and must make a Wisdom saving throw each time it attempts to move to a space that is more than 30 feet away from you; if it succeeds on this saving throw, this spell doesn't restrict the target's movement for that turn.<br/><br/>The spell ends if you attack any other creature, if you cast a spell that targets a hostile creature other than the target, if a creature friendly to you damages the target or casts a harmful spell on it, or if you end your turn more than 30 feet away from the target."
+        ],
+        "range": "30 feet",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "school": "Enchantment",
+        "classes": [
+            "Paladin"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "comprehend-languages",
         "name": "Comprehend Languages",
         "desc": [
@@ -7988,6 +8009,30 @@
         ]
     },
     {
+        "index": "searing-smite",
+        "name": "Searing Smite",
+        "desc": [
+            "The next time you hit a creature with a melee weapon attack during the spell's duration, your weapon flares with white-hot intensity, and the attack deals an extra 1d6 fire damage to the target and causes the target to ignite in flames. At the start of each of its turns until the spell ends, the target must make a Constitution saving throw. On a failed save, it takes 1d6 fire damage. On a successful save, the spell ends. If the target or a creature within 5 feet of it uses an action to put out the flames, or if some other effect douses the flames (such as the target being submerged in water), the spell ends."
+        ],
+        "higher_level": [
+            "At Higher Levels. When you cast this spell using a spell slot of 2nd level or higher, the initial extra damage dealt by the attack increases by 1d6 for each slot level above 1st."
+        ],
+        "range": "Self",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "school": "Evocation",
+        "classes": [
+            "Paladin"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "secret-chest",
         "name": "Secret Chest",
         "desc": [
@@ -9157,6 +9202,27 @@
         ]
     },
     {
+        "index": "thunderous-smite",
+        "name": "Thunderous Smite",
+        "desc": [
+            "The first time you hit with a melee weapon attack during this spell's duration, your weapon rings with thunder that is audible within 300 feet of you, and the attack deals an extra 2d6 thunder damage to the target. Additionally, if the target is a creature, it must succeed on a Strength saving throw or be pushed 10 feet away from you and knocked prone."
+        ],
+        "range": "Self",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "school": "Evocation",
+        "classes": [
+            "Paladin"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "thunderwave",
         "name": "Thunderwave",
         "desc": [
@@ -9991,6 +10057,27 @@
         "school": "Conjuration",
         "classes": [
             "Cleric"
+        ],
+        "subclasses": []
+    },
+    {
+        "index": "wrathful-smite",
+        "name": "Wrathful Smite",
+        "desc": [
+            "The next time you hit with a melee weapon attack during this spell's duration, your attack deals an extra 1d6 psychic damage. Additionally, if the target is a creature, it must make a Wisdom saving throw or be frightened of you until the spell ends. As an action, the creature can make a Wisdom check against your spell save DC to steel its resolve and end this spell."
+        ],
+        "range": "Self",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "school": "Evocation",
+        "classes": [
+            "Paladin"
         ],
         "subclasses": []
     },
