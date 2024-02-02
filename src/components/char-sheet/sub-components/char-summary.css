@@ -1,9 +1,9 @@
 
 input[type="checkbox"] {
-    accent-color: var(--color-highlight);
+    accent-color: var(--color-header);
 }
 .name {
-    color: var(--color-highlight);
+    color: var(--color-header);
     font-size: 1.5em;
     font-weight: 900;
     margin-bottom: -10px;

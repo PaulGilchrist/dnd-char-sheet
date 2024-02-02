@@ -11,7 +11,7 @@
 }
 
 .combat-tracking button {
-    color: var(--color-highlight);
+    color: var(--color-header);
     margin: 0;
 }
 
@@ -21,8 +21,8 @@
 }
 
 .combat-tracking header {
-    background-color: var(--background-color-highlight);
-    color: var(--color-highlight);
+    background-color: var(--background-color-header);
+    color: var(--color-header);
 }
 
 .combat-tracking header.initiative {
@@ -40,7 +40,7 @@
 }
 
 .combat-tracking-title {
-    color: var(--color-highlight);
+    color: var(--color-header);
     font-size: 1.5em;
     font-weight: 600;
 }

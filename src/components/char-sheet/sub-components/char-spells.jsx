@@ -24,7 +24,7 @@ function CharSpells({ allSpells, playerStats }) {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
             if(spell.higher_level) {
-                html += `<br/>${spell.higher_level}`;
+                html += `<br/><b>At higher levels.</b>&nbsp;${spell.higher_level}`;
             }
             setPopupHtml(html);
         }
