@@ -44,7 +44,8 @@
         { "name": "Find Familiar", "prepared": false },
         { "name": "Identify", "prepared": false },
         { "name": "Magic Missile", "prepared": true },
-        { "name": "Shield", "prepared": true }
+        { "name": "Shield", "prepared": true },
+        { "name": "Prismatic Spray", "prepared": true }        
     ],
     "subclass": "Evocation",
     "subrace": "High Elf",
