@@ -27,8 +27,8 @@ function CharSpells({ allSpells, playerStats }) {
                     }
                 });
             }
-            setSpellAbilities(spellAbilities);
         }
+        setSpellAbilities(spellAbilities);
     }, [allSpells, playerStats]);
     if(!spellAbilities) {
         return;
