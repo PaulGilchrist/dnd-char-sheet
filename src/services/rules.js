@@ -249,7 +249,7 @@ const rules = {
                     if (knownSpell) {
                         knownSpell.prepared = 'Always';
                     } else {
-                        const levelPrerequisite = subclassSpell.prerequisites[0].name.split(' ')[1];
+                        const levelPrerequisite = subclassSpell.prerequisites[0].index.split('-')[1];
                         if (playerStats.level >= levelPrerequisite) {
                             spellAbilities.spells.push({
                                 name: subclassSpell.spell.name,
@@ -263,7 +263,7 @@ const rules = {
                 spellAbilities.spells = spellAbilities.spells.map(spell => {
                     let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
                     if (spellDetail) {
-                        return { ...spellDetail, prepared: spell.prepared };
+                        return { ...spellDetail, prepared: spellDetail.level === 0 ? 'Always' : spell.prepared };
                     }
                     return { ...spell };
                 });

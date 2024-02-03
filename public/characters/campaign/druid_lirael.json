@@ -43,9 +43,9 @@
     ],
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Perception","Stealth"],
     "spells": [
-        {"name": "Druidcraft","prepared": "Prepared"},
-        {"name": "Frostbite","prepared": "Prepared"},
-        {"name": "Shillelagh","prepared": "Prepared"},
+        {"name": "Druidcraft","prepared": "Always"},
+        {"name": "Frostbite","prepared": "Always"},
+        {"name": "Shillelagh","prepared": "Always"},
         {"name": "Beast Bond","prepared": "Prepared"},
         {"name": "Detect Magic","prepared": "Prepared"},
         {"name": "Detect Poison and Disease","prepared": "Prepared"},

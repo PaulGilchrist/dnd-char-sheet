@@ -6,7 +6,7 @@ import CharSpellSlotLevel from './char-spell-slot-level'
 function CharSpellSlots({ playerStats }) {
 
     let classLevel = playerStats.class.class_levels[playerStats.level-1];
-    if(!classLevel.spellcasting) {
+    if(!classLevel.spellcasting && playerStats.class.subclass) {
         classLevel = playerStats.class.subclass.class_levels[playerStats.level-3]
     }
 

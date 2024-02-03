@@ -47,9 +47,9 @@
     ],
     "skillProficiencies": ["Animal Handling","Insight","Medicine","Perception","Survival"],
     "spells": [
-        {"name": "Guidance","prepared": "Prepared"},
-        {"name": "Sacred Flame","prepared": "Prepared"},
-        {"name": "Spare the Dying","prepared": "Prepared"},
+        {"name": "Guidance","prepared": "Always"},
+        {"name": "Sacred Flame","prepared": "Always"},
+        {"name": "Spare the Dying","prepared": "Always"},
         {"name": "Detect Magic","prepared": "Prepared"},
         {"name": "Guiding Bolt","prepared": "Prepared"},
         {"name": "Healing Word","prepared": "Prepared"},

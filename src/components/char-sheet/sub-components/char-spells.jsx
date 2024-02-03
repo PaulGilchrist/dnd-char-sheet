@@ -1,14 +1,59 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import rules from '../../../services/rules'
+import storage from '../../../services/local-storage'
 import './char-spells.css'
 import CharPopup from './char-popup'
 import CharSpellSlots from './char-spell-slots'
 
 function CharSpells({ allSpells, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
-    const spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
-    const alwaysPreparedCount = spellAbilities.spells.filter(spell => spell.prepared === 'Always').length;
+    const [spellAbilities, setSpellAbilities] = React.useState(null);
+    React.useEffect(() => {
+        const spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
+        // Override any spells from localStorage
+        if(spellAbilities && spellAbilities.spells) {
+            let preparedSpells = storage.get(playerStats.name, 'preparedSpells');
+            if(preparedSpells) {
+                spellAbilities.spells.forEach(spell => {
+                    if(preparedSpells.includes(spell.name)) {
+                        if(spell.prepared === '') {
+                            spell.prepared = 'Prepared';
+                        }
+                    } else {
+                        if(spell.prepared === 'Prepared') {
+                            spell.prepared = '';
+                        }
+                    }
+                });
+            }
+            setSpellAbilities(spellAbilities);
+        }
+    }, [allSpells, playerStats]);
+    if(!spellAbilities) {
+        return;
+    }
+    let alwaysPreparedCount = 0;
+    const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
+    if(alwaysPreparedSpells) {
+        alwaysPreparedCount = alwaysPreparedSpells.length;
+    }
+    const handleTogglePrepared = (spell) => {
+        if(spell.prepared === 'Prepared') {
+            spell.prepared = '';
+        } else {
+            spell.prepared = 'Prepared';
+        }
+        // Update local storage
+        const preparedSpells = [];
+        spellAbilities.spells.forEach(spell => {
+            if(spell.prepared === 'Prepared') {
+                preparedSpells.push(spell.name);
+            }
+        });
+        storage.set(playerStats.name, 'preparedSpells', preparedSpells);
+        setSpellAbilities({...spellAbilities});
+    }
     const showPopup = (spell) => {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
@@ -31,11 +76,11 @@ function CharSpells({ allSpells, playerStats }) {
                     </div>
                     <div>
                         <b>Save DC:</b> {spellAbilities.saveDc}<br/>
-                        {spellAbilities.maxPreparedSpells && <span><b>Max Prepared:</b> {spellAbilities.maxPreparedSpells}</span>}
+                        <b>Max Prepared:</b> {spellAbilities.maxPreparedSpells ? spellAbilities.maxPreparedSpells : 'All'}
                     </div>
                     <div>
-                        {spellAbilities.cantrips_known && <span><b>Cantrips Known:</b> {spellAbilities.cantrips_known}<br/></span>}
-                        {spellAbilities.spells_known && <span><b>Spells Known:</b> {spellAbilities.spells_known + alwaysPreparedCount}</span>}                        
+                        <b>Cantrips Known:</b> {spellAbilities.cantrips_known ? spellAbilities.cantrips_known : 0}<br/>
+                        <b>Spells Known:</b> {spellAbilities.spells_known ? spellAbilities.spells_known + alwaysPreparedCount : 'All'}                       
                     </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>
@@ -66,7 +111,8 @@ function CharSpells({ allSpells, playerStats }) {
                         return <React.Fragment key={spell.name}>
                             <div className='left spell-name' onClick={() => showPopup(spell)}>{spell.name}</div>
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
-                            <div>{spell.prepared}</div>
+                            {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <div>{spell.prepared}</div>}
+                            {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePrepared(spell)}/></div>}
                             <div>{spell.casting_time.replace('bonus action','BA').replace('action','A').replace('minute','min').replace('minutes','min')}</div>
                             <div>{spell.range}</div>
                             <div>{effect}</div>
