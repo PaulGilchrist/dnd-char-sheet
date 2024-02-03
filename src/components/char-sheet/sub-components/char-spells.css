@@ -2,7 +2,7 @@
     align-items: center;
     display: grid;
     grid-template-columns: auto auto auto auto auto;
-    margin-bottom: 0px;
+    margin-bottom: 5px;
     margin-top: -10px;
 }
 .spell-popup-parent {

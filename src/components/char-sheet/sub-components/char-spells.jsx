@@ -8,7 +8,7 @@ import CharSpellSlots from './char-spell-slots'
 function CharSpells({ allSpells, playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     const spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
-
+    const alwaysPreparedCount = spellAbilities.spells.filter(spell => spell.prepared === 'Always').length;
     const showPopup = (spell) => {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
@@ -18,7 +18,6 @@ function CharSpells({ allSpells, playerStats }) {
             setPopupHtml(html);
         }
     }
-    
     return (
         <div>
             {(spellAbilities && spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
@@ -26,9 +25,18 @@ function CharSpells({ allSpells, playerStats }) {
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader">Spells</div>
-                    <div><b>Attack (to hit):</b> +{spellAbilities.toHit}</div>
-                    <div><b>Modifier:</b> +{spellAbilities.modifier}</div>
-                    <div><b>Save DC:</b> {spellAbilities.saveDc}</div>
+                    <div>
+                        <b>Attack (to hit):</b> +{spellAbilities.toHit}<br/>
+                        <b>Modifier:</b> +{spellAbilities.modifier}
+                    </div>
+                    <div>
+                        <b>Save DC:</b> {spellAbilities.saveDc}<br/>
+                        {spellAbilities.maxPreparedSpells && <span><b>Max Prepared:</b> {spellAbilities.maxPreparedSpells}</span>}
+                    </div>
+                    <div>
+                        {spellAbilities.cantrips_known && <span><b>Cantrips Known:</b> {spellAbilities.cantrips_known}<br/></span>}
+                        {spellAbilities.spells_known && <span><b>Spells Known:</b> {spellAbilities.spells_known + alwaysPreparedCount}</span>}                        
+                    </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>
                 <div className='spells'>
