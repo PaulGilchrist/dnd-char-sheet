@@ -48,9 +48,9 @@
     ],
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
     "spells": [
-        {"name": "Detect Magic","prepared": true},
-        {"name": "Goodberry","prepared": true},
-        {"name": "Hunter's Mark","prepared": true}
+        {"name": "Detect Magic","prepared": "Prepared"},
+        {"name": "Goodberry","prepared": "Prepared"},
+        {"name": "Hunter's Mark","prepared": "Prepared"}
     ],
     "subclass": "Beast Master",
     "subrace": "",
