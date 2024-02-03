@@ -7,7 +7,6 @@
 }
 .spell-popup-parent {
     overflow: visible;
-    position: relative;
 }
 .spell-name {
     cursor: pointer;
