@@ -3129,6 +3129,45 @@
         ]
     },
     {
+        "index": "ensnaring-strike",
+        "name": "Ensnaring Strike",
+        "desc": [
+            "The next time you hit a creature with a weapon attack before this spell ends, a writhing mass of thorny vines appears at the point of impact, and the target must succeed on a Strength saving throw or be restrained by the magical vines until the spell ends. A Large or larger creature has advantage on this saving throw. If the target succeeds on the save, the vines shrivel away.<br/>While restrained by this spell, the target takes 1d6 piercing damage at the start of each of its turns. A creature restrained by the vines or one that can touch the creature can use its action to make a Strength check against your spell save DC. On a success, the target is freed."
+        ],
+        "higher_level": [
+            "If you cast this spell using a spell slot of 2nd level or higher, the damage increases by 1d6 for each slot level above 1st."
+        ],
+        "range": "Self",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "damage": {
+            "damage_type": "Piercing",
+            "damage_at_slot_level": {
+                "1": "1d6",
+                "2": "2d6",
+                "3": "3d6",
+                "4": "4d6",
+                "5": "5d6",
+                "6": "6d6"
+            }
+        },
+        "dc": {
+            "dc_type": "STR",
+            "dc_success": "none"
+        },
+        "school": "Conjuration",
+        "classes": [
+            "Ranger"
+        ],
+        "subclasses": []
+    },
+    {
         "index": "entangle",
         "name": "Entangle",
         "desc": [
@@ -4724,6 +4763,45 @@
         "subclasses": [
             "Lore"
         ]
+    },
+    {
+        "index": "hail-of-thorns",
+        "name": "Hail of Thorns",
+        "desc": [
+            "The next time you hit a creature with a ranged weapon attack before the spell ends, this spell creates a rain of thorns that sprouts from your ranged weapon or ammunition. In addition to the normal effect of the attack, the target of the attack and each creature within 5 feet of it must make a Dexterity saving throw. A creature takes 1dlO piercing damage on a failed save, or half as much damage on a successful one."
+        ],
+        "higher_level": [
+            "If you cast this spell using a spell slot of 2nd level or higher, the damage increases by 1dlO for each slot level above 1st (to a maximum of 6d10)."
+        ],
+        "range": "Self",
+        "components": [
+            "V"
+        ],
+        "ritual": false,
+        "duration": "Up to 1 minute",
+        "concentration": true,
+        "casting_time": "1 bonus action",
+        "level": 1,
+        "damage": {
+            "damage_type": "Piercing",
+            "damage_at_slot_level": {
+                "1": "1d10",
+                "2": "2d10",
+                "3": "3d10",
+                "4": "4d10",
+                "5": "5d10",
+                "6": "6d10"
+            }
+        },
+        "dc": {
+            "dc_type": "DEX",
+            "dc_success": "half"
+        },
+        "school": "Conjuration",
+        "classes": [
+            "Ranger"
+        ],
+        "subclasses": []
     },
     {
         "index": "hallow",
