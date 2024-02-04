@@ -55,7 +55,8 @@
         {"name": "Protection from Poison","prepared": "Prepared"},
         {"name": "Spider Climb","prepared": "Prepared"}
     ],
-    "subclass": "Circle of the Land - Forest",
+    "subclass": "Land",
+    "subSubclass": "Forest",
     "subrace": "Wood Elf",
     "vulnerabilities": []
 }
