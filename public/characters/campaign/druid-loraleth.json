@@ -48,10 +48,7 @@
         {"name": "Produce Flame","prepared": "Always"},
         {"name": "Shocking Grasp","prepared": "Always"},
         {"name": "Cure Wounds","prepared": "Prepared"},
-        {"name": "Ice Knife","prepared": "Prepared"},
-        {"name": "Mirror Image","prepared": "Prepared"},
-        {"name": "Misty Step","prepared": "Prepared"},
-        {"name": "Spike Growth","prepared": "Prepared"}
+        {"name": "Ice Knife","prepared": "Prepared"}
     ],
     "subclass": "Land",
     "subSubclass": "Coast",
