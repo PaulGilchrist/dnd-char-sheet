@@ -61,7 +61,6 @@
     ],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
     "spells": [
-        {"name": "Bane","prepared": ""},
         {"name": "Bless","prepared": "Prepared"},
         {"name": "Command","prepared": "Prepared"},
         {"name": "Compelled Duel","prepared": ""},
@@ -71,7 +70,6 @@
         {"name": "Detect Poison and Disease","prepared": ""},
         {"name": "Divine Favor","prepared": "Prepared"},
         {"name": "Heroism","prepared": ""},
-        {"name": "Hunter's Mark","prepared": "Prepared"},
         {"name": "Protection from Evil and Good","prepared": ""},
         {"name": "Purify Food and Drink","prepared": ""},
         {"name": "Searing Smite","prepared": "Prepared"},

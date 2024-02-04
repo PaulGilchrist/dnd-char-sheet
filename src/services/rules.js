@@ -48,6 +48,67 @@ const rules = {
             return ability;
         });
     },
+    getArmorClass: (allEquipment, playerStats) => {
+        // playerStats must include full class from getClass()
+        const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
+        const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
+        const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
+        // Find armor in the character's equipment and calculate Armor Class
+        let armorName = playerStats.inventory.equipped.find(itemName => {
+            // Does this item have a magic bonus?
+            if(itemName.charAt(0) === "+") {
+                itemName = itemName.substring(3);
+            }        
+            let item = allEquipment.find((item) => item.name === itemName);
+            if(item) {
+                return item.equipment_category === 'Armor';
+            }
+            return false;
+        });
+        let addedBonus = 0;
+        if(playerStats.class.name === 'Monk') {
+            addedBonus += wisdom.bonus;
+        } 
+        if(playerStats.fightingStyle === 'Defense') {
+            addedBonus += 1;
+        }
+        let armorClass;
+        if(armorName) {
+            // Does this item have a magic bonus?
+            let magicBonus = 0;
+            if(armorName.charAt(0) === '+') {
+                magicBonus = Number(armorName.charAt(1));
+                armorName = armorName.substring(3);
+            }
+            let armor = allEquipment.find((item) => item.name === armorName);
+            armorClass = armor.armor_class.base + addedBonus + magicBonus;
+            if(armor.armor_class.dex_bonus) {
+                let armorBonus = dexterity.bonus;
+                if(armor.armor_class.max_bonus) {
+                    armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
+                }
+                armorClass = armor.armor_class.base + armorBonus + addedBonus + magicBonus;
+            }
+        } else {
+            armorClass = 10 + dexterity.bonus + addedBonus// Unarmored
+        }
+        // Check for an equipped magical shield, and if found increase AC
+        let shield = playerStats.inventory.equipped.find(item => item.substring(3) === 'Shield');
+        if(shield) {
+            armorClass += 2 + Number(shield.charAt(1));
+        } else if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
+            // Non-magical shield
+            armorClass += 2;
+        }
+        // Barbarian may have native AC better than armor based AC due to "Unarmored Defense"
+        if(playerStats.class.name === 'Barbarian') {
+            const barbarianAc = 10 + dexterity.bonus + constitution.bonus;
+            if(barbarianAc > armorClass) {
+                armorClass = barbarianAc;
+            }
+        }         
+        return armorClass;
+    },
     getClass: (allClasses, playerSummary) => {
         const characterClass = utils.deepCopy(allClasses.find((characterClass) => characterClass.name === playerSummary.class));
         const subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.subclass);
@@ -59,6 +120,17 @@ const rules = {
         delete characterClass.subclasses; // We don't need these anymore
         characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => rules.getAbilityLongName(savingThrow));
         return characterClass;
+    },
+    getHighestSubclassLevel: (playerStats) => {
+        let subClassLevel = null
+        for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
+            if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
+                break;
+            } else {
+                subClassLevel = playerStats.class.subclass.class_levels[i];
+            }
+        }
+        return subClassLevel
     },
     getLanguages: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace()

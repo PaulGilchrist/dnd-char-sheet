@@ -1,0 +1,42 @@
+{
+    "abilities": [
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 11, "miscBonus": 0 },
+        { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
+    ],
+    "actions": [],
+    "alignment": "Neutral Good",
+    "attacksPerAction": 1,
+    "bonusActions": [],
+    "class": "Bard",
+    "immunities": [],
+    "inventory": {
+        "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
+        "equipped": ["Studded Leather","Crossbow, hand","Rapier","Dagger"],
+        "gold": 10
+    },
+    "languages": [],
+    "level": 10,
+    "proficiencies": [],
+    "name": "Mordai",
+    "race": "Tiefling",
+    "reactions": [],
+    "resistances": ["Fire"],
+    "senses": [],
+    "skillProficiencies": ["Performance","Persuasion","Deception"],
+    "spells": [
+        { "name": "Mage Hand", "prepared": "Always" },
+        { "name": "Minor Illusion", "prepared": "Always" },
+        { "name": "Charm Person", "prepared": "Always" },
+        { "name": "Disguise Self", "prepared": "Always" },
+        { "name": "Hideous Laughter", "prepared": "Always" },
+        { "name": "Sleep", "prepared": "Always" }
+    ],
+    "specialActions": [],
+    "subclass": "Lore",
+    "subrace": "",
+    "vulnerabilities": []
+}

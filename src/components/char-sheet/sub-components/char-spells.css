@@ -1,9 +1,10 @@
 .spell-abilities {
     align-items: center;
+    background-color: var(--background-color-body);
     display: grid;
-    grid-template-columns: auto auto auto auto auto;
-    margin-bottom: 5px;
-    margin-top: -10px;
+    grid-template-columns: auto auto auto auto;
+    padding-bottom: 5px;
+    margin-top: -5px;
 }
 .spell-popup-parent {
     overflow: visible;

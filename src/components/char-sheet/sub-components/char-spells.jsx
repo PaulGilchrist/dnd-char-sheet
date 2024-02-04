@@ -30,14 +30,15 @@ function CharSpells({ allSpells, playerStats }) {
         }
         setSpellAbilities(spellAbilities);
     }, [allSpells, playerStats]);
-    if(!spellAbilities) {
-        return;
-    }
+
     let alwaysPreparedCount = 0;
-    const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
-    if(alwaysPreparedSpells) {
-        alwaysPreparedCount = alwaysPreparedSpells.length;
+    if(spellAbilities) {
+        const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
+        if(alwaysPreparedSpells) {
+            alwaysPreparedCount = alwaysPreparedSpells.length;
+        }
     }
+
     const handleTogglePrepared = (spell) => {
         if(spell.prepared === 'Prepared') {
             spell.prepared = '';
@@ -69,18 +70,16 @@ function CharSpells({ allSpells, playerStats }) {
                 {popupHtml && (<CharPopup html={popupHtml} onClick={() => setPopupHtml(null)}></CharPopup>)}
                 <hr />
                 <div className='spell-abilities'>
-                    <div className="sectionHeader">Spells</div>
+                    <div className="sectionHeader"><h4>&nbsp;Spells</h4></div>
                     <div>
                         <b>Attack (to hit):</b> +{spellAbilities.toHit}<br/>
-                        <b>Modifier:</b> +{spellAbilities.modifier}
-                    </div>
-                    <div>
-                        <b>Save DC:</b> {spellAbilities.saveDc}<br/>
-                        <b>Max Prepared:</b> {spellAbilities.maxPreparedSpells ? spellAbilities.maxPreparedSpells : 'All'}
+                        <b>Modifier:</b> +{spellAbilities.modifier}<br/>
+                        <b>Save DC:</b> {spellAbilities.saveDc}
                     </div>
                     <div>
                         <b>Cantrips Known:</b> {spellAbilities.cantrips_known ? spellAbilities.cantrips_known : 0}<br/>
-                        <b>Spells Known:</b> {spellAbilities.spells_known ? spellAbilities.spells_known + alwaysPreparedCount : 'All'}                       
+                        <b>Spells Known:</b> {spellAbilities.spells_known ? spellAbilities.spells_known : 'All'}<br/>                    
+                        <b>Max Prepared:</b> {spellAbilities.maxPreparedSpells ? spellAbilities.maxPreparedSpells : 'All'}
                     </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>

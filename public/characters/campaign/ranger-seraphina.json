@@ -108,56 +108,16 @@
   ],
   "spells": [
     {
-      "name": "Detect Magic",
-      "prepared": "Prepared"
-    },
-    {
-      "name": "Goodberry",
-      "prepared": "Prepared"
-    },
-    {
       "name": "Hunter's Mark",
       "prepared": "Prepared"
-    },
-    {
-      "name": "Alarm",
-      "prepared": ""
-    },
-    {
-      "name": "Animal Friendship",
-      "prepared": ""
-    },
-    {
-      "name": "Cure Wounds",
-      "prepared": ""
     },
     {
       "name": "Hail of Thorns",
       "prepared": ""
     },
     {
-      "name": "Detect Poison and Disease",
-      "prepared": ""
-    },
-    {
       "name": "Ensnaring Strike",
       "prepared": ""
-    },
-    {
-      "name": "Fog Cloud",
-      "prepared": ""
-    },
-    {
-      "name": "Jump",
-      "prepared": ""
-    },
-    {
-      "name": "Longstrider",
-      "prepared": ""
-    },
-    {
-      "name": "Speak with Animals",
-      "prepared": "Prepared"
     }
   ],
   "subclass": "Beast Master",
