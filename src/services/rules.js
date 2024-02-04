@@ -69,7 +69,7 @@ const rules = {
         if(playerStats.class.name === 'Monk') {
             addedBonus += wisdom.bonus;
         } 
-        if(playerStats.fightingStyle === 'Defense') {
+        if(playerStats.fightingStyles && playerStats.fightingStyles.includes('Defense')) {
             addedBonus += 1;
         }
         let armorClass;
@@ -120,6 +120,16 @@ const rules = {
         delete characterClass.subclasses; // We don't need these anymore
         characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => rules.getAbilityLongName(savingThrow));
         return characterClass;
+    },
+    getDruidMaxWildShapeChallengeRating: (playerStats) => {
+        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_max_cr;
+        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {    
+            maxWildShapeChallengeRating = 1;
+            if(playerStats.level > 5) {
+                maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
+            }
+        }
+        return maxWildShapeChallengeRating
     },
     getHighestSubclassLevel: (playerStats) => {
         let subClassLevel = null

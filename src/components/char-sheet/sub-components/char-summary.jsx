@@ -9,6 +9,7 @@ import CharHitPoints from './char-hit-points'
 import CharClassBarbarian from './char-class-barbarian'
 import CharClassBard from './char-class-bard'
 import CharClassCleric from './char-class-cleric'
+import CharClassDruid from './char-class-druid'
 import CharClassMonk from './char-class-monk'
 
 function CharSummary({ allEquipment, playerStats }) {
@@ -47,6 +48,7 @@ function CharSummary({ allEquipment, playerStats }) {
                     {playerStats.class.name == 'Barbarian' && <CharClassBarbarian playerStats={playerStats}></CharClassBarbarian>}
                     {playerStats.class.name == 'Bard' && <CharClassBard playerStats={playerStats}></CharClassBard>}
                     {playerStats.class.name == 'Cleric' && <CharClassCleric playerStats={playerStats}></CharClassCleric>}
+                    {playerStats.class.name == 'Druid' && <CharClassDruid playerStats={playerStats}></CharClassDruid>}
                     {playerStats.class.name == 'Monk' && playerStats.level > 2 && <CharClassMonk playerStats={playerStats}></CharClassMonk>}
                 </div>
             </div>

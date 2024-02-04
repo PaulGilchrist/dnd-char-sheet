@@ -12,7 +12,7 @@
     "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Ranger",
-    "fightingStyle": "",
+    "fightingStyles": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit", "Rations (5 days)", "Rope, Silk (50 feet)", "Tinderbox", "Torch", "Waterskin"],
