@@ -9,7 +9,6 @@
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "attacksPerAction": 1,
     "bonusActions": [
         {
             "name": "Second Wind",
@@ -17,7 +16,7 @@
         }
     ],
     "class": "Fighter",
-    "fightingStyle": "Archery",
+    "fightingStyles": ["Archery"],
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],

@@ -1,7 +1,7 @@
 {
     "abilities": [
-        { "name": "Strength", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
-        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Constitution", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
         { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 },
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 11, "miscBonus": 0 },
@@ -9,31 +9,25 @@
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [
-        {
-            "name": "Second Wind",
-            "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP"
-        }
-    ],
-    "class": "Fighter",
-    "fightingStyles": ["Archery"],
+    "bonusActions": [],
+    "class": "Barbarian",
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
+        "equipped": ["Longbow","Greatsword","Dagger"],
         "gold": 10
     },
     "languages": [],
     "level": 1,
     "proficiencies": [],
-    "name": "Agron",
+    "name": "Crom",
     "race": "Human",
     "reactions": [],
     "resistances": [],
     "senses": [],
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "specialActions": [],
-    "subclass": "Champion",
+    "subclass": "Berserker",
     "subrace": "",
     "vulnerabilities": []
 }

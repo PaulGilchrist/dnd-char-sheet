@@ -22,7 +22,6 @@
         }
     ],
     "alignment": "Lawful Good",
-    "attacksPerAction": 1,
     "bonusActions": [
         {
             "name": "Channel Divinity: Vow of Enmity",
@@ -30,7 +29,7 @@
         }
     ],
     "class": "Paladin",
-    "fightingStyle": "Defense",
+    "fightingStyles": ["Defense"],
     "immunities": ["Disease"],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
@@ -61,7 +60,6 @@
     ],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
     "spells": [
-        {"name": "Bane","prepared": ""},
         {"name": "Bless","prepared": "Prepared"},
         {"name": "Command","prepared": "Prepared"},
         {"name": "Compelled Duel","prepared": ""},
@@ -71,7 +69,6 @@
         {"name": "Detect Poison and Disease","prepared": ""},
         {"name": "Divine Favor","prepared": "Prepared"},
         {"name": "Heroism","prepared": ""},
-        {"name": "Hunter's Mark","prepared": "Prepared"},
         {"name": "Protection from Evil and Good","prepared": ""},
         {"name": "Purify Food and Drink","prepared": ""},
         {"name": "Searing Smite","prepared": "Prepared"},

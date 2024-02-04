@@ -18,7 +18,6 @@
         }
     ],
     "alignment": "Neutral Good",
-    "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Cleric",
     "immunities": ["Magical Sleep"],

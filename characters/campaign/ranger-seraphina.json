@@ -1,166 +1,129 @@
 {
-  "abilities": [
-    {
-      "name": "Strength",
-      "abilityImprovements": 0,
-      "baseScore": 11,
-      "miscBonus": 0
-    },
-    {
-      "name": "Dexterity",
-      "abilityImprovements": 0,
-      "baseScore": 16,
-      "miscBonus": 1
-    },
-    {
-      "name": "Constitution",
-      "abilityImprovements": 0,
-      "baseScore": 13,
-      "miscBonus": 1
-    },
-    {
-      "name": "Intelligence",
-      "abilityImprovements": 0,
-      "baseScore": 8,
-      "miscBonus": 0
-    },
-    {
-      "name": "Wisdom",
-      "abilityImprovements": 0,
-      "baseScore": 14,
-      "miscBonus": 0
-    },
-    {
-      "name": "Charisma",
-      "abilityImprovements": 0,
-      "baseScore": 10,
-      "miscBonus": 0
-    }
-  ],
-  "actions": [
-    {
-      "name": "Primeval Awareness",
-      "description": "Expend one ranger spell slot (1 minute per level of spell slot) to sense whether any aberrations, celestials, dragons, elementals, fey, fiends, or undead are present within 1 mile of you (or within up to 6 miles if you are in your favored terrain). This feature doesn't reveal the creatures' location or number."
-    }
-  ],
-  "alignment": "Neutral Good",
-  "attacksPerAction": 1,
-  "bonusActions": [],
-  "class": "Ranger",
-  "fightingStyle": "Archery",
-  "immunities": [
-    "Magical Sleep"
-  ],
-  "inventory": {
-    "backpack": [
-      "Bedroll",
-      "Goodberry",
-      "Mess Kit",
-      "Rations (10 days)",
-      "Rope, Hempen (50 feet)",
-      "Tinderbox",
-      "Torch",
-      "Waterskin"
+    "abilities": [
+        {
+            "name": "Strength",
+            "abilityImprovements": 0,
+            "baseScore": 11,
+            "miscBonus": 0
+        },
+        {
+            "name": "Dexterity",
+            "abilityImprovements": 0,
+            "baseScore": 16,
+            "miscBonus": 1
+        },
+        {
+            "name": "Constitution",
+            "abilityImprovements": 0,
+            "baseScore": 13,
+            "miscBonus": 1
+        },
+        {
+            "name": "Intelligence",
+            "abilityImprovements": 0,
+            "baseScore": 8,
+            "miscBonus": 0
+        },
+        {
+            "name": "Wisdom",
+            "abilityImprovements": 0,
+            "baseScore": 14,
+            "miscBonus": 0
+        },
+        {
+            "name": "Charisma",
+            "abilityImprovements": 0,
+            "baseScore": 10,
+            "miscBonus": 0
+        }
     ],
-    "equipped": [
-      "Arrows",
-      "Studded Leather",
-      "Longbow",
-      "Scimitar",
-      "Scimitar",
-      "Ring of Command"
+    "actions": [
+        {
+            "name": "Primeval Awareness",
+            "description": "Expend one ranger spell slot (1 minute per level of spell slot) to sense whether any aberrations, celestials, dragons, elementals, fey, fiends, or undead are present within 1 mile of you (or within up to 6 miles if you are in your favored terrain). This feature doesn't reveal the creatures' location or number."
+        }
     ],
-    "gold": 10
-  },
-  "languages": [
-    "Goblin",
-    "Orc"
-  ],
-  "level": 3,
-  "name": "Seraphina Windrunner",
-  "proficiencies": [],
-  "race": "Half-Elf",
-  "reactions": [],
-  "resistances": [],
-  "senses": [],
-  "specialActions": [
-    {
-      "name": "Favored Enemy",
-      "description": "Humanoids - You have advantage on Survival checks to track your favored enemies, as well as on INT checks to recall information about them."
+    "alignment": "Neutral Good",
+    "bonusActions": [],
+    "class": "Ranger",
+    "favoredEnemies": ["Humanoids"],
+    "favoredTerrain": ["Forest"],
+    "fightingStyles": [
+        "Archery"
+    ],
+    "immunities": [
+        "Magical Sleep"
+    ],
+    "inventory": {
+        "backpack": [
+            "Bedroll",
+            "Goodberry",
+            "Mess Kit",
+            "Rations (10 days)",
+            "Rope, Hempen (50 feet)",
+            "Tinderbox",
+            "Torch",
+            "Waterskin"
+        ],
+        "equipped": [
+            "Arrows",
+            "Studded Leather",
+            "Longbow",
+            "Scimitar",
+            "Scimitar",
+            "Ring of Command"
+        ],
+        "gold": 10
     },
-    {
-      "name": "Natural Explorer",
-      "description": "Forest - You have a favored terrain type. Your proficiency bonus is doubled for proficient skills when you make an INT or WIS check related to it. While traveling for an hour or more in your chosen terrain, difficult terrain doesn't slow your group's travel, your group can't become lost except by magical means, you remain alert to danger even when you are engaged in another activity, you can move stealthily at a normal pace (while alone), you find twice as much food while foraging, and while tracking creatures, you learn the exact number, sizes, and how long ago they passed through the area."
-    },
-    {
-      "name": "Beast Master",
-      "description": "You gain a beast companion that accompanies you on your adventures and is trained to fight alongside you. The beast obeys your commands and takes its turn on your initiative. On your turn, you can command the beast where to move (no action required by you) or take the Attack, Dash, Disengage, or Help action. If you don't issue a command, the beast takes the Dodge action."
-    }
-  ],
-  "skillProficiencies": [
-    "Animal Handling",
-    "Insight",
-    "Investigation",
-    "Nature",
-    "Perception",
-    "Stealth",
-    "Survival"
-  ],
-  "spells": [
-    {
-      "name": "Detect Magic",
-      "prepared": "Prepared"
-    },
-    {
-      "name": "Goodberry",
-      "prepared": "Prepared"
-    },
-    {
-      "name": "Hunter's Mark",
-      "prepared": "Prepared"
-    },
-    {
-      "name": "Alarm",
-      "prepared": ""
-    },
-    {
-      "name": "Animal Friendship",
-      "prepared": ""
-    },
-    {
-      "name": "Cure Wounds",
-      "prepared": ""
-    },
-    {
-      "name": "Hail of Thorns",
-      "prepared": ""
-    },
-    {
-      "name": "Detect Poison and Disease",
-      "prepared": ""
-    },
-    {
-      "name": "Ensnaring Strike",
-      "prepared": ""
-    },
-    {
-      "name": "Fog Cloud",
-      "prepared": ""
-    },
-    {
-      "name": "Jump",
-      "prepared": ""
-    },
-    {
-      "name": "Longstrider",
-      "prepared": ""
-    },
-    {
-      "name": "Speak with Animals",
-      "prepared": "Prepared"
-    }
-  ],
-  "subclass": "Beast Master",
-  "subrace": "",
-  "vulnerabilities": []
+    "languages": [
+        "Goblin",
+        "Orc"
+    ],
+    "level": 3,
+    "name": "Seraphina Windrunner",
+    "proficiencies": [],
+    "race": "Half-Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [],
+    "specialActions": [
+        {
+            "name": "Favored Enemy",
+            "description": "You have advantage on Survival checks to track your favored enemies, as well as on INT checks to recall information about them."
+        },
+        {
+            "name": "Natural Explorer",
+            "description": "You have a favored terrain type. Your proficiency bonus is doubled for proficient skills when you make an INT or WIS check related to it. While traveling for an hour or more in your chosen terrain, difficult terrain doesn't slow your group's travel, your group can't become lost except by magical means, you remain alert to danger even when you are engaged in another activity, you can move stealthily at a normal pace (while alone), you find twice as much food while foraging, and while tracking creatures, you learn the exact number, sizes, and how long ago they passed through the area."
+        },
+        {
+            "name": "Beast Master",
+            "description": "You gain a beast companion that accompanies you on your adventures and is trained to fight alongside you. The beast obeys your commands and takes its turn on your initiative. On your turn, you can command the beast where to move (no action required by you) or take the Attack, Dash, Disengage, or Help action. If you don't issue a command, the beast takes the Dodge action."
+        }
+    ],
+    "skillProficiencies": [
+        "Animal Handling",
+        "Insight",
+        "Investigation",
+        "Nature",
+        "Perception",
+        "Stealth",
+        "Survival"
+    ],
+    "spells": [
+        {
+            "name": "Hunter's Mark",
+            "prepared": "Prepared"
+        },
+        {
+            "name": "Hail of Thorns",
+            "prepared": ""
+        },
+        {
+            "name": "Ensnaring Strike",
+            "prepared": ""
+        }
+    ],
+    "subclass": "Beast Master",
+    "subrace": "",
+    "vulnerabilities": []
 }
