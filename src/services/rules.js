@@ -148,7 +148,7 @@ const rules = {
                 spellAbilities.spells = [];
             }
         }
-        if (playerStats.race === 'Tiefling') {
+        if (playerStats.race.name === 'Tiefling') {
             if (!spellAbilities) {
                 spellAbilities = {
                     spellCastingAbility: 'Charisma',
@@ -177,7 +177,7 @@ const rules = {
                     });
                 }
             }
-        } else if (playerStats.subrace === 'High Elf') {
+        } else if (playerStats.race.subrace.name === 'High Elf') {
             // High Elf gets one cantrip from the wizard spell list
             if (!spellAbilities) {
                 spellAbilities = {
@@ -185,7 +185,7 @@ const rules = {
                     spells: []
                 }
             }
-        } else if (playerStats.subrace === 'Forest Gnome') {
+        } else if (playerStats.race.subrace.name === 'Forest Gnome') {
             if (!spellAbilities) {
                 spellAbilities = {
                     spellCastingAbility: 'Intelligence',
@@ -205,7 +205,7 @@ const rules = {
         }
         if (spellAbilities) {
             // A null for classSpellcasting.cantrips_known means NONE are known
-            if (playerStats.race === 'Tiefling' || playerStats.subrace === 'Forest Gnome' || playerStats.subrace === 'High Elf') {
+            if (playerStats.race.name === 'Tiefling' || playerStats.race.subrace.name === 'Forest Gnome' || playerStats.race.subrace.name === 'High Elf') {
                 if (spellAbilities.cantrips_known) {
                     spellAbilities.cantrips_known += 1;
                 } else {
@@ -219,12 +219,16 @@ const rules = {
             spellAbilities.modifier = spellAbility.bonus;
             spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
             spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
-            switch (playerStats.class.subclass) {
+            // subclass specific adjustments
+            switch (playerStats.class.subclass.name) {
                 case 'Arcane Trickster':
                     spellAbilities.schoolLimits = ['enchantment', 'illusion'];
                     break;
                 case 'Eldritch Knight':
                     spellAbilities.schoolLimits = ['abjuration', 'evocation'];
+                    break;
+                case 'Land':
+                    spellAbilities.cantrips_known += 1;
                     break;
             }
             switch (playerStats.class.name) {
