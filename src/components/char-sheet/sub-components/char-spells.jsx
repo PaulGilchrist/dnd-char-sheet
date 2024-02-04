@@ -113,10 +113,10 @@ function CharSpells({ allSpells, playerStats }) {
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                             {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <div>{spell.prepared}</div>}
                             {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePrepared(spell)}/></div>}
-                            <div>{spell.casting_time.replace('bonus action','BA').replace('action','A').replace('minute','min').replace('minutes','min')}</div>
+                            <div>{spell.casting_time ? spell.casting_time.replace('bonus action','BA').replace('action','A').replace('minute','min').replace('minutes','min') : ''}</div>
                             <div>{spell.range}</div>
                             <div>{effect}</div>
-                            <div>{spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min')}</div>
+                            <div>{spell.duration ? spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min') : ''}</div>
                             <div className='left'>{notes.join(', ').replace('Concentration','Con')}</div>
                         </React.Fragment>;
                     })}
