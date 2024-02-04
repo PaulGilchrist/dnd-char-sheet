@@ -1,0 +1,39 @@
+{
+    "abilities": [
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
+    ],
+    "actions": [],
+    "alignment": "Neutral Good",
+    "bonusActions": [],
+    "class": "Warlock",
+    "immunities": [],
+    "inventory": {
+        "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
+        "equipped": ["Quarterstaff","Dagger"],
+        "gold": 10
+    },
+    "languages": [],
+    "level": 1,
+    "name": "Naal",
+    "proficiencies": [],
+    "race": "Half-Elf",
+    "reactions": [],
+    "resistances": [],
+    "senses": [],
+    "specialActions": [],
+    "skillProficiencies": ["Arcana","Investigation","Perception","Nature"],
+    "spells": [
+        { "name": "Eldritch Blast", "prepared": "Always" },
+        { "name": "Mage Hand", "prepared": "Always" },
+        { "name": "Charm Person", "prepared": "Always" },
+        { "name": "Hellish Rebuke", "prepared": "Always" }
+    ],
+    "subclass": "The Archfey",
+    "subrace": "",
+    "vulnerabilities": []
+}
