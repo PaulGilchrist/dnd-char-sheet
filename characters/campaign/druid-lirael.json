@@ -46,14 +46,11 @@
         {"name": "Druidcraft","prepared": "Always"},
         {"name": "Frostbite","prepared": "Always"},
         {"name": "Shillelagh","prepared": "Always"},
+        {"name": "Detect Magic","prepared": "Ritual"},
+        {"name": "Detect Poison and Disease","prepared": "Ritual"},
         {"name": "Beast Bond","prepared": "Prepared"},
-        {"name": "Detect Magic","prepared": "Prepared"},
-        {"name": "Detect Poison and Disease","prepared": "Prepared"},
         {"name": "Ice Knife","prepared": "Prepared"},
-        {"name": "Barkskin","prepared": "Prepared"},
-        {"name": "Pass Without Trace","prepared": "Prepared"},
-        {"name": "Protection from Poison","prepared": "Prepared"},
-        {"name": "Spider Climb","prepared": "Prepared"}
+        {"name": "Protection from Poison","prepared": "Prepared"}
     ],
     "subclass": "Land",
     "subSubclass": "Forest",
