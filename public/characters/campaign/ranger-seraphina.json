@@ -44,7 +44,6 @@
     }
   ],
   "alignment": "Neutral Good",
-  "attacksPerAction": 1,
   "bonusActions": [],
   "class": "Ranger",
   "fightingStyles": ["Archery"],

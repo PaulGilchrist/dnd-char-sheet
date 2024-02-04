@@ -100,9 +100,10 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     }
     // If we have a Monk, then their hands are a weapon
     if (playerStats.class.name === 'Monk') {
+        const martialArts = playerStats.class.class_levels[playerStats.level-1].class_specific.martial_arts;
         attacks.push({
             "name": 'Unarmed Strike',
-            "damage": `1d4+${dexterity.bonus}`,
+            "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
             "hitBonus": dexterity.bonus + playerStats.proficiency,
             "range": 5,
@@ -110,7 +111,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         });
         attacks.push({
             "name": 'Unarmed Strike',
-            "damage": `1d4+${dexterity.bonus}`,
+            "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
             "damageType": 'Bludgeoning',
             "hitBonus": dexterity.bonus + playerStats.proficiency,
             "range": 5,
@@ -152,7 +153,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     return (
         <div>
             <div>
-                <span className='sectionHeader'>Actions</span>{ playerStats.attacksPerAction > 1 && (<span> {playerStats.attacksPerAction} attacks per turn</span>)}
+                <span className='sectionHeader'>Actions</span>
                 <div className='attacks'>
                     <div className='left'><b>Name</b></div>
                     <div><b>Range</b></div>

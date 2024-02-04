@@ -22,7 +22,6 @@
         }
     ],
     "alignment": "Lawful Good",
-    "attacksPerAction": 1,
     "bonusActions": [
         {
             "name": "Channel Divinity: Vow of Enmity",

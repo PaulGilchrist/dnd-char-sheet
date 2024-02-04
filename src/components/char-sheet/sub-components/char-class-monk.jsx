@@ -23,8 +23,14 @@ function CharClassMonk({ playerStats }) {
         setKiPoints(kiPoints);
     };
     const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
+    let extraAttacks = 0;
+    if(playerStats.level > 4) { // "Extra Attack" class feature at level 5
+        extraAttacks = 1;
+    }
+    
     return (<React.Fragment>
         {playerStats.class.name === 'Monk' && playerStats.level > 1 && <div>
+            <div><b>Extra Attacks: </b>{extraAttacks}</div>
             <div className="clickable" onClick={handleKiPointsToggle} onKeyDown={handleKiPointsToggle} tabIndex={0}>
                 <b>Ki Points:</b> {maxKiPoints}/<HiddenInput handleInputToggle={handleKiPointsToggle} handleValueChange={(value) => handleKiPointsChange(value)} showInput={showInput} value={kiPoints}></HiddenInput> <span className="text-muted">(max/cur)</span>
             </div>

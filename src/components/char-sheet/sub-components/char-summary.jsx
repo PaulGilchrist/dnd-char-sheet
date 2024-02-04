@@ -10,7 +10,9 @@ import CharClassBarbarian from './char-class-barbarian'
 import CharClassBard from './char-class-bard'
 import CharClassCleric from './char-class-cleric'
 import CharClassDruid from './char-class-druid'
+import CharClassFighter from './char-class-fighter'
 import CharClassMonk from './char-class-monk'
+import CharClassPaladin from './char-class-paladin'
 
 function CharSummary({ allEquipment, playerStats }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
@@ -19,8 +21,8 @@ function CharSummary({ allEquipment, playerStats }) {
         setHasInspiration(value ? value : false);
     }, [playerStats]);
     let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
-    if(playerStats.class.name === 'Monk') {
-        speed += 10;
+    if(playerStats.class.name === 'Monk' && playerStats.level > 1) { // Level 2 class feature
+        speed += playerStats.class.class_levels[playerStats.level-1].class_specific.unarmored_movement;
     }
     const armorClass = rules.getArmorClass(allEquipment, playerStats);
     const handleToggleInspiraction = () => {
@@ -49,7 +51,9 @@ function CharSummary({ allEquipment, playerStats }) {
                     {playerStats.class.name == 'Bard' && <CharClassBard playerStats={playerStats}></CharClassBard>}
                     {playerStats.class.name == 'Cleric' && <CharClassCleric playerStats={playerStats}></CharClassCleric>}
                     {playerStats.class.name == 'Druid' && <CharClassDruid playerStats={playerStats}></CharClassDruid>}
-                    {playerStats.class.name == 'Monk' && playerStats.level > 2 && <CharClassMonk playerStats={playerStats}></CharClassMonk>}
+                    {playerStats.class.name == 'Fighter' && <CharClassFighter playerStats={playerStats}></CharClassFighter>}
+                    {playerStats.class.name == 'Monk' && <CharClassMonk playerStats={playerStats}></CharClassMonk>}
+                    {playerStats.class.name == 'Paladin' && <CharClassPaladin playerStats={playerStats}></CharClassPaladin>}
                 </div>
             </div>
         </div>           

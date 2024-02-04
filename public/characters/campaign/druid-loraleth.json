@@ -14,7 +14,6 @@
         }
     ],
     "alignment": "Neutral Good",
-    "attacksPerAction": 1,
     "bonusActions": [],
     "class": "Druid",
     "immunities": ["Magical Sleep"],
