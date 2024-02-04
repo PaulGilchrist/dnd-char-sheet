@@ -1,7 +1,4 @@
 
-input[type="checkbox"] {
-    accent-color: var(--color-header);
-}
 .name {
     color: var(--color-header);
     font-size: 1.5em;

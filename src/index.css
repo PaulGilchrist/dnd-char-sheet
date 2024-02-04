@@ -103,6 +103,11 @@ hr {
     margin-top: 10px;
 }
 
+input[type="checkbox"] {
+    accent-color: var(--color-header);
+    color: var(--background-color-header);
+}
+
 .left {
     text-align: left;
 }

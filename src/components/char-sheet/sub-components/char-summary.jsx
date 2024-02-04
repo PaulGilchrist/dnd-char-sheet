@@ -89,7 +89,7 @@ function CharSummary({ allEquipment, playerStats }) {
                     <CharGold playerStats={playerStats}></CharGold>
                 </div>
                 <div>
-                    <b>Inspiration: </b><input type="checkbox" checked={hasInspiration} onChange={handleToggleInspiraction}/><br/>
+                    <b>Inspiration: </b><input tabIndex={0} type="checkbox" checked={hasInspiration} onChange={handleToggleInspiraction}/><br/>
                     {playerStats.class.name == 'Monk' && playerStats.level > 2 && <CharMonkKi playerStats={playerStats}></CharMonkKi>}
                 </div>
             </div>
