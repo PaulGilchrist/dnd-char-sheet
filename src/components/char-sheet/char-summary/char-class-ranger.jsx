@@ -9,10 +9,10 @@ function CharClassRanger({ playerStats }) {
     }
     return (<React.Fragment>
         {playerStats.class.name === 'Ranger' && <div>
-            <div><b>Fighting Styles: </b>{playerStats.fightingStyles.join(', ')}</div>
+            <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles.join(', ')}</div>
             <div><b>Extra Attacks: </b>{extraAttacks}</div>
-            <div><b>Favored Enemies: </b>{classSpecific.favored_enemies} - {playerStats.favoredEnemies.join(',')}</div>
-            <div><b>Favored Terrain: </b>{classSpecific.favored_terrain} - {playerStats.favoredTerrain.join(',')}</div>            
+            <div><b>Favored Enemies: </b>{classSpecific.favored_enemies} - {playerStats.class.favoredEnemies.join(',')}</div>
+            <div><b>Favored Terrain: </b>{classSpecific.favored_terrain} - {playerStats.class.favoredTerrain.join(',')}</div>            
         </div>}
     </React.Fragment>)
 }

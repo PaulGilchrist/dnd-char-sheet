@@ -29,7 +29,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         }
         let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
         let toHitBonus = dexterity.bonus + playerStats.proficiency + magicBonus;
-        if (playerStats.fightingStyles && playerStats.fightingStyles.includes('Archery')) {
+        if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Archery')) {
             toHitBonus += 2;
         }
         attacks.push({
@@ -63,7 +63,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
         let bonus = Math.max(strength.bonus, dexterity.bonus) + magicBonus; // Assumes using finesse if dex build
         let damage = mainHandWeapon.damage.damage_dice;
-        if (playerStats.fightingStyles && playerStats.fightingStyles.includes('Dueling') && meleeWeaponNames.length == 1) { // No dual wielding
+        if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Dueling') && meleeWeaponNames.length == 1) { // No dual wielding
             damage = mainHandWeapon.damage.damage_dice + 2;
         }
         attacks.push({
@@ -83,7 +83,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
             }
             let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
             let damage = offHandWeapon.damage.damage_dice;
-            if (playerStats.fightingStyles && playerStats.fightingStyles.includes('Two-Weapon Fighting')) {
+            if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Two-Weapon Fighting')) {
                 damage = `${offHandWeapon.damage.damage_dice}+${bonus + magicBonus}`;
             } else if(magicBonus > 0) {
                 damage = `${offHandWeapon.damage.damage_dice}+${magicBonus}`;

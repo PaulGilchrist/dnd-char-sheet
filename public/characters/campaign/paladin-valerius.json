@@ -28,8 +28,13 @@
             "description": "You can choose a creature you can see within 10 ft. of you and gain advantage on attack rolls against it for 1 minute or until it drops to 0 HP or falls unconscious."
         }
     ],
-    "class": "Paladin",
-    "fightingStyles": ["Defense"],
+    "class": {
+        "name": "Paladin",
+        "fightingStyles": ["Defense"],
+        "subclass": {
+            "name": "Vengeance"
+        }
+    },
     "immunities": ["Disease"],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
@@ -40,7 +45,10 @@
     "level": 3,
     "name": "Valerius Stormscale",
     "proficiencies": [],
-    "race": "Dragonborn",
+    "race": {
+        "name": "Dragonborn",
+        "type": "Gold"
+    },
     "reactions": [],
     "resistances": ["Fire"],
     "senses": [],
@@ -76,7 +84,5 @@
         {"name": "Thunderous Smite","prepared": ""},
         {"name": "Wrathful Smite","prepared": ""}
     ],
-    "subclass": "Vengeance",
-    "subrace": "",
     "vulnerabilities": []
 }

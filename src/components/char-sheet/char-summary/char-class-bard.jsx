@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import rules from '../../../services/rules'
+import classRules from '../../../services/class-rules'
 import storage from '../../../services/local-storage'
 import HiddenInput from '../../common/hidden-input'
 
@@ -21,7 +21,7 @@ function CharClassBard({ playerStats }) {
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;
     let subclassMagicalSecrets = 0;
     if(playerStats.class.subclass && playerStats.class.subclass.name === 'Lore' && playerStats.level > 2) {    
-        subclassMagicalSecrets = rules.getHighestSubclassLevel(playerStats).subclass_specific.additional_magical_secrets_max_lvl;
+        subclassMagicalSecrets = classRules.getHighestSubclassLevel(playerStats).subclass_specific.additional_magical_secrets_max_lvl;
     }
     const charisma = playerStats.abilities.find((ability) => ability.name === 'Charisma');
     return (<React.Fragment>

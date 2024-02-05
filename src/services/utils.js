@@ -1,5 +1,4 @@
 const utils = {
-    deepCopy: (obj) => JSON.parse(JSON.stringify(obj)),
     getFirstName: (fullName) => {
         return fullName.split(' ')[0];
     },

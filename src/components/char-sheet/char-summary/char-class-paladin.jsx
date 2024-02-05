@@ -9,7 +9,7 @@ function CharClassPaladin({ playerStats }) {
     }
     return (<React.Fragment>
         {playerStats.class.name === 'Paladin' && <div>
-            <div><b>Fighting Styles: </b>{playerStats.fightingStyles.join(', ')}</div>
+            <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles.join(', ')}</div>
             <div><b>Extra Attacks: </b>{extraAttacks}</div>
             <div><b>Aura Range: </b>{classSpecific.aura_range}</div>
         </div>}

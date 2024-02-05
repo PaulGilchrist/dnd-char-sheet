@@ -1,10 +1,10 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import rules from '../../../services/rules'
+import classRules from '../../../services/class-rules'
 
 function CharClassDruid({ playerStats }) {
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;
-    const maxWildShapeChallengeRating = rules.getDruidMaxWildShapeChallengeRating(playerStats)
+    const maxWildShapeChallengeRating = classRules.getDruidMaxWildShapeChallengeRating(playerStats)
     return (<React.Fragment>
         {playerStats.class.name === 'Druid' && <div>
             <div><b>Wild Shape Max Challenge Rating: </b>{maxWildShapeChallengeRating}</div>

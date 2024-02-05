@@ -2,7 +2,6 @@
 import React from 'react'
 import './char-summary.css'
 
-import rules from '../../../services/rules'
 import storage from '../../../services/local-storage'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
@@ -19,7 +18,7 @@ import CharClassSorcerer from './char-class-sorcerer'
 import CharClassWarlock from './char-class-warlock'
 import CharClassWizard from './char-class-wizard'
 
-function CharSummary({ allEquipment, playerStats }) {
+function CharSummary({ playerStats }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
     React.useEffect(() => {
         let value = storage.get(playerStats.name, 'hasInspiration');
@@ -29,7 +28,6 @@ function CharSummary({ allEquipment, playerStats }) {
     if(playerStats.class.name === 'Monk' && playerStats.level > 1) { // Level 2 class feature
         speed += playerStats.class.class_levels[playerStats.level-1].class_specific.unarmored_movement;
     }
-    const armorClass = rules.getArmorClass(allEquipment, playerStats);
     const handleToggleInspiraction = () => {
         const newValue = !hasInspiration;
         storage.set(playerStats.name, 'hasInspiration', newValue);
@@ -41,7 +39,7 @@ function CharSummary({ allEquipment, playerStats }) {
             <div className='summary'>{playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name} {playerStats.class.name} ({playerStats.subclass ? `${playerStats.class.subclass.name.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <div className='summaryGrid'>
                 <div>
-                    <b>Armor Class: </b>{armorClass}<br/>
+                    <b>Armor Class: </b>{playerStats.armorClass}<br/>
                     <CharHitPoints playerStats={playerStats}></CharHitPoints>
                     <b>Speed: </b>{speed} ft.<br/>
                     <CharGold playerStats={playerStats}></CharGold>

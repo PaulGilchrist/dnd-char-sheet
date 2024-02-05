@@ -1,6 +1,7 @@
+import { cloneDeep, merge } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
-import utils from './utils'
+import classRules from './class-rules'
 
 const rules = {
     getAbilityLongName: (shortName) => {
@@ -69,7 +70,7 @@ const rules = {
         if(playerStats.class.name === 'Monk') {
             addedBonus += wisdom.bonus;
         } 
-        if(playerStats.fightingStyles && playerStats.fightingStyles.includes('Defense')) {
+        if(playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Defense')) {
             addedBonus += 1;
         }
         let armorClass;
@@ -109,39 +110,6 @@ const rules = {
         }         
         return armorClass;
     },
-    getClass: (allClasses, playerSummary) => {
-        const characterClass = utils.deepCopy(allClasses.find((characterClass) => characterClass.name === playerSummary.class));
-        const subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.subclass);
-        if (subclass) {
-            characterClass.subclass = utils.deepCopy(subclass);
-        } else {
-            characterClass.subclass = null;
-        }
-        delete characterClass.subclasses; // We don't need these anymore
-        characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => rules.getAbilityLongName(savingThrow));
-        return characterClass;
-    },
-    getDruidMaxWildShapeChallengeRating: (playerStats) => {
-        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_max_cr;
-        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {    
-            maxWildShapeChallengeRating = 1;
-            if(playerStats.level > 5) {
-                maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
-            }
-        }
-        return maxWildShapeChallengeRating
-    },
-    getHighestSubclassLevel: (playerStats) => {
-        let subClassLevel = null
-        for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
-            if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
-                break;
-            } else {
-                subClassLevel = playerStats.class.subclass.class_levels[i];
-            }
-        }
-        return subClassLevel
-    },
     getLanguages: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace()
         let languages = [...new Set([...playerStats.languages, ...playerStats.race.languages])];
@@ -173,14 +141,14 @@ const rules = {
         return proficiencies.sort();
     },
     getRace: (allRaces, playerSummary) => {
-        const race = utils.deepCopy(allRaces.find((race) => race.name === playerSummary.race));
+        const race = merge(cloneDeep(allRaces.find((race) => race.name === playerSummary.race.name)), cloneDeep(playerSummary.race));
         race.ability_bonuses = race.ability_bonuses.map((ability_bonus) => {
             ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
             return ability_bonus;
         });
         const subrace = race.subraces.find((subrace) => subrace.name === playerSummary.subrace);
         if (subrace) {
-            race.subrace = utils.deepCopy(subrace);
+            race.subrace = merge(cloneDeep(subrace), cloneDeep(playerSummary.subrace));
         } else {
             race.subrace = null;
         }
@@ -369,16 +337,15 @@ const rules = {
         }
         return spellAbilities;
     },
-    getPlayerStats: (allClasses, allRaces, playerSummary) => {
-        const playerStats = utils.deepCopy(playerSummary);
-        playerStats.class = rules.getClass(allClasses, playerSummary);
-        delete playerStats.subclass; // We don't need this anymore
+    getPlayerStats: (allClasses, allEquipment, allRaces, playerSummary) => {
+        const playerStats = cloneDeep(playerSummary);
+        playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = rules.getRace(allRaces, playerSummary);
-        delete playerStats.subrace; // We don't need this anymore
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         playerStats.abilities = rules.getAbilities(playerStats);
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
+        playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
         return playerStats;
     }
 }

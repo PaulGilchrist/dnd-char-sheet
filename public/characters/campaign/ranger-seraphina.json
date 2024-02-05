@@ -45,12 +45,17 @@
     ],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Ranger",
-    "favoredEnemies": ["Humanoids"],
-    "favoredTerrain": ["Forest"],
-    "fightingStyles": [
-        "Archery"
-    ],
+    "class": {
+        "name": "Ranger",
+        "favoredEnemies": ["Humanoids"],
+        "favoredTerrain": ["Forest"],
+        "fightingStyles": [
+            "Archery"
+        ],
+        "subclass": {
+            "name": "Beast Master"
+        }
+    },
     "immunities": [
         "Magical Sleep"
     ],
@@ -82,7 +87,9 @@
     "level": 3,
     "name": "Seraphina Windrunner",
     "proficiencies": [],
-    "race": "Half-Elf",
+    "race": {
+        "name": "Half-Elf"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -123,7 +130,5 @@
             "prepared": ""
         }
     ],
-    "subclass": "Beast Master",
-    "subrace": "",
     "vulnerabilities": []
 }

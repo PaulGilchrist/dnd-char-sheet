@@ -14,7 +14,7 @@ import './char-sheet.css'
 function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary }) {  
     const [playerStats, setPlayerStats] = React.useState(null);
     React.useEffect(() => {
-        const stats = rules.getPlayerStats(allClasses, allRaces, playerSummary);
+        const stats = rules.getPlayerStats(allClasses, allEquipment, allRaces, playerSummary);
         setPlayerStats(stats);
     }, [allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary]);
     return (

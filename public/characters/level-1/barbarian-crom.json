@@ -10,7 +10,12 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Barbarian",
+    "class": {
+        "name": "Barbarian",
+        "subclass": {
+            "name": "Berserker"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -21,13 +26,13 @@
     "level": 1,
     "proficiencies": [],
     "name": "Crom",
-    "race": "Human",
+    "race": {
+        "name": "Human"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "specialActions": [],
-    "subclass": "Berserker",
-    "subrace": "",
     "vulnerabilities": []
 }

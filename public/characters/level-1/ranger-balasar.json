@@ -10,7 +10,17 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Ranger",
+    "class": {
+        "name": "Ranger",
+        "favoredEnemies": ["Humanoids"],
+        "favoredTerrain": ["Forest"],
+        "fightingStyles": [
+            "Archery"
+        ],
+        "subclass": {
+            "name": "Beast Master"
+        }
+    },
     "fightingStyles": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
@@ -22,7 +32,9 @@
     "level": 1,
     "name": "Balasar",
     "proficiencies": [],
-    "race": "Half-Elf",
+    "race": {
+        "name": "Half-Elf"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -42,7 +54,5 @@
         {"name": "Goodberry","prepared": "Prepared"},
         {"name": "Hunter's Mark","prepared": "Prepared"}
     ],
-    "subclass": "",
-    "subrace": "",
     "vulnerabilities": []
 }
