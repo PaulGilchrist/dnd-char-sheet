@@ -10,8 +10,13 @@
     "actions": [],
     "alignment": "Chaotic Good",
     "bonusActions": [],
-    "class": "Rogue",
-    "expertise": ["Sleight of Hand","Thieves' Tools"],
+    "class": {
+        "name": "Rogue",
+        "expertise": ["Sleight of Hand","Thieves' Tools"],
+        "subclass": {
+            "name": "Theif"
+        }
+    },
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
@@ -22,7 +27,9 @@
     "level": 1,
     "name": "Praxen",
     "proficiencies": [],
-    "race": "Half-Elf",
+    "race": {
+        "name": "Half-Elf"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -34,7 +41,5 @@
     ],
     "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
     "spells": [],
-    "subclass": "Theif",
-    "subrace": "",
     "vulnerabilities": []
 }

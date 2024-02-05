@@ -27,7 +27,12 @@
             "description": "When you use the Attack action with an unarmed strike or a monk weapon on your turn, you can make one unarmed strike as a bonus action."
         }
     ],
-    "class": "Monk",
+    "class": {
+        "name": "Monk",
+        "subclass": {
+            "name": "Open Hand"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
@@ -38,7 +43,9 @@
     "level": 3,
     "name": "Zareth Stonestride",
     "proficiencies": [],
-    "race": "Half-Orc",
+    "race": {
+        "name": "Half-Orc"
+    },
     "reactions": [
         {
             "name": "Deflect Missiles",
@@ -71,7 +78,5 @@
     ],
     "skillProficiencies": ["Acrobatics","Insight","Intimidation","Medicine","Religion"],
     "spells": [],
-    "subclass": "Open Hand",
-    "subrace": "",
     "vulnerabilities": []
 }

@@ -10,7 +10,12 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Warlock",
+    "class": {
+        "name": "Warlock",
+        "subclass": {
+            "name": "The Archfey"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -21,7 +26,9 @@
     "level": 1,
     "name": "Naal",
     "proficiencies": [],
-    "race": "Half-Elf",
+    "race": {
+        "name": "Half-Elf"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -33,7 +40,5 @@
         { "name": "Charm Person", "prepared": "Always" },
         { "name": "Hellish Rebuke", "prepared": "Always" }
     ],
-    "subclass": "The Archfey",
-    "subrace": "",
     "vulnerabilities": []
 }

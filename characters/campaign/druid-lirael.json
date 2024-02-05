@@ -15,7 +15,13 @@
     ],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Druid",
+    "class": {
+        "name": "Druid",
+        "subclass": {
+            "name": "Land",
+            "type": "Forest"
+        }
+    },
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
@@ -26,7 +32,12 @@
     "level": 3,
     "name": "Lirael",
     "proficiencies": [],
-    "race": "Elf",
+    "race": {
+        "name": "Elf",
+        "subrace": {
+            "name": "Wood Elf"
+        }
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -51,8 +62,5 @@
         {"name": "Ice Knife","prepared": "Prepared"},
         {"name": "Protection from Poison","prepared": "Prepared"}
     ],
-    "subclass": "Land",
-    "subSubclass": "Forest",
-    "subrace": "Wood Elf",
     "vulnerabilities": []
 }

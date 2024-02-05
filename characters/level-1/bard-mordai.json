@@ -10,7 +10,12 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Bard",
+    "class": {
+        "name": "Bard",
+        "subclass": {
+            "name": "Lore"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -21,7 +26,9 @@
     "level": 10,
     "proficiencies": [],
     "name": "Mordai",
-    "race": "Tiefling",
+    "race": {
+        "name": "Tiefling"
+    },
     "reactions": [],
     "resistances": ["Fire"],
     "senses": [],
@@ -35,7 +42,5 @@
         { "name": "Sleep", "prepared": "Always" }
     ],
     "specialActions": [],
-    "subclass": "Lore",
-    "subrace": "",
     "vulnerabilities": []
 }

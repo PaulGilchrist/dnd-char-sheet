@@ -10,7 +10,12 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Cleric",
+    "class": {
+        "name": "Cleric",
+        "subclass": {
+            "name": "Life"
+        }
+    },
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Tinderbox","Torch","Waterskin"],
@@ -21,7 +26,12 @@
     "level": 1,
     "name": "Seti",
     "proficiencies": [],
-    "race": "Elf",
+    "race": {
+        "name": "Elf",
+        "subrace": {
+            "name": "Wood Elf"
+        }
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -43,7 +53,5 @@
         { "name": "Healing Word", "prepared": "Prepared" },
         { "name": "Inflict Wounds", "prepared": "Prepared" }
     ],
-    "subclass": "Life",
-    "subrace": "Wood Elf",
     "vulnerabilities": []
 }

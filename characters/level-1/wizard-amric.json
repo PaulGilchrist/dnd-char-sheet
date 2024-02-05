@@ -10,7 +10,12 @@
     "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
-    "class": "Wizard",
+    "class": {
+        "name": "Wizard",
+        "subclass": {
+            "name": "Evocation"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -21,7 +26,12 @@
     "level": 1,
     "name": "Amric",
     "proficiencies": [],
-    "race": "Elf",
+    "race": {
+        "name": "Elf",
+        "subrace": {
+            "name": "High Elf"
+        }
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -46,7 +56,5 @@
         { "name": "Shield", "prepared": "Prepared" },
         { "name": "Prismatic Spray", "prepared": "Prepared" }        
     ],
-    "subclass": "Evocation",
-    "subrace": "High Elf",
     "vulnerabilities": []
 }

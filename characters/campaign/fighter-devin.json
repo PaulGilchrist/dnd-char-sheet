@@ -15,8 +15,13 @@
             "description": "Once per short rest, you can use a bonus action to regain 1d10 + 3 HP"
         }
     ],
-    "class": "Fighter",
-    "fightingStyles": ["Archery"],
+    "class": {
+        "name": "Fighter",
+        "fightingStyles": ["Archery"],
+        "subclass": {
+            "name": "Champion"
+        }
+    },
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -27,7 +32,9 @@
     "level": 3,
     "name": "Devin",
     "proficiencies": [],
-    "race": "Human",
+    "race": {
+        "name": "Human"
+    },
     "reactions": [],
     "resistances": [],
     "senses": [],
@@ -42,7 +49,5 @@
             "description": "Your weapon attacks score a critical hit on a roll of 19 or 20."
         }
     ],
-    "subclass": "Champion",
-    "subrace": "",
     "vulnerabilities": []
 }
