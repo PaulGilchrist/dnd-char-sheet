@@ -26,12 +26,15 @@ function CharClassBard({ playerStats }) {
     const charisma = playerStats.abilities.find((ability) => ability.name === 'Charisma');
     return (<React.Fragment>
         {playerStats.class.name === 'Bard' && <div>
-            <div><b>Bardic Inspiration Die: </b>d{classSpecific.bardic_inspiration_die}</div>
-            <div className="clickable" onClick={handleBardicInspirationUsesToggle} onKeyDown={handleBardicInspirationUsesToggle} tabIndex={0}>
-                <b>Bardic Inspiration Uses:</b> {charisma.bonus}/<HiddenInput handleInputToggle={handleBardicInspirationUsesToggle} handleValueChange={(value) => handleBardicInspirationUsesChange(value)} showInput={showInput} value={bardicInspirationUses}></HiddenInput> <span className="text-muted">(max/cur)</span>
+            <div>
+                <b>Bardic Inspiration Die: </b>d{classSpecific.bardic_inspiration_die}
+                <span className="clickable" onClick={handleBardicInspirationUsesToggle} onKeyDown={handleBardicInspirationUsesToggle} tabIndex={0}>
+                    &nbsp;&nbsp;<b>Uses:</b> {charisma.bonus}/<HiddenInput handleInputToggle={handleBardicInspirationUsesToggle} handleValueChange={(value) => handleBardicInspirationUsesChange(value)} showInput={showInput} value={bardicInspirationUses}></HiddenInput> <span className="text-muted">(max/cur)</span>
+                </span>
             </div>
             <div><b>Song of Rest Die: </b>d{classSpecific.song_of_rest_die}</div>
             <div><b>Magical Secrets: </b>{classSpecific.magical_secrets_max_5 + subclassMagicalSecrets}</div>
+            {playerStats.level > 2 && playerStats.class.expertise && <div><b>Expertise: </b>{playerStats.class.expertise.join(', ')}</div>}
         </div>}
     </React.Fragment>)
 }

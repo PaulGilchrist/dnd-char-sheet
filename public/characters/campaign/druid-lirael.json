@@ -19,9 +19,10 @@
         "name": "Druid",
         "subclass": {
             "name": "Land",
-            "type": "Forest"
+            "circle": "Forest"
         }
     },
+    "feats": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],

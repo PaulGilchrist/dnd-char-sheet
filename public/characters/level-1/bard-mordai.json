@@ -12,10 +12,12 @@
     "bonusActions": [],
     "class": {
         "name": "Bard",
+        "expertise": ["Performance","Persuasion"],
         "subclass": {
             "name": "Lore"
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],

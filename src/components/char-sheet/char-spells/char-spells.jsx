@@ -31,14 +31,6 @@ function CharSpells({ allSpells, playerStats }) {
         setSpellAbilities(spellAbilities);
     }, [allSpells, playerStats]);
 
-    // let alwaysPreparedCount = 0;
-    // if(spellAbilities) {
-    //     const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
-    //     if(alwaysPreparedSpells) {
-    //         alwaysPreparedCount = alwaysPreparedSpells.length;
-    //     }
-    // }
-
     const handleTogglePrepared = (spell) => {
         if(spell.prepared === 'Prepared') {
             spell.prepared = '';

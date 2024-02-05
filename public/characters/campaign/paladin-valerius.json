@@ -35,6 +35,7 @@
             "name": "Vengeance"
         }
     },
+    "feats": [],
     "immunities": ["Disease"],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],

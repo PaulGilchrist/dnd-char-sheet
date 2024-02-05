@@ -6,6 +6,7 @@ function CharClassRogue({ playerStats }) {
     return (<React.Fragment>
         {playerStats.class.name === 'Rogue' && <div>
             <div><b>Sneak Attack Damage: </b>+{sneakAttack.dice_count}d{sneakAttack.dice_value}</div>
+            <div><b>Expertise: </b>{playerStats.class.expertise.join(', ')}</div>
         </div>}
     </React.Fragment>)
 }

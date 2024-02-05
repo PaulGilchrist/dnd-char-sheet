@@ -15,7 +15,9 @@ html {
     --background-color-header-inner: #202320;
     --color-header-inner: #fff;
 
+    --color-error: red;
     --color-hover: #646cff;
+    --color-warning: orange;
 
     color-scheme: light dark;
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -66,6 +68,10 @@ button:focus-visible {
 
 .clickable:hover {
     color: var(--color-hover);
+}
+
+.error {
+    color: var(--color-error);
 }
 
 h1 {
@@ -159,6 +165,10 @@ th {
     border-width: 0;
 }
 
+.warning {
+    color: var(--color-warning);
+}
+
 @media (prefers-color-scheme: light) {
     :root {
         --background-color-main: #fff;
@@ -169,7 +179,9 @@ th {
         --color-body: #000;
         --background-color-header-inner: #ddd;
         --color-header-inner: #070;
+        --color-error: red;
         --color-hover: #646cff;
+        --color-warning: orange;
     }
 
     a:hover {

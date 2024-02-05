@@ -27,6 +27,13 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions>
             <CharSpells allSpells={allSpells} playerStats={playerStats}></CharSpells><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
+            {playerStats.warnings.length > 0 && <div>
+                <hr />
+                <div className='sectionHeader'>Warnings</div>
+                {playerStats.warnings.map((warning, index) => (
+                    <div key={index} className={warning.type}>{warning.desc}</div>
+                ))}
+            </div>}
         </div>}
     </div>)
 }

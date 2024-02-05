@@ -1,6 +1,7 @@
 import { cloneDeep, merge } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
+import auditRules from './audit-rules'
 import classRules from './class-rules'
 
 const rules = {
@@ -14,6 +15,16 @@ const rules = {
             case 'CHA': return 'Charisma';
         }
     },
+    // getAbilityShortName: (longName) => {
+    //     switch (longName) {
+    //         case 'Strength': return 'STR';
+    //         case 'Dexterity': return 'DEX';
+    //         case 'Constitution': return 'CON';
+    //         case 'Intelligence': return 'INT';
+    //         case 'Wisdom': return 'WIS';
+    //         case 'Charisma': return 'CHA';
+    //     }
+    // },
     getAbilities: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
         // playerStats must also already have skill proficiencies determined
@@ -146,7 +157,7 @@ const rules = {
             ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
             return ability_bonus;
         });
-        const subrace = race.subraces.find((subrace) => subrace.name === playerSummary.subrace);
+        const subrace = race.subraces.find((subrace) => subrace.name === playerSummary.race.subrace.name);
         if (subrace) {
             race.subrace = merge(cloneDeep(subrace), cloneDeep(playerSummary.subrace));
         } else {
@@ -222,8 +233,10 @@ const rules = {
         if (playerStats.race.name === 'Tiefling') {
             if (!spellAbilities) {
                 spellAbilities = {
+                    cantrips_known: 0,
                     spellCastingAbility: 'Charisma',
-                    spells: []
+                    spells: [],
+                    spells_known: 0
                 }
             }
             // Tieflings get the "Thaumaturgy" cantrip
@@ -236,6 +249,7 @@ const rules = {
                     prepared: 'Always'
                 });
             }
+            spellAbilities.cantrips_known += 1;
             // Tieflings get the hellish rebuke spell at level 3
             if (playerStats.level > 2) {
                 const hellishRebuke = spellAbilities.spells.find(spell => spell.name === 'Hellish Rebuke');
@@ -247,20 +261,26 @@ const rules = {
                         prepared: 'Always'
                     });
                 }
+                spellAbilities.spells_known += 1;
             }
         } else if (playerStats.race.subrace && playerStats.race.subrace.name === 'High Elf') {
             // High Elf gets one cantrip from the wizard spell list
             if (!spellAbilities) {
                 spellAbilities = {
+                    cantrips_known: 0,
                     spellCastingAbility: 'Intelligence',
-                    spells: []
+                    spells: [],
+                    spells_known: 0
                 }
             }
+            spellAbilities.cantrips_known += 1;
         } else if (playerStats.race.subrace && playerStats.race.subrace.name === 'Forest Gnome') {
             if (!spellAbilities) {
                 spellAbilities = {
+                    cantrips_known: 0,
                     spellCastingAbility: 'Intelligence',
-                    spells: []
+                    spells: [],
+                    spells_known: 0
                 }
             }
             // Forest Gnome get the "Minor Illusion" cantrip
@@ -273,16 +293,9 @@ const rules = {
                     prepared: 'Always'
                 });
             }
+            spellAbilities.cantrips_known += 1;
         }
         if (spellAbilities) {
-            // A null for classSpellcasting.cantrips_known means NONE are known
-            if (playerStats.race.name === 'Tiefling' || (playerStats.race.subrace && (playerStats.race.subrace.name === 'Forest Gnome' || playerStats.race.subrace.name === 'High Elf'))) {
-                if (spellAbilities.cantrips_known) {
-                    spellAbilities.cantrips_known += 1;
-                } else {
-                    spellAbilities.cantrips_known = 1;
-                }
-            }
             if (playerStats.class.spell_casting_ability) {
                 spellAbilities.spellCastingAbility = playerStats.class.spell_casting_ability;
             }
@@ -320,14 +333,16 @@ const rules = {
                     });
             }
             // Add any subclass spells to known spells and set them to always prepared
-            if (playerStats.class.subclass && playerStats.class.subclass.spells) {
-                playerStats.class.subclass.spells.forEach((subclassSpell) => {
+            if (playerStats.level > 2 && playerStats.class.subclass && playerStats.class.subclass.spells) {
+                playerStats.class.subclass.spells.forEach((subclassSpell) => {                    
                     const knownSpell = spellAbilities.spells.find((knownSpell) => knownSpell.name === subclassSpell.spell.name);
                     if (knownSpell) {
                         knownSpell.prepared = 'Always';
                     } else {
-                        const levelPrerequisite = subclassSpell.prerequisites[0].index.split('-')[1];
-                        if (playerStats.level >= levelPrerequisite) {
+                        const meetsLevel = (playerStats.level >= subclassSpell.prerequisites[0].index.split('-')[1]);
+                        const meetsCircle = (playerStats.class.subclass.name != 'Land' || subclassSpell.prerequisites[1].name.endsWith(playerStats.class.subclass.circle));
+                        if (meetsLevel && meetsCircle) {
+                            spellAbilities.spells_known += 1;
                             spellAbilities.spells.push({
                                 name: subclassSpell.spell.name,
                                 prepared: 'Always'
@@ -353,8 +368,10 @@ const rules = {
                     }
                 });
             }
-            // A null for classSpellcasting.spells_known means ALL are known
-            // spell_slots_level_1 through 9
+            // A null for spellAbilities.spells_known means ALL are known
+            if(playerStats.class.name === "Cleric" || playerStats.class.name === "Druid" || playerStats.class.name === "Paladin") {
+                spellAbilities.spells_known = null;
+            }
         }
         return spellAbilities;
     },
@@ -364,18 +381,11 @@ const rules = {
         playerStats.race = rules.getRace(allRaces, playerSummary);
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getSkillProficiencies(playerStats);
-        // Warn if the player has not choosen the correct number skill proficiencies
-        if(playerStats.skillProficiencies.length > playerStats.skillProficienciesAllowed) {
-            console.error(`More skill proficiencies than allowed (${playerStats.skillProficiencies.length} vs ${playerStats.skillProficienciesAllowed})`)
-            console.log(playerStats.skillProficiencies);
-        } else if(playerStats.skillProficiencies.length < playerStats.skillProficienciesAllowed) {
-            console.warn(`More skill proficiencies available (${playerStats.skillProficienciesAllowed - playerStats.skillProficiencies.length})`)
-            console.log(playerStats.skillProficiencies);
-        }
         playerStats.abilities = rules.getAbilities(playerStats);
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
         playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
+        playerStats.warnings = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }
 }

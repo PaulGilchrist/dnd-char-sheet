@@ -33,6 +33,7 @@
             "name": "Open Hand"
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
