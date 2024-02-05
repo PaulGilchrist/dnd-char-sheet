@@ -3,7 +3,7 @@ import React from 'react'
 import rules from '../../../services/rules'
 import storage from '../../../services/local-storage'
 import './char-spells.css'
-import CharPopup from './char-popup'
+import Popup from '../../common/popup'
 import CharSpellSlots from './char-spell-slots'
 
 function CharSpells({ allSpells, playerStats }) {
@@ -31,13 +31,13 @@ function CharSpells({ allSpells, playerStats }) {
         setSpellAbilities(spellAbilities);
     }, [allSpells, playerStats]);
 
-    let alwaysPreparedCount = 0;
-    if(spellAbilities) {
-        const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
-        if(alwaysPreparedSpells) {
-            alwaysPreparedCount = alwaysPreparedSpells.length;
-        }
-    }
+    // let alwaysPreparedCount = 0;
+    // if(spellAbilities) {
+    //     const alwaysPreparedSpells = spellAbilities.spells.filter(spell => spell.prepared === 'Always');
+    //     if(alwaysPreparedSpells) {
+    //         alwaysPreparedCount = alwaysPreparedSpells.length;
+    //     }
+    // }
 
     const handleTogglePrepared = (spell) => {
         if(spell.prepared === 'Prepared') {
@@ -67,7 +67,7 @@ function CharSpells({ allSpells, playerStats }) {
     return (
         <div>
             {(spellAbilities && spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
-                {popupHtml && (<CharPopup html={popupHtml} onClick={() => setPopupHtml(null)}></CharPopup>)}
+                {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader"><h4>&nbsp;Spells</h4></div>
@@ -108,7 +108,7 @@ function CharSpells({ allSpells, playerStats }) {
                             spell.prepared = 'Ritual';
                         }
                         return <React.Fragment key={spell.name}>
-                            <div className='left spell-name' onClick={() => showPopup(spell)}>{spell.name}</div>
+                            <div className='left spell-name clickable' onClick={() => showPopup(spell)}>{spell.name}</div>
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                             {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <div>{spell.prepared}</div>}
                             {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePrepared(spell)}/></div>}

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import { actions } from '../../../data/actions';
+import { actions } from '../../data/actions';
 import './char-actions.css'
 
 function CharActions({ allEquipment, allSpells, playerStats }) {

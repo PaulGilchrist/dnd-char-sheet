@@ -1,14 +1,14 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import rules from '../../services/rules'
-import CharAbilities from './sub-components/char-abilities'
-import CharActions from './sub-components/char-actions'
-import CharInventory from './sub-components/char-inventory'
-import CharReactions from './sub-components/char-reactions'
-import CharSpecialActions from './sub-components/char-special-actions'
-import CharSpells from './sub-components/char-spells'
-import CharSummary from './sub-components/char-summary'
-import CharSummary2 from './sub-components/char-summary2'
+import CharAbilities from './char-abilities'
+import CharActions from './char-actions'
+import CharInventory from './char-inventory'
+import CharReactions from './char-reactions'
+import CharSpecialActions from './char-special-actions'
+import CharSpells from './char-spells/char-spells'
+import CharSummary from './char-summary/char-summary'
+import CharSummary2 from './char-summary2'
 import './char-sheet.css'
 
 function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary }) {  

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import CharPopup from './char-popup'
+import Popup from '../common/popup'
 import './char-abilities.css'
 
 function CharAbilities({ allAbilityScores, playerStats }) {
@@ -16,7 +16,7 @@ function CharAbilities({ allAbilityScores, playerStats }) {
 
     return (
         <div className='abilities-popup-parent'>
-            {popupHtml && (<CharPopup html={popupHtml} onClick={() => setPopupHtml(null)}></CharPopup>)}
+            {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
             <div className='abilities'>
                 <div className='left'><b>Ability</b></div>
                 <div><b>Score</b></div>

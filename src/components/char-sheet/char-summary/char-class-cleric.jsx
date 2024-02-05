@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import storage from '../../../services/local-storage'
-import HiddenInput from './hidden-input'
+import HiddenInput from '../../common/hidden-input'
 
 function CharClassCleric({ playerStats }) {
     const [channelDivinityCharges, setChannelDivinityCharges] = React.useState(0);

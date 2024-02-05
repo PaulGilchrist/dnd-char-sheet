@@ -2,7 +2,7 @@
 import React from 'react'
 import rules from '../../../services/rules'
 import storage from '../../../services/local-storage'
-import HiddenInput from './hidden-input'
+import HiddenInput from '../../common/hidden-input'
 
 function CharClassBard({ playerStats }) {
     const [bardicInspirationUses, setBardicInspirationUses] = React.useState(0);

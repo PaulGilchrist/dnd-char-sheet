@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import rules from '../../../services/rules'
+import rules from '../../services/rules'
 
 function CharSummary2({ playerStats }) {
     const [languages, setLanguages] = React.useState([]);

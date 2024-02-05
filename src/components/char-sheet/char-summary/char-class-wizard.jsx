@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import stoarcaneRecovery from '../../../services/local-storage'
-import HiddenInput from './hidden-input'
+import HiddenInput from '../../common/hidden-input'
 
 function CharClassWizard({ playerStats }) {
     const [arcaneRecoveryLevels, setArcaneRecoveryLevels] = React.useState(0);

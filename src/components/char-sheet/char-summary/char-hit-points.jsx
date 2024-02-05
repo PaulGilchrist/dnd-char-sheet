@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import storage from '../../../services/local-storage'
-import HiddenInput from './hidden-input'
+import HiddenInput from '../../common/hidden-input'
 
 function CharHitPoints({ playerStats }) {
     const [currentHitPoints, setCurrentHitPoints] = React.useState(0);
