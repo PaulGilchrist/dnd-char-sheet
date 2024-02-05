@@ -41,7 +41,7 @@
             "description": "You can attempt to hide even when you are only lightly obscured."
         }
     ],
-    "skillProficiencies": ["Insight","Medicine","Perception","Religion","Survival"],
+    "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
     "spells": [
         { "name": "Guidance", "prepared": "Prepared" },
         { "name": "Sacred Flame", "prepared": "Prepared" },

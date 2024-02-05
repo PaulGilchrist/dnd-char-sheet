@@ -33,7 +33,7 @@
     "resistances": [],
     "senses": [],
     "specialActions": [],
-    "skillProficiencies": ["Arcana","Investigation","Perception","Nature"],
+    "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
     "spells": [
         { "name": "Eldritch Blast", "prepared": "Always" },
         { "name": "Mage Hand", "prepared": "Always" },

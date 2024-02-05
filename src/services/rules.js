@@ -16,7 +16,7 @@ const rules = {
     },
     getAbilities: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
-        // playerStats must also already have proficiency determined
+        // playerStats must also already have skill proficiencies determined
         return playerStats.abilities.map((ability) => {
             ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + rules.getRacialBonus(playerStats, ability.name);
             ability.bonus = Math.floor((ability.totalScore - 10) / 2);
@@ -186,6 +186,27 @@ const rules = {
         }
         return senses.sort((a, b) => a.name.localeCompare(b.name));
     },
+    getSkillProficiencies: (playerStats) => {
+        // playerStats must include full class and race objects from getClass() and getRace() 
+        let skillProficiencies = [
+            ...playerStats.class.proficiencies.filter((proficiency) => proficiency.startsWith('Skill: ')),
+            ...playerStats.race.starting_proficiencies.filter((proficiency) => proficiency.startsWith('Skill: '))
+        ];
+        skillProficiencies = skillProficiencies.map((skillProficiency) => {
+            return skillProficiency.substring(7);
+        });
+        let skillProficienciesAllowed = skillProficiencies.length + 2; // dndbeyond allows one given based on background and another choosen based on background
+        if(playerStats.race.starting_proficiency_options && playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')) {
+            skillProficienciesAllowed += playerStats.race.starting_proficiency_options.choose;
+        }
+        playerStats.class.proficiency_choices.forEach((proficiency) => {
+            if(proficiency.from[0].startsWith('Skill: ')) {
+                skillProficienciesAllowed += proficiency.choose;
+            }
+        })
+        skillProficiencies = [...new Set([...skillProficiencies, ...playerStats.skillProficiencies])];
+        return [skillProficienciesAllowed, skillProficiencies.sort()];
+    },
     getSpellAbilities: (allSpells, playerStats) => {
         let spellAbilities = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
         if (!spellAbilities && playerStats.class.subclass) {
@@ -342,6 +363,15 @@ const rules = {
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = rules.getRace(allRaces, playerSummary);
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+        [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getSkillProficiencies(playerStats);
+        // Warn if the player has not choosen the correct number skill proficiencies
+        if(playerStats.skillProficiencies.length > playerStats.skillProficienciesAllowed) {
+            console.error(`More skill proficiencies than allowed (${playerStats.skillProficiencies.length} vs ${playerStats.skillProficienciesAllowed})`)
+            console.log(playerStats.skillProficiencies);
+        } else if(playerStats.skillProficiencies.length < playerStats.skillProficienciesAllowed) {
+            console.warn(`More skill proficiencies available (${playerStats.skillProficienciesAllowed - playerStats.skillProficiencies.length})`)
+            console.log(playerStats.skillProficiencies);
+        }
         playerStats.abilities = rules.getAbilities(playerStats);
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);

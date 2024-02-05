@@ -54,7 +54,7 @@
             "description": "You can attempt to hide even when you are only lightly obscured."
         }
     ],
-    "skillProficiencies": ["Animal Handling","Insight","Medicine","Perception","Survival"],
+    "skillProficiencies": ["Animal Handling","Insight","Medicine","Survival"],
     "spells": [
         {"name": "Guidance","prepared": "Always"},
         {"name": "Sacred Flame","prepared": "Always"},

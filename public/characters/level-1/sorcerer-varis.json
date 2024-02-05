@@ -33,7 +33,7 @@
     "resistances": [],
     "senses": [],
     "specialActions": [],
-    "skillProficiencies": ["Arcana","Insight","Perception","Survival"],
+    "skillProficiencies": ["Arcana","History","Insight","Investigation","Perception","Survival"],
     "spells": [
         { "name": "Chill Touch", "prepared": "Always" },
         { "name": "Fire Bolt", "prepared": "Always" },

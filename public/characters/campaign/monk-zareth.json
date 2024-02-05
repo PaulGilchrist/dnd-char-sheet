@@ -76,7 +76,7 @@
             "description": "When you score a critical hit, roll one of the weapon's dice one additional time and add it to the extra damage."
         }
     ],
-    "skillProficiencies": ["Acrobatics","Insight","Intimidation","Medicine","Religion"],
+    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
     "spells": [],
     "vulnerabilities": []
 }

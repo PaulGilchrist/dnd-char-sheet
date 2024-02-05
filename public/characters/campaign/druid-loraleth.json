@@ -51,7 +51,7 @@
             "description": "Once per long rest during a short rest, you choose expended spell slots to recover"
         }
     ],
-    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+    "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
     "spells": [
         {"name": "Guidance","prepared": "Always"},
         {"name": "Mending","prepared": "Always"},

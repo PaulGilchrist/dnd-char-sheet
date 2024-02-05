@@ -51,7 +51,7 @@
             "description": "Once per long rest during a short rest, you choose expended spell slots to recover."
         }
     ],
-    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Perception","Stealth"],
+    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
     "spells": [
         {"name": "Druidcraft","prepared": "Always"},
         {"name": "Frostbite","prepared": "Always"},
