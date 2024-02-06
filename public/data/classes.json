@@ -54,7 +54,8 @@
                 "class_specific": {
                     "rage_count": 2,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 0
                 }
             },
             {
@@ -83,7 +84,8 @@
                 "class_specific": {
                     "rage_count": 2,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 0
                 }
             },
             {
@@ -104,7 +106,8 @@
                 "class_specific": {
                     "rage_count": 3,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 0
                 }
             },
             {
@@ -125,7 +128,8 @@
                 "class_specific": {
                     "rage_count": 3,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 0
                 }
             },
             {
@@ -154,7 +158,8 @@
                 "class_specific": {
                     "rage_count": 3,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -166,7 +171,8 @@
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -180,15 +186,15 @@
                         "level": 7,
                         "prerequisites": [],
                         "desc": [
-                            "By 7th level, your instincts are so honed that you have advantage on initiative rolls.",
-                            "Additionally, if you are surprised at the beginning of combat and aren't incapacitated, you can act normally on your first turn, but only if you enter your rage before doing anything else on that turn."
+                            "By 7th level, your instincts are so honed that you have advantage on initiative rolls. Additionally, if you are surprised at the beginning of combat and aren't incapacitated, you can act normally on your first turn, but only if you enter your rage before doing anything else on that turn."
                         ]
                     }
                 ],
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -209,7 +215,8 @@
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 2,
-                    "brutal_critical_dice": 0
+                    "brutal_critical_dice": 0,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -219,7 +226,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Brutal Critical (1 die)",
+                        "name": "Brutal Critical",
                         "level": 9,
                         "prerequisites": [],
                         "desc": [
@@ -230,7 +237,8 @@
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 1
+                    "brutal_critical_dice": 1,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -242,7 +250,8 @@
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 1
+                    "brutal_critical_dice": 1,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -256,15 +265,15 @@
                         "level": 11,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 11th level, your rage can keep you fighting despite grievous wounds. If you drop to 0 hit points while you're raging and don't die outright, you can make a DC 10 Constitution saving throw. If you succeed, you drop to 1 hit point instead.",
-                            "Each time you use this feature after the first, the DC increases by 5. When you finish a short or long rest, the DC resets to 10."
+                            "Starting at 11th level, your rage can keep you fighting despite grievous wounds. If you drop to 0 hit points while you're raging and don't die outright, you can make a DC 10 Constitution saving throw. If you succeed, you drop to 1 hit point instead. Each time you use this feature after the first, the DC increases by 5. When you finish a short or long rest, the DC resets to 10."
                         ]
                     }
                 ],
                 "class_specific": {
                     "rage_count": 4,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 1
+                    "brutal_critical_dice": 1,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -285,7 +294,8 @@
                 "class_specific": {
                     "rage_count": 5,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 1
+                    "brutal_critical_dice": 1,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -295,7 +305,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Brutal Critical (2 dice)",
+                        "name": "Brutal Critical",
                         "level": 13,
                         "prerequisites": [],
                         "desc": [
@@ -306,7 +316,8 @@
                 "class_specific": {
                     "rage_count": 5,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 2
+                    "brutal_critical_dice": 2,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -318,7 +329,8 @@
                 "class_specific": {
                     "rage_count": 5,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 2
+                    "brutal_critical_dice": 2,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -339,7 +351,8 @@
                 "class_specific": {
                     "rage_count": 5,
                     "rage_damage_bonus": 3,
-                    "brutal_critical_dice": 2
+                    "brutal_critical_dice": 2,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -360,7 +373,8 @@
                 "class_specific": {
                     "rage_count": 5,
                     "rage_damage_bonus": 4,
-                    "brutal_critical_dice": 2
+                    "brutal_critical_dice": 2,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -370,7 +384,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Brutal Critical (3 dice)",
+                        "name": "Brutal Critical",
                         "level": 17,
                         "prerequisites": [],
                         "desc": [
@@ -381,7 +395,8 @@
                 "class_specific": {
                     "rage_count": 6,
                     "rage_damage_bonus": 4,
-                    "brutal_critical_dice": 3
+                    "brutal_critical_dice": 3,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -402,7 +417,8 @@
                 "class_specific": {
                     "rage_count": 6,
                     "rage_damage_bonus": 4,
-                    "brutal_critical_dice": 3
+                    "brutal_critical_dice": 3,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -423,7 +439,8 @@
                 "class_specific": {
                     "rage_count": 6,
                     "rage_damage_bonus": 4,
-                    "brutal_critical_dice": 3
+                    "brutal_critical_dice": 3,
+                    "unarmored_movement": 10
                 }
             },
             {
@@ -444,7 +461,8 @@
                 "class_specific": {
                     "rage_count": 9999,
                     "rage_damage_bonus": 4,
-                    "brutal_critical_dice": 3
+                    "brutal_critical_dice": 3,
+                    "unarmored_movement": 10
                 }
             }
         ],
@@ -454,7 +472,7 @@
                 "name": "Berserker",
                 "subclass_flavor": "Primal Path",
                 "desc": [
-                    "For some barbarians, rage is a means to an end--that end being violence. The Path of the Berserker is a path of untrammeled fury, slick with blood. As you enter the berserker's rage, you thrill in the chaos of battle, heedless of your own health or well-being."
+                    "For some barbarians, rage is a means to an end (that end being violence). The Path of the Berserker is a path of untrammeled fury, slick with blood. As you enter the berserker's rage, you thrill in the chaos of battle, heedless of your own health or well-being."
                 ],
                 "features": [],
                 "class_levels": [
@@ -467,7 +485,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting when you choose this path at 3rd level, you can go into a frenzy when you rage. If you do so, for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your turns after this one. When your rage ends, you suffer one level of exhaustion (as described in appendix A)."
+                                    "You can go into a frenzy when you rage. If you do so, for the duration of your rage you can make a single melee weapon attack as a bonus action on each of your turns after this one. When your rage ends, you suffer one level of exhaustion (as described in appendix A)."
                                 ]
                             }
                         ]
@@ -535,7 +553,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Yours is a path that seeks attunement with the natural world, giving you a kinship with beasts. At 3rd level when you adopt this path, you gain the ability to cast the beast sense and speak with animals spells, but only as rituals, as described in chapter 10, \"Spellcasting.\""
+                                    "Yours is a path that seeks attunement with the natural world, giving you a kinship with beasts. At 3rd level when you adopt this path, you gain the ability to cast the beast sense and speak with animals spells, but only as rituals."
                                 ]
                             },
                             {
@@ -543,7 +561,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 3rd level, when you adopt this path, you choose a totem spirit and gain its feature. You must make or acquire a physical totem object-an amulet or similar adornment-that incorporates fur or feathers, claws, teeth, or bones of the totem animal. At your option, you also gain minor physical attributes that are reminiscent of your totem spirit. For example, if you have a bear totem spirit, you might be unusually hairy and thick­ skinned, or if your totem is the eagle, your eyes turn bright yellow.<br/>Your totem animal might be an animal related to those listed here but more appropriate to your homeland. For example, you could choose a hawk or vulture in place of an eagle.<br/><ul><li><b>Bear</b>. While raging, you have resistance to all damage except psychic damage. The spirit of the bear makes you tough enough to stand up to any punishment.</li><li><b>Eagle</b>. While you're raging, other creatures have disadvantage on opportunity attack rolls against you, and you can use the Dash action as a bonus action on your turn. The spirit of the eagle makes you into a predator who can weave through the fray with ease.</li><li><b>Wolf</b>. While you're raging, your friends have advantage on melee attack rolls against any creature within 5 feet of you that is hostile to you. The spirit of the wolf makes you a leader of hunters.</li></ul>"
+                                    "You choose a totem spirit and gain its feature. You must make or acquire a physical totem object-an amulet or similar adornment-that incorporates fur or feathers, claws, teeth, or bones of the totem animal. At your option, you also gain minor physical attributes that are reminiscent of your totem spirit. For example, if you have a bear totem spirit, you might be unusually hairy and thick skinned, or if your totem is the eagle, your eyes turn bright yellow.<br/>Your totem animal might be an animal related to those listed here but more appropriate to your homeland. For example, you could choose a hawk or vulture in place of an eagle.<br/><ul><li><b>Bear</b>. While raging, you have resistance to all damage except psychic damage. The spirit of the bear makes you tough enough to stand up to any punishment.</li><li><b>Eagle</b>. While you're raging, other creatures have disadvantage on opportunity attack rolls against you, and you can use the Dash action as a bonus action on your turn. The spirit of the eagle makes you into a predator who can weave through the fray with ease.</li><li><b>Wolf</b>. While you're raging, your friends have advantage on melee attack rolls against any creature within 5 feet of you that is hostile to you. The spirit of the wolf makes you a leader of hunters.</li></ul>"
                                 ]
                             }
                         ]
@@ -663,17 +681,15 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Bardic Inspiration (d6)",
+                        "name": "Bardic Inspiration",
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.",
-                            "You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest. ",
-                            "Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
+                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.<br/><br/>You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest.<br/><br/>Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
                         ]
                     },
                     {
-                        "name": "Spellcasting: Bard",
+                        "name": "Spellcasting",
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
@@ -718,12 +734,11 @@
                         ]
                     },
                     {
-                        "name": "Song of Rest (d6)",
+                        "name": "Song of Rest",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. ",
-                            "The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
+                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points.<br/><br/>The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
                         ]
                     }
                 ],
@@ -861,13 +876,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Bardic Inspiration (d8)",
+                        "name": "Bardic Inspiration",
                         "level": 5,
                         "prerequisites": [],
                         "desc": [
-                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.",
-                            "You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest. ",
-                            "Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
+                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.<br/><br/>You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest.<br/><br/>Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
                         ]
                     },
                     {
@@ -1006,12 +1019,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Song of Rest (d8)",
+                        "name": "Song of Rest",
                         "level": 9,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. ",
-                            "The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
+                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
                         ]
                     }
                 ],
@@ -1076,13 +1088,11 @@
                 ],
                 "features": [
                     {
-                        "name": "Bardic Inspiration (d10)",
+                        "name": "Bardic Inspiration",
                         "level": 10,
                         "prerequisites": [],
                         "desc": [
-                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.",
-                            "You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest. ",
-                            "Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
+                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.<br/><br/>You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest.<br/><br/>Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
                         ]
                     },
                     {
@@ -1090,9 +1100,7 @@
                         "level": 10,
                         "prerequisites": [],
                         "desc": [
-                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. ",
-                            "The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. ",
-                            "You learn two additional spells from any class at 14th level and again at 18th level."
+                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. You learn two additional spells from any class at 14th level and again at 18th level."
                         ]
                     }
                 ],
@@ -1187,12 +1195,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Song of Rest (d10)",
+                        "name": "Song of Rest",
                         "level": 13,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. ",
-                            "The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
+                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
                         ]
                     }
                 ],
@@ -1228,9 +1235,7 @@
                         "level": 14,
                         "prerequisites": [],
                         "desc": [
-                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. ",
-                            "The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. ",
-                            "You learn two additional spells from any class at 14th level and again at 18th level."
+                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. You learn two additional spells from any class at 14th level and again at 18th level."
                         ]
                     }
                 ],
@@ -1262,13 +1267,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Bardic Inspiration (d12)",
+                        "name": "Bardic Inspiration",
                         "level": 15,
                         "prerequisites": [],
                         "desc": [
-                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.",
-                            "You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest. ",
-                            "Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
+                            "You can inspire others through stirring words or music. To do so, you use a bonus action on your turn to choose one creature other than yourself within 60 feet of you who can hear you. That creature gains one Bardic Inspiration die, a d6. Once within the next 10 minutes, the creature can roll the die and add the number rolled to one ability check, attack roll, or saving throw it makes. The creature can wait until after it rolls the d20 before deciding to use the Bardic Inspiration die, but must decide before the GM says whether the roll succeeds or fails. Once the Bardic Inspiration die is rolled, it is lost. A creature can have only one Bardic Inspiration die at a time.<br/><br/>You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain any expended uses when you finish a long rest.<br/><br/>Your Bardic Inspiration die changes when you reach certain levels in this class. The die becomes a d8 at 5th level, a d10 at 10th level, and a d12 at 15th level."
                         ]
                     }
                 ],
@@ -1336,12 +1339,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Song of Rest (d12)",
+                        "name": "Song of Rest",
                         "level": 17,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. ",
-                            "The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
+                            "Beginning at 2nd level, you can use soothing music or oration to help revitalize your wounded allies during a short rest. If you or any friendly creatures who can hear your performance regain hit points at the end of the short rest by spending one or more Hit Dice, each of those creatures regains an extra 1d6 hit points. The extra hit points increase when you reach certain levels in this class: to 1d8 at 9th level, to 1d10 at 13th level, and to 1d12 at 17th level."
                         ]
                     }
                 ],
@@ -1377,9 +1379,7 @@
                         "level": 18,
                         "prerequisites": [],
                         "desc": [
-                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. ",
-                            "The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. ",
-                            "You learn two additional spells from any class at 14th level and again at 18th level."
+                            "By 10th level, you have plundered magical knowledge from a wide spectrum of disciplines. Choose two spells from any class, including this one. A spell you choose must be of a level you can cast, as shown on the Bard table, or a cantrip. The chosen spells count as bard spells for you and are included in the number in the Spells Known column of the Bard table. You learn two additional spells from any class at 14th level and again at 18th level."
                         ]
                     }
                 ],
@@ -1504,9 +1504,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Also at 3rd level, you learn how to use your wit to distract, confuse, and otherwise sap the confidence and competence of others.",
-                                    "When a creature that you can see within 60 feet of you makes an attack roll, an ability check, or a damage roll, you can use your reaction to expend one of your uses of Bardic Inspiration, rolling a Bardic Inspiration die and subtracting the number rolled from the creature's roll.",
-                                    "You can choose to use this feature after the creature makes its roll, but before the GM determines whether the attack roll or ability check succeeds or fails, or before the creature deals its damage. The creature is immune if it can't hear you or if it's immune to being charmed."
+                                    "At 3rd level, you learn how to use your wit to distract, confuse, and otherwise sap the confidence and competence of others.  When a creature that you can see within 60 feet of you makes an attack roll, an ability check, or a damage roll, you can use your reaction to expend one of your uses of Bardic Inspiration, rolling a Bardic Inspiration die and subtracting the number rolled from the creature's roll. You can choose to use this feature after the creature makes its roll, but before the GM determines whether the attack roll or ability check succeeds or fails, or before the creature deals its damage. The creature is immune if it can't hear you or if it's immune to being charmed."
                                 ]
                             }
                         ],
@@ -1568,7 +1566,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you join the College ofValor at 3rd level, you gain proficiency with medium armor, shields, and martial weapons."
+                                    "When you join the College of Valor at 3rd level, you gain proficiency with medium armor, shields, and martial weapons."
                                 ]
                             },
                             {
@@ -1648,8 +1646,7 @@
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "Choose one domain related to your deity: Knowledge, Life, Light, Nature, Tempest, Trickery, or War. Only the Life domain is detailed in the Open Game Licensed SRD. Additional Domains are described in the official rulebooks or products from other publishers.",
-                            "Your domain grants you domain spells and other features when you choose it at 1st level. It also grants you additional ways to use Channel Divinity when you gain that feature at 2nd level, and additional benefits at 6th, 8th, and 17th levels."
+                            "Choose one domain related to your deity: Knowledge, Life, Light, Nature, Tempest, Trickery, or War. Only the Life domain is detailed in the Open Game Licensed SRD. Additional Domains are described in the official rulebooks or products from other publishers. Your domain grants you domain spells and other features when you choose it at 1st level. It also grants you additional ways to use Channel Divinity when you gain that feature at 2nd level, and additional benefits at 6th, 8th, and 17th levels."
                         ]
                     },
                     {
@@ -1657,12 +1654,11 @@
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
-                            "If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
+                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
                         ]
                     },
                     {
-                        "name": "Spellcasting: Cleric",
+                        "name": "Spellcasting",
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
@@ -1696,14 +1692,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Channel Divinity (1/rest)",
+                        "name": "Channel Divinity",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "At 2nd level, you gain the ability to channel divine energy directly from your deity, using that energy to fuel magical effects. You start with two such effects: Turn Undead and an effect determined by your domain. Some domains grant you additional effects as you advance in levels, as noted in the domain description.",
-                            "When you use your Channel Divinity, you choose which effect to create. You must then finish a short or long rest to use your Channel Divinity again.",
-                            "Some Channel Divinity effects require saving throws. When you use such an effect from this class, the DC equals your cleric spell save DC.",
-                            "Beginning at 6th level, you can use your Channel Divinity twice between rests, and beginning at 18th level, you can use it three times between rests. When you finish a short or long rest, you regain your expended uses."
+                            "At 2nd level, you gain the ability to channel divine energy directly from your deity, using that energy to fuel magical effects. You start with two such effects: Turn Undead and an effect determined by your domain. Some domains grant you additional effects as you advance in levels, as noted in the domain description. When you use your Channel Divinity, you choose which effect to create. You must then finish a short or long rest to use your Channel Divinity again. Some Channel Divinity effects require saving throws. When you use such an effect from this class, the DC equals your cleric spell save DC. Beginning at 6th level, you can use your Channel Divinity twice between rests, and beginning at 18th level, you can use it three times between rests. When you finish a short or long rest, you regain your expended uses."
                         ]
                     },
                     {
@@ -1711,8 +1704,7 @@
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "As an action, you present your holy symbol and speak a prayer censuring the undead. Each undead that can see or hear you within 30 feet of you must make a Wisdom saving throw. If the creature fails its saving throw, it is turned for 1 minute or until it takes any damage.",
-                            "A turned creature must spend its turns trying to move as far away from you as it can, and it can't willingly move to a space within 30 feet of you. It also can't take reactions. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If there's nowhere to move, the creature can use the Dodge action."
+                            "As an action, you present your holy symbol and speak a prayer censuring the undead. Each undead that can see or hear you within 30 feet of you must make a Wisdom saving throw. If the creature fails its saving throw, it is turned for 1 minute or until it takes any damage. A turned creature must spend its turns trying to move as far away from you as it can, and it can't willingly move to a space within 30 feet of you. It also can't take reactions. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If there's nowhere to move, the creature can use the Dodge action."
                         ]
                     }
                 ],
@@ -1745,7 +1737,7 @@
                         "level": 3,
                         "prerequisites": [],
                         "desc": [
-                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
+                            "Each domain has a list of spells (its domain spells) that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
                             "If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
                         ]
                     }
@@ -1808,7 +1800,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Destroy Undead (CR 1/2 or below)",
+                        "name": "Destroy Undead",
                         "level": 5,
                         "prerequisites": [],
                         "desc": [
@@ -1820,8 +1812,7 @@
                         "level": 5,
                         "prerequisites": [],
                         "desc": [
-                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
-                            "If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
+                            "Each domain has a list of spells (its domain spells) that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
                         ]
                     }
                 ],
@@ -1850,7 +1841,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Channel Divinity (2/rest)",
+                        "name": "Channel Divinity",
                         "level": 6,
                         "prerequisites": [],
                         "desc": [
@@ -1887,8 +1878,7 @@
                         "level": 7,
                         "prerequisites": [],
                         "desc": [
-                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
-                            "If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
+                            "Each domain has a list of spells (its domain spells) that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
                         ]
                     }
                 ],
@@ -1925,7 +1915,7 @@
                         ]
                     },
                     {
-                        "name": "Destroy Undead (CR 1 or below)",
+                        "name": "Destroy Undead",
                         "level": 8,
                         "prerequisites": [],
                         "desc": [
@@ -1962,8 +1952,7 @@
                         "level": 9,
                         "prerequisites": [],
                         "desc": [
-                            "Each domain has a list of spells--its domain spells--that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day.",
-                            "If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
+                            "Each domain has a list of spells (its domain spells) that you gain at the cleric levels noted in the domain description. Once you gain a domain spell, you always have it prepared, and it doesn't count against the number of spells you can prepare each day. If you have a domain spell that doesn't appear on the cleric spell list, the spell is nonetheless a cleric spell for you."
                         ]
                     }
                 ],
@@ -1996,10 +1985,7 @@
                         "level": 10,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 10th level, you can call on your deity to intervene on your behalf when your need is great.",
-                            "Imploring your deity's aid requires you to use your action. Describe the assistance you seek, and roll percentile dice. If you roll a number equal to or lower than your cleric level, your deity intervenes. The GM chooses the nature of the intervention; the effect of any cleric spell or cleric domain spell would be appropriate.",
-                            "If your deity intervenes, you can't use this feature again for 7 days. Otherwise, you can use it again after you finish a long rest.",
-                            "At 20th level, your call for intervention succeeds automatically, no roll required."
+                            "Beginning at 10th level, you can call on your deity to intervene on your behalf when your need is great. Imploring your deity's aid requires you to use your action. Describe the assistance you seek, and roll percentile dice. If you roll a number equal to or lower than your cleric level, your deity intervenes. The GM chooses the nature of the intervention; the effect of any cleric spell or cleric domain spell would be appropriate. If your deity intervenes, you can't use this feature again for 7 days. Otherwise, you can use it again after you finish a long rest. At 20th level, your call for intervention succeeds automatically, no roll required."
                         ]
                     }
                 ],
@@ -2028,7 +2014,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Destroy Undead (CR 2 or below)",
+                        "name": "Destroy Undead",
                         "level": 11,
                         "prerequisites": [],
                         "desc": [
@@ -2118,7 +2104,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Destroy Undead (CR 3 or below)",
+                        "name": "Destroy Undead",
                         "level": 14,
                         "prerequisites": [],
                         "desc": [
@@ -2208,7 +2194,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Destroy Undead (CR 4 or below)",
+                        "name": "Destroy Undead",
                         "level": 17,
                         "prerequisites": [],
                         "desc": [
@@ -2241,7 +2227,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Channel Divinity (3/rest)",
+                        "name": "Channel Divinity",
                         "level": 18,
                         "prerequisites": [],
                         "desc": [
@@ -2480,7 +2466,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Also starting at 1st level, your healing spells are more effective. Whenever you use a spell of 1st level or higher to restore hit points to a creature, the creature regains additional hit points equal to 2 + the spell's level."
+                                    "Starting at 1st level, your healing spells are more effective. Whenever you use a spell of 1st level or higher to restore hit points to a creature, the creature regains additional hit points equal to 2 + the spell's level."
                                 ]
                             }
                         ]
@@ -2494,9 +2480,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can use your Channel Divinity to heal the badly injured.",
-                                    "As an action, you present your holy symbol and evoke healing energy that can restore a number of hit points equal to five times your cleric level.",
-                                    "Choose any creatures within 30 feet of you, and divide those hit points among them. This feature can restore a creature to no more than half of its hit point maximum. You can't use this feature on an undead or a construct."
+                                    "Starting at 2nd level, you can use your Channel Divinity to heal the badly injured. As an action, you present your holy symbol and evoke healing energy that can restore a number of hit points equal to five times your cleric level. Choose any creatures within 30 feet of you, and divide those hit points among them. This feature can restore a creature to no more than half of its hit point maximum. You can't use this feature on an undead or a construct."
                                 ]
                             }
                         ]
@@ -2704,10 +2688,7 @@
                                 "level": 6,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 6th level, you can use your Channel Divinity to read a creature's thoughts. You can then use your access to the creature's mind to command it.",
-                                    "As an action, choose one creature that you can see within 60 feet of you. That creature must make a Wisdom saving throw. If the creature succeeds on the saving throw, you can't use this feature on it again until youfinishalongrest.",
-                                    "If the creature fails its save, you can read its surface thoughts (those foremost in its mind, reflecting its current emotions and what it is actively thinking about) when it is within 60 feet of you. This effect lasts for 1 minute.",
-                                    "During that time, you can use your action to end this effect and cast the suggestion spell on the creature without expending a spell slot. The target automatically fails its saving throw against the spell."
+                                    "At 6th level, you can use your Channel Divinity to read a creature's thoughts. You can then use your access to the creature's mind to command it. As an action, choose one creature that you can see within 60 feet of you. That creature must make a Wisdom saving throw. If the creature succeeds on the saving throw, you can't use this feature on it again until you finish a long rest. If the creature fails its save, you can read its surface thoughts (those foremost in its mind, reflecting its current emotions and what it is actively thinking about) when it is within 60 feet of you. This effect lasts for 1 minute. During that time, you can use your action to end this effect and cast the suggestion spell on the creature without expending a spell slot. The target automatically fails its saving throw against the spell."
                                 ]
                             }
                         ]
@@ -2735,10 +2716,7 @@
                                 "level": 17,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 17th level, you can call up visions of the past that relate to an object you hold or your immediate surroundings. You spend at least 1 minute in meditation and prayer, then receive dreamlike, shadowy glimpses of recent events. You can meditate in this way for a number of minutes equal to your Wisdom score and must maintain concentration during that time, as if you were casting a spell.",
-                                    "Once you use this feature, you can't use it again until you finish a short or long rest.",
-                                    "Object Reading. Holding an object as you meditate, you can see visions of the object's previous owner. After meditating for 1 minute, you learn how the owner acquired and lost the object, as well as the most recent significant event involving the object and that owner. If the object was owned by another creature in the recent past (within a number of days equal to your Wisdom score), you can spend 1 additional minute for each owner to learn the same information about that creature.",
-                                    "Area Reading. As you meditate, you see visions of recent events in your immediate vicinity (a room, street, tunnel, clearing, or the like, up to a 5O-foot cube), going back a number of days equal to your Wisdom score. For each minute you meditate, you learn about one significant event, beginning with the most recent. Significant events typically involve powerful emotions, such as battles and betrayals, marriages and murders, births and funerals. However, they might also include more mundane events that are nevertheless important in your current situation."
+                                    "Starting at 17th level, you can call up visions of the past that relate to an object you hold or your immediate surroundings. You spend at least 1 minute in meditation and prayer, then receive dreamlike, shadowy glimpses of recent events. You can meditate in this way for a number of minutes equal to your Wisdom score and must maintain concentration during that time, as if you were casting a spell. Once you use this feature, you can't use it again until you finish a short or long rest. Object Reading. Holding an object as you meditate, you can see visions of the object's previous owner. After meditating for 1 minute, you learn how the owner acquired and lost the object, as well as the most recent significant event involving the object and that owner. If the object was owned by another creature in the recent past (within a number of days equal to your Wisdom score), you can spend 1 additional minute for each owner to learn the same information about that creature. Area Reading. As you meditate, you see visions of recent events in your immediate vicinity (a room, street, tunnel, clearing, or the like, up to a 5O-foot cube), going back a number of days equal to your Wisdom score. For each minute you meditate, you learn about one significant event, beginning with the most recent. Significant events typically involve powerful emotions, such as battles and betrayals, marriages and murders, births and funerals. However, they might also include more mundane events that are nevertheless important in your current situation."
                                 ]
                             }
                         ]
@@ -2885,7 +2863,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you choose this domain at 1st level, you gain the light cantrip ifyou don't already know it."
+                                    "You gain the light cantrip ifyou don't already know it."
                                 ]
                             },
                             {
@@ -2893,8 +2871,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Also at 1st level, you can interpose divine light between yourself and an attacking enemy. When you are attacked by a creature within 30 feet of you that you can see, you can use your reaction to impose disadvantage on the attack roll, causing light to flare before the attacker before it hits or misses. An attacker that can't be blinded is immune to this feature.",
-                                    "You can use this feature a number of times equal to your Wisdom modifier (a minimum of once). You regain all expended uses when you finish a long rest."
+                                    "You can interpose divine light between yourself and an attacking enemy. When you are attacked by a creature within 30 feet of you that you can see, you can use your reaction to impose disadvantage on the attack roll, causing light to flare before the attacker before it hits or misses. An attacker that can't be blinded is immune to this feature. You can use this feature a number of times equal to your Wisdom modifier (a minimum of once). You regain all expended uses when you finish a long rest."
                                 ]
                             }
                         ]
@@ -2908,8 +2885,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can use your Channel Divinity to harness sunlight, banishing darkness and dealing radiant damage to your foes.",
-                                    "As an action, you present your holy symbol, and any magical darkness within 30 feet of you is dispelled. Additionally, each hostile creature within 30 feet of you must make a Constitution saving throw. A creature takes radiant damage equal to 2d10 + your cleric level on a failed saving throw, and half as much damage on a successful one. A creature that has total cover from you is not affected."
+                                    "Starting at 2nd level, you can use your Channel Divinity to harness sunlight, banishing darkness and dealing radiant damage to your foes. As an action, you present your holy symbol, and any magical darkness within 30 feet of you is dispelled. Additionally, each hostile creature within 30 feet of you must make a Constitution saving throw. A creature takes radiant damage equal to 2d10 + your cleric level on a failed saving throw, and half as much damage on a successful one. A creature that has total cover from you is not affected."
                                 ]
                             }
                         ]
@@ -3098,7 +3074,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 1st level, you learn one druid cantrip of your choice. You also gain proficiency in one of the following skills of your choice: Animal Handling, Nature, or Survival."
+                                    "You learn one druid cantrip of your choice. You also gain proficiency in one of the following skills of your choice: Animal Handling, Nature, or Survival."
                                 ]
                             },
                             {
@@ -3106,7 +3082,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Also at 1st level, you gain proficiency with heavy armor."
+                                    "You gain proficiency with heavy armor."
                                 ]
                             }
                         ]
@@ -3120,8 +3096,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can use your Channel Divinity to charm animals and plants.",
-                                    "As an action, you present your holy symbol and invoke the name of your deity. Each beast or plant creature that can see you within 30 feet of you must make a Wisdom saving throw. If the creature fails its saving throw, it is charmed by you for 1 minute or until it takes damage. While it is charmed by you, it is friendly to you and other creatures you designate."
+                                    "Starting at 2nd level, you can use your Channel Divinity to charm animals and plants. As an action, you present your holy symbol and invoke the name of your deity. Each beast or plant creature that can see you within 30 feet of you must make a Wisdom saving throw. If the creature fails its saving throw, it is charmed by you for 1 minute or until it takes damage. While it is charmed by you, it is friendly to you and other creatures you designate."
                                 ]
                             }
                         ]
@@ -3175,7 +3150,7 @@
                 "name": "Tempest",
                 "subclass_flavor": "Divine Domain",
                 "desc": [
-                    "Gods whose portfolios include the Tempest domain­ including Talos, Umberlee, Kord, Zeboim, the Devourer, Zeus, and Thor-govern storms, sea, and sky. They include gods of lightning and thunder, gods of earthquakes, some fire gods, and certain gods of violence, physical strength, and courage. In some pantheons, a god of this domain rules over other deities and is known for swift justice delivered by thunderbolts. In the pantheons of seafaring people, gods of this domain are ocean deities and the patrons of sailors. Tempest gods send their clerics to inspire fear in the common folk, either to keep those folk on the path of righteousness or to encourage them to offer sacrifices of propitiation to ward off divine wrath."
+                    "Gods whose portfolios include the Tempest domain including Talos, Umberlee, Kord, Zeboim, the Devourer, Zeus, and Thor-govern storms, sea, and sky. They include gods of lightning and thunder, gods of earthquakes, some fire gods, and certain gods of violence, physical strength, and courage. In some pantheons, a god of this domain rules over other deities and is known for swift justice delivered by thunderbolts. In the pantheons of seafaring people, gods of this domain are ocean deities and the patrons of sailors. Tempest gods send their clerics to inspire fear in the common folk, either to keep those folk on the path of righteousness or to encourage them to offer sacrifices of propitiation to ward off divine wrath."
                 ],
                 "spells": [
                     {
@@ -3310,7 +3285,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 1st level, you gain proficiency with martial weapons and heavy armor."
+                                    "You gain proficiency with martial weapons and heavy armor."
                                 ]
                             },
                             {
@@ -3318,8 +3293,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Also a t 1st level, you can thunderously rebuke attackers. When a creature within 5 feet of you that you can see hits you with an attack, you can use your reaction to cause the creature to make a Dexterity saving throw. The creature takes 2d8 lightning or thunder damage (your choice) on a failed saving throw, and half as much damage on a successful one.",
-                                    "You can use this feature a number of times equal to your Wisdom modifier (a minimum of once). You regain all expended uses when you finish a long rest."
+                                    "You can thunderously rebuke attackers. When a creature within 5 feet of you that you can see hits you with an attack, you can use your reaction to cause the creature to make a Dexterity saving throw. The creature takes 2d8 lightning or thunder damage (your choice) on a failed saving throw, and half as much damage on a successful one. You can use this feature a number of times equal to your Wisdom modifier (a minimum of once). You regain all expended uses when you finish a long rest."
                                 ]
                             }
                         ]
@@ -3333,8 +3307,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can use your Channel Divinity to wield the power of the storm with unchecked ferocity.",
-                                    "When you roll lightning or thunder damage, you can use your Channel Divinity to deal maximum damage, instead of rolling."
+                                    "Starting at 2nd level, you can use your Channel Divinity to wield the power of the storm with unchecked ferocity. When you roll lightning or thunder damage, you can use your Channel Divinity to deal maximum damage, instead of rolling."
                                 ]
                             }
                         ]
@@ -3523,7 +3496,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting when you choose this domain at 1st level, you can use your action to touch a willing creature other than yourself to give it advantage on Dexterity (Stealth) checks. This blessing lasts for 1 hour or until you use this feature again."
+                                    "You can use your action to touch a willing creature other than yourself to give it advantage on Dexterity (Stealth) checks. This blessing lasts for 1 hour or until you use this feature again."
                                 ]
                             }
                         ]
@@ -3537,9 +3510,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can use your Channel Divinity to create an illusory duplicate of yourself.",
-                                    "As an action, you create a perfect illusion of yourself that lasts for 1 minute, or until you lose your concentration (as if you were concentrating on a spell). The illusion appears in an unoccupied space that you can see within 30 feet of you. As a bonus action on your turn, you can move the illusion up to 30 feet to a space you can see, but it must remain within 120 feet of you.",
-                                    "For the duration, you can cast spells as though you were in the illusion's space, but you must use your own senses. Additionally, when both you and your illusion are within 5 feet ofa creature that can see the illusion, you have advantage on attack rolls against that creature, given how distracting the illusion is to the target."
+                                    "Starting at 2nd level, you can use your Channel Divinity to create an illusory duplicate of yourself. As an action, you create a perfect illusion of yourself that lasts for 1 minute, or until you lose your concentration (as if you were concentrating on a spell). The illusion appears in an unoccupied space that you can see within 30 feet of you. As a bonus action on your turn, you can move the illusion up to 30 feet to a space you can see, but it must remain within 120 feet of you. For the duration, you can cast spells as though you were in the illusion's space, but you must use your own senses. Additionally, when both you and your illusion are within 5 feet ofa creature that can see the illusion, you have advantage on attack rolls against that creature, given how distracting the illusion is to the target."
                                 ]
                             }
                         ]
@@ -3553,8 +3524,7 @@
                                 "level": 6,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 6th level, you can use your Channel Divinity to vanish.",
-                                    "As an action, you become invisible until the end of your next turn. You become visible ifyou attack or cast a spell."
+                                    "Starting at 6th level, you can use your Channel Divinity to vanish. As an action, you become invisible until the end of your next turn. You become visible ifyou attack or cast a spell."
                                 ]
                             }
                         ]
@@ -3568,7 +3538,7 @@
                                 "level": 8,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 8th level, you gain the ability to infuse your weapon strikes with poison-a gift from your deity. Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra 1d8 poison damage to the target. When you reach 14th level, the extra damage increases to 2d8."
+                                    "At 8th level, you gain the ability to infuse your weapon strikes with poison (a gift from your deity). Once on each of your turns when you hit a creature with a weapon attack, you can cause the attack to deal an extra 1d8 poison damage to the target. When you reach 14th level, the extra damage increases to 2d8."
                                 ]
                             }
                         ]
@@ -3729,7 +3699,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 1st level, you gain proficiency with martial weapons and heavy armor."
+                                    "You gain proficiency with martial weapons and heavy armor."
                                 ]
                             },
                             {
@@ -3737,8 +3707,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "From 1st level, your god delivers bolts of inspiration to you while you are engaged in battle. When you use the Attack action, you can make one weapon attack as a bonus action.",
-                                    "You can use this feature a number of times equal to your Wisdom modifier (aminimum of once). You regain all expended uses when you finish a long rest."
+                                    "Your god delivers bolts of inspiration to you while you are engaged in battle. When you use the Attack action, you can make one weapon attack as a bonus action. You can use this feature a number of times equal to your Wisdom modifier (aminimum of once). You regain all expended uses when you finish a long rest."
                                 ]
                             }
                         ]
@@ -3906,7 +3875,7 @@
                         ]
                     },
                     {
-                        "name": "Wild Shape (CR 1/4 or below, no flying or swim speed)",
+                        "name": "Wild Shape",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
@@ -3971,7 +3940,7 @@
                         ]
                     },
                     {
-                        "name": "Wild Shape (CR 1/2 or below, no flying speed)",
+                        "name": "Wild Shape",
                         "level": 4,
                         "prerequisites": [],
                         "desc": [
@@ -4084,7 +4053,7 @@
                         ]
                     },
                     {
-                        "name": "Wild Shape (CR 1 or below)",
+                        "name": "Wild Shape",
                         "level": 8,
                         "prerequisites": [],
                         "desc": [
@@ -4429,8 +4398,7 @@
                         "level": 20,
                         "prerequisites": [],
                         "desc": [
-                            "At 20th level, you can use your Wild Shape an unlimited number of times.",
-                            "Additionally, you can ignore the verbal and somatic components of your druid spells, as well as any material components that lack a cost and aren't consumed by a spell. You gain this benefit in both your normal shape and your beast shape from Wild Shape."
+                            "At 20th level, you can use your Wild Shape an unlimited number of times. Additionally, you can ignore the verbal and somatic components of your druid spells, as well as any material components that lack a cost and aren't consumed by a spell. You gain this benefit in both your normal shape and your beast shape from Wild Shape."
                         ]
                     }
                 ],
@@ -5490,8 +5458,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 2nd level, you can regain some of your magical energy by sitting in meditation and communing with nature. During a short rest, you choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your druid level (rounded up), and none of the slots can be 6th level or higher. You can't use this feature again until you finish a long rest.",
-                                    "For example, when you are a 4th-level druid, you can recover up to two levels worth of spell slots. You can recover either a 2nd-level slot or two 1st-level slots."
+                                    "Starting at 2nd level, you can regain some of your magical energy by sitting in meditation and communing with nature. During a short rest, you choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your druid level (rounded up), and none of the slots can be 6th level or higher. You can't use this feature again until you finish a long rest. For example, when you are a 4th-level druid, you can recover up to two levels worth of spell slots. You can recover either a 2nd-level slot or two 1st-level slots."
                                 ]
                             }
                         ]
@@ -5505,8 +5472,7 @@
                                 "level": 6,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 6th level, moving through nonmagical difficult terrain costs you no extra movement. You can also pass through nonmagical plants without being slowed by them and without taking damage from them if they have thorns, spines, or a similar hazard.",
-                                    "In addition, you have advantage on saving throws against plants that are magically created or manipulated to impede movement, such those created by the entangle spell."
+                                    "Starting at 6th level, moving through nonmagical difficult terrain costs you no extra movement. You can also pass through nonmagical plants without being slowed by them and without taking damage from them if they have thorns, spines, or a similar hazard. In addition, you have advantage on saving throws against plants that are magically created or manipulated to impede movement, such those created by the entangle spell."
                                 ]
                             }
                         ]
@@ -5568,8 +5534,7 @@
                                 "level": 2,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you choose this circle at 2nd level, you gain the ability to use Wild Shape on your turn as a bonus action, rather than as an action.",
-                                    "Additionally, while you are transformed by Wild Shape, you can use a bonus action to expend one spell slot to regain 1d8 hit points per level of the spell slot expended."
+                                    "When you choose this circle at 2nd level, you gain the ability to use Wild Shape on your turn as a bonus action, rather than as an action. Additionally, while you are transformed by Wild Shape, you can use a bonus action to expend one spell slot to regain 1d8 hit points per level of the spell slot expended."
                                 ]
                             }
                         ]
@@ -5714,12 +5679,11 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Action Surge (1 use)",
+                        "name": "Action Surge",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action.",
-                            "Once you use this feature, you must finish a short or long rest before you can use it again. Starting at 17th level, you can use it twice before a rest, but only once on the same turn."
+                            "Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action. Once you use this feature, you must finish a short or long rest before you can use it again. Starting at 17th level, you can use it twice before a rest, but only once on the same turn."
                         ]
                     }
                 ],
@@ -5853,7 +5817,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Indomitable (1 use)",
+                        "name": "Indomitable",
                         "level": 9,
                         "prerequisites": [],
                         "desc": [
@@ -5886,7 +5850,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Extra Attack (2)",
+                        "name": "Extra Attack",
                         "level": 11,
                         "prerequisites": [],
                         "desc": [
@@ -5928,7 +5892,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Indomitable (2 uses)",
+                        "name": "Indomitable",
                         "level": 13,
                         "prerequisites": [],
                         "desc": [
@@ -6003,7 +5967,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Action Surge (2 uses)",
+                        "name": "Action Surge",
                         "level": 17,
                         "prerequisites": [],
                         "desc": [
@@ -6012,7 +5976,7 @@
                         ]
                     },
                     {
-                        "name": "Indomitable (3 uses)",
+                        "name": "Indomitable",
                         "level": 17,
                         "prerequisites": [],
                         "desc": [
@@ -6066,7 +6030,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Extra Attack (3)",
+                        "name": "Extra Attack",
                         "level": 20,
                         "prerequisites": [],
                         "desc": [
@@ -6194,7 +6158,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you choose this archetype at 3rd level, you learn maneuvers that are fueled by special dice called superiority dice.<br/><br/> <b>Maneuvers:</b> You learn three maneuvers of your choice, which are detailed under &quot;Maneuvers&quot; below. Many maneuvers enhance an attack in some way. You can use only one maneuver per attack. You learn two additional maneuvers of your choice at 7th, 10th, and 15th level. Each time you learn new maneuvers, you can also replace one maneuver you know with a different one.<br/><br/> <b>Superiority Dice</b> You have four superiority dice, which are d8s. A superiority die is expended when you use it. You regain all of your expended superiority dice when you finish a short or long rest. You gain another superiority die at 7th level and one more at 15th level.<br/><br/> <b>Saving Throws</b> Some of your maneuvers require your target to make a saving throw to resist the maneuver's effects. The saving throw DC is calculated as follows:<br/><br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Maneuver save DC = 8 + your proficiency bonus + your Strength or Dexterity modifier (your choice)<br/><br/> <b>Maneuvers</b><br/> <ul> <li><b>Commander's Strike</b>: When you take the Attack action on your turn, you can forgo one of your attacks and use a bonus action to direct one of your companions to strike. When you do so, choose a friendly creature who can see or hear you and expend one superiority die. That creature can immediately use its reaction to make one weapon attack, adding the superiority die to the attack's damage roll.</li> <li><b>Disarming Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to disarm the target, forcing it to drop one item of your choice that it's holding. You add the superiority die to the attack's damage roll, and the target must make a Strength saving throw. On a failed save, it drops the object you choose. The object lands at its feet.</li> <li><b>Distracting Strike</b>: When you hit a creature with a weapon attack, you can expend one superiority die to distract the creature, giving your allies an opening. You add the superiority die to the attack's damage roll. The next attack roll against the target by an attacker other than you has advantage if the attack is made before the start of your next turn.</li> <li><b>Evasive Footwork</b>: When you move, you can expend one superiority die, rolling the die and adding the number rolled to your AC until you stop moving.</li> <li><b>Feinting Attack</b>: You can expend one superiority die and use a bonus action on your turn to feint, choosing one creature within 5 feet of you as your target. You have advantage on your next attack roll against that creature this turn. If that attack hits, add the superiority die to the attack's damage roll.</li> <li><b>Goading Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to goad the target into attacking you. You add the superiority die to the attack's damage roll, and the target must make a Wisdom saving throw. On a failed save, the target has disadvantage on all attack rolls against targets other than you until the end of your next turn.</li> <li><b>Lunging Attack</b>: When you make a melee weapon attack on your turn, you can expend one superiority die to increase your reach for that attack by 5 feet. If you hit, you add the superiority die to the attack's damage roll.</li> <li><b>Maneuvering Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to maneuver one of your comrades into a more advantageous position. You add the superiority die to the attack's damage roll, and you choose a friendly creature who can see or hear you. That creature can use its reaction to move up to half its speed without provoking opportunity attacks from the target of your attack.</li> <li><b>Menacing Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to frighten the target. You add the superiority die to the attack's damage roll, and the target must make a Wisdom saving throw. On a failed save, it is frightened of you until the end of your next turn.</li> <li><b>Parry</b>: When another creature damages you with a melee attack, you can use your reaction and expend one superiority die to reduce the damage by the number you roll on your superiority die + your Dexterity modifier.</li> <li><b>Precision Attack</b>: When you make a weapon attack roll against a creature, you can expend one superiority die to add it to the roll. You can use this maneuver before or after making the attack roll, but before any effects of the attack are applied.</li> <li><b>Pushing Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to drive the target back. You add the superiority die to the attack's damage roll, and if the target is Large or smaller, it must make a Strength saving throw. On a failed save, you push the target up to 15 feet away from you.</li> <li><b>Rally</b>: On your turn, you can use a bonus action and expend one superiority die to bolster the resolve of one of your companions. When you do so, choose a friendly creature who can see or hear you. That creature gains temporary hit points equal to the superiority die roll + your Charisma modifier.</li> <li><b>Riposte</b>: When a creature misses you with a melee attack, you can use your reaction and expend one superiority die to make a melee weapon attack against the creature. If you hit, you add the superiority die to the attack's damage roll.</li> <li><b>Sweeping Attack</b>: When you hit a creature with a melee weapon attack, you can expend one superiority die to attempt to damage another creature with the same attack. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your superiority die. The damage is of the same type dealt by the original attack.</li> <li><b>Trip Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to knock the target down. You add the superiority die to the attack's damage roll, and if the target is Large or smaller, it must make a Strength saving throw. On a failed save, you knock the target prone.</li> </ul>"
+                                    "You learn maneuvers that are fueled by special dice called superiority dice.<br/><br/> <b>Maneuvers:</b> You learn three maneuvers of your choice, which are detailed under &quot;Maneuvers&quot; below. Many maneuvers enhance an attack in some way. You can use only one maneuver per attack. You learn two additional maneuvers of your choice at 7th, 10th, and 15th level. Each time you learn new maneuvers, you can also replace one maneuver you know with a different one.<br/><br/> <b>Superiority Dice</b> You have four superiority dice, which are d8s. A superiority die is expended when you use it. You regain all of your expended superiority dice when you finish a short or long rest. You gain another superiority die at 7th level and one more at 15th level.<br/><br/> <b>Saving Throws</b> Some of your maneuvers require your target to make a saving throw to resist the maneuver's effects. The saving throw DC is calculated as follows:<br/><br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Maneuver save DC = 8 + your proficiency bonus + your Strength or Dexterity modifier (your choice)<br/><br/> <b>Maneuvers</b><br/> <ul> <li><b>Commander's Strike</b>: When you take the Attack action on your turn, you can forgo one of your attacks and use a bonus action to direct one of your companions to strike. When you do so, choose a friendly creature who can see or hear you and expend one superiority die. That creature can immediately use its reaction to make one weapon attack, adding the superiority die to the attack's damage roll.</li> <li><b>Disarming Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to disarm the target, forcing it to drop one item of your choice that it's holding. You add the superiority die to the attack's damage roll, and the target must make a Strength saving throw. On a failed save, it drops the object you choose. The object lands at its feet.</li> <li><b>Distracting Strike</b>: When you hit a creature with a weapon attack, you can expend one superiority die to distract the creature, giving your allies an opening. You add the superiority die to the attack's damage roll. The next attack roll against the target by an attacker other than you has advantage if the attack is made before the start of your next turn.</li> <li><b>Evasive Footwork</b>: When you move, you can expend one superiority die, rolling the die and adding the number rolled to your AC until you stop moving.</li> <li><b>Feinting Attack</b>: You can expend one superiority die and use a bonus action on your turn to feint, choosing one creature within 5 feet of you as your target. You have advantage on your next attack roll against that creature this turn. If that attack hits, add the superiority die to the attack's damage roll.</li> <li><b>Goading Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to goad the target into attacking you. You add the superiority die to the attack's damage roll, and the target must make a Wisdom saving throw. On a failed save, the target has disadvantage on all attack rolls against targets other than you until the end of your next turn.</li> <li><b>Lunging Attack</b>: When you make a melee weapon attack on your turn, you can expend one superiority die to increase your reach for that attack by 5 feet. If you hit, you add the superiority die to the attack's damage roll.</li> <li><b>Maneuvering Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to maneuver one of your comrades into a more advantageous position. You add the superiority die to the attack's damage roll, and you choose a friendly creature who can see or hear you. That creature can use its reaction to move up to half its speed without provoking opportunity attacks from the target of your attack.</li> <li><b>Menacing Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to frighten the target. You add the superiority die to the attack's damage roll, and the target must make a Wisdom saving throw. On a failed save, it is frightened of you until the end of your next turn.</li> <li><b>Parry</b>: When another creature damages you with a melee attack, you can use your reaction and expend one superiority die to reduce the damage by the number you roll on your superiority die + your Dexterity modifier.</li> <li><b>Precision Attack</b>: When you make a weapon attack roll against a creature, you can expend one superiority die to add it to the roll. You can use this maneuver before or after making the attack roll, but before any effects of the attack are applied.</li> <li><b>Pushing Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to drive the target back. You add the superiority die to the attack's damage roll, and if the target is Large or smaller, it must make a Strength saving throw. On a failed save, you push the target up to 15 feet away from you.</li> <li><b>Rally</b>: On your turn, you can use a bonus action and expend one superiority die to bolster the resolve of one of your companions. When you do so, choose a friendly creature who can see or hear you. That creature gains temporary hit points equal to the superiority die roll + your Charisma modifier.</li> <li><b>Riposte</b>: When a creature misses you with a melee attack, you can use your reaction and expend one superiority die to make a melee weapon attack against the creature. If you hit, you add the superiority die to the attack's damage roll.</li> <li><b>Sweeping Attack</b>: When you hit a creature with a melee weapon attack, you can expend one superiority die to attempt to damage another creature with the same attack. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number you roll on your superiority die. The damage is of the same type dealt by the original attack.</li> <li><b>Trip Attack</b>: When you hit a creature with a weapon attack, you can expend one superiority die to attempt to knock the target down. You add the superiority die to the attack's damage roll, and if the target is Large or smaller, it must make a Strength saving throw. On a failed save, you knock the target prone.</li> </ul>"
                                 ],
                                 "html": true
                             },
@@ -6203,7 +6167,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 3rd level, you gain proficiency with one type of artisan's tools of your choice."
+                                    "You gain proficiency with one type of artisan's tools of your choice."
                                 ]
                             }
                         ]
@@ -6231,7 +6195,7 @@
                                 "level": 10,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 10th level, your superiority dice turn into dlOs. At 18th level, they turn into d12s"
+                                    "At 10th level, your superiority dice turn into d1Os. At 18th level, they turn into d12s"
                                 ]
                             }
                         ]
@@ -6663,7 +6627,7 @@
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 1st level, while you are wearing no armor and not wielding a shield, your AC equals 10 + your Dexterity modifier + your Wisdom modifier."
+                            "While you are wearing no armor and not wielding a shield, your AC equals 10 + your Dexterity modifier + your Wisdom modifier."
                         ]
                     }
                 ],
@@ -6695,11 +6659,7 @@
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 2nd level, your training allows you to harness the mystic energy of ki. Your access to this energy is represented by a number of ki points. Your monk level determines the number of points you have, as shown in the Ki Points column of Table: The Monk.",
-                            "You can spend these points to fuel various ki features. You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind. You learn more ki features as you gain levels in this class.",
-                            "When you spend a ki point, it is unavailable until you finish a short or long rest, at the end of which you draw all of your expended ki back into yourself. You must spend at least 30 minutes of the rest meditating to regain your ki points.",
-                            "Some of your ki features require your target to make a saving throw to resist the feature's effects. The saving throw DC is calculated as follows:",
-                            "Ki save DC = 8 + your proficiency bonus + your Wisdom modifier"
+                            "Starting at 2nd level, your training allows you to harness the mystic energy of ki. Your access to this energy is represented by a number of ki points. Your monk level determines the number of points you have, as shown in the Ki Points column of Table: The Monk. You can spend these points to fuel various ki features. You start knowing three such features: Flurry of Blows, Patient Defense, and Step of the Wind. You learn more ki features as you gain levels in this class. When you spend a ki point, it is unavailable until you finish a short or long rest, at the end of which you draw all of your expended ki back into yourself. You must spend at least 30 minutes of the rest meditating to regain your ki points. Some of your ki features require your target to make a saving throw to resist the feature's effects. The saving throw DC is calculated as follows: Ki save DC = 8 + your proficiency bonus + your Wisdom modifier"
                         ]
                     },
                     {
@@ -6723,8 +6683,7 @@
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 2nd level, your speed increases by 10 feet while you are not wearing armor or wielding a shield. This bonus increases when you reach certain monk levels, as shown in Table: The Monk.",
-                            "At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
+                            "Starting at 2nd level, your speed increases by 10 feet while you are not wearing armor or wielding a shield. This bonus increases when you reach certain monk levels, as shown in Table: The Monk. At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
                         ]
                     }
                 ],
@@ -6748,8 +6707,7 @@
                         "level": 3,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 3rd level, you can use your reaction to deflect or catch the missile when you are hit by a ranged weapon attack. When you do so, the damage you take from the attack is reduced by 1d10 + your Dexterity modifier + your monk level.",
-                            "If you reduce the damage to 0, you can catch the missile if it is small enough for you to hold in one hand and you have at least one hand free. If you catch a missile in this way, you can spend 1 ki point to make a ranged attack with the weapon or piece of ammunition you just caught, as part of the same reaction. You make this attack with proficiency, regardless of your weapon proficiencies, and the missile counts as a monk weapon for the attack, which has a normal range of 20 feet and a long range of 60 feet."
+                            "Starting at 3rd level, you can use your reaction to deflect or catch the missile when you are hit by a ranged weapon attack. When you do so, the damage you take from the attack is reduced by 1d10 + your Dexterity modifier + your monk level. If you reduce the damage to 0, you can catch the missile if it is small enough for you to hold in one hand and you have at least one hand free. If you catch a missile in this way, you can spend 1 ki point to make a ranged attack with the weapon or piece of ammunition you just caught, as part of the same reaction. You make this attack with proficiency, regardless of your weapon proficiencies, and the missile counts as a monk weapon for the attack, which has a normal range of 20 feet and a long range of 60 feet."
                         ]
                     },
                     {
@@ -6925,8 +6883,7 @@
                         "level": 9,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 2nd level, your speed increases by 10 feet while you are not wearing armor or wielding a shield. This bonus increases when you reach certain monk levels, as shown in Table: The Monk.",
-                            "At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
+                            "Starting at 2nd level, your speed increases by 10 feet while you are not wearing armor or wielding a shield. This bonus increases when you reach certain monk levels, as shown in Table: The Monk. At 9th level, you gain the ability to move along vertical surfaces and across liquids on your turn without falling during the move."
                         ]
                     }
                 ],
@@ -7037,8 +6994,7 @@
                         "level": 14,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 14th level, your mastery of ki grants you proficiency in all saving throws.",
-                            "Additionally, whenever you make a saving throw and fail, you can spend 1 ki point to reroll it and take the second result."
+                            "Beginning at 14th level, your mastery of ki grants you proficiency in all saving throws. Additionally, whenever you make a saving throw and fail, you can spend 1 ki point to reroll it and take the second result."
                         ]
                     }
                 ],
@@ -7125,8 +7081,7 @@
                         "level": 18,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 18th level, you can use your action to spend 4 ki points to become invisible for 1 minute. During that time, you also have resistance to all damage but force damage.",
-                            "Additionally, you can spend 8 ki points to cast the astral projection spell, without needing material components. When you do so, you can't take any other creatures with you."
+                            "Beginning at 18th level, you can use your action to spend 4 ki points to become invisible for 1 minute. During that time, you also have resistance to all damage but force damage. Additionally, you can spend 8 ki points to cast the astral projection spell, without needing material components. When you do so, you can't take any other creatures with you."
                         ]
                     }
                 ],
@@ -7207,10 +7162,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting when you choose this tradition at 3rd level, you can manipulate your enemy's ki when you harness your own. Whenever you hit a creature with one of the attacks granted by your Flurry of Blows, you can impose one of the following effects on that target:",
-                                    "- It must succeed on a Dexterity saving throw or be knocked prone.",
-                                    "- It must make a Strength saving throw. If it fails, you can push it up to 15 feet away from you.",
-                                    "- It can't take reactions until the end of your next turn."
+                                    "Starting when you choose this tradition at 3rd level, you can manipulate your enemy's ki when you harness your own. Whenever you hit a creature with one of the attacks granted by your Flurry of Blows, you can impose one of the following effects on that target:<ul><li>It must succeed on a Dexterity saving throw or be knocked prone.</li><li>It must make a Strength saving throw. If it fails, you can push it up to 15 feet away from you.</li><li>It can't take reactions until the end of your next turn.</li></ul>"
                                 ]
                             }
                         ]
@@ -7252,8 +7204,7 @@
                                 "level": 17,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 17th level, you gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an unarmed strike, you can spend 3 ki points to start these imperceptible vibrations, which last for a number of days equal to your monk level. The vibrations are harmless unless you use your action to end them. To do so, you and the target must be on the same plane of existence. When you use this action, the creature must make a Constitution saving throw. If it fails, it is reduced to 0 hit points. If it succeeds, it takes 10d10 necrotic damage.",
-                                    "You can have only one creature under the effect of this feature at a time. You can choose to end the vibrations harmlessly without using an action."
+                                    "At 17th level, you gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an unarmed strike, you can spend 3 ki points to start these imperceptible vibrations, which last for a number of days equal to your monk level. The vibrations are harmless unless you use your action to end them. To do so, you and the target must be on the same plane of existence. When you use this action, the creature must make a Constitution saving throw. If it fails, it is reduced to 0 hit points. If it succeeds, it takes 10d10 necrotic damage. You can have only one creature under the effect of this feature at a time. You can choose to end the vibrations harmlessly without using an action."
                                 ]
                             }
                         ]
@@ -7278,7 +7229,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting when you choose this tradition at 3rd level, you can use your ki to duplicate the effects of certain spells. As an action, you can spend 2 ki points to cast darkness, darkvision, pass without trace, or silence, without providing material components. Additionally, you gain the minorillusion cantrip ifyou don't already know it."
+                                    "You can use your ki to duplicate the effects of certain spells. As an action, you can spend 2 ki points to cast darkness, darkvision, pass without trace, or silence, without providing material components. Additionally, you gain the minorillusion cantrip ifyou don't already know it."
                                 ]
                             }
                         ]
@@ -7336,7 +7287,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you choose this tradition at 3rd level, you learn magical disciplines that harness the power of the four elements. A discipline requires you to spend ki points each time you use it.<br/><br/> You know the Elemental Attunement discipline and one other elemental discipline of your choice, which are detailed in the &quot;Elemental Disciplines&quot; section below. You learn one additional elemental discipline of your choice at 6th, 11th, and 17th level.<br/><br/> Whenever you learn a new elemental discipline, you can also replace one elemental discipline that you already know with a different discipline.<br/><br/> Casting Elemental Spells. Some elemental disciplines allow you to cast spells. See chapter 10 for the general rules of spellcasting. To cast one of these spells, you use its casting time and other rules, but you don't need to provide material components for it.<br/><br/> Once you reach 5th level in this class, you can spend additional ki points to increase the level of an elemental discipline spell that you cast, provided that the spell has an enhanced effect at a higher level, as burning hands does. The spell's level increases by 1 for each additional ki point you spend. For example, if you are a 5th-level monk and use Sweeping Cinder Strike to cast burning hands, you can spend 3 ki points to cast it as a 2nd-level spell (the discipline's base cost of 2 ki points plus 1).<br/><br/> The maximum number of ki points you can spend to cast a spell in this way (including its base ki point cost and any additional ki points you spend to increase its level) is determined by your monk level, as shown in the Spells and Ki Points table.<br/><br/> <b>Spells and KI Points</b><br/> <table class='table table-condensed table-striped table-hover'><thead><tr><th>Monk Levels</th><th>Maximum Ki Points for a Spell</th></tr></thead><tbody> <tr><td>5th-8th</td><td>3</td></tr> <tr><td>9th-12th</td><td>4</td></tr> <tr><td>13th-16th</td><td>5</td></tr> <tr><td>17th-20th</td><td>6</td></tr> </tbody></table> <br/> <b>Elemental Disciplines</b><br/> <ul> <li><b>Breath of Winter (17th Level Required)</b>: You can spend 6 ki points to cast cone of cold.</li> <li><b>Clench of the North Wind (6th Level Required)</b>: You can spend 3 ki points to cast hold person.</li> <li> <b>Elemental Attunement</b>: You can use your action to briefly control elemental forces within 30 feet of you, causing one of the following effects of your choice: <ul> <li>Create a harmless, instantaneous sensory effect related to air, earth, fire, or water, such as a shower of sparks, a puff of wind, a spray of light mist, or a gentle rumbling of stone.</li> <li>Instantaneously light or snuff out a candle, a torch, or a small campfire.</li> <li>Chill or warm up to 1 pound of nonliving material for up to 1 hour.</li> <li>Cause earth, fire, water, or mist that can fit within a I-foot cube to shape itself into a crude form you desig­ nate for 1 minute.</li> </ul> </li> <li><b>Eternal Mountain Defense (17th Level Required)</b>: You can spend 5 ki points to cast stoneskin, target­ ing yourself.</li> <li><b>Fangs of the Fire Snake</b>: When you use the Attack action on your turn, you can spend 1 ki point to cause tendrils of flame to stretch out from your fists and feet. Your reach with your unarmed strikes increases by 10 feet for that action, as well as the rest of the turn. A hit with such an attack deals fire damage instead of bludgeoning damage, and if you spend 1 ki point when the attack hits, it also deals an extra ldlO fire damage.</li> <li><b>Fist ofFour Thunders</b>: You can spend 2 ki points to cast thunderwave.</li> <li><b>Fist of Unbroken Air</b>: You can create a blast of compressed air that strikes like a mighty fist. As an action, you can spend 2 ki points and choose a creature within 30 feet of you. That creature must make a Strength saving throw. On a failed save, the creature takes 3d10 bludgeoning damage, plus an extra ldlO bludgeoning damage for each additional ki point you spend, and you can push the creature up to 20 feet away from you and knock it prone. On a successful save, the creature takes half as much damage, and you don't push it or knock it prone.</li> <li><b>Flames ofthe Phoenix (11th Level Required)</b>: You can spend 4 ki points to cast fireball.</li> <li><b>Gong ofthe Summit (6th Level Required)</b>: You can spend 3 ki points to cast shatter.</li> <li><b>Mist Stance (11th Level Required)</b>: You can spend 4 ki points to cast gaseous form, targeting yourself.</li> <li><b>Ride the Wind (11th Level Required)</b>: You can spend 4 ki points to cast fly, targeting yourself.</li> <li><b>River of Hungry Flame (17th Level Required)</b>: You can spend 5 ki points to cast wall of fire.</li> <li><b>Rush of the Gale Spirits</b>: You can spend 2 ki points to cast gust of wind.</li> <li><b>Shape the Flowing River</b>: As an action, you can spend 1 ki point to choose an area of ice or water no larger than 30 feet on a side within 120 feet of you. You can change water to ice within the area and vice versa, and you can reshape ice in the area in any manner you choose. You can raise or lower the ice's elevation, create or fill in a trench, erect or flatten a wall, or form a pillar. The extent of any such changes can't exceed half the area's largest dimension. For example, ifyou affect a 30-foot square, you can create a pillar up to 15 feet high, raise or lower the square's elevation by up to 1 5 feet, dig a trench up to 15 feet deep, and so on. You can't shape the ice to trap or damage a creature in the area.</li> <li><b>Sweeping Cinder Strike</b>: You can spend 2 ki points to cast burning hands.</li> <li><b>Water Whip</b>: You can spend 2 ki points as an action to create a whip of water that shoves and pulls a creature to unbalance it. A creature that you can see that is within 30 feet of you must make a Dexterity saving throw. On a failed save, the creature takes 3d10 bludgeoning damage, plus an extra ldlO bludgeoning damage for each additional ki point you spend, and you can either knock it prone or pull it up to 25 feet closer to you. On a successful save, the creature takes half as much damage, and you don't pull it or knock it prone.</li> <li><b>Wave of Rolling Earth (17th Level Required)</b>: You can spend 6 ki points to cast wall ofstone.</li> </ul>"
+                                    "You learn magical disciplines that harness the power of the four elements. A discipline requires you to spend ki points each time you use it.<br/><br/> You know the Elemental Attunement discipline and one other elemental discipline of your choice, which are detailed in the &quot;Elemental Disciplines&quot; section below. You learn one additional elemental discipline of your choice at 6th, 11th, and 17th level.<br/><br/> Whenever you learn a new elemental discipline, you can also replace one elemental discipline that you already know with a different discipline.<br/><br/> Casting Elemental Spells. Some elemental disciplines allow you to cast spells. See chapter 10 for the general rules of spellcasting. To cast one of these spells, you use its casting time and other rules, but you don't need to provide material components for it.<br/><br/> Once you reach 5th level in this class, you can spend additional ki points to increase the level of an elemental discipline spell that you cast, provided that the spell has an enhanced effect at a higher level, as burning hands does. The spell's level increases by 1 for each additional ki point you spend. For example, if you are a 5th-level monk and use Sweeping Cinder Strike to cast burning hands, you can spend 3 ki points to cast it as a 2nd-level spell (the discipline's base cost of 2 ki points plus 1).<br/><br/> The maximum number of ki points you can spend to cast a spell in this way (including its base ki point cost and any additional ki points you spend to increase its level) is determined by your monk level, as shown in the Spells and Ki Points table.<br/><br/> <b>Spells and KI Points</b><br/> <table class='table table-condensed table-striped table-hover'><thead><tr><th>Monk Levels</th><th>Maximum Ki Points for a Spell</th></tr></thead><tbody> <tr><td>5th-8th</td><td>3</td></tr> <tr><td>9th-12th</td><td>4</td></tr> <tr><td>13th-16th</td><td>5</td></tr> <tr><td>17th-20th</td><td>6</td></tr> </tbody></table> <br/> <b>Elemental Disciplines</b><br/> <ul> <li><b>Breath of Winter (17th Level Required)</b>: You can spend 6 ki points to cast cone of cold.</li> <li><b>Clench of the North Wind (6th Level Required)</b>: You can spend 3 ki points to cast hold person.</li> <li> <b>Elemental Attunement</b>: You can use your action to briefly control elemental forces within 30 feet of you, causing one of the following effects of your choice: <ul> <li>Create a harmless, instantaneous sensory effect related to air, earth, fire, or water, such as a shower of sparks, a puff of wind, a spray of light mist, or a gentle rumbling of stone.</li> <li>Instantaneously light or snuff out a candle, a torch, or a small campfire.</li> <li>Chill or warm up to 1 pound of nonliving material for up to 1 hour.</li> <li>Cause earth, fire, water, or mist that can fit within a I-foot cube to shape itself into a crude form you desig­ nate for 1 minute.</li> </ul> </li> <li><b>Eternal Mountain Defense (17th Level Required)</b>: You can spend 5 ki points to cast stoneskin, target­ ing yourself.</li> <li><b>Fangs of the Fire Snake</b>: When you use the Attack action on your turn, you can spend 1 ki point to cause tendrils of flame to stretch out from your fists and feet. Your reach with your unarmed strikes increases by 10 feet for that action, as well as the rest of the turn. A hit with such an attack deals fire damage instead of bludgeoning damage, and if you spend 1 ki point when the attack hits, it also deals an extra ldlO fire damage.</li> <li><b>Fist ofFour Thunders</b>: You can spend 2 ki points to cast thunderwave.</li> <li><b>Fist of Unbroken Air</b>: You can create a blast of compressed air that strikes like a mighty fist. As an action, you can spend 2 ki points and choose a creature within 30 feet of you. That creature must make a Strength saving throw. On a failed save, the creature takes 3d10 bludgeoning damage, plus an extra ldlO bludgeoning damage for each additional ki point you spend, and you can push the creature up to 20 feet away from you and knock it prone. On a successful save, the creature takes half as much damage, and you don't push it or knock it prone.</li> <li><b>Flames ofthe Phoenix (11th Level Required)</b>: You can spend 4 ki points to cast fireball.</li> <li><b>Gong ofthe Summit (6th Level Required)</b>: You can spend 3 ki points to cast shatter.</li> <li><b>Mist Stance (11th Level Required)</b>: You can spend 4 ki points to cast gaseous form, targeting yourself.</li> <li><b>Ride the Wind (11th Level Required)</b>: You can spend 4 ki points to cast fly, targeting yourself.</li> <li><b>River of Hungry Flame (17th Level Required)</b>: You can spend 5 ki points to cast wall of fire.</li> <li><b>Rush of the Gale Spirits</b>: You can spend 2 ki points to cast gust of wind.</li> <li><b>Shape the Flowing River</b>: As an action, you can spend 1 ki point to choose an area of ice or water no larger than 30 feet on a side within 120 feet of you. You can change water to ice within the area and vice versa, and you can reshape ice in the area in any manner you choose. You can raise or lower the ice's elevation, create or fill in a trench, erect or flatten a wall, or form a pillar. The extent of any such changes can't exceed half the area's largest dimension. For example, ifyou affect a 30-foot square, you can create a pillar up to 15 feet high, raise or lower the square's elevation by up to 1 5 feet, dig a trench up to 15 feet deep, and so on. You can't shape the ice to trap or damage a creature in the area.</li> <li><b>Sweeping Cinder Strike</b>: You can spend 2 ki points to cast burning hands.</li> <li><b>Water Whip</b>: You can spend 2 ki points as an action to create a whip of water that shoves and pulls a creature to unbalance it. A creature that you can see that is within 30 feet of you must make a Dexterity saving throw. On a failed save, the creature takes 3d10 bludgeoning damage, plus an extra ldlO bludgeoning damage for each additional ki point you spend, and you can either knock it prone or pull it up to 25 feet closer to you. On a successful save, the creature takes half as much damage, and you don't pull it or knock it prone.</li> <li><b>Wave of Rolling Earth (17th Level Required)</b>: You can spend 6 ki points to cast wall ofstone.</li> </ul>"
                                 ]
                             }
                         ]
@@ -7389,8 +7340,7 @@
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "The presence of strong evil registers on your senses like a noxious odor, and powerful good rings like heavenly music in your ears. As an action, you can open your awareness to detect such forces. Until the end of your next turn, you know the location of any celestial, fiend, or undead within 60 feet of you that is not behind total cover. You know the type (celestial, fiend, or undead) of any being whose presence you sense, but not its identity. Within the same radius, you also detect the presence of any place or object that has been consecrated or desecrated, as with the hallow spell.",
-                            "You can use this feature a number of times equal to 1 + your Charisma modifier. When you finish a long rest, you regain all expended uses."
+                            "The presence of strong evil registers on your senses like a noxious odor, and powerful good rings like heavenly music in your ears. As an action, you can open your awareness to detect such forces. Until the end of your next turn, you know the location of any celestial, fiend, or undead within 60 feet of you that is not behind total cover. You know the type (celestial, fiend, or undead) of any being whose presence you sense, but not its identity. Within the same radius, you also detect the presence of any place or object that has been consecrated or desecrated, as with the hallow spell. You can use this feature a number of times equal to 1 + your Charisma modifier. When you finish a long rest, you regain all expended uses."
                         ]
                     },
                     {
@@ -7398,10 +7348,7 @@
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you take a long rest. With that pool, you can restore a total number of hit points equal to your paladin level x 5.",
-                            "As an action, you can touch a creature and draw power from the pool to restore a number of hit points to that creature, up to the maximum amount remaining in your pool.",
-                            "Alternatively, you can expend 5 hit points from your pool of healing to cure the target of one disease or neutralize one poison affecting it. You can cure multiple diseases and neutralize multiple poisons with a single use of Lay on Hands, expending hit points separately for each one.",
-                            "This feature has no effect on undead and constructs."
+                            "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you take a long rest. With that pool, you can restore a total number of hit points equal to your paladin level x 5. As an action, you can touch a creature and draw power from the pool to restore a number of hit points to that creature, up to the maximum amount remaining in your pool. Alternatively, you can expend 5 hit points from your pool of healing to cure the target of one disease or neutralize one poison affecting it. You can cure multiple diseases and neutralize multiple poisons with a single use of Lay on Hands, expending hit points separately for each one. This feature has no effect on undead and constructs."
                         ]
                     }
                 ],
@@ -7451,7 +7398,7 @@
                         ]
                     },
                     {
-                        "name": "Spellcasting: Paladin",
+                        "name": "Spellcasting",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [
@@ -7498,8 +7445,7 @@
                         "level": 3,
                         "prerequisites": [],
                         "desc": [
-                            "Each oath has a list of associated spells. You gain access to these spells at the levels specified in the oath description. Once you gain access to an oath spell, you always have it prepared. Oath spells don't count against the number of spells you can prepare each day.",
-                            "If you gain an oath spell that doesn't appear on the paladin spell list, the spell is nonetheless a paladin spell for you."
+                            "Each oath has a list of associated spells. You gain access to these spells at the levels specified in the oath description. Once you gain access to an oath spell, you always have it prepared. Oath spells don't count against the number of spells you can prepare each day. If you gain an oath spell that doesn't appear on the paladin spell list, the spell is nonetheless a paladin spell for you."
                         ]
                     },
                     {
@@ -7586,8 +7532,7 @@
                         "level": 6,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus.",
-                            "At 18th level, the range of this aura increases to 30 feet."
+                            "Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus. At 18th level, the range of this aura increases to 30 feet."
                         ]
                     }
                 ],
@@ -7673,8 +7618,7 @@
                         "level": 10,
                         "prerequisites": [],
                         "desc": [
-                            "Starting at 10th level, you and friendly creatures within 10 feet of you can't be frightened while you are conscious.",
-                            "At 18th level, the range of this aura increases to 30 feet."
+                            "Starting at 10th level, you and friendly creatures within 10 feet of you can't be frightened while you are conscious. At 18th level, the range of this aura increases to 30 feet."
                         ]
                     }
                 ],
@@ -7769,8 +7713,7 @@
                         "level": 14,
                         "prerequisites": [],
                         "desc": [
-                            "Beginning at 14th level, you can use your action to end one spell on yourself or on one willing creature that you touch.",
-                            "You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain expended uses when you finish a long rest."
+                            "Beginning at 14th level, you can use your action to end one spell on yourself or on one willing creature that you touch. You can use this feature a number of times equal to your Charisma modifier (a minimum of once). You regain expended uses when you finish a long rest."
                         ]
                     }
                 ],
@@ -8058,8 +8001,7 @@
                                 "level": 7,
                                 "prerequisites": [],
                                 "desc": [
-                                    "Starting at 7th level, you and friendly creatures within 10 feet of you can't be charmed while you are conscious.",
-                                    "At 18th level, the range of this aura increases to 30 feet."
+                                    "Starting at 7th level, you and friendly creatures within 10 feet of you can't be charmed while you are conscious. At 18th level, the range of this aura increases to 30 feet."
                                 ]
                             }
                         ],
@@ -8101,9 +8043,7 @@
                                 "level": 20,
                                 "prerequisites": [],
                                 "desc": [
-                                    "At 20th level, as an action, you can emanate an aura of sunlight. For 1 minute, bright light shines from you in a 30-foot radius, and dim light shines 30 feet beyond that.",
-                                    "Whenever an enemy creature starts its turn in the bright light, the creature takes 10 radiant damage.",
-                                    "In addition, for the duration, you have advantage on saving throws against spells cast by fiends or undead."
+                                    "At 20th level, as an action, you can emanate an aura of sunlight. For 1 minute, bright light shines from you in a 30-foot radius, and dim light shines 30 feet beyond that. Whenever an enemy creature starts its turn in the bright light, the creature takes 10 radiant damage. In addition, for the duration, you have advantage on saving throws against spells cast by fiends or undead."
                                 ]
                             }
                         ],
@@ -8257,7 +8197,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you take this oath at 3rd level, you gain the following two Channel Divinity options.<br /><br /> <div style='padding:0 20px'> <b>Nature's Wrath</b>: You can use your Channel Divinity to invoke primeval forces to ensnare a foe. As an action, you can cause spectral vines to spring up and reach for a creature within 10 feet of you that you can see. The creature must succeed on a Strength or Dexterity saving throw (its choice) or be restrained. While restrained by the vines, the creature repeats the saving throw at the end of each of its turns. On a success, it frees itself and the vines vanish.<br /><br /> <b>Turn the Faithless</b>: You can use your Channel Divinity to utter ancient words that are painful for fey and fiends to hear. As an action, you present your holy symbol, and each fey or fiend within 30 feet of you that can hear you must make a Wisdom saving throw. On a failed save, the creature is turned for 1 minute or until it takes damage. On a successful save, the creature's speed is halved for 1 minute or until the creature takes any damage.<br />A turned creature must spend its turns trying to move as far away from you as it can, and it can't willingly move to a space within 30 feet of you. It also can't take reactions. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If there's nowhere to move, the creature can use the Dodge action.<br/>If the creature's true form is concealed by an illusion, shapeshifting, or other effect, that form is revealed while it is turned.<br/><br/> </div>"
+                                    "You gain the following two Channel Divinity options.<br /><br /> <div style='padding:0 20px'> <b>Nature's Wrath</b>: You can use your Channel Divinity to invoke primeval forces to ensnare a foe. As an action, you can cause spectral vines to spring up and reach for a creature within 10 feet of you that you can see. The creature must succeed on a Strength or Dexterity saving throw (its choice) or be restrained. While restrained by the vines, the creature repeats the saving throw at the end of each of its turns. On a success, it frees itself and the vines vanish.<br /><br /> <b>Turn the Faithless</b>: You can use your Channel Divinity to utter ancient words that are painful for fey and fiends to hear. As an action, you present your holy symbol, and each fey or fiend within 30 feet of you that can hear you must make a Wisdom saving throw. On a failed save, the creature is turned for 1 minute or until it takes damage. On a successful save, the creature's speed is halved for 1 minute or until the creature takes any damage.<br />A turned creature must spend its turns trying to move as far away from you as it can, and it can't willingly move to a space within 30 feet of you. It also can't take reactions. For its action, it can use only the Dash action or try to escape from an effect that prevents it from moving. If there's nowhere to move, the creature can use the Dodge action.<br/>If the creature's true form is concealed by an illusion, shapeshifting, or other effect, that form is revealed while it is turned.<br/><br/> </div>"
                                 ]
                             }
                         ]
@@ -8441,7 +8381,7 @@
                                 "level": 3,
                                 "prerequisites": [],
                                 "desc": [
-                                    "When you take this oath at 3rd level, you gain the following two Channel Divinity options.<br /><br /> <div style='padding:0 20px'> <b>Abjure Enemy</b>: As an action, you present your holy symbol and speak a prayer of denunciation, using your Channel Divinity. Choose one creature within 60 feet of you that you can see. That creature must make a Wisdom saving throw, unless it is immune to being frightened. Fiends and undead have disadvantage on this saving throw.<br />On a failed save, the creature is frightened for 1 minute or until it takes any damage. While frightened, the creature's speed is 0, and it can't benefit from any bonus to its speed. On a successful save, the creature's speed is halved for 1 minute or until the creature takes any damage.<br /><br /> <b>Vow of Enmity.</b>: As a bonus action, you can utter a vow of enmity against a creature you can see within 10 feet of you, using your Channel Divinity. You gain advantage on attack rolls against the creature for 1 minute or until it drops to 0 hit points or falls unconscious.<br/><br/> </div>"
+                                    "You gain the following two Channel Divinity options.<br /><br /> <div style='padding:0 20px'> <b>Abjure Enemy</b>: As an action, you present your holy symbol and speak a prayer of denunciation, using your Channel Divinity. Choose one creature within 60 feet of you that you can see. That creature must make a Wisdom saving throw, unless it is immune to being frightened. Fiends and undead have disadvantage on this saving throw.<br />On a failed save, the creature is frightened for 1 minute or until it takes any damage. While frightened, the creature's speed is 0, and it can't benefit from any bonus to its speed. On a successful save, the creature's speed is halved for 1 minute or until the creature takes any damage.<br /><br /> <b>Vow of Enmity.</b>: As a bonus action, you can utter a vow of enmity against a creature you can see within 10 feet of you, using your Channel Divinity. You gain advantage on attack rolls against the creature for 1 minute or until it drops to 0 hit points or falls unconscious.<br/><br/> </div>"
                                 ]
                             }
                         ]
@@ -8536,7 +8476,7 @@
                 "feature_choices": [],
                 "features": [
                     {
-                        "name": "Favored Enemy (1 type)",
+                        "name": "Favored Enemy",
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
@@ -8548,19 +8488,11 @@
                         ]
                     },
                     {
-                        "name": "Natural Explorer (1 terrain type)",
+                        "name": "Natural Explorer",
                         "level": 1,
                         "prerequisites": [],
                         "desc": [
-                            "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions. Choose one type of favored terrain: arctic, coast, desert, forest, grassland, mountain, or swamp. When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in.",
-                            "While traveling for an hour or more in your favored terrain, you gain the following benefits:",
-                            "- Difficult terrain doesn't slow your group's travel.",
-                            "- Your group can't become lost except by magical means.",
-                            "- Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.",
-                            "- If you are traveling alone, you can move stealthily at a normal pace.",
-                            "- When you forage, you find twice as much food as you normally would.",
-                            "- While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area.",
-                            "You choose additional favored terrain types at 6th and 10th level."
+                            "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions. Choose one type of favored terrain: arctic, coast, desert, forest, grassland, mountain, or swamp. When you make an Intelligence or Wisdom check related to your favored terrain, your proficiency bonus is doubled if you are using a skill that you're proficient in. While traveling for an hour or more in your favored terrain, you gain the following benefits: <ul><li>Difficult terrain doesn't slow your group's travel.</li><li>Your group can't become lost except by magical means.</li><li>Even when you are engaged in another activity while traveling (such as foraging, navigating, or tracking), you remain alert to danger.</li><li>If you are traveling alone, you can move stealthily at a normal pace.</li><li>When you forage, you find twice as much food as you normally would.</li><li>While tracking other creatures, you also learn their exact number, their sizes, and how long ago they passed through the area.</li></ul>You choose additional favored terrain types at 6th and 10th level."
                         ]
                     }
                 ],
@@ -8604,7 +8536,7 @@
                 ],
                 "features": [
                     {
-                        "name": "Spellcasting: Ranger",
+                        "name": "Spellcasting",
                         "level": 2,
                         "prerequisites": [],
                         "desc": [

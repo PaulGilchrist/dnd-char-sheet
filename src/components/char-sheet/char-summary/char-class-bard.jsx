@@ -11,6 +11,10 @@ function CharClassBard({ playerStats }) {
         let bardicInspirationUses = storage.get(playerStats.name, 'bardicInspirationUses');
         setBardicInspirationUses(bardicInspirationUses ? bardicInspirationUses : charisma.bonus);
     }, [playerStats]);
+    let extraAttacks = 0;
+    if(playerStats.level > 5) { // "Extra Attack" class feature at level 6
+        extraAttacks = 1;
+    }
     const handleBardicInspirationUsesToggle = () => {
         setShowInput((showInput) => !showInput);
     };
@@ -26,6 +30,7 @@ function CharClassBard({ playerStats }) {
     const charisma = playerStats.abilities.find((ability) => ability.name === 'Charisma');
     return (<React.Fragment>
         {playerStats.class.name === 'Bard' && <div>
+            {extraAttacks > 0 && <div><b>Extra Attacks: </b>{extraAttacks}</div>}
             <div>
                 <b>Bardic Inspiration Die: </b>d{classSpecific.bardic_inspiration_die}
                 <span className="clickable" onClick={handleBardicInspirationUsesToggle} onKeyDown={handleBardicInspirationUsesToggle} tabIndex={0}>

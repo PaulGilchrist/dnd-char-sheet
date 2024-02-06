@@ -25,7 +25,7 @@ function CharSummary({ playerStats }) {
         setHasInspiration(value ? value : false);
     }, [playerStats]);
     let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
-    if(playerStats.class.name === 'Monk' && playerStats.level > 1) { // Level 2 class feature
+    if((playerStats.class.name === 'Monk') || (playerStats.class.name === 'Barbarian')) {
         speed += playerStats.class.class_levels[playerStats.level-1].class_specific.unarmored_movement;
     }
     const handleToggleInspiraction = () => {

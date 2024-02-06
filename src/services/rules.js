@@ -1,4 +1,4 @@
-import { cloneDeep, merge } from 'lodash';
+import { cloneDeep, merge, uniqBy } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
 import auditRules from './audit-rules'
@@ -15,16 +15,6 @@ const rules = {
             case 'CHA': return 'Charisma';
         }
     },
-    // getAbilityShortName: (longName) => {
-    //     switch (longName) {
-    //         case 'Strength': return 'STR';
-    //         case 'Dexterity': return 'DEX';
-    //         case 'Constitution': return 'CON';
-    //         case 'Intelligence': return 'INT';
-    //         case 'Wisdom': return 'WIS';
-    //         case 'Charisma': return 'CHA';
-    //     }
-    // },
     getAbilities: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
         // playerStats must also already have skill proficiencies determined
@@ -221,7 +211,10 @@ const rules = {
     getSpellAbilities: (allSpells, playerStats) => {
         let spellAbilities = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
         if (!spellAbilities && playerStats.class.subclass) {
-            spellAbilities = playerStats.class.subclass.class_levels[playerStats.level - 1].spellcasting;
+            const subclassLevel = classRules.getHighestSubclassLevel(playerStats)
+            if(subclassLevel) {
+                spellAbilities = subclassLevel.spellcasting;
+            }
         }
         if (spellAbilities) {
             if (playerStats.spells) {
@@ -385,6 +378,11 @@ const rules = {
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
         playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
+        const features = classRules.getFeatures(playerStats);
+        playerStats.actions = uniqBy([...features.actions, ...playerStats.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.bonusActions = uniqBy([...features.bonusActions, ...playerStats.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.reactions = uniqBy([...features.reactions, ...playerStats.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.specialActions = uniqBy([...features.specialActions, ...playerStats.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         playerStats.warnings = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }

@@ -106,6 +106,8 @@ const auditRules = {
         warnings.push(auditRules.getAbilityBonusOptionWarning(playerStats));
         warnings.push(auditRules.getBaseAbilitiesWarning(playerStats));
         warnings.push(auditRules.getAbilityImprovementsWarning(playerStats));
+        // Cantrips known
+        // Spells known
         warnings = warnings.filter(item => item !== null);
         warnings.forEach(warning => warning.type === 'error'? console.error(warning.desc) : console.warn(warning.desc));
         return warnings;
