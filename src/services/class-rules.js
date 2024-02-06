@@ -1,4 +1,4 @@
-import { cloneDeep, merge, uniq, uniqBy } from 'lodash';
+import { cloneDeep, merge, uniqBy } from 'lodash';
 import rules from './rules'
 
 const classRules = {
@@ -29,17 +29,22 @@ const classRules = {
         // Ignore the following features because they are already accounted for
         const featuresToIgnore = [
             "Ability Score Improvement",
+            "Acolyte of Nature",
             "Additional Magical Secrets",
             "Arcane Tradition",
             "Aura improvements",
             "Bard College",
             "Bardic Inspiration",
+            "Blessings of Knowledge",
             "Bonus Cantrip",
+            "Bonus Proficiencies",
+            "Bonus Proficiency",
             "Brutal Critical",
             "Channel Divinity",
             "Divine Domain",
             "Divine Health",
             "Domain Spells",
+            "Draconic Resilience",
             "Druid Circle",
             "Druidic",
             "Expertise",
@@ -48,6 +53,7 @@ const classRules = {
             "Favored Enemy",
             "Font of Magic",
             "Ki",
+            "Mage Hand Legerdemain",
             "Magical Secrets",
             "Martial Archetype",
             "Martial Arts",

@@ -70,7 +70,7 @@ const raceRules = {
             resistances.push("Charm"); // Fey Ancestry
         } else if(playerStats.race.name === "Halfling") {
             resistances.push("Frightened"); // Brave
-            if(playerStats.race.subrace.name === "Scout Halfling") {
+            if(playerStats.race.subrace && playerStats.race.subrace.name === "Scout Halfling") {
                 resistances.push("Poison"); // Scout Resilience
             }
         } else if(playerStats.race.name === "Tiefling") {

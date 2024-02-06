@@ -14,7 +14,7 @@
         "name": "Druid",
         "subclass": {
             "name": "Land",
-            "circle": "Forest"
+            "type": "Forest"
         }
     },
     "feats": [],

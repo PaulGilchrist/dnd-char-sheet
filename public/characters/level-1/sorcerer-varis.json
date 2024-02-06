@@ -14,7 +14,7 @@
         "name": "Sorcerer",
         "subclass": {
             "name": "Draconic",
-            "dragonAncestor": "Brass"
+            "type": "Brass"
         }
     },
     "feats": [],

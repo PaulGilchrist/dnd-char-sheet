@@ -14,7 +14,9 @@
         "name": "Warlock",
         "subclass": {
             "name": "The Archfey"
-        }
+        },
+        "eldritchInvocations": ["Agonizing Blast","Mask of Many Faces"],
+        "pactBoon": "Tome"
     },
     "feats": [],
     "immunities": [],

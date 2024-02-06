@@ -2861,7 +2861,7 @@
                                 "level": 1,
                                 "prerequisites": [],
                                 "desc": [
-                                    "You gain the light cantrip ifyou don't already know it."
+                                    "You gain the light cantrip if you don't already know it."
                                 ]
                             },
                             {
@@ -11492,7 +11492,7 @@
                 "level": 2,
                 "ability_score_bonuses": 0,
                 "prof_bonus": 2,
-                "feature_choices": [
+                "features": [
                     {
                         "name": "Eldritch Invocations",
                         "level": 2,
@@ -11525,7 +11525,6 @@
                         }
                     }
                 ],
-                "features": [],
                 "spellcasting": {
                     "cantrips_known": 2,
                     "spells_known": 3,
@@ -11551,7 +11550,7 @@
                 "level": 3,
                 "ability_score_bonuses": 0,
                 "prof_bonus": 2,
-                "feature_choices": [
+                "features": [
                     {
                         "name": "Pact Boon",
                         "level": 3,
@@ -11571,7 +11570,6 @@
                         }
                     }
                 ],
-                "features": [],
                 "spellcasting": {
                     "cantrips_known": 2,
                     "spells_known": 4,

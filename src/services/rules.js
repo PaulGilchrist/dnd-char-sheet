@@ -21,6 +21,9 @@ const rules = {
         // playerStats must also already have skill proficiencies determined
         return playerStats.abilities.map((ability) => {
             ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + raceRules.getRacialBonus(playerStats, ability.name);
+            if((ability.name === 'Strength' || ability.name === 'Constitution') && playerStats.class.name === 'Barbarian' && playerStats.level > 19) {
+                ability.totalScore += 4; // Primal Champion
+            }
             ability.bonus = Math.floor((ability.totalScore - 10) / 2);
             ability.proficient = playerStats.class.saving_throws.includes(ability.name);
             ability.save = ability.proficient ? ability.bonus + playerStats.proficiency : ability.bonus;
@@ -103,46 +106,70 @@ const rules = {
             // Non-magical shield
             armorClass += 2;
         }
-        // Barbarian may have native AC better than armor based AC due to "Unarmored Defense"
-        if(playerStats.class.name === 'Barbarian') {
+        if(playerStats.class.name === 'Barbarian') { // Unarmored Defense
             const barbarianAc = 10 + dexterity.bonus + constitution.bonus;
             if(barbarianAc > armorClass) {
                 armorClass = barbarianAc;
             }
-        }         
+        } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Draconic') { // Dragon Resilience
+            const sorcererAc = 13 + dexterity.bonus;
+            if(sorcererAc > armorClass) {
+                armorClass = sorcererAc;
+            }
+        }
         return armorClass;
     },
     getLanguages: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace()
-        let languages = [...new Set([...playerStats.languages, ...playerStats.race.languages])];
+        let languages = [...playerStats.race.languages];
+        let languagesAllowed = languages.length;
+        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Knowledge') { // Blessings of Knowledge
+            languagesAllowed += 2;
+        }
         if (playerStats.race.subrace) {
             languages = [...new Set([...languages, ...playerStats.race.subrace.languages])];
         }
         switch(playerStats.class.name) {
             case 'Druid':
                 languages.push("Druidic");
+                languagesAllowed += 1;
                 break;
             case 'Rogue':
                 languages.push("Thieves' Cant");
+                languagesAllowed += 1;
                 break;
         }
-        return languages.sort();
+        languages = [...new Set([...playerStats.languages, ...playerStats.race.languages])];
+        return [languagesAllowed, languages.sort()];
     },
     getProficiencies: (playerStats) => {
-        // playerStats must include full class and race objects from getClass() and getRace() 
-        let proficiencies = [...new Set([...playerStats.class.proficiencies, ...playerStats.race.starting_proficiencies])];
+        // playerStats must include full class and race objects from getClass() and getRace()
+        let proficiencies = [...new Set([...playerStats.proficiencies, ...playerStats.class.proficiencies, ...playerStats.race.starting_proficiencies])];
+        // Race Specific
         playerStats.race.traits.forEach(trait => {
             if (trait.proficiencies.length > 0) {
                 proficiencies = [...new Set([...proficiencies, ...trait.proficiencies])];
             }
         });
-        if (playerStats.race.subrace) {
+        if(playerStats.race.subrace) {
             proficiencies = [...new Set([...proficiencies, ...playerStats.race.subrace.starting_proficiencies])];
             playerStats.race.subrace.racial_traits.forEach(racial_trait => {
                 if (racial_trait.proficiencies.length > 0) {
                     proficiencies = [...new Set([...proficiencies, ...racial_trait.proficiencies])];
                 }
             });
+        }
+        // Class Specific
+        if(playerStats.class.name === "Bard" && playerStats.class.subclass && playerStats.class.subclass.name === 'Valor') {
+            proficiencies = [...new Set([...proficiencies, ...['Medium Armor','Shields','Martial Weapons']])];
+        } else if(playerStats.class.name === "Cleric" && playerStats.class.subclass) {
+            if(playerStats.class.subclass.name === 'Life' || playerStats.class.subclass.name === 'Nature') {
+                proficiencies = [...new Set([...proficiencies, ...['Heavy Armor']])];
+            } else if(playerStats.class.subclass.name === 'Tempest' || playerStats.class.subclass.name === 'War') {
+                proficiencies = [...new Set([...proficiencies, ...['Heavy Armor','Martial Weapons']])];
+            }
+        } else if(playerStats.class.name === "Thief" && playerStats.class.subclass && playerStats.class.subclass.name === 'Assassin') {
+            proficiencies = [...new Set([...proficiencies, ...['Disguise Kit',"Poisoner's Kit"]])];
         }
         proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
         return proficiencies.sort();
@@ -157,6 +184,11 @@ const rules = {
             return skillProficiency.substring(7);
         });
         let skillProficienciesAllowed = skillProficiencies.length + 2; // dndbeyond allows one given based on background and another choosen based on background
+        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Nature') { // Acolyte of Nature
+            skillProficienciesAllowed += 1;
+        } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Knowledge') { // Blessings of Knowledge
+            skillProficienciesAllowed += 2;
+        }
         if(playerStats.race.starting_proficiency_options && playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')) {
             skillProficienciesAllowed += playerStats.race.starting_proficiency_options.choose;
         }
@@ -179,6 +211,15 @@ const rules = {
         if (spellAbilities) {
             if (playerStats.spells) {
                 spellAbilities.spells = [...playerStats.spells];
+                if(playerStats.class.subclass && playerStats.class.subclass.name === 'Arcane Trickster') { // Mage Hand Legerdemain
+                    spellAbilities.spells = [...new Set([...spellAbilities.spells, ...['Mage Hand']])];
+                    spellAbilities.cantrips_known += 3;                    
+                } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Light') { // Bonus Cantrip
+                    spellAbilities.spells = [...new Set([...spellAbilities.spells, ...['Light']])];
+                    spellAbilities.cantrips_known += 1;
+                } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Nature') { // Acolyte of Nature
+                    spellAbilities.cantrips_known += 1;
+                }
             } else {
                 spellAbilities.spells = [];
             }
@@ -266,7 +307,7 @@ const rules = {
                         spellAbilities.schoolLimits = ['abjuration', 'evocation'];
                         break;
                     case 'Land':
-                        spellAbilities.cantrips_known += 1;
+                        spellAbilities.cantrips_known += 1; // Bonus Cantrip
                         break;
                 }
             }
@@ -333,12 +374,18 @@ const rules = {
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+        playerStats.proficiencies = rules.getProficiencies(playerStats);
+        playerStats.senses = raceRules.getSenses(playerStats);
+        [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getSkillProficiencies(playerStats);
-        playerStats.abilities = rules.getAbilities(playerStats);
+        playerStats.abilities = rules.getAbilities(playerStats);        
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
-        if(playerStats.race.subrace.name === "Hill Dwarf") {
+        if(playerStats.race.subrace && playerStats.race.subrace.name === "Hill Dwarf") {
             playerStats.hitPoints += playerStats.level; // Dwarven Toughness
+        }
+        if(playerStats.class.subclass && playerStats.class.subclass.name === "Draconic") {
+            playerStats.hitPoints += playerStats.level; // Draconic Resilience
         }
         playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
         playerStats.immunities = raceRules.getImmunities(playerStats);
