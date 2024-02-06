@@ -34,12 +34,7 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Sneak Attack",
-            "description": "Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack with a finesse or ranged weapon if you have advantage on the attack roll. You don’t need advantage on the attack roll if another enemy of the target is within 5 ft. of it, that enemy isn’t incapacitated, and you don’t have disadvantage on the attack roll."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
     "spells": [],
     "vulnerabilities": []

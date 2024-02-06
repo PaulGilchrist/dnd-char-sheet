@@ -36,12 +36,7 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Mask of the Wild",
-            "description": "You can attempt to hide even when you are only lightly obscured."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
     "spells": [
         { "name": "Guidance", "prepared": "Prepared" },

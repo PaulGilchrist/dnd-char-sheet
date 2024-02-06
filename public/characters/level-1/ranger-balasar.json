@@ -38,16 +38,7 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Favored Enemy",
-            "description": "Humanoids - You have advantage on Survival checks to track your favored enemies, as well as on INT checks to recall information about them."
-        },
-        {
-            "name": "Natural Explorer",
-            "description": "Forest - You have a favored terrain type. Your proficiency bonus is doubled for proficient skills when you make an INT or WIS check related to it. While traveling for an hour or more in your chosen terrain, difficult terrain doesn't slow your group's travel, your group can't become lost except by magical means, you remain alert to danger even when you are engaged in another activity, you can move stealthily at a normal pace (while alone), you find twice as much food while foraging, and while tracking creatures, you learn the exact number, sizes, and how long ago they passed through the area."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
     "spells": [],
     "vulnerabilities": []

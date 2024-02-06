@@ -7,27 +7,9 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Breath Weapon (Gold)",
-            "description": "Once per short rest, exhale in a 15 ft. cone (DEX DC 12, half damage on success) for 2d6 Fire Damage [6th] 3d6, [11th] 4d6, [16th] 5d6"
-        },
-        {
-            "name": "Channel Divinity: Abjure Enemy",
-            "description": "Choose one creature within 60 ft. of you that you can see to make a WIS saving throw (12). Fiends and undead have disadvantage on this saving throw. On failure, the creature is frightened and its speed is reduced to 0 (and it can't benefit from bonuses to speed) for 1 minute or until it takes any damage. On success, the creature's speed is halved for 1 minute or until the creature takes any damage."
-        },
-        {
-            "name": "Divine Sense",
-            "description": "Detect good and evil. Until the end of your next turn, you can sense anything affected by the hallow spell or know the location of any celestial, fiend, undead within 60 ft. that is not behind total cover. You can use this feature 3 times per long rest."
-        }
-    ],
+    "actions": [],
     "alignment": "Lawful Good",
-    "bonusActions": [
-        {
-            "name": "Channel Divinity: Vow of Enmity",
-            "description": "You can choose a creature you can see within 10 ft. of you and gain advantage on attack rolls against it for 1 minute or until it drops to 0 HP or falls unconscious."
-        }
-    ],
+    "bonusActions": [],
     "class": {
         "name": "Paladin",
         "fightingStyles": ["Defense"],
@@ -53,20 +35,7 @@
     "reactions": [],
     "resistances": ["Fire"],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Channel Divinity",
-            "description": "Your oath allows you to channel divine energy to fuel magical effects. When you use your Channel Divinity, you choose which option to use. You must then finish a short or long rest to use your Channel Divinity again. Some Channel Divinity effects require saving throws (DC 12)."
-        },
-        {
-            "name": "Divine Smite",
-            "description": "When you hit with a melee weapon attack, you can expend one spell slot to deal 2d8 extra radiant damage to the target plus 1d8 for each spell level higher than 1st (max 5d8) and plus 1d8 against undead or fiends."
-        },
-        {
-            "name": "Lay on Hands Pool",
-            "description": "You have a pool of healing power that can restore 15 HP per long rest. As an action, you can touch a creature to restore any number of HP remaining in the pool, or 5 HP to either cure a disease or neutralize a poison affecting the creature."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
     "spells": [
         {"name": "Bless","prepared": "Prepared"},

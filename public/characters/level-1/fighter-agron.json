@@ -9,12 +9,7 @@
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [
-        {
-            "name": "Second Wind",
-            "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP"
-        }
-    ],
+    "bonusActions": [],
     "class": {
         "name": "Fighter",
         "fightingStyles": ["Archery"],
