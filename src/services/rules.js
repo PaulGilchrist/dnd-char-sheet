@@ -1,8 +1,9 @@
-import { cloneDeep, merge, uniqBy } from 'lodash';
+import { cloneDeep, uniqBy } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
 import auditRules from './audit-rules'
 import classRules from './class-rules'
+import raceRules from './race-rules'
 
 const rules = {
     getAbilityLongName: (shortName) => {
@@ -19,7 +20,7 @@ const rules = {
         // playerStats must include full class and race objects from getClass() and getRace() 
         // playerStats must also already have skill proficiencies determined
         return playerStats.abilities.map((ability) => {
-            ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + rules.getRacialBonus(playerStats, ability.name);
+            ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + raceRules.getRacialBonus(playerStats, ability.name);
             ability.bonus = Math.floor((ability.totalScore - 10) / 2);
             ability.proficient = playerStats.class.saving_throws.includes(ability.name);
             ability.save = ability.proficient ? ability.bonus + playerStats.proficiency : ability.bonus;
@@ -117,8 +118,13 @@ const rules = {
         if (playerStats.race.subrace) {
             languages = [...new Set([...languages, ...playerStats.race.subrace.languages])];
         }
-        if (playerStats.class.name == 'Rogue') {
-            languages.push("Thieves' Cant");
+        switch(playerStats.class.name) {
+            case 'Druid':
+                languages.push("Druidic");
+                break;
+            case 'Rogue':
+                languages.push("Thieves' Cant");
+                break;
         }
         return languages.sort();
     },
@@ -140,52 +146,6 @@ const rules = {
         }
         proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
         return proficiencies.sort();
-    },
-    getRace: (allRaces, playerSummary) => {
-        const race = merge(cloneDeep(allRaces.find((race) => race.name === playerSummary.race.name)), cloneDeep(playerSummary.race));
-        race.ability_bonuses = race.ability_bonuses.map((ability_bonus) => {
-            ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
-            return ability_bonus;
-        });
-        const subrace = race.subraces.find((subrace) => subrace.name === playerSummary.race.subrace.name);
-        if (subrace) {
-            race.subrace = merge(cloneDeep(subrace), cloneDeep(playerSummary.subrace));
-        } else {
-            race.subrace = null;
-        }
-        delete race.subraces; // We don't need these anymore
-        if (race.subrace) {
-            race.subrace.ability_bonuses = race.subrace.ability_bonuses.map((ability_bonus) => {
-                ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
-                return ability_bonus;
-            });
-        }
-        return race;
-    },
-    getRacialBonus: (playerStats, abilityName) => {
-        // playerStats must include full race object from getPlayerRace() 
-        let racialBonus = 0;
-        let ability_bonus = playerStats.race.ability_bonuses.find((ability_bonus) => ability_bonus.ability_score == abilityName);
-        if (ability_bonus) {
-            racialBonus += ability_bonus.bonus;
-        }
-        if (playerStats.race.subrace) {
-            ability_bonus = playerStats.race.subrace.ability_bonuses.find((ability_bonus) => ability_bonus.ability_score == abilityName);
-            if (ability_bonus) {
-                racialBonus += ability_bonus.bonus;
-            }
-        }
-        return racialBonus;
-    },
-    getSenses: (playerStats) => {
-        // playerStats must include full race object from getPlayerRace()
-        const senses = [...playerStats.senses];
-        const darkvisionInSenses = senses.some((sense) => sense.name === 'Darkvision');
-        const darkvisionRace = playerStats.race.traits.some((trait) => trait.name === 'Darkvision');
-        if (darkvisionRace && !darkvisionInSenses) {
-            senses.push({ name: 'Darkvision', value: '60 ft.' });
-        }
-        return senses.sort((a, b) => a.name.localeCompare(b.name));
     },
     getSkillProficiencies: (playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
@@ -371,18 +331,24 @@ const rules = {
     getPlayerStats: (allClasses, allEquipment, allRaces, playerSummary) => {
         const playerStats = cloneDeep(playerSummary);
         playerStats.class = classRules.getClass(allClasses, playerSummary);
-        playerStats.race = rules.getRace(allRaces, playerSummary);
+        playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getSkillProficiencies(playerStats);
         playerStats.abilities = rules.getAbilities(playerStats);
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
+        if(playerStats.race.subrace.name === "Hill Dwarf") {
+            playerStats.hitPoints += playerStats.level; // Dwarven Toughness
+        }
         playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
+        playerStats.immunities = raceRules.getImmunities(playerStats);
+        playerStats.resistances = raceRules.getResistances(playerStats);
         const features = classRules.getFeatures(playerStats);
-        playerStats.actions = uniqBy([...features.actions, ...playerStats.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.bonusActions = uniqBy([...features.bonusActions, ...playerStats.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.reactions = uniqBy([...features.reactions, ...playerStats.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.specialActions = uniqBy([...features.specialActions, ...playerStats.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        const traits = raceRules.getTraits(playerStats);
+        playerStats.actions = uniqBy([...playerStats.actions, ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.bonusActions = uniqBy([...playerStats.bonusActions, ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.reactions = uniqBy([...playerStats.reactions, ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.specialActions = uniqBy([...playerStats.specialActions, ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         playerStats.warnings = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }

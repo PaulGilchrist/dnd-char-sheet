@@ -38,6 +38,7 @@ const classRules = {
             "Brutal Critical",
             "Channel Divinity",
             "Divine Domain",
+            "Divine Health",
             "Domain Spells",
             "Druid Circle",
             "Druidic",

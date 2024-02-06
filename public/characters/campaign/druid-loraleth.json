@@ -18,13 +18,13 @@
         }
     },
     "feats": [],
-    "immunities": ["Magical Sleep"],
+    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Shirt","Cloak of Cats","Longbow","Scimitar","Dagger"],
         "gold": 8
     },
-    "languages": ["Celestial","Druidic","Primordial","Undercommon"],
+    "languages": ["Celestial","Primordial","Undercommon"],
     "level": 3,
     "name": "Loraleth Fundraea",
     "proficiencies": [],

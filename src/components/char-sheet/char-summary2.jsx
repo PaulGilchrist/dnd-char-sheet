@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
+import raceRules from '../../services/race-rules'
 import rules from '../../services/rules'
 
 function CharSummary2({ playerStats }) {
@@ -9,7 +10,7 @@ function CharSummary2({ playerStats }) {
     React.useEffect(() => {
         setLanguages(rules.getLanguages(playerStats));
         setProficiencies(rules.getProficiencies(playerStats));
-        setSenses(rules.getSenses(playerStats));
+        setSenses(raceRules.getSenses(playerStats));
     }, [playerStats]);
 
     return (

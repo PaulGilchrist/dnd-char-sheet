@@ -18,13 +18,13 @@
         }
     },
     "feats": [],
-    "immunities": ["Magical Sleep"],
+    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
         "equipped": ["Cloak of Elvenkind","Leather","Longbow","Scimitar","Dagger"],
         "gold": 30
     },
-    "languages": ["Druidic","Elvish","Sylvan"],
+    "languages": ["Sylvan"],
     "level": 3,
     "name": "Lirael",
     "proficiencies": [],

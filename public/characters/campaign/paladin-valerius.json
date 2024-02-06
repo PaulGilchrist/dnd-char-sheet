@@ -7,11 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Breath Weapon (Gold)",
-            "description": "Once per short rest, exhale in a 15 ft. cone (DEX DC 12, half damage on success) for 2d6 Fire Damage [6th] 3d6, [11th] 4d6, [16th] 5d6"
-        }],
+    "actions": [],
     "alignment": "Lawful Good",
     "bonusActions": [],
     "class": {
@@ -22,7 +18,7 @@
         }
     },
     "feats": [],
-    "immunities": ["Disease"],
+    "immunities": [],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger"],
@@ -37,7 +33,7 @@
         "type": "Gold"
     },
     "reactions": [],
-    "resistances": ["Fire"],
+    "resistances": [],
     "senses": [],
     "specialActions": [],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
