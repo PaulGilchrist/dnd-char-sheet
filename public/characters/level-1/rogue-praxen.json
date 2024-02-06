@@ -14,7 +14,7 @@
         "name": "Rogue",
         "expertise": ["Sleight of Hand","Thieves' Tools"],
         "subclass": {
-            "name": "Theif"
+            "name": "Thief"
         }
     },
     "feats": [],

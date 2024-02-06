@@ -7,12 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Wild Shape",
-            "description": "Magically assume the shape of a beast that you have seen before twice per short rest."
-        }
-    ],
+    "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
     "class": {
@@ -46,12 +41,7 @@
         {
             "name": "Loraleth's Cat",
             "description": "AC 14, HP 4, Speed 40 ft."
-        },
-        {
-            "name": "Natural Recovery",
-            "description": "Once per long rest during a short rest, you choose expended spell slots to recover"
-        }
-    ],
+        }],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
     "spells": [
         {"name": "Guidance","prepared": "Always"},

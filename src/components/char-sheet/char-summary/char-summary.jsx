@@ -36,7 +36,7 @@ function CharSummary({ playerStats }) {
     return (
         <div>
             <div className='name'>{playerStats.name}</div>
-            <div className='summary'>{playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name} {playerStats.class.name} ({playerStats.class.subclass ? `${playerStats.class.subclass.name.toLowerCase()} ` : ''}{playerStats.class.subclass.circle ? `${playerStats.class.subclass.circle.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
+            <div className='summary'>{playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name} {playerStats.class.name} ({playerStats.class.subclass ? `${playerStats.class.subclass.name.toLowerCase()} ` : ''}{playerStats.class.subclass && playerStats.class.subclass.circle ? `${playerStats.class.subclass.circle.toLowerCase()} ` : ''}level {playerStats.level}), {playerStats.alignment}</div>
             <div className='summaryGrid'>
                 <div>
                     <b>Armor Class: </b>{playerStats.armorClass}<br/>

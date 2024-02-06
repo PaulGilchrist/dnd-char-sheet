@@ -12,7 +12,8 @@ function CharSpecialActions({ playerStats }) {
         <div>
             <div className='sectionHeader'>Special Actions</div>
             {playerStats.specialActions.map((specialAction) => {
-                return <div key={specialAction.name}><b>{specialAction.name}:</b> {specialAction.description}</div>;
+                const html = `<b>${specialAction.name}:</b> ${specialAction.description}`;
+                return <div key={specialAction.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
             })}
         </div>
     )

@@ -7,12 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Wild Shape",
-            "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest."
-        }
-    ],
+    "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
     "class": {
@@ -42,16 +37,7 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Mask of the Wild",
-            "description": "You can attempt to hide even when you are only lightly obscured."
-        },
-        {
-            "name": "Natural Recovery",
-            "description": "Once per long rest during a short rest, you choose expended spell slots to recover."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
     "spells": [
         {"name": "Druidcraft","prepared": "Always"},

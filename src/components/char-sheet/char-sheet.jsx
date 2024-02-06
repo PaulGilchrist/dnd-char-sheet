@@ -23,9 +23,9 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
             <CharActions allEquipment={allEquipment} allSpells={allSpells} playerStats={playerStats}></CharActions><hr />
-            <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions><hr />
-            <CharSpecialActions playerStats={playerStats}></CharSpecialActions>
+            <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions>
             <CharSpells allSpells={allSpells} playerStats={playerStats}></CharSpells><hr />
+            <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
             {playerStats.warnings.length > 0 && <div>
                 <hr />

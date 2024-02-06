@@ -173,13 +173,14 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
                 </div>
                 <br />
                 {playerStats.actions.map((action) => {
-                    return <div key={action.name}><b>{action.name}:</b> {action.description}</div>;
+                    const html = `<b>${action.name}:</b> ${action.description}`;
+                    return <div key={action.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
                 })}
                 <div><b>Base Actions:</b> {actions.join(', ')}</div>
             </div>
-            <hr />
             <div>
                 {attacks.find((attack) => attack.type === 'Bonus Action') && <div>
+                    <hr />
                     <div className='sectionHeader'>Bonus Actions</div>
                     <div className='attacks'>
                         <div className='left'><b>Name</b></div>
@@ -206,12 +207,12 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
                 {/* Bonus Action Attacks and Bonus Actions so there has already been a section header and the Bonus Actions are a sub section */}
                 {attacks.find((attack) => attack.type === 'Bonus Action') && playerStats.bonusActions.length > 0 && <div>
                     <br />
-                    <b>Bonus Actions: </b><br />
-                </div>}
-                {(playerStats.bonusActions.length > 0) && <div>
-                    {playerStats.bonusActions.map((bonusAction) => {
-                        return <div key={bonusAction.name}><b>{bonusAction.name}:</b> {bonusAction.description}</div>;
-                    })}
+                    {(playerStats.bonusActions.length > 0) && <div>
+                        {playerStats.bonusActions.map((bonusAction) => {
+                            const html = `<b>${bonusAction.name}:</b> ${bonusAction.description}`;
+                            return <div key={bonusAction.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
+                        })}
+                    </div>}
                 </div>}
             </div>
         </div>

@@ -29,7 +29,8 @@ function CharReactions({ allSpells, playerStats }) {
         <div>
             <div className='sectionHeader'>Reactions</div>
             {playerStats.reactions.map((reaction) => {
-                return <div key={reaction.name}><b>{reaction.name}:</b> {reaction.description}</div>;
+                const html = `<b>${reaction.name}:</b> ${reaction.description}`;
+                return <div key={reaction.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
             })}
         </div>
     )
