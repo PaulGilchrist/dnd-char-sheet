@@ -113,19 +113,6 @@
                 "proficiencies": []
             },
             {
-                "index": "dwarven-combat-training",
-                "name": "Dwarven Combat Training",
-                "desc": [
-                    "You have proficiency with the battleaxe, handaxe, light hammer, and warhammer."
-                ],
-                "proficiencies": [
-                    "Battleaxes",
-                    "Handaxes",
-                    "Light hammers",
-                    "Warhammers"
-                ]
-            },
-            {
                 "index": "tool-proficiency",
                 "name": "Tool Proficiency",
                 "desc": [
@@ -177,21 +164,12 @@
                         "bonus": 2
                     }
                 ],
-                "starting_proficiencies": [],
+                "starting_proficiencies": [
+                    "Light Armor",
+                    "Medium Armor"
+                ],
                 "languages": [],
-                "racial_traits": [
-                    {
-                        "index": "dwarven-armor-training",
-                        "name": "Dwarven Armor Training",
-                        "desc": [
-                            "You have proficiency with light and medium armor."
-                        ],
-                        "proficiencies": [
-                            "Light Armor",
-                            "Medium Armor"
-                        ]
-                    }
-                ]
+                "racial_traits": []
             }
         ],
         "book": "Player's Handbook",
@@ -285,19 +263,6 @@
                 },
                 "racial_traits": [
                     {
-                        "index": "elf-weapon-training",
-                        "name": "Elf Weapon Training",
-                        "desc": [
-                            "You have proficiency with the longsword, shortsword, shortbow, and longbow."
-                        ],
-                        "proficiencies": [
-                            "Longswords",
-                            "Shortswords",
-                            "Shortbows",
-                            "Longbows"
-                        ]
-                    },
-                    {
                         "index": "high-elf-cantrip",
                         "name": "High Elf Cantrip",
                         "desc": [
@@ -338,22 +303,14 @@
                     }
                 ],
                 "speed": 35,
-                "starting_proficiencies": [],
+                "starting_proficiencies": [
+                    "Longswords",
+                    "Shortswords",
+                    "Shortbows",
+                    "Longbows"
+                ],
                 "languages": [],
                 "racial_traits": [
-                    {
-                        "index": "elf-weapon-training",
-                        "name": "Elf Weapon Training",
-                        "desc": [
-                            "You have proficiency with the longsword, shortsword, shortbow, and longbow."
-                        ],
-                        "proficiencies": [
-                            "Longswords",
-                            "Shortswords",
-                            "Shortbows",
-                            "Longbows"
-                        ]
-                    },
                     {
                         "index": "fleet-of-foot",
                         "name": "Fleet of Foot",
@@ -383,7 +340,11 @@
                         "bonus": 1
                     }
                 ],
-                "starting_proficiencies": [],
+                "starting_proficiencies": [
+                    "Rapiers",
+                    "Shortswords",
+                    "Hand Crossbows"
+                ],
                 "languages": [],
                 "racial_traits": [
                     {
@@ -409,18 +370,6 @@
                             "You know the dancing lights cantrip. When you reach 3rd level, you can cast the faerie fire spell once with this trait and regain the ability to do so when you finish a long rest. When you reach 5th level, you can cast the darkness spell once with this trait and regain the ability to do so when you finish a long rest. Charisma is your spellcasting ability for these spells."
                         ],
                         "proficiencies": []
-                    },
-                    {
-                        "index": "drow-weapon-training",
-                        "name": "Drow Weapon Training",
-                        "desc": [
-                            "You have proficiency with rapiers, shortswords, and hand crossbows."
-                        ],
-                        "proficiencies": [
-                            "Rapiers",
-                            "Shortswords",
-                            "Hand Crossbows"
-                        ]
                     }
                 ]
             }
@@ -830,7 +779,7 @@
                         "index": "scout-resilience",
                         "name": "Scout Resilience",
                         "desc": [
-                            "You have advantage o n saving throws against poison, and you have resistance against poison damage."
+                            "You have advantage on saving throws against poison, and you have resistance against poison damage."
                         ],
                         "proficiencies": []
                     }

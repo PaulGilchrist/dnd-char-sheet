@@ -16,6 +16,7 @@
             "name": "Life"
         }
     },
+    "feats": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Tinderbox","Torch","Waterskin"],
@@ -23,7 +24,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 1,
+    "level": 20,
     "name": "Seti",
     "proficiencies": [],
     "race": {
@@ -35,19 +36,12 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Mask of the Wild",
-            "description": "You can attempt to hide even when you are only lightly obscured."
-        }
-    ],
-    "skillProficiencies": ["Insight","Medicine","Perception","Religion","Survival"],
+    "specialActions": [],
+    "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
     "spells": [
         { "name": "Guidance", "prepared": "Prepared" },
         { "name": "Sacred Flame", "prepared": "Prepared" },
         { "name": "Spare the Dying", "prepared": "Prepared" },
-        { "name": "Bless", "prepared": "Prepared" },
-        { "name": "Cure Wounds", "prepared": "Prepared" },
         { "name": "Detect Magic", "prepared": "Prepared" },
         { "name": "Guiding Bolt", "prepared": "Prepared" },
         { "name": "Healing Word", "prepared": "Prepared" },

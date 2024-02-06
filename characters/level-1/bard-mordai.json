@@ -12,10 +12,12 @@
     "bonusActions": [],
     "class": {
         "name": "Bard",
+        "expertise": ["Performance","Persuasion"],
         "subclass": {
             "name": "Lore"
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -23,7 +25,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 10,
+    "level": 20,
     "proficiencies": [],
     "name": "Mordai",
     "race": {
@@ -32,7 +34,7 @@
     "reactions": [],
     "resistances": ["Fire"],
     "senses": [],
-    "skillProficiencies": ["Performance","Persuasion","Deception"],
+    "skillProficiencies": ["Insight","Performance","Perception","Persuasion","Deception"],
     "spells": [
         { "name": "Mage Hand", "prepared": "Always" },
         { "name": "Minor Illusion", "prepared": "Always" },

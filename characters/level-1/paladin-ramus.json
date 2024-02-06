@@ -18,22 +18,22 @@
         }
     },
     "feats": [],
-    "immunities": [],
+    "immunities": ["Disease"],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger"],
         "gold": 25
     },
     "languages": ["Elvish"],
-    "level": 3,
-    "name": "Valerius Stormscale",
+    "level": 20,
+    "name": "Ramus",
     "proficiencies": [],
     "race": {
         "name": "Dragonborn",
         "type": "Gold"
     },
     "reactions": [],
-    "resistances": [],
+    "resistances": ["Fire"],
     "senses": [],
     "specialActions": [],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],

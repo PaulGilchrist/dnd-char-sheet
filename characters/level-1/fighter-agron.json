@@ -9,12 +9,7 @@
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [
-        {
-            "name": "Second Wind",
-            "description": "Once per short rest, you can use a bonus action to regain 1d10 + 1 HP"
-        }
-    ],
+    "bonusActions": [],
     "class": {
         "name": "Fighter",
         "fightingStyles": ["Archery"],
@@ -22,6 +17,7 @@
             "name": "Champion"            
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -29,7 +25,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 1,
+    "level": 20,
     "proficiencies": [],
     "name": "Agron",
     "race": {

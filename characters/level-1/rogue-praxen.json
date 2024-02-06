@@ -1,10 +1,10 @@
 {
     "abilities": [
         {"name": "Strength","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
-        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 15,"miscBonus": 1},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
-        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 13,"miscBonus": 0},
+        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 13,"miscBonus": 1},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0}
     ],
     "actions": [],
@@ -14,9 +14,10 @@
         "name": "Rogue",
         "expertise": ["Sleight of Hand","Thieves' Tools"],
         "subclass": {
-            "name": "Theif"
+            "name": "Thief"
         }
     },
+    "feats": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
@@ -24,7 +25,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 1,
+    "level": 20,
     "name": "Praxen",
     "proficiencies": [],
     "race": {
@@ -33,12 +34,7 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Sneak Attack",
-            "description": "Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack with a finesse or ranged weapon if you have advantage on the attack roll. You don’t need advantage on the attack roll if another enemy of the target is within 5 ft. of it, that enemy isn’t incapacitated, and you don’t have disadvantage on the attack roll."
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
     "spells": [],
     "vulnerabilities": []

@@ -7,12 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Wild Shape",
-            "description": "As an action, you can magically assume the shape of a beast that you have seen before twice per short rest."
-        }
-    ],
+    "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
     "class": {
@@ -22,13 +17,14 @@
             "type": "Forest"
         }
     },
-    "immunities": ["Magical Sleep"],
+    "feats": [],
+    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
         "equipped": ["Cloak of Elvenkind","Leather","Longbow","Scimitar","Dagger"],
         "gold": 30
     },
-    "languages": ["Druidic","Elvish","Sylvan"],
+    "languages": ["Sylvan"],
     "level": 3,
     "name": "Lirael",
     "proficiencies": [],
@@ -41,17 +37,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Mask of the Wild",
-            "description": "You can attempt to hide even when you are only lightly obscured."
-        },
-        {
-            "name": "Natural Recovery",
-            "description": "Once per long rest during a short rest, you choose expended spell slots to recover."
-        }
-    ],
-    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Perception","Stealth"],
+    "specialActions": [],
+    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
     "spells": [
         {"name": "Druidcraft","prepared": "Always"},
         {"name": "Frostbite","prepared": "Always"},

@@ -7,12 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
-    "actions": [
-        {
-            "name": "Wild Shape",
-            "description": "Magically assume the shape of a beast that you have seen before twice per short rest."
-        }
-    ],
+    "actions": [],
     "alignment": "Neutral Good",
     "bonusActions": [],
     "class": {
@@ -22,13 +17,14 @@
             "type": "Coast"
         }
     },
-    "immunities": ["Magical Sleep"],
+    "feats": [],
+    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Shirt","Cloak of Cats","Longbow","Scimitar","Dagger"],
         "gold": 8
     },
-    "languages": ["Celestial","Druidic","Primordial","Undercommon"],
+    "languages": ["Celestial","Primordial","Undercommon"],
     "level": 3,
     "name": "Loraleth Fundraea",
     "proficiencies": [],
@@ -45,13 +41,8 @@
         {
             "name": "Loraleth's Cat",
             "description": "AC 14, HP 4, Speed 40 ft."
-        },
-        {
-            "name": "Natural Recovery",
-            "description": "Once per long rest during a short rest, you choose expended spell slots to recover"
-        }
-    ],
-    "skillProficiencies": ["Animal Handling","Arcana","History","Nature","Perception"],
+        }],
+    "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
     "spells": [
         {"name": "Guidance","prepared": "Always"},
         {"name": "Mending","prepared": "Always"},

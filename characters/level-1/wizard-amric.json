@@ -1,10 +1,10 @@
 {
     "abilities": [
-        { "name": "Strength", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 },
-        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 },
         { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
         { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
-        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
     "actions": [],
@@ -16,6 +16,7 @@
             "name": "Evocation"
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -23,7 +24,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 1,
+    "level": 20,
     "name": "Amric",
     "proficiencies": [],
     "race": {
@@ -35,26 +36,19 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [
-        {
-            "name": "Arcane Recovery",
-            "description": "Once per day when you finish a short rest, you can choose expended spell slots to recover - up to a combined level of 1, and none of the slots can be 6th level or higher"
-        }
-    ],
+    "specialActions": [],
     "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
     "spells": [
-        { "name": "Fire Bolt", "prepared": "Prepared" },
-        { "name": "Mage Hand", "prepared": "Prepared" },
-        { "name": "Shocking Grasp", "prepared": "Prepared" },
+        { "name": "Fire Bolt", "prepared": "Always" },
+        { "name": "Mage Hand", "prepared": "Always" },
+        { "name": "Minor Illusion", "prepared": "Always" },
+        { "name": "Shocking Grasp", "prepared": "Always" },
         { "name": "Burning Hands", "prepared": "Prepared" },
-        { "name": "Charm Person", "prepared": "Prepared" },
-        { "name": "Detect Magic", "prepared": "" },
+        { "name": "Detect Magic", "prepared": "Ritual" },
         { "name": "Disguise Self", "prepared": "Prepared" },
-        { "name": "Find Familiar", "prepared": "" },
-        { "name": "Identify", "prepared": "" },
+        { "name": "Find Familiar", "prepared": "Ritual" },
         { "name": "Magic Missile", "prepared": "Prepared" },
-        { "name": "Shield", "prepared": "Prepared" },
-        { "name": "Prismatic Spray", "prepared": "Prepared" }        
+        { "name": "Shield", "prepared": "Prepared" }      
     ],
     "vulnerabilities": []
 }

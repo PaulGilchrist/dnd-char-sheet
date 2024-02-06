@@ -9,12 +9,7 @@
     ],
     "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [
-        {
-            "name": "Second Wind",
-            "description": "Once per short rest, you can use a bonus action to regain 1d10 + 3 HP"
-        }
-    ],
+    "bonusActions": [],
     "class": {
         "name": "Fighter",
         "fightingStyles": ["Archery"],
@@ -22,6 +17,7 @@
             "name": "Champion"
         }
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -39,15 +35,6 @@
     "resistances": [],
     "senses": [],
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
-    "specialActions": [
-        {
-            "name": "Action Surge",
-            "description": "You can take one additional action on your turn. This can be used 1 times per short rest."
-        },
-        {
-            "name": "Improved Critical",
-            "description": "Your weapon attacks score a critical hit on a roll of 19 or 20."
-        }
-    ],
+    "specialActions": [],
     "vulnerabilities": []
 }

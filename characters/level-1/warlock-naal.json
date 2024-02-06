@@ -1,10 +1,10 @@
 {
     "abilities": [
         { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
-        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
-        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 1 },
         { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 },
-        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 1 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
     ],
     "actions": [],
@@ -14,8 +14,11 @@
         "name": "Warlock",
         "subclass": {
             "name": "The Archfey"
-        }
+        },
+        "eldritchInvocations": ["Agonizing Blast","Mask of Many Faces"],
+        "pactBoon": "Tome"
     },
+    "feats": [],
     "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -23,7 +26,7 @@
         "gold": 10
     },
     "languages": [],
-    "level": 1,
+    "level": 20,
     "name": "Naal",
     "proficiencies": [],
     "race": {
@@ -33,7 +36,7 @@
     "resistances": [],
     "senses": [],
     "specialActions": [],
-    "skillProficiencies": ["Arcana","Investigation","Perception","Nature"],
+    "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
     "spells": [
         { "name": "Eldritch Blast", "prepared": "Always" },
         { "name": "Mage Hand", "prepared": "Always" },
