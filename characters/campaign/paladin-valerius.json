@@ -37,11 +37,6 @@
     "senses": [],
     "specialActions": [],
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
-    "spells": [
-        {"name": "Bless","prepared": "Prepared"},
-        {"name": "Command","prepared": "Prepared"},
-        {"name": "Divine Favor","prepared": "Prepared"},
-        {"name": "Searing Smite","prepared": "Prepared"}
-    ],
+    "spells": [],
     "vulnerabilities": []
 }

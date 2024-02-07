@@ -25,8 +25,8 @@
         "gold": 30
     },
     "languages": ["Sylvan"],
-    "level": 3,
-    "name": "Lirael",
+    "level": 20,
+    "name": "Immeral",
     "proficiencies": [],
     "race": {
         "name": "Elf",
@@ -42,7 +42,12 @@
     "spells": [
         {"name": "Druidcraft","prepared": "Always"},
         {"name": "Frostbite","prepared": "Always"},
-        {"name": "Shillelagh","prepared": "Always"}
+        {"name": "Shillelagh","prepared": "Always"},
+        {"name": "Detect Magic","prepared": "Ritual"},
+        {"name": "Detect Poison and Disease","prepared": "Ritual"},
+        {"name": "Beast Bond","prepared": "Prepared"},
+        {"name": "Ice Knife","prepared": "Prepared"},
+        {"name": "Protection from Poison","prepared": "Prepared"}
     ],
     "vulnerabilities": []
 }
