@@ -35,7 +35,6 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
     }, [allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary]);
 
     const handleTogglePreparedSpells = (spellName) => {
-        console.log(spellName);
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);
         if(spell) {
             if(spell.prepared === 'Prepared') {

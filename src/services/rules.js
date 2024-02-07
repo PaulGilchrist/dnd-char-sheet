@@ -123,23 +123,45 @@ const rules = {
         // playerStats must include full class and race objects from getClass() and getRace()
         let languages = [...playerStats.race.languages];
         let languagesAllowed = languages.length;
-        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Knowledge') { // Blessings of Knowledge
-            languagesAllowed += 2;
+        // dndbeyond allows up to 2 languages from the character's backstory (See Acolyte or Sage)
+        languagesAllowed += 2;
+         switch(playerStats.race.name) {
+            case 'Half-Elf':
+            case 'Human':
+                languagesAllowed += 1;
+                break;
         }
-        if (playerStats.race.subrace) {
+        if(playerStats.race.subrace) {
             languages = [...new Set([...languages, ...playerStats.race.subrace.languages])];
+            switch(playerStats.race.subrace.name) {
+                case 'High Elf':
+                    languagesAllowed += 1;
+                    break;
+            }
         }
         switch(playerStats.class.name) {
             case 'Druid':
                 languages.push("Druidic");
                 languagesAllowed += 1;
                 break;
+            case 'Ranger': // Favored Enemies
+                languagesAllowed += 1;
+                if(playerStats.level > 5) languagesAllowed += 1;
+                if(playerStats.level > 13) languagesAllowed += 1;
+                break;
             case 'Rogue':
                 languages.push("Thieves' Cant");
                 languagesAllowed += 1;
                 break;
         }
-        languages = [...new Set([...playerStats.languages, ...playerStats.race.languages])];
+        if(playerStats.class.subclass) {
+            switch(playerStats.class.subclass.name) {
+                case 'Knowledge': // Blessings of Knowledge
+                    languagesAllowed += 1;
+                    break;
+            }
+        }
+        languages = [...new Set([...playerStats.languages, ...languages])];
         return [languagesAllowed, languages.sort()];
     },
     getProficiencies: (playerStats) => {
