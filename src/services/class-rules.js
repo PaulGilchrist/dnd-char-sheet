@@ -139,8 +139,9 @@ const classRules = {
             reactions: [],
             specialActions: []
         }
-        levels.forEach(level => {
-            level.features.forEach(feature => {
+        // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
+        for(let i = levels.length-1; i >= 0; i--) {
+            levels[i].features.forEach(feature => {
                 const featureSummary = {
                     name: feature.name,
                     description: feature.desc
@@ -157,7 +158,7 @@ const classRules = {
                     }
                 }
             });
-        });
+        }
         return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
