@@ -201,6 +201,7 @@ const rules = {
         return [skillProficienciesAllowed, skillProficiencies.sort()];
     },
     getSpellAbilities: (allSpells, playerStats) => {
+        // playerStats must include full class and race objects from getClass() and getRace() 
         let spellAbilities = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
         if (!spellAbilities && playerStats.class.subclass) {
             const subclassLevel = classRules.getHighestSubclassLevel(playerStats)
@@ -326,6 +327,18 @@ const rules = {
                         spell.prepared = 'Always';
                     });
             }
+            // Druids and Paladins know all spells
+            if(playerStats.class.name === 'Druid' || playerStats.class.name === 'Paladin') {
+                let spellMaxLevel = rules.getSpellMaxLevel(playerStats);
+                allSpells.forEach(spell => {
+                    if(spell.level != 0 && spell.level <= spellMaxLevel && spell.classes.includes(playerStats.class.name) && !spellAbilities.spells.find((s) => s.name === spell.name)) {
+                        spellAbilities.spells.push({
+                            name: spell.name,
+                            prepared: ''
+                        });
+                    }
+                });
+            }
             // Add any subclass spells to known spells and set them to always prepared
             if (playerStats.level > 2 && playerStats.class.subclass && playerStats.class.subclass.spells) {
                 playerStats.class.subclass.spells.forEach((subclassSpell) => {                    
@@ -368,6 +381,24 @@ const rules = {
             }
         }
         return spellAbilities;
+    },
+    getSpellMaxLevel: (playerStats) => {
+        // playerStats must include full class and race objects from getClass() and getRace() 
+        let classLevel = playerStats.class.class_levels[playerStats.level-1];
+        if(!classLevel.spellcasting && playerStats.class.subclass) {
+            classLevel = playerStats.class.subclass.class_levels[playerStats.level-3]
+        }
+        let spellMaxLevel = null;
+        if(classLevel.spellcasting.spell_slots_level_1 != null && classLevel.spellcasting.spell_slots_level_1 > 0) spellMaxLevel = 1;
+        if(classLevel.spellcasting.spell_slots_level_2 != null && classLevel.spellcasting.spell_slots_level_2 > 0) spellMaxLevel = 2;
+        if(classLevel.spellcasting.spell_slots_level_3 != null && classLevel.spellcasting.spell_slots_level_3 > 0) spellMaxLevel = 3;
+        if(classLevel.spellcasting.spell_slots_level_4 != null && classLevel.spellcasting.spell_slots_level_4 > 0) spellMaxLevel = 4;
+        if(classLevel.spellcasting.spell_slots_level_5 != null && classLevel.spellcasting.spell_slots_level_5 > 0) spellMaxLevel = 5;
+        if(classLevel.spellcasting.spell_slots_level_6 != null && classLevel.spellcasting.spell_slots_level_6 > 0) spellMaxLevel = 6;
+        if(classLevel.spellcasting.spell_slots_level_7 != null && classLevel.spellcasting.spell_slots_level_7 > 0) spellMaxLevel = 7;
+        if(classLevel.spellcasting.spell_slots_level_8 != null && classLevel.spellcasting.spell_slots_level_8 > 0) spellMaxLevel = 8;
+        if(classLevel.spellcasting.spell_slots_level_9 != null && classLevel.spellcasting.spell_slots_level_9 > 0) spellMaxLevel = 9;
+        return spellMaxLevel;
     },
     getPlayerStats: (allClasses, allEquipment, allRaces, playerSummary) => {
         const playerStats = cloneDeep(playerSummary);
