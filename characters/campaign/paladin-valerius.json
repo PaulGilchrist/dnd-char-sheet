@@ -40,19 +40,8 @@
     "spells": [
         {"name": "Bless","prepared": "Prepared"},
         {"name": "Command","prepared": "Prepared"},
-        {"name": "Compelled Duel","prepared": ""},
-        {"name": "Cure Wounds","prepared": ""},
-        {"name": "Detect Evil and Good","prepared": ""},
-        {"name": "Detect Magic","prepared": ""},
-        {"name": "Detect Poison and Disease","prepared": ""},
         {"name": "Divine Favor","prepared": "Prepared"},
-        {"name": "Heroism","prepared": ""},
-        {"name": "Protection from Evil and Good","prepared": ""},
-        {"name": "Purify Food and Drink","prepared": ""},
-        {"name": "Searing Smite","prepared": "Prepared"},
-        {"name": "Shield of Faith","prepared": ""},
-        {"name": "Thunderous Smite","prepared": ""},
-        {"name": "Wrathful Smite","prepared": ""}
+        {"name": "Searing Smite","prepared": "Prepared"}
     ],
     "vulnerabilities": []
 }
