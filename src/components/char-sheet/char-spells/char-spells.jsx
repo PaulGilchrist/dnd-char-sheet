@@ -87,6 +87,7 @@ function CharSpells({ allSpells, playerStats }) {
                     {spellAbilities.spells.map((spell) => {
                         let notes = [];
                         if(spell.concentration) notes.push('Concentration');
+                        if(spell.ritual) notes.push('Ritual');
                         if(spell.components) notes.push(spell.components.join('/'));
                         let effect = 'Utility';
                         if(spell.damage) {
@@ -95,9 +96,6 @@ function CharSpells({ allSpells, playerStats }) {
                             } else if (spell.damage.damage_at_character_level) {
                                 effect = `${spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]]} ${spell.damage.damage_type}`
                             }
-                        }
-                        if(spell.ritual) {
-                            spell.prepared = 'Ritual';
                         }
                         return <React.Fragment key={spell.name}>
                             <div className='left spell-name clickable' onClick={() => showPopup(spell)}>{spell.name}</div>
