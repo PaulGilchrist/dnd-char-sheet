@@ -178,11 +178,13 @@ const classRules = {
     },
     getHighestSubclassLevel: (playerStats) => {
         let subClassLevel = null
-        for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
-            if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
-                break;
-            } else {
-                subClassLevel = playerStats.class.subclass.class_levels[i];
+        if(playerStats.class.subclass) {
+            for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
+                if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
+                    break;
+                } else {
+                    subClassLevel = playerStats.class.subclass.class_levels[i];
+                }
             }
         }
         return subClassLevel

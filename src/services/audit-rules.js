@@ -83,6 +83,48 @@ const auditRules = {
         }
         return null;
     },
+    getFightingStylesWarning: (playerStats) => {
+        // Warn if the player has not choosen the correct number fighting styles
+        let fightingStylesAllowed = 0;
+        if(playerStats.class.name === 'Fighter' || (playerStats.class.name === 'Paladin' && playerStats.level > 1) || (playerStats.class.name === 'Ranger' && playerStats.level > 1)) {
+            fightingStylesAllowed = 1;
+            if(playerStats.class.name === 'Fighter' && playerStats.class.subclass.name === 'Champion' && playerStats.level > 9) {
+                fightingStylesAllowed = 2;
+            }
+            let available = fightingStylesAllowed - playerStats.class.fightingStyles.length;
+            if(available < 0) {
+                return {
+                    desc: `${-available} more fighting style${available == -1 ? '' : 's'} then allowed`,
+                    type: 'error'
+                };
+            } else if(available > 0) {
+                return {
+                    desc: `${available} more fighting style${available == 1 ? '' : 's'} available`,
+                    type: 'warning'
+                };
+            }
+        }
+        return null;
+    },
+    getKnownSpellsWarnings: (playerStats) => {
+        // Warn if the player has not choosen the correct number known spells
+        let spellAbilities = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
+        if (spellAbilities && playerStats.class.name != 'Druid' && playerStats.class.name != 'Paladin') { // Druids and Paladins know all spells
+            let available = spellAbilities.spells_known - spellAbilities.spells.length;
+            if(available < 0) {
+                return {
+                    desc: `${-available} more skill proficienc${available == -1 ? 'y' : 'ies'} then allowed`,
+                    type: 'error'
+                };
+            } else if(available > 0) {
+                return {
+                    desc: `${available} more skill proficienc${available == 1 ? 'y' : 'ies'} available`,
+                    type: 'warning'
+                };
+            }
+        }
+        return null;
+    },
     getSkillProficienciesWarning: (playerStats) => {
         // Warn if the player has not choosen the correct number skill proficiencies
         let available = playerStats.skillProficienciesAllowed - playerStats.skillProficiencies.length;
@@ -101,11 +143,12 @@ const auditRules = {
     },
     auditPlayerStats: (playerStats) => {
         let warnings = []
-        warnings.push(auditRules.getSkillProficienciesWarning(playerStats));
-        warnings.push(auditRules.getExpertiseWarning(playerStats));
         warnings.push(auditRules.getAbilityBonusOptionWarning(playerStats));
-        warnings.push(auditRules.getBaseAbilitiesWarning(playerStats));
         warnings.push(auditRules.getAbilityImprovementsWarning(playerStats));
+        warnings.push(auditRules.getBaseAbilitiesWarning(playerStats));
+        warnings.push(auditRules.getExpertiseWarning(playerStats));
+        warnings.push(auditRules.getFightingStylesWarning(playerStats));
+        warnings.push(auditRules.getSkillProficienciesWarning(playerStats));
         // Cantrips known
         // Spells known
         warnings = warnings.filter(item => item !== null);

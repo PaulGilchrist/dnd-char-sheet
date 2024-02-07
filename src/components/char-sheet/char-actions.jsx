@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
+import storage from '../../services/local-storage'
 import { actions } from '../../data/actions';
 import './char-actions.css'
 
@@ -119,8 +120,23 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         });
     }
     // Add spell details
-    if(playerStats.spells && playerStats.spells.length > 0) {
-        let spells = playerStats.spells.map(spell => {
+    if(playerStats.spellAbilities) {   
+        // Override spell prepared status for any spells from localStorage
+        // let preparedSpells = storage.get(playerStats.name, 'preparedSpells');
+        // if(preparedSpells) {
+        //     playerStats.spellAbilities.spells.forEach(spell => {
+        //         if(preparedSpells.includes(spell.name)) {
+        //             if(spell.prepared === '') {
+        //                 spell.prepared = 'Prepared';
+        //             }
+        //         } else {
+        //             if(spell.prepared === 'Prepared') {
+        //                 spell.prepared = '';
+        //             }
+        //         }
+        //     });
+        // }
+        let spells = playerStats.spellAbilities.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
             if(spellDetail) {
                 return {...spellDetail, prepared: spell.prepared};
@@ -128,7 +144,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
             return {...spell};
         });
         // Find spells that are actions, damage based and prepared and add them to attacks
-        spells = spells.filter(spell => spell.damage && spell.prepared);
+        spells = spells.filter(spell => spell.damage && (spell.prepared === 'Always' || spell.prepared === 'Prepared'));
         spells.forEach(spell => {
             if(!attacks.find((attack) => attack.name === spell.name)) {
                 let damage = ''
@@ -137,12 +153,11 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
                 } else if (spell.damage.damage_at_character_level) {
                     damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
                 }
-                const spellAbility = playerStats.abilities.find((ability) => ability.name === playerStats.class.spell_casting_ability);
                 attacks.push({
                     "name": spell.name,
                     "damage": damage,
                     "damageType": spell.damage.damage_type,
-                    "hitBonus": spellAbility.bonus,
+                    "hitBonus": playerStats.spellAbilities.modifier,
                     "range": spell.range,
                     "type": spell.casting_time === "1 action" ? "Action" : "Bonus Action"
                 });

@@ -202,16 +202,18 @@ const rules = {
     },
     getSpellAbilities: (allSpells, playerStats) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
-        let spellAbilities = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
-        if (!spellAbilities && playerStats.class.subclass) {
-            const subclassLevel = classRules.getHighestSubclassLevel(playerStats)
-            if(subclassLevel) {
-                spellAbilities = subclassLevel.spellcasting;
-            }
+        let spellAbilities = null;
+        let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
+        if(!spellcasting) {
+            spellcasting = classRules.getHighestSubclassLevel(playerStats).spellcasting;
+        }
+        if(spellcasting) {
+            spellAbilities = {...spellcasting};
         }
         if (spellAbilities) {
             if (playerStats.spells) {
-                spellAbilities.spells = [...playerStats.spells];
+                spellAbilities.spells = [...playerStats.spells];                
+                delete playerStats.spells;
                 if(playerStats.class.subclass && playerStats.class.subclass.name === 'Arcane Trickster') { // Mage Hand Legerdemain
                     spellAbilities.spells = [...new Set([...spellAbilities.spells, ...['Mage Hand']])];
                     spellAbilities.cantrips_known += 3;                    
@@ -312,24 +314,9 @@ const rules = {
                         break;
                 }
             }
-            switch (playerStats.class.name) {
-                case 'Cleric':
-                case 'Druid':
-                case 'Wizard':
-                    spellAbilities.maxPreparedSpells = spellAbility.bonus + playerStats.level;
-                    break;
-                case 'Paladin':
-                    spellAbilities.maxPreparedSpells = spellAbility.bonus + Math.floor(playerStats.level / 2);
-                    break;
-                default:
-                    // Classes with all spells prepared = Bard, Eldritch Knight Fighter, Ranger, Arcane Trickster Rogue, Sorcerer, Warlock
-                    spellAbilities.spells.forEach((spell) => {
-                        spell.prepared = 'Always';
-                    });
-            }
-            // Druids and Paladins know all spells
             if(playerStats.class.name === 'Druid' || playerStats.class.name === 'Paladin') {
-                let spellMaxLevel = rules.getSpellMaxLevel(playerStats);
+                spellAbilities.spells_known = null; // All spells known
+                let spellMaxLevel = rules.getSpellMaxLevel(spellAbilities);
                 allSpells.forEach(spell => {
                     if(spell.level != 0 && spell.level <= spellMaxLevel && spell.classes.includes(playerStats.class.name) && !spellAbilities.spells.find((s) => s.name === spell.name)) {
                         spellAbilities.spells.push({
@@ -358,6 +345,21 @@ const rules = {
                     }
                 });
             }
+            switch (playerStats.class.name) {
+                case 'Cleric':
+                case 'Druid':
+                case 'Wizard':
+                    spellAbilities.maxPreparedSpells = spellAbility.bonus + playerStats.level;
+                    break;
+                case 'Paladin':
+                    spellAbilities.maxPreparedSpells = spellAbility.bonus + Math.floor(playerStats.level / 2);
+                    break;
+                default:
+                    // Classes with all spells prepared = Bard, Eldritch Knight Fighter, Ranger, Arcane Trickster Rogue, Sorcerer, Warlock
+                    spellAbilities.spells.forEach((spell) => {
+                        spell.prepared = 'Always';
+                    });
+            }
             if (spellAbilities.spells.length > 0) {
                 spellAbilities.spells = spellAbilities.spells.map(spell => {
                     let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
@@ -375,35 +377,29 @@ const rules = {
                     }
                 });
             }
-            // A null for spellAbilities.spells_known means ALL are known
-            if(playerStats.class.name === "Cleric" || playerStats.class.name === "Druid" || playerStats.class.name === "Paladin") {
-                spellAbilities.spells_known = null;
-            }
         }
         return spellAbilities;
     },
-    getSpellMaxLevel: (playerStats) => {
+    getSpellMaxLevel: (spellAbilities) => {
         // playerStats must include full class and race objects from getClass() and getRace() 
-        let classLevel = playerStats.class.class_levels[playerStats.level-1];
-        if(!classLevel.spellcasting && playerStats.class.subclass) {
-            classLevel = playerStats.class.subclass.class_levels[playerStats.level-3]
-        }
         let spellMaxLevel = null;
-        if(classLevel.spellcasting.spell_slots_level_1 != null && classLevel.spellcasting.spell_slots_level_1 > 0) spellMaxLevel = 1;
-        if(classLevel.spellcasting.spell_slots_level_2 != null && classLevel.spellcasting.spell_slots_level_2 > 0) spellMaxLevel = 2;
-        if(classLevel.spellcasting.spell_slots_level_3 != null && classLevel.spellcasting.spell_slots_level_3 > 0) spellMaxLevel = 3;
-        if(classLevel.spellcasting.spell_slots_level_4 != null && classLevel.spellcasting.spell_slots_level_4 > 0) spellMaxLevel = 4;
-        if(classLevel.spellcasting.spell_slots_level_5 != null && classLevel.spellcasting.spell_slots_level_5 > 0) spellMaxLevel = 5;
-        if(classLevel.spellcasting.spell_slots_level_6 != null && classLevel.spellcasting.spell_slots_level_6 > 0) spellMaxLevel = 6;
-        if(classLevel.spellcasting.spell_slots_level_7 != null && classLevel.spellcasting.spell_slots_level_7 > 0) spellMaxLevel = 7;
-        if(classLevel.spellcasting.spell_slots_level_8 != null && classLevel.spellcasting.spell_slots_level_8 > 0) spellMaxLevel = 8;
-        if(classLevel.spellcasting.spell_slots_level_9 != null && classLevel.spellcasting.spell_slots_level_9 > 0) spellMaxLevel = 9;
+        if(spellAbilities) {
+            if(spellAbilities.spell_slots_level_1 != null && spellAbilities.spell_slots_level_1 > 0) spellMaxLevel = 1;
+            if(spellAbilities.spell_slots_level_2 != null && spellAbilities.spell_slots_level_2 > 0) spellMaxLevel = 2;
+            if(spellAbilities.spell_slots_level_3 != null && spellAbilities.spell_slots_level_3 > 0) spellMaxLevel = 3;
+            if(spellAbilities.spell_slots_level_4 != null && spellAbilities.spell_slots_level_4 > 0) spellMaxLevel = 4;
+            if(spellAbilities.spell_slots_level_5 != null && spellAbilities.spell_slots_level_5 > 0) spellMaxLevel = 5;
+            if(spellAbilities.spell_slots_level_6 != null && spellAbilities.spell_slots_level_6 > 0) spellMaxLevel = 6;
+            if(spellAbilities.spell_slots_level_7 != null && spellAbilities.spell_slots_level_7 > 0) spellMaxLevel = 7;
+            if(spellAbilities.spell_slots_level_8 != null && spellAbilities.spell_slots_level_8 > 0) spellMaxLevel = 8;
+            if(spellAbilities.spell_slots_level_9 != null && spellAbilities.spell_slots_level_9 > 0) spellMaxLevel = 9;
+        }
         return spellMaxLevel;
     },
-    getPlayerStats: (allClasses, allEquipment, allRaces, playerSummary) => {
+    getPlayerStats: (allClasses, allEquipment, allRaces, allSpells, playerSummary) => {
         const playerStats = cloneDeep(playerSummary);
         playerStats.class = classRules.getClass(allClasses, playerSummary);
-        playerStats.race = raceRules.getRace(allRaces, playerSummary);
+        playerStats.race = raceRules.getRace(allRaces, playerSummary);        
         playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         playerStats.proficiencies = rules.getProficiencies(playerStats);
         playerStats.senses = raceRules.getSenses(playerStats);
@@ -421,6 +417,7 @@ const rules = {
         playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
         playerStats.immunities = raceRules.getImmunities(playerStats);
         playerStats.resistances = raceRules.getResistances(playerStats);
+        playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
         const features = classRules.getFeatures(playerStats);
         const traits = raceRules.getTraits(playerStats);
         playerStats.actions = uniqBy([...playerStats.actions, ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));

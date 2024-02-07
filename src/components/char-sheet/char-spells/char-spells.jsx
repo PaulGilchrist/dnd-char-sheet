@@ -1,52 +1,12 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import rules from '../../../services/rules'
-import storage from '../../../services/local-storage'
-import './char-spells.css'
 import Popup from '../../common/popup'
 import CharSpellSlots from './char-spell-slots'
+import './char-spells.css'
 
-function CharSpells({ allSpells, playerStats }) {
+function CharSpells({ playerStats, handleTogglePreparedSpells }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
-    const [spellAbilities, setSpellAbilities] = React.useState(null);
-    React.useEffect(() => {
-        const spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
-        // Override any spells from localStorage
-        if(spellAbilities && spellAbilities.spells) {
-            let preparedSpells = storage.get(playerStats.name, 'preparedSpells');
-            if(preparedSpells) {
-                spellAbilities.spells.forEach(spell => {
-                    if(preparedSpells.includes(spell.name)) {
-                        if(spell.prepared === '') {
-                            spell.prepared = 'Prepared';
-                        }
-                    } else {
-                        if(spell.prepared === 'Prepared') {
-                            spell.prepared = '';
-                        }
-                    }
-                });
-            }
-        }
-        setSpellAbilities(spellAbilities);
-    }, [allSpells, playerStats]);
-
-    const handleTogglePrepared = (spell) => {
-        if(spell.prepared === 'Prepared') {
-            spell.prepared = '';
-        } else {
-            spell.prepared = 'Prepared';
-        }
-        // Update local storage
-        const preparedSpells = [];
-        spellAbilities.spells.forEach(spell => {
-            if(spell.prepared === 'Prepared') {
-                preparedSpells.push(spell.name);
-            }
-        });
-        storage.set(playerStats.name, 'preparedSpells', preparedSpells);
-        setSpellAbilities({...spellAbilities});
-    }
+    const spellAbilities = playerStats.spellAbilities;
     const showPopup = (spell) => {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
@@ -101,7 +61,7 @@ function CharSpells({ allSpells, playerStats }) {
                             <div className='left spell-name clickable' onClick={() => showPopup(spell)}>{spell.name}</div>
                             <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                             {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <div>{spell.prepared}</div>}
-                            {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePrepared(spell)}/></div>}
+                            {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></div>}
                             <div>{spell.casting_time ? spell.casting_time.replace('reaction','R').replace('bonus action','BA').replace('action',' A').replace('minute','min').replace('minutes','min') : ''}</div>
                             <div>{spell.range}</div>
                             <div>{effect}</div>
