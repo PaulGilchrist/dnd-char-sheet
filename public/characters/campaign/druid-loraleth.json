@@ -47,9 +47,7 @@
         {"name": "Guidance","prepared": "Always"},
         {"name": "Mending","prepared": "Always"},
         {"name": "Produce Flame","prepared": "Always"},
-        {"name": "Shocking Grasp","prepared": "Always"},
-        {"name": "Cure Wounds","prepared": "Prepared"},
-        {"name": "Ice Knife","prepared": "Prepared"}
+        {"name": "Shocking Grasp","prepared": "Always"}
     ],
     "vulnerabilities": []
 }
