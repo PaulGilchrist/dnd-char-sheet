@@ -21,7 +21,7 @@
     "immunities": [],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger"],
+        "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger","Holy Symbol"],
         "gold": 25
     },
     "languages": ["Elvish"],

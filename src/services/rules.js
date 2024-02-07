@@ -446,7 +446,7 @@ const rules = {
         playerStats.bonusActions = uniqBy([...playerStats.bonusActions, ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         playerStats.reactions = uniqBy([...playerStats.reactions, ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         playerStats.specialActions = uniqBy([...playerStats.specialActions, ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.warnings = auditRules.auditPlayerStats(playerStats);
+        playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }
 }

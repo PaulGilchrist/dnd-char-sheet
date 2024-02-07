@@ -64,12 +64,20 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             <CharSpells allSpells={allSpells} playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
-            {playerStats.warnings.length > 0 && <div>
+            {playerStats.audits.length > 0 && <div>
                 <hr />
-                <div className='sectionHeader'>Warnings</div>
-                {playerStats.warnings.map((warning, index) => (
-                    <div key={index} className={warning.type}>{warning.desc}</div>
-                ))}
+                <div className='sectionHeader'>Character Audit</div>
+                {playerStats.audits.map(audit => {
+                    // dndbeyond is inconsistent and has sometimes allowed a total of 72 and other times a total of 71 base score
+                    const ignoreWarning = (audit.name === 'Ability Score Base Scores' && audit.allowed == audit.used+1);
+                    if(audit.used > audit.allowed) {
+                        return (<div key={audit.name} className='error'>{`${audit.name}: Used=${audit.used}, Allowed=${audit.allowed}`}</div>)
+                    } else if(!ignoreWarning && audit.allowed > audit.used) {
+                        return (<div key={audit.name} className='warning'>{`${audit.name}: Used=${audit.used}, Allowed=${audit.allowed}`}</div>)
+                    } else {
+                        return;
+                    }
+                })}
             </div>}
         </div>}
     </div>)
