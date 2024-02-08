@@ -161,7 +161,9 @@ const rules = {
                     break;
             }
         }
-        languages = [...new Set([...playerStats.languages, ...languages])];
+        if(playerStats.languages) {
+            languages = [...new Set([...languages, ...playerStats.languages])];
+        }
         return [languagesAllowed, languages.sort()];
     },
     getProficiencyChoiceCount: (playerStats, skills = true) => {
