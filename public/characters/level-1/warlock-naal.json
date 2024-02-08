@@ -15,7 +15,8 @@
         "subclass": {
             "name": "The Archfey"
         },
-        "eldritchInvocations": ["Agonizing Blast","Mask of Many Faces"],
+        "arcanums": ["Conjure Fey"],
+        "invocations": ["Agonizing Blast","Mask of Many Faces"],
         "pactBoon": "Tome"
     },
     "feats": [],

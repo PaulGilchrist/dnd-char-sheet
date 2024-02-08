@@ -32,6 +32,9 @@ function CharClassFighter({ playerStats }) {
     return (<React.Fragment>
         {playerStats.class.name === 'Fighter' && <div>
             <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles.join(', ')}</div>
+            {playerStats.class.subclass.maneuvers && <div>
+                <b>Maneuvers: </b>{playerStats.class.subclass.maneuvers.sort().join(', ')}
+            </div>}
             <div><b>Extra Attacks: </b>{classSpecific.extra_attacks}</div>
             <div className="clickable" onClick={handleActionSurgesToggle} onKeyDown={handleActionSurgesToggle} tabIndex={0}>
                 <b>Action Surges:</b> {classSpecific.action_surges}/<HiddenInput handleInputToggle={handleActionSurgesToggle} handleValueChange={(value) => handleActionSurgesChange(value)} showInput={showActionSurgesInput} value={actionSurges}></HiddenInput> <span className="text-muted">(max/cur)</span>
