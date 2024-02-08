@@ -7,37 +7,27 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Cleric",
         "subclass": {
             "name": "Life"
         }
     },
-    "feats": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Seti",
-    "proficiencies": [],
     "race": {
         "name": "Elf",
         "subrace": {
             "name": "Wood Elf"
         }
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
-    "specialActions": [],
-    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"],
-    "vulnerabilities": []
+    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"]
 }

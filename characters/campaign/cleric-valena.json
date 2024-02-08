@@ -7,17 +7,13 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Cleric",
         "subclass": {
             "name": "Life"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
@@ -26,18 +22,12 @@
     "languages": ["Celestial","Dwarvish"],
     "level": 3,
     "name": "Valena",
-    "proficiencies": [],
     "race": {
         "name": "Elf",
         "subrace": {
             "name": "Wood Elf"
         }
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "skillProficiencies": ["Animal Handling","Insight","Medicine","Survival"],
-    "specialActions": [],
-    "spells": ["Aid","Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Prayer of Healing","Sacred Flame","Spare the Dying"],
-    "vulnerabilities": []
+    "spells": ["Aid","Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Prayer of Healing","Sacred Flame","Spare the Dying"]
 }

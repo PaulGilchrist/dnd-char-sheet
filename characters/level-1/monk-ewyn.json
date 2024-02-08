@@ -21,9 +21,9 @@
     },
     "languages": ["Halfling", "Infernal"],
     "level": 3,
-    "name": "Zareth Stonestride",
+    "name": "Ewyn",
     "race": {
-        "name": "Half-Orc"
+        "name": "Human"
     },
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
 }

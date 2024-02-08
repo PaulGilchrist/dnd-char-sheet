@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Lawful Good",
-    "bonusActions": [],
     "class": {
         "name": "Paladin",
         "fightingStyles": ["Defense"],
@@ -17,8 +15,6 @@
             "name": "Vengeance"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Chain Mail","Shield","Crossbow, heavy","Longsword","Dagger","Holy Symbol"],
@@ -27,16 +23,9 @@
     "languages": ["Elvish"],
     "level": 3,
     "name": "Valerius Stormscale",
-    "proficiencies": [],
     "race": {
         "name": "Dragonborn",
         "type": "Gold"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "specialActions": [],
-    "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"]
 }

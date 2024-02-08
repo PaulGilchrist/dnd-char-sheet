@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 13,"miscBonus": 1},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Chaotic Good",
-    "bonusActions": [],
     "class": {
         "name": "Rogue",
         "expertise": ["Sleight of Hand","Thieves' Tools"],
@@ -17,25 +15,15 @@
             "name": "Thief"
         }
     },
-    "feats": [],
-    "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Praxen",
-    "proficiencies": [],
     "race": {
         "name": "Half-Elf"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
-    "specialActions": [],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"]
 }

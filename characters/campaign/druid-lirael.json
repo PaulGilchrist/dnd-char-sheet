@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Druid",
         "subclass": {
@@ -17,8 +15,6 @@
             "type": "Forest"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
         "equipped": ["Cloak of Elvenkind","Leather","Longbow","Scimitar","Dagger"],
@@ -27,18 +23,12 @@
     "languages": ["Sylvan"],
     "level": 3,
     "name": "Lirael",
-    "proficiencies": [],
     "race": {
         "name": "Elf",
         "subrace": {
             "name": "Wood Elf"
         }
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
-    "specialActions": [],
-    "spells": ["Druidcraft","Frostbite","Shillelagh"],
-    "vulnerabilities": []
+    "spells": ["Druidcraft","Frostbite","Shillelagh"]
 }
