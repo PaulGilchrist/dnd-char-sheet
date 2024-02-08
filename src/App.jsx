@@ -106,7 +106,7 @@ function App() {
         setCharacters(newCharacters);
     };
     const handleSaveClick = async () => {
-        let fileName = `${activeCharacter.class}-${Utils.getFirstName(activeCharacter.name)}.json`;
+        let fileName = `${activeCharacter.class.name}-${Utils.getFirstName(activeCharacter.name)}.json`;
         fileName = fileName.toLowerCase();
         const json = JSON.stringify(activeCharacter, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
