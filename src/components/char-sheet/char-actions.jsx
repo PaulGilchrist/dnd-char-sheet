@@ -1,10 +1,17 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../services/local-storage'
+import Popup from '../common/popup'
 import { actions } from '../../data/actions';
 import './char-actions.css'
 
 function CharActions({ allEquipment, allSpells, playerStats }) {
+    const [popupHtml, setPopupHtml] = React.useState(null);
+    const showPopup = (actionOrBonusAction) => {
+        if (actionOrBonusAction.details) {
+            let html = `<b>${actionOrBonusAction.name}</b><br/>${actionOrBonusAction.description}<br/><br/>${actionOrBonusAction.details}`;
+            setPopupHtml(html);
+        }
+    }
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
     const strength = playerStats.abilities.find((ability) => ability.name === 'Strength');
     const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
@@ -12,7 +19,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     // Find ranged weapon in the character's equipment and add it to attacks
     let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
         // Does this item have a magic bonus?
-        if(itemName.charAt(0) === "+") {
+        if (itemName.charAt(0) === "+") {
             itemName = itemName.substring(3);
         }
         let item = allEquipment.find((item) => item.name === itemName);
@@ -21,10 +28,10 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         }
         return false;
     });
-    if(rangedWeaponName) {
+    if (rangedWeaponName) {
         // Does this item have a magic bonus?
         let magicBonus = 0;
-        if(rangedWeaponName.charAt(0) === '+') {
+        if (rangedWeaponName.charAt(0) === '+') {
             magicBonus = Number(rangedWeaponName.charAt(1));
             rangedWeaponName = rangedWeaponName.substring(3);
         }
@@ -45,7 +52,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     // Find main hand weapon in the character's equipment and add it to attacks
     let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
         // Does this item have a magic bonus?
-        if(itemName.charAt(0) === '+') {
+        if (itemName.charAt(0) === '+') {
             itemName = itemName.substring(3);
         }
         let item = allEquipment.find((item) => item.name === itemName);
@@ -57,7 +64,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     if (meleeWeaponNames) {
         // Does this item have a magic bonus?
         let magicBonus = 0;
-        if(meleeWeaponNames[0].charAt(0) === '+') {
+        if (meleeWeaponNames[0].charAt(0) === '+') {
             magicBonus = Number(meleeWeaponNames[0].charAt(1));
             meleeWeaponNames[0] = meleeWeaponNames[0].substring(3);
         }
@@ -78,7 +85,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         if (meleeWeaponNames.length > 1) {
             // There is also an offhand weapon
             magicBonus = 0;
-            if(meleeWeaponNames[1].charAt(0) === "+") {
+            if (meleeWeaponNames[1].charAt(0) === "+") {
                 magicBonus = Number(meleeWeaponNames[1].charAt(1));
                 meleeWeaponNames[1] = meleeWeaponNames[1].substring(3);
             }
@@ -86,7 +93,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
             let damage = offHandWeapon.damage.damage_dice;
             if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Two-Weapon Fighting')) {
                 damage = `${offHandWeapon.damage.damage_dice}+${bonus + magicBonus}`;
-            } else if(magicBonus > 0) {
+            } else if (magicBonus > 0) {
                 damage = `${offHandWeapon.damage.damage_dice}+${magicBonus}`;
             }
             attacks.push({
@@ -101,7 +108,7 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     }
     // If we have a Monk, then their hands are a weapon
     if (playerStats.class.name === 'Monk') {
-        const martialArts = playerStats.class.class_levels[playerStats.level-1].class_specific.martial_arts;
+        const martialArts = playerStats.class.class_levels[playerStats.level - 1].class_specific.martial_arts;
         attacks.push({
             "name": 'Unarmed Strike',
             "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
@@ -120,20 +127,20 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
         });
     }
     // Add spell details
-    if(playerStats.spellAbilities) {   
+    if (playerStats.spellAbilities) {
         let spells = playerStats.spellAbilities.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
-            if(spellDetail) {
-                return {...spellDetail, prepared: spell.prepared};
+            if (spellDetail) {
+                return { ...spellDetail, prepared: spell.prepared };
             }
-            return {...spell};
+            return { ...spell };
         });
         // Find spells that are actions, damage based and prepared and add them to attacks
         spells = spells.filter(spell => spell.damage && (spell.prepared === 'Always' || spell.prepared === 'Prepared'));
         spells.forEach(spell => {
-            if(!attacks.find((attack) => attack.name === spell.name)) {
+            if (!attacks.find((attack) => attack.name === spell.name)) {
                 let damage = ''
-                if(spell.damage.damage_at_slot_level) {
+                if (spell.damage.damage_at_slot_level) {
                     damage = spell.damage.damage_at_slot_level[Object.keys(spell.damage.damage_at_slot_level)[0]];
                 } else if (spell.damage.damage_at_character_level) {
                     damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
@@ -173,8 +180,10 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
                 </div>
                 <br />
                 {playerStats.actions.map((action) => {
-                    const html = `<b>${action.name}:</b> ${action.description}`;
-                    return <div key={action.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
+                    return <div key={action.name}>
+                        {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+                        <b className={action.details ? "clickable" : ""} onClick={() => showPopup(action)}>{action.name}:</b> <span dangerouslySetInnerHTML={{ __html: action.description }}></span>;
+                    </div>
                 })}
                 <div><b>Base Actions:</b> {actions.join(', ')}</div>
             </div>
@@ -209,8 +218,10 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
                     <br />
                     {(playerStats.bonusActions.length > 0) && <div>
                         {playerStats.bonusActions.map((bonusAction) => {
-                            const html = `<b>${bonusAction.name}:</b> ${bonusAction.description}`;
-                            return <div key={bonusAction.name} dangerouslySetInnerHTML={{ __html: html }}></div>;
+                            return <div key={bonusAction.name}>
+                                {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+                                <b className={bonusAction.details ? "clickable" : ""} onClick={() => showPopup(bonusAction)}>{bonusAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: bonusAction.description }}></span>;
+                            </div>
                         })}
                     </div>}
                 </div>}

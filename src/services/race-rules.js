@@ -118,7 +118,8 @@ const raceRules = {
             traits.forEach(trait => {
                 const traitSummary = {
                     name: trait.name,
-                    description: trait.desc
+                    description: trait.desc,
+                    details: trait.details
                 };
                 if(!traitsToIgnore.includes(trait.name)) {
                     if(actions.includes(trait.name) && !categorizedTraits.actions.some(action => action.name == trait.name)) {
