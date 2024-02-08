@@ -8,6 +8,10 @@ const raceRules = {
         if(playerStats.race.name === "Elf") {
             immunities.push("Magical Sleep"); // Fey Ancestry
         }
+        if(playerStats.class.name === "Monk" && playerStats.level > 9) {
+            immunities.push("Disease"); // Purity of Body
+            immunities.push("Poison"); // Purity of Body
+        }
         if(playerStats.class.name === "Paladin" && playerStats.level > 2) {
             immunities.push("Disease"); // Divine Health
         }

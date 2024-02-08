@@ -103,6 +103,14 @@ const auditRules = {
         }
         return null;
     },
+    auditProficiencies: (playerStats) => {
+        // Warn if the player has not choosen the correct number of proficiencies
+        return {
+            name: 'Proficiencies',
+            allowed: playerStats.proficienciesAllowed, 
+            used: playerStats.proficiencies.length   
+        }
+    },
     auditSkillProficiencies: (playerStats) => {
         // Warn if the player has not choosen the correct number of skill proficiencies
         return {
@@ -121,6 +129,7 @@ const auditRules = {
         audits.push(auditRules.auditKnownCantrips(playerStats));
         audits.push(auditRules.auditKnownLanguages(playerStats));
         audits.push(auditRules.auditKnownSpells(playerStats));
+        audits.push(auditRules.auditProficiencies(playerStats));
         audits.push(auditRules.auditSkillProficiencies(playerStats));
         audits = audits.filter(item => item !== null);
         audits.forEach(audit => {
