@@ -36,12 +36,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
-    "spells": [
-        {"name": "Hunter's Mark","prepared": "Prepared"},
-        {"name": "Hail of Thorns","prepared": ""},
-        {"name": "Ensnaring Strike","prepared": ""}
-    ],
+    "specialActions": [],
+    "spells": ["Hail of Thorns","Hunter's Mark","Ensnaring Strike"],
     "vulnerabilities": []
 }

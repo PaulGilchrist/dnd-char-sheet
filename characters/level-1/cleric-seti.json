@@ -36,16 +36,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
-    "spells": [
-        { "name": "Guidance", "prepared": "Prepared" },
-        { "name": "Sacred Flame", "prepared": "Prepared" },
-        { "name": "Spare the Dying", "prepared": "Prepared" },
-        { "name": "Detect Magic", "prepared": "Prepared" },
-        { "name": "Guiding Bolt", "prepared": "Prepared" },
-        { "name": "Healing Word", "prepared": "Prepared" },
-        { "name": "Inflict Wounds", "prepared": "Prepared" }
-    ],
+    "specialActions": [],
+    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"],
     "vulnerabilities": []
 }

@@ -38,17 +38,6 @@
     "senses": [],
     "specialActions": [],
     "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
-    "spells": [
-        { "name": "Fire Bolt", "prepared": "Always" },
-        { "name": "Mage Hand", "prepared": "Always" },
-        { "name": "Minor Illusion", "prepared": "Always" },
-        { "name": "Shocking Grasp", "prepared": "Always" },
-        { "name": "Burning Hands", "prepared": "Prepared" },
-        { "name": "Detect Magic", "prepared": "Ritual" },
-        { "name": "Disguise Self", "prepared": "Prepared" },
-        { "name": "Find Familiar", "prepared": "Ritual" },
-        { "name": "Magic Missile", "prepared": "Prepared" },
-        { "name": "Shield", "prepared": "Prepared" }      
-    ],
+    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"],
     "vulnerabilities": []
 }

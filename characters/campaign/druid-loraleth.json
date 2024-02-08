@@ -40,14 +40,9 @@
     "specialActions": [
         {
             "name": "Loraleth's Cat",
-            "description": "AC 14, HP 4, Speed 40 ft."
+            "description": "While wearing (Armor Class 11), the player has an Animal Handling advantage, however, the player also has an Intimidation and Stealth disadvantage. Once per short rest, the player can roll a d20 to Conjure Cats. If the roll is less than 10, one cat is conjured. If the roll is over 10, two cats are conjured. Cats live indefinitely. If cats are tamed, they can Scratch as an action, doing up to 1d4 slashing damage."
         }],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
-    "spells": [
-        {"name": "Guidance","prepared": "Always"},
-        {"name": "Mending","prepared": "Always"},
-        {"name": "Produce Flame","prepared": "Always"},
-        {"name": "Shocking Grasp","prepared": "Always"}
-    ],
+    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"],
     "vulnerabilities": []
 }

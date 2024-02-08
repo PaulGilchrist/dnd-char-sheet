@@ -37,17 +37,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
-    "spells": [
-        {"name": "Druidcraft","prepared": "Always"},
-        {"name": "Frostbite","prepared": "Always"},
-        {"name": "Shillelagh","prepared": "Always"},
-        {"name": "Detect Magic","prepared": "Ritual"},
-        {"name": "Detect Poison and Disease","prepared": "Ritual"},
-        {"name": "Beast Bond","prepared": "Prepared"},
-        {"name": "Ice Knife","prepared": "Prepared"},
-        {"name": "Protection from Poison","prepared": "Prepared"}
-    ],
+    "specialActions": [],
+    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"],
     "vulnerabilities": []
 }

@@ -38,8 +38,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
+    "specialActions": [],
     "spells": [],
     "vulnerabilities": []
 }
