@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 11,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 9,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Fighter",
         "fightingStyles": ["Archery"],
@@ -17,8 +15,6 @@
             "name": "Champion"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Scroll or Charm Person"],
@@ -27,15 +23,8 @@
     "languages": ["Elvish"],
     "level": 3,
     "name": "Devin",
-    "proficiencies": [],
     "race": {
         "name": "Human"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
-    "specialActions": [],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }

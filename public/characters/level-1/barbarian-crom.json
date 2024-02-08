@@ -7,34 +7,22 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 11, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Barbarian",
         "subclass": {
             "name": "Berserker"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Longbow","Greatsword","Dagger"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
-    "proficiencies": [],
     "name": "Crom",
     "race": {
         "name": "Human"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
-    "specialActions": [],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }

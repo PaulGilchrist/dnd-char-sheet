@@ -15,7 +15,9 @@ const raceRules = {
         if(playerStats.class.name === "Paladin" && playerStats.level > 2) {
             immunities.push("Disease"); // Divine Health
         }
-        immunities = [...new Set([...immunities, ...playerStats.immunities])];
+        if(playerStats.immunities) {
+            immunities = [...new Set([...immunities, ...playerStats.immunities])];
+        }
         return immunities.sort((a, b) => a.name.localeCompare(b.name));
     },
     getRace: (allRaces, playerSummary) => {
@@ -80,12 +82,14 @@ const raceRules = {
         } else if(playerStats.race.name === "Tiefling") {
             resistances.push("Fire"); // Hellish Resistance
         }
-        resistances = [...new Set([...resistances, ...playerStats.resistances])];
+        if(playerStats.resistances) {
+            resistances = [...new Set([...resistances, ...playerStats.resistances])];
+        }
         return resistances.sort((a, b) => a.name.localeCompare(b.name));
     },
     getSenses: (playerStats) => {
         // playerStats must include full race object from getPlayerRace()
-        const senses = [...playerStats.senses];
+        const senses = playerStats.senses ? [...playerStats.senses] : [];
         const darkvisionInSenses = senses.some((sense) => sense.name === 'Darkvision');
         const darkvisionRace = playerStats.race.traits.some((trait) => trait.name === 'Darkvision');
         if (darkvisionRace && !darkvisionInSenses) {

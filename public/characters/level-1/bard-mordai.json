@@ -7,9 +7,7 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 11, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Bard",
         "expertise": ["Performance","Persuasion"],
@@ -17,25 +15,17 @@
             "name": "Lore"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Studded Leather","Crossbow, hand","Rapier","Dagger"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
-    "proficiencies": [],
     "name": "Mordai",
     "race": {
         "name": "Tiefling"
     },
-    "reactions": [],
     "resistances": ["Fire"],
-    "senses": [],
     "skillProficiencies": ["Insight","Performance","Perception","Persuasion","Deception"],
-    "spells": ["Charm Person","Disguise Self","Hideous Laughter","Mage Hand","Minor Illusion","Sleep"],
-    "specialActions": [],
-    "vulnerabilities": []
+    "spells": ["Charm Person","Disguise Self","Hideous Laughter","Mage Hand","Minor Illusion","Sleep"]
 }

@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Ranger",
         "favoredEnemies": ["Humanoids"],
@@ -19,8 +17,6 @@
             "name": "Beast Master"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Studded Leather","Longbow","Scimitar","Scimitar","Ring of Command"],
@@ -29,15 +25,9 @@
     "languages": ["Goblin","Orc"],
     "level": 3,
     "name": "Seraphina Windrunner",
-    "proficiencies": [],
     "race": {
         "name": "Half-Elf"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
-    "specialActions": [],
-    "spells": ["Hail of Thorns","Hunter's Mark","Ensnaring Strike"],
-    "vulnerabilities": []
+    "spells": ["Hail of Thorns","Hunter's Mark","Ensnaring Strike"]
 }

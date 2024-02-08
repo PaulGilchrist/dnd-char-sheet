@@ -7,37 +7,26 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Wizard",
         "subclass": {
             "name": "Evocation"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Amric",
-    "proficiencies": [],
     "race": {
         "name": "Elf",
         "subrace": {
             "name": "High Elf"
         }
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
-    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"],
-    "vulnerabilities": []
+    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"]
 }

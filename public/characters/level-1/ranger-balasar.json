@@ -7,9 +7,7 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Ranger",
         "favoredEnemies": ["Humanoids"],
@@ -21,25 +19,16 @@
             "name": "Beast Master"
         }
     },
-    "feats": [],
     "immunities": ["Magical Sleep"],
     "inventory": {
         "backpack": ["Mess Kit", "Rations (5 days)", "Rope, Silk (50 feet)", "Tinderbox", "Torch", "Waterskin"],
         "equipped": ["Arrows", "Studded Leather", "Longbow", "Scimitar", "Scimitar"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Balasar",
-    "proficiencies": [],
     "race": {
         "name": "Half-Elf"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
-    "specialActions": [],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"]
 }

@@ -5,7 +5,9 @@ const auditRules = {
         playerStats.abilities.forEach(ability => {
             abilityScoreBonusesUsed += ability.abilityImprovements;
         })
-        abilityScoreBonusesUsed += (playerStats.feats.length * 2); // One feat can be traded for 2 ability points
+        if(playerStats.feats) {
+            abilityScoreBonusesUsed += (playerStats.feats.length * 2); // One feat can be traded for 2 ability points
+        }
         return {
             name: 'Ability Score Improvements',
             allowed: playerStats.class.class_levels[playerStats.level-1].ability_score_bonuses * 2, // two points per bonus

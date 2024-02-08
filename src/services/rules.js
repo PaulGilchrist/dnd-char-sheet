@@ -220,7 +220,9 @@ const rules = {
             }
             // Allowed - Both class and race
             proficienciesAllowed += rules.getProficiencyChoiceCount(playerStats, true);
-            proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
+            if(playerStats.skillProficiencies) {
+                proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
+            }
         } else {
             proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
             // Manually enforced rules
@@ -237,7 +239,9 @@ const rules = {
             }
             // Allowed Count
             proficienciesAllowed = proficiencies.length + rules.getProficiencyChoiceCount(playerStats, false);
-            proficiencies = [...new Set([...proficiencies, ...playerStats.proficiencies])];
+            if(playerStats.proficiencies) {
+                proficiencies = [...new Set([...proficiencies, ...playerStats.proficiencies])];
+            }
         }
         return [proficienciesAllowed, proficiencies.sort()];
     },
@@ -461,10 +465,10 @@ const rules = {
         playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
         const features = classRules.getFeatures(playerStats);
         const traits = raceRules.getTraits(playerStats);
-        playerStats.actions = uniqBy([...playerStats.actions, ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.bonusActions = uniqBy([...playerStats.bonusActions, ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.reactions = uniqBy([...playerStats.reactions, ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.specialActions = uniqBy([...playerStats.specialActions, ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.actions = uniqBy([...playerStats.actions ? playerStats.actions : [], ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.bonusActions = uniqBy([...playerStats.bonusActions ? playerStats.bonusActions : [], ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.reactions = uniqBy([...playerStats.reactions ? playerStats.reactions : [], ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }

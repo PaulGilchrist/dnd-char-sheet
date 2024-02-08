@@ -7,9 +7,7 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 1 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Warlock",
         "subclass": {
@@ -19,25 +17,16 @@
         "invocations": ["Agonizing Blast","Mask of Many Faces"],
         "pactBoon": "Tome"
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Naal",
-    "proficiencies": [],
     "race": {
         "name": "Half-Elf"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
-    "spells": ["Charm Person","Eldritch Blast","Hellish Rebuke","Mage Hand"],
-    "vulnerabilities": []
+    "spells": ["Charm Person","Eldritch Blast","Hellish Rebuke","Mage Hand"]
 }

@@ -7,9 +7,7 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Druid",
         "subclass": {
@@ -17,8 +15,6 @@
             "type": "Coast"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Chain Shirt","Cloak of Cats","Longbow","Scimitar","Dagger"],
@@ -27,22 +23,17 @@
     "languages": ["Celestial","Primordial","Undercommon"],
     "level": 3,
     "name": "Loraleth Fundraea",
-    "proficiencies": [],
     "race": {
         "name": "Elf",
         "subrace": {
             "name": "High Elf"
         }
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "specialActions": [
         {
             "name": "Loraleth's Cat",
             "description": "While wearing (Armor Class 11), the player has an Animal Handling advantage, however, the player also has an Intimidation and Stealth disadvantage. Once per short rest, the player can roll a d20 to Conjure Cats. If the roll is less than 10, one cat is conjured. If the roll is over 10, two cats are conjured. Cats live indefinitely. If cats are tamed, they can Scratch as an action, doing up to 1d4 slashing damage."
         }],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
-    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"],
-    "vulnerabilities": []
+    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"]
 }

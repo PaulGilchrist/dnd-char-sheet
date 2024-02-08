@@ -7,17 +7,13 @@
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0}
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Monk",
         "subclass": {
             "name": "Open Hand"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Quarterstaff","Dart"],
@@ -26,15 +22,8 @@
     "languages": ["Halfling", "Infernal"],
     "level": 3,
     "name": "Zareth Stonestride",
-    "proficiencies": [],
     "race": {
         "name": "Half-Orc"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
-    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
-    "specialActions": [],
-    "spells": [],
-    "vulnerabilities": []
+    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
 }

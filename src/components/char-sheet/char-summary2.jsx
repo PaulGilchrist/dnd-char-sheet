@@ -10,7 +10,7 @@ function CharSummary2({ playerStats }) {
                 <b>Immunities: </b>
                 {playerStats.immunities.join(', ')}
             </div>}
-            {(playerStats.vulnerabilities.length > 0) && <b>Vulnerabilities: </b>}{(playerStats.vulnerabilities.length > 0) && playerStats.vulnerabilities.join(', ')}
+            {(playerStats.vulnerabilities && playerStats.vulnerabilities.length > 0) && <span><b>Vulnerabilities: </b>}{playerStats.vulnerabilities.join(', ')}</span>}
             <div><b>Senses: </b>{playerStats.senses.map((sense) => { return `${sense.name} ${sense.value}`;}).join(', ')}</div>
             <div><b>Proficiencies: </b>{playerStats.proficiencies.join(', ')}</div>
             <b>Languages: </b>{playerStats.languages.join(', ')}<br />

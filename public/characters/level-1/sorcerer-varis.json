@@ -7,9 +7,7 @@
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
     ],
-    "actions": [],
     "alignment": "Neutral Good",
-    "bonusActions": [],
     "class": {
         "name": "Sorcerer",
         "subclass": {
@@ -17,25 +15,16 @@
             "type": "Brass"
         }
     },
-    "feats": [],
-    "immunities": [],
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "languages": [],
     "level": 20,
     "name": "Varis",
-    "proficiencies": [],
     "race": {
         "name": "Half-Elf"
     },
-    "reactions": [],
-    "resistances": [],
-    "senses": [],
     "skillProficiencies": ["Arcana","History","Insight","Investigation","Perception","Survival"],
-    "specialActions": [],
-    "spells": ["Chill Touch","Fire Bolt","Mage Hand","Magic Missile","Shield","Shocking Grasp"],
-    "vulnerabilities": []
+    "spells": ["Chill Touch","Fire Bolt","Mage Hand","Magic Missile","Shield","Shocking Grasp"]
 }
