@@ -47,7 +47,19 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             playerStats.spellAbilities.spells.forEach(spell => {
                 if(spell.prepared === 'Prepared') {
                     preparedSpells.push(spell.name);
-                }            <CharActions allEquipment={allEquipment} allSpells={allSpells} playerStats={playerStats}></CharActions><hr />
+                }
+            });
+            storage.set(playerStats.name, 'preparedSpells', preparedSpells);
+            setPlayerStats(cloneDeep(playerStats));
+        }
+    }
+
+    return (<React.Fragment>
+        {playerStats && <div className='char-sheet'>
+            <CharSummary allEquipment={allEquipment} playerStats={playerStats}></CharSummary><hr />
+            <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
+            <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
+            <CharActions allEquipment={allEquipment} allSpells={allSpells} playerStats={playerStats}></CharActions><hr />
             <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions>
             <CharSpells allSpells={allSpells} playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
@@ -67,18 +79,6 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
                     }
                 })}
             </div>}
-            });
-            storage.set(playerStats.name, 'preparedSpells', preparedSpells);
-            setPlayerStats(cloneDeep(playerStats));
-        }
-    }
-
-    return (<React.Fragment>
-        {playerStats && <div className='char-sheet'>
-            <CharSummary allEquipment={allEquipment} playerStats={playerStats}></CharSummary><hr />
-            <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
-            <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
-
         </div>}
     </React.Fragment>)
 }
