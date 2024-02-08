@@ -14,7 +14,8 @@
         "name": "Fighter",
         "fightingStyles": ["Archery"],
         "subclass": {
-            "name": "Champion"            
+            "name": "Battle Master",
+            "maneuvers": ["Parry","Riposte","Sweeping Attack"]
         }
     },
     "feats": [],
