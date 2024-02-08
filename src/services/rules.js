@@ -234,7 +234,7 @@ const rules = {
         }
         if (spellAbilities) {
             if (playerStats.spells) {
-                spellAbilities.spells = [...playerStats.spells];                
+                spellAbilities.spells = playerStats.spells.map(spell => {return { name: spell, prepared: ''};})               
                 delete playerStats.spells;
                 if(playerStats.class.subclass && playerStats.class.subclass.name === 'Arcane Trickster') { // Mage Hand Legerdemain
                     spellAbilities.spells = [...new Set([...spellAbilities.spells, ...['Mage Hand']])];
@@ -358,7 +358,7 @@ const rules = {
                         const meetsLevel = (playerStats.level >= subclassSpell.prerequisites[0].index.split('-')[1]);
                         const meetsCircle = (playerStats.class.subclass.name != 'Land' || subclassSpell.prerequisites[1].name.endsWith(playerStats.class.subclass.circle));
                         if (meetsLevel && meetsCircle) {
-                            spellAbilities.spells_known += 1;
+                            if(spellAbilities.spells_known) spellAbilities.spells_known += 1;
                             spellAbilities.spells.push({
                                 name: subclassSpell.spell.name,
                                 prepared: 'Always'

@@ -121,21 +121,6 @@ function CharActions({ allEquipment, allSpells, playerStats }) {
     }
     // Add spell details
     if(playerStats.spellAbilities) {   
-        // Override spell prepared status for any spells from localStorage
-        // let preparedSpells = storage.get(playerStats.name, 'preparedSpells');
-        // if(preparedSpells) {
-        //     playerStats.spellAbilities.spells.forEach(spell => {
-        //         if(preparedSpells.includes(spell.name)) {
-        //             if(spell.prepared === '') {
-        //                 spell.prepared = 'Prepared';
-        //             }
-        //         } else {
-        //             if(spell.prepared === 'Prepared') {
-        //                 spell.prepared = '';
-        //             }
-        //         }
-        //     });
-        // }
         let spells = playerStats.spellAbilities.spells.map(spell => {
             let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
             if(spellDetail) {

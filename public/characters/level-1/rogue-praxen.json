@@ -34,8 +34,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
+    "specialActions": [],
     "spells": [],
     "vulnerabilities": []
 }

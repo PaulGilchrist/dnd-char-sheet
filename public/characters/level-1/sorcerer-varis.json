@@ -34,15 +34,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Arcana","History","Insight","Investigation","Perception","Survival"],
-    "spells": [
-        { "name": "Chill Touch", "prepared": "Always" },
-        { "name": "Fire Bolt", "prepared": "Always" },
-        { "name": "Mage Hand", "prepared": "Always" },
-        { "name": "Shocking Grasp", "prepared": "Always" },
-        { "name": "Magic Missile", "prepared": "Always" },
-        { "name": "Shield", "prepared": "Always" }
-    ],
+    "specialActions": [],
+    "spells": ["Chill Touch","Fire Bolt","Mage Hand","Magic Missile","Shield","Shocking Grasp"],
     "vulnerabilities": []
 }

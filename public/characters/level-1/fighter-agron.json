@@ -36,7 +36,6 @@
     "senses": [],
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "specialActions": [],
-    "subclass": "Champion",
-    "subrace": "",
+    "spells":[],
     "vulnerabilities": []
 }

@@ -39,7 +39,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
         if(spell) {
             if(spell.prepared === 'Prepared') {
                 spell.prepared = '';
-            } else {
+            } else if(spell.prepared === '') {
                 spell.prepared = 'Prepared';
             }
             // Update local storage

@@ -37,12 +37,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
-    "spells": [
-        {"name": "Druidcraft","prepared": "Always"},
-        {"name": "Frostbite","prepared": "Always"},
-        {"name": "Shillelagh","prepared": "Always"}
-    ],
+    "specialActions": [],
+    "spells": ["Druidcraft","Frostbite","Shillelagh"],
     "vulnerabilities": []
 }

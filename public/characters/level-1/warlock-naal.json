@@ -37,11 +37,6 @@
     "senses": [],
     "specialActions": [],
     "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
-    "spells": [
-        { "name": "Eldritch Blast", "prepared": "Always" },
-        { "name": "Mage Hand", "prepared": "Always" },
-        { "name": "Charm Person", "prepared": "Always" },
-        { "name": "Hellish Rebuke", "prepared": "Always" }
-    ],
+    "spells": ["Charm Person","Eldritch Blast","Hellish Rebuke","Mage Hand"],
     "vulnerabilities": []
 }

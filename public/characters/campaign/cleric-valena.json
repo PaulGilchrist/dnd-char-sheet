@@ -23,7 +23,7 @@
         "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
         "gold": 10
     },
-    "languages": [],
+    "languages": ["Celestial","Dwarvish"],
     "level": 3,
     "name": "Valena",
     "proficiencies": [],
@@ -36,18 +36,8 @@
     "reactions": [],
     "resistances": [],
     "senses": [],
-    "specialActions": [],
     "skillProficiencies": ["Animal Handling","Insight","Medicine","Survival"],
-    "spells": [
-        {"name": "Guidance","prepared": "Always"},
-        {"name": "Sacred Flame","prepared": "Always"},
-        {"name": "Spare the Dying","prepared": "Always"},
-        {"name": "Detect Magic","prepared": "Prepared"},
-        {"name": "Guiding Bolt","prepared": "Prepared"},
-        {"name": "Healing Word","prepared": "Prepared"},
-        {"name": "Inflict Wounds","prepared": "Prepared"},
-        {"name": "Aid","prepared": "Prepared"},
-        {"name": "Prayer of Healing","prepared": "Prepared"}
-    ],
+    "specialActions": [],
+    "spells": ["Aid","Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Prayer of Healing","Sacred Flame","Spare the Dying"],
     "vulnerabilities": []
 }
