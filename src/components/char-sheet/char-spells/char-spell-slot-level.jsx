@@ -12,14 +12,16 @@ function CharSpellSlotLevel({ level, totalSlots, playerStats }) {
         setAvailableSlots(value ? value : totalSlots);
     }, [level, totalSlots, playerStats]);
 
-    const handleClick = () => {
-        if(availableSlots > 0) {
-            storage.set(playerStats.name, `spell_slots_level_${level}`, availableSlots-1);
-            setAvailableSlots(availableSlots-1);
-        } else {
-            // Reset
-            storage.set(playerStats.name, `spell_slots_level_${level}`, totalSlots);
-            setAvailableSlots(totalSlots);
+    const handleClick = (event) => {
+        if (event.key !== "Tab") {
+            if(availableSlots > 0) {
+                storage.set(playerStats.name, `spell_slots_level_${level}`, availableSlots-1);
+                setAvailableSlots(availableSlots-1);
+            } else {
+                // Reset
+                storage.set(playerStats.name, `spell_slots_level_${level}`, totalSlots);
+                setAvailableSlots(totalSlots);
+            }
         }
     }
 
