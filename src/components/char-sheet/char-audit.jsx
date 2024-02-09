@@ -2,9 +2,11 @@
 import React from 'react'
 
 function CharAudit({ playerStats }) {
-
+    
+    const showAudits = playerStats.audits.some(audit => audit.allowed != audit.used && audit.allowed != audit.used+1);
+    
     return (<React.Fragment>
-        {playerStats.audits.length > 0 && <div>
+        {showAudits && <div>
             <hr />
             <div className='sectionHeader'>Character Audit</div>
             {playerStats.audits.map(audit => {
