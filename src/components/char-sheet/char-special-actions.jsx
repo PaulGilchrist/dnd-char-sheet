@@ -23,7 +23,7 @@ function CharSpecialActions({ playerStats }) {
             {playerStats.specialActions.map((specialAction) => {
                 return <div key={specialAction.name}>
                     {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}        
-                    <b className={specialAction.details ? "clickable" : ""} onClick={() => showPopup(specialAction)}>{specialAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: specialAction.description }}></span>;
+                    <b className={specialAction.details ? "clickable" : ""} onClick={() => showPopup(specialAction)}>{specialAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: specialAction.description }}></span>
                 </div>
             })}
         </div>
