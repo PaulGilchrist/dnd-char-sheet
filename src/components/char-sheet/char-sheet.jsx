@@ -1,10 +1,11 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import { cloneDeep, uniqBy } from 'lodash';
+import { cloneDeep } from 'lodash';
 import storage from '../../services/local-storage'
 import rules from '../../services/rules'
 import CharAbilities from './char-abilities'
 import CharActions from './char-actions'
+import CharAudit from './char-audit'
 import CharInventory from './char-inventory'
 import CharReactions from './char-reactions'
 import CharSpecialActions from './char-special-actions'
@@ -56,29 +57,15 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
 
     return (<React.Fragment>
         {playerStats && <div className='char-sheet'>
-            <CharSummary allEquipment={allEquipment} playerStats={playerStats}></CharSummary><hr />
+            <CharSummary playerStats={playerStats}></CharSummary><hr />
             <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
             <CharActions playerStats={playerStats}></CharActions><hr />
-            <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions>
-            <CharSpells allSpells={allSpells} playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
+            <CharReactions playerStats={playerStats}></CharReactions>
+            <CharSpells playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
-            {playerStats.audits.length > 0 && <div>
-                <hr />
-                <div className='sectionHeader'>Character Audit</div>
-                {playerStats.audits.map(audit => {
-                    // dndbeyond is inconsistent and has sometimes allowed a total of 72 and other times a total of 71 base score
-                    const ignoreWarning = (audit.name === 'Ability Score Base Scores' && audit.allowed == audit.used+1);
-                    if(audit.used > audit.allowed) {
-                        return (<div key={audit.name} className='error'>{`${audit.name}: Used=${audit.used}, Allowed=${audit.allowed}`}</div>)
-                    } else if(!ignoreWarning && audit.allowed > audit.used) {
-                        return (<div key={audit.name} className='warning'>{`${audit.name}: Used=${audit.used}, Allowed=${audit.allowed}`}</div>)
-                    } else {
-                        return;
-                    }
-                })}
-            </div>}
+            <CharAudit playerStats={playerStats}></CharAudit>
         </div>}
     </React.Fragment>)
 }

@@ -1,12 +1,46 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
+import { cloneDeep } from 'lodash';
 import Popup from '../../common/popup'
 import CharSpellSlots from './char-spell-slots'
 import './char-spells.css'
 
 function CharSpells({ playerStats, handleTogglePreparedSpells }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
-    const spellAbilities = playerStats.spellAbilities;
+    const [filterPrepared, setFilterPrepared] = React.useState(false);
+    const [spells, setSpells] = React.useState([]);
+    React.useEffect(() => {
+        if(playerStats.spellAbilities) {
+            setFilterPrepared(false);
+            setSpells(playerStats.spellAbilities.spells);
+        }
+    }, [playerStats]);
+    const handleTogglePreparedFilter = () => {
+        const spells = cloneDeep(playerStats.spellAbilities.spells);
+        if(!filterPrepared) {
+            setSpells(spells.filter(spell => spell.prepared === 'Always' || spell.prepared === 'Prepared'));
+        } else {
+            setSpells(spells)
+        }
+        setFilterPrepared(!filterPrepared)
+    }
+    const handleSortLevel = () => {
+        const spells = cloneDeep(playerStats.spellAbilities.spells);
+        // Sort by level (ascending) and then by name
+        spells.sort((a, b) => {
+            if (a.level !== b.level) {
+                return a.level - b.level;
+            } else {
+                return a.name.localeCompare(b.name);
+            }
+        });
+        setSpells(spells);
+    }
+    const handleSortSpell = () => {
+        const spells = cloneDeep(playerStats.spellAbilities.spells);
+        spells.sort((a, b) => a.name.localeCompare(b.name));
+        setSpells(spells);
+    }
     const showPopup = (spell) => {
         if(spell.desc) {
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
@@ -18,33 +52,33 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
     }
     return (
         <div>
-            {(spellAbilities && spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
+            {(playerStats.spellAbilities && playerStats.spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
                 {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader"><h4>&nbsp;Spells</h4></div>
                     <div>
-                        <b>Attack (to hit):</b> +{spellAbilities.toHit}<br/>
-                        <b>Modifier:</b> +{spellAbilities.modifier}<br/>
-                        <b>Save DC:</b> {spellAbilities.saveDc}
+                        <b>Attack (to hit):</b> +{playerStats.spellAbilities.toHit}<br/>
+                        <b>Modifier:</b> +{playerStats.spellAbilities.modifier}<br/>
+                        <b>Save DC:</b> {playerStats.spellAbilities.saveDc}
                     </div>
                     <div>
-                        <b>Cantrips Known:</b> {spellAbilities.cantrips_known ? spellAbilities.cantrips_known : 0}<br/>
-                        <b>Spells Known:</b> {spellAbilities.spells_known ? spellAbilities.spells_known : 'All'}<br/>                    
-                        <b>Max Prepared:</b> {spellAbilities.maxPreparedSpells ? spellAbilities.maxPreparedSpells : 'All'}
+                        <b>Cantrips Known:</b> {playerStats.spellAbilities.cantrips_known ? playerStats.spellAbilities.cantrips_known : 0}<br/>
+                        <b>Spells Known:</b> {playerStats.spellAbilities.spells_known ? playerStats.spellAbilities.spells_known : 'All'}<br/>                    
+                        <b>Max Prepared:</b> {playerStats.spellAbilities.maxPreparedSpells ? playerStats.spellAbilities.maxPreparedSpells : 'All'}
                     </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>
                 <div className='spells'>
-                    <div className='left'><b>Spell</b></div>
-                    <div><b>Level</b></div>
-                    <div><b>Prepared</b></div>
+                    <div className='left'><b className="clickable" onClick={handleSortSpell}>Spell</b></div>
+                    <div><b className="clickable" onClick={handleSortLevel}>Level</b></div>
+                    <div><b className="clickable" onClick={handleTogglePreparedFilter}>Prepared</b></div>
                     <div><b>Time</b></div>
                     <div><b>Range</b></div>
                     <div><b>Effect</b></div>
                     <div><b>Duration</b></div>
                     <div className='left'><b>Notes</b></div>
-                    {spellAbilities.spells.map((spell) => {
+                    {spells.map((spell) => {
                         let notes = [];
                         if(spell.concentration) notes.push('Concentration');
                         if(spell.ritual) notes.push('Ritual');
