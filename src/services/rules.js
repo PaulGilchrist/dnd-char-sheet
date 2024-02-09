@@ -156,22 +156,37 @@ const rules = {
             return false;
         });
         if (rangedWeaponName) {
-            // Does this item have a magic bonus?
-            let magicBonus = 0;
+            let nonMagicalName = rangedWeaponName;
             if (rangedWeaponName.charAt(0) === '+') {
-                magicBonus = Number(rangedWeaponName.charAt(1));
-                rangedWeaponName = rangedWeaponName.substring(3);
+                nonMagicalName = rangedWeaponName.substring(3);
             }
-            let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
-            let toHitBonus = dexterity.bonus + proficiency + magicBonus;
+            let rangedWeapon = allEquipment.find((item) => item.name === nonMagicalName);
+            let damage = rangedWeapon.damage.damage_dice;
+            let damageFormula = `Damage Formula = Weapon (${rangedWeapon.damage.damage_dice})`;
+            let toHitBonus = dexterity.bonus + proficiency;
+            let hitBonusFormula = `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`;
+            // Does this item have a magic bonus?
+            if (rangedWeaponName.charAt(0) === '+') {
+                let magicBonus = Number(rangedWeaponName.charAt(1));
+                damage += `+${dexterity.bonus + magicBonus}`;
+                damageFormula += ` + Dexterity Bonus (${dexterity.bonus}) + Weapon Magic Bonus (${magicBonus})`;
+                toHitBonus += magicBonus;
+                hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
+            } else {
+                damage += `+${dexterity.bonus}`;
+                damageFormula += ` + Dexterity Bonus (${dexterity.bonus})`;
+            }
             if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Archery')) {
                 toHitBonus += 2;
+                hitBonusFormula += ` + Archery Fighting Style (2)`;
             }
             attacks.push({
-                "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${rangedWeapon.name}`,
-                "damage": `${rangedWeapon.damage.damage_dice}+${dexterity.bonus + magicBonus}`,
+                "name": rangedWeaponName,
+                "damage": damage,
                 "damageType": rangedWeapon.damage.damage_type,
+                "damageFormula": damageFormula,
                 "hitBonus": toHitBonus,
+                "hitBonusFormula": hitBonusFormula,
                 "range": rangedWeapon.range.normal,
                 "type": "Action"
             });
@@ -189,45 +204,73 @@ const rules = {
             return false;
         });
         if (meleeWeaponNames) {
+            let bonus = Math.max(strength.bonus, dexterity.bonus); // Assumes using finesse if dex build
+            let nonMagicalName = meleeWeaponNames[0];
+            if (meleeWeaponNames[0].charAt(0) === '+') {
+                nonMagicalName = meleeWeaponNames[0].substring(3);
+            }
+            let mainHandWeapon = allEquipment.find((item) => item.name === nonMagicalName);
+            let damage = mainHandWeapon.damage.damage_dice;
+            let damageFormula = `Damage Formula = Weapon (${mainHandWeapon.damage.damage_dice})`;
+            let toHitBonus = bonus + proficiency;
+            let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
             // Does this item have a magic bonus?
             let magicBonus = 0;
             if (meleeWeaponNames[0].charAt(0) === '+') {
                 magicBonus = Number(meleeWeaponNames[0].charAt(1));
-                meleeWeaponNames[0] = meleeWeaponNames[0].substring(3);
+                damage += `+${bonus + magicBonus}`;
+                damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Weapon Magic Bonus (${magicBonus})`;
+                toHitBonus += magicBonus;
+                hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
+            } else {
+                damage += `+${dexterity.bonus}`;
+                damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus})`;
             }
-            let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
-            let bonus = Math.max(strength.bonus, dexterity.bonus) + magicBonus; // Assumes using finesse if dex build
-            let damage = mainHandWeapon.damage.damage_dice;
             if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Dueling') && meleeWeaponNames.length == 1) { // No dual wielding
-                damage = mainHandWeapon.damage.damage_dice + 2;
+                damage += 2;
+                damageFormula += ` + Dueling Fighting Style (2)`;
             }
             attacks.push({
-                "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${mainHandWeapon.name}`,
-                "damage": `${damage}+${bonus}`,
+                "name": meleeWeaponNames[0],
+                "damage": damage,
                 "damageType": mainHandWeapon.damage.damage_type,
-                "hitBonus": bonus + proficiency,
+                "damageFormula": damageFormula,
+                "hitBonus": toHitBonus,
+                "hitBonusFormula": hitBonusFormula,
                 "range": mainHandWeapon.range.normal,
                 "type": "Action"
             });
             if (meleeWeaponNames.length > 1) {
+                let bonus = Math.max(strength.bonus, dexterity.bonus); // Assumes using finesse if dex build
+                let nonMagicalName = meleeWeaponNames[1];
+                if (meleeWeaponNames[1].charAt(0) === '+') {
+                    nonMagicalName = meleeWeaponNames[1].substring(3);
+                }
+                let offHandWeapon = allEquipment.find((item) => item.name === nonMagicalName);
+                let damage = offHandWeapon.damage.damage_dice;
+                let damageFormula = `Damage Formula = Weapon (${offHandWeapon.damage.damage_dice})`;
+                let hitBonus = bonus + proficiency;
+                let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
                 // There is also an offhand weapon
                 magicBonus = 0;
                 if (meleeWeaponNames[1].charAt(0) === "+") {
                     magicBonus = Number(meleeWeaponNames[1].charAt(1));
-                    meleeWeaponNames[1] = meleeWeaponNames[1].substring(3);
+                    damage += `+${magicBonus}`;
+                    damageFormula += ` + Weapon Magic Bonus (${magicBonus})`;
+                    hitBonus += magicBonus;
+                    hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
                 }
-                let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
-                let damage = offHandWeapon.damage.damage_dice;
                 if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Two-Weapon Fighting')) {
-                    damage = `${offHandWeapon.damage.damage_dice}+${bonus + magicBonus}`;
-                } else if (magicBonus > 0) {
-                    damage = `${offHandWeapon.damage.damage_dice}+${magicBonus}`;
-                }
+                    damage += `+${bonus}`;
+                    damageFormula += ` + Two-Weapon Fighting Style (${bonus})`;
+                } 
                 attacks.push({
-                    "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${offHandWeapon.name}`,
+                    "name": meleeWeaponNames[1],
                     "damage": damage,
                     "damageType": offHandWeapon.damage.damage_type,
-                    "hitBonus": bonus + proficiency + magicBonus,
+                    "damageFormula": damageFormula,
+                    "hitBonus": hitBonus,
+                    "hitBonusFormula": hitBonusFormula,
                     "range": offHandWeapon.range.normal,
                     "type": "Bonus Action"
                 });
@@ -240,7 +283,9 @@ const rules = {
                 "name": 'Unarmed Strike',
                 "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
                 "damageType": 'Bludgeoning',
+                "damageFormula": `Damage Formula = Monk Open Hand (${martialArts.dice_count}d${martialArts.dice_value}) + Dexterity Bonus (${dexterity.bonus})`,
                 "hitBonus": dexterity.bonus + proficiency,
+                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
                 "range": 5,
                 "type": "Action"
             });
@@ -248,7 +293,9 @@ const rules = {
                 "name": 'Unarmed Strike',
                 "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
                 "damageType": 'Bludgeoning',
+                "damageFormula": `Damage Formula = Monk Open Hand (${martialArts.dice_count}d${martialArts.dice_value}) + Dexterity Bonus (${dexterity.bonus})`,
                 "hitBonus": dexterity.bonus + proficiency,
+                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
                 "range": 5,
                 "type": "Bonus Action"
             });

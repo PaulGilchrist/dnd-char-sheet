@@ -6,7 +6,7 @@ import './char-actions.css'
 
 function CharActions({ playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
-    const showPopup = (actionOrBonusAction) => {
+    const showActionsPopup = (actionOrBonusAction) => {
         if (actionOrBonusAction.details) {
             let html = `<b>${actionOrBonusAction.name}</b><br/>${actionOrBonusAction.description}<br/><br/>${actionOrBonusAction.details}`;
             setPopupHtml(html);
@@ -27,10 +27,10 @@ function CharActions({ playerStats }) {
                     {playerStats.attacks.map((attack) => {
                         if (attack.type != 'Action') return '';
                         return <React.Fragment key={attack.name}>
-                            <div className='left'>{attack.name}</div>
+                            <div className={"left"}>{attack.name}</div>
                             <div>{attack.range} ft.</div>
-                            <div>{signFormatter.format(attack.hitBonus)}</div>
-                            <div>{attack.damage}</div>
+                            <div className={attack.hitBonusFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.hitBonusFormula)}>{signFormatter.format(attack.hitBonus)}</div>
+                            <div className={attack.damageFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.damageFormula)}>{attack.damage}</div>
                             <div className='left'>{attack.damageType}</div>
                         </React.Fragment>;
                     })}
@@ -39,7 +39,7 @@ function CharActions({ playerStats }) {
                 {playerStats.actions.map((action) => {
                     return <div key={action.name}>
                         {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
-                        <b className={action.details ? "clickable" : ""} onClick={() => showPopup(action)}>{action.name}:</b> <span dangerouslySetInnerHTML={{ __html: action.description }}></span>;
+                        <b className={action.details ? "clickable" : ""} onClick={() => showActionsPopup(action)}>{action.name}:</b> <span dangerouslySetInnerHTML={{ __html: action.description }}></span>;
                     </div>
                 })}
                 <div><b>Base Actions:</b> {actions.join(', ')}</div>
