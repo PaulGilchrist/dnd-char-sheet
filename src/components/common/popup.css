@@ -17,7 +17,7 @@
     height: fit-content;
     max-height: 95vh;
     max-width:95vh;
-    width: 95%;
+    width:fit-content;
     left: 50%;
     overflow-y: scroll;
     overscroll-behavior: contain;
@@ -26,4 +26,10 @@
     text-align: left;
     top: 50%;
     transform: translate(-50%, -50%);
+}
+
+.popup-modal.small {
+    /* max-height: 55vh;
+    max-width:55vh; */
+    width: 500px;
 }

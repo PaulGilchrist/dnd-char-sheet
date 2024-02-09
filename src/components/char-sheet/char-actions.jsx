@@ -27,7 +27,7 @@ function CharActions({ playerStats }) {
                     {playerStats.attacks.map((attack) => {
                         if (attack.type != 'Action') return '';
                         return <React.Fragment key={attack.name}>
-                            <div className={"left"}>{attack.name}</div>
+                            <div className='left'>{attack.name}</div>
                             <div>{attack.range} ft.</div>
                             <div className={attack.hitBonusFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.hitBonusFormula)}>{signFormatter.format(attack.hitBonus)}</div>
                             <div className={attack.damageFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.damageFormula)}>{attack.damage}</div>
