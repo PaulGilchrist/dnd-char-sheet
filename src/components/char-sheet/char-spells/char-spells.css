@@ -12,11 +12,9 @@
 .spell-name {
     cursor: pointer;
 }
-.spells {
-    display: grid;
-    grid-template-columns: auto auto auto auto auto auto auto auto;
+.table-spells {
+    border-collapse: collapse;
     text-align: center;
+    width: 100%;
 }
-.spells > div {
-    padding-right: 10px;
-}
+

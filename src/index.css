@@ -145,8 +145,8 @@ thead {
 }
 
 .table-striped>tbody>tr:nth-of-type(even) {
-    background-color: var(--background-color-header-inner);
-    color: var(--color-header-inner);
+    background-color: var(--background-color-body);
+    color: var(--color-body);
 }
 
 .table-striped>tbody>tr:nth-of-type(odd) {

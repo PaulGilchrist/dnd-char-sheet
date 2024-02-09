@@ -69,41 +69,47 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
                     </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>
                 </div>
-                <div className='spells'>
-                    <div className='left'><b className="clickable" onClick={handleSortSpell}>Spell</b></div>
-                    <div><b className="clickable" onClick={handleSortLevel}>Level</b></div>
-                    <div><b className="clickable" onClick={handleTogglePreparedFilter}>Prepared</b></div>
-                    <div><b>Time</b></div>
-                    <div><b>Range</b></div>
-                    <div><b>Effect</b></div>
-                    <div><b>Duration</b></div>
-                    <div className='left'><b>Notes</b></div>
-                    {spells.map((spell) => {
-                        let notes = [];
-                        if(spell.concentration) notes.push('Concentration');
-                        if(spell.ritual) notes.push('Ritual');
-                        if(spell.components) notes.push(spell.components.join('/'));
-                        let effect = 'Utility';
-                        if(spell.damage) {
-                            if(spell.damage.damage_at_slot_level) {
-                                effect = `${spell.damage.damage_at_slot_level[Object.keys(spell.damage.damage_at_slot_level)[0]]} ${spell.damage.damage_type}`
-                            } else if (spell.damage.damage_at_character_level) {
-                                effect = `${spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]]} ${spell.damage.damage_type}`
+                <table className='table-spells table-striped'>
+                    <thead>
+                        <tr>
+                            <th className='left clickable' onClick={handleSortSpell}>Spell</th>
+                            <th className='clickable' onClick={handleSortLevel}>Level</th>
+                            <th className='clickable' onClick={handleTogglePreparedFilter}>Prepared</th>
+                            <th>Time</th>
+                            <th>Range</th>
+                            <th>Effect</th>
+                            <th>Duration</th>
+                            <th className='left'>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {spells.map((spell) => {
+                            let notes = [];
+                            if(spell.concentration) notes.push('Concentration');
+                            if(spell.ritual) notes.push('Ritual');
+                            if(spell.components) notes.push(spell.components.join('/'));
+                            let effect = 'Utility';
+                            if(spell.damage) {
+                                if(spell.damage.damage_at_slot_level) {
+                                    effect = `${spell.damage.damage_at_slot_level[Object.keys(spell.damage.damage_at_slot_level)[0]]} ${spell.damage.damage_type}`
+                                } else if (spell.damage.damage_at_character_level) {
+                                    effect = `${spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]]} ${spell.damage.damage_type}`
+                                }
                             }
-                        }
-                        return <React.Fragment key={spell.name}>
-                            <div className='left spell-name clickable' onClick={() => showPopup(spell)}>{spell.name}</div>
-                            <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
-                            {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <div>{spell.prepared}</div>}
-                            {(spell.prepared === 'Prepared' || spell.prepared === '') && <div><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></div>}
-                            <div>{spell.casting_time ? spell.casting_time.replace('reaction','R').replace('bonus action','BA').replace('action',' A').replace('minute','min').replace('minutes','min') : ''}</div>
-                            <div>{spell.range}</div>
-                            <div>{effect}</div>
-                            <div>{spell.duration ? spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min') : ''}</div>
-                            <div className='left'>{notes.join(', ').replace('Concentration','Con')}</div>
-                        </React.Fragment>;
-                    })}
-                </div>
+                            return <tr key={spell.name}>
+                                <td className='left spell-name clickable' onClick={() => showPopup(spell)}>{spell.name}</td>
+                                <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
+                                {(spell.prepared !== 'Prepared' && spell.prepared !== '') && <td>{spell.prepared}</td>}
+                                {(spell.prepared === 'Prepared' || spell.prepared === '') && <td><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></td>}
+                                <td>{spell.casting_time ? spell.casting_time.replace('reaction','R').replace('bonus action','BA').replace('action',' A').replace('minute','min').replace('minutes','min') : ''}</td>
+                                <td>{spell.range}</td>
+                                <td>{effect}</td>
+                                <td>{spell.duration ? spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min') : ''}</td>
+                                <td className='left'>{notes.join(', ').replace('Concentration','Con')}</td>
+                            </tr>
+                        })}
+                    </tbody>
+                </table>
             </div>}
         </div>
     )
