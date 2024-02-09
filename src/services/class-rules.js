@@ -3,6 +3,7 @@ import rules from './rules'
 
 const classRules = {
     getClass: (allClasses, playerSummary) => {
+         // Dependencies: None
         let characterClass = allClasses.find((characterClass) => characterClass.name === playerSummary.class.name)
         characterClass = merge(cloneDeep(characterClass), cloneDeep(playerSummary.class));
         let subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.class.subclass.name);
@@ -163,6 +164,7 @@ const classRules = {
         return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
+        // Dependencies: Class
         const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
         let features = classRules.addFeatures(classLevels);
         if(playerStats.class.subclass) {

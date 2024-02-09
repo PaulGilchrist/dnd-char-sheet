@@ -2,21 +2,21 @@ import { cloneDeep, merge, uniqBy } from 'lodash';
 import rules from './rules'
 
 const raceRules = {
-    getImmunities: (playerStats) => {
-        // playerStats must include full race object from getPlayerRace()
+    getImmunities: (playerSummary) => {
+        // Dependencies: None
         let immunities = [];
-        if(playerStats.race.name === "Elf") {
+        if(playerSummary.race.name === "Elf") {
             immunities.push("Magical Sleep"); // Fey Ancestry
         }
-        if(playerStats.class.name === "Monk" && playerStats.level > 9) {
+        if(playerSummary.class.name === "Monk" && playerSummary.level > 9) {
             immunities.push("Disease"); // Purity of Body
             immunities.push("Poison"); // Purity of Body
         }
-        if(playerStats.class.name === "Paladin" && playerStats.level > 2) {
+        if(playerSummary.class.name === "Paladin" && playerSummary.level > 2) {
             immunities.push("Disease"); // Divine Health
         }
-        if(playerStats.immunities) {
-            immunities = [...new Set([...immunities, ...playerStats.immunities])];
+        if(playerSummary.immunities) {
+            immunities = [...new Set([...immunities, ...playerSummary.immunities])];
         }
         return immunities.sort((a, b) => a.name.localeCompare(b.name));
     },
@@ -42,7 +42,7 @@ const raceRules = {
         return race;
     },
     getRacialBonus: (playerStats, abilityName) => {
-        // playerStats must include full race object from getPlayerRace() 
+        // Dependencies: Race 
         let racialBonus = 0;
         let ability_bonus = playerStats.race.ability_bonuses.find((ability_bonus) => ability_bonus.ability_score == abilityName);
         if (ability_bonus) {
@@ -56,11 +56,11 @@ const raceRules = {
         }
         return racialBonus;
     },
-    getResistances: (playerStats) => {
-        // playerStats must include full race object from getPlayerRace()
+    getResistances: (playerSummary) => {
+        // Dependencies: None
         let resistances = [];
-        if(playerStats.race.name === "Dragonborn") {
-            switch(playerStats.race.type) {
+        if(playerSummary.race.name === "Dragonborn") {
+            switch(playerSummary.race.type) {
                 case 'Black': resistances.push("Acid"); break;
                 case 'Blue': resistances.push("Lightning"); break;
                 case 'Brass': resistances.push("Fire"); break;
@@ -72,23 +72,23 @@ const raceRules = {
                 case 'Silver': resistances.push("Cold"); break;
                 case 'White': resistances.push("Cold"); break;
             }
-        } else if(playerStats.race.name === "Elf") {
+        } else if(playerSummary.race.name === "Elf") {
             resistances.push("Charm"); // Fey Ancestry
-        } else if(playerStats.race.name === "Halfling") {
+        } else if(playerSummary.race.name === "Halfling") {
             resistances.push("Frightened"); // Brave
-            if(playerStats.race.subrace && playerStats.race.subrace.name === "Scout Halfling") {
+            if(playerSummary.race.subrace && playerSummary.race.subrace.name === "Scout Halfling") {
                 resistances.push("Poison"); // Scout Resilience
             }
-        } else if(playerStats.race.name === "Tiefling") {
+        } else if(playerSummary.race.name === "Tiefling") {
             resistances.push("Fire"); // Hellish Resistance
         }
-        if(playerStats.resistances) {
-            resistances = [...new Set([...resistances, ...playerStats.resistances])];
+        if(playerSummary.resistances) {
+            resistances = [...new Set([...resistances, ...playerSummary.resistances])];
         }
         return resistances.sort((a, b) => a.name.localeCompare(b.name));
     },
     getSenses: (playerStats) => {
-        // playerStats must include full race object from getPlayerRace()
+        // Dependencies: Race
         const senses = playerStats.senses ? [...playerStats.senses] : [];
         const darkvisionInSenses = senses.some((sense) => sense.name === 'Darkvision');
         const darkvisionRace = playerStats.race.traits.some((trait) => trait.name === 'Darkvision');
@@ -141,6 +141,7 @@ const raceRules = {
         return categorizedTraits;
     },
     getTraits: (playerStats) => {
+        // Dependencies: Race
         let traits = raceRules.addTraits(playerStats.race.traits);
         if(playerStats.race.subrace) {
             const subraceTraits = raceRules.addTraits(playerStats.race.subrace.racial_traits);

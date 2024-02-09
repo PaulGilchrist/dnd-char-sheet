@@ -59,7 +59,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             <CharSummary allEquipment={allEquipment} playerStats={playerStats}></CharSummary><hr />
             <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
-            <CharActions allEquipment={allEquipment} allSpells={allSpells} playerStats={playerStats}></CharActions><hr />
+            <CharActions playerStats={playerStats}></CharActions><hr />
             <CharReactions allSpells={allSpells} playerStats={playerStats}></CharReactions>
             <CharSpells allSpells={allSpells} playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />

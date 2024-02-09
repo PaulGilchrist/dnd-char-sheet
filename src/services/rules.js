@@ -17,22 +17,23 @@ const rules = {
         }
     },
     getAbilities: (playerStats) => {
-        // playerStats must include full class and race objects from getClass() and getRace() 
-        // playerStats must also already have skill proficiencies determined
+        // Dependencies: Class, Race, Skill Proficiencies 
+        // Sets Abilities, Initiative, and Hit Points
         return playerStats.abilities.map((ability) => {
+            const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
             ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + raceRules.getRacialBonus(playerStats, ability.name);
             if((ability.name === 'Strength' || ability.name === 'Constitution') && playerStats.class.name === 'Barbarian' && playerStats.level > 19) {
                 ability.totalScore += 4; // Primal Champion
             }
             ability.bonus = Math.floor((ability.totalScore - 10) / 2);
             ability.proficient = playerStats.class.saving_throws.includes(ability.name);
-            ability.save = ability.proficient ? ability.bonus + playerStats.proficiency : ability.bonus;
+            ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
             ability.skills = skills.filter(skill => skill.ability === ability.name);
             ability.skills = ability.skills.map((skill) => {
                 const proficient = playerStats.skillProficiencies.includes(skill.name);
-                skill.bonus = proficient ? ability.bonus + playerStats.proficiency : ability.bonus;
+                skill.bonus = proficient ? ability.bonus + proficiency : ability.bonus;
                 if (playerStats.expertise && playerStats.expertise.includes(skill.name)) {
-                    skill.bonus += playerStats.proficiency; // Rogues can double their proficiency for two selected areas of expertise
+                    skill.bonus += proficiency; // Rogues can double their proficiency for two selected areas of expertise
                 }
                 if (passiveSkills.includes(skill.name)) {
                     // Add skill based senses
@@ -46,16 +47,21 @@ const rules = {
                 }
                 return skill;
             });
-            if (ability.name === 'Dexterity') {
-                playerStats.initiative = ability.bonus;
-            } else if (ability.name === 'Constitution') {
-                playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (ability.bonus * playerStats.level);
-            }
             return ability;
         });
     },
+    getActions: (playerStats) => {
+        // Dependencies: Class, Race
+        const features = classRules.getFeatures(playerStats);
+        const traits = raceRules.getTraits(playerStats);
+        const actions = uniqBy([...playerStats.actions ? playerStats.actions : [], ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        const bonusActions = uniqBy([...playerStats.bonusActions ? playerStats.bonusActions : [], ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        const reactions = uniqBy([...playerStats.reactions ? playerStats.reactions : [], ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        const specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        return [actions, bonusActions, reactions, specialActions];
+    },
     getArmorClass: (allEquipment, playerStats) => {
-        // playerStats must include full class from getClass()
+        // Dependencies: Abilities
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
         const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
@@ -119,8 +125,168 @@ const rules = {
         }
         return armorClass;
     },
+    getAttacks: (allEquipment, allSpells, playerStats) => {
+        // Dependencies: Abilities, Spells
+        const strength = playerStats.abilities.find((ability) => ability.name === 'Strength');
+        const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
+        const proficiency = Math.floor((playerStats.level - 1) / 4 + 2)
+        const attacks = [];
+        // Find ranged weapon in the character's equipment and add it to attacks
+        let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
+            // Does this item have a magic bonus?
+            if (itemName.charAt(0) === "+") {
+                itemName = itemName.substring(3);
+            }
+            let item = allEquipment.find((item) => item.name === itemName);
+            if (item) {
+                return item.equipment_category === 'Weapon' && item.weapon_range === 'Ranged';
+            }
+            return false;
+        });
+        if (rangedWeaponName) {
+            // Does this item have a magic bonus?
+            let magicBonus = 0;
+            if (rangedWeaponName.charAt(0) === '+') {
+                magicBonus = Number(rangedWeaponName.charAt(1));
+                rangedWeaponName = rangedWeaponName.substring(3);
+            }
+            let rangedWeapon = allEquipment.find((item) => item.name === rangedWeaponName);
+            let toHitBonus = dexterity.bonus + proficiency + magicBonus;
+            if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Archery')) {
+                toHitBonus += 2;
+            }
+            attacks.push({
+                "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${rangedWeapon.name}`,
+                "damage": `${rangedWeapon.damage.damage_dice}+${dexterity.bonus + magicBonus}`,
+                "damageType": rangedWeapon.damage.damage_type,
+                "hitBonus": toHitBonus,
+                "range": rangedWeapon.range.normal,
+                "type": "Action"
+            });
+        }
+        // Find main hand weapon in the character's equipment and add it to attacks
+        let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
+            // Does this item have a magic bonus?
+            if (itemName.charAt(0) === '+') {
+                itemName = itemName.substring(3);
+            }
+            let item = allEquipment.find((item) => item.name === itemName);
+            if (item) {
+                return item.equipment_category === 'Weapon' && item.weapon_range === 'Melee';
+            }
+            return false;
+        });
+        if (meleeWeaponNames) {
+            // Does this item have a magic bonus?
+            let magicBonus = 0;
+            if (meleeWeaponNames[0].charAt(0) === '+') {
+                magicBonus = Number(meleeWeaponNames[0].charAt(1));
+                meleeWeaponNames[0] = meleeWeaponNames[0].substring(3);
+            }
+            let mainHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[0]);
+            let bonus = Math.max(strength.bonus, dexterity.bonus) + magicBonus; // Assumes using finesse if dex build
+            let damage = mainHandWeapon.damage.damage_dice;
+            if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Dueling') && meleeWeaponNames.length == 1) { // No dual wielding
+                damage = mainHandWeapon.damage.damage_dice + 2;
+            }
+            attacks.push({
+                "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${mainHandWeapon.name}`,
+                "damage": `${damage}+${bonus}`,
+                "damageType": mainHandWeapon.damage.damage_type,
+                "hitBonus": bonus + proficiency,
+                "range": mainHandWeapon.range.normal,
+                "type": "Action"
+            });
+            if (meleeWeaponNames.length > 1) {
+                // There is also an offhand weapon
+                magicBonus = 0;
+                if (meleeWeaponNames[1].charAt(0) === "+") {
+                    magicBonus = Number(meleeWeaponNames[1].charAt(1));
+                    meleeWeaponNames[1] = meleeWeaponNames[1].substring(3);
+                }
+                let offHandWeapon = allEquipment.find((item) => item.name === meleeWeaponNames[1]);
+                let damage = offHandWeapon.damage.damage_dice;
+                if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Two-Weapon Fighting')) {
+                    damage = `${offHandWeapon.damage.damage_dice}+${bonus + magicBonus}`;
+                } else if (magicBonus > 0) {
+                    damage = `${offHandWeapon.damage.damage_dice}+${magicBonus}`;
+                }
+                attacks.push({
+                    "name": `${magicBonus > 0 ? `+${magicBonus} ` : ''}${offHandWeapon.name}`,
+                    "damage": damage,
+                    "damageType": offHandWeapon.damage.damage_type,
+                    "hitBonus": bonus + proficiency + magicBonus,
+                    "range": offHandWeapon.range.normal,
+                    "type": "Bonus Action"
+                });
+            }
+        }
+        // If we have a Monk, then their hands are a weapon
+        if (playerStats.class.name === 'Monk') {
+            const martialArts = playerStats.class.class_levels[playerStats.level - 1].class_specific.martial_arts;
+            attacks.push({
+                "name": 'Unarmed Strike',
+                "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
+                "damageType": 'Bludgeoning',
+                "hitBonus": dexterity.bonus + proficiency,
+                "range": 5,
+                "type": "Action"
+            });
+            attacks.push({
+                "name": 'Unarmed Strike',
+                "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
+                "damageType": 'Bludgeoning',
+                "hitBonus": dexterity.bonus + proficiency,
+                "range": 5,
+                "type": "Bonus Action"
+            });
+        }
+        // Add spell details
+        if (playerStats.spellAbilities) {
+            let spells = playerStats.spellAbilities.spells.map(spell => {
+                let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
+                if (spellDetail) {
+                    return { ...spellDetail, prepared: spell.prepared };
+                }
+                return { ...spell };
+            });
+            // Find spells that are actions, damage based and prepared and add them to attacks
+            spells = spells.filter(spell => spell.damage && (spell.prepared === 'Always' || spell.prepared === 'Prepared'));
+            spells.forEach(spell => {
+                if (!attacks.find((attack) => attack.name === spell.name)) {
+                    let damage = ''
+                    if (spell.damage.damage_at_slot_level) {
+                        damage = spell.damage.damage_at_slot_level[Object.keys(spell.damage.damage_at_slot_level)[0]];
+                    } else if (spell.damage.damage_at_character_level) {
+                        damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
+                    }
+                    attacks.push({
+                        "name": spell.name,
+                        "damage": damage,
+                        "damageType": spell.damage.damage_type,
+                        "hitBonus": playerStats.spellAbilities.modifier,
+                        "range": spell.range,
+                        "type": spell.casting_time === "1 action" ? "Action" : "Bonus Action"
+                    });
+                }
+            });
+        }
+        return attacks;
+    },
+    getHitPoints: (playerStats) => {
+        // Dependencies: Abilities, Class
+        const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
+        let hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
+        if(playerStats.race.subrace && playerStats.race.subrace.name === "Hill Dwarf") {
+            hitPoints += playerStats.level; // Dwarven Toughness
+        }
+        if(playerStats.class.subclass && playerStats.class.subclass.name === "Draconic") {
+            hitPoints += playerStats.level; // Draconic Resilience
+        }
+        return hitPoints
+    },
     getLanguages: (playerStats) => {
-        // playerStats must include full class and race objects from getClass() and getRace()
+        // Dependencies: Class, Race
         let languages = [...playerStats.race.languages];
         let languagesAllowed = languages.length;
         // dndbeyond allows up to 2 languages from the character's backstory (See Acolyte or Sage)
@@ -167,6 +333,7 @@ const rules = {
         return [languagesAllowed, languages.sort()];
     },
     getProficiencyChoiceCount: (playerStats, skills = true) => {
+        // Dependencies: Class, Race
         let proficiencyChoiceCount = 0;
         playerStats.class.proficiency_choices.forEach((proficiency) => {
             if((skills && proficiency.from[0].startsWith('Skill: ') || (!skills && !proficiency.from[0].startsWith('Skill: ')))) {
@@ -186,7 +353,7 @@ const rules = {
         return proficiencyChoiceCount
     },
     getProficiencies: (playerStats, skill = true) => {
-        // playerStats must include full class and race objects from getClass() and getRace()
+        // Dependencies: Class, Race
         let proficienciesAllowed = 0;
         let proficiencies = [...new Set([...playerStats.class.proficiencies, ...playerStats.race.starting_proficiencies])];
         // Race Specific
@@ -248,7 +415,7 @@ const rules = {
         return [proficienciesAllowed, proficiencies.sort()];
     },
     getSpellAbilities: (allSpells, playerStats) => {
-        // playerStats must include full class and race objects from getClass() and getRace() 
+        // Dependencies: Abilities, Class 
         let spellAbilities = null;
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
         if(!spellcasting) {
@@ -445,32 +612,25 @@ const rules = {
     },
     getPlayerStats: (allClasses, allEquipment, allRaces, allSpells, playerSummary) => {
         const playerStats = cloneDeep(playerSummary);
+        playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
         playerStats.class = classRules.getClass(allClasses, playerSummary);
-        playerStats.race = raceRules.getRace(allRaces, playerSummary);        
-        playerStats.proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
-        playerStats.senses = raceRules.getSenses(playerStats);
-        [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
-        [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false);
-        [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true);
-        playerStats.abilities = rules.getAbilities(playerStats);        
-        const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
-        playerStats.hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
-        if(playerStats.race.subrace && playerStats.race.subrace.name === "Hill Dwarf") {
-            playerStats.hitPoints += playerStats.level; // Dwarven Toughness
-        }
-        if(playerStats.class.subclass && playerStats.class.subclass.name === "Draconic") {
-            playerStats.hitPoints += playerStats.level; // Draconic Resilience
-        }
-        playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats);
-        playerStats.immunities = raceRules.getImmunities(playerStats);
-        playerStats.resistances = raceRules.getResistances(playerStats);
-        playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
-        const features = classRules.getFeatures(playerStats);
-        const traits = raceRules.getTraits(playerStats);
-        playerStats.actions = uniqBy([...playerStats.actions ? playerStats.actions : [], ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.bonusActions = uniqBy([...playerStats.bonusActions ? playerStats.bonusActions : [], ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.reactions = uniqBy([...playerStats.reactions ? playerStats.reactions : [], ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        playerStats.specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        playerStats.immunities = raceRules.getImmunities(playerSummary);
+        playerStats.race = raceRules.getRace(allRaces, playerSummary);
+        playerStats.resistances = raceRules.getResistances(playerSummary);
+        // Dependency on class and race begin here        
+        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions] = rules.getActions(playerStats); // Dependencies: Class, Race
+        [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats); // Dependencies: Class, Race
+        [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false); // Dependencies: Class, Race
+        [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true); // Dependencies: Class, Race
+        playerStats.senses = raceRules.getSenses(playerStats); // Dependencies: Race
+        // Dependency on abilities begin here
+        playerStats.abilities = rules.getAbilities(playerStats); // Dependencies: Class, Race, Skill Proficiencies        
+        playerStats.hitPoints = rules.getHitPoints(playerStats) // Dependencies: Abilities, Class
+        playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus; // Dependencies: Abilities
+        playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
+        playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats); // Dependencies: Abilities, Class
+        playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats); // Dependencies: Abilities, Spells 
+        // Dependency on full player statistics
         playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }
