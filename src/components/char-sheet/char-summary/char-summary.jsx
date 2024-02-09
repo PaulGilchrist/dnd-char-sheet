@@ -17,9 +17,11 @@ import CharClassRogue from './char-class-rogue'
 import CharClassSorcerer from './char-class-sorcerer'
 import CharClassWarlock from './char-class-warlock'
 import CharClassWizard from './char-class-wizard'
+import Popup from '../../common/popup'
 
 function CharSummary({ playerStats }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
+    const [popupHtml, setPopupHtml] = React.useState(null);
     React.useEffect(() => {
         let value = storage.get(playerStats.name, 'hasInspiration');
         setHasInspiration(value ? value : false);
@@ -33,8 +35,13 @@ function CharSummary({ playerStats }) {
         storage.set(playerStats.name, 'hasInspiration', newValue);
         setHasInspiration(newValue);
     }
+    const showArmorClassFormulaPopup = () => {
+        const html = `Armor Class (${playerStats.armorClass}) = ${playerStats.armorClassFormula}`
+        setPopupHtml(html);
+    }
     return (
         <div>
+            {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
             <div className='name'>{playerStats.name}</div>
             <div className='summary'>
                 {playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name}
@@ -45,7 +52,7 @@ function CharSummary({ playerStats }) {
             </div>
             <div className='summaryGrid'>
                 <div>
-                    <b>Armor Class: </b>{playerStats.armorClass}<br/>
+                    <div className='clickable' onClick={showArmorClassFormulaPopup}><b>Armor Class: </b>{playerStats.armorClass}</div>
                     <CharHitPoints playerStats={playerStats}></CharHitPoints>
                     <b>Speed: </b>{speed} ft.<br/>
                     <CharGold playerStats={playerStats}></CharGold>

@@ -78,11 +78,14 @@ const rules = {
             return false;
         });
         let addedBonus = 0;
+        let contributions = [];
         if(playerStats.class.name === 'Monk') {
             addedBonus += wisdom.bonus;
+            contributions.push(`Monk Wisdom Bonus (${wisdom.bonus})`);
         } 
         if(playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Defense')) {
             addedBonus += 1;
+            contributions.push(`Fighting Style Defense (1)`);
         }
         let armorClass;
         if(armorName) {
@@ -90,12 +93,15 @@ const rules = {
             let magicBonus = 0;
             if(armorName.charAt(0) === '+') {
                 magicBonus = Number(armorName.charAt(1));
+                contributions.push(`Armor Magic Bonus (${magicBonus})`);
                 armorName = armorName.substring(3);
             }
             let armor = allEquipment.find((item) => item.name === armorName);
             armorClass = armor.armor_class.base + addedBonus + magicBonus;
+            contributions.push(`Armor (${armor.armor_class.base})`);
             if(armor.armor_class.dex_bonus) {
                 let armorBonus = dexterity.bonus;
+                contributions.push(`Dexterity Bonus (${dexterity.bonus})`);
                 if(armor.armor_class.max_bonus) {
                     armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
                 }
@@ -103,27 +109,33 @@ const rules = {
             }
         } else {
             armorClass = 10 + dexterity.bonus + addedBonus// Unarmored
+            contributions.push(`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus})`);
         }
         // Check for an equipped magical shield, and if found increase AC
         let shield = playerStats.inventory.equipped.find(item => item.substring(3) === 'Shield');
         if(shield) {
-            armorClass += 2 + Number(shield.charAt(1));
+            const magicBonus = Number(shield.charAt(1))
+            armorClass += 2 + magicBonus;
+            contributions.push(`Shield (2) + Shield Magic Bonus (${magicBonus})`);
         } else if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
             // Non-magical shield
             armorClass += 2;
+            contributions.push(`Shield (2)`);
         }
         if(playerStats.class.name === 'Barbarian') { // Unarmored Defense
             const barbarianAc = 10 + dexterity.bonus + constitution.bonus;
             if(barbarianAc > armorClass) {
                 armorClass = barbarianAc;
+                contributions = [`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus}) + Constitution Bonus (${constitution.bonus})`];
             }
         } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Draconic') { // Dragon Resilience
             const sorcererAc = 13 + dexterity.bonus;
             if(sorcererAc > armorClass) {
                 armorClass = sorcererAc;
+                contributions = [`Unarmored AC (13) + Dexterity Bonus (${dexterity.bonus})`];
             }
         }
-        return armorClass;
+        return [armorClass, contributions.join(' + ')];
     },
     getAttacks: (allEquipment, allSpells, playerStats) => {
         // Dependencies: Abilities, Spells
@@ -627,7 +639,7 @@ const rules = {
         playerStats.abilities = rules.getAbilities(playerStats); // Dependencies: Class, Race, Skill Proficiencies        
         playerStats.hitPoints = rules.getHitPoints(playerStats) // Dependencies: Abilities, Class
         playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus; // Dependencies: Abilities
-        playerStats.armorClass = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
+        [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
         playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats); // Dependencies: Abilities, Class
         playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats); // Dependencies: Abilities, Spells 
         // Dependency on full player statistics
