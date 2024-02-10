@@ -19,7 +19,7 @@
     },
     "inventory": {
         "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Studded Leather","Longbow","Scimitar","Scimitar","Ring of Command"],
+        "equipped": ["Arrows","Studded Leather","Longbow","Scimitar","Scimitar","+1 Ring of Protection"],
         "gold": 10
     },
     "languages": ["Goblin","Orc"],
