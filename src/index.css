@@ -196,6 +196,9 @@ th {
 @media print {
     :root {
         --color-header: black;
+        --color-header-inner: black;
+        --color-main: black;
+        --color-body: black;
     }
 
     .no-print {
