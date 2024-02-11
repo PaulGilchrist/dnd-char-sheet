@@ -16,7 +16,7 @@
     },
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Quarterstaff","Dart","+1 Ring of Protection"],
+        "equipped": ["Short Bow","Quarterstaff","Dart","+1 Ring of Protection"],
         "gold": 400
     },
     "languages": ["Halfling", "Infernal"],
