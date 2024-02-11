@@ -584,7 +584,7 @@
         "description": "You gain a +3 bonus to attack and damage rolls made with this magic weapon. It has the thrown property with a normal range of 20 feet and a long range of 60 feet. When you hit with a ranged attack using this weapon, it deals an extra 1d8 damage or, if the target is a giant, 2d8 damage. Immediately after the attack, the weapon flies back to your hand.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a dwarf",
+        "attunementRequirements": "requires attunement by a dwarf",
         "type": "Weapon",
         "subtype": "warhammer"
     },
@@ -864,7 +864,7 @@
         "description": "You gain a +3 bonus to attack and damage rolls made with this magic weapon. When you hit a fiend or an undead with it, that creature takes an extra 2d10 radiant damage.<br/><br/>While you hold the drawn sword, it creates an aura in a 10-foot radius around you. You and all creatures friendly to you in the aura have advantage on saving throws against spells and other magical effects. If you have 17 or more levels in the paladin class, the radius of the aura increases to 30 feet.",
         "rarity": "legendary",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a paladin",
+        "attunementRequirements": "requires attunement by a paladin",
         "type": "Weapon",
         "subtype": "any sword"
     },
@@ -1122,7 +1122,7 @@
 ,
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a cleric, druid, or paladin",
+        "attunementRequirements": "requires attunement by a cleric, druid, or paladin",
         "type": "Wondrous item"
     },
     {
@@ -1213,7 +1213,7 @@
         "description": "While this pearl is on your person, you can use an action to speak its command word and regain one expended spell slot. If the expended slot was of 4th level or higher, the new slot is 3rd level. Once you use the pearl, it can't be used again until the next dawn.",
         "rarity": "uncommon",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wondrous item"
     },
     {
@@ -1797,7 +1797,7 @@
         "description": "While holding this staff, you can use an action to expend 1 of its 10 charges to cast charm person, command, or comprehend languages from it using your spell save DC. The staff can also be used as a magic quarterstaff.<br/><br/>If you are holding the staff and fail a saving throw against an enchantment spell that targets only you, you can turn your failed save into a successful one. You can't use this property of the staff again until the next dawn. If you succeed on a save against an enchantment spell that targets only you, with or without the staff's intervention, you can use your reaction to expend 1 charge from the staff and turn the spell back on its caster as if you had cast the spell.<br/><br/>The staff regains 1d8 + 2 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff becomes a nonmagical quarterstaff.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a bard, cleric, druid, sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a bard, cleric, druid, sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1806,7 +1806,7 @@
         "description": "You have resistance to fire damage while you hold this staff.<br/><br/>The staff has 10 charges. While holding it, you can use an action to expend 1 or more of its charges to cast one of the following spells from it, using your spell save DC: burning hands (1 charge), fireball (3 charges), or wall of fire (4 charges).<br/><br/>The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff blackens, crumbles into cinders, and is destroyed.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a druid, sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a druid, sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1815,7 +1815,7 @@
         "description": "You have resistance to cold damage while you hold this staff.<br/><br/>The staff has 10 charges. While holding it, you can use an action to expend 1 or more of its charges to cast one of the following spells from it, using your spell save DC: cone of cold (5 charges), fog cloud (1 charge), ice storm (4 charges), or wall of ice (4 charges).<br/><br/>The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff turns to water and is destroyed.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a druid, sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a druid, sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1824,7 +1824,7 @@
         "description": "This staff has 10 charges. While holding it, you can use an action to expend 1 or more of its charges to cast one of the following spells from it, using your spell save DC and spellcasting ability modifier: cure wounds (1 charge per spell level, up to 4th), lesser restoration (2 charges), or mass cure wounds (5 charges).<br/><br/>The staff regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff vanishes in a flash of light, lost forever.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a bard, cleric, or druid",
+        "attunementRequirements": "requires attunement by a bard, cleric, or druid",
         "type": "Staff"
     },
     {
@@ -1833,7 +1833,7 @@
         "description": "This staff can be wielded as a magic quarterstaff that grants a +2 bonus to attack and damage rolls made with it. While holding it, you gain a +2 bonus to Armor Class, saving throws, and spell attack rolls.<br/><br/>The staff has 20 charges for the following properties. The staff regains 2d8 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff retains its +2 bonus to attack and damage rolls but loses all other properties. On a 20, the staff regains 1d8 + 2 charges.<br/><br/><b>Power Strike:</b> When you hit with a melee attack using the staff, you can expend 1 charge to deal an extra 1d6 force damage to the target.<br/><br/><b>Spells:</b> While holding this staff, you can use an action to expend 1 or more of its charges to cast one of the following spells from it, using your spell save DC and spell attack bonus: cone of cold (5 charges), fireball (5th-level version, 5 charges), globe of invulnerability (6 charges), hold monster (5 charges), levitate (2 charges), lightning bolt (5th-level version, 5 charges), magic missile (1 charge), ray of enfeeblement (1 charge), or wall of force (5 charges).<br/><br/><b>Retributive Strike:</b> You can use an action to break the staff over your knee or against a solid surface, performing a retributive strike. The staff is destroyed and releases its remaining magic in an explosion that expands to fill a 30-foot-radius sphere centered on it. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take force damage equal to 16 x the number of charges in the staff. Every other creature in the area must make a DC 17 Dexterity saving throw. On a failed save, a creature takes an amount of damage based on how far away it is from the point of origin, as shown in the following table. On a successful save, a creature takes half as much damage.<br/><br/><table class='table table-condensed table-striped table-hover' style='margin-left:40px;width:450px;text-align:center;line-height:1px;'><thead><tr><th>Distance from Origin</th><th>Damage</th></tr></thead><tbody><tr><td>10 ft. away or closer</td><td>8 x the number of charges in the staff</td></tr><tr><td>11 to 20 ft. away</td><td>6 x the number of charges in the staff</td></tr><tr><td>21 to 30 ft. away</td><td>4 x the number of charges in the staff</td></tr></tbody></table>",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1850,7 +1850,7 @@
         "description": "This staff has 10 charges and regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, a swarm of insects consumes and destroys the staff, then disperses.<br/><br/>Spells. While holding the staff, you can use an action to expend some of its charges to cast one of the following spells from it, using your spell save DC: giant insect (4 charges) or insect plague (5 charges).<br/><br/>Insect Cloud. While holding the staff, you can use an action and expend 1 charge to cause a swarm of harmless flying insects to spread out in a 30-foot radius from you. The insects remain for 10 minutes, making the area heavily obscured for creatures other than you. The swarm moves with you, remaining centered on you. A wind of at least 10 miles per hour disperses the swarm and ends the effect.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a bard, cleric, druid, sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a bard, cleric, druid, sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1867,7 +1867,7 @@
         "description": "This staff has 3 charges and regains 1d3 expended charges daily at dawn.<br/><br/>The staff can be wielded as a magic quarterstaff. On a hit, it deals damage as a normal quarterstaff, and you can expend 1 charge to deal an extra 2d10 necrotic damage to the target. In addition, the target must succeed on a DC 15 Constitution saving throw or have disadvantage for 1 hour on any ability check or saving throw that uses Strength or Constitution.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a cleric, druid, or warlock",
+        "attunementRequirements": "requires attunement by a cleric, druid, or warlock",
         "type": "Staff"
     },
     {
@@ -1876,7 +1876,7 @@
         "description": "This staff can be wielded as a magic quarterstaff that grants a +2 bonus to attack and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.<br/><br/>The staff has 50 charges for the following properties. It regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 20, the staff regains 1d12 + 1 charges.<br/><br/><b>Spell Absorption:</b> While holding the staff, you have advantage on saving throws against spells. In addition, you can use your reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its retributive strike (see below).<br/><br/><b>Spells:</b> While holding the staff, you can use an action to expend some of its charges to cast one of the following spells from it, using your spell save DC and spellcasting ability: conjure elemental (7 charges), dispel magic (3 charges), fireball (7th-level version, 7 charges), flaming sphere (2 charges), ice storm (4 charges), invisibility (2 charges), knock (2 charges), lightning bolt (7th-level version, 7 charges), passwall (5 charges), plane shift (7 charges), telekinesis (5 charges), wall of fire (4 charges), or web (2 charges). You can also use an action to cast one of the following spells from the staff without using any charges: arcane lock, detect magic, enlarge/reduce, light, mage hand, or protection from evil and good.<br/><br/><b>Retributive Strike:</b> You can use an action to break the staff over your knee or against a solid surface, performing a retributive strike. The staff is destroyed and releases its remaining magic in an explosion that expands to fill a 30-foot-radius sphere centered on it. You have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take force damage equal to 16 × the number of charges in the staff. Every other creature in the area must make a DC 17 Dexterity saving throw. On a failed save, a creature takes an amount of damage based on how far away it is from the point of origin, as shown in the following table. On a successful save, a creature takes half as much damage.<br/><br/><table class='table table-condensed table-striped table-hover' style='margin-left:40px;width:450px;text-align:center;line-height:1px;'><thead><tr><th>Distance from Origin</th><th>Damage</th></tr></thead><tbody><tr><td>10 ft. away or closer</td><td>8 x the number of charges in the staff</td></tr><tr><td>11 to 20 ft. away</td><td>6 x the number of charges in the staff</td></tr><tr><td>21 to 30 ft. away</td><td>4 x the number of charges in the staff</td></tr></tbody></table>",
         "rarity": "legendary",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a sorcerer, warlock, or wizard",
+        "attunementRequirements": "requires attunement by a sorcerer, warlock, or wizard",
         "type": "Staff"
     },
     {
@@ -1885,7 +1885,7 @@
         "description": "You can use an action to speak this staff's command word and throw the staff on the ground within 10 feet of you. The staff becomes a giant constrictor snake under your control and acts on its own initiative count. By using a bonus action to speak the command word again, you return the staff to its normal form in a space formerly occupied by the snake.<br/><br/>On your turn, you can mentally command the snake if it is within 60 feet of you and you aren't incapacitated. You decide what action the snake takes and where it moves during its next turn, or you can issue it a general command, such as to attack your enemies or guard a location.<br/><br/>If the snake is reduced to 0 hit points, it dies and reverts to its staff form. The staff then shatters and is destroyed. If the snake reverts to staff form before losing all its hit points, it regains all of them.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a cleric, druid, or warlock",
+        "attunementRequirements": "requires attunement by a cleric, druid, or warlock",
         "type": "Staff"
     },
     {
@@ -1894,7 +1894,7 @@
         "description": "This staff can be wielded as a magic quarterstaff that grants a +2 bonus to attack and damage rolls made with it. While holding it, you have a +2 bonus to spell attack rolls.<br/><br/>The staff has 10 charges for the following properties. It regains 1d6 + 4 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 1, the staff loses its properties and becomes a nonmagical quarterstaff.<br/><br/>Spells. You can use an action to expend 1 or more of the staff's charges to cast one of the following spells from it, using your spell save DC: animal friendship (1 charge), awaken (5 charges), barkskin (2 charges), locate animals or plants (2 charges), speak with animals (1 charge), speak with plants (3 charges), or wall of thorns (6 charges).<br/><br/>You can also use an action to cast the pass without trace spell from the staff without using any charges. Tree Form. You can use an action to plant one end of the staff in fertile earth and expend 1 charge to transform the staff into a healthy tree. The tree is 60 feet tall and has a 5-foot-diameter trunk, and its branches at the top spread out in a 20-foot radius.<br/><br/>The tree appears ordinary but radiates a faint aura of transmutation magic if targeted by detect magic. While touching the tree and using another action to speak its command word, you return the staff to its normal form. Any creature in the tree falls when it reverts to a staff.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a druid",
+        "attunementRequirements": "requires attunement by a druid",
         "type": "Staff"
     },
     {
@@ -1955,7 +1955,7 @@
         "description": "This talisman is a mighty symbol of goodness. A creature that is neither good nor evil in alignment takes 6d6 radiant damage upon touching the talisman. An evil creature takes 8d6 radiant damage upon touching the talisman. Either sort of creature takes the damage again each time it ends its turn holding or carrying the talisman.<br/><br/>If you are a good cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell attack rolls while you wear or hold it.<br/><br/>The talisman has 7 charges. If you are wearing or holding it, you can use an action to expend 1 charge from it and choose one creature you can see on the ground within 120 feet of you. If the target is of evil alignment, a flaming fissure opens under it. The target must succeed on a DC 20 Dexterity saving throw or fall into the fissure and be destroyed, leaving no remains. The fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman disperses into motes of golden light and is destroyed.",
         "rarity": "legendary",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a creature of good alignment",
+        "attunementRequirements": "requires attunement by a creature of good alignment",
         "type": "Wondrous item"
     },
     {
@@ -1964,7 +1964,7 @@
         "description": "This item symbolizes unrepentant evil. A creature that is neither good nor evil in alignment takes 6d6 necrotic damage upon touching the talisman. A good creature takes 8d6 necrotic damage upon touching the talisman. Either sort of creature takes the damage again each time it ends its turn holding or carrying the talisman.<br/><br/>If you are an evil cleric or paladin, you can use the talisman as a holy symbol, and you gain a +2 bonus to spell attack rolls while you wear or hold it.<br/><br/>The talisman has 6 charges. If you are wearing or holding it, you can use an action to expend 1 charge from the talisman and choose one creature you can see on the ground within 120 feet of you. If the target is of good alignment, a flaming fissure opens under it. The target must succeed on a DC 20 Dexterity saving throw or fall into the fissure and be destroyed, leaving no remains. The fissure then closes, leaving no trace of its existence. When you expend the last charge, the talisman dissolves into foul-smelling slime and is destroyed.",
         "rarity": "legendary",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a creature of evil alignment",
+        "attunementRequirements": "requires attunement by a creature of evil alignment",
         "type": "Wondrous item"
     },
     {
@@ -2048,7 +2048,7 @@
         "description": "This wand has 7 charges for the following properties. It regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.<br/><br/>Spells. While holding the wand, you can use an action to expend some of its charges to cast one of the following spells (save DC 17): hold monster (5 charges) or hold person (2 charges).<br/><br/>Assisted Escape. While holding the wand, you can use your reaction to expend 1 charge and gain advantage on a saving throw you make to avoid being paralyzed or restrained, or you can expend 1 charge and gain advantage on any check you make to escape a grapple.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2073,7 +2073,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the fireball spell (save DC 15) from it. For 1 charge, you cast the 3rd-level version of the spell. You can increase the spell slot level by one for each additional charge you expend.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2082,7 +2082,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the lightning bolt spell (save DC 15) from it. For 1 charge, you cast the 3rd-level version of the spell. You can increase the spell slot level by one for each additional charge you expend.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2107,7 +2107,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 of its charges to cause a thin blue ray to streak from the tip toward a creature you can see within 60 feet of you. The target must succeed on a DC 15 Constitution saving throw or be paralyzed for 1 minute. At the end of each of the target's turns, it can repeat the saving throw, ending the effect on itself on a success.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2116,7 +2116,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 of its charges to cast the polymorph spell (save DC 15) from it.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.",
         "rarity": "very rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2133,7 +2133,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 of its charges to cast the web spell (save DC 15) from it.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.",
         "rarity": "uncommon",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2142,7 +2142,7 @@
         "description": "This wand has 7 charges. While holding it, you can use an action to expend 1 of its charges and choose a target within 120 feet of you. The target can be a creature, an object, or a point in space. Roll d100 and consult the following table to discover what happens.<br/><br/>If the effect causes you to cast a spell from the wand, the spell's save DC is 15. If the spell normally has a range expressed in feet, its range becomes 120 feet if it isn't already.<br/><br/>If an effect covers an area, you must center the spell on and include the target. If an effect has multiple possible subjects, the GM randomly determines which ones are affected.<br/><br/>The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into dust and is destroyed.<br/><br/><table class='table table-condensed table-striped table-hover'><thead><tr><th style='width:65px;'>d100</th><th>Effect</th></tr></thead><tbody><tr><td>01-05</td><td>You cast slow.</td></tr><tr><td>06-10</td><td>You cast faerie fire.</td></tr><tr><td>11-15</td><td>You are stunned until the start of your next turn, believing something awesome just happened.</td></tr><tr><td>16-20</td><td>You cast gust of wind.</td></tr><tr><td>21-25</td><td>You cast detect thoughts on the target you chose. If you didn't target a creature, you instead take 1d6 psychic damage.</td></tr><tr><td>26-30</td><td>You cast stinking cloud.</td></tr><tr><td>31-33</td><td>Heavy rain falls in a 60-foot radius centered on the target. The area becomes lightly obscured. The rain falls until the start of your next turn.</td></tr><tr><td>34-36</td><td>An animal appears in the unoccupied space nearest the target. The animal isn't under your control and acts as it normally would. Roll a d100 to determine which animal appears. On a 01-25, a rhinoceros appears; on a 26-50, an elephant appears; and on a 51-100, a rat appears.</td></tr><tr><td>37-46</td><td>You cast lightning bolt.</td></tr><tr><td>47-49</td><td>A cloud of 600 oversized butterflies fills a 30-foot radius centered on the target. The area becomes heavily obscured. The butterflies remain for 10 minutes.</td></tr><tr><td>50-53</td><td>You enlarge the target as if you had cast enlarge/reduce. If the target can't be affected by that spell, or if you didn't target a creature, you become the target.</td></tr><tr><td>54-58</td><td>You cast darkness.</td></tr><tr><td>59-62</td><td>Grass grows on the ground in a 60-foot radius centered on the target. If grass is already there, it grows to ten times its normal size and remains overgrown for 1 minute.</td></tr><tr><td>63-65</td><td>An object of the GM's choice disappears into the Ethereal Plane. The object must be neither worn nor carried, within 120 feet of the target, and no larger than 10 feet in any dimension.</td></tr><tr><td>66-69</td><td>You shrink yourself as if you had cast enlarge/reduce on yourself.</td></tr><tr><td>70-79</td><td>You cast fireball.</td></tr><tr><td>80-84</td><td>You cast invisibility on yourself.</td></tr><tr><td>85-87</td><td>Leaves grow from the target. If you chose a point in space as the target, leaves sprout from the creature nearest to that point. Unless they are picked off, the leaves turn brown and fall off after 24 hours.</td></tr><tr><td>88-90</td><td>A stream of 1d4 x 10 gems, each worth 1 gp, shoots from the wand's tip in a line 30 feet long and 5 feet wide. Each gem deals 1 bludgeoning damage, and the total damage of the gems is divided equally among all creatures in the line.</td></tr><tr><td>91-95</td><td>A burst of colorful shimmering light extends from you in a 30-foot radius. You and each creature in the area that can see must succeed on a DC 15 Constitution saving throw or become blinded for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.</td></tr><tr><td>96-97</td><td>The target's skin turns bright blue for 1d10 days. If you chose a point in space, the creature nearest to that point is affected.</td></tr><tr><td>98-100</td><td>If you targeted a creature, it must make a DC 15 Constitution saving throw. If you didn't target a creature, you become the target and must make the saving throw. If the saving throw fails by 5 or more, the target is instantly petrified. On any other failed save, the target is restrained and begins to turn to stone. While restrained in this way, the target must repeat the saving throw at the end of its next turn, becoming petrified on a failure or ending the effect on a success. The petrification lasts until the target is freed by the greater restoration spell or similar magic.</td></tr></tbody></table>",
         "rarity": "rare",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
@@ -2151,7 +2151,7 @@
         "description": "While holding this wand, you gain a bonus to spell attack rolls determined by the wand's rarity. In addition, you ignore half cover when making a spell attack.",
         "rarity": "uncommon",
         "requiresAttunement": true,
-        "attunementRequirements": "Requires attunement by a spellcaster",
+        "attunementRequirements": "requires attunement by a spellcaster",
         "type": "Wand"
     },
     {
