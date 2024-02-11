@@ -23,7 +23,8 @@
                 "name": "Cloak of Elvenkind"
             },
             {
-                "name": "10 Fire Arrows (+1d4)"
+                "name": "Arrow of Fire",
+                "quantity": 10
             }
         ],
         "gold": 30

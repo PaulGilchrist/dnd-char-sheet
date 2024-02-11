@@ -18,7 +18,16 @@
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball"],
-        "magicItems": ["Ring of Command","Scroll or Charm Person"],
+        "magicItems": [
+            {
+                "name": "Spell Ring",
+                "spell": "Command"
+            },
+            {
+                "name": "Spell Scroll",
+                "spell": "Charm Person"
+            }
+        ],
         "gold": 10
     },
     "languages": ["Elvish"],

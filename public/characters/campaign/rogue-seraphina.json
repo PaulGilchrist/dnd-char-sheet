@@ -18,7 +18,20 @@
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
         "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
-        "magicItems": ["+1 Ring of Protection","2 Ice Arrows (+1d8)","10 Fire Arrows (+1d4)"],
+        "magicItems": [
+            {
+                "name": "Ring of Protection",
+                "bonus": "+1"
+            },
+            {
+                "name": "Arrow of Ice",
+                "quantity": 2
+            },
+            {
+                "name": "Arrow of Fire",
+                "quantity": 10
+            }
+        ],
         "gold": 10
     },
     "languages": ["Goblin","Orc"],

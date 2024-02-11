@@ -122,6 +122,15 @@ const rules = {
             armorClass += 2;
             contributions.push(`Shield (2)`);
         }
+        // Check for cloak or ring of protection
+        if(playerStats.inventory.magicItems && playerStats.inventory.magicItems.some(item => item.name === 'Cloak of Protection')) {
+            armorClass += 1;
+            contributions.push(`Cloak of Protection (1)`);
+        }
+        if(playerStats.inventory.magicItems && playerStats.inventory.magicItems.some(item => item.name === 'Ring of Protection')) {
+            armorClass += 1;
+            contributions.push(`Ring of Protection (1)`);
+        }        
         if(playerStats.class.name === 'Barbarian') { // Unarmored Defense
             const barbarianAc = 10 + dexterity.bonus + constitution.bonus;
             if(barbarianAc > armorClass) {
@@ -392,15 +401,18 @@ const rules = {
         return [languagesAllowed, languages.sort()];
     },
     getMagicItems: (allMagicItems, playerSummary) => {
-        if(playerSummary.magicItems) {
-            const magicItems = playerSummary.magicItems.map(magicItem => {
-                const foundMagicItem = allMagicItems.find(foundMagicItem => foundMagicItem.name === magicItem.name);
-                if(foundMagicItem) {
-                    return {...foundMagicItem};
+        if(playerSummary.inventory.magicItems) {
+            const playerMagicItems = playerSummary.inventory.magicItems.map(playerMagicItem => {
+                const magicItem = allMagicItems.find(magicItem => magicItem.name === playerMagicItem.name);
+                if(magicItem) {
+                    if(magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
+                        return {...magicItem, details: magicItem.description, description: playerMagicItem.spell}
+                    }
+                    return {...magicItem, quantity: playerMagicItem.quantity};
                 }
-                return{...magicItem};
-            })
-            return magicItems;
+                return{...playerMagicItem};
+            });
+            return playerMagicItems;
         }
         return null;
     },
@@ -687,7 +699,7 @@ const rules = {
         playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.immunities = raceRules.getImmunities(playerSummary);
-        playerStats.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
+        playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.resistances = raceRules.getResistances(playerSummary);
         // Dependency on class and race begin here        
