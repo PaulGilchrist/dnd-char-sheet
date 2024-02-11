@@ -12,6 +12,7 @@ function App() {
     const [characters, setCharacters] = React.useState([]);
     const [classes, setClasses] = React.useState([]);
     const [equipment, setEquipment] = React.useState([]);
+    const [magicItems, setMagicItems] = React.useState([]);
     const [races, setRaces] = React.useState([]);
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
@@ -35,6 +36,13 @@ function App() {
             .then(response => response.json())
             .then(data => {
                 setEquipment(data);
+            });
+    }, []);
+    React.useEffect(() => {
+        fetch('/dnd-char-sheet/data/magic-items.json')
+            .then(response => response.json())
+            .then(data => {
+                setMagicItems(data);
             });
     }, []);
     React.useEffect(() => {
@@ -120,7 +128,7 @@ function App() {
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
-            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allRaces={races} allSpells={spells} playerSummary={activeCharacter}></CharSheet>}
+            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allMagicItems={magicItems} allRaces={races} allSpells={spells} playerSummary={activeCharacter}></CharSheet>}
             {characters.length > 0 && activeCharacter == null && <CombatTracking characters={characters}></CombatTracking>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>}<br/>

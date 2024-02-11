@@ -391,6 +391,19 @@ const rules = {
         }
         return [languagesAllowed, languages.sort()];
     },
+    getMagicItems: (allMagicItems, playerSummary) => {
+        if(playerSummary.magicItems) {
+            const magicItems = playerSummary.magicItems.map(magicItem => {
+                const foundMagicItem = allMagicItems.find(foundMagicItem => foundMagicItem.name === magicItem.name);
+                if(foundMagicItem) {
+                    return {...foundMagicItem};
+                }
+                return{...magicItem};
+            })
+            return magicItems;
+        }
+        return null;
+    },
     getProficiencyChoiceCount: (playerStats, skills = true) => {
         // Dependencies: Class, Race
         let proficiencyChoiceCount = 0;
@@ -669,11 +682,12 @@ const rules = {
         }
         return spellMaxLevel;
     },
-    getPlayerStats: (allClasses, allEquipment, allRaces, allSpells, playerSummary) => {
+    getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
         const playerStats = cloneDeep(playerSummary);
         playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.immunities = raceRules.getImmunities(playerSummary);
+        playerStats.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.resistances = raceRules.getResistances(playerSummary);
         // Dependency on class and race begin here        

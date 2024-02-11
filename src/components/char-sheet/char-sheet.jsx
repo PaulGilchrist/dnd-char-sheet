@@ -14,10 +14,10 @@ import CharSummary from './char-summary/char-summary'
 import CharSummary2 from './char-summary2'
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary }) {  
+function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary }) {  
     const [playerStats, setPlayerStats] = React.useState(null);
     React.useEffect(() => {
-        const stats = rules.getPlayerStats(allClasses, allEquipment, allRaces, allSpells, playerSummary);
+        const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
         let preparedSpells = storage.get(stats.name, 'preparedSpells');
         if(preparedSpells) {
             stats.spellAbilities.spells.forEach(spell => {
@@ -33,7 +33,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             });
         }
         setPlayerStats(stats);
-    }, [allAbilityScores, allClasses, allEquipment, allRaces, allSpells, playerSummary]);
+    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary]);
 
     const handleTogglePreparedSpells = (spellName) => {
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);
@@ -41,7 +41,10 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allRaces, allSp
             if(spell.prepared === 'Prepared') {
                 spell.prepared = '';
             } else if(spell.prepared === '') {
-                spell.prepared = 'Prepared';
+                const preparedSpellCount = playerStats.spellAbilities.spells.filter(spell => spell.prepared === 'Prepared').length;
+                if(preparedSpellCount < playerStats.spellAbilities.maxPreparedSpells) {
+                    spell.prepared = 'Prepared';
+                }
             }
             // Update local storage
             const preparedSpells = [];

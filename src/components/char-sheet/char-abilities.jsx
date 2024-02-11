@@ -16,7 +16,7 @@ function CharAbilities({ allAbilityScores, playerStats }) {
 
     return (
         <div className='abilities-popup-parent'>
-            {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+            {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
             <div className='abilities'>
                 <div className='left'><b>Ability</b></div>
                 <div><b>Score</b></div>

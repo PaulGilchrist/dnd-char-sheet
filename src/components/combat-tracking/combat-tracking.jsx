@@ -18,10 +18,6 @@ function CombatTracking({ characters }) {
         let creatureList = []
         if (json) {
             creatureList = JSON.parse(json);
-            if (!creatureList[0].id) { // For people using the old JSON
-                localStorage.removeItem('combatTrackedCreatures');
-                creatureList = setupCreatures();
-            }
         } else {
             creatureList = setupCreatures();
         }
@@ -35,24 +31,24 @@ function CombatTracking({ characters }) {
             setCombatRound(1);
         }
     };
-    const handleInitiativeChange = (name, value) => {
+    const handleInitiativeChange = (id, value) => {
         const creatureList = [...creatures];
-        const index = creatureList.findIndex((creature) => creature.name === name);
+        const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].initiative = value;
         creatureList.sort((a, b) => b.initiative - a.initiative); // desc
         localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
         setCreatures(creatureList);
     };
-    const handleNameChange = (name, value) => {
+    const handleNameChange = (id, value) => {
         const creatureList = [...creatures];
-        const index = creatureList.findIndex((creature) => creature.name === name);
+        const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].name = value;
         localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
         setCreatures(creatureList);
     };
-    const handleNotesChange = (name, value) => {
+    const handleNotesChange = (id, value) => {
         const creatureList = [...creatures];
-        const index = creatureList.findIndex((creature) => creature.name === name);
+        const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].notes = value;
         localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
         setCreatures(creatureList);
@@ -105,7 +101,7 @@ function CombatTracking({ characters }) {
                     {creature.type === 'player' && <div>{creature.name}</div>}
                     {creature.type === 'npc' && <div>
                         <input
-                            onChange={(event) => handleNameChange(creature.name, event.target.value)}
+                            onChange={(event) => handleNameChange(creature.id, event.target.value)}
                             tabIndex={0}
                             type="text"
                             value={creature.name}
@@ -114,14 +110,14 @@ function CombatTracking({ characters }) {
                     </div>}
                     <input
                         min="0"
-                        onChange={(event) => handleInitiativeChange(creature.name, event.target.value)}
+                        onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
                         tabIndex={0}
                         type="number"
                         value={creature.initiative}
                     />
                     <input
                         placeholder="hit points, conditions, death saves, exhaustion, etc."
-                        onChange={(event) => handleNotesChange(creature.name, event.target.value)}
+                        onChange={(event) => handleNotesChange(creature.id, event.target.value)}
                         tabIndex={0}
                         type="text"
                         value={creature.notes}

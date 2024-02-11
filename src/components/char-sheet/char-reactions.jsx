@@ -31,7 +31,7 @@ function CharReactions({ playerStats }) {
             <div className='sectionHeader'>Reactions</div>
             {playerStats.reactions.map((reaction) => {
                 return <div key={reaction.name}>
-                    {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+                    {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
                     <b className={reaction.details ? "clickable" : ""} onClick={() => showPopup(reaction)}>{reaction.name}:</b> <span dangerouslySetInnerHTML={{ __html: reaction.description }}></span>;
                 </div>
             })}

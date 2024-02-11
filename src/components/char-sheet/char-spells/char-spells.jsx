@@ -53,7 +53,7 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
     return (
         <div>
             {(playerStats.spellAbilities && playerStats.spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
-                {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+                {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
                 <hr />
                 <div className='spell-abilities'>
                     <div className="sectionHeader"><h4>&nbsp;Spells</h4></div>

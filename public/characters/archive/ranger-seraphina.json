@@ -19,7 +19,8 @@
     },
     "inventory": {
         "backpack": ["Bedroll","Goodberry","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["2 Ice Arrows (+1d8)","10 Fire Arrows (+1d4)","Studded Leather","Longbow","Scimitar","Scimitar","+1 Ring of Protection"],
+        "equipped": ["Studded Leather","Longbow","Scimitar","Scimitar"],
+        "magicItems": ["+1 Ring of Protection","2 Ice Arrows (+1d8)","10 Fire Arrows (+1d4)"],
         "gold": 10
     },
     "languages": ["Goblin","Orc"],

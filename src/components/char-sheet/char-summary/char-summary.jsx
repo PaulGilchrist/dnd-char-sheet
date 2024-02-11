@@ -17,11 +17,26 @@ import CharClassRogue from './char-class-rogue'
 import CharClassSorcerer from './char-class-sorcerer'
 import CharClassWarlock from './char-class-warlock'
 import CharClassWizard from './char-class-wizard'
+import HiddenInput from '../../common/hidden-input'
 import Popup from '../../common/popup'
 
 function CharSummary({ playerStats }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
     const [popupHtml, setPopupHtml] = React.useState(null);
+    const [shortRestHitDice, setShortRestHitDice] = React.useState(0);
+    const [showInput, setShowInput] = React.useState(false);
+    React.useEffect(() => {
+        let shortRestHitDice = storage.get(playerStats.name, 'shortRestHitDice');
+        setShortRestHitDice(shortRestHitDice ? shortRestHitDice : playerStats.level);
+    }, [playerStats]);
+    const handleShortRestHitDiceToggle = () => {
+        setShowInput((showInput) => !showInput);
+    };
+    const handleShortRestHitDiceChange = (shortRestHitDice) => {
+        storage.set(playerStats.name, 'shortRestHitDice', shortRestHitDice);
+        setShortRestHitDice(shortRestHitDice);
+    };
+
     React.useEffect(() => {
         let value = storage.get(playerStats.name, 'hasInspiration');
         setHasInspiration(value ? value : false);
@@ -41,7 +56,7 @@ function CharSummary({ playerStats }) {
     }
     return (
         <div>
-            {popupHtml && (<Popup html={popupHtml} onClick={() => setPopupHtml(null)}></Popup>)}
+            {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
             <div className='name'>{playerStats.name}</div>
             <div className='summary'>
                 {playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name}
@@ -61,6 +76,9 @@ function CharSummary({ playerStats }) {
                     <b>Proficiency: </b>+{playerStats.proficiency}<br/>
                     <b>Initiative: </b>+{playerStats.initiative}<br/>
                     <b>Inspiration: </b><input tabIndex={0} type="checkbox" checked={hasInspiration} onChange={handleToggleInspiraction}/><br/>
+                    <div className="clickable" onClick={handleShortRestHitDiceToggle} onKeyDown={handleShortRestHitDiceToggle} tabIndex={0}>
+                        <b>Short Rest Hit Dice:</b> {playerStats.level}/<HiddenInput handleInputToggle={handleShortRestHitDiceToggle} handleValueChange={(value) => handleShortRestHitDiceChange(value)} showInput={showInput} value={shortRestHitDice}></HiddenInput> <span className="text-muted">(max/cur)</span>
+                    </div>
                 </div>
                 <div>
                     {playerStats.class.name == 'Barbarian' && <CharClassBarbarian playerStats={playerStats}></CharClassBarbarian>}
