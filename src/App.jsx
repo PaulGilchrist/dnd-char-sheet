@@ -60,7 +60,7 @@ function App() {
                 '/dnd-char-sheet/characters/campaign/fighter-devin.json',
                 '/dnd-char-sheet/characters/campaign/monk-zareth.json',
                 '/dnd-char-sheet/characters/campaign/paladin-valerius.json',
-                '/dnd-char-sheet/characters/campaign/ranger-seraphina.json'
+                '/dnd-char-sheet/characters/campaign/rogue-seraphina.json'
             ];
             const promises = urls.map(url => fetch(url).then(response => response.json()));
             Promise.all(promises)
