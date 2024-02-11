@@ -17,7 +17,7 @@
     },
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Scroll or Charm Person"],
+        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Ring of Command","Scroll or Charm Person"],
         "gold": 10
     },
     "languages": ["Elvish"],

@@ -16,8 +16,8 @@
         }
     },
     "inventory": {
-        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Cloak of Elvenkind","Leather","Longbow","Scimitar","Dagger"],
+        "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Scimitar","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
+        "equipped": ["Cloak of Elvenkind","10 Fire Arrows (+1d4)","Leather","Longbow","Quarterstaff","Dagger"],
         "gold": 30
     },
     "languages": ["Sylvan"],
