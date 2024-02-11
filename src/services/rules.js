@@ -223,7 +223,7 @@ const rules = {
                 toHitBonus += magicBonus;
                 hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
             } else {
-                damage += `+${dexterity.bonus}`;
+                damage += `+${bonus}`;
                 damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus})`;
             }
             if (playerStats.class.fightingStyles && playerStats.class.fightingStyles.includes('Dueling') && meleeWeaponNames.length == 1) { // No dual wielding
