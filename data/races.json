@@ -761,9 +761,9 @@
                 ]
             },
             {
-                "index": "scout-halfling",
-                "name": "Scout Halfling",
-                "desc": "As a stout halfting, you're hardier than average and have some resistance to poison.",
+                "index": "stout-halfling",
+                "name": "Stout Halfling",
+                "desc": "As a stout halfling, you're hardier than average and have some resistance to poison.",
                 "race": {},
                 "ability_bonuses": [
                     {
