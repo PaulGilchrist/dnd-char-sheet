@@ -77,13 +77,16 @@ const classRules = {
         const actions = [
             "Action Surge",
             "Avenging Angel",
+            "Channel Divinity: Abjure Enemy",
             "Channel Divinity: Charm Animals and Plants",
             "Channel Divinity: Cloak of Shadows",
             "Channel Divinity: Invoke Duplicity",
             "Channel Divinity: Knowledge of the Ages",
+            "Channel Divinity: Nature's Wrath",
             "Channel Divinity: Preserve Life",
             "Channel Divinity: Radiance of the Dawn",
             "Channel Divinity: Read Thoughts",
+            "Channel Divinity: Turn the Faithless",
             "Channel Divinity: Turn Undead",
             "Cleansing Touch",
             "Cloak of Shadows",
@@ -105,6 +108,7 @@ const classRules = {
             "Wholeness of Body"
         ]
         const bonusActions = [
+            "Channel Divinity: Vow of Enmity",
             "Combat Wild Shape",
             "Cunning Action",
             "Exceptional Training",
