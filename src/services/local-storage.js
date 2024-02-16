@@ -12,13 +12,24 @@ const storage = {
     },
     set: (name, propertyName, value) => {
         // console.log(`${name} ${propertyName} ${value}`);
-        const json = localStorage.getItem(name);
+        let json = localStorage.getItem(name);
         let objValue = {};
         if (json) {
             objValue = JSON.parse(json);
         }
         objValue[propertyName] = value;
-        localStorage.setItem(name, JSON.stringify(objValue));
+        json = JSON.stringify(objValue);
+        localStorage.setItem(name, json);
+        const apiUrl = sessionStorage.getItem('apiUrl');
+        if(apiUrl) {
+            fetch(`${apiUrl}/${name}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: json,
+            }).catch((error) => {
+                console.error('Error posting data to API:', error);
+            });
+        }
     }
 }
 

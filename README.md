@@ -19,6 +19,22 @@ Load entire party at once, print or track changes, combat and initiative.
 * Spell Slots
 * Spells Prepared
 
+## Sharing Tracked Changes
+
+If during game play, you want to share all tracked changes made by any player or the game master, you can running the following command:
+```cmd
+node server.js
+```
+This requires nodejs installed, and server.js copied from this project repository.  This will start an API that will track and persist changes for all characters.  Then just send the link to the players with the querystring apiUrl that points to the local IP address of your PC and the port 3000.  Example:
+```url
+https://paulgilchrist.github.io/dnd-char-sheet?appUrl=http://192.168.1.201:3000
+```
+The dnd-char-sheet application will then automatically read and write all changes to the API and they will be cached in memory to be quickly shared by all players as well as persisted to disk between game sessions.
+
+To determine your IP address on a Windows PC, go to a CMD prompt and type `ipconfig`.
+
+To determine your IP address on a Mac, go to `System Settings -> Network Wi-Fi -> Details`.
+
 ## Character JSON File Syntax
 
 The easiest way to make a new character is to download an existing character, modify it following the below syntax, then upload it back into the application.  You can upload multiple character sheets using shift or ctrl keys for bulk selection.

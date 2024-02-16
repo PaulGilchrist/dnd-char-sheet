@@ -1,4 +1,5 @@
 import React from 'react'
+import { useLocation } from 'react-router-dom';
 import { saveAs } from 'file-saver';
 import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
@@ -17,6 +18,14 @@ function App() {
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const inputRef = React.useRef(null);
+    React.useEffect(() => {
+        const searchParams = new URLSearchParams(document.location.search);
+        const apiUrl = searchParams.get('apiUrl'); // Pass in URL if wanting to use API vs just localStorage for tracking character changes
+        if(apiUrl) {
+            sessionStorage.setItem('apiUrl', apiUrl);
+            console.log(`Using API - ${apiUrl}`)
+        }
+    }, []);
     React.useEffect(() => {
         fetch('/dnd-char-sheet/data/ability-scores.json')
             .then(response => response.json())
