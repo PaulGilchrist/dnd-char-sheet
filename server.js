@@ -8,11 +8,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const persistDataDebounceMilliseconds = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-app.use(cors({
-    methods: ['GET', 'POST'],
-    origin: ['http://localhost:5173', 'https://paulgilchrist.github.io/']
-}));
-// app.use(cors());
+// app.use(cors({
+//     methods: ['GET', 'POST'],
+//     origin: ['http://localhost:5173/', 'https://paulgilchrist.github.io/']
+// }));
+app.use(cors());
 app.use(express.json());
 const readFile = () => {
     fs.readFile('characterChangeData.json', 'utf-8', (err, data) => {

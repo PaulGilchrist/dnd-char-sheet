@@ -22,7 +22,9 @@ const storage = {
         localStorage.setItem(name, json);
         const apiUrl = sessionStorage.getItem('apiUrl');
         if(apiUrl) {
-            fetch(`${apiUrl}/${name}/`, {
+            const fullUrl = `${apiUrl}/${name}`;
+            console.log(fullUrl)
+            fetch(fullUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: json,
