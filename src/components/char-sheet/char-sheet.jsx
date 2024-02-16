@@ -22,9 +22,12 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             try {
                 const apiUrl = sessionStorage.getItem('apiUrl');
                 if(apiUrl) {
-                    const fullUrl = `${apiUrl}/${playerSummary.name}`;
+                    const fullUrl = `${apiUrl}/${playerSummary.name}/`;
                     console.log(fullUrl)
-                    const response = await fetch(fullUrl);
+                    const response = await fetch(fullUrl, {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         localStorage.setItem(playerSummary.name, JSON.stringify(data));                        

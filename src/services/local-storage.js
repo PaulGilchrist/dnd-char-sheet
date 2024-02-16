@@ -22,12 +22,13 @@ const storage = {
         localStorage.setItem(name, json);
         const apiUrl = sessionStorage.getItem('apiUrl');
         if(apiUrl) {
-            const fullUrl = `${apiUrl}/${name}`;
+            const fullUrl = `${apiUrl}/${name}/`;
             console.log(fullUrl)
             fetch(fullUrl, {
                 method: 'POST',
+                mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
-                body: json,
+                body: json
             }).catch((error) => {
                 console.error('Error posting data to API:', error);
             });
