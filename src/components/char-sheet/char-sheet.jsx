@@ -2,6 +2,7 @@
 import React from 'react'
 import { cloneDeep } from 'lodash';
 import storage from '../../services/local-storage'
+import utils from '../../services/utils'
 import rules from '../../services/rules'
 import CharAbilities from './char-abilities'
 import CharActions from './char-actions'
@@ -15,51 +16,42 @@ import CharSummary2 from './char-summary2'
 import './char-sheet.css'
 
 function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary }) {
-    const [loading, setLoading] = React.useState(true);
     const [playerStats, setPlayerStats] = React.useState(null);
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                const apiUrl = sessionStorage.getItem('apiUrl');
-                if(apiUrl) {
-                    const fullUrl = `${apiUrl}/${playerSummary.name}/`;
-                    console.log(fullUrl)
-                    const response = await fetch(fullUrl, {
-                        method: 'GET',
-                        mode: 'cors'
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        localStorage.setItem(playerSummary.name, JSON.stringify(data));                        
-                    }
+                const fullUrl = `http://${window.location.hostname}:3000/${utils.getFirstName(playerSummary.name)}/`;
+                // console.log(fullUrl)
+                const response = await fetch(fullUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem(playerSummary.name, JSON.stringify(data));
                 }
+                const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
+                let preparedSpells = storage.get(stats.name, 'preparedSpells');
+                if (preparedSpells) {
+                    stats.spellAbilities.spells.forEach(spell => {
+                        if (preparedSpells.includes(spell.name)) {
+                            if (spell.prepared === '') {
+                                spell.prepared = 'Prepared';
+                            }
+                        } else {
+                            if (spell.prepared === 'Prepared') {
+                                spell.prepared = '';
+                            }
+                        }
+                    });
+                }
+                setPlayerStats(stats);
             } catch (err) {
                 // console.log(err.message);
             }
-            setLoading(false);
         };
         fetchData();
     }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary]);
-    React.useEffect(() => {
-        if(!loading) {
-            const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
-            let preparedSpells = storage.get(stats.name, 'preparedSpells');
-            if (preparedSpells) {
-                stats.spellAbilities.spells.forEach(spell => {
-                    if (preparedSpells.includes(spell.name)) {
-                        if (spell.prepared === '') {
-                            spell.prepared = 'Prepared';
-                        }
-                    } else {
-                        if (spell.prepared === 'Prepared') {
-                            spell.prepared = '';
-                        }
-                    }
-                });
-            }
-            setPlayerStats(stats);
-        }
-    }, [loading]);
 
     const handleTogglePreparedSpells = (spellName) => {
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);

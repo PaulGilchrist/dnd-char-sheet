@@ -20,20 +20,26 @@ Load entire party at once, print or track changes, combat and initiative.
 * Spells Prepared
 
 ## Sharing Tracked Changes
+If during game play, you want to share all tracked changes made by any player or the game master, first ensure you have [Node.js](https://nodejs.org/en/download) and [GIT](https://git-scm.com/downloads) installed.  Next, clone this project using the following command:
 
-If during game play, you want to share all tracked changes made by any player or the game master, you can running the following command:
 ```cmd
-node server.js
+git clone https://github.com/PaulGilchrist/dnd-char-sheet.git
 ```
-This requires nodejs installed, and server.js copied from this project repository.  This will start an API that will track and persist changes for all characters.  Then just send the link to the players with the querystring apiUrl that points to the local IP address of your PC and the port 3000.  Example:
+
+Change directory into the newly created project folder, install the needed packages, and start the project
+
+```cmd
+cd dnd-char-sheet
+npm install
+npm run dev
+```
+
+This command will show the network URL the application and API are hosted on.  The API will be started on the same ip but a different port (3000).  Finally, send the following URL to your players, replacing it's IP address with the one reported from the run command.
 ```url
-https://paulgilchrist.github.io/dnd-char-sheet?apiUrl=http://192.168.0.201:3000
+http://192.168.0.201:5173/dnd-char-sheet?apiUrl=http://192.168.0.201:3000
 ```
-The dnd-char-sheet application will then automatically read and write all changes to the API and they will be cached in memory to be quickly shared by all players as well as persisted to disk between game sessions.
 
-To determine your IP address on a Windows PC, go to a CMD prompt and type `ipconfig`.
-
-To determine your IP address on a Mac, go to `System Settings -> Network Wi-Fi -> Details`.
+The dnd-char-sheet application will automatically read and write all changes to the API caching them in memory to be quickly shared by all players as well as persisted to disk between game sessions.
 
 ## Character JSON File Syntax
 
@@ -140,3 +146,7 @@ The spelling of anything added such as a language, spell, equipment name, etc. m
 * if an action, bonusAction, reaction, or specialAction exists, it must have a name and descriptions, but need not have details
   * These arrays are shown above with only one object, but can contain multiple separated by commas
 
+### Certificate Generation
+```cmd
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -sha256 -days 3650 -nodes -subj "/C=US/ST=Michigan/L=Detroit/O=None/CN=Paul Gilchrist/emailAddress=paul.gilchrist@outlook.com"
+```

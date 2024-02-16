@@ -1,19 +1,19 @@
 // API for saving character changes like Gold, Hit Points, Initiative Order, Inspiration, Classes, Barbarian Rage Points, Bard Inpiration Uses, Cleric Channel Divinity Charges, Fighter Action Surges, Fighter Indomitable Uses, Monk Ki Points, Sorcerer Sorcery Points, Wizard Arcane Recovery Levels, Spell Slots, Spells Prepared
 // Changes are cached in memory, and batch persisted to disk (backed up) at a configurable interval
-import cors from 'cors'
 import express from 'express';
-import fs from 'fs'
+import fs from 'fs';
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 const persistDataDebounceMilliseconds = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-app.use(cors({
-    methods: ['GET', 'OPTIONS', 'POST'],
-    origin: ['http://localhost:5173/', 'https://paulgilchrist.github.io/']
-}));
-// app.use(cors());
+const app = express();
 app.use(express.json());
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, POST');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
 const readFile = () => {
     fs.readFile('characterChangeData.json', 'utf-8', (err, data) => {
         if (err) {
@@ -47,7 +47,7 @@ app.post('/:key', (req, res) => {
     const data = req.body;
     characterChangeData[key] = data;
     res.status(200).json({ message: 'Data stored successfully' });
-    if(!saveTimer) {
+    if (!saveTimer) {
         saveTimer = setTimeout(() => {
             saveFile();
             clearTimeout(saveTimer);
