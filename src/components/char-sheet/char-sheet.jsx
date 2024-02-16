@@ -22,7 +22,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             try {
                 const apiUrl = sessionStorage.getItem('apiUrl');
                 if(apiUrl) {
-                    const response = await fetch(`${apiUrl}/${playerSummary.name}`);
+                    const response = await fetch(`${apiUrl}/${playerSummary.name}/`);
                     if (response.ok) {
                         const data = await response.json();
                         localStorage.setItem(playerSummary.name, JSON.stringify(data));                        
