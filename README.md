@@ -27,7 +27,7 @@ node server.js
 ```
 This requires nodejs installed, and server.js copied from this project repository.  This will start an API that will track and persist changes for all characters.  Then just send the link to the players with the querystring apiUrl that points to the local IP address of your PC and the port 3000.  Example:
 ```url
-https://paulgilchrist.github.io/dnd-char-sheet?appUrl=http://192.168.1.201:3000
+https://paulgilchrist.github.io/dnd-char-sheet?apiUrl=http://192.168.0.201:3000
 ```
 The dnd-char-sheet application will then automatically read and write all changes to the API and they will be cached in memory to be quickly shared by all players as well as persisted to disk between game sessions.
 
