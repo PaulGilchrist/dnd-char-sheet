@@ -1,1 +1,21 @@
-{"mykey":{"name":"Test"},"Valena":{"name":"Test","preparedSpells":["Detect Magic","Guiding Bolt","Healing Word","Inflict Wounds","Aid","Prayer of Healing"],"gold":"25"},"Lirael":{"preparedSpells":["Animal Friendship","Beast Bond","Charm Person"]}}
+{
+    "Valena": {
+        "name": "Test",
+        "preparedSpells": [
+            "Detect Magic",
+            "Guiding Bolt",
+            "Healing Word",
+            "Inflict Wounds",
+            "Aid",
+            "Prayer of Healing"
+        ],
+        "gold": "25"
+    },
+    "Lirael": {
+        "preparedSpells": [
+            "Animal Friendship",
+            "Beast Bond",
+            "Charm Person"
+        ]
+    }
+}

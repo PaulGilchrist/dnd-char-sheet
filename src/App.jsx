@@ -1,4 +1,5 @@
 import React from 'react'
+import { cloneDeep } from 'lodash';
 import { saveAs } from 'file-saver';
 import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
@@ -68,6 +69,7 @@ function App() {
                 '/dnd-char-sheet/characters/campaign/fighter-devin.json',
                 '/dnd-char-sheet/characters/campaign/monk-zareth.json',
                 '/dnd-char-sheet/characters/campaign/paladin-valerius.json',
+                '/dnd-char-sheet/characters/campaign/ranger-seraphina.json',
                 '/dnd-char-sheet/characters/campaign/rogue-seraphina.json'
             ];
             const promises = urls.map(url => fetch(url).then(response => response.json()));
@@ -90,7 +92,7 @@ function App() {
         setActiveCharacter(characters[0]);
     }, [characters]);
     const handleCharacterClick = (character) => {
-        setActiveCharacter(character);
+        setActiveCharacter(cloneDeep(character));
     }
     const handleInitiativeClick = () => {
         setActiveCharacter(null);
