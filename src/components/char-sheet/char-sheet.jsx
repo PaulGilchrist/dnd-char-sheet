@@ -21,24 +21,17 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
         const fetchData = async () => {
             const fullUrl = `http://${window.location.hostname}:3000/${utils.getFirstName(playerSummary.name)}/`;
             // console.log(fullUrl)
-            let response = null;
             try {
-                response = await fetch(fullUrl, {
+                const response = await fetch(fullUrl, {
                     method: 'GET',
                     mode: 'cors'
-                }).catch(e => {
-                    console.error('Error getting data from API:', e);
                 });
-            } catch(e) {
-                // console.log(e.message); 
-            }
-            if(response && response.ok) {
-                try {
+                if(response.ok) {
                     const data = await response.json();
                     localStorage.setItem(playerSummary.name, JSON.stringify(data));
-                } catch(e) {
-                    // console.log(e.message); 
                 }
+            } catch(e) {
+                // console.log(e.message); 
             }
             const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
             let preparedSpells = storage.get(stats.name, 'preparedSpells');
