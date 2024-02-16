@@ -26,6 +26,8 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
                 response = await fetch(fullUrl, {
                     method: 'GET',
                     mode: 'cors'
+                }).catch(e => {
+                    console.error('Error getting data from API:', e);
                 });
             } catch(e) {
                 // console.log(e.message); 

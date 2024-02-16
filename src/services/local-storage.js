@@ -29,8 +29,8 @@ const storage = {
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: json
-        }).catch((error) => {
-            // console.error('Error posting data to API:', error);
+        }).catch((e) => {
+            // console.error('Error posting data to API:', e);
         });
     }
 }
