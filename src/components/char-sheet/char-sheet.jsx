@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import { cloneDeep } from 'lodash';
-import storage from '../../services/local-storage'
+import { cloneDeep, isEqual } from 'lodash';
+import storage from '../../services/storage'
 import utils from '../../services/utils'
 import rules from '../../services/rules'
 import CharAbilities from './char-abilities'
@@ -13,13 +13,15 @@ import CharSpecialActions from './char-special-actions'
 import CharSpells from './char-spells/char-spells'
 import CharSummary from './char-summary/char-summary'
 import CharSummary2 from './char-summary2'
+import Subscriber from '../common/subscriber';
 import './char-sheet.css'
 
 function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary }) {
     const [playerStats, setPlayerStats] = React.useState(null);
+    const [forceRefresh, setForceRefresh] = React.useState(0);
     React.useEffect(() => {
         const fetchData = async () => {
-            const fullUrl = `http://${window.location.hostname}:3000/${utils.getFirstName(playerSummary.name)}/`;
+            const fullUrl = `http://${window.location.hostname}:3000/api/${utils.getFirstName(playerSummary.name)}/`;
             // console.log(fullUrl)
             try {
                 const response = await fetch(fullUrl, {
@@ -34,7 +36,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
                 // console.log(e.message); 
             }
             const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
-            let preparedSpells = storage.get(stats.name, 'preparedSpells');
+            let preparedSpells = storage.getProperty(stats.name, 'preparedSpells');
             if (preparedSpells) {
                 stats.spellAbilities.spells.forEach(spell => {
                     if (preparedSpells.includes(spell.name)) {
@@ -51,8 +53,16 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             setPlayerStats(stats);
         };
         fetchData();
-    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary]);
+    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary, forceRefresh]);
 
+    const handleEvent = (event) => {
+        if(!isEqual(storage.get(event.key), event.data)) { // We may have made this change ourtselves
+            localStorage.setItem(event.key, JSON.stringify(event.data));
+            if(event.key === utils.getFirstName(playerStats.name)) {
+                setForceRefresh(utils.guid()); // Force Character Refresh
+            }
+        }
+    }
     const handleTogglePreparedSpells = (spellName) => {
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);
         if (spell) {
@@ -71,7 +81,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
                     preparedSpells.push(spell.name);
                 }
             });
-            storage.set(playerStats.name, 'preparedSpells', preparedSpells);
+            storage.setProperty(playerStats.name, 'preparedSpells', preparedSpells);
             setPlayerStats(cloneDeep(playerStats));
         }
     }
@@ -87,6 +97,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
             <CharAudit playerStats={playerStats}></CharAudit>
+            <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>}
     </React.Fragment>)
 }

@@ -1,20 +1,20 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassBarbarian({ playerStats }) {
     const [ragePoints, setRagePoints] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let ragePoints = storage.get(playerStats.name, 'ragePoints');
+        let ragePoints = storage.getProperty(playerStats.name, 'ragePoints');
         setRagePoints(ragePoints ? ragePoints : classSpecific.rage_count);
     }, [playerStats]);
     const handleRagePointsToggle = () => {
         setShowInput((showInput) => !showInput);
     };
     const handleRagePointsChange = (ragePoints) => {
-        storage.set(playerStats.name, 'ragePoints', ragePoints);
+        storage.setProperty(playerStats.name, 'ragePoints', ragePoints);
         setRagePoints(ragePoints);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

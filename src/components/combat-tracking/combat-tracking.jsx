@@ -1,6 +1,10 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import Utils from '../../services/utils'
+import { isEqual } from 'lodash';
+
+import utils from '../../services/utils'
+import storage from '../../services/storage'
+import Subscriber from '../common/subscriber';
 
 import './combat-tracking.css'
 
@@ -8,64 +12,70 @@ function CombatTracking({ characters }) {
     const [combatRound, setCombatRound] = React.useState(1);
     const [creatures, setCreatures] = React.useState([]);
     const [numOfNpc, setNumOfNpc] = React.useState(5);
+    const [forceRefresh, setForceRefresh] = React.useState(0);
 
     React.useEffect(() => {
-        const round = localStorage.getItem('combatRound');
-        if(round) {
+        let round = storage.get('combatRound');
+        if (round) {
             setCombatRound(round);
         }
-        const json = localStorage.getItem('combatTrackedCreatures');
-        let creatureList = []
-        if (json) {
-            creatureList = JSON.parse(json);
-        } else {
+        let creatureList = storage.get('combatTrackedCreatures');
+        if (!creatureList) {
             creatureList = setupCreatures();
         }
         setCreatures(creatureList);
-    }, []);
+    }, [characters, forceRefresh]);
     const handleClear = () => {
         if (window.confirm('Are you sure you want to clear all combat status?')) {
             const resetCreatures = setupCreatures();
-            localStorage.setItem('combatTrackedCreatures', JSON.stringify(resetCreatures));
+            storage.set('combatTrackedCreatures', resetCreatures);
             setCreatures([...resetCreatures]);
             setCombatRound(1);
         }
     };
+    const handleEvent = (event) => {
+        if (!isEqual(storage.get(event.key), event.data)) { // We may have made this change ourselves
+            localStorage.setItem(event.key, JSON.stringify(event.data));
+            if (event.key === 'combatTrackedCreatures' || event.key === 'combatRound') {
+                setForceRefresh(utils.guid()); // Force Refresh after debounce
+            }
+        }
+    }
     const handleInitiativeChange = (id, value) => {
         const creatureList = [...creatures];
         const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].initiative = value;
         creatureList.sort((a, b) => b.initiative - a.initiative); // desc
-        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        storage.set('combatTrackedCreatures', creatureList);
         setCreatures(creatureList);
     };
     const handleNameChange = (id, value) => {
         const creatureList = [...creatures];
         const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].name = value;
-        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        storage.set('combatTrackedCreatures', creatureList);
         setCreatures(creatureList);
     };
     const handleNotesChange = (id, value) => {
         const creatureList = [...creatures];
         const index = creatureList.findIndex((creature) => creature.id === id);
         creatureList[index].notes = value;
-        localStorage.setItem('combatTrackedCreatures', JSON.stringify(creatureList));
+        storage.set('combatTrackedCreatures', creatureList);
         setCreatures(creatureList);
     };
     const handleAddNpc = () => {
         const creatureList = [...creatures];
-        creatureList.push({ id: Utils.guid(), name: `NPC ${numOfNpc + 1}`, type: 'npc', initiative: '', notes: '' });
-        setNumOfNpc(numOfNpc+1);
+        creatureList.push({ id: utils.guid(), name: `NPC ${numOfNpc + 1}`, type: 'npc', initiative: '', notes: '' });
+        setNumOfNpc(numOfNpc + 1);
         setCreatures(creatureList);
     };
     const handleRemoveNpc = () => {
         const creatureList = [...creatures];
-        for (let i = creatureList.length-1; i >= 0; i--) {
+        for (let i = creatureList.length - 1; i >= 0; i--) {
             if (creatureList[i].type === 'npc') {
                 if (creatureList[i].initiative == '' || window.confirm(`${creatureList[i].name} has initiative assigned.  Remove anyway?`)) {
                     creatureList.splice(i, 1);
-                    setNumOfNpc(numOfNpc-1);
+                    setNumOfNpc(numOfNpc - 1);
                     setCreatures(creatureList);
                 }
                 break;
@@ -74,19 +84,19 @@ function CombatTracking({ characters }) {
     };
     const handleAddCombatRound = () => {
         const round = combatRound + 1;
-        localStorage.setItem('combatRound', round);
+        storage.set('combatRound', round);
         setCombatRound(round);
     };
     const handleRemoveCombatRound = () => {
         const round = combatRound - 1;
-        localStorage.setItem('combatRound', round);
+        storage.set('combatRound', round);
         setCombatRound(round)
     };
     const setupCreatures = () => {
-        const creatureList = characters.map((character) => { return { id: Utils.guid(), name: Utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
+        const creatureList = characters.map((character) => { return { id: utils.guid(), name: utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
         creatureList.sort((a, b) => a.name.localeCompare(b.name)); // asc
         for (let i = 0; i < numOfNpc; i++) {
-            creatureList.push({ id: Utils.guid(), name: `NPC ${i + 1}`, type: 'npc', initiative: '', notes: '' });
+            creatureList.push({ id: utils.guid(), name: `NPC ${i + 1}`, type: 'npc', initiative: '', notes: '' });
         }
         return creatureList;
     };
@@ -130,6 +140,7 @@ function CombatTracking({ characters }) {
                 <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
                 <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
             </div>
+            <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>
     )
 }

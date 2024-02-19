@@ -2,6 +2,7 @@
 // Changes are cached in memory, and batch persisted to disk (backed up) at a configurable interval
 import express from 'express';
 import fs from 'fs';
+import guid from 'guid'
 
 const PORT = process.env.PORT || 3000;
 const persistDataDebounceMilliseconds = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -33,7 +34,7 @@ const saveFile = () => {
         console.log('Character change data saved');
     });
 }
-app.get('/:key', (req, res) => {
+app.get('/api/:key', (req, res) => {
     const { key } = req.params;
     const storedData = characterChangeData[key];
     if (storedData) {
@@ -42,7 +43,7 @@ app.get('/:key', (req, res) => {
         res.status(404).json({ error: 'Data not found' });
     }
 });
-app.post('/:key', (req, res) => {
+app.post('/api/:key', (req, res) => {
     const { key } = req.params;
     const data = req.body;
     characterChangeData[key] = data;
@@ -54,11 +55,38 @@ app.post('/:key', (req, res) => {
             saveTimer = null;
         }, persistDataDebounceMilliseconds);
     }
+    publish(key, data);
 });
+app.get('/subscribe', (req, res) => {
+    const headers = {
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+    };
+    res.writeHead(200, headers);
+    const clientId = guid.create().value;
+    const newClient = {
+        id: clientId,
+        res
+    };
+    subscribers.push(newClient);
+    req.on('close', () => {
+        console.log(`${clientId} Connection closed`);
+        subscribers = subscribers.filter(client => client.id !== clientId);
+    });
+});
+const publish = (key, data) => {
+    const event = {
+        key,
+        data
+    }
+    subscribers.forEach(subscriber => subscriber.res.write(`data: ${JSON.stringify(event)}\n\n`));
+}
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
 let characterChangeData = {}
+let subscribers = [];
 readFile(); // Read once at startup
 let saveTimer = null;

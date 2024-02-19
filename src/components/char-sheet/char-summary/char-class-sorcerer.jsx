@@ -1,20 +1,20 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassSorcerer({ playerStats }) {
     const [sorceryPoints, setSorceryPoints] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let sorceryPoints = storage.get(playerStats.name, 'sorceryPoints');
+        let sorceryPoints = storage.getProperty(playerStats.name, 'sorceryPoints');
         setSorceryPoints(sorceryPoints ? sorceryPoints : classSpecific.sorcery_points);
     }, [playerStats]);
     const handleSorceryPointsToggle = () => {
         setShowInput((showInput) => !showInput);
     };
     const handleSorceryPointsChange = (sorceryPoints) => {
-        storage.set(playerStats.name, 'sorceryPoints', sorceryPoints);
+        storage.setProperty(playerStats.name, 'sorceryPoints', sorceryPoints);
         setSorceryPoints(sorceryPoints);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

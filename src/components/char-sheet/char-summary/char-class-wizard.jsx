@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import stoarcaneRecovery from '../../../services/local-storage'
+import stoarcaneRecovery from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassWizard({ playerStats }) {

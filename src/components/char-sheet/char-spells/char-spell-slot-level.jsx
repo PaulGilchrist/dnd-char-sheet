@@ -2,24 +2,24 @@
 import React from 'react'
 
 import './char-spell-slot-level.css'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 
 function CharSpellSlotLevel({ level, totalSlots, playerStats }) {
     const [availableSlots, setAvailableSlots] = React.useState(totalSlots);
 
     React.useEffect(() => {
-        let value = storage.get(playerStats.name, `spell_slots_level_${level}`);
+        let value = storage.getProperty(playerStats.name, `spell_slots_level_${level}`);
         setAvailableSlots(value ? value : totalSlots);
     }, [level, totalSlots, playerStats]);
 
     const handleClick = (event) => {
         if (event.key !== "Tab") {
             if(availableSlots > 0) {
-                storage.set(playerStats.name, `spell_slots_level_${level}`, availableSlots-1);
+                storage.setProperty(playerStats.name, `spell_slots_level_${level}`, availableSlots-1);
                 setAvailableSlots(availableSlots-1);
             } else {
                 // Reset
-                storage.set(playerStats.name, `spell_slots_level_${level}`, totalSlots);
+                storage.setProperty(playerStats.name, `spell_slots_level_${level}`, totalSlots);
                 setAvailableSlots(totalSlots);
             }
         }

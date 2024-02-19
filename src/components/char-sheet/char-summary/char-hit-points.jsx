@@ -1,20 +1,20 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharHitPoints({ playerStats }) {
     const [currentHitPoints, setCurrentHitPoints] = React.useState(0);
     const [showInputCurrentHitPoints, setShowInputCurrentHitPoints] = React.useState(false);
     React.useEffect(() => {
-        let value = storage.get(playerStats.name, 'currentHitPoints');
+        let value = storage.getProperty(playerStats.name, 'currentHitPoints');
         setCurrentHitPoints(value ? value : playerStats.hitPoints);
     }, [playerStats]);
     const handleInputToggleCurrentHitPoints = () => {
         setShowInputCurrentHitPoints((showInputCurrentHitPoints) => !showInputCurrentHitPoints);
     };
     const handleValueChangeCurrentHitPoints = (value) => {
-        storage.set(playerStats.name, 'currentHitPoints', value);
+        storage.setProperty(playerStats.name, 'currentHitPoints', value);
         setCurrentHitPoints(value);
     };
     return (

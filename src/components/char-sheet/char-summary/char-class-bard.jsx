@@ -1,14 +1,14 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 import classRules from '../../../services/class-rules'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassBard({ playerStats }) {
     const [bardicInspirationUses, setBardicInspirationUses] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let bardicInspirationUses = storage.get(playerStats.name, 'bardicInspirationUses');
+        let bardicInspirationUses = storage.getProperty(playerStats.name, 'bardicInspirationUses');
         setBardicInspirationUses(bardicInspirationUses ? bardicInspirationUses : charisma.bonus);
     }, [playerStats]);
     let extraAttacks = 0;
@@ -19,7 +19,7 @@ function CharClassBard({ playerStats }) {
         setShowInput((showInput) => !showInput);
     };
     const handleBardicInspirationUsesChange = (bardicInspirationUses) => {
-        storage.set(playerStats.name, 'bardicInspirationUses', bardicInspirationUses);
+        storage.setProperty(playerStats.name, 'bardicInspirationUses', bardicInspirationUses);
         setBardicInspirationUses(bardicInspirationUses);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

@@ -2,13 +2,13 @@
 import React from 'react'
 import HiddenInput from '../../common/hidden-input'
 import classRules from '../../../services/class-rules'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 
 function CharClassDruid({ playerStats }) {
     const [wildShapeUses, setWildShapeUses] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let wildShapeUses = storage.get(playerStats.name, 'wildShapeUses');
+        let wildShapeUses = storage.getProperty(playerStats.name, 'wildShapeUses');
         if(playerStats.level > 1) {
             setWildShapeUses(wildShapeUses ? wildShapeUses : 2);
         }
@@ -17,7 +17,7 @@ function CharClassDruid({ playerStats }) {
         setShowInput((showInput) => !showInput);
     };
     const handleWildShapeUsesChange = (wildShapeUses) => {
-        storage.set(playerStats.name, 'wildShapeUses', wildShapeUses);
+        storage.setProperty(playerStats.name, 'wildShapeUses', wildShapeUses);
         setWildShapeUses(wildShapeUses);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

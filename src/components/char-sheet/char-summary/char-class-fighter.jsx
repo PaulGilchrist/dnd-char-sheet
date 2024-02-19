@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassFighter({ playerStats }) {
@@ -9,23 +9,23 @@ function CharClassFighter({ playerStats }) {
     const [indomitableUses, setIndomitableUses] = React.useState(0);
     const [showIndomitableUsesInput, setShowIndomitableUsesInput] = React.useState(false);
     React.useEffect(() => {
-        let actionSurges = storage.get(playerStats.name, 'actionSurges');
+        let actionSurges = storage.getProperty(playerStats.name, 'actionSurges');
         setActionSurges(actionSurges ? actionSurges : classSpecific.action_surges);
-        let indomitableUses = storage.get(playerStats.name, 'indomitableUses');
+        let indomitableUses = storage.getProperty(playerStats.name, 'indomitableUses');
         setIndomitableUses(indomitableUses ? indomitableUses : classSpecific.indomitable_uses);
     }, [playerStats]);
     const handleActionSurgesToggle = () => {
         setShowActionSurgesInput((showInput) => !showInput);
     };
     const handleActionSurgesChange = (actionSurges) => {
-        storage.set(playerStats.name, 'actionSurges', actionSurges);
+        storage.setProperty(playerStats.name, 'actionSurges', actionSurges);
         setActionSurges(actionSurges);
     };
     const handleIndomitableUsesToggle = () => {
         setShowIndomitableUsesInput((showInput) => !showInput);
     };
     const handleIndomitableUsesChange = (indomitableUses) => {
-        storage.set(playerStats.name, 'indomitableUses', indomitableUses);
+        storage.setProperty(playerStats.name, 'indomitableUses', indomitableUses);
         setIndomitableUses(indomitableUses);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

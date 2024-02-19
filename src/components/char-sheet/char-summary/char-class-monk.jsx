@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassMonk({ playerStats }) {
@@ -8,7 +8,7 @@ function CharClassMonk({ playerStats }) {
     const [maxKiPoints, setMaxKiPoints] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let kiPoints = storage.get(playerStats.name, 'kiPoints');
+        let kiPoints = storage.getProperty(playerStats.name, 'kiPoints');
         if(playerStats.level > 1) {
             const maxKiPoints = playerStats.level;
             setMaxKiPoints(maxKiPoints);
@@ -19,7 +19,7 @@ function CharClassMonk({ playerStats }) {
         setShowInput((showInput) => !showInput);
     };
     const handleKiPointsChange = (kiPoints) => {
-        storage.set(playerStats.name, 'kiPoints', kiPoints);
+        storage.setProperty(playerStats.name, 'kiPoints', kiPoints);
         setKiPoints(kiPoints);
     };
     const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');

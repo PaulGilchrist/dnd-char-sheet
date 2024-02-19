@@ -2,7 +2,7 @@
 import React from 'react'
 import './char-summary.css'
 
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
 import CharClassBarbarian from './char-class-barbarian'
@@ -26,19 +26,19 @@ function CharSummary({ playerStats }) {
     const [shortRestHitDice, setShortRestHitDice] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let shortRestHitDice = storage.get(playerStats.name, 'shortRestHitDice');
+        let shortRestHitDice = storage.getProperty(playerStats.name, 'shortRestHitDice');
         setShortRestHitDice(shortRestHitDice ? shortRestHitDice : playerStats.level);
     }, [playerStats]);
     const handleShortRestHitDiceToggle = () => {
         setShowInput((showInput) => !showInput);
     };
     const handleShortRestHitDiceChange = (shortRestHitDice) => {
-        storage.set(playerStats.name, 'shortRestHitDice', shortRestHitDice);
+        storage.setProperty(playerStats.name, 'shortRestHitDice', shortRestHitDice);
         setShortRestHitDice(shortRestHitDice);
     };
 
     React.useEffect(() => {
-        let value = storage.get(playerStats.name, 'hasInspiration');
+        let value = storage.getProperty(playerStats.name, 'hasInspiration');
         setHasInspiration(value ? value : false);
     }, [playerStats]);
     let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
@@ -47,7 +47,7 @@ function CharSummary({ playerStats }) {
     }
     const handleToggleInspiraction = () => {
         const newValue = !hasInspiration;
-        storage.set(playerStats.name, 'hasInspiration', newValue);
+        storage.setProperty(playerStats.name, 'hasInspiration', newValue);
         setHasInspiration(newValue);
     }
     const showArmorClassFormulaPopup = () => {

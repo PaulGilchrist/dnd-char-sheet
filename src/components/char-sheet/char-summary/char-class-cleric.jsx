@@ -1,20 +1,20 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassCleric({ playerStats }) {
     const [channelDivinityCharges, setChannelDivinityCharges] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
-        let channelDivinityCharges = storage.get(playerStats.name, 'channelDivinityCharges');
+        let channelDivinityCharges = storage.getProperty(playerStats.name, 'channelDivinityCharges');
         setChannelDivinityCharges(channelDivinityCharges ? channelDivinityCharges : classSpecific.channel_divinity_charges);
     }, [playerStats]);
     const handleChannelDivinityChargesToggle = () => {
         setShowInput((showInput) => !showInput);
     };
     const handleChannelDivinityChargesChange = (channelDivinityCharges) => {
-        storage.set(playerStats.name, 'channelDivinityCharges', channelDivinityCharges);
+        storage.setProperty(playerStats.name, 'channelDivinityCharges', channelDivinityCharges);
         setChannelDivinityCharges(channelDivinityCharges);
     };
     const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;

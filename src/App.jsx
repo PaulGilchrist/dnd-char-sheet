@@ -5,6 +5,7 @@ import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
 import CombatTracking from './components/combat-tracking/combat-tracking'
 import Utils from './services/utils'
+import utils from './services/utils';
 
 
 function App() {
@@ -125,13 +126,14 @@ function App() {
     const handleUploadClick = async () => {
         inputRef.current.click();
     };
+    let combatTrackingActive = characters.length > 0 && activeCharacter == null;
     return (
         <div className="app">
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allMagicItems={magicItems} allRaces={races} allSpells={spells} playerSummary={activeCharacter}></CharSheet>}
-            {characters.length > 0 && activeCharacter == null && <CombatTracking characters={characters}></CombatTracking>}
+            {combatTrackingActive && <CombatTracking characters={characters}></CombatTracking>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>}<br/>
         </div>

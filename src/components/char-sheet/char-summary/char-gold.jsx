@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
 
-import storage from '../../../services/local-storage'
+import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharGold({ playerStats }) {
@@ -10,7 +10,7 @@ function CharGold({ playerStats }) {
     const [showInputGold, setShowInputGold] = React.useState(false);
 
     React.useEffect(() => {
-        let value = storage.get(playerStats.name, 'gold');
+        let value = storage.getProperty(playerStats.name, 'gold');
         setGold(value ? value : playerStats.inventory.gold);
     }, [playerStats]);
     
@@ -19,7 +19,7 @@ function CharGold({ playerStats }) {
     };
     
     const handleValueChangeGold = (value) => {
-        storage.set(playerStats.name, 'gold', value);
+        storage.setProperty(playerStats.name, 'gold', value);
         setGold(value);
     };
 
