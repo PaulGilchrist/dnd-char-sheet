@@ -21,7 +21,10 @@
         "magicItems": [
             {
                 "name": "Loraleth's Cat",
-                "description": "While wearing (Armor Class 11), the player has an Animal Handling advantage, however, the player also has an Intimidation and Stealth disadvantage. Once per short rest, the player can roll a d20 to Conjure Cats. If the roll is less than 10, one cat is conjured. If the roll is over 10, two cats are conjured. Cats live indefinitely. If cats are tamed, they can Scratch as an action, doing up to 1d4 slashing damage."
+                "description": "While wearing (Armor Class 11), the player has an Animal Handling advantage, however, the player also has an Intimidation and Stealth disadvantage. Once per short rest, the player can roll a d20 to Conjure Cats. If the roll is less than 10, one cat is conjured. If the roll is over 10, two cats are conjured. Cats live indefinitely. If cats are tamed, they can Scratch as an action, doing up to 1d4 slashing damage.",
+                "rarity": "uncommon",
+                "requiresAttunement": false,
+                "type": "Wonderous Item"
             }
         ],
         "gold": 8
