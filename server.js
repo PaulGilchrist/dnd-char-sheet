@@ -5,7 +5,7 @@ import fs from 'fs';
 import guid from 'guid'
 
 const PORT = process.env.PORT || 3000;
-const persistDataDebounceMilliseconds = 5 * 60 * 1000; // 5 minutes in milliseconds
+const persistDataDebounceMilliseconds = 1 * 60 * 1000; // 1 minute in milliseconds
 
 const app = express();
 app.use(express.json());
@@ -74,6 +74,7 @@ app.get('/subscribe', (req, res) => {
         console.log(`${clientId} Connection closed`);
         subscribers = subscribers.filter(client => client.id !== clientId);
     });
+    console.log(`Current subscriber count = ${subscribers.length}`)
 });
 const publish = (key, data) => {
     const event = {

@@ -24,7 +24,7 @@ const storage = {
     getProperty: (name, propertyName) => {
         const firstName = utils.getFirstName(name);
         const obj = storage.get(firstName);
-        if(obj && obj[propertyName]) {
+        if(obj && obj[propertyName] != null) {
             return obj[propertyName];
         }
         return null;
