@@ -410,6 +410,7 @@ const rules = {
                     }
                     return {...magicItem, quantity: playerMagicItem.quantity};
                 }
+                console.log(playerMagicItem);
                 return{...playerMagicItem};
             });
             return playerMagicItems;
