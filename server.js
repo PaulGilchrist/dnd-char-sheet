@@ -57,6 +57,9 @@ app.post('/api/:key', (req, res) => {
     }
     publish(key, data);
 });
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'Healthy' });
+});
 app.get('/subscribe', (req, res) => {
     const headers = {
         'Content-Type': 'text/event-stream',
@@ -83,6 +86,16 @@ const publish = (key, data) => {
     }
     subscribers.forEach(subscriber => subscriber.res.write(`data: ${JSON.stringify(event)}\n\n`));
 }
+const keepAlive = () => {
+    fetch(`http://localhost:${PORT}/health`)
+        .then((response) => {
+            console.log(`Response: ${response.status}`);
+        })
+        .catch((error) => {
+            console.error(`Error: ${error.message}`);
+        });
+}
+setInterval(keepAlive, 60000); // 60 seconds
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

@@ -24,14 +24,15 @@
         "url": "https://github.com/PaulGilchrist/dnd-char-sheet.git"
     },
     "scripts": {
+        "build-and-serve": "npm run build && npm run preview",
         "deploy": "gh-pages -d dist",
-        "dev": "concurrently \"npm run dev:react\" \"npm run dev:node\"",
-        "dev:react": "vite --host",
-        "dev:node": "node server.js",
+        "dev": "vite --host",
+        "api": "node server.js",
         "build": "vite build",
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
         "predeploy": "npm run build",
-        "preview": "vite preview"
+        "preview": "vite preview --host",
+        "start": "concurrently \"caffeinate -d -i\" \"npm run build-and-serve\" \"npm run api\""
     },
     "type": "module",
     "version": "0.0.0",
