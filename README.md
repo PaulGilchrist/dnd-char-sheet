@@ -31,7 +31,7 @@ Change directory into the newly created project folder, install the needed packa
 ```cmd
 cd dnd-char-sheet
 npm install
-npm run dev
+npm start
 ```
 
 This command will show the network URL the application and API are hosted on.  The API will be started on the same ip but a different port (3000).  Finally, send the following URL to your players, replacing it's IP address with the one reported from the run command.
