@@ -17,7 +17,7 @@
     },
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Scimitar","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Leather","Longbow","Quarterstaff","Dagger"],
+        "equipped": ["Leather","Longbow","Quarterstaff","Dagger","Healing Potion"],
         "magicItems": [
             {
                 "name": "Cloak of Elvenkind"

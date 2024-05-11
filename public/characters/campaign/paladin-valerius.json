@@ -17,7 +17,7 @@
     },
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Chain Mail","Shield","Crossbow, heavy","+1 Longsword","Dagger","Holy Symbol"],
+        "equipped": ["Plate Mail","Shield","Crossbow, heavy","+1 Greataxe","Dagger","Holy Symbol"],
         "gold": 25
     },
     "languages": ["Elvish"],

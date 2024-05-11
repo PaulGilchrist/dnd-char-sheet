@@ -16,7 +16,7 @@
     },
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
+        "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","+1 Longsword","Shield"],
         "gold": 10
     },
     "languages": ["Celestial","Dwarvish"],

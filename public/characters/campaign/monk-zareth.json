@@ -16,7 +16,7 @@
     },
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Shortbow","Quarterstaff","Dart"],
+        "equipped": ["Shortbow","Quarterstaff","Dart","Healing Potion"],
         "magicItems": [
             {
                 "name": "Ring of Protection"
