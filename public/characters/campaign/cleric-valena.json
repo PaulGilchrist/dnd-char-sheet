@@ -4,7 +4,7 @@
         {"name": "Dexterity","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
-        {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
+        {"name": "Wisdom","abilityImprovements": 2,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
     ],
     "alignment": "Neutral Good",
@@ -20,7 +20,7 @@
         "gold": 10
     },
     "languages": ["Celestial","Dwarvish"],
-    "level": 3,
+    "level": 4,
     "name": "Valena",
     "race": {
         "name": "Elf",
@@ -29,5 +29,5 @@
         }
     },
     "skillProficiencies": ["Animal Handling","Insight","Medicine","Survival"],
-    "spells": ["Aid","Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Prayer of Healing","Sacred Flame","Spare the Dying"]
+    "spells": ["Aid","Detect Magic","Guidance","Guiding Bolt","Healing Word","Hold Person","Inflict Wounds","Prayer of Healing","Sacred Flame","Spare the Dying"]
 }
