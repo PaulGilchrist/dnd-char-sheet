@@ -18,7 +18,7 @@
     "feats":["Resilient"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Shirt","Longbow","Scimitar","Dagger","Healing Potion"],
+        "equipped": ["Arrows","Chain Shirt","Longbow","Longsword","Healing Potion","Shield"],
         "magicItems": [
             {
                 "name": "Loraleth's Cat",
