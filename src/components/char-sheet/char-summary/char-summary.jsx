@@ -81,6 +81,7 @@ function CharSummary({ playerStats }) {
                     </div>
                 </div>
                 <div>
+                    {playerStats.feats && <div><b>Feats: </b>{playerStats.feats.join(', ')}</div>}
                     {playerStats.class.name == 'Barbarian' && <CharClassBarbarian playerStats={playerStats}></CharClassBarbarian>}
                     {playerStats.class.name == 'Bard' && <CharClassBard playerStats={playerStats}></CharClassBard>}
                     {playerStats.class.name == 'Cleric' && <CharClassCleric playerStats={playerStats}></CharClassCleric>}
