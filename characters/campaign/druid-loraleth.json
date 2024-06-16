@@ -2,7 +2,7 @@
     "abilities": [
         {"name": "Strength","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
         {"name": "Dexterity","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
-        {"name": "Constitution","abilityImprovements": 0,"baseScore": 13,"miscBonus": 0},
+        {"name": "Constitution","abilityImprovements": 1,"baseScore": 13,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Charisma","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0}
@@ -15,9 +15,10 @@
             "type": "Coast"
         }
     },
+    "feats":["Resilient"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Shirt","Longbow","Scimitar","Dagger"],
+        "equipped": ["Arrows","Chain Shirt","Longbow","Longsword","Healing Potion","Shield"],
         "magicItems": [
             {
                 "name": "Loraleth's Cat",
@@ -30,7 +31,7 @@
         "gold": 8
     },
     "languages": ["Celestial","Primordial","Undercommon"],
-    "level": 3,
+    "level": 4,
     "name": "Loraleth Fundraea",
     "race": {
         "name": "Elf",
@@ -40,5 +41,5 @@
     },
     "specialActions": [],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
-    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"]
+    "spells": ["Guidance","Mage Hand","Mending","Produce Flame"]
 }

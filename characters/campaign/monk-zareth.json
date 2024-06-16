@@ -1,7 +1,7 @@
 {
     "abilities": [
         {"name": "Strength","abilityImprovements": 0,"baseScore": 12,"miscBonus": 0},
-        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 1,"baseScore": 15,"miscBonus": 0},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 13,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
@@ -14,9 +14,10 @@
             "name": "Open Hand"
         }
     },
+    "feats": ["Athlete"],
     "inventory": {
         "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Shortbow","Quarterstaff","Dart"],
+        "equipped": ["Shortbow","Quarterstaff","Dart","Healing Potion"],
         "magicItems": [
             {
                 "name": "Ring of Protection"
@@ -25,7 +26,7 @@
         "gold": 400
     },
     "languages": ["Halfling", "Infernal"],
-    "level": 3,
+    "level": 4,
     "name": "Zareth Stonestride",
     "race": {
         "name": "Half-Orc"

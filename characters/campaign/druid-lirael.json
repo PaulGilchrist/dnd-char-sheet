@@ -15,9 +15,10 @@
             "type": "Forest"
         }
     },
+    "feats": ["Moderately Armored"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Scimitar","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Leather","Longbow","Quarterstaff","Dagger"],
+        "equipped": ["Chain Shirt","Longbow","Quarterstaff","Dagger","Healing Potion"],
         "magicItems": [
             {
                 "name": "Cloak of Elvenkind"
@@ -30,7 +31,7 @@
         "gold": 30
     },
     "languages": ["Sylvan"],
-    "level": 3,
+    "level": 4,
     "name": "Lirael",
     "race": {
         "name": "Elf",
@@ -39,5 +40,5 @@
         }
     },
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
-    "spells": ["Druidcraft","Frostbite","Shillelagh"]
+    "spells": ["Druidcraft","Frostbite","Produce Flame","Shillelagh"]
 }

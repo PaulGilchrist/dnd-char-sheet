@@ -1,7 +1,7 @@
 {
     "abilities": [
         {"name": "Strength","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
-        {"name": "Dexterity","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Dexterity","abilityImprovements": 2,"baseScore": 14,"miscBonus": 0},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 15,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
         {"name": "Wisdom","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
@@ -17,7 +17,7 @@
     },
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
+        "equipped": ["Arrows","Grappling hook","Hunting Trap","Studded Leather","Crossbow, hand","Piton (10)","Shortsword","Shortsword","Thieves' Tools","Healing Potion"],
         "magicItems": [
             {
                 "name": "Ring of Protection",
@@ -35,7 +35,7 @@
         "gold": 10
     },
     "languages": ["Goblin","Orc"],
-    "level": 3,
+    "level": 4,
     "name": "Seraphina",
     "race": {
         "name": "Halfling",
