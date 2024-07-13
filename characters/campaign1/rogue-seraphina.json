@@ -17,12 +17,8 @@
     },
     "inventory": {
         "backpack": ["Crowbar","Dice Set","Playing Card Set","Forgery Kit","Piton","Rations (5 days)","Thieves' Tools","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Grappling hook","Hunting Trap","Studded Leather","Crossbow, hand","Piton (10)","Shortsword","Shortsword","Thieves' Tools","Healing Potion"],
+        "equipped": ["Arrows","Grappling hook","Hunting Trap","Studded Leather","Crossbow, hand","Piton (10)","Shortsword","Shortsword","Thieves' Tools"],
         "magicItems": [
-            {
-                "name": "Ring of Protection",
-                "bonus": "+1"
-            },
             {
                 "name": "Arrow of Ice",
                 "quantity": 2
@@ -30,6 +26,22 @@
             {
                 "name": "Arrow of Fire",
                 "quantity": 10
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 1,
+                "rarity": "common"
+            },
+            {
+                "name": "Ring of Protection",
+                "bonus": "+1"
+            },
+            {
+                "name": "Spider Dagger",
+                "description": "+1 Dagger",
+                "rarity": "uncommon",
+                "requiresAttunement": false,
+                "type": "Wondrous item"
             }
         ],
         "gold": 10

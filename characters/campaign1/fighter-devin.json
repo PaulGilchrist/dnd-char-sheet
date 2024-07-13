@@ -17,15 +17,23 @@
     },
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar","Scroll of Fireball","Healing Potion"],
+        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
         "magicItems": [
             {
-                "name": "Spell Ring",
-                "spell": "Command"
+                "name": "Boots of Striding and Springing"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 1,
+                "rarity": "common"
             },
             {
                 "name": "Spell Scroll",
                 "spell": "Charm Person"
+            },
+            {
+                "name": "Spell Scroll",
+                "spell": "Fireball"
             }
         ],
         "gold": 10
@@ -34,7 +42,8 @@
     "level": 4,
     "name": "Devin",
     "race": {
-        "name": "Human"
+        "name": "Human",
+        "subrace": "Default"
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }

@@ -26,6 +26,11 @@
                 "rarity": "uncommon",
                 "requiresAttunement": false,
                 "type": "Wonderous Item"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 1,
+                "rarity": "common"
             }
         ],
         "gold": 8

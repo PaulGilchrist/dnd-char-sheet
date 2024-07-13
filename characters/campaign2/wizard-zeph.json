@@ -1,0 +1,33 @@
+{
+    "abilities": [
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 1, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Intelligence", "abilityImprovements": 1, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
+        { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
+    ],
+    "alignment": "Lawful Good",
+    "class": {
+        "name": "Wizard",
+        "subclass": {
+            "name": "Evocation"
+        }
+    },
+    "inventory": {
+        "backpack": ["Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Quarterstaff"],
+        "gold": 15
+    },
+    "languages": ["Draconic","Goblin","Orc"],
+    "level": 1,
+    "name": "Zeph",
+    "race": {
+        "name": "Human",
+        "subrace": {
+            "name": "Variant"
+        }
+    },
+    "skillProficiencies": ["Investigation","Insight","Medicine","Perception","Religion"],
+    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"]
+}
