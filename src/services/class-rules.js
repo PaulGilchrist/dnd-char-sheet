@@ -184,7 +184,7 @@ const classRules = {
         return features;
     },
     getHighestSubclassLevel: (playerStats) => {
-        let subClassLevel = null
+        let subClassLevel = 0
         if(playerStats.class.subclass) {
             for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
                 if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {

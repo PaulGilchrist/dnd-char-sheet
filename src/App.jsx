@@ -63,14 +63,19 @@ function App() {
     }, []);
     React.useEffect(() => {
         if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+            // const urls = [
+            //     '/dnd-char-sheet/characters/campaign1/cleric-valena.json',
+            //     '/dnd-char-sheet/characters/campaign1/druid-lirael.json',
+            //     '/dnd-char-sheet/characters/campaign1/druid-loraleth.json',
+            //     '/dnd-char-sheet/characters/campaign1/fighter-devin.json',
+            //     '/dnd-char-sheet/characters/campaign1/monk-zareth.json',
+            //     '/dnd-char-sheet/characters/campaign1/paladin-valerius.json',
+            //     '/dnd-char-sheet/characters/campaign1/rogue-seraphina.json'
+            // ];
             const urls = [
-                '/dnd-char-sheet/characters/campaign/cleric-valena.json',
-                '/dnd-char-sheet/characters/campaign/druid-lirael.json',
-                '/dnd-char-sheet/characters/campaign/druid-loraleth.json',
-                '/dnd-char-sheet/characters/campaign/fighter-devin.json',
-                '/dnd-char-sheet/characters/campaign/monk-zareth.json',
-                '/dnd-char-sheet/characters/campaign/paladin-valerius.json',
-                '/dnd-char-sheet/characters/campaign/rogue-seraphina.json'
+                '/dnd-char-sheet/characters/campaign2/druid-xandria.json',
+                '/dnd-char-sheet/characters/campaign2/rogue-terra.json',
+                '/dnd-char-sheet/characters/campaign2/wizard-zeph.json'
             ];
             const promises = urls.map(url => fetch(url).then(response => response.json()));
             Promise.all(promises)

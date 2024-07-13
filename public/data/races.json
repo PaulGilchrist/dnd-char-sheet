@@ -378,6 +378,62 @@
         "page": 21
     },
     {
+        "index": "genasi",
+        "name": "Genasi",
+        "speed": 30,
+        "ability_bonuses": [
+            {
+                "ability_score": "CON",
+                "bonus": 2
+            }
+        ],
+        "size": "Medium",
+        "starting_proficiencies": [],
+        "languages": [
+            "Common",
+            "Primordial"
+        ],
+        "traits": [],
+        "subraces": [
+            {
+                "index": "earth",
+                "name": "Earth",
+                "desc": "As an earth genasi, you are descended from the cruel and greedy dao, though you aren’t necessarily evil. You have inherited some measure of control over earth, reveling in superior strength and solid power. You tend to avoid rash decisions, pausing long enough to consider your options before taking action. Elemental earth manifests differently from one individual to the next. Some earth genasi always have bits of dust falling from their bodies and mud clinging to their clothes, never getting clean no matter how often they bathe. Others are as shiny and polished as gemstones, with skin tones of deep brown or black, eyes sparkling like agates. Earth genasi can also have smooth metallic flesh, dull iron skin spotted with rust, a pebbled and rough hide, or even a coating of tiny embedded crystals. The most arresting have fissures in their flesh, from which faint light shines.",
+                "ability_bonuses": [
+                    {
+                        "ability_score": "STR",
+                        "bonus": 1
+                    }
+                ],
+                "starting_proficiencies": [
+                    "Tinker's Tools"
+                ],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "earth-walk",
+                        "name": "Earth Walk",
+                        "desc": [
+                            "You can move across difficult terrain made of earth or stone without expending extra movement."
+                         ],
+                        "proficiencies": []
+                    },
+                    {
+                        "index": "merge-with-stone",
+                        "name": "Merge With Stone",
+                        "desc": [
+                            "You can cast the pass without trace spell once with this trait, requiring no material components, and you regain the ability to cast it this way when you finish a long rest. Constitution is your spellcasting ability for this spell."
+                         ],
+                        "proficiencies": []
+                    }
+                ]
+            }
+        ],
+        "book": "Player's Handbook",
+        "desc": "Genasi carry the power of the elemental planes of air, earth, fire, and water in their blood.",
+        "page": 0
+    },
+    {
         "index": "gnome",
         "name": "Gnome",
         "speed": 25,
@@ -793,32 +849,7 @@
         "index": "human",
         "name": "Human",
         "speed": 30,
-        "ability_bonuses": [
-            {
-                "ability_score": "STR",
-                "bonus": 1
-            },
-            {
-                "ability_score": "DEX",
-                "bonus": 1
-            },
-            {
-                "ability_score": "CON",
-                "bonus": 1
-            },
-            {
-                "ability_score": "INT",
-                "bonus": 1
-            },
-            {
-                "ability_score": "WIS",
-                "bonus": 1
-            },
-            {
-                "ability_score": "CHA",
-                "bonus": 1
-            }
-        ],
+        "ability_bonuses": [],
         "age": "Humans reach adulthood in their late teens and live less than a century.",
         "alignment": "Humans tend toward no particular alignment. The best and the worst are found among them.",
         "size": "Medium",
@@ -849,7 +880,98 @@
         },
         "language_desc": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
         "traits": [],
-        "subraces": [],
+        "subraces": [
+            {
+                "index": "default",
+                "name": "Default",
+                "desc": "",
+                "ability_bonuses": [
+                    {
+                        "ability_score": "STR",
+                        "bonus": 1
+                    },
+                    {
+                        "ability_score": "DEX",
+                        "bonus": 1
+                    },
+                    {
+                        "ability_score": "CON",
+                        "bonus": 1
+                    },
+                    {
+                        "ability_score": "INT",
+                        "bonus": 1
+                    },
+                    {
+                        "ability_score": "WIS",
+                        "bonus": 1
+                    },
+                    {
+                        "ability_score": "CHA",
+                        "bonus": 1
+                    }
+                ],
+                "starting_proficiencies": [],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "naturally-stealthy",
+                        "name": "Naturally Stealthy",
+                        "desc": [
+                            "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
+                        ],
+                        "proficiencies": []
+                    }
+                ]
+            },
+            {
+                "index": "variant",
+                "name": "Variant",
+                "desc": "If your campaign uses the optional feat rules from the Player's Handbook, your Dungeon Master might allow these variant traits, all of which replace the human's Ability Score Increase trait.",
+                "ability_bonuses": [],
+                "ability_bonus_options": {
+                    "choose": 2,
+                    "from": [
+                        {
+                            "ability_score": "STR",
+                            "bonus": 1
+                        },
+                        {
+                            "ability_score": "DEX",
+                            "bonus": 1
+                        },
+                        {
+                            "ability_score": "CON",
+                            "bonus": 1
+                        },
+                        {
+                            "ability_score": "INT",
+                            "bonus": 1
+                        },
+                        {
+                            "ability_score": "WIS",
+                            "bonus": 1
+                        },
+                        {
+                            "ability_score": "CHA",
+                            "bonus": 1
+                        }
+                    ]
+                },
+                "starting_proficiencies": [],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "naturally-stealthy",
+                        "name": "Naturally Stealthy",
+                        "desc": [
+                            "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
+                        ],
+                        "proficiencies": []
+                    }
+                ]
+            }
+        ],
         "book": "Player's Handbook",
         "desc": "Humans are the most adaptable and ambitious people among the common races. Whatever drives them, humans are the innovators, the achievers, and the pioneers of the worlds.",
         "page": 29
