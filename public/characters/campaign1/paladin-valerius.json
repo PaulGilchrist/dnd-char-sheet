@@ -18,6 +18,27 @@
     "inventory": {
         "backpack": ["Bedroll","Light Hammer","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Plate","Crossbow, heavy","+1 Greataxe","Dagger","Holy Symbol"],
+        "magicItems": [
+            {
+                "name": "Clockwork Amulet",
+                "description": "Add +10 to d20 once per day",
+                "rarity": "uncommon",
+                "requiresAttunement": false,
+                "type": "Wondrous item"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 1,
+                "rarity": "common"
+            },
+            {
+                "name": "Veterans Cane",
+                "description": "+1 longsword disguised as a cane",
+                "rarity": "uncommon",
+                "requiresAttunement": false,
+                "type": "Wondrous item"
+            }
+        ],
         "gold": 25
     },
     "languages": ["Elvish"],

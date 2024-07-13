@@ -16,11 +16,45 @@
     },
     "feats": ["Athlete"],
     "inventory": {
-        "backpack": ["Potion of Healing (2)","Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Shortbow","Quarterstaff","Dart","Healing Potion"],
+        "backpack": ["Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
+        "equipped": ["Shortbow","Quarterstaff","Dart","Vials of Poison (2)"],
         "magicItems": [
             {
+                "name": "Goat Staff +1",
+                "description": "3d6 bludgeoning damage per turn if Goblin",
+                "rarity": "uncommon",
+                "requiresAttunement": true,
+                "type": "Wondrous item"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 3,
+                "rarity": "common"
+            },
+            {
                 "name": "Ring of Protection"
+            },
+            {
+                "name": "Ring of Spell Storing",
+                "spell": "Command"
+            },
+            {
+                "name": "Spell Scroll",
+                "spell": "Darkness"
+            },
+            {
+                "name": "Staff of Mag +1",
+                "description": "+1 staff",
+                "rarity": "uncommon",
+                "requiresAttunement": true,
+                "type": "Wondrous item"
+            },
+            {
+                "name": "Transcendent Skull",
+                "description": "unknown",
+                "rarity": "uncommon",
+                "requiresAttunement": true,
+                "type": "Wondrous item"
             }
         ],
         "gold": 400

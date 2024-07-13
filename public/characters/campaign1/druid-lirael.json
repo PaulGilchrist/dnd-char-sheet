@@ -18,14 +18,26 @@
     "feats": ["Moderately Armored"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Scimitar","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Chain Shirt","Longbow","Quarterstaff","Dagger","Healing Potion"],
+        "equipped": ["Chain Shirt","Longbow","Quarterstaff","Dagger"],
         "magicItems": [
+            {
+                "name": "Arrow of Fire",
+                "quantity": 10
+            },
+            {
+                "name": "Arrow of Ice",
+                "quantity": 2
+            },
             {
                 "name": "Cloak of Elvenkind"
             },
             {
-                "name": "Arrow of Fire",
-                "quantity": 10
+                "name": "Horn of Silent Alarm"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 1,
+                "rarity": "common"
             }
         ],
         "gold": 30

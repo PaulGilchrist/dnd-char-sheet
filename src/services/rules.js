@@ -405,7 +405,7 @@ const rules = {
             const playerMagicItems = playerSummary.inventory.magicItems.map(playerMagicItem => {
                 const magicItem = allMagicItems.find(magicItem => magicItem.name === playerMagicItem.name);
                 if(magicItem) {
-                    if(magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
+                    if(magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
                         return {...magicItem, details: magicItem.description, description: playerMagicItem.spell}
                     }
                     return {...magicItem, quantity: playerMagicItem.quantity};
