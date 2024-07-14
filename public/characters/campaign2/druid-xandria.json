@@ -26,6 +26,6 @@
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
+    "skillProficiencies": ["Animal Handling","Arcana","History","Medicine","Nature","Nature","Survival"],
     "spells": ["Guidance","Produce Flame"]
 }
