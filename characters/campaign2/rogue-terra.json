@@ -27,7 +27,7 @@
     "race": {
         "name": "Genasi",
         "subrace": {
-            "name": "Earth"
+            "name": "Earth Genasi"
         }
     },
     "skillProficiencies": ["Deception","Perception","Sleight of Hand","Stealth"]
