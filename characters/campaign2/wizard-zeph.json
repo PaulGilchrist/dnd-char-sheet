@@ -26,7 +26,7 @@
     "race": {
         "name": "Human",
         "subrace": {
-            "name": "Variant"
+            "name": "Variant Human"
         }
     },
     "skillProficiencies": ["Investigation","Insight","Medicine","Perception","Religion"],
