@@ -60,7 +60,7 @@ function CharSummary({ playerStats }) {
             <div className='name'>{playerStats.name}</div>
             <div className='summary'>
                 {playerStats.race.subrace ? playerStats.race.subrace.name : playerStats.race.name}
-                {playerStats.race.type ? ` (${playerStats.race.type.toLowerCase()})` : ''}&nbsp;
+                {playerStats.race.type ? `&nbsp;(${playerStats.race.type.toLowerCase()})` : ''}&nbsp;
                 {playerStats.class.name}{playerStats.class.subclass ? `(${playerStats.class.subclass.name.toLowerCase()}` : ''}
                 {playerStats.class.subclass && playerStats.class.subclass.type ? `-${playerStats.class.subclass.type.toLowerCase()}` : ''}
                 ) Level {playerStats.level}, {playerStats.alignment}
