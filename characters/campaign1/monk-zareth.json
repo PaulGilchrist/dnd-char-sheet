@@ -28,8 +28,13 @@
             },
             {
                 "name": "Potion of Healing",
-                "quantity": 3,
+                "quantity": 1,
                 "rarity": "common"
+            },
+            {
+                "name": "Potion of Healing",
+                "quantity": 2,
+                "rarity": "uncommon"
             },
             {
                 "name": "Ring of Protection"
