@@ -17,7 +17,7 @@
     },
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Leather","Scimitar","Dagger","Crossbow, light"],
+        "equipped": ["Leather","Quarterstaff","Dagger","Crossbow, light"],
         "gold": 30
     },
     "languages": ["Abyssal","Dwarvish","Giant"],
