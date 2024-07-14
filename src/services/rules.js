@@ -408,7 +408,7 @@ const rules = {
                     if(magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
                         return {...magicItem, details: magicItem.description, description: playerMagicItem.spell}
                     }
-                    return {...magicItem, quantity: playerMagicItem.quantity};
+                    return {...magicItem, quantity: playerMagicItem.quantity, rarity: playerMagicItem.rarity ? playerMagicItem.rarity : magicItem.rarity };
                 }
                 console.log(playerMagicItem);
                 return{...playerMagicItem};

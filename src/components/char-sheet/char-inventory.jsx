@@ -7,13 +7,12 @@ function CharInventory({ playerStats }) {
             {playerStats.inventory.magicItems && <div>
                 <div className='sectionHeader'>Magic Items</div>
                 {playerStats.inventory.magicItems.map((magicItem) => {
-                    return <div key={magicItem.name}>
-                        {/* <b>{`${magicItem.name}${magicItem.quantity ? ` (qty ${magicItem.quantity})` : '' }`}:</b> <span dangerouslySetInnerHTML={{ __html: magicItem.description }}></span> */}
+                    return <div key={magicItem.name+magicItem.rarity}>
                         <b>
                             {magicItem.name} {magicItem.quantity ? `(qty ${magicItem.quantity}) ` : '' } -&nbsp;
                             <i>
-                                {magicItem.type}&nbsp;
-                                {magicItem.subtype && <span>({magicItem.subtype})</span>}, {magicItem.rarity}
+                                {magicItem.type}
+                                {magicItem.subtype && <span>&nbsp;({magicItem.subtype})</span>}, {magicItem.rarity}
                                 {magicItem.requiresAttunement && !magicItem.attunementRequirements && <span> (requires attunement)</span>}
                                 {magicItem.requiresAttunement && magicItem.attunementRequirements && <span> ({magicItem.attunementRequirements})</span>}
                             </i>
