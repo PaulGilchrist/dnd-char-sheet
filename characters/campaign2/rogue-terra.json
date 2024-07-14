@@ -12,7 +12,7 @@
         "name": "Rogue",
         "expertise": ["Sleight of Hand","Thieves' Tools"],
         "subclass": {
-            "name": "Theif"
+            "name": "Thief"
         }
     },
     "expertise":["Sleight of Hand","Thieves Tools"],
