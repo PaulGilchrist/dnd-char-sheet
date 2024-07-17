@@ -20,7 +20,7 @@
         "equipped": ["Studded Leather","Crossbow, hand","Rapier","Dagger"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Mordai",
     "race": {
         "name": "Tiefling"

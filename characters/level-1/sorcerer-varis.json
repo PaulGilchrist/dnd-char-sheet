@@ -20,7 +20,7 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Varis",
     "race": {
         "name": "Half-Elf"

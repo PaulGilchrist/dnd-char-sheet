@@ -20,7 +20,7 @@
         "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Praxen",
     "race": {
         "name": "Half-Elf"

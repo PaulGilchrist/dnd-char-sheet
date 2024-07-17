@@ -19,10 +19,13 @@
         "equipped": ["Longbow","Greatsword","Dagger"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Crom",
     "race": {
-        "name": "Human"
+        "name": "Human",
+        "subrace": {
+            "name": "Human"
+        }
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }

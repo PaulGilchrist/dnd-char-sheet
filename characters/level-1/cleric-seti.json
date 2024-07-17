@@ -20,7 +20,7 @@
         "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","Longsword","Shield"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Seti",
     "race": {
         "name": "Elf",

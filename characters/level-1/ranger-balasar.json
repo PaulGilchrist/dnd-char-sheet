@@ -25,7 +25,7 @@
         "equipped": ["Arrows", "Studded Leather", "Longbow", "Scimitar", "Scimitar"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Balasar",
     "race": {
         "name": "Half-Elf"
