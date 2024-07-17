@@ -22,7 +22,7 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Naal",
     "race": {
         "name": "Half-Elf"

@@ -20,10 +20,13 @@
         "gold": 400
     },
     "languages": ["Halfling", "Infernal"],
-    "level": 3,
+    "level": 1,
     "name": "Ewyn",
     "race": {
-        "name": "Human"
+        "name": "Human",
+        "subrace": {
+            "name": "Human"
+        }
     },
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
 }

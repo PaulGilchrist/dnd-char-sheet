@@ -21,10 +21,13 @@
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
         "gold": 10
     },
-    "level": 20,
+    "level": 1,
     "name": "Agron",
     "race": {
-        "name": "Human"
+        "name": "Human",
+        "subrace": {
+            "name": "Human"
+        }
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }
