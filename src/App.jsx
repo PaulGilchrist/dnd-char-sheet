@@ -96,6 +96,8 @@ function App() {
                 ];
             } else { // default
                 urls = [
+                    '/dnd-char-sheet/characters/campaign2/barbarian-vexna.json',
+                    '/dnd-char-sheet/characters/campaign2/cleric-garrick.json',
                     '/dnd-char-sheet/characters/campaign2/druid-xandria.json',
                     '/dnd-char-sheet/characters/campaign2/rogue-terra.json',
                     '/dnd-char-sheet/characters/campaign2/wizard-zeph.json'

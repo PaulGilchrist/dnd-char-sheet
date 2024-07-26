@@ -19,7 +19,7 @@
     "inventory": {
         "backpack": ["Ball Bearings","Bell","Candle","Crowbar","Hammer","Lantern, Hooded","Oil (flasj)","Piton","Rations (5 days)","Rope, Hempen (50 feet)","String","Tinderbox","Waterskin"],
         "equipped": ["Leather","Rapier","Dagger","Shortbow","Thieves' Tools"],
-        "gold": 10
+        "gold": 30
     },
     "languages": ["Primordial","Thieves' Cant"],
     "level": 1,
@@ -30,5 +30,7 @@
             "name": "Earth Genasi"
         }
     },
-    "skillProficiencies": ["Deception","Perception","Sleight of Hand","Stealth"]
+    "skillProficiencies": ["Deception","Perception","Sleight of Hand","Stealth"],
+    "spells": ["Pass Without Trace"]
+
 }

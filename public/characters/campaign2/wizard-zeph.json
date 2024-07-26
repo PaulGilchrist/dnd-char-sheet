@@ -2,8 +2,8 @@
     "abilities": [
         { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
         { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 0 },
-        { "name": "Constitution", "abilityImprovements": 1, "baseScore": 14, "miscBonus": 0 },
-        { "name": "Intelligence", "abilityImprovements": 1, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 1 },
+        { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 1 },
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
@@ -18,7 +18,7 @@
     "inventory": {
         "backpack": ["Bedroll","Mess Kit","Rations (10 days)","Rope, Hempen (50 feet)","Tinderbox","Torch","Waterskin"],
         "equipped": ["Quarterstaff","Crossbow, light"],
-        "gold": 15
+        "gold": 30
     },
     "languages": ["Draconic","Goblin","Orc"],
     "level": 1,
