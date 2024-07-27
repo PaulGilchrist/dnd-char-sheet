@@ -11,7 +11,7 @@
     "class": {
         "name": "Cleric",
         "subclass": {
-            "name": "Life"
+            "name": "Tempest"
         }
     },
     "feats": ["Resilient"],
