@@ -19,7 +19,7 @@
         "equipped": ["Arrows (10)","Greataxe","Longbow"],
         "gold": 30
     },
-    "languages": ["Orc"],
+    "languages": ["Goblin","Orc","Uncommon"],
     "level": 2,
     "name": "Vexna",
     "race": {
