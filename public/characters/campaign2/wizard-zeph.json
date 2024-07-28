@@ -30,5 +30,5 @@
         }
     },
     "skillProficiencies": ["Investigation","Insight","Medicine","Perception","Religion"],
-    "spells": ["Chill Touch","Dancing Lights","Mage Hand","Charm Person","Detect Magic","Magic Missile","Sleep"]
+    "spells": ["Alarm","Chill Touch","Dancing Lights","Mage Hand","Charm Person","Detect Magic","Magic Missile","Sleep"]
 }
