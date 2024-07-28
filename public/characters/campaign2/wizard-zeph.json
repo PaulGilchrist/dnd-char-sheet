@@ -11,7 +11,7 @@
     "class": {
         "name": "Wizard",
         "subclass": {
-            "name": "Evocation"
+            "name": "Divination"
         }
     },
     "feats": ["War Caster"],
@@ -21,7 +21,7 @@
         "gold": 30
     },
     "languages": ["Draconic","Goblin","Orc"],
-    "level": 1,
+    "level": 2,
     "name": "Zeph",
     "race": {
         "name": "Human",
