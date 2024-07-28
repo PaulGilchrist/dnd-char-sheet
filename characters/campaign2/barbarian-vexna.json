@@ -19,8 +19,8 @@
         "equipped": ["Arrows (10)","Greataxe","Longbow"],
         "gold": 30
     },
-    "languages": ["Orc"],
-    "level": 1,
+    "languages": ["Goblin","Orc","Uncommon"],
+    "level": 2,
     "name": "Vexna",
     "race": {
         "name": "Half-Orc"

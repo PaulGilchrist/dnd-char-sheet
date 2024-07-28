@@ -21,7 +21,7 @@
         "gold": 30
     },
     "languages": ["Common","Elvish"],
-    "level": 1,
+    "level": 2,
     "name": "Garrick",
     "race": {
         "name": "Human",
@@ -30,5 +30,5 @@
         }
     },
     "skillProficiencies": ["Athletics","Intimidation","Medicine","Perception","Religion"],
-    "spells": ["Sacred Flame","Spare the Dying","Thaumaturgy","Bless","Command","Fog Cloud","Healing Word","Inflict Wounds","Thunderwave"]
+    "spells": ["Sacred Flame","Spare the Dying","Thaumaturgy","Bless","Command","Fog Cloud","Healing Word","Inflict Wounds","Sanctuary","Thunderwave"]
 }
