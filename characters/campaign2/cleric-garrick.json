@@ -20,7 +20,7 @@
         "equipped": ["Chain Mail","Crossbow Bolts","Crossbow, light","Shield","Warhammer","Dagger"],
         "gold": 30
     },
-    "languages": ["Common","Elvish"],
+    "languages": ["Common","Dwarven"],
     "level": 2,
     "name": "Garrick",
     "race": {
