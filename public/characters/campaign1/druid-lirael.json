@@ -18,7 +18,7 @@
     "feats": ["Moderately Armored"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Scimitar","Small Knife","Tinderbox","Torch","Totem","Waterskin"],
-        "equipped": ["Chain Shirt","Longbow","Quarterstaff","Dagger"],
+        "equipped": ["+1 Breastplate","Longbow","Quarterstaff","Dagger"],
         "magicItems": [
             {
                 "name": "Arrow of Fire",
@@ -30,6 +30,13 @@
             },
             {
                 "name": "Cloak of Elvenkind"
+            },
+            {
+                "name": "Dragonguard Breastplate +1",
+                "description": "Advantage on saving throws against dragon attacks",
+                "rarity": "rare",
+                "requiresAttunement": true,
+                "type": "Armor (Breastplate)"
             },
             {
                 "name": "Horn of Silent Alarm"

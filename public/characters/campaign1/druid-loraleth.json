@@ -18,7 +18,7 @@
     "feats":["Resilient"],
     "inventory": {
         "backpack": ["Mess Kit","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Shirt","Longbow","Longsword","Healing Potion","Shield"],
+        "equipped": ["Arrows","Chain Shirt","Longbow","+1 Longsword","Healing Potion","Shield"],
         "magicItems": [
             {
                 "name": "Loraleth's Cat",
@@ -26,11 +26,6 @@
                 "rarity": "uncommon",
                 "requiresAttunement": false,
                 "type": "Wonderous Item"
-            },
-            {
-                "name": "Potion of Healing",
-                "quantity": 1,
-                "rarity": "common"
             }
         ],
         "gold": 8
