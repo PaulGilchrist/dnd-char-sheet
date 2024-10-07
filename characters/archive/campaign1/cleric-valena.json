@@ -1,6 +1,6 @@
 {
     "abilities": [
-        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 5},
+        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Dexterity","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
