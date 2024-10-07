@@ -1,6 +1,6 @@
 {
     "abilities": [
-        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
+        {"name": "Strength","abilityImprovements": 0,"baseScore": 14,"miscBonus": 5},
         {"name": "Dexterity","abilityImprovements": 0,"baseScore": 8,"miscBonus": 0},
         {"name": "Constitution","abilityImprovements": 0,"baseScore": 14,"miscBonus": 0},
         {"name": "Intelligence","abilityImprovements": 0,"baseScore": 10,"miscBonus": 0},
@@ -16,8 +16,18 @@
     },
     "inventory": {
         "backpack": ["Mess Kit","Minerals","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","Small Knife","Tinderbox","Torch","Waterskin"],
-        "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","+1 Longsword","Shield"],
+        "equipped": ["Arrows","Chain Mail","Holy Symbol","Longbow","+1 Mace","Shield"],
         "magicItems": [
+            {
+                "name": "Gauntlets of Ogre Power"
+            },
+            {
+                "name": "Lightbringer Mace +1",
+                "description": "Adds 1d6 radiant damage and allows for illumination of a 20' radius around the weilder",
+                "rarity": "rare",
+                "requiresAttunement": true,
+                "type": "Weapon (mace)"
+            },
             {
                 "name": "Potion of Healing",
                 "quantity": 1,
