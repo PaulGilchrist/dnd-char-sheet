@@ -9,7 +9,7 @@ Load entire party at once, print or track changes, combat and initiative.
 * Inspiration
 * Classes
   * Barbarian Rage Points
-  * Bard Inpiration Uses
+  * Bard Inspiration Uses
   * Cleric Channel Divinity Charges
   * Fighter Action Surges
   * Fighter Indomitable Uses
@@ -55,8 +55,8 @@ The spelling of anything added such as a language, spell, equipment name, etc. m
         { "name": "Strength", "abilityImprovements": number, "baseScore": number, "miscBonus": number },
         { "name": "Dexterity", "abilityImprovements": number, "baseScore": number, "miscBonus": number },
         { "name": "Constitution", "abilityImprovements": number, "baseScore": number, "miscBonus": number },
-        { "name": "Intelligence", "abilityImprovements": number, "baseScore": number, "miscBonus": number0 },
-        { "name": "Wisdom", "abilityImprovements": number, "baseScore": number1, "miscBonus": number },
+        { "name": "Intelligence", "abilityImprovements": number, "baseScore": number, "miscBonus": number },
+        { "name": "Wisdom", "abilityImprovements": number, "baseScore": number, "miscBonus": number },
         { "name": "Charisma", "abilityImprovements": number, "baseScore": number, "miscBonus": number }
     ],
     "alignment": string,
@@ -77,7 +77,7 @@ The spelling of anything added such as a language, spell, equipment name, etc. m
 ```
  #### Required Property Notes
  * abilities[].baseScore should be no less than 8 and no greater than 15.  Using the point buy system, the total points across all abilities should not exceed 72.
- * abilities[].abilityImprovements start at 0 for level 1 characters and may go up for the first time at 4th level accoring to the Player's Handbook (see Ability Score Improvement).
+ * abilities[].abilityImprovements start at 0 for level 1 characters and may go up for the first time at 4th level according to the Player's Handbook (see Ability Score Improvement).
  * abilities[].miscBonus is reserved for race or class ability bonuses, magical item enhancements, etc.
 
 ### Optional Properties
@@ -134,13 +134,13 @@ The spelling of anything added such as a language, spell, equipment name, etc. m
             "description": string,
             "details" string
         }],
-    "spells":string[],
+    "spells": string[],
     "vulnerabilities": string[]
 }
 ```
 #### Optional Property Notes
 * If class.subclass exists, it must have a name
-  * class.subclass type examples include a Land Driud's circle name (ex: Forest)
+  * class.subclass type examples include a Land Druid's circle name (ex: Forest)
 * If race.subrace exists, it must have a name
   * race.subrace type examples include a Dragonborn's color (ex: Gold)
 * if an action, bonusAction, reaction, or specialAction exists, it must have a name and descriptions, but need not have details
