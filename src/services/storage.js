@@ -17,8 +17,6 @@ const storage = {
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: json
-        }).catch((e) => {
-            // console.error('Error posting data to API:', e);
         });
     },
     getProperty: (name, propertyName) => {

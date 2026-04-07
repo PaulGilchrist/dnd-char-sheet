@@ -77,7 +77,7 @@ function CharActions({ playerStats }) {
                         {playerStats.bonusActions.map((bonusAction) => {
                             return <div key={bonusAction.name}>
                                 {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
-                                <b className={bonusAction.details ? "clickable" : ""} onClick={() => showPopup(bonusAction)}>{bonusAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: bonusAction.description }}></span>;
+                                <b className={bonusAction.details ? "clickable" : ""} onClick={() => showActionsPopup(bonusAction)}>{bonusAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: bonusAction.description }}></span>;
                             </div>
                         })}
                     </div>}
