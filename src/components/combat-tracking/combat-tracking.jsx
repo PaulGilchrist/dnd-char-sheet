@@ -31,6 +31,27 @@ function CombatTracking({ characters }) {
         }
         setActiveCreatureId(activeId);
     }, [characters, forceRefresh]);
+
+    React.useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                handlePreviousCreature();
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                handleNextCreature();
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                handleAddCombatRound();
+            } else if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                handleRemoveCombatRound();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [combatSummary, activeCreatureId]);
     const handleClear = () => {
         if (window.confirm('Are you sure you want to clear all combat status?')) {
             const combatSummary = {
@@ -142,33 +163,34 @@ function CombatTracking({ characters }) {
                 {combatSummary.creatures && combatSummary.creatures.map((creature) => {
                     const isActive = creature.id === activeCreatureId;
                     return <React.Fragment key={creature.id}>
-                        {creature.type === 'player' && <div className={isActive ? 'active-text' : ''}>{creature.name}</div>}
-                        {creature.type === 'npc' && <div>
+                        {creature.type === 'player' && <div className={isActive ? 'active-text active-row' : ''} style={{paddingLeft: '10px'}}>{creature.name}</div>}
+                        {creature.type === 'npc' && <div className={isActive ? 'active-row' : ''}>
                             <input
                                 onChange={(event) => handleNameChange(creature.id, event.target.value)}
                                 tabIndex={0}
                                 type="text"
                                 value={creature.name}
                                 size='10'
-                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
                             />
                         </div>}
-                        <input
-                            min="0"
-                            onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
-                            tabIndex={0}
-                            type="number"
-                            value={creature.initiative}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
-                        />
-                        <input
-                            placeholder="hit points, conditions, death saves, exhaustion, etc."
-                            onChange={(event) => handleNotesChange(creature.id, event.target.value)}
-                            tabIndex={0}
-                            type="text"
-                            value={creature.notes}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
-                        />
+                        <div className={isActive ? 'active-row' : ''}>
+                            <input
+                                min="0"
+                                onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
+                                tabIndex={0}
+                                type="number"
+                                value={creature.initiative}
+                            />
+                        </div>
+                        <div className={isActive ? 'active-row' : ''}>
+                            <input
+                                placeholder="hit points, conditions, death saves, exhaustion, etc."
+                                onChange={(event) => handleNotesChange(creature.id, event.target.value)}
+                                tabIndex={0}
+                                type="text"
+                                value={creature.notes}
+                            />
+                        </div>
                     </React.Fragment>;
                 })}
             </div>
