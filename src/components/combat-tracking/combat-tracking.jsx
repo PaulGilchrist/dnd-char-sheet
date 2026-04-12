@@ -163,17 +163,16 @@ function CombatTracking({ characters }) {
                 {combatSummary.creatures && combatSummary.creatures.map((creature) => {
                     const isActive = creature.id === activeCreatureId;
                     return <React.Fragment key={creature.id}>
-                        {creature.type === 'player' && <div className={isActive ? 'active-text active-row' : ''} style={{paddingLeft: '10px'}}>{creature.name}</div>}
-                        {creature.type === 'npc' && <div className={isActive ? 'active-row' : ''}>
+                        {creature.type === 'player' && <div className={isActive ? 'active-text active-row active-name' : ''} style={{paddingLeft: '10px'}}>{creature.name}</div>}
+                        {creature.type === 'npc' && <div className={isActive ? 'active-row active-name' : ''}>
                             <input
                                 onChange={(event) => handleNameChange(creature.id, event.target.value)}
                                 tabIndex={0}
                                 type="text"
                                 value={creature.name}
-                                size='10'
                             />
                         </div>}
-                        <div className={isActive ? 'active-row' : ''}>
+                        <div className={isActive ? 'active-row active-initiative' : ''}>
                             <input
                                 min="0"
                                 onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
@@ -182,9 +181,8 @@ function CombatTracking({ characters }) {
                                 value={creature.initiative}
                             />
                         </div>
-                        <div className={isActive ? 'active-row' : ''}>
+                        <div className={isActive ? 'active-row notes' : 'notes'}>
                             <input
-                                placeholder="hit points, conditions, death saves, exhaustion, etc."
                                 onChange={(event) => handleNotesChange(creature.id, event.target.value)}
                                 tabIndex={0}
                                 type="text"
@@ -196,7 +194,7 @@ function CombatTracking({ characters }) {
             </div>
             <br />
             <div className='combat-tracking-buttons'>
-                <button onClick={handleClear}>Clear</button>
+                <button className='clear-button' onClick={handleClear}>Clear</button>
                 <span className='up-down'>Add NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
                 <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
                 <span className='up-down'>Active Creature <button onClick={handlePreviousCreature}>&#8593;</button><button onClick={handleNextCreature}>&#8595;</button></span>

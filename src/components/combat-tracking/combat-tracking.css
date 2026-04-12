@@ -6,13 +6,17 @@
 .combat-tracking-buttons {
     align-items: center;
     display: grid;
-    grid-template-columns: 100px 185px 240px 240px;
+    grid-template-columns: 250px 185px 240px 240px;
     max-width: 950px;
 }
 
 .combat-tracking button {
     color: var(--color-header);
     margin: 0;
+}
+
+.combat-tracking .clear-button {
+    width: 150px
 }
 
 .combat-tracking input {
@@ -100,7 +104,6 @@
 
 .combat-tracking .active-row input:focus {
     border: 0;
-    box-shadow: 0 0 30px rgba(255, 204, 0, 1);
     background-color: rgba(255, 204, 0, 0.2);
 }
 
@@ -113,26 +116,14 @@
     border: 1px solid rgba(255, 204, 0, 0.3);
 }
 
-@keyframes inputPulse {
-    0%, 100% {
-        border-color: #ffcc00;
-        box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
-    }
-    50% {
-        border-color: #ffcc00;
-        box-shadow: 0 0 20px rgba(255, 204, 0, 1), 0 0 30px rgba(255, 204, 0, 0.7);
-    }
+.combat-tracking .active-name input {
+    min-width: 200px;
 }
 
-.combat-tracking input[data-active='true'] {
-    color: #ffcc00 !important;
-    font-weight: bold !important;
-    font-size: 1.3em !important;
-    animation: inputPulse 2s ease-in-out infinite;
-    transition: color 0.4s ease-in-out, font-weight 0.4s ease-in-out, font-size 0.4s ease-in-out, border-color 0.4s ease-in-out, box-shadow 0.4s ease-in-out;
+.combat-tracking .active-initiative input {
+    min-width: 80px;
 }
 
-.combat-tracking input[data-active='true']:focus {
-    animation: inputPulse 2s ease-in-out infinite;
-    box-shadow: 0 0 30px rgba(255, 204, 0, 1), 0 0 40px rgba(255, 204, 0, 0.8);
+.combat-tracking .notes input {
+    min-width: 97%;
 }
