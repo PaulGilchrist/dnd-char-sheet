@@ -106,6 +106,10 @@ function CombatTracking({ characters }) {
             const nextId = combatSummary.creatures[currentIndex + 1].id;
             storage.set('activeCreatureId', nextId);
             setActiveCreatureId(nextId);
+        } else {
+            const firstId = combatSummary.creatures[0].id;
+            storage.set('activeCreatureId', firstId);
+            setActiveCreatureId(firstId);
         }
     };
     const handlePreviousCreature = () => {
@@ -114,6 +118,10 @@ function CombatTracking({ characters }) {
             const prevId = combatSummary.creatures[currentIndex - 1].id;
             storage.set('activeCreatureId', prevId);
             setActiveCreatureId(prevId);
+        } else {
+            const lastId = combatSummary.creatures[combatSummary.creatures.length - 1].id;
+            storage.set('activeCreatureId', lastId);
+            setActiveCreatureId(lastId);
         }
     };
     const setupCreatures = () => {
@@ -134,7 +142,7 @@ function CombatTracking({ characters }) {
                 {combatSummary.creatures && combatSummary.creatures.map((creature) => {
                     const isActive = creature.id === activeCreatureId;
                     return <React.Fragment key={creature.id}>
-                        {creature.type === 'player' && <div style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal'}}>{creature.name}</div>}
+                        {creature.type === 'player' && <div style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}>{creature.name}</div>}
                         {creature.type === 'npc' && <div>
                             <input
                                 onChange={(event) => handleNameChange(creature.id, event.target.value)}
@@ -142,7 +150,7 @@ function CombatTracking({ characters }) {
                                 type="text"
                                 value={creature.name}
                                 size='10'
-                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
+                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
                             />
                         </div>}
                         <input
@@ -151,7 +159,7 @@ function CombatTracking({ characters }) {
                             tabIndex={0}
                             type="number"
                             value={creature.initiative}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
                         />
                         <input
                             placeholder="hit points, conditions, death saves, exhaustion, etc."
@@ -159,7 +167,7 @@ function CombatTracking({ characters }) {
                             tabIndex={0}
                             type="text"
                             value={creature.notes}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
                         />
                     </React.Fragment>;
                 })}
@@ -167,7 +175,7 @@ function CombatTracking({ characters }) {
             <br />
             <div className='combat-tracking-buttons'>
                 <button onClick={handleClear}>Clear</button>
-                <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
+                <span className='up-down'>Add NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
                 <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
                 <span className='up-down'>Active Creature <button onClick={handlePreviousCreature}>&#8593;</button><button onClick={handleNextCreature}>&#8595;</button></span>
             </div>

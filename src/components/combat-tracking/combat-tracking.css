@@ -6,7 +6,7 @@
 .combat-tracking-buttons {
     align-items: center;
     display: grid;
-    grid-template-columns: 100px 140px 240px 240px;
+    grid-template-columns: 100px 185px 240px 240px;
     max-width: 950px;
 }
 
@@ -57,4 +57,14 @@
 .combat-tracking .up-down button {
     padding: 5px 7px;
     margin-left: 2px;
+}
+
+/* Active creature expansion animation */
+.combat-tracking .creatures > div:nth-child(2n) {
+    transition: all 0.3s ease-in-out;
+}
+
+.combat-tracking .creatures > div:nth-child(2n):hover {
+    background-color: rgba(255, 204, 0, 0.05);
+    border: 1px solid rgba(255, 204, 0, 0.3);
 }
