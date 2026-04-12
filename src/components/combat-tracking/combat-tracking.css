@@ -1,5 +1,5 @@
 .combat-tracking {
-    font-size: 1.5em;
+    font-size: 1.0em;
     padding: 10px;
 }
 
@@ -31,7 +31,7 @@
 
 .combat-tracking>.creatures {
     display: grid;
-    grid-template-columns: 150px 80px minmax(auto, 580px);
+    grid-template-columns: 200px 80px minmax(auto, 580px);
 }
 
 .combat-tracking-header {
@@ -59,7 +59,14 @@
     margin-left: 2px;
 }
 
-/* Active creature expansion animation */
+/* Active creature styling */
+.combat-tracking .active-text {
+    color: #ffcc00 !important;
+    font-weight: bold !important;
+    font-size: 1.5em !important;
+    transition: all 0.4s ease-in-out !important;
+}
+
 .combat-tracking .creatures > div:nth-child(2n) {
     transition: all 0.3s ease-in-out;
 }

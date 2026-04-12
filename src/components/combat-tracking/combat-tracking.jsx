@@ -142,7 +142,7 @@ function CombatTracking({ characters }) {
                 {combatSummary.creatures && combatSummary.creatures.map((creature) => {
                     const isActive = creature.id === activeCreatureId;
                     return <React.Fragment key={creature.id}>
-                        {creature.type === 'player' && <div style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}>{creature.name}</div>}
+                        {creature.type === 'player' && <div className={isActive ? 'active-text' : ''}>{creature.name}</div>}
                         {creature.type === 'npc' && <div>
                             <input
                                 onChange={(event) => handleNameChange(creature.id, event.target.value)}
@@ -150,7 +150,7 @@ function CombatTracking({ characters }) {
                                 type="text"
                                 value={creature.name}
                                 size='10'
-                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
+                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
                             />
                         </div>}
                         <input
@@ -159,7 +159,7 @@ function CombatTracking({ characters }) {
                             tabIndex={0}
                             type="number"
                             value={creature.initiative}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
                         />
                         <input
                             placeholder="hit points, conditions, death saves, exhaustion, etc."
@@ -167,7 +167,7 @@ function CombatTracking({ characters }) {
                             tabIndex={0}
                             type="text"
                             value={creature.notes}
-                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.3em' : '1em', transition: 'all 0.4s ease-in-out'}}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', fontSize: isActive ? '1.4em' : '1em', transition: 'all 0.4s ease-in-out'}}
                         />
                     </React.Fragment>;
                 })}
