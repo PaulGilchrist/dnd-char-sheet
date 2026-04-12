@@ -11,6 +11,7 @@ function CombatTracking({ characters }) {
     const [combatSummary, setCombatSummary] = React.useState(1);
     const [numOfNpc, setNumOfNpc] = React.useState(5);
     const [forceRefresh, setForceRefresh] = React.useState(0);
+    const [activeCreatureId, setActiveCreatureId] = React.useState(null);
 
     React.useEffect(() => {
         let combatSummary = storage.get('combatSummary');
@@ -22,6 +23,13 @@ function CombatTracking({ characters }) {
             storage.set('combatSummary', combatSummary);
         }
         setCombatSummary(combatSummary);
+
+        let activeId = storage.get('activeCreatureId');
+        if (!activeId) {
+            activeId = combatSummary.creatures[0]?.id;
+            storage.set('activeCreatureId', activeId);
+        }
+        setActiveCreatureId(activeId);
     }, [characters, forceRefresh]);
     const handleClear = () => {
         if (window.confirm('Are you sure you want to clear all combat status?')) {
@@ -31,11 +39,14 @@ function CombatTracking({ characters }) {
             }
             storage.set('combatSummary', combatSummary);
             setCombatSummary(combatSummary);
+            const firstCreatureId = setupCreatures()[0].id;
+            storage.set('activeCreatureId', firstCreatureId);
+            setActiveCreatureId(firstCreatureId);
         }
     };
     const handleEvent = (event) => {
         if (!isEqual(storage.get(event.key), event.data)) { // We may have made this change ourselves
-            localStorage.setItem(event.key, JSON.stringify(event.data));
+
             if (event.key === 'combatTrackedCreatures' || event.key === 'combatSummary') {
                 setForceRefresh(utils.guid()); // Force Refresh after debounce
             }
@@ -89,6 +100,22 @@ function CombatTracking({ characters }) {
         storage.set('combatSummary', combatSummary);
         setCombatSummary({...combatSummary});
     };
+    const handleNextCreature = () => {
+        const currentIndex = combatSummary.creatures.findIndex((creature) => creature.id === activeCreatureId);
+        if (currentIndex < combatSummary.creatures.length - 1) {
+            const nextId = combatSummary.creatures[currentIndex + 1].id;
+            storage.set('activeCreatureId', nextId);
+            setActiveCreatureId(nextId);
+        }
+    };
+    const handlePreviousCreature = () => {
+        const currentIndex = combatSummary.creatures.findIndex((creature) => creature.id === activeCreatureId);
+        if (currentIndex > 0) {
+            const prevId = combatSummary.creatures[currentIndex - 1].id;
+            storage.set('activeCreatureId', prevId);
+            setActiveCreatureId(prevId);
+        }
+    };
     const setupCreatures = () => {
         const creatureList = characters.map((character) => { return { id: utils.guid(), name: utils.getFirstName(character.name), type: 'player', initiative: '', notes: '' } });
         creatureList.sort((a, b) => a.name.localeCompare(b.name)); // asc
@@ -104,38 +131,45 @@ function CombatTracking({ characters }) {
                 <header>Name</header>
                 <header className="initiative">Initiative</header>
                 <header>Notes</header>
-                {combatSummary.creatures && combatSummary.creatures.map((creature) => <React.Fragment key={creature.id}>
-                    {creature.type === 'player' && <div>{creature.name}</div>}
-                    {creature.type === 'npc' && <div>
+                {combatSummary.creatures && combatSummary.creatures.map((creature) => {
+                    const isActive = creature.id === activeCreatureId;
+                    return <React.Fragment key={creature.id}>
+                        {creature.type === 'player' && <div style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal'}}>{creature.name}</div>}
+                        {creature.type === 'npc' && <div>
+                            <input
+                                onChange={(event) => handleNameChange(creature.id, event.target.value)}
+                                tabIndex={0}
+                                type="text"
+                                value={creature.name}
+                                size='10'
+                                style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
+                            />
+                        </div>}
                         <input
-                            onChange={(event) => handleNameChange(creature.id, event.target.value)}
+                            min="0"
+                            onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
+                            tabIndex={0}
+                            type="number"
+                            value={creature.initiative}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
+                        />
+                        <input
+                            placeholder="hit points, conditions, death saves, exhaustion, etc."
+                            onChange={(event) => handleNotesChange(creature.id, event.target.value)}
                             tabIndex={0}
                             type="text"
-                            value={creature.name}
-                            size='10'
+                            value={creature.notes}
+                            style={{color: isActive ? '#ffcc00' : 'inherit', fontWeight: isActive ? 'bold' : 'normal', backgroundColor: isActive ? 'rgba(255, 204, 0, 0.2)' : 'inherit', borderColor: isActive ? '#ffcc00' : 'inherit', borderWidth: isActive ? '2px' : '0', borderStyle: isActive ? 'solid' : 'none'}}
                         />
-                    </div>}
-                    <input
-                        min="0"
-                        onChange={(event) => handleInitiativeChange(creature.id, event.target.value)}
-                        tabIndex={0}
-                        type="number"
-                        value={creature.initiative}
-                    />
-                    <input
-                        placeholder="hit points, conditions, death saves, exhaustion, etc."
-                        onChange={(event) => handleNotesChange(creature.id, event.target.value)}
-                        tabIndex={0}
-                        type="text"
-                        value={creature.notes}
-                    />
-                </React.Fragment>)}
+                    </React.Fragment>;
+                })}
             </div>
             <br />
             <div className='combat-tracking-buttons'>
                 <button onClick={handleClear}>Clear</button>
                 <span className='up-down'>NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
                 <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
+                <span className='up-down'>Active Creature <button onClick={handlePreviousCreature}>&#8593;</button><button onClick={handleNextCreature}>&#8595;</button></span>
             </div>
             <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>

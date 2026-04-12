@@ -6,7 +6,7 @@
 .combat-tracking-buttons {
     align-items: center;
     display: grid;
-    grid-template-columns: 100px 140px 240px;
+    grid-template-columns: 100px 140px 240px 240px;
     max-width: 950px;
 }
 
