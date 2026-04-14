@@ -46,6 +46,12 @@ function CombatTracking({ characters }) {
             } else if (event.key === 'ArrowLeft') {
                 event.preventDefault();
                 handleRemoveCombatRound();
+            } else if (event.key === '+') {
+                event.preventDefault();
+                handleAddNpc();
+            } else if (event.key === '-') {
+                event.preventDefault();
+                handleRemoveNpc();
             }
         };
 
@@ -195,9 +201,9 @@ function CombatTracking({ characters }) {
             <br />
             <div className='combat-tracking-buttons'>
                 <button className='clear-button' onClick={handleClear}>Clear</button>
-                <span className='up-down'>Add NPC <button onClick={handleAddNpc}>&#8593;</button><button onClick={handleRemoveNpc}>&#8595;</button></span>
-                <span className='up-down'>Combat Round <button onClick={handleAddCombatRound}>&#8593;</button><button onClick={handleRemoveCombatRound}>&#8595;</button></span>
-                <span className='up-down'>Active Creature <button onClick={handlePreviousCreature}>&#8593;</button><button onClick={handleNextCreature}>&#8595;</button></span>
+                <span className='up-down'>Add NPC <button onClick={handleAddNpc}>+</button><button onClick={handleRemoveNpc}>-</button></span>
+                <span className='up-down'>Combat Round <button onClick={handleRemoveCombatRound}>&#8592;</button><button onClick={handleAddCombatRound}>&#8594;</button></span>
+                <span className='up-down'>Creature <button onClick={handlePreviousCreature}>&#8593;</button><button onClick={handleNextCreature}>&#8595;</button></span>
             </div>
             <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>
