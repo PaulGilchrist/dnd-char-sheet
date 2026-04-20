@@ -77,6 +77,15 @@ function CharInventory({ playerStats }) {
                     if(item.equipment_category) {
                         properties.push(`<b>Category:</b> ${item.equipment_category}`);
                     }
+                    if(item.ability) {
+                        properties.push(`<b>Ability:</b> ${item.ability}`);
+                    }
+                    if(item.utilize) {
+                        properties.push(`<b>Utilize:</b> ${item.utilize}`);
+                    }
+                    if(item.craft) {
+                        properties.push(`<b>Craft:</b> ${item.craft}`);
+                    }
                     
                     if(properties.length > 0) {
                         html += `<br/>${properties.join('<br/>')}`;

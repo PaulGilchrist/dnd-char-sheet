@@ -676,7 +676,7 @@
         "quantity": 1
       },
       {
-        "item": "Rope, hempen (50 feet)",
+        "item": "Rope, Hempen (50 feet)",
         "quantity": 1
       }
     ]
@@ -1425,7 +1425,7 @@
         "quantity": 1
       },
       {
-        "item": "Rope, hempen (50 feet)",
+        "item": "Rope, Hempen (50 feet)",
         "quantity": 1
       }
     ]
@@ -1539,7 +1539,7 @@
         "quantity": 1
       },
       {
-        "item": "Rope, hempen (50 feet)",
+        "item": "Rope, Hempen (50 feet)",
         "quantity": 1
       }
     ]
@@ -1991,8 +1991,8 @@
     }
   },
   {
-    "index": "holy-water-flask",
-    "name": "Holy water (flask)",
+    "index": "holy-water",
+    "name": "Holy Water",
     "equipment_category": "Adventuring Gear",
     "gear_category": "Standard Gear",
     "cost": {
@@ -3416,31 +3416,31 @@
     ]
   },
   {
-    "index": "rope-hempen-50-feet",
-    "name": "Rope, hempen (50 feet)",
+    "index": "rope-hempen",
+    "name": "Rope, Hempen",
     "equipment_category": "Adventuring Gear",
     "gear_category": "Standard Gear",
     "cost": {
-      "quantity": 1,
+      "quantity": 50,
       "unit": "gp"
     },
     "weight": 10,
     "desc": [
-      "Rope, whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check."
+      "Rope (in feet), whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check."
     ]
   },
   {
-    "index": "rope-silk-50-feet",
-    "name": "Rope, silk (50 feet)",
+    "index": "rope-silk",
+    "name": "Rope, Silk",
     "equipment_category": "Adventuring Gear",
     "gear_category": "Standard Gear",
     "cost": {
-      "quantity": 10,
+      "quantity": 50,
       "unit": "gp"
     },
     "weight": 5,
     "desc": [
-      "Rope, whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check."
+      "Rope (in feet), whether made of hemp or silk, has 2 hit points and can be burst with a DC 17 Strength check."
     ]
   },
   {
