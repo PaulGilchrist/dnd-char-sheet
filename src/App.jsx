@@ -21,6 +21,7 @@ function App() {
     const [races, setRaces] = React.useState([]);
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
+    const [spells2024, setSpells2024] = React.useState([]);
     const inputRef = React.useRef(null);
     React.useEffect(() => {
         fetch('/dnd-char-sheet/data/ability-scores.json')
@@ -65,9 +66,16 @@ function App() {
             });
     }, []);
     React.useEffect(() => {
+        fetch('/dnd-char-sheet/data/2024/spells.json')
+            .then(response => response.json())
+            .then(data => {
+                setSpells2024(data);
+            });
+    }, []);
+    React.useEffect(() => {
         console.log(campaign);
 
-        if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+        if (classes.length > 0 && equipment.length > 0 && spells.length > 0 && spells2024.length > 0) {
             let urls = [];
             if(campaign==0) {
                 urls = [
@@ -112,13 +120,13 @@ function App() {
                     console.log(error);
                 });
         }
-    }, [abilityScores, classes, equipment, spells]);
+    }, [abilityScores, classes, equipment, spells, spells2024]);
     React.useEffect(() => {
         // Do not allow uploading character until everything is ready
-        if (classes.length > 0 && equipment.length > 0 && spells.length > 0) {
+        if (classes.length > 0 && equipment.length > 0 && spells.length > 0 && spells2024.length > 0) {
             setShowButton(true);
         }
-    }, [abilityScores, classes, equipment, spells]);
+    }, [abilityScores, classes, equipment, spells, spells2024]);
     React.useEffect(() => {
         setActiveCharacter(characters[0]);
     }, [characters]);
@@ -166,7 +174,7 @@ function App() {
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
-            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allMagicItems={magicItems} allRaces={races} allSpells={spells} playerSummary={activeCharacter}></CharSheet>}
+            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allMagicItems={magicItems} allRaces={races} allSpells={spells} allSpells2024={spells2024} playerSummary={activeCharacter}></CharSheet>}
             {combatTrackingActive && <CombatTracking characters={characters}></CombatTracking>}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>}<br />

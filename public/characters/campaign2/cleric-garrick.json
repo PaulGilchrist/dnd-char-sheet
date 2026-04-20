@@ -29,7 +29,7 @@
             "name": "Variant Human"
         }
     },
-    "rules": "5e",
+    "rules": "2024",
     "skillProficiencies": ["Athletics","Intimidation","Medicine","Perception","Religion"],
     "spells": ["Sacred Flame","Spare the Dying","Thaumaturgy","Bless","Command","Fog Cloud","Healing Word","Inflict Wounds","Sanctuary","Thunderwave"]
 }

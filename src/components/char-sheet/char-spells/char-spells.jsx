@@ -43,6 +43,10 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
     }
     const showPopup = (spell) => {
         if(spell.desc) {
+            console.log(`[CharSpells] Spell clicked: ${spell.name}`, {
+                spellData: spell,
+                rules: playerStats.rules || '5e (default)'
+            });
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
             if(spell.higher_level) {
                 html += `<br/><b>At higher levels.</b>&nbsp;${spell.higher_level}`;

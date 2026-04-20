@@ -16,7 +16,7 @@ import CharSummary2 from './char-summary2'
 import Subscriber from '../common/subscriber';
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary }) {
+function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary }) {
     const [playerStats, setPlayerStats] = React.useState(null);
     const [forceRefresh, setForceRefresh] = React.useState(0);
     React.useEffect(() => {
@@ -36,7 +36,8 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             }
             
             // Use rules factory to get appropriate rules based on character's rules setting
-            const stats = rulesFactory.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
+            const spellData = playerSummary.rules === '2024' ? allSpells2024 : allSpells;
+            const stats = rulesFactory.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, spellData, playerSummary);
             
             let preparedSpells = storage.getProperty(stats.name, 'preparedSpells');
             if (preparedSpells) {
@@ -55,7 +56,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             setPlayerStats(stats);
         };
         fetchData();
-    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary, forceRefresh]);
+    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, forceRefresh]);
 
     const handleEvent = (event) => {
         if(!isEqual(storage.get(event.key), event.data)) {
