@@ -10,8 +10,8 @@ function CharFeats({ playerStats, showPopup }) {
         // Load feats from appropriate JSON file based on rules version
         const rulesVersion = playerStats.rules || '5e';
         const featsFile = rulesVersion === '2024' ? '2024/feats.json' : 'feats.json';
-        // Use import.meta.env.BASE_URL to get the correct base path from Vite config
-        const featsUrl = `${import.meta.env.BASE_URL}data/${featsFile}`;
+        // Use the deployment path from Vite config base
+        const featsUrl = `/dnd-char-sheet/data/${featsFile}`;
         
         console.log(`[CharFeats] Fetching feats from: ${featsUrl}`);
         
@@ -20,22 +20,17 @@ function CharFeats({ playerStats, showPopup }) {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.text().then(text => {
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        console.error('[CharFeats] Failed to parse JSON:', e);
-                        throw new Error('Invalid JSON response');
-                    }
-                });
+                return response.json();
             })
             .then(featsData => {
                 console.log(`[CharFeats] Loaded ${featsData.length} feats`);
-                // Normalize feat name: convert to lowercase and replace spaces with hyphens for matching
-                const normalizedInput = featName.toLowerCase().replace(/\s+/g, '-');
+                // For 2024, feat names are uppercase (e.g., "ACTOR", "ATHLETE")
+                // For 5e, feat names use lowercase with hyphens (e.g., "actor", "athlete")
+                // Character feat names are typically title case with spaces (e.g., "Actor", "Athlete")
+                const normalizedInput = featName.toUpperCase().replace(/\s+/g, '_');
                 const feat = featsData.find(f => {
-                    const normalizedName = (f.name || '').toLowerCase().replace(/\s+/g, '-');
-                    const normalizedIndex = (f.index || '').toLowerCase().replace(/\s+/g, '-');
+                    const normalizedName = (f.name || '').toUpperCase().replace(/\s+/g, '_');
+                    const normalizedIndex = (f.index || '').toUpperCase().replace(/\s+/g, '_');
                     return normalizedName === normalizedInput || normalizedIndex === normalizedInput;
                 });
                 if (feat) {

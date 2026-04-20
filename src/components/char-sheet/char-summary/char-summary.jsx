@@ -83,12 +83,21 @@ function CharSummary({ playerStats }) {
                 </div>
                 <div>
                     <CharFeats playerStats={playerStats} showPopup={(feat) => {
-                            if(feat.desc) {
+                            if(feat.desc || feat.description) {
                                 console.log(`[CharSummary] Feat clicked: ${feat.name}`, {
                                     featData: feat,
                                     rules: playerStats.rules || '5e (default)'
                                 });
-                                let html = `<b>${feat.name}</b><br/><br/>${feat.desc}<br/>`;
+                                // Handle both array (5e) and string (2024) description formats
+                                let descriptionHtml = '';
+                                if (Array.isArray(feat.desc)) {
+                                    descriptionHtml = feat.desc.map(desc => desc || '').join('<br/>');
+                                } else if (feat.description) {
+                                    descriptionHtml = feat.description;
+                                } else {
+                                    descriptionHtml = feat.desc || '';
+                                }
+                                let html = `<b>${feat.name}</b><br/><br/>${descriptionHtml}<br/>`;
                                 if(feat.prerequisites) {
                                     html += `<br/><b>Prerequisites:</b><br/>`;
                                     if(feat.prerequisites.level) {
@@ -104,10 +113,11 @@ function CharSummary({ playerStats }) {
                                     }
                                 }
                                 if(feat.benefits && feat.benefits.length > 0) {
-                                    html += `<br/><b>Benefits:</b><br/>`;
+                                    html += `<br/><b>Benefits:</b><ul>`;
                                     feat.benefits.forEach(benefit => {
-                                        html += `${benefit.description || benefit}<br/>`;
+                                        html += `<li>${benefit.description || benefit}</li>`;
                                     });
+                                    html += `</ul>`;
                                 }
                                 setPopupHtml(html);
                             }
