@@ -1,15 +1,11 @@
-import React from 'react'
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { cloneDeep } from 'lodash';
 import { saveAs } from 'file-saver';
 import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
 import CombatTracking from './components/combat-tracking/combat-tracking'
+import CampaignSelection from './components/campaign-selection/campaign-selection'
 import Utils from './services/utils'
-
-function useQuery() {
-    return new URLSearchParams(useLocation().search);
-}
 
 function App() {
     const [abilityScores, setAbilityScores] = React.useState(null);
@@ -22,120 +18,92 @@ function App() {
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const [spells2024, setSpells2024] = React.useState([]);
+    const [showCampaignSelection, setShowCampaignSelection] = React.useState(true);
     const inputRef = React.useRef(null);
-    React.useEffect(() => {
+
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/ability-scores.json')
             .then(response => response.json())
             .then(data => {
                 setAbilityScores(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/classes.json')
             .then(response => response.json())
             .then(data => {
                 setClasses(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/equipment.json')
             .then(response => response.json())
             .then(data => {
                 setEquipment(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/magic-items.json')
             .then(response => response.json())
             .then(data => {
                 setMagicItems(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/races.json')
             .then(response => response.json())
             .then(data => {
                 setRaces(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/spells.json')
             .then(response => response.json())
             .then(data => {
                 setSpells(data);
             });
     }, []);
-    React.useEffect(() => {
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/2024/spells.json')
             .then(response => response.json())
             .then(data => {
                 setSpells2024(data);
             });
     }, []);
-    React.useEffect(() => {
-        console.log(campaign);
 
-        if (classes.length > 0 && equipment.length > 0 && spells.length > 0 && spells2024.length > 0) {
-            let urls = [];
-            if(campaign==0) {
-                urls = [
-                    '/dnd-char-sheet/characters/level-1/barbarian-crom.json',
-                    '/dnd-char-sheet/characters/level-1/bard-mordai.json',
-                    '/dnd-char-sheet/characters/level-1/cleric-seti.json',
-                    '/dnd-char-sheet/characters/level-1/druid-Immeral.json',
-                    '/dnd-char-sheet/characters/level-1/fighter-agron.json',
-                    '/dnd-char-sheet/characters/level-1/monk-ewyn.json',
-                    '/dnd-char-sheet/characters/level-1/paladin-ramus.json',
-                    '/dnd-char-sheet/characters/level-1/ranger-balasar.json',
-                    '/dnd-char-sheet/characters/level-1/rogue-praxen.json',
-                    '/dnd-char-sheet/characters/level-1/sorcerer-varis.json',
-                    '/dnd-char-sheet/characters/level-1/warlock-naal.json',
-                    '/dnd-char-sheet/characters/level-1/wizard-amric.json'
-                ];
-            } else if(campaign==1) { 
-                urls = [
-                    '/dnd-char-sheet/characters/campaign1/cleric-valena.json',
-                    '/dnd-char-sheet/characters/campaign1/druid-lirael.json',
-                    '/dnd-char-sheet/characters/campaign1/druid-loraleth.json',
-                    '/dnd-char-sheet/characters/campaign1/fighter-devin.json',
-                    '/dnd-char-sheet/characters/campaign1/monk-zareth.json',
-                    '/dnd-char-sheet/characters/campaign1/paladin-valerius.json',
-                    '/dnd-char-sheet/characters/campaign1/rogue-seraphina.json'
-                ];
-            } else { // default
-                urls = [
-                    '/dnd-char-sheet/characters/campaign2/barbarian-vexna.json',
-                    '/dnd-char-sheet/characters/campaign2/cleric-garrick.json',
-                    '/dnd-char-sheet/characters/campaign2/druid-xandria.json',
-                    '/dnd-char-sheet/characters/campaign2/rogue-terra.json',
-                    '/dnd-char-sheet/characters/campaign2/wizard-zeph.json'
-                ];
+    useEffect(() => {
+        // Check if characters are pre-loaded from campaign selection or URL
+        const preloadedCharacters = sessionStorage.getItem('characters');
+        
+        if (preloadedCharacters) {
+            const loadedCharacters = JSON.parse(preloadedCharacters);
+            setCharacters(loadedCharacters);
+            setShowCampaignSelection(false);
+            
+            // Clear session storage after loading
+            sessionStorage.removeItem('characters');
+            
+            if (loadedCharacters.length > 0) {
+                setActiveCharacter(cloneDeep(loadedCharacters[0]));
             }
-            const promises = urls.map(url => fetch(url).then(response => response.json()));
-            Promise.all(promises)
-                .then(data => {
-                    setCharacters(data);
-                })
-                .catch(error => {
-                    console.log(error);
-                });
         }
-    }, [abilityScores, classes, equipment, spells, spells2024]);
-    React.useEffect(() => {
+    }, []);
+
+    useEffect(() => {
         // Do not allow uploading character until everything is ready
         if (classes.length > 0 && equipment.length > 0 && spells.length > 0 && spells2024.length > 0) {
             setShowButton(true);
         }
     }, [abilityScores, classes, equipment, spells, spells2024]);
-    React.useEffect(() => {
-        setActiveCharacter(characters[0]);
-    }, [characters]);
+
     const handleCharacterClick = (character) => {
         setActiveCharacter(cloneDeep(character));
     }
+
     const handleInitiativeClick = () => {
         setActiveCharacter(null);
     }
+
     const handleUploadChange = async (event) => {
         const files = event.target.files;
         const newCharacters = [];
@@ -154,6 +122,7 @@ function App() {
         }
         setCharacters(newCharacters);
     };
+
     const handleSaveClick = async () => {
         let fileName = `${activeCharacter.class.name}-${Utils.getFirstName(activeCharacter.name)}.json`;
         fileName = fileName.toLowerCase();
@@ -161,26 +130,64 @@ function App() {
         const blob = new Blob([json], { type: 'application/json' });
         saveAs(blob, fileName);
     };
+
     const handleUploadClick = async () => {
         inputRef.current.click();
     };
 
-    const query = useQuery();
-    const campaign = query.get('c');
+    const handleCampaignSelected = (campaign, loadedCharacters) => {
+        setCharacters(loadedCharacters);
+        setShowCampaignSelection(false);
+        if (loadedCharacters.length > 0) {
+            setActiveCharacter(cloneDeep(loadedCharacters[0]));
+        }
+    };
 
     let combatTrackingActive = characters.length > 0 && activeCharacter == null;
+
+    // Show campaign selection if no characters are loaded
+    if (showCampaignSelection || characters.length === 0) {
+        return (
+            <CampaignSelection onCampaignSelect={handleCampaignSelected} />
+        );
+    }
+
     return (
         <div className="app">
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
-            {characters.length > 0 && characters.map((character) => { return (<button key={Utils.getFirstName(character.name)} className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} onClick={() => handleCharacterClick(character)}>{Utils.getFirstName(character.name)}</button>) })}
+            {characters.length > 0 && characters.map((character) => { 
+                return (
+                    <button 
+                        key={Utils.getFirstName(character.name)} 
+                        className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} 
+                        onClick={() => handleCharacterClick(character)}
+                    >
+                        {Utils.getFirstName(character.name)}
+                    </button>
+                )
+            })}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
-            {activeCharacter != null && <CharSheet allAbilityScores={abilityScores} allClasses={classes} allEquipment={equipment} allMagicItems={magicItems} allRaces={races} allSpells={spells} allSpells2024={spells2024} playerSummary={activeCharacter}></CharSheet>}
-            {combatTrackingActive && <CombatTracking characters={characters}></CombatTracking>}
+            {activeCharacter != null && (
+                <CharSheet 
+                    allAbilityScores={abilityScores} 
+                    allClasses={classes} 
+                    allEquipment={equipment} 
+                    allMagicItems={magicItems} 
+                    allRaces={races} 
+                    allSpells={spells} 
+                    allSpells2024={spells2024} 
+                    playerSummary={activeCharacter}
+                />
+            )}
+            {combatTrackingActive && <CombatTracking characters={characters} />}
             {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
-            {characters.length > 0 && activeCharacter != null && <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>}<br />
+            {characters.length > 0 && activeCharacter != null && (
+                <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>
+            )}
+            <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}>Back to Campaigns</button>
+            <br />
         </div>
     )
 }
 
 export default App
-

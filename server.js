@@ -2,6 +2,7 @@
 // Changes are cached in memory, and batch persisted to disk (backed up) at a configurable interval
 import express from 'express';
 import fs from 'fs';
+import path from 'path';
 import guid from 'guid'
 
 const PORT = process.env.PORT || 3000;
@@ -15,6 +16,47 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Connection, Content-Type, Authorization');
     next();
 });
+
+// Serve static files from the public directory
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+// API endpoint to list character folders
+app.get('/api/characters', (req, res) => {
+    const charactersDir = path.join(process.cwd(), 'public', 'characters');
+    
+    try {
+        const items = fs.readdirSync(charactersDir, { withFileTypes: true });
+        const folders = items
+            .filter(item => item.isDirectory())
+            .map(item => item.name)
+            .sort();
+        
+        res.json({ folders });
+    } catch (error) {
+        console.error('Error reading characters directory:', error);
+        res.status(500).json({ error: 'Failed to read characters directory' });
+    }
+});
+
+// API endpoint to list character files in a specific campaign
+app.get('/api/characters/:campaign', (req, res) => {
+    const { campaign } = req.params;
+    const campaignDir = path.join(process.cwd(), 'public', 'characters', campaign);
+    
+    try {
+        const items = fs.readdirSync(campaignDir, { withFileTypes: true });
+        const files = items
+            .filter(item => item.isFile() && item.name.endsWith('.json'))
+            .map(item => item.name)
+            .sort();
+        
+        res.json({ files });
+    } catch (error) {
+        console.error('Error reading campaign directory:', error);
+        res.status(500).json({ error: 'Failed to read campaign directory' });
+    }
+});
+
 const readFile = () => {
     fs.readFile('characterChangeData.json', 'utf-8', (err, data) => {
         if (err) {

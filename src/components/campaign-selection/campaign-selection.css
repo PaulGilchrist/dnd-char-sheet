@@ -1,0 +1,77 @@
+.campaign-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
+}
+
+.campaign-selection h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.campaign-selection.loading p,
+.campaign-selection.error p {
+  font-size: 1.2rem;
+  margin: 1rem 0;
+}
+
+.campaign-selection.error .error-message {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.campaign-selection .no-campaigns {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 1rem 0;
+}
+
+.campaign-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  max-width: 800px;
+}
+
+.campaign-button {
+  background-color: #4a90d9;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  min-width: 200px;
+}
+
+.campaign-button:hover:not(:disabled) {
+  background-color: #357abd;
+  transform: translateY(-2px);
+}
+
+.campaign-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.campaign-selection button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: #666;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.campaign-selection button:hover {
+  background-color: #555;
+}
