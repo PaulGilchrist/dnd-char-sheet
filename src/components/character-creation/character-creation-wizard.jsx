@@ -87,6 +87,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     rules: '2024'
   });
   const [errors, setErrors] = useState({});
+  const [tempInventory, setTempInventory] = useState({ backpack: '', equipped: '' });
 
   // Validate ability scores when formData.abilities changes
   useEffect(() => {
@@ -782,7 +783,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           onChange={(e) => {
             const updatedInventory = {
               ...formData.inventory,
-              gold: parseInt(e.target.value)
+              gold: parseInt(e.target.value) || 0
             };
             handleInputChange('inventory', updatedInventory);
           }}
@@ -792,8 +793,17 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       <div className="form-group">
         <label>Backpack Items</label>
         <textarea
-          value={formData.inventory.backpack.join(', ')}
-          onChange={(e) => handleArrayFieldChange('backpack', e.target.value.split(',').map(i => i.trim()).filter(i => i))}
+          value={tempInventory.backpack}
+          onChange={(e) => setTempInventory(prev => ({ ...prev, backpack: e.target.value }))}
+          onBlur={() => {
+            const items = tempInventory.backpack.split(',').map(item => item.trim()).filter(item => item.length > 0);
+            const updatedInventory = {
+              ...formData.inventory,
+              backpack: items
+            };
+            handleInputChange('inventory', updatedInventory);
+            setTempInventory(prev => ({ ...prev, backpack: '' }));
+          }}
           placeholder="Enter items separated by commas"
           rows={3}
         />
@@ -803,8 +813,17 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       <div className="form-group">
         <label>Equipped Items</label>
         <textarea
-          value={formData.inventory.equipped.join(', ')}
-          onChange={(e) => handleArrayFieldChange('equipped', e.target.value.split(',').map(i => i.trim()).filter(i => i))}
+          value={tempInventory.equipped}
+          onChange={(e) => setTempInventory(prev => ({ ...prev, equipped: e.target.value }))}
+          onBlur={() => {
+            const items = tempInventory.equipped.split(',').map(item => item.trim()).filter(item => item.length > 0);
+            const updatedInventory = {
+              ...formData.inventory,
+              equipped: items
+            };
+            handleInputChange('inventory', updatedInventory);
+            setTempInventory(prev => ({ ...prev, equipped: '' }));
+          }}
           placeholder="Enter items separated by commas"
           rows={3}
         />
