@@ -1,6 +1,6 @@
 export const getCharacterFolders = async () => {
   try {
-    const response = await fetch('/dnd-char-sheet/characters/campaigns.json');
+    const response = await fetch('/api/characters');
     if (!response.ok) {
       throw new Error('Failed to fetch character folders');
     }
