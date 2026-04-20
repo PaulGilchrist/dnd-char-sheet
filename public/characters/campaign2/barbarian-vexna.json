@@ -25,6 +25,6 @@
     "race": {
         "name": "Half-Orc"
     },
-    "rules": "5e",
+    "rules": "2024",
     "skillProficiencies": ["Acrobatics","Athletics","Intimidation","Perception","Performance"]
 }

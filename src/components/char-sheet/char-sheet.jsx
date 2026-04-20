@@ -3,7 +3,7 @@ import React from 'react'
 import { cloneDeep, isEqual } from 'lodash';
 import storage from '../../services/storage'
 import utils from '../../services/utils'
-import rules from '../../services/rules'
+import rulesFactory from '../../services/rules-factory'
 import CharAbilities from './char-abilities'
 import CharActions from './char-actions'
 import CharAudit from './char-audit'
@@ -22,7 +22,6 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
     React.useEffect(() => {
         const fetchData = async () => {
             const fullUrl = `http://${window.location.hostname}:3000/api/${utils.getFirstName(playerSummary.name)}/`;
-            // console.log(fullUrl)
             try {
                 const response = await fetch(fullUrl, {
                     method: 'GET',
@@ -35,7 +34,10 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             } catch(e) {
                 // console.log(e.message); 
             }
-            const stats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
+            
+            // Use rules factory to get appropriate rules based on character's rules setting
+            const stats = rulesFactory.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
+            
             let preparedSpells = storage.getProperty(stats.name, 'preparedSpells');
             if (preparedSpells) {
                 stats.spellAbilities.spells.forEach(spell => {
@@ -56,13 +58,14 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
     }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary, forceRefresh]);
 
     const handleEvent = (event) => {
-        if(!isEqual(storage.get(event.key), event.data)) { // We may have made this change ourtselves
+        if(!isEqual(storage.get(event.key), event.data)) {
             localStorage.setItem(event.key, JSON.stringify(event.data));
             if(event.key === utils.getFirstName(playerStats.name)) {
-                setForceRefresh(utils.guid()); // Force Character Refresh
+                setForceRefresh(utils.guid());
             }
         }
     }
+    
     const handleTogglePreparedSpells = (spellName) => {
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);
         if (spell) {
@@ -74,7 +77,6 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
                     spell.prepared = 'Prepared';
                 }
             }
-            // Update local storage
             const preparedSpells = [];
             playerStats.spellAbilities.spells.forEach(spell => {
                 if (spell.prepared === 'Prepared') {
