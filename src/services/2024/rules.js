@@ -512,6 +512,9 @@ const rules = {
         // Initialize senses array early to prevent undefined errors
         playerStats.senses = [];
         
+        // Store equipment reference for mastery lookup
+        playerStats.equipment = allEquipment;
+
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
