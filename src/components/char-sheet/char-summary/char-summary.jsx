@@ -17,6 +17,7 @@ import CharClassRogue from './char-class-rogue'
 import CharClassSorcerer from './char-class-sorcerer'
 import CharClassWarlock from './char-class-warlock'
 import CharClassWizard from './char-class-wizard'
+import CharFeats from '../char-feats/char-feats'
 import HiddenInput from '../../common/hidden-input'
 import Popup from '../../common/popup'
 
@@ -81,7 +82,36 @@ function CharSummary({ playerStats }) {
                     </div>
                 </div>
                 <div>
-                    {playerStats.feats && <div><b>Feats: </b>{playerStats.feats.join(', ')}</div>}
+                    <CharFeats playerStats={playerStats} showPopup={(feat) => {
+                            if(feat.desc) {
+                                console.log(`[CharSummary] Feat clicked: ${feat.name}`, {
+                                    featData: feat,
+                                    rules: playerStats.rules || '5e (default)'
+                                });
+                                let html = `<b>${feat.name}</b><br/><br/>${feat.desc}<br/>`;
+                                if(feat.prerequisites) {
+                                    html += `<br/><b>Prerequisites:</b><br/>`;
+                                    if(feat.prerequisites.level) {
+                                        html += `Level ${feat.prerequisites.level}<br/>`;
+                                    }
+                                    if(feat.prerequisites.ability_scores) {
+                                        feat.prerequisites.ability_scores.forEach(as => {
+                                            html += `${as.name} ${as.minimum} or higher<br/>`;
+                                        });
+                                    }
+                                    if(feat.prerequisites.proficiency) {
+                                        html += `Proficiency with ${feat.prerequisites.proficiency}<br/>`;
+                                    }
+                                }
+                                if(feat.benefits && feat.benefits.length > 0) {
+                                    html += `<br/><b>Benefits:</b><br/>`;
+                                    feat.benefits.forEach(benefit => {
+                                        html += `${benefit.description || benefit}<br/>`;
+                                    });
+                                }
+                                setPopupHtml(html);
+                            }
+                        }} />
                     {playerStats.background && <div><b>Background: </b>{playerStats.background}</div>}
                     {playerStats.class.name == 'Barbarian' && <CharClassBarbarian playerStats={playerStats}></CharClassBarbarian>}
                     {playerStats.class.name == 'Bard' && <CharClassBard playerStats={playerStats}></CharClassBard>}
