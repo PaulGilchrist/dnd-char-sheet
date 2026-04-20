@@ -11,6 +11,13 @@ function CharInventory({ playerStats }) {
         
         console.log(`[CharInventory] Fetching equipment from: ${equipmentUrl}`);
         
+        // Extract name if item has quantity info in parentheses (e.g., "Arrows (10)" -> "Arrows")
+        let lookupName = itemName;
+        const parenIndex = itemName.indexOf('(');
+        if (parenIndex > 0) {
+            lookupName = itemName.substring(0, parenIndex).trim();
+        }
+        
         fetch(equipmentUrl)
             .then(response => {
                 if (!response.ok) {
@@ -20,13 +27,38 @@ function CharInventory({ playerStats }) {
             })
             .then(equipmentData => {
                 console.log(`[CharInventory] Loaded ${equipmentData.length} items`);
-                // Normalize item name: convert to lowercase and replace spaces with hyphens for matching
-                const normalizedInput = itemName.toLowerCase().replace(/\s+/g, '-');
-                const item = equipmentData.find(f => {
-                    const normalizedName = (f.name || '').toLowerCase().replace(/\s+/g, '-');
-                    const normalizedIndex = (f.index || '').toLowerCase().replace(/\s+/g, '-');
-                    return normalizedName === normalizedInput || normalizedIndex === normalizedInput;
-                });
+                
+                // Try to find item, handling plural/singular variations
+                const findItem = (itemNameToSearch) => {
+                    const normalizedInput = itemNameToSearch.toLowerCase().replace(/\s+/g, '-');
+                    return equipmentData.find(f => {
+                        const normalizedName = (f.name || '').toLowerCase().replace(/\s+/g, '-');
+                        const normalizedIndex = (f.index || '').toLowerCase().replace(/\s+/g, '-');
+                        return normalizedName === normalizedInput || normalizedIndex === normalizedInput;
+                    });
+                };
+                
+                // First try exact match
+                let item = findItem(lookupName);
+                
+                // If not found, try removing trailing 's' (plural to singular)
+                if (!item && lookupName.endsWith('s')) {
+                    const singularName = lookupName.slice(0, -1);
+                    item = findItem(singularName);
+                    if (item) {
+                        console.log(`[CharInventory] Found item via singular conversion: ${item.name} from ${lookupName}`);
+                    }
+                }
+                
+                // If still not found, try adding 's' (singular to plural)
+                if (!item) {
+                    const pluralName = lookupName + 's';
+                    item = findItem(pluralName);
+                    if (item) {
+                        console.log(`[CharInventory] Found item via plural conversion: ${item.name} from ${lookupName}`);
+                    }
+                }
+                
                 if (item) {
                     console.log(`[CharInventory] Found item: ${item.name}`);
                     let descriptionHtml = '';
@@ -52,7 +84,7 @@ function CharInventory({ playerStats }) {
                     
                     setPopupHtml(html);
                 } else {
-                    console.warn(`[CharInventory] Item not found: ${itemName} (normalized: ${normalizedInput})`);
+                    console.warn(`[CharInventory] Item not found: ${itemName} (lookup: ${lookupName})`);
                     setPopupHtml(`<b>${itemName}</b><br/><br/>Item details not found in database.`);
                 }
             })
