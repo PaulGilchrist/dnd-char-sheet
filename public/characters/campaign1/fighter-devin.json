@@ -47,5 +47,6 @@
             "name": "Human"
         }
     },
+    "rules": "5e",
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
 }

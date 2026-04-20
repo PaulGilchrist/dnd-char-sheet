@@ -42,6 +42,7 @@
     "race": {
         "name": "Half-Elf"
     },
+    "rules": "5e",
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
     "spells": ["Hail of Thorns","Hunter's Mark","Ensnaring Strike"]
 }

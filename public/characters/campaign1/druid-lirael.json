@@ -58,6 +58,7 @@
             "name": "Wood Elf"
         }
     },
+    "rules": "5e",
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
     "spells": ["Druidcraft","Frostbite","Produce Flame","Shillelagh"]
 }

@@ -29,6 +29,7 @@
             "name": "Variant Human"
         }
     },
+    "rules": "5e",
     "skillProficiencies": ["Investigation","Insight","Medicine","Perception","Religion"],
     "spells": ["Chill Touch","Dancing Lights","Feather Fall","Mage Hand","Charm Person","Detect Magic","Magic Missile","Sleep"]
 }

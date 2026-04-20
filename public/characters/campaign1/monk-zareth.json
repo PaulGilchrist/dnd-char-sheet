@@ -70,5 +70,6 @@
     "race": {
         "name": "Half-Orc"
     },
+    "rules": "5e",
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
 }

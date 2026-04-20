@@ -48,5 +48,6 @@
         "name": "Dragonborn",
         "type": "Gold"
     },
+    "rules": "5e",
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"]
 }
