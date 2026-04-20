@@ -37,7 +37,7 @@ const rules = {
                         name: `Passive ${skill.name}`,
                         value: 10 + skill.bonus
                     }
-                    if (!playerStats.senses.some((sense) => sense.name === newSense.name)) {
+                    if (playerStats.senses && !playerStats.senses.some((sense) => sense.name === newSense.name)) {
                         playerStats.senses.push(newSense);
                     }
                 }
@@ -509,6 +509,9 @@ const rules = {
         const playerStats = cloneDeep(playerSummary);
         playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
         
+        // Initialize senses array early to prevent undefined errors
+        playerStats.senses = [];
+        
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
@@ -526,6 +529,9 @@ const rules = {
         [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats);
         playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
         playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats);
+        
+        // Merge race senses with ability-based senses
+        playerStats.senses = playerStats.senses.concat(raceRules.getSenses(playerStats));
         
         playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;

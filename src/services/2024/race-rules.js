@@ -7,15 +7,17 @@ const raceRules = {
         let immunities = [];
         
         // Check traits for immunity effects
-        playerSummary.race.traits.forEach(trait => {
-            if (trait.description && trait.description.toLowerCase().includes('immunity')) {
-                // Extract immunity type from description
-                const match = trait.description.match(/immunity to ([^\s.]+)/i);
-                if (match) {
-                    immunities.push(match[1]);
+        if (playerSummary.race && playerSummary.race.traits) {
+            playerSummary.race.traits.forEach(trait => {
+                if (trait.description && trait.description.toLowerCase().includes('immunity')) {
+                    // Extract immunity type from description
+                    const match = trait.description.match(/immunity to ([^\s.]+)/i);
+                    if (match) {
+                        immunities.push(match[1]);
+                    }
                 }
-            }
         });
+        }
         
         if(playerSummary.immunities) {
             immunities = [...new Set([...immunities, ...playerSummary.immunities])];
@@ -66,15 +68,17 @@ const raceRules = {
         // 2024 Rules: Extract resistances from racial traits
         let resistances = [];
         
-        playerSummary.race.traits.forEach(trait => {
-            if (trait.description) {
-                // Look for resistance patterns in description
-                const resistanceMatch = trait.description.match(/Resistance to ([^\s.]+)/i);
-                if (resistanceMatch) {
-                    resistances.push(resistanceMatch[1]);
+        if (playerSummary.race && playerSummary.race.traits) {
+            playerSummary.race.traits.forEach(trait => {
+                if (trait.description) {
+                    // Look for resistance patterns in description
+                    const resistanceMatch = trait.description.match(/Resistance to ([^\s.]+)/i);
+                    if (resistanceMatch) {
+                        resistances.push(resistanceMatch[1]);
+                    }
                 }
-            }
         });
+        }
         
         if(playerSummary.resistances) {
             resistances = [...new Set([...resistances, ...playerSummary.resistances])];
@@ -86,31 +90,33 @@ const raceRules = {
         // 2024 Rules: Extract senses from racial traits
         const senses = playerStats.senses ? [...playerStats.senses] : [];
         
-        playerStats.race.traits.forEach(trait => {
-            if (trait.description) {
-                // Check for darkvision
-                if (trait.description.toLowerCase().includes('darkvision')) {
-                    const darkvisionMatch = trait.description.match(/darkvision with a range of (\d+) feet/i);
-                    if (darkvisionMatch) {
-                        const range = `${darkvisionMatch[1]} ft.`;
-                        if (!senses.some((sense) => sense.name === 'Darkvision')) {
-                            senses.push({ name: 'Darkvision', value: range });
+        if (playerStats.race && playerStats.race.traits) {
+            playerStats.race.traits.forEach(trait => {
+                if (trait.description) {
+                    // Check for darkvision
+                    if (trait.description.toLowerCase().includes('darkvision')) {
+                        const darkvisionMatch = trait.description.match(/darkvision with a range of (\d+) feet/i);
+                        if (darkvisionMatch) {
+                            const range = `${darkvisionMatch[1]} ft.`;
+                            if (!senses.some((sense) => sense.name === 'Darkvision')) {
+                                senses.push({ name: 'Darkvision', value: range });
+                            }
+                        }
+                    }
+                    
+                    // Check for tremorsense
+                    if (trait.description.toLowerCase().includes('tremorsense')) {
+                        const tremorsenseMatch = trait.description.match(/tremorsense with a range of (\d+) feet/i);
+                        if (tremorsenseMatch) {
+                            const range = `${tremorsenseMatch[1]} ft.`;
+                            if (!senses.some((sense) => sense.name === 'Tremorsense')) {
+                                senses.push({ name: 'Tremorsense', value: range });
+                            }
                         }
                     }
                 }
-                
-                // Check for tremorsense
-                if (trait.description.toLowerCase().includes('tremorsense')) {
-                    const tremorsenseMatch = trait.description.match(/tremorsense with a range of (\d+) feet/i);
-                    if (tremorsenseMatch) {
-                        const range = `${tremorsenseMatch[1]} ft.`;
-                        if (!senses.some((sense) => sense.name === 'Tremorsense')) {
-                            senses.push({ name: 'Tremorsense', value: range });
-                        }
-                    }
-                }
-            }
         });
+        }
         
         return senses.sort((a, b) => a.name.localeCompare(b.name));
     },
@@ -180,10 +186,10 @@ const raceRules = {
     },
     getTraits: (playerStats) => {
         // 2024 Rules: Process racial traits including lineages
-        let traits = raceRules.addTraits(playerStats.race.traits);
+        let traits = raceRules.addTraits(playerStats.race?.traits);
         
         // Handle lineage-specific traits
-        if (playerStats.race.lineage) {
+        if (playerStats.race?.lineage && playerStats.race.traits) {
             playerStats.race.traits.forEach(trait => {
                 if (trait.sub_traits) {
                     const selectedLineage = trait.sub_traits.find(st => st.name === playerStats.race.lineage);
