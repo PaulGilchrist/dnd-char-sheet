@@ -19,6 +19,7 @@ function App() {
     const [spells, setSpells] = React.useState([]);
     const [spells2024, setSpells2024] = React.useState([]);
     const [showCampaignSelection, setShowCampaignSelection] = React.useState(true);
+    const [showAddCharacterModal, setShowAddCharacterModal] = React.useState(false);
     const inputRef = React.useRef(null);
 
     useEffect(() => {
@@ -143,6 +144,32 @@ function App() {
         }
     };
 
+    const handleAddCharacter = () => {
+        // Create a new character object
+        const newCharacter = {
+            name: '',
+            class: { name: '' },
+            race: { name: '' },
+            abilities: {},
+            gold: 0,
+            hitPoints: 0,
+            initiative: 0,
+            inspiration: false,
+            spellAbilities: {
+                spells: [],
+                maxPreparedSpells: 0
+            },
+            rules: '2024'
+        };
+        
+        setActiveCharacter(cloneDeep(newCharacter));
+        setShowAddCharacterModal(false);
+    };
+
+    const closeModal = () => {
+        setShowAddCharacterModal(false);
+    };
+
     let combatTrackingActive = characters.length > 0 && activeCharacter == null;
 
     // Show campaign selection if no characters are loaded
@@ -166,6 +193,7 @@ function App() {
                     </button>
                 )
             })}
+            {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}>Add Character</button>}
             {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && (
                 <CharSheet 

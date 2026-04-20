@@ -76,6 +76,33 @@ const saveFile = () => {
         console.log('Character change data saved');
     });
 }
+// API endpoint to create a new campaign folder (must be BEFORE wildcard routes)
+app.post('/api/campaigns', (req, res) => {
+    const { campaignName } = req.body;
+    
+    if (!campaignName || campaignName.trim() === '') {
+        return res.status(400).json({ error: 'Campaign name is required' });
+    }
+    
+    const campaignsDir = path.join(process.cwd(), 'public', 'characters');
+    const newCampaignDir = path.join(campaignsDir, campaignName.trim());
+    
+    try {
+        if (fs.existsSync(newCampaignDir)) {
+            return res.status(400).json({ error: 'Campaign already exists' });
+        }
+        
+        fs.mkdirSync(newCampaignDir);
+        const emptyListPath = path.join(newCampaignDir, '.vite-plugin-campaign-list.json');
+        fs.writeFileSync(emptyListPath, JSON.stringify({ files: [] }, null, 2));
+        
+        res.status(201).json({ message: 'Campaign created successfully', campaignName: campaignName.trim() });
+    } catch (error) {
+        console.error('Error creating campaign:', error);
+        res.status(500).json({ error: 'Failed to create campaign' });
+    }
+});
+// Wildcard routes for character data (must be AFTER /api/campaigns)
 app.get('/api/:key', (req, res) => {
     const { key } = req.params;
     const storedData = characterChangeData[key];
