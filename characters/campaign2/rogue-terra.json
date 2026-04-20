@@ -30,6 +30,7 @@
             "name": "Earth Genasi"
         }
     },
+    "rules": "5e",
     "skillProficiencies": ["Deception","Perception","Sleight of Hand","Stealth"],
     "spells": ["Pass Without Trace"]
 

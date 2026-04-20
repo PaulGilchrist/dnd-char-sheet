@@ -39,6 +39,7 @@
             "name": "High Elf"
         }
     },
+    "rules": "5e",
     "specialActions": [],
     "skillProficiencies": ["Animal Handling","Arcana","History","Nature"],
     "spells": ["Guidance","Mage Hand","Mending","Produce Flame"]

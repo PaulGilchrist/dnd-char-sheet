@@ -55,5 +55,6 @@
             "name": "Stout Halfling"
         }
     },
+    "rules": "5e",
     "skillProficiencies": ["Acrobatics","Deception","Investigation","Perception","Sleight of Hand","Stealth"]
 }

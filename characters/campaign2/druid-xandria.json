@@ -26,6 +26,7 @@
     "race": {
         "name": "Half-Elf"
     },
+    "rules": "5e",
     "skillProficiencies": ["Animal Handling","Arcana","History","Medicine","Nature","Nature","Survival"],
     "spells": ["Guidance","Produce Flame"]
 }

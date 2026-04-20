@@ -8,6 +8,7 @@
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 }
     ],
     "alignment": "Lawful Good",
+    "background": "Acolyte",
     "class": {
         "name": "Cleric",
         "subclass": {
@@ -29,6 +30,7 @@
             "name": "Variant Human"
         }
     },
+    "rules": "2024",
     "skillProficiencies": ["Athletics","Intimidation","Medicine","Perception","Religion"],
     "spells": ["Sacred Flame","Spare the Dying","Thaumaturgy","Bless","Command","Fog Cloud","Healing Word","Inflict Wounds","Sanctuary","Thunderwave"]
 }
