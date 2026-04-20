@@ -87,6 +87,29 @@
   color: #555;
 }
 
+/* Horizontal layout for ability scores in Step 3 */
+.ability-score-form-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ability-score-form-group label {
+  display: block;
+  margin-bottom: 0;
+  margin-right: 10px;
+  min-width: 120px;
+  font-weight: 600;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.ability-score-form-group input {
+  flex: 1;
+  max-width: 150px;
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {

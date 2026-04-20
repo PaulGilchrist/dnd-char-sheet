@@ -647,7 +647,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             return (
               <div key={ability} className="ability-score-card">
                 <h4>{ability}</h4>
-                <div className="form-group">
+                <div className="form-group ability-score-form-group">
                   <label>Base Score (8-18)</label>
                   <input
                     type="number"
@@ -661,7 +661,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
                   <span className="point-cost">Cost: {cost}</span>
                   {errors[`ability_${index}_baseScore`] && <span className="error-message">{errors[`ability_${index}_baseScore`]}</span>}
                 </div>
-                <div className="form-group">
+                <div className="form-group ability-score-form-group">
                   <label>Improvements</label>
                   <input
                     type="number"
@@ -672,7 +672,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
                   />
                   {errors[`ability_${index}_abilityImprovements`] && <span className="error-message">{errors[`ability_${index}_abilityImprovements`]}</span>}
                 </div>
-                <div className="form-group">
+                <div className="form-group ability-score-form-group">
                   <label>Misc Bonus</label>
                   <input
                     type="number"
