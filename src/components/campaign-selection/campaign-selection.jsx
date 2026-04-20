@@ -32,17 +32,14 @@ function CampaignSelection({ onCampaignSelect }) {
       const characterFiles = await getCharacterFiles(campaign);
       const characters = await loadCharacters(campaign, characterFiles);
       
-      if (characters.length > 0) {
-        // Store characters in sessionStorage for the App component
-        sessionStorage.setItem('currentCampaign', campaign);
-        sessionStorage.setItem('characters', JSON.stringify(characters));
-        
-        // Notify parent to switch views
-        if (onCampaignSelect) {
-          onCampaignSelect(campaign, characters);
-        }
-      } else {
-        setError(`No characters found in campaign: ${campaign}`);
+      // Store campaign and characters in sessionStorage
+      // Even if empty, allow navigation to char sheet
+      sessionStorage.setItem('currentCampaign', campaign);
+      sessionStorage.setItem('characters', JSON.stringify(characters));
+      
+      // Notify parent to switch views
+      if (onCampaignSelect) {
+        onCampaignSelect(campaign, characters);
       }
     } catch (err) {
       setError(`Failed to load campaign ${campaign}: ${err.message}`);

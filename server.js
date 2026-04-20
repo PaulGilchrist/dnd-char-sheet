@@ -102,6 +102,59 @@ app.post('/api/campaigns', (req, res) => {
         res.status(500).json({ error: 'Failed to create campaign' });
     }
 });
+
+// API endpoint to create a new character in the selected campaign
+app.post('/api/characters', (req, res) => {
+    const { campaignName, character } = req.body;
+    
+    if (!campaignName || !character) {
+        return res.status(400).json({ error: 'Campaign name and character data are required' });
+    }
+    
+    const campaignsDir = path.join(process.cwd(), 'public', 'characters');
+    const campaignDir = path.join(campaignsDir, campaignName.trim());
+    
+    try {
+        if (!fs.existsSync(campaignDir)) {
+            return res.status(404).json({ error: 'Campaign not found' });
+        }
+        
+        // Generate a safe filename from character name and class
+        const className = character.class?.name || 'Unknown';
+        const charName = character.name || 'Character';
+        const fileName = `${className.toLowerCase()}-${charName.toLowerCase().replace(/\s+/g, '-')}.json`;
+        const filePath = path.join(campaignDir, fileName);
+        
+        // Check if file already exists
+        if (fs.existsSync(filePath)) {
+            return res.status(400).json({ error: 'Character with this name already exists' });
+        }
+        
+        // Write character data to file
+        fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
+        
+        // Update the campaign list file
+        const listPath = path.join(campaignDir, '.vite-plugin-campaign-list.json');
+        let fileList = { files: [] };
+        if (fs.existsSync(listPath)) {
+            const listData = fs.readFileSync(listPath, 'utf-8');
+            fileList = JSON.parse(listData);
+        }
+        if (!fileList.files.includes(fileName)) {
+            fileList.files.push(fileName);
+            fs.writeFileSync(listPath, JSON.stringify(fileList, null, 2));
+        }
+        
+        res.status(201).json({ 
+            message: 'Character created successfully', 
+            character: character,
+            filename: fileName 
+        });
+    } catch (error) {
+        console.error('Error creating character:', error);
+        res.status(500).json({ error: 'Failed to create character' });
+    }
+});
 // Wildcard routes for character data (must be AFTER /api/campaigns)
 app.get('/api/:key', (req, res) => {
     const { key } = req.params;

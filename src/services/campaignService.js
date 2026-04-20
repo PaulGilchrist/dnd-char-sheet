@@ -15,7 +15,7 @@ export const getCharacterFolders = async () => {
 
 export const getCharacterFiles = async (campaign) => {
   try {
-    const response = await fetch(`/dnd-char-sheet/characters/${campaign}/.vite-plugin-campaign-list.json`);
+    const response = await fetch(`/api/characters/${campaign}`);
     if (!response.ok) {
       throw new Error('Failed to fetch character files');
     }
@@ -29,7 +29,7 @@ export const getCharacterFiles = async (campaign) => {
 };
 
 export const loadCharacters = async (campaign, characterFiles) => {
-  const urls = characterFiles.map(file => `/dnd-char-sheet/characters/${campaign}/${file}`);
+  const urls = characterFiles.map(file => `/api/characters/${campaign}/${file}`);
   const promises = urls.map(url => fetch(url).then(response => response.json()));
   
   try {

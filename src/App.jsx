@@ -5,6 +5,7 @@ import './App.css'
 import CharSheet from './components/char-sheet/char-sheet'
 import CombatTracking from './components/combat-tracking/combat-tracking'
 import CampaignSelection from './components/campaign-selection/campaign-selection'
+import CharacterCreationWizard from './components/character-creation/character-creation-wizard'
 import Utils from './services/utils'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
     const [spells2024, setSpells2024] = React.useState([]);
     const [showCampaignSelection, setShowCampaignSelection] = React.useState(true);
     const [showAddCharacterModal, setShowAddCharacterModal] = React.useState(false);
+    const [showCharacterWizard, setShowCharacterWizard] = React.useState(false);
     const inputRef = React.useRef(null);
 
     useEffect(() => {
@@ -87,6 +89,7 @@ function App() {
             if (loadedCharacters.length > 0) {
                 setActiveCharacter(cloneDeep(loadedCharacters[0]));
             }
+            // Don't auto-open wizard here - let handleCampaignSelected handle it
         }
     }, []);
 
@@ -138,42 +141,79 @@ function App() {
 
     const handleCampaignSelected = (campaign, loadedCharacters) => {
         setCharacters(loadedCharacters);
+        setActiveCharacter(null); // Clear active character when switching campaigns
         setShowCampaignSelection(false);
         if (loadedCharacters.length > 0) {
             setActiveCharacter(cloneDeep(loadedCharacters[0]));
+        } else {
+            // Open wizard for empty campaigns
+            setShowCharacterWizard(true);
         }
     };
 
     const handleAddCharacter = () => {
-        // Create a new character object
-        const newCharacter = {
-            name: '',
-            class: { name: '' },
-            race: { name: '' },
-            abilities: {},
-            gold: 0,
-            hitPoints: 0,
-            initiative: 0,
-            inspiration: false,
-            spellAbilities: {
-                spells: [],
-                maxPreparedSpells: 0
-            },
-            rules: '2024'
-        };
-        
-        setActiveCharacter(cloneDeep(newCharacter));
-        setShowAddCharacterModal(false);
+        // Open wizard instead of creating empty character
+        setShowCharacterWizard(true);
     };
 
     const closeModal = () => {
         setShowAddCharacterModal(false);
     };
 
+    const handleWizardComplete = async (characterData) => {
+        try {
+            const campaign = sessionStorage.getItem('currentCampaign');
+            if (!campaign) {
+                throw new Error('No campaign selected');
+            }
+            
+            // Send POST request to API to save character
+            const response = await fetch('/api/characters', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    campaignName: campaign,
+                    character: characterData
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save character');
+            }
+
+            const result = await response.json();
+            
+            // Load the newly created character
+            setActiveCharacter(cloneDeep(result.character));
+            setShowCharacterWizard(false);
+            
+            // Refresh character list
+            const characterFiles = await fetch(`/api/characters/${campaign}`)
+                .then(res => res.json())
+                .then(data => data.files);
+            const newCharacters = await Promise.all(
+                characterFiles.map(file => 
+                    fetch(`/api/characters/${campaign}/${file}`)
+                        .then(res => res.json())
+                )
+            );
+            setCharacters(newCharacters);
+        } catch (error) {
+            console.error('Error creating character:', error);
+            alert('Failed to create character. Please try again.');
+        }
+    };
+
+    const handleWizardCancel = () => {
+        setShowCharacterWizard(false);
+    };
+
     let combatTrackingActive = characters.length > 0 && activeCharacter == null;
 
-    // Show campaign selection if no characters are loaded
-    if (showCampaignSelection || characters.length === 0) {
+    // Show campaign selection if not yet selected
+    if (showCampaignSelection) {
         return (
             <CampaignSelection onCampaignSelect={handleCampaignSelected} />
         );
@@ -214,6 +254,12 @@ function App() {
             )}
             <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}>Back to Campaigns</button>
             <br />
+            {showCharacterWizard && (
+                <CharacterCreationWizard 
+                    onComplete={handleWizardComplete}
+                    onCancel={handleWizardCancel}
+                />
+            )}
         </div>
     )
 }
