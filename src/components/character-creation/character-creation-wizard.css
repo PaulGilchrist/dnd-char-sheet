@@ -241,7 +241,7 @@
 
 .rules-option.selected {
   border-color: #4CAF50;
-  background-color: #e8f5e9;
+  background-color: #4CAF50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
 }
 
@@ -314,9 +314,9 @@
   border: 1px solid #f44336;
 }
 .total-score:not(.error) {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-"  border: 1px solid #a5d6a7;
+  background-color: #4CAF50;
+  color: white;
+  border: 1px solid #a5d6a7;
 }
 
 /* Multi-select for Skills and Languages */
@@ -352,10 +352,12 @@
   height: 16px;
 }
 
-.multi-select-item:has(input[type=\"checkbox\"]:checked) {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #a5d6a7;
+.multi-select-item.selected {
+  background-color: #4CAF50;
+  color: white;
+  border: 2px solid #4CAF50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+  font-weight: 600;
 }
 
 @media (max-width: 600px) {
@@ -363,5 +365,4 @@
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 6px;
   }
-}"
-
+}

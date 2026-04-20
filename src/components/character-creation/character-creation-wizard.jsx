@@ -701,7 +701,10 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           <label>Skill Proficiencies</label>
           <div className="multi-select-container">
             {SKILL_PROFICIENCIES.map(skill => (
-              <label key={skill} className="multi-select-item">
+              <label 
+                key={skill} 
+                className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill) ? 'selected' : ''}`}
+              >
                 <input
                   type="checkbox"
                   checked={(formData.skillProficiencies || []).includes(skill)}
@@ -718,7 +721,10 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           <label>Languages</label>
           <div className="multi-select-container">
             {LANGUAGES.map(language => (
-              <label key={language} className="multi-select-item">
+              <label 
+                key={language} 
+                className={`multi-select-item ${(formData.languages || []).includes(language) ? 'selected' : ''}`}
+              >
                 <input
                   type="checkbox"
                   checked={(formData.languages || []).includes(language)}
