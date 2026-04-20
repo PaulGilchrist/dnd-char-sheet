@@ -107,7 +107,7 @@
 
 .ability-score-form-group input {
   flex: 1;
-  max-width: 150px;
+  max-width: 80px;
 }
 
 .form-group input,
