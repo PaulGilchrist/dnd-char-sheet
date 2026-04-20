@@ -20,6 +20,7 @@ const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Pal
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [ruleset, setRuleset] = useState(null);
+  const [backgrounds, setBackgrounds] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     level: 1,
@@ -51,12 +52,28 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     }
   };
 
-  const handleRulesetChange = (ruleset) => {
+  const handleRulesetChange = async (ruleset) => {
     setRuleset(ruleset);
+    
+    // Load backgrounds for 2024 rules
+    if (ruleset === '2024') {
+      try {
+        const response = await fetch('/dnd-char-sheet/data/2024/backgrounds.json');
+        const data = await response.json();
+        setBackgrounds(data);
+      } catch (error) {
+        console.error('Failed to load backgrounds:', error);
+        setBackgrounds([]);
+      }
+    } else {
+      setBackgrounds([]);
+    }
+    
     setFormData(prev => ({
       ...prev,
       rules: ruleset,
       spells: ruleset === '2024' ? [] : allSpells || [],
+      background: ruleset === '2024' ? '' : '',
       abilities: ABILITY_NAMES.map(name => ({ name, baseScore: 10, abilityImprovements: 0, miscBonus: 0 }))
     }));
     setCurrentStep(2);
@@ -245,14 +262,22 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         {errors.alignment && <span className="error-message">{errors.alignment}</span>}
       </div>
       
-      <div className="form-group">
-        <label>Background</label>
-        <input
-          type="text"
-          value={formData.background}
-          onChange={(e) => handleInputChange('background', e.target.value)}
-        />
-      </div>
+      {ruleset === '2024' && (
+        <div className="form-group">
+          <label>Background (2024 Rules)</label>
+          <select
+            value={formData.background}
+            onChange={(e) => handleInputChange('background', e.target.value)}
+            className={errors.background ? 'error' : ''}
+          >
+            <option value="">Select a background</option>
+            {backgrounds.map(background => (
+              <option key={background.index} value={background.name}>{background.name}</option>
+            ))}
+          </select>
+          {errors.background && <span className="error-message">{errors.background}</span>}
+        </div>
+      )}
     </div>
   );
 
