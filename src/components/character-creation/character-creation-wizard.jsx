@@ -14,9 +14,49 @@ const ALIGNMENTS = [
   'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'
 ];
 
-const RACES = ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling', 'Tiefling', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc'];
+const LANGUAGES = [
+  // Standard Languages
+  "Common",
+  "Dwarvish",
+  "Elvish",
+  "Giant",
+  "Gnomish",
+  "Goblin",
+  "Halfling",
+  "Orc",
+  // Exotic Languages
+  "Abyssal",
+  "Celestial",
+  "Draconic",
+  "Deep Speech",
+  "Infernal",
+  "Primordial",
+  "Sylvan",
+  "Undercommon"
+];
 
-const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
+
+const SKILL_PROFICIENCIES = [
+  "Acrobatics",
+  "Animal Handling",
+  "Arcana",
+  "Athletics",
+  "Deception",
+  "History",
+  "Insight",
+  "Intimidation",
+  "Investigation",
+  "Medicine",
+  "Nature",
+  "Perception",
+  "Performance",
+  "Persuasion",
+  "Religion",
+  "Sleight of Hand",
+  "Stealth",
+  "Survival"
+];
+
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -452,9 +492,13 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onChange={(e) => handleInputChange('class', { name: e.target.value })}
             className={errors.class ? 'error' : ''}
           >
-            {CLASSES.map(cls => (
-              <option key={cls} value={cls}>{cls}</option>
-            ))}
+            {classSubtypes.length > 0 ? (
+              classSubtypes.map(cs => (
+                <option key={cs.className} value={cs.className}>{cs.className}</option>
+              ))
+            ) : (
+              <option value="">Loading classes...</option>
+            )}
           </select>
           {errors.class && <span className="error-message">{errors.class}</span>}
         </div>
@@ -622,33 +666,73 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     );
   };
 
-  const renderStep4 = () => (
-    <div className="wizard-step">
-      <h2>Step 4: Skills & Proficiencies</h2>
-      
-      <div className="form-group">
-        <label>Skill Proficiencies</label>
-        <textarea
-          value={formData.skillProficiencies.join(', ')}
-          onChange={(e) => handleArrayFieldChange('skillProficiencies', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-          placeholder="Enter skills separated by commas"
-          rows={4}
-        />
-        <p className="field-description">e.g., Acrobatics, Athletics, Perception</p>
+  const renderStep4 = () => {
+    const handleSkillToggle = (skill) => {
+      setFormData(prev => {
+        const currentSkills = prev.skillProficiencies || [];
+        const newSkills = currentSkills.includes(skill)
+          ? currentSkills.filter(s => s !== skill)
+          : [...currentSkills, skill];
+        return { ...prev, skillProficiencies: newSkills };
+      });
+      if (errors.skillProficiencies) {
+        setErrors(prev => ({ ...prev, skillProficiencies: null }));
+      }
+    };
+
+    const handleLanguageToggle = (language) => {
+      setFormData(prev => {
+        const currentLanguages = prev.languages || [];
+        const newLanguages = currentLanguages.includes(language)
+          ? currentLanguages.filter(l => l !== language)
+          : [...currentLanguages, language];
+        return { ...prev, languages: newLanguages };
+      });
+      if (errors.languages) {
+        setErrors(prev => ({ ...prev, languages: null }));
+      }
+    };
+
+    return (
+      <div className="wizard-step">
+        <h2>Step 4: Skills & Proficiencies</h2>
+        
+        <div className="form-group">
+          <label>Skill Proficiencies</label>
+          <div className="multi-select-container">
+            {SKILL_PROFICIENCIES.map(skill => (
+              <label key={skill} className="multi-select-item">
+                <input
+                  type="checkbox"
+                  checked={(formData.skillProficiencies || []).includes(skill)}
+                  onChange={() => handleSkillToggle(skill)}
+                />
+                {skill}
+              </label>
+            ))}
+          </div>
+          {errors.skillProficiencies && <span className="error-message">{errors.skillProficiencies}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Languages</label>
+          <div className="multi-select-container">
+            {LANGUAGES.map(language => (
+              <label key={language} className="multi-select-item">
+                <input
+                  type="checkbox"
+                  checked={(formData.languages || []).includes(language)}
+                  onChange={() => handleLanguageToggle(language)}
+                />
+                {language}
+              </label>
+            ))}
+          </div>
+          {errors.languages && <span className="error-message">{errors.languages}</span>}
+        </div>
       </div>
-      
-      <div className="form-group">
-        <label>Languages</label>
-        <textarea
-          value={formData.languages.join(', ')}
-          onChange={(e) => handleArrayFieldChange('languages', e.target.value.split(',').map(l => l.trim()).filter(l => l))}
-          placeholder="Enter languages separated by commas"
-          rows={2}
-        />
-        <p className="field-description">e.g., Common, Elvish, Dwarvish</p>
-      </div>
-    </div>
   );
+  };
 
   const renderStep5 = () => (
     <div className="wizard-step">

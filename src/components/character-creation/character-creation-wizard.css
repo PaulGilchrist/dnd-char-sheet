@@ -316,5 +316,52 @@
 .total-score:not(.error) {
   background-color: #e8f5e9;
   color: #2e7d32;
+"  border: 1px solid #a5d6a7;
+}
+
+/* Multi-select for Skills and Languages */
+.multi-select-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.multi-select-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.multi-select-item:hover {
+  background-color: #e0e0e0;
+}
+
+.multi-select-item input[type=\"checkbox\"] {
+  margin: 0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.multi-select-item:has(input[type=\"checkbox\"]:checked) {
+  background-color: #e8f5e9;
+  color: #2e7d32;
   border: 1px solid #a5d6a7;
+}
+
+@media (max-width: 600px) {
+  .multi-select-container {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 6px;
+  }
+}"
 
