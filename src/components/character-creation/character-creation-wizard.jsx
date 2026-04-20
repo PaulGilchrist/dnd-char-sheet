@@ -21,6 +21,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [currentStep, setCurrentStep] = useState(1);
   const [ruleset, setRuleset] = useState(null);
   const [backgrounds, setBackgrounds] = useState([]);
+  const [racesData, setRacesData] = useState([]);
+  const [classSubtypes, setClassSubtypes] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     level: 1,
@@ -67,6 +69,56 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       }
     } else {
       setBackgrounds([]);
+    }
+    
+    // Load races for selected ruleset
+    if (ruleset === '2024') {
+      try {
+        const response = await fetch('/dnd-char-sheet/data/2024/races.json');
+        const data = await response.json();
+        setRacesData(data);
+      } catch (error) {
+        console.error('Failed to load 2024 races:', error);
+        setRacesData([]);
+      }
+    } else {
+      try {
+        const response = await fetch('/dnd-char-sheet/data/races.json');
+        const data = await response.json();
+        setRacesData(data);
+      } catch (error) {
+        console.error('Failed to load 5e races:', error);
+        setRacesData([]);
+      }
+    }
+    
+    // Load class subtypes for selected ruleset
+    if (ruleset === '2024') {
+      try {
+        const response = await fetch('/dnd-char-sheet/data/2024/classes.json');
+        const data = await response.json();
+        const subtypes = data.map(cls => ({
+          className: cls.name,
+          subtypes: cls.subclasses || []
+        }));
+        setClassSubtypes(subtypes);
+      } catch (error) {
+        console.error('Failed to load 2024 classes:', error);
+        setClassSubtypes([]);
+      }
+    } else {
+      try {
+        const response = await fetch('/dnd-char-sheet/data/classes.json');
+        const data = await response.json();
+        const subtypes = data.map(cls => ({
+          className: cls.name,
+          subtypes: cls.subclasses || []
+        }));
+        setClassSubtypes(subtypes);
+      } catch (error) {
+        console.error('Failed to load 5e classes:', error);
+        setClassSubtypes([]);
+      }
     }
     
     setFormData(prev => ({
@@ -281,69 +333,91 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     </div>
   );
 
-  const renderStep2 = () => (
-    <div className="wizard-step">
-      <h2>Step 2: Race & Class</h2>
-      
-      <div className="form-group">
-        <label>Race *</label>
-        <select
-          value={formData.race?.name || ''}
-          onChange={(e) => handleInputChange('race', { name: e.target.value })}
-          className={errors.race ? 'error' : ''}
-        >
-          {RACES.map(race => (
-            <option key={race} value={race}>{race}</option>
-          ))}
-        </select>
-        {errors.race && <span className="error-message">{errors.race}</span>}
+  const renderStep2 = () => {
+    // Get available subclasses for the selected class
+    const selectedClass = formData.class?.name;
+    const availableSubclasses = classSubtypes.find(
+      cs => cs.className === selectedClass
+    )?.subtypes || [];
+    
+    return (
+      <div className="wizard-step">
+        <h2>Step 2: Race & Class</h2>
+        
+        <div className="form-group">
+          <label>Race *</label>
+          <select
+            value={formData.race?.name || ''}
+            onChange={(e) => handleInputChange('race', { name: e.target.value })}
+            className={errors.race ? 'error' : ''}
+          >
+            {racesData.length > 0 ? (
+              racesData.map(race => (
+                <option key={race.name || race.index} value={race.name || race.index}>{race.name || race.index}</option>
+              ))
+            ) : (
+              RACES.map(race => (
+                <option key={race} value={race}>{race}</option>
+              ))
+            )}
+          </select>
+          {errors.race && <span className="error-message">{errors.race}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Class *</label>
+          <select
+            value={formData.class?.name || ''}
+            onChange={(e) => handleInputChange('class', { name: e.target.value })}
+            className={errors.class ? 'error' : ''}
+          >
+            {CLASSES.map(cls => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
+          {errors.class && <span className="error-message">{errors.class}</span>}
+        </div>
+        
+        {availableSubclasses.length > 0 && (
+          <div className="form-group">
+            <label>Subclass</label>
+            <select
+              value={formData.class?.subclass?.name || ''}
+              onChange={(e) => {
+                const updatedClass = {
+                  ...formData.class,
+                  subclass: { name: e.target.value, type: '' }
+                };
+                handleInputChange('class', updatedClass);
+              }}
+            >
+              <option value="">Select a subclass</option>
+              {availableSubclasses.map(subclass => (
+                <option key={subclass.name} value={subclass.name}>{subclass.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        
+        {availableSubclasses.length > 0 && (
+          <div className="form-group">
+            <label>Subclass Type (Optional)</label>
+            <input
+              type="text"
+              value={formData.class?.subclass?.type || ''}
+              onChange={(e) => {
+                const updatedClass = {
+                  ...formData.class,
+                  subclass: { ...formData.class.subclass, type: e.target.value }
+                };
+                handleInputChange('class', updatedClass);
+              }}
+            />
+          </div>
+        )}
       </div>
-      
-      <div className="form-group">
-        <label>Class *</label>
-        <select
-          value={formData.class?.name || ''}
-          onChange={(e) => handleInputChange('class', { name: e.target.value })}
-          className={errors.class ? 'error' : ''}
-        >
-          {CLASSES.map(cls => (
-            <option key={cls} value={cls}>{cls}</option>
-          ))}
-        </select>
-        {errors.class && <span className="error-message">{errors.class}</span>}
-      </div>
-      
-      <div className="form-group">
-        <label>Subclass (Optional)</label>
-        <input
-          type="text"
-          value={formData.class?.subclass?.name || ''}
-          onChange={(e) => {
-            const updatedClass = {
-              ...formData.class,
-              subclass: { name: e.target.value, type: '' }
-            };
-            handleInputChange('class', updatedClass);
-          }}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Subclass Type (Optional)</label>
-        <input
-          type="text"
-          value={formData.class?.subclass?.type || ''}
-          onChange={(e) => {
-            const updatedClass = {
-              ...formData.class,
-              subclass: { ...formData.class.subclass, type: e.target.value }
-            };
-            handleInputChange('class', updatedClass);
-          }}
-        />
-      </div>
-    </div>
   );
+  };
 
   const renderStep3 = () => (
     <div className="wizard-step">
