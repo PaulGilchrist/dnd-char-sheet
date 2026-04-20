@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './character-creation-wizard.css';
+import './character-creation-wizard-compact.css';
 
 const REQUIRED_FIELDS = [
   'name', 'level', 'alignment', 'race', 'class', 'abilities', 'inventory', 'skillProficiencies'
@@ -46,6 +47,53 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     rules: '2024'
   });
   const [errors, setErrors] = useState({});
+
+  // Validate ability scores when formData.abilities changes
+  useEffect(() => {
+    if (currentStep === 3) {
+      const abilityErrors = {};
+      let totalPointsSpent = 0;
+      
+      formData.abilities.forEach((ability, index) => {
+        const baseScore = parseInt(ability.baseScore) || 8;
+        const improvements = parseInt(ability.abilityImprovements) || 0;
+        const misc = parseInt(ability.miscBonus) || 0;
+        const totalScore = baseScore + improvements + misc;
+
+        // Calculate point buy cost
+        const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
+        totalPointsSpent += cost;
+
+        // Validate base score range
+        if (baseScore < 8) {
+          abilityErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
+        }
+        if (baseScore > 18) {
+          abilityErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 18';
+        }
+
+        // Validate total score
+        if (totalScore > 20) {
+          abilityErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
+        }
+
+        // Validate non-negative improvements and misc
+        if (improvements < 0) {
+          abilityErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
+        }
+        if (misc < 0) {
+          abilityErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
+        }
+      });
+
+      // Check if user has spent more than 27 points
+      if (totalPointsSpent > 27) {
+        abilityErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
+      }
+
+      setErrors(prev => ({ ...prev, ...abilityErrors }));
+    }
+  }, [formData.abilities, currentStep]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -187,11 +235,44 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     }
     
     if (step === 3) {
+      // Calculate total points spent
+      let totalPointsSpent = 0;
       formData.abilities.forEach((ability, index) => {
-        if (ability.baseScore < 1 || ability.baseScore > 30) {
-          newErrors[`ability_${index}`] = `Base score must be between 1 and 30`;
+        const baseScore = parseInt(ability.baseScore) || 8;
+        const improvements = parseInt(ability.abilityImprovements) || 0;
+        const misc = parseInt(ability.miscBonus) || 0;
+        const totalScore = baseScore + improvements + misc;
+
+        // Calculate point buy cost
+        const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
+        totalPointsSpent += cost;
+
+        // Validate base score range
+        if (baseScore < 8) {
+          newErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
+        }
+        if (baseScore > 18) {
+          newErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 18';
+        }
+
+        // Validate total score
+        if (totalScore > 20) {
+          newErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
+        }
+
+        // Validate non-negative improvements and misc
+        if (improvements < 0) {
+          newErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
+        }
+        if (misc < 0) {
+          newErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
         }
       });
+
+      // Check if user has spent more than 27 points
+      if (totalPointsSpent > 27) {
+        newErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
+      }
     }
     
     setErrors(newErrors);
@@ -419,47 +500,127 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   );
   };
 
-  const renderStep3 = () => (
-    <div className="wizard-step">
-      <h2>Step 3: Ability Scores</h2>
-      <p className="step-description">Set base scores for each ability (1-30)</p>
-      
-      {ABILITY_NAMES.map((ability, index) => (
-        <React.Fragment key={ability}>
-          <div className="form-group">
-            <label>{ability} - Base Score *</label>
-            <input
-              type="number"
-              min="1"
-              max="30"
-              value={formData.abilities[index].baseScore}
-              onChange={(e) => handleAbilityChange(index, 'baseScore', parseInt(e.target.value))}
-              className={errors[`ability_${index}`] ? 'error' : ''}
-            />
-            {errors[`ability_${index}`] && <span className="error-message">{errors[`ability_${index}`]}</span>}
-          </div>
-          <div className="form-group">
-            <label>{ability} - Ability Improvements</label>
-            <input
-              type="number"
-              min="0"
-              value={formData.abilities[index].abilityImprovements}
-              onChange={(e) => handleAbilityImprovementChange(index, parseInt(e.target.value))}
-            />
-          </div>
-          <div className="form-group">
-            <label>{ability} - Misc Bonus</label>
-            <input
-              type="number"
-              min="0"
-              value={formData.abilities[index].miscBonus}
-              onChange={(e) => handleAbilityMiscBonusChange(index, parseInt(e.target.value))}
-            />
-          </div>
-        </React.Fragment>
-      ))}
-    </div>
-  );
+  const renderStep3 = () => {
+    // Calculate total points spent on base scores
+    const totalPointsSpent = formData.abilities.reduce((sum, ability) => {
+      const baseScore = parseInt(ability.baseScore) || 8;
+      // Point buy cost: 8=0, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9, 16=11, 17=13, 18=15
+      const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
+      return sum + cost;
+    }, 0);
+
+    const pointsRemaining = 27 - totalPointsSpent;
+
+    // Calculate total score for each ability (base + improvements + misc)
+    const calculateTotalScore = (ability) => {
+      const base = parseInt(ability.baseScore) || 8;
+      const improvements = parseInt(ability.abilityImprovements) || 0;
+      const misc = parseInt(ability.miscBonus) || 0;
+      return base + improvements + misc;
+    };
+
+    // Validate each ability
+    const validateAbility = (ability, index) => {
+      const errors = {};
+      const baseScore = parseInt(ability.baseScore) || 8;
+      const totalScore = calculateTotalScore(ability);
+
+      // Base score validation
+      if (baseScore < 8) {
+        errors.baseScore = 'Base score must be at least 8';
+      }
+      if (baseScore > 18) {
+        errors.baseScore = 'Base score cannot exceed 18 (point buy max)';
+      }
+
+      // Total score validation
+      if (totalScore > 20) {
+        errors.totalScore = `Total score (base + improvements + misc) cannot exceed 20`;
+      }
+
+      // Non-negative validation
+      if (parseInt(ability.abilityImprovements) < 0) {
+        errors.abilityImprovements = 'Improvements must be 0 or above';
+      }
+      if (parseInt(ability.miscBonus) < 0) {
+        errors.miscBonus = 'Misc bonus must be 0 or above';
+      }
+
+      return errors;
+    };
+
+    // Note: Validation errors are set in useEffect to prevent infinite re-renders
+
+    return (
+      <div className="wizard-step wizard-step-3">
+        <h2>Step 3: Ability Scores</h2>
+        <p className="step-description">
+          Use point buy: Each ability starts at 8. You have <strong>{pointsRemaining} points</strong> remaining.
+          Costs: 8=0, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9, 16=11, 17=13, 18=15
+        </p>
+        <p className="step-description">
+          Total score (base + improvements + misc) cannot exceed 20 for any ability.
+        </p>
+
+        <div className="ability-scores-grid">
+          {ABILITY_NAMES.map((ability, index) => {
+            const baseScore = parseInt(formData.abilities[index].baseScore) || 8;
+            const improvements = parseInt(formData.abilities[index].abilityImprovements) || 0;
+            const misc = parseInt(formData.abilities[index].miscBonus) || 0;
+            const totalScore = baseScore + improvements + misc;
+
+            // Calculate point buy cost for this ability
+            const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
+
+            return (
+              <div key={ability} className="ability-score-card">
+                <h4>{ability}</h4>
+                <div className="form-group">
+                  <label>Base Score (8-18)</label>
+                  <input
+                    type="number"
+                    min="8"
+                    max="18"
+                    value={formData.abilities[index].baseScore}
+                    onChange={(e) => handleAbilityChange(index, 'baseScore', parseInt(e.target.value))}
+                    className={errors[`ability_${index}_baseScore`] ? 'error' : ''}
+                  />
+                  <span className="point-cost">Cost: {cost}</span>
+                  {errors[`ability_${index}_baseScore`] && <span className="error-message">{errors[`ability_${index}_baseScore`]}</span>}
+                </div>
+                <div className="form-group">
+                  <label>Improvements</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.abilities[index].abilityImprovements}
+                    onChange={(e) => handleAbilityImprovementChange(index, parseInt(e.target.value))}
+                    className={errors[`ability_${index}_abilityImprovements`] ? 'error' : ''}
+                  />
+                  {errors[`ability_${index}_abilityImprovements`] && <span className="error-message">{errors[`ability_${index}_abilityImprovements`]}</span>}
+                </div>
+                <div className="form-group">
+                  <label>Misc Bonus</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.abilities[index].miscBonus}
+                    onChange={(e) => handleAbilityMiscBonusChange(index, parseInt(e.target.value))}
+                    className={errors[`ability_${index}_miscBonus`] ? 'error' : ''}
+                  />
+                  {errors[`ability_${index}_miscBonus`] && <span className="error-message">{errors[`ability_${index}_miscBonus`]}</span>}
+                </div>
+                <div className={`total-score ${totalScore > 20 ? 'error' : ''}`}>
+                  Total: <strong>{totalScore}</strong>
+                  {totalScore > 20 && <span className="error-message"> (max 20)</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderStep4 = () => (
     <div className="wizard-step">
