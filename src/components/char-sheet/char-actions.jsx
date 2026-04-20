@@ -14,16 +14,39 @@ function CharActions({ playerStats }) {
     }
     let signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
 
+    // Helper function to get mastery for a weapon name
+    const getWeaponMastery = (weaponName) => {
+        if (playerStats.rules !== '2024') {
+            return null;
+        }
+        
+        // Remove magic prefix if present
+        let nonMagicalName = weaponName;
+        if (nonMagicalName.charAt(0) === '+') {
+            nonMagicalName = nonMagicalName.substring(3);
+        }
+        
+        // Find the weapon in equipment
+        const weapon = playerStats.equipment?.find(item => item.name === nonMagicalName);
+        if (weapon && weapon.equipment_category === 'Weapon') {
+            return weapon.mastery;
+        }
+        return null;
+    };
+
+    const is2024Rules = playerStats.rules === '2024';
+
     return (
         <div>
             <div>
                 <span className='sectionHeader'>Actions</span>
-                <div className='attacks'>
+                <div className={`attacks ${is2024Rules ? 'mastery-enabled' : ''}`}>
                     <div className='left'><b>Name</b></div>
                     <div><b>Range</b></div>
                     <div><b>Hit</b></div>
                     <div><b>Damage</b></div>
                     <div className='left'><b>Type</b></div>
+                    {is2024Rules && <div><b>Mastery</b></div>}
                     {playerStats.attacks.map((attack) => {
                         if (attack.type != 'Action') return '';
                         return <React.Fragment key={attack.name}>
@@ -32,6 +55,7 @@ function CharActions({ playerStats }) {
                             <div className={attack.hitBonusFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.hitBonusFormula)}>{signFormatter.format(attack.hitBonus)}</div>
                             <div className={attack.damageFormula ? "clickable" : ""} onClick={() => setPopupHtml(attack.damageFormula)}>{attack.damage}</div>
                             <div className='left'>{attack.damageType}</div>
+                            {is2024Rules && <div>{getWeaponMastery(attack.name) || ''}</div>}
                         </React.Fragment>;
                     })}
                 </div>
@@ -48,12 +72,13 @@ function CharActions({ playerStats }) {
                 {playerStats.attacks.find((attack) => attack.type === 'Bonus Action') && <div>
                     <hr />
                     <div className='sectionHeader'>Bonus Actions</div>
-                    <div className='attacks'>
+                    <div className={`attacks ${is2024Rules ? 'mastery-enabled' : ''}`}>
                         <div className='left'><b>Name</b></div>
                         <div><b>Range</b></div>
                         <div><b>Hit</b></div>
                         <div><b>Damage</b></div>
                         <div className='left'><b>Type</b></div>
+                        {is2024Rules && <div><b>Mastery</b></div>}
                         {playerStats.attacks.map((attack) => {
                             if (attack.type != 'Bonus Action') return '';
                             return <React.Fragment key={attack.name}>
@@ -62,6 +87,7 @@ function CharActions({ playerStats }) {
                                 <div>{signFormatter.format(attack.hitBonus)}</div>
                                 <div>{attack.damage}</div>
                                 <div className='left'>{attack.damageType}</div>
+                                {is2024Rules && <div>{getWeaponMastery(attack.name) || ''}</div>}
                             </React.Fragment>;
                         })}
                     </div>
