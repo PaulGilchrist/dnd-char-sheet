@@ -10,22 +10,45 @@ function CharFeats({ playerStats, showPopup }) {
         // Load feats from appropriate JSON file based on rules version
         const rulesVersion = playerStats.rules || '5e';
         const featsFile = rulesVersion === '2024' ? '2024/feats.json' : 'feats.json';
-        const featsUrl = `/data/${featsFile}`;
+        // Use import.meta.env.BASE_URL to get the correct base path from Vite config
+        const featsUrl = `${import.meta.env.BASE_URL}data/${featsFile}`;
+        
+        console.log(`[CharFeats] Fetching feats from: ${featsUrl}`);
         
         fetch(featsUrl)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('[CharFeats] Failed to parse JSON:', e);
+                        throw new Error('Invalid JSON response');
+                    }
+                });
+            })
             .then(featsData => {
-                const feat = featsData.find(f => f.name === featName || f.index === featName);
+                console.log(`[CharFeats] Loaded ${featsData.length} feats`);
+                // Normalize feat name: convert to lowercase and replace spaces with hyphens for matching
+                const normalizedInput = featName.toLowerCase().replace(/\s+/g, '-');
+                const feat = featsData.find(f => {
+                    const normalizedName = (f.name || '').toLowerCase().replace(/\s+/g, '-');
+                    const normalizedIndex = (f.index || '').toLowerCase().replace(/\s+/g, '-');
+                    return normalizedName === normalizedInput || normalizedIndex === normalizedInput;
+                });
                 if (feat) {
+                    console.log(`[CharFeats] Found feat: ${feat.name}`);
                     showPopup(feat);
                 } else {
-                    console.warn(`[CharFeats] Feat not found: ${featName}`);
+                    console.warn(`[CharFeats] Feat not found: ${featName} (normalized: ${normalizedInput})`);
                     setPopupHtml(`<b>${featName}</b><br/><br/>Feat details not found in database.`);
                 }
             })
             .catch(error => {
                 console.error(`[CharFeats] Error loading feats:`, error);
-                setPopupHtml(`<b>${featName}</b><br/><br/>Error loading feat details.`);
+                setPopupHtml(`<b>${featName}</b><br/><br/>Error loading feat details: ${error.message}. Check browser console for more details.`);
             });
     };
     
