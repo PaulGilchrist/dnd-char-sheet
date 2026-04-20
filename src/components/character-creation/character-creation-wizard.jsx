@@ -17,8 +17,9 @@ const RACES = ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfling', 'Tiefling', 'Dragonbo
 
 const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
 
-function CharacterCreationWizard({ onComplete, onCancel }) {
+function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [ruleset, setRuleset] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     level: 1,
@@ -48,6 +49,17 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  const handleRulesetChange = (ruleset) => {
+    setRuleset(ruleset);
+    setFormData(prev => ({
+      ...prev,
+      rules: ruleset,
+      spells: ruleset === '2024' ? [] : allSpells || [],
+      abilities: ABILITY_NAMES.map(name => ({ name, baseScore: 10, abilityImprovements: 0, miscBonus: 0 }))
+    }));
+    setCurrentStep(2);
   };
 
   const handleAbilityChange = (index, field, value) => {
@@ -149,6 +161,47 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
       onComplete(formData);
     }
   };
+
+  const renderRulesSelection = () => (
+    <div className="wizard-step">
+      <h2>Select Rules System</h2>
+      <p className="step-description">Choose which D&D ruleset your character will follow:</p>
+      
+      <div className="rules-selection-container">
+        <div 
+          className={`rules-option ${ruleset === '5e' ? 'selected' : ''}`}
+          onClick={() => handleRulesetChange('5e')}
+        >
+          <div className="rules-option-icon">📜</div>
+          <h3>5th Edition (5e)</h3>
+          <p>The classic D&D ruleset from 2014. Features traditional spell slots, class features, and ability scores.</p>
+          <ul className="rules-features">
+            <li>Traditional spell slots</li>
+            <li>Classic class features</li>
+            <li>Standard ability improvements</li>
+            <li>Original subclass system</li>
+          </ul>
+        </div>
+        
+        <div 
+          className={`rules-option ${ruleset === '2024' ? 'selected' : ''}`}
+          onClick={() => handleRulesetChange('2024')}
+        >
+          <div className="rules-option-icon">✨</div>
+          <h3>2024 Rules (Essentials)</h3>
+          <p>The updated D&D ruleset with streamlined mechanics and modernized features.</p>
+          <ul className="rules-features">
+            <li>Revised spell mechanics</li>
+            <li>Updated class features</li>
+            <li>Improved ability improvements</li>
+            <li>Modern subclass system</li>
+          </ul>
+        </div>
+      </div>
+      
+      {errors.ruleset && <span className="error-message">{errors.ruleset}</span>}
+    </div>
+  );
 
   const renderStep1 = () => (
     <div className="wizard-step">
@@ -263,17 +316,6 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
             handleInputChange('class', updatedClass);
           }}
         />
-      </div>
-      
-      <div className="form-group">
-        <label>Rules System</label>
-        <select
-          value={formData.rules}
-          onChange={(e) => handleInputChange('rules', e.target.value)}
-        >
-          <option value="2024">2024 Rules</option>
-          <option value="5e">5e Rules</option>
-        </select>
       </div>
     </div>
   );
@@ -443,13 +485,14 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
 
   const renderStep = () => {
     switch (currentStep) {
-      case 1: return renderStep1();
-      case 2: return renderStep2();
-      case 3: return renderStep3();
-      case 4: return renderStep4();
-      case 5: return renderStep5();
-      case 6: return renderStep6();
-      default: return renderStep1();
+      case 1: return renderRulesSelection();
+      case 2: return renderStep1();
+      case 3: return renderStep2();
+      case 4: return renderStep3();
+      case 5: return renderStep4();
+      case 6: return renderStep5();
+      case 7: return renderStep6();
+      default: return renderRulesSelection();
     }
   };
 
@@ -464,7 +507,7 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
         <div className="progress-bar">
           <div 
             className="progress-fill" 
-            style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
+            style={{ width: `${((currentStep - 1) / 6) * 100}%` }}
           ></div>
         </div>
         
@@ -481,7 +524,7 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
             {currentStep === 1 ? 'Cancel' : 'Previous'}
           </button>
           
-          {currentStep < 6 ? (
+          {currentStep < 7 ? (
             <button className="btn btn-primary" onClick={handleNext}>
               Next
             </button>
@@ -497,4 +540,3 @@ function CharacterCreationWizard({ onComplete, onCancel }) {
 }
 
 export default CharacterCreationWizard;
-

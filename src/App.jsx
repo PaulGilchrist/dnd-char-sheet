@@ -258,6 +258,10 @@ function App() {
                 <CharacterCreationWizard 
                     onComplete={handleWizardComplete}
                     onCancel={handleWizardCancel}
+                    allRaces={races}
+                    allClasses={classes}
+                    allSpells={spells}
+                    allSpells2024={spells2024}
                 />
             )}
         </div>
