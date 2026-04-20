@@ -7,7 +7,6 @@
     "feat": "Magic Initiate",
     "skill_proficiencies": "Insight and Religion",
     "tool_proficiencies": "Calligrapher's Supplies",
-    "languages": "",
     "equipment": "Choose A or B: (A) Calligrapher1s Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
     "book": "Player's Handbook 2024",
     "page": 178
@@ -183,7 +182,7 @@
   {
     "index": "wayfarer",
     "name": "Wayfarer",
-    "description": "You grew up on the streets st1rrounded by similarly ill-fated castoffs, a few of them friends and a few of them rivals. You slept where you could and did odd jobs for food. At times, when the hunger became unbearable, you resorted to theft. Still, you never lost your pride and never abandoned hope. Fate is not yet finished with you.",
+    "description": "You grew up on the streets surrounded by similarly ill-fated castoffs, a few of them friends and a few of them rivals. You slept where you could and did odd jobs for food. At times, when the hunger became unbearable, you resorted to theft. Still, you never lost your pride and never abandoned hope. Fate is not yet finished with you.",
     "ability_scores": "Dexterity, Wisdom, Charisma",
     "feat": "Lucky",
     "skill_proficiencies": "Insight and Stealth",

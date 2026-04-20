@@ -8,6 +8,7 @@
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 }
     ],
     "alignment": "Neutral Good",
+    "background": "Guide",
     "class": {
         "name": "Barbarian",
         "subclass": {
