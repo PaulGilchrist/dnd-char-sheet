@@ -320,7 +320,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         return (
           <WizardStepSpecial
             formData={formData}
-            onArrayFieldChange={onArrayFieldChange}
+            onArrayFieldChange={handleArrayFieldChange}
           />
         );
       default:
