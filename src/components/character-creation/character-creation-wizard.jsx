@@ -1,62 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import './character-creation-wizard.css';
 import './character-creation-wizard-compact.css';
-
-const REQUIRED_FIELDS = [
-  'name', 'level', 'alignment', 'race', 'class', 'abilities', 'inventory', 'skillProficiencies'
-];
-
-const ABILITY_NAMES = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
-
-const ALIGNMENTS = [
-  'Lawful Good', 'Neutral Good', 'Chaotic Good',
-  'Lawful Neutral', 'True Neutral', 'Chaotic Neutral',
-  'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'
-];
-
-const LANGUAGES = [
-  // Standard Languages
-  "Common",
-  "Dwarvish",
-  "Elvish",
-  "Giant",
-  "Gnomish",
-  "Goblin",
-  "Halfling",
-  "Orc",
-  // Exotic Languages
-  "Abyssal",
-  "Celestial",
-  "Draconic",
-  "Deep Speech",
-  "Infernal",
-  "Primordial",
-  "Sylvan",
-  "Undercommon"
-];
-
-
-const SKILL_PROFICIENCIES = [
-  "Acrobatics",
-  "Animal Handling",
-  "Arcana",
-  "Athletics",
-  "Deception",
-  "History",
-  "Insight",
-  "Intimidation",
-  "Investigation",
-  "Medicine",
-  "Nature",
-  "Perception",
-  "Performance",
-  "Persuasion",
-  "Religion",
-  "Sleight of Hand",
-  "Stealth",
-  "Survival"
-];
-
+import {
+  REQUIRED_FIELDS,
+  ABILITY_NAMES,
+  DEFAULT_FORM_DATA
+} from './constants';
+import { validateStep, validateFinalFormData } from './utils';
+import WizardHeader from './wizard-header';
+import WizardProgressBar from './wizard-progress-bar';
+import WizardFooter from './wizard-footer';
+import WizardStepRules from './wizard-step-rules';
+import WizardStepBasic from './wizard-step-basic';
+import WizardStepRaceClass from './wizard-step-race-class';
+import WizardStepAbilities from './wizard-step-abilities';
+import WizardStepSkills from './wizard-step-skills';
+import WizardStepInventory from './wizard-step-inventory';
+import WizardStepSpecial from './wizard-step-special';
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -64,32 +24,55 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [backgrounds, setBackgrounds] = useState([]);
   const [racesData, setRacesData] = useState([]);
   const [classSubtypes, setClassSubtypes] = useState([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    level: 1,
-    alignment: 'True Neutral',
-    background: '',
-    race: { name: 'Human', subrace: { name: '' } },
-    class: { name: 'Fighter', subclass: { name: '' }, fightingStyles: [], expertise: [], favoredEnemies: [], favoredTerrain: [] },
-    abilities: ABILITY_NAMES.map(name => ({ name, baseScore: 10, abilityImprovements: 0, miscBonus: 0 })),
-    skillProficiencies: [],
-    inventory: {
-      backpack: [],
-      equipped: [],
-      gold: 10,
-      magicItems: []
-    },
-    languages: [],
-    spells: [],
-    resistances: [],
-    feats: [],
-    specialActions: [],
-    rules: '2024'
-  });
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: '', equipped: '' });
 
-  // Validate ability scores when formData.abilities changes
+  // Load data based on ruleset
+  useEffect(() => {
+    if (ruleset === '2024') {
+      const loadData = async (url, setData) => {
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          setData(data);
+        } catch (error) {
+          console.error(`Failed to load ${url}:`, error);
+          setData([]);
+        }
+      };
+
+      loadData('/dnd-char-sheet/data/2024/backgrounds.json', setBackgrounds);
+      loadData('/dnd-char-sheet/data/2024/races.json', setRacesData);
+      loadData('/dnd-char-sheet/data/2024/classes.json', (data) => {
+        setClassSubtypes(data.map(cls => ({
+          className: cls.name,
+          subtypes: cls.subclasses || []
+        })));
+      });
+    } else {
+      const loadData = async (url, setData) => {
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          setData(data);
+        } catch (error) {
+          console.error(`Failed to load ${url}:`, error);
+          setData([]);
+        }
+      };
+
+      loadData('/dnd-char-sheet/data/races.json', setRacesData);
+      loadData('/dnd-char-sheet/data/classes.json', (data) => {
+        setClassSubtypes(data.map(cls => ({
+          className: cls.name,
+          subtypes: cls.subclasses || []
+        })));
+      });
+    }
+  }, [ruleset]);
+
+  // Validate ability scores
   useEffect(() => {
     if (currentStep === 3) {
       const abilityErrors = {};
@@ -101,24 +84,18 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         const misc = parseInt(ability.miscBonus) || 0;
         const totalScore = baseScore + improvements + misc;
 
-        // Calculate point buy cost
         const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
         totalPointsSpent += cost;
 
-        // Validate base score range
         if (baseScore < 8) {
           abilityErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
         }
         if (baseScore > 18) {
           abilityErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 18';
         }
-
-        // Validate total score
         if (totalScore > 20) {
           abilityErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
         }
-
-        // Validate non-negative improvements and misc
         if (improvements < 0) {
           abilityErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
         }
@@ -127,7 +104,6 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         }
       });
 
-      // Check if user has spent more than 27 points
       if (totalPointsSpent > 27) {
         abilityErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
       }
@@ -136,88 +112,36 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     }
   }, [formData.abilities, currentStep]);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
+  const handleRulesetChange = async (newRuleset) => {
+    setRuleset(newRuleset);
+    
+    if (newRuleset === '2024') {
+      setFormData(prev => ({
+        ...prev,
+        rules: '2024',
+        spells: [],
+        background: ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        rules: '5e',
+        spells: allSpells || [],
+        background: ''
+      }));
     }
+    
+    setCurrentStep(2);
   };
 
-  const handleRulesetChange = async (ruleset) => {
-    setRuleset(ruleset);
-    
-    // Load backgrounds for 2024 rules
-    if (ruleset === '2024') {
-      try {
-        const response = await fetch('/dnd-char-sheet/data/2024/backgrounds.json');
-        const data = await response.json();
-        setBackgrounds(data);
-      } catch (error) {
-        console.error('Failed to load backgrounds:', error);
-        setBackgrounds([]);
-      }
-    } else {
-      setBackgrounds([]);
-    }
-    
-    // Load races for selected ruleset
-    if (ruleset === '2024') {
-      try {
-        const response = await fetch('/dnd-char-sheet/data/2024/races.json');
-        const data = await response.json();
-        setRacesData(data);
-      } catch (error) {
-        console.error('Failed to load 2024 races:', error);
-        setRacesData([]);
-      }
-    } else {
-      try {
-        const response = await fetch('/dnd-char-sheet/data/races.json');
-        const data = await response.json();
-        setRacesData(data);
-      } catch (error) {
-        console.error('Failed to load 5e races:', error);
-        setRacesData([]);
-      }
-    }
-    
-    // Load class subtypes for selected ruleset
-    if (ruleset === '2024') {
-      try {
-        const response = await fetch('/dnd-char-sheet/data/2024/classes.json');
-        const data = await response.json();
-        const subtypes = data.map(cls => ({
-          className: cls.name,
-          subtypes: cls.subclasses || []
-        }));
-        setClassSubtypes(subtypes);
-      } catch (error) {
-        console.error('Failed to load 2024 classes:', error);
-        setClassSubtypes([]);
-      }
-    } else {
-      try {
-        const response = await fetch('/dnd-char-sheet/data/classes.json');
-        const data = await response.json();
-        const subtypes = data.map(cls => ({
-          className: cls.name,
-          subtypes: cls.subclasses || []
-        }));
-        setClassSubtypes(subtypes);
-      } catch (error) {
-        console.error('Failed to load 5e classes:', error);
-        setClassSubtypes([]);
-      }
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      rules: ruleset,
-      spells: ruleset === '2024' ? [] : allSpells || [],
-      background: ruleset === '2024' ? '' : '',
-      abilities: ABILITY_NAMES.map(name => ({ name, baseScore: 10, abilityImprovements: 0, miscBonus: 0 }))
-    }));
-    setCurrentStep(2);
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => ({ ...prev, [field]: null }));
+  };
+
+  const handleArrayFieldChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => ({ ...prev, [field]: null }));
   };
 
   const handleAbilityChange = (index, field, value) => {
@@ -226,6 +150,31 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       newAbilities[index] = { ...newAbilities[index], [field]: value };
       return { ...prev, abilities: newAbilities };
     });
+  };
+
+  const handleAbilityBaseScoreChange = (index, value) => {
+    const newBaseScore = parseInt(value) || 8;
+    const oldBaseScore = parseInt(formData.abilities[index].baseScore) || 8;
+    
+    const calculateCost = (score) => {
+      return score <= 8 ? 0 : score <= 9 ? 1 : score <= 10 ? 2 : score <= 11 ? 3 : score <= 12 ? 4 : score <= 13 ? 5 : score <= 14 ? 7 : score <= 15 ? 9 : score <= 16 ? 11 : score <= 17 ? 13 : 15;
+    };
+    
+    const newCost = calculateCost(newBaseScore);
+    const oldCost = calculateCost(oldBaseScore);
+    
+    const currentTotalSpent = formData.abilities.reduce((sum, ability, i) => {
+      if (i === index) {
+        return sum + newCost;
+      }
+      const baseScore = parseInt(ability.baseScore) || 8;
+      const cost = calculateCost(baseScore);
+      return sum + cost;
+    }, 0);
+
+    if (currentTotalSpent <= 27) {
+      handleAbilityChange(index, 'baseScore', newBaseScore);
+    }
   };
 
   const handleAbilityImprovementChange = (index, value) => {
@@ -244,112 +193,41 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     });
   };
 
-  const handleArrayFieldChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
-    }
+  const handleSkillToggle = (skill) => {
+    setFormData(prev => {
+      const currentSkills = prev.skillProficiencies || [];
+      const newSkills = currentSkills.includes(skill)
+        ? currentSkills.filter(s => s !== skill)
+        : [...currentSkills, skill];
+      return { ...prev, skillProficiencies: newSkills };
+    });
+    setErrors(prev => ({ ...prev, skillProficiencies: null }));
   };
 
-  const handleAbilityBaseScoreChange = (index, value) => {
-    const newBaseScore = parseInt(value) || 8;
-    const oldBaseScore = parseInt(formData.abilities[index].baseScore) || 8;
-    
-    // Calculate point costs
-    const calculateCost = (score) => {
-      return score <= 8 ? 0 : score <= 9 ? 1 : score <= 10 ? 2 : score <= 11 ? 3 : score <= 12 ? 4 : score <= 13 ? 5 : score <= 14 ? 7 : score <= 15 ? 9 : score <= 16 ? 11 : score <= 17 ? 13 : 15;
-    };
-    
-    const newCost = calculateCost(newBaseScore);
-    const oldCost = calculateCost(oldBaseScore);
-    
-    // Calculate what the total would be if we set this ability to the new base score
-    const currentTotalSpent = formData.abilities.reduce((sum, ability, i) => {
-      if (i === index) {
-        return sum + newCost;
-      }
-      const baseScore = parseInt(ability.baseScore) || 8;
-      const cost = calculateCost(baseScore);
-      return sum + cost;
-    }, 0);
-
-    // Only update if we won't exceed 27 points
-    if (currentTotalSpent <= 27) {
-      handleAbilityChange(index, 'baseScore', newBaseScore);
-    }
+  const handleLanguageToggle = (language) => {
+    setFormData(prev => {
+      const currentLanguages = prev.languages || [];
+      const newLanguages = currentLanguages.includes(language)
+        ? currentLanguages.filter(l => l !== language)
+        : [...currentLanguages, language];
+      return { ...prev, languages: newLanguages };
+    });
+    setErrors(prev => ({ ...prev, languages: null }));
   };
 
-  const validateStep = (step) => {
-    const newErrors = {};
-    
-    if (step === 1) {
-      if (!formData.name.trim()) {
-        newErrors.name = 'Character name is required';
-      }
-      if (formData.level < 1 || formData.level > 20) {
-        newErrors.level = 'Level must be between 1 and 20';
-      }
-      if (!formData.alignment) {
-        newErrors.alignment = 'Alignment is required';
-      }
-    }
-    
-    if (step === 2) {
-      if (!formData.race || !formData.race.name) {
-        newErrors.race = 'Race is required';
-      }
-      if (!formData.class || !formData.class.name) {
-        newErrors.class = 'Class is required';
-      }
-    }
-    
-    if (step === 3) {
-      // Calculate total points spent
-      let totalPointsSpent = 0;
-      formData.abilities.forEach((ability, index) => {
-        const baseScore = parseInt(ability.baseScore) || 8;
-        const improvements = parseInt(ability.abilityImprovements) || 0;
-        const misc = parseInt(ability.miscBonus) || 0;
-        const totalScore = baseScore + improvements + misc;
+  const handleInventoryChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      inventory: { ...prev.inventory, [field]: value }
+    }));
+  };
 
-        // Calculate point buy cost
-        const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
-        totalPointsSpent += cost;
-
-        // Validate base score range
-        if (baseScore < 8) {
-          newErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
-        }
-        if (baseScore > 18) {
-          newErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 18';
-        }
-
-        // Validate total score
-        if (totalScore > 20) {
-          newErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
-        }
-
-        // Validate non-negative improvements and misc
-        if (improvements < 0) {
-          newErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
-        }
-        if (misc < 0) {
-          newErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
-        }
-      });
-
-      // Check if user has spent more than 27 points
-      if (totalPointsSpent > 27) {
-        newErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleTempInventoryChange = (field, value) => {
+    setTempInventory(prev => ({ ...prev, [field]: value }));
   };
 
   const handleNext = () => {
-    if (validateStep(currentStep)) {
+    if (validateStep(currentStep, formData, errors)) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -359,579 +237,109 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   };
 
   const handleSubmit = () => {
-    if (validateStep(currentStep)) {
-      // Validate all required fields
-      const finalErrors = {};
-      REQUIRED_FIELDS.forEach(field => {
-        if (field === 'abilities' || field === 'inventory' || field === 'skillProficiencies') {
-          // These are handled in their respective steps
-          return;
-        }
-        if (!formData[field] || (typeof formData[field] === 'string' && !formData[field].trim())) {
-          finalErrors[field] = `${field} is required`;
-        }
-      });
-      
+    if (validateStep(currentStep, formData, errors)) {
+      const finalErrors = validateFinalFormData(formData);
       if (Object.keys(finalErrors).length > 0) {
         setErrors(finalErrors);
         return;
       }
-      
       onComplete(formData);
     }
   };
 
-  const renderRulesSelection = () => (
-    <div className="wizard-step">
-      <h2>Select Rules System</h2>
-      <p className="step-description">Choose which D&D ruleset your character will follow:</p>
-      
-      <div className="rules-selection-container">
-        <div 
-          className={`rules-option ${ruleset === '5e' ? 'selected' : ''}`}
-          onClick={() => handleRulesetChange('5e')}
-        >
-          <div className="rules-option-icon">📜</div>
-          <h3>5th Edition (5e)</h3>
-          <p>The classic D&D ruleset from 2014. Features traditional spell slots, class features, and ability scores.</p>
-          <ul className="rules-features">
-            <li>Traditional spell slots</li>
-            <li>Classic class features</li>
-            <li>Standard ability improvements</li>
-            <li>Original subclass system</li>
-          </ul>
-        </div>
-        
-        <div 
-          className={`rules-option ${ruleset === '2024' ? 'selected' : ''}`}
-          onClick={() => handleRulesetChange('2024')}
-        >
-          <div className="rules-option-icon">✨</div>
-          <h3>2024 Rules (Essentials)</h3>
-          <p>The updated D&D ruleset with streamlined mechanics and modernized features.</p>
-          <ul className="rules-features">
-            <li>Revised spell mechanics</li>
-            <li>Updated class features</li>
-            <li>Improved ability improvements</li>
-            <li>Modern subclass system</li>
-          </ul>
-        </div>
-      </div>
-      
-      {errors.ruleset && <span className="error-message">{errors.ruleset}</span>}
-    </div>
-  );
-
-  const renderStep1 = () => (
-    <div className="wizard-step">
-      <h2>Step 1: Basic Information</h2>
-      
-      <div className="form-group">
-        <label>Character Name *</label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          className={errors.name ? 'error' : ''}
-        />
-        {errors.name && <span className="error-message">{errors.name}</span>}
-      </div>
-      
-      <div className="form-group">
-        <label>Level *</label>
-        <input
-          type="number"
-          min="1"
-          max="20"
-          value={formData.level}
-          onChange={(e) => handleInputChange('level', parseInt(e.target.value))}
-          className={errors.level ? 'error' : ''}
-        />
-        {errors.level && <span className="error-message">{errors.level}</span>}
-      </div>
-      
-      <div className="form-group">
-        <label>Alignment *</label>
-        <select
-          value={formData.alignment}
-          onChange={(e) => handleInputChange('alignment', e.target.value)}
-          className={errors.alignment ? 'error' : ''}
-        >
-          {ALIGNMENTS.map(alignment => (
-            <option key={alignment} value={alignment}>{alignment}</option>
-          ))}
-        </select>
-        {errors.alignment && <span className="error-message">{errors.alignment}</span>}
-      </div>
-      
-      {ruleset === '2024' && (
-        <div className="form-group">
-          <label>Background (2024 Rules)</label>
-          <select
-            value={formData.background}
-            onChange={(e) => handleInputChange('background', e.target.value)}
-            className={errors.background ? 'error' : ''}
-          >
-            <option value="">Select a background</option>
-            {backgrounds.map(background => (
-              <option key={background.index} value={background.name}>{background.name}</option>
-            ))}
-          </select>
-          {errors.background && <span className="error-message">{errors.background}</span>}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderStep2 = () => {
-    // Get available subclasses for the selected class
-    const selectedClass = formData.class?.name;
-    const availableSubclasses = classSubtypes.find(
-      cs => cs.className === selectedClass
-    )?.subtypes || [];
-    
-    return (
-      <div className="wizard-step">
-        <h2>Step 2: Race & Class</h2>
-        
-        <div className="form-group">
-          <label>Race *</label>
-          <select
-            value={formData.race?.name || ''}
-            onChange={(e) => handleInputChange('race', { name: e.target.value })}
-            className={errors.race ? 'error' : ''}
-          >
-            {racesData.length > 0 ? (
-              racesData.map(race => (
-                <option key={race.name || race.index} value={race.name || race.index}>{race.name || race.index}</option>
-              ))
-            ) : (
-              RACES.map(race => (
-                <option key={race} value={race}>{race}</option>
-              ))
-            )}
-          </select>
-          {errors.race && <span className="error-message">{errors.race}</span>}
-        </div>
-        
-        <div className="form-group">
-          <label>Class *</label>
-          <select
-            value={formData.class?.name || ''}
-            onChange={(e) => handleInputChange('class', { name: e.target.value })}
-            className={errors.class ? 'error' : ''}
-          >
-            {classSubtypes.length > 0 ? (
-              classSubtypes.map(cs => (
-                <option key={cs.className} value={cs.className}>{cs.className}</option>
-              ))
-            ) : (
-              <option value="">Loading classes...</option>
-            )}
-          </select>
-          {errors.class && <span className="error-message">{errors.class}</span>}
-        </div>
-        
-        {availableSubclasses.length > 0 && (
-          <div className="form-group">
-            <label>Subclass</label>
-            <select
-              value={formData.class?.subclass?.name || ''}
-              onChange={(e) => {
-                const updatedClass = {
-                  ...formData.class,
-                  subclass: { name: e.target.value, type: '' }
-                };
-                handleInputChange('class', updatedClass);
-              }}
-            >
-              <option value="">Select a subclass</option>
-              {availableSubclasses.map(subclass => (
-                <option key={subclass.name} value={subclass.name}>{subclass.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        
-        {availableSubclasses.length > 0 && (
-          <div className="form-group">
-            <label>Subclass Type (Optional)</label>
-            <input
-              type="text"
-              value={formData.class?.subclass?.type || ''}
-              onChange={(e) => {
-                const updatedClass = {
-                  ...formData.class,
-                  subclass: { ...formData.class.subclass, type: e.target.value }
-                };
-                handleInputChange('class', updatedClass);
-              }}
-            />
-          </div>
-        )}
-      </div>
-  );
-  };
-
-  const renderStep3 = () => {
-    // Calculate total points spent on base scores
-    const totalPointsSpent = formData.abilities.reduce((sum, ability) => {
-      const baseScore = parseInt(ability.baseScore) || 8;
-      // Point buy cost: 8=0, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9, 16=11, 17=13, 18=15
-      const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
-      return sum + cost;
-    }, 0);
-
-    const pointsRemaining = 27 - totalPointsSpent;
-
-    // Calculate total score for each ability (base + improvements + misc)
-    const calculateTotalScore = (ability) => {
-      const base = parseInt(ability.baseScore) || 8;
-      const improvements = parseInt(ability.abilityImprovements) || 0;
-      const misc = parseInt(ability.miscBonus) || 0;
-      return base + improvements + misc;
-    };
-
-    // Validate each ability
-    const validateAbility = (ability, index) => {
-      const errors = {};
-      const baseScore = parseInt(ability.baseScore) || 8;
-      const totalScore = calculateTotalScore(ability);
-
-      // Base score validation
-      if (baseScore < 8) {
-        errors.baseScore = 'Base score must be at least 8';
-      }
-      if (baseScore > 18) {
-        errors.baseScore = 'Base score cannot exceed 18 (point buy max)';
-      }
-
-      // Total score validation
-      if (totalScore > 20) {
-        errors.totalScore = `Total score (base + improvements + misc) cannot exceed 20`;
-      }
-
-      // Non-negative validation
-      if (parseInt(ability.abilityImprovements) < 0) {
-        errors.abilityImprovements = 'Improvements must be 0 or above';
-      }
-      if (parseInt(ability.miscBonus) < 0) {
-        errors.miscBonus = 'Misc bonus must be 0 or above';
-      }
-
-      return errors;
-    };
-
-    // Note: Validation errors are set in useEffect to prevent infinite re-renders
-
-    return (
-      <div className="wizard-step wizard-step-3">
-        <h2>Step 3: Ability Scores</h2>
-        <p className="step-description">
-          Use point buy: Each ability starts at 8. You have <strong>{Math.max(0, pointsRemaining)} points</strong> remaining.
-          Costs: 8=0, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9, 16=11, 17=13, 18=15
-        </p>
-        <p className="step-description">
-          Total score (base + improvements + misc) cannot exceed 20 for any ability.
-        </p>
-
-        <div className="ability-scores-grid">
-          {ABILITY_NAMES.map((ability, index) => {
-            const baseScore = parseInt(formData.abilities[index].baseScore) || 8;
-            const improvements = parseInt(formData.abilities[index].abilityImprovements) || 0;
-            const misc = parseInt(formData.abilities[index].miscBonus) || 0;
-            const totalScore = baseScore + improvements + misc;
-
-            // Calculate point buy cost for this ability
-            const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
-
-            return (
-              <div key={ability} className="ability-score-card">
-                <h4>{ability}</h4>
-                <div className="form-group ability-score-form-group">
-                  <label>Base Score (8-18)</label>
-                  <input
-                    type="number"
-                    min="8"
-                    max="18"
-                    value={formData.abilities[index].baseScore}
-                    onChange={(e) => handleAbilityBaseScoreChange(index, e.target.value)}
-                    className={errors[`ability_${index}_baseScore`] ? 'error' : ''}
-                    
-                  />
-                  <span className="point-cost">Cost: {cost}</span>
-                  {errors[`ability_${index}_baseScore`] && <span className="error-message">{errors[`ability_${index}_baseScore`]}</span>}
-                </div>
-                <div className="form-group ability-score-form-group">
-                  <label>Improvements</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.abilities[index].abilityImprovements}
-                    onChange={(e) => handleAbilityImprovementChange(index, parseInt(e.target.value))}
-                    className={errors[`ability_${index}_abilityImprovements`] ? 'error' : ''}
-                  />
-                  {errors[`ability_${index}_abilityImprovements`] && <span className="error-message">{errors[`ability_${index}_abilityImprovements`]}</span>}
-                </div>
-                <div className="form-group ability-score-form-group">
-                  <label>Misc Bonus</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.abilities[index].miscBonus}
-                    onChange={(e) => handleAbilityMiscBonusChange(index, parseInt(e.target.value))}
-                    className={errors[`ability_${index}_miscBonus`] ? 'error' : ''}
-                  />
-                  {errors[`ability_${index}_miscBonus`] && <span className="error-message">{errors[`ability_${index}_miscBonus`]}</span>}
-                </div>
-                <div className={`total-score ${totalScore > 20 ? 'error' : ''}`}>
-                  Total: <strong>{totalScore}</strong>
-                  {totalScore > 20 && <span className="error-message"> (max 20)</span>}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderStep4 = () => {
-    const handleSkillToggle = (skill) => {
-      setFormData(prev => {
-        const currentSkills = prev.skillProficiencies || [];
-        const newSkills = currentSkills.includes(skill)
-          ? currentSkills.filter(s => s !== skill)
-          : [...currentSkills, skill];
-        return { ...prev, skillProficiencies: newSkills };
-      });
-      if (errors.skillProficiencies) {
-        setErrors(prev => ({ ...prev, skillProficiencies: null }));
-      }
-    };
-
-    const handleLanguageToggle = (language) => {
-      setFormData(prev => {
-        const currentLanguages = prev.languages || [];
-        const newLanguages = currentLanguages.includes(language)
-          ? currentLanguages.filter(l => l !== language)
-          : [...currentLanguages, language];
-        return { ...prev, languages: newLanguages };
-      });
-      if (errors.languages) {
-        setErrors(prev => ({ ...prev, languages: null }));
-      }
-    };
-
-    return (
-      <div className="wizard-step">
-        <h2>Step 4: Skills & Proficiencies</h2>
-        
-        <div className="form-group">
-          <label>Skill Proficiencies</label>
-          <div className="multi-select-container">
-            {SKILL_PROFICIENCIES.map(skill => (
-              <label 
-                key={skill} 
-                className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill) ? 'selected' : ''}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={(formData.skillProficiencies || []).includes(skill)}
-                  onChange={() => handleSkillToggle(skill)}
-                />
-                {skill}
-              </label>
-            ))}
-          </div>
-          {errors.skillProficiencies && <span className="error-message">{errors.skillProficiencies}</span>}
-        </div>
-        
-        <div className="form-group">
-          <label>Languages</label>
-          <div className="multi-select-container">
-            {LANGUAGES.map(language => (
-              <label 
-                key={language} 
-                className={`multi-select-item ${(formData.languages || []).includes(language) ? 'selected' : ''}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={(formData.languages || []).includes(language)}
-                  onChange={() => handleLanguageToggle(language)}
-                />
-                {language}
-              </label>
-            ))}
-          </div>
-          {errors.languages && <span className="error-message">{errors.languages}</span>}
-        </div>
-      </div>
-  );
-  };
-
-  const renderStep5 = () => (
-    <div className="wizard-step">
-      <h2>Step 5: Inventory</h2>
-      
-      <div className="form-group">
-        <label>Gold Pieces *</label>
-        <input
-          type="number"
-          min="0"
-          value={formData.inventory.gold}
-          onChange={(e) => {
-            const updatedInventory = {
-              ...formData.inventory,
-              gold: parseInt(e.target.value) || 0
-            };
-            handleInputChange('inventory', updatedInventory);
-          }}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Backpack Items</label>
-        <textarea
-          value={tempInventory.backpack}
-          onChange={(e) => setTempInventory(prev => ({ ...prev, backpack: e.target.value }))}
-          onBlur={() => {
-            const items = tempInventory.backpack.split(',').map(item => item.trim()).filter(item => item.length > 0);
-            const updatedInventory = {
-              ...formData.inventory,
-              backpack: items
-            };
-            handleInputChange('inventory', updatedInventory);
-            setTempInventory(prev => ({ ...prev, backpack: '' }));
-          }}
-          placeholder="Enter items separated by commas"
-          rows={3}
-        />
-        <p className="field-description">e.g., Rope, Torch, rations</p>
-      </div>
-      
-      <div className="form-group">
-        <label>Equipped Items</label>
-        <textarea
-          value={tempInventory.equipped}
-          onChange={(e) => setTempInventory(prev => ({ ...prev, equipped: e.target.value }))}
-          onBlur={() => {
-            const items = tempInventory.equipped.split(',').map(item => item.trim()).filter(item => item.length > 0);
-            const updatedInventory = {
-              ...formData.inventory,
-              equipped: items
-            };
-            handleInputChange('inventory', updatedInventory);
-            setTempInventory(prev => ({ ...prev, equipped: '' }));
-          }}
-          placeholder="Enter items separated by commas"
-          rows={3}
-        />
-        <p className="field-description">e.g., Longsword, Chain mail, Shield</p>
-      </div>
-    </div>
-  );
-
-  const renderStep6 = () => (
-    <div className="wizard-step">
-      <h2>Step 6: Special Features</h2>
-      
-      <div className="form-group">
-        <label>Spells Known/Prepared</label>
-        <textarea
-          value={formData.spells.join(', ')}
-          onChange={(e) => handleArrayFieldChange('spells', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-          placeholder="Enter spells separated by commas"
-          rows={4}
-        />
-      </div>
-      
-      <div className="form-group">
-        <label>Resistances</label>
-        <textarea
-          value={formData.resistances.join(', ')}
-          onChange={(e) => handleArrayFieldChange('resistances', e.target.value.split(',').map(r => r.trim()).filter(r => r))}
-          placeholder="Enter damage types separated by commas"
-          rows={2}
-        />
-        <p className="field-description">e.g., Fire, Cold, Lightning</p>
-      </div>
-      
-      <div className="form-group">
-        <label>Feats</label>
-        <textarea
-          value={formData.feats.join(', ')}
-          onChange={(e) => handleArrayFieldChange('feats', e.target.value.split(',').map(f => f.trim()).filter(f => f))}
-          placeholder="Enter feats separated by commas"
-          rows={3}
-        />
-        <p className="field-description">e.g., Alert, War Caster, Sharpshooter</p>
-      </div>
-      
-      <div className="form-group">
-        <label>Special Actions</label>
-        <textarea
-          value={formData.specialActions.join(', ')}
-          onChange={(e) => handleArrayFieldChange('specialActions', e.target.value.split(',').map(a => a.trim()).filter(a => a))}
-          placeholder="Enter special actions separated by commas"
-          rows={3}
-        />
-        <p className="field-description">e.g., Second Wind (1d10 + CON modifier)</p>
-      </div>
-    </div>
-  );
-
   const renderStep = () => {
     switch (currentStep) {
-      case 1: return renderRulesSelection();
-      case 2: return renderStep1();
-      case 3: return renderStep2();
-      case 4: return renderStep3();
-      case 5: return renderStep4();
-      case 6: return renderStep5();
-      case 7: return renderStep6();
-      default: return renderRulesSelection();
+      case 1:
+        return (
+          <WizardStepRules
+            ruleset={ruleset}
+            errors={errors}
+            onRulesetChange={handleRulesetChange}
+          />
+        );
+      case 2:
+        return (
+          <WizardStepBasic
+            formData={formData}
+            errors={errors}
+            backgrounds={backgrounds}
+            ruleset={ruleset}
+            onInputChange={handleInputChange}
+          />
+        );
+      case 3:
+        return (
+          <WizardStepRaceClass
+            formData={formData}
+            errors={errors}
+            racesData={racesData}
+            classSubtypes={classSubtypes}
+            onInputChange={handleInputChange}
+          />
+        );
+      case 4:
+        return (
+          <WizardStepAbilities
+            formData={formData}
+            errors={errors}
+            onAbilityBaseScoreChange={handleAbilityBaseScoreChange}
+            onAbilityImprovementChange={handleAbilityImprovementChange}
+            onAbilityMiscBonusChange={handleAbilityMiscBonusChange}
+          />
+        );
+      case 5:
+        return (
+          <WizardStepSkills
+            formData={formData}
+            errors={errors}
+            onSkillToggle={handleSkillToggle}
+            onLanguageToggle={handleLanguageToggle}
+          />
+        );
+      case 6:
+        return (
+          <WizardStepInventory
+            formData={formData}
+            tempInventory={tempInventory}
+            onInventoryChange={handleInventoryChange}
+            onTempInventoryChange={handleTempInventoryChange}
+          />
+        );
+      case 7:
+        return (
+          <WizardStepSpecial
+            formData={formData}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      default:
+        return null;
     }
   };
 
   return (
     <div className="character-creation-wizard-overlay">
       <div className="character-creation-wizard">
-        <div className="wizard-header">
-          <h2>Create New Character</h2>
-          <button className="close-btn" onClick={onCancel}>×</button>
-        </div>
-        
-        <div className="progress-bar">
-          <div 
-            className="progress-fill" 
-            style={{ width: `${((currentStep - 1) / 6) * 100}%` }}
-          ></div>
-        </div>
-        
+        <WizardHeader
+          title="Create New Character"
+          onClose={onCancel}
+        />
+        <WizardProgressBar
+          currentStep={currentStep}
+          totalSteps={7}
+        />
         <div className="wizard-content">
           {renderStep()}
         </div>
-        
-        <div className="wizard-footer">
-          <button 
-            className="btn btn-secondary" 
-            onClick={currentStep === 1 ? onCancel : handlePrevious}
-            disabled={currentStep === 1}
-          >
-            {currentStep === 1 ? 'Cancel' : 'Previous'}
-          </button>
-          
-          {currentStep < 7 ? (
-            <button className="btn btn-primary" onClick={handleNext}>
-              Next
-            </button>
-          ) : (
-            <button className="btn btn-success" onClick={handleSubmit}>
-              Create Character
-            </button>
-          )}
-        </div>
+        <WizardFooter
+          currentStep={currentStep}
+          isFirstStep={currentStep === 1}
+          isLastStep={currentStep === 7}
+          onCancel={onCancel}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onSubmit={handleSubmit}
+        />
       </div>
     </div>
   );

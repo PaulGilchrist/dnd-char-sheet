@@ -1,0 +1,67 @@
+import React from 'react';
+import { ALIGNMENTS } from './constants';
+
+function WizardStepBasic({ formData, errors, backgrounds, ruleset, onInputChange }) {
+  return (
+    <div className="wizard-step">
+      <h2>Step 1: Basic Information</h2>
+      
+      <div className="form-group">
+        <label>Character Name *</label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => onInputChange('name', e.target.value)}
+          className={errors.name ? 'error' : ''}
+        />
+        {errors.name && <span className="error-message">{errors.name}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label>Level *</label>
+        <input
+          type="number"
+          min="1"
+          max="20"
+          value={formData.level}
+          onChange={(e) => onInputChange('level', parseInt(e.target.value))}
+          className={errors.level ? 'error' : ''}
+        />
+        {errors.level && <span className="error-message">{errors.level}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label>Alignment *</label>
+        <select
+          value={formData.alignment}
+          onChange={(e) => onInputChange('alignment', e.target.value)}
+          className={errors.alignment ? 'error' : ''}
+        >
+          {ALIGNMENTS.map(alignment => (
+            <option key={alignment} value={alignment}>{alignment}</option>
+          ))}
+        </select>
+        {errors.alignment && <span className="error-message">{errors.alignment}</span>}
+      </div>
+      
+      {ruleset === '2024' && (
+        <div className="form-group">
+          <label>Background (2024 Rules)</label>
+          <select
+            value={formData.background}
+            onChange={(e) => onInputChange('background', e.target.value)}
+            className={errors.background ? 'error' : ''}
+          >
+            <option value="">Select a background</option>
+            {backgrounds.map(background => (
+              <option key={background.index} value={background.name}>{background.name}</option>
+            ))}
+          </select>
+          {errors.background && <span className="error-message">{errors.background}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default WizardStepBasic;
