@@ -47,7 +47,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       loadData('/dnd-char-sheet/data/2024/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
           className: cls.name,
-          subtypes: cls.subclasses || []
+          subtypes: cls.subclasses || cls.majors || []
         })));
       });
     } else {
@@ -274,6 +274,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             errors={errors}
             racesData={racesData}
             classSubtypes={classSubtypes}
+            ruleset={ruleset}
             onInputChange={handleInputChange}
           />
         );
@@ -346,3 +347,4 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
 }
 
 export default CharacterCreationWizard;
+

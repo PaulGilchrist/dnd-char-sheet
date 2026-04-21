@@ -5,12 +5,25 @@ function WizardStepRaceClass({
   errors, 
   racesData, 
   classSubtypes,
+  ruleset,
   onInputChange 
 }) {
   const selectedClass = formData.class?.name;
+  const selectedRace = formData.race?.name;
+  
+  // Get available subclasses/majors based on selected class
   const availableSubclasses = classSubtypes.find(
     cs => cs.className === selectedClass
   )?.subtypes || [];
+  
+  // Get available subraces based on selected race
+  const availableSubraces = racesData.find(
+    race => race.name === selectedRace
+  )?.subraces || [];
+  
+  // Determine if we should show "Major" or "Subclass" label for 2024
+  const subclassLabel = ruleset === '2024' ? 'Subclass (Major)' : 'Subclass';
+  const subraceLabel = ruleset === '2024' ? 'Subrace (Major)' : 'Subrace';
   
   return (
     <div className="wizard-step">
@@ -23,6 +36,7 @@ function WizardStepRaceClass({
           onChange={(e) => onInputChange('race', { name: e.target.value })}
           className={errors.race ? 'error' : ''}
         >
+          <option value="">Select a race</option>
           {racesData.length > 0 ? (
             racesData.map(race => (
               <option key={race.name || race.index} value={race.name || race.index}>{race.name || race.index}</option>
@@ -34,6 +48,31 @@ function WizardStepRaceClass({
         {errors.race && <span className="error-message">{errors.race}</span>}
       </div>
       
+      {availableSubraces.length > 0 && (
+        <div className="form-group">
+          <label>{subraceLabel} *</label>
+          <select
+            value={formData.race?.subrace?.name || ''}
+            onChange={(e) => {
+              const updatedRace = {
+                ...formData.race,
+                subrace: { name: e.target.value, description: '' }
+              };
+              onInputChange('race', updatedRace);
+            }}
+            className={errors.race ? 'error' : ''}
+          >
+            <option value="">Select a {subraceLabel.toLowerCase()}</option>
+            {availableSubraces.map(subrace => (
+              <option key={subrace.name || subrace.index} value={subrace.name || subrace.index}>
+                {subrace.name || subrace.index}
+              </option>
+            ))}
+          </select>
+          {errors.race && <span className="error-message">{errors.race}</span>}
+        </div>
+      )}
+      
       <div className="form-group">
         <label>Class *</label>
         <select
@@ -41,6 +80,7 @@ function WizardStepRaceClass({
           onChange={(e) => onInputChange('class', { name: e.target.value })}
           className={errors.class ? 'error' : ''}
         >
+          <option value="">Select a class</option>
           {classSubtypes.length > 0 ? (
             classSubtypes.map(cs => (
               <option key={cs.className} value={cs.className}>{cs.className}</option>
@@ -54,7 +94,7 @@ function WizardStepRaceClass({
       
       {availableSubclasses.length > 0 && (
         <div className="form-group">
-          <label>Subclass</label>
+          <label>{subclassLabel} *</label>
           <select
             value={formData.class?.subclass?.name || ''}
             onChange={(e) => {
@@ -64,12 +104,16 @@ function WizardStepRaceClass({
               };
               onInputChange('class', updatedClass);
             }}
+            className={errors.class ? 'error' : ''}
           >
-            <option value="">Select a subclass</option>
+            <option value="">Select a {subclassLabel.toLowerCase()}</option>
             {availableSubclasses.map(subclass => (
-              <option key={subclass.name} value={subclass.name}>{subclass.name}</option>
+              <option key={subclass.name || subclass.index} value={subclass.name || subclass.index}>
+                {subclass.name || subclass.index}
+              </option>
             ))}
           </select>
+          {errors.class && <span className="error-message">{errors.class}</span>}
         </div>
       )}
       
