@@ -140,13 +140,19 @@ function App() {
     };
 
     const handleCampaignSelected = (campaign, loadedCharacters) => {
+        console.log(`handleCampaignSelected called: campaign='${campaign}', loadedCharacters=`, loadedCharacters);
+        console.log(`loadedCharacters.length: ${loadedCharacters.length}`);
+        loadedCharacters.forEach((char, index) => {
+            console.log(`Character ${index}:`, char?.name || 'NO NAME PROPERTY', 'Full object:', char);
+        });
         setCharacters(loadedCharacters);
         setActiveCharacter(null); // Clear active character when switching campaigns
         setShowCampaignSelection(false);
         if (loadedCharacters.length > 0) {
             setActiveCharacter(cloneDeep(loadedCharacters[0]));
         } else {
-            // Open wizard for empty campaigns
+            // Only auto-open wizard if campaign has no characters at all
+            // If campaign has characters, user must click "Add Character" button
             setShowCharacterWizard(true);
         }
     };

@@ -61,6 +61,25 @@ app.get('/api/characters/:campaign', (req, res) => {
     }
 });
 
+// API endpoint to get a specific character file in a campaign
+app.get('/api/characters/:campaign/:file', (req, res) => {
+    const { campaign, file } = req.params;
+    const campaignDir = path.join(process.cwd(), 'public', 'characters', campaign);
+    const filePath = path.join(campaignDir, file);
+    
+    try {
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Character file not found' });
+        }
+        
+        const characterData = fs.readFileSync(filePath, 'utf-8');
+        res.json(JSON.parse(characterData));
+    } catch (error) {
+        console.error('Error reading character file:', error);
+        res.status(500).json({ error: 'Failed to read character file' });
+    }
+});
+
 const readFile = () => {
     fs.readFile('characterChangeData.json', 'utf-8', (err, data) => {
         if (err) {
@@ -97,8 +116,6 @@ app.post('/api/campaigns', (req, res) => {
         }
         
         fs.mkdirSync(newCampaignDir);
-        const emptyListPath = path.join(newCampaignDir, '.vite-plugin-campaign-list.json');
-        fs.writeFileSync(emptyListPath, JSON.stringify({ files: [] }, null, 2));
         
         res.status(201).json({ message: 'Campaign created successfully', campaignName: campaignName.trim() });
     } catch (error) {

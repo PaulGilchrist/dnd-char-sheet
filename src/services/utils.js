@@ -1,5 +1,8 @@
 const utils = {
     getFirstName: (fullName) => {
+        if (!fullName || typeof fullName !== 'string') {
+            return 'Unknown';
+        }
         return fullName.split(' ')[0];
     },
     guid: () => {

@@ -29,8 +29,11 @@ function CampaignSelection({ onCampaignSelect }) {
   const handleCampaignSelect = async (campaign) => {
     try {
       setLoading(true);
+      console.log(`handleCampaignSelect called for: '${campaign}'`);
       const characterFiles = await getCharacterFiles(campaign);
+      console.log(`Character files for '${campaign}':`, characterFiles);
       const characters = await loadCharacters(campaign, characterFiles);
+      console.log(`Loaded characters for '${campaign}':`, characters);
       
       // Store campaign and characters in sessionStorage
       // Even if empty, allow navigation to char sheet
