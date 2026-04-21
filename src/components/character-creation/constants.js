@@ -61,7 +61,7 @@ export const LANGUAGES = [
   'Undercommon',
 ];
 
-export const RESISTANCES = [
+export const RESISTANCES_IMMUNITIES = [
   "Acid",
   "Bludgeoning",
   "Cold",
@@ -101,17 +101,15 @@ export const SKILL_PROFICIENCIES = [
 ];
 
 export const POINT_BUY_COSTS = {
-  8: 0,
   9: 1,
   10: 2,
   11: 3,
   12: 4,
   13: 5,
-  14: 7,
-  15: 9,
-  16: 11,
-  17: 13,
-  18: 15,
+  14: 6,
+  15: 7,
+  16: 9,
+  17: 11,
 };
 
 export const DEFAULT_FORM_DATA = {
@@ -130,7 +128,7 @@ export const DEFAULT_FORM_DATA = {
   },
   abilities: ABILITY_NAMES.map((name) => ({
     name,
-    baseScore: 10,
+    baseScore: 8,
     abilityImprovements: 0,
     miscBonus: 0,
   })),

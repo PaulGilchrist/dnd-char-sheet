@@ -4,7 +4,8 @@ import './character-creation-wizard-compact.css';
 import {
   REQUIRED_FIELDS,
   ABILITY_NAMES,
-  DEFAULT_FORM_DATA
+  DEFAULT_FORM_DATA,
+  POINT_BUY_COSTS
 } from './constants';
 import { validateStep, validateFinalFormData } from './utils';
 import WizardHeader from './wizard-header';
@@ -85,7 +86,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         const misc = parseInt(ability.miscBonus) || 0;
         const totalScore = baseScore + improvements + misc;
 
-        const cost = baseScore <= 8 ? 0 : baseScore <= 9 ? 1 : baseScore <= 10 ? 2 : baseScore <= 11 ? 3 : baseScore <= 12 ? 4 : baseScore <= 13 ? 5 : baseScore <= 14 ? 7 : baseScore <= 15 ? 9 : baseScore <= 16 ? 11 : baseScore <= 17 ? 13 : 15;
+        const cost = POINT_BUY_COSTS[baseScore] || 0;
         totalPointsSpent += cost;
 
         if (baseScore < 8) {
@@ -158,7 +159,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     const oldBaseScore = parseInt(formData.abilities[index].baseScore) || 8;
     
     const calculateCost = (score) => {
-      return score <= 8 ? 0 : score <= 9 ? 1 : score <= 10 ? 2 : score <= 11 ? 3 : score <= 12 ? 4 : score <= 13 ? 5 : score <= 14 ? 7 : score <= 15 ? 9 : score <= 16 ? 11 : score <= 17 ? 13 : 15;
+      return POINT_BUY_COSTS[score] || 0;
     };
     
     const newCost = calculateCost(newBaseScore);

@@ -26,8 +26,8 @@ function WizardStepAbilities({
     <div className="wizard-step wizard-step-3">
       <h2>Step 3: Ability Scores</h2>
       <p className="step-description">
-        Use point buy: Each ability starts at 8. You have <strong>{Math.max(0, pointsRemaining)} points</strong> remaining.
-        Costs: 8=0, 9=1, 10=2, 11=3, 12=4, 13=5, 14=7, 15=9, 16=11, 17=13, 18=15
+        Use point buy: Each ability base score minimum is 8 and maximum is 17. You have <strong>{Math.max(0, pointsRemaining)} points</strong> remaining to spend.
+        Each point from 9-15 costs 1; each point from 15-17 costs 2
       </p>
       <p className="step-description">
         Total score (base + improvements + misc) cannot exceed 20 for any ability.
@@ -45,11 +45,11 @@ function WizardStepAbilities({
             <div key={ability} className="ability-score-card">
               <h4>{ability}</h4>
               <div className="form-group ability-score-form-group">
-                <label>Base Score (8-18)</label>
+                <label>Base Score (8-17)</label>
                 <input
                   type="number"
                   min="8"
-                  max="18"
+                  max="17"
                   value={formData.abilities[index].baseScore}
                   onChange={(e) => onAbilityBaseScoreChange(index, e.target.value)}
                   className={errors[`ability_${index}_baseScore`] ? 'error' : ''}
