@@ -61,6 +61,24 @@ export const LANGUAGES = [
   'Undercommon',
 ];
 
+export const RESISTANCES = [
+  "Acid",
+  "Bludgeoning",
+  "Cold",
+  "Fire",
+  "Force",
+  "Lightning",
+  "Necrotic",
+  "Piercing",
+  "Poison",
+  "Psychic",
+  "Radiant",
+  "Slashing",
+  "Thunder"
+];
+
+
+
 export const SKILL_PROFICIENCIES = [
   'Acrobatics',
   'Animal Handling',

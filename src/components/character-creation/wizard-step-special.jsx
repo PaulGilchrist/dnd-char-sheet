@@ -3,17 +3,7 @@ import React from 'react';
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
   return (
     <div className="wizard-step">
-      <h2>Step 6: Special Features</h2>
-      
-      <div className="form-group">
-        <label>Spells Known/Prepared</label>
-        <textarea
-          value={formData.spells.join(', ')}
-          onChange={(e) => onArrayFieldChange('spells', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-          placeholder="Enter spells separated by commas"
-          rows={4}
-        />
-      </div>
+      <h2>Step 8: Special Features</h2>
       
       <div className="form-group">
         <label>Resistances</label>

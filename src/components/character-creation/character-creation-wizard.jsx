@@ -17,6 +17,7 @@ import WizardStepAbilities from './wizard-step-abilities';
 import WizardStepSkills from './wizard-step-skills';
 import WizardStepInventory from './wizard-step-inventory';
 import WizardStepSpecial from './wizard-step-special';
+import WizardStepSpells from './wizard-step-spells';
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -299,6 +300,14 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 6:
         return (
+          <WizardStepSpells
+            formData={formData}
+            allSpells={allSpells || []}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 7:
+        return (
           <WizardStepInventory
             formData={formData}
             tempInventory={tempInventory}
@@ -306,11 +315,11 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onTempInventoryChange={handleTempInventoryChange}
           />
         );
-      case 7:
+      case 8:
         return (
           <WizardStepSpecial
             formData={formData}
-            onArrayFieldChange={handleArrayFieldChange}
+            onArrayFieldChange={onArrayFieldChange}
           />
         );
       default:
@@ -326,16 +335,16 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           onClose={onCancel}
         />
         <WizardProgressBar
-          currentStep={currentStep}
-          totalSteps={7}
-        />
+                    currentStep={currentStep}
+                    totalSteps={8}
+                  />
         <div className="wizard-content">
           {renderStep()}
         </div>
         <WizardFooter
           currentStep={currentStep}
           isFirstStep={currentStep === 1}
-          isLastStep={currentStep === 7}
+          isLastStep={currentStep === 8}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}
