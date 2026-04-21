@@ -2,6 +2,7 @@
 // Changes are cached in memory, and batch persisted to disk (backed up) at a configurable interval
 import express from 'express';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import guid from 'guid'
 
@@ -16,6 +17,9 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Connection, Content-Type, Authorization');
     next();
 });
+
+// Serve your React build (dist folder) BEFORE API routes
+app.use('/dnd-char-sheet', express.static(path.join(process.cwd(), 'dist')));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(process.cwd(), 'public')));
@@ -218,8 +222,30 @@ const keepAlive = () => {
         });
 }
 setInterval(keepAlive, 60000); // 60 seconds
+
+// React Router fallback — MUST be last
+app.get(/^\/dnd-char-sheet\/.*/, (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+});
+
+
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    // Get local network IP (e.g., 192.168.x.x)
+    const interfaces = os.networkInterfaces();
+    let lanIP = 'unknown';
+
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                lanIP = iface.address;
+            }
+        }
+    }
+
+    console.log(`Server running at:`);
+    console.log(`  Local:   http://localhost:${PORT}/dnd-char-sheet/`);
+    console.log(`  Network: http://${lanIP}:${PORT}/dnd-char-sheet/`);
 });
 
 let characterChangeData = {}
