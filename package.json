@@ -27,7 +27,7 @@
         "deploy": "gh-pages -d dist",
         "dev": "concurrently \"npm run api\" \"npm run dev:react\"",
         "dev:react": "vite --host",
-        "api": "node server.js",
+        "prod": "node server.js",
         "build": "vite build",
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
         "predeploy": "npm run build",
