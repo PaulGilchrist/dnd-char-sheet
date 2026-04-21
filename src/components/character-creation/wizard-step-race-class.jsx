@@ -27,7 +27,7 @@ function WizardStepRaceClass({
   
   return (
     <div className="wizard-step">
-      <h2>Step 2: Race & Class</h2>
+      <h2>Step 3: Race & Class</h2>
       
       <div className="form-group">
         <label>Race *</label>

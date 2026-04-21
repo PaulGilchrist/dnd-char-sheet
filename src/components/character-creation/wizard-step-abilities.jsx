@@ -23,8 +23,8 @@ function WizardStepAbilities({
   };
 
   return (
-    <div className="wizard-step wizard-step-3">
-      <h2>Step 3: Ability Scores</h2>
+    <div className="wizard-step wizard-step-4">
+      <h2>Step 4: Ability Scores</h2>
       <p className="step-description">
         Use point buy: Each ability base score minimum is 8 and maximum is 17. You have <strong>{Math.max(0, pointsRemaining)} points</strong> remaining to spend.
         Each point from 9-15 costs 1; each point from 15-17 costs 2

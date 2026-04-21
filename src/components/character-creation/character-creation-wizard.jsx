@@ -19,6 +19,7 @@ import WizardStepSkills from './wizard-step-skills';
 import WizardStepInventory from './wizard-step-inventory';
 import WizardStepSpecial from './wizard-step-special';
 import WizardStepSpells from './wizard-step-spells';
+import WizardStepResistances from './wizard-step-resistances';
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -217,6 +218,28 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setErrors(prev => ({ ...prev, languages: null }));
   };
 
+  const handleResistanceToggle = (type) => {
+    setFormData(prev => {
+      const currentResistances = prev.resistances || [];
+      const newResistances = currentResistances.includes(type)
+        ? currentResistances.filter(r => r !== type)
+        : [...currentResistances, type];
+      return { ...prev, resistances: newResistances };
+    });
+    setErrors(prev => ({ ...prev, resistances: null }));
+  };
+
+  const handleImmunityToggle = (type) => {
+    setFormData(prev => {
+      const currentImmunities = prev.immunities || [];
+      const newImmunities = currentImmunities.includes(type)
+        ? currentImmunities.filter(i => i !== type)
+        : [...currentImmunities, type];
+      return { ...prev, immunities: newImmunities };
+    });
+    setErrors(prev => ({ ...prev, immunities: null }));
+  };
+
   const handleInventoryChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -301,14 +324,6 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 6:
         return (
-          <WizardStepSpells
-            formData={formData}
-            allSpells={allSpells || []}
-            onArrayFieldChange={handleArrayFieldChange}
-          />
-        );
-      case 7:
-        return (
           <WizardStepInventory
             formData={formData}
             tempInventory={tempInventory}
@@ -316,11 +331,27 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onTempInventoryChange={handleTempInventoryChange}
           />
         );
+      case 7:
+        return (
+          <WizardStepSpells
+            formData={formData}
+            allSpells={allSpells || []}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
       case 8:
         return (
           <WizardStepSpecial
             formData={formData}
             onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 9:
+        return (
+          <WizardStepResistances
+            formData={formData}
+            onResistanceToggle={handleResistanceToggle}
+            onImmunityToggle={handleImmunityToggle}
           />
         );
       default:
@@ -337,7 +368,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         />
         <WizardProgressBar
                     currentStep={currentStep}
-                    totalSteps={8}
+                    totalSteps={9}
                   />
         <div className="wizard-content">
           {renderStep()}
@@ -345,7 +376,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         <WizardFooter
           currentStep={currentStep}
           isFirstStep={currentStep === 1}
-          isLastStep={currentStep === 8}
+          isLastStep={currentStep === 9}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}

@@ -3,18 +3,7 @@ import React from 'react';
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
   return (
     <div className="wizard-step">
-      <h2>Step 8: Special Features</h2>
-      
-      <div className="form-group">
-        <label>Resistances</label>
-        <textarea
-          value={formData.resistances.join(', ')}
-          onChange={(e) => onArrayFieldChange('resistances', e.target.value.split(',').map(r => r.trim()).filter(r => r))}
-          placeholder="Enter damage types separated by commas"
-          rows={2}
-        />
-        <p className="field-description">e.g., Fire, Cold, Lightning</p>
-      </div>
+      <h2>Step 8: Feats & Special Actions</h2>
       
       <div className="form-group">
         <label>Feats</label>

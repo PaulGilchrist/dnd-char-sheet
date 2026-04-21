@@ -9,6 +9,7 @@ export { default as WizardStepAbilities } from './wizard-step-abilities';
 export { default as WizardStepSkills } from './wizard-step-skills';
 export { default as WizardStepInventory } from './wizard-step-inventory';
 export { default as WizardStepSpecial } from './wizard-step-special';
+export { default as WizardStepResistances } from './wizard-step-resistances';
 
 export const REQUIRED_FIELDS = [
   'name',

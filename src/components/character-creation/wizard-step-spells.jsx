@@ -275,7 +275,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     if (!allSpells || allSpells.length === 0) {
       return (
         <div className="wizard-step">
-          <h2>Step 6: Spells</h2>
+          <h2>Step 7: Spells</h2>
           <div className="no-spells-found">
             Spell data not yet loaded. Please try again.
           </div>
@@ -285,7 +285,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
 
     return (
       <div className="wizard-step-spells">
-        <h2>Step 6: Spells</h2>
+        <h2>Step 7: Spells</h2>
         
         {/* Spell Level Summary - Moved to top */}
         <div className="spells-summary" style={{display: 'block', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '1rem'}}>

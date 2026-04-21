@@ -4,7 +4,7 @@ import { ALIGNMENTS } from './constants';
 function WizardStepBasic({ formData, errors, backgrounds, ruleset, onInputChange }) {
   return (
     <div className="wizard-step">
-      <h2>Step 1: Basic Information</h2>
+      <h2>Step 2: Basic Information</h2>
       
       <div className="form-group">
         <label>Character Name *</label>
