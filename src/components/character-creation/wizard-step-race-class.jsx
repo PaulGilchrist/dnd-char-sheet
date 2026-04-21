@@ -117,22 +117,7 @@ function WizardStepRaceClass({
         </div>
       )}
       
-      {availableSubclasses.length > 0 && (
-        <div className="form-group">
-          <label>Subclass Type (Optional)</label>
-          <input
-            type="text"
-            value={formData.class?.subclass?.type || ''}
-            onChange={(e) => {
-              const updatedClass = {
-                ...formData.class,
-                subclass: { ...formData.class.subclass, type: e.target.value }
-              };
-              onInputChange('class', updatedClass);
-            }}
-          />
-        </div>
-      )}
+
     </div>
   );
 }
