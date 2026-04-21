@@ -376,56 +376,6 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
             )}
           </div>
         </div>
-
-        <div className="spells-summary" style={{display: 'block', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '1rem'}}>
-          <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333', fontWeight: '600'}}>Spell Selection Summary</h3>
-          
-          <div className="spell-levels-summary" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', margin: '1rem 0', padding: '0.75rem', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #e0e0e0'}}>
-            <div className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
-              <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>Cantrips:</span>
-              <span className={`level-count ${spellCounts.cantrip > (spellLimits.cantrip || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
-                {spellCounts.cantrip}/{spellLimits.cantrip || 0}
-              </span>
-            </div>
-            {['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9'].map(levelKey => (
-              <div key={levelKey} className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
-                <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>{levelKey.replace('level', '')}th level:</span>
-                <span className={`level-count ${spellCounts[levelKey] > (spellLimits[levelKey] || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
-                  {spellCounts[levelKey] || 0}/{spellLimits[levelKey] || 0}
-                </span>
-              </div>
-            ))}
-          </div>
-          
-          {validationMessage && (
-            <div className="validation-message error">
-              ⚠️ {validationMessage}
-            </div>
-          )}
-          
-          {formData.spells && formData.spells.length > 0 ? (
-            <div className="selected-spells-list">
-              {formData.spells.map(spellName => (
-                <span key={spellName} className="selected-spell-tag">
-                  {spellName}
-                  <button
-                    type="button"
-                    className="remove-spell-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeSpell(spellName);
-                    }}
-                    title="Remove spell"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="no-spells-selected">No spells selected yet</p>
-          )}
-        </div>
       </div>
     );
   };
