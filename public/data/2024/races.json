@@ -46,6 +46,48 @@
         "description": "<p>The ancestors of dragonborn hatched from the eggs of chromatic and metallic dragons. One story holds that these eggs were blessed by the dragon gods Bahamut and Tiamat, who wanted to populate the multiverse with people created in their image. Another story claims that dragons created the first dragonborn without the gods' blessings. Whatever their origin, dragonborn have made homes for themselves on the Material Plane.</p><p>Dragonborn look like wingless, bipedal dragons—sclaly, bright-eyed, and thick-boned with horns on their heads—and their coloration and other features are reminiscent of their draconic ancestors.</p>",
         "size": "Medium",
         "speed": 30,
+        "subraces": [
+            {
+                "name": "Black",
+                "description": "Acid"
+            },
+            {
+                "name": "Blue",
+                "description": "Lightning"
+            },
+            {
+                "name": "Brass",
+                "description": "Fire"
+            },
+            {
+                "name": "Bronze",
+                "description": "Lightning"
+            },
+            {
+                "name": "Copper",
+                "description": "Acid"
+            },
+            {
+                "name": "Black",
+                "description": "Acid"
+            },
+            {
+                "name": "Gold",
+                "description": "Fire"
+            },
+            {
+                "name": "Green",
+                "description": "Poison"
+            },
+            {
+                "name": "Red",
+                "description": "Fire"
+            },
+            {
+                "name": "Silver",
+                "description": "Cold"
+            }
+        ],
         "traits": [
             {
                 "name": "Draconic Ancestry",
@@ -75,6 +117,16 @@
         "creature_type": "Humanoid",
         "size": "Medium (about 4-5 feet tall)",
         "speed": 30,
+        "subraces": [
+            {
+                "name": "Hill",
+                "description": ""
+            },
+            {
+                "name": "Mountain",
+                "description": ""
+            }
+        ],
         "traits": [
             {
                 "name": "Darkvision",
@@ -93,12 +145,27 @@
                 "description": "As a Bonus Action, you gain Tremorsense with a range of 60 feet for 10 minutes. You must be on a stone surface or touching a stone surface to use this Tremorsense. The stone can be natural or worked.<br/>You can use this Bonus Action a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest."
             }
         ]
-    },    {
+    },
+    {
         "name": "Elf",
         "creature_type": "Humanoid",
         "description": "<p>Created by the god Corellon, the first elves could change their forms at will. They lost this ability when Corellon cursed them for plotting with the deity Lolth who tried and failed to usurp Corellon's dominion. When Lolth was cast into the Abyss, most elves renounced her and earned Corellon's forgiveness, but that which Corellon had taken from them was lost forever. No longer able to shape-shift at will, the elves retreated to the Feywild, where their sorrow was deepened by that plane's influence. Over time, curiosity led many of them to explore other planes of existence, including worlds in the Material Plane. Elves have pointed ears and lack facial and body hair. They live for around 750 years, and they don't sleep but instead enter a trance when they need to rest. In that state, they remain aware of their surroundings while immersing themselves in memories and meditations. An environment subtly transforms elves after they inhabit it for a millennium or more, and it grants them certain kinds of magic. Drow, high elves, and wood elves are examples of elves who have been transformed thus.</p>",
         "size": "Medium",
         "speed": 30,
+        "subraces": [
+            {
+                "name": "Drow",
+                "description": "Drow typically dwell in the Underdark and have been shaped by it. Some drow individuals and societies avoid the Underdark altogether yet carry its magic. In the Eberron setting, for example, drow dwell in rainforests and cyclopean ruins on the continent of Xen'drik."
+            },
+            {
+                "name": "High Elves",
+                "description": "High elves have been infused with the magic of crossings between the Feywild and the Material Plane. On some worlds, high elves refer to themselves by other names. For example, they call tl1emselves sun or moon elves in the Forgotten Realms setting, Silvanesti and Qualinesti in the Dragonlance setting, and Aereni in the Eberro11 setting."
+            },
+            {
+                "name": "Wood Elves",
+                "description": "Wood elves carry the magic of primeval forests within themselves. They are known by many other names, including wild elves, green elves, and forest elves. Grugach are reclusive wood elves of the Greyhawk setting, while the Kagonesti and the Tairnadal are wood elves of the Dragonlance and Eberron settings, respectively."
+            }
+        ],
         "traits": [
             {
                 "name": "Darkvision",
@@ -118,25 +185,7 @@
             },
             {
                 "name": "Elfish Lineage",
-                "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):",
-                "sub_traits": [
-                    {
-                        "name": "Drow",
-                        "description": "Drow typically dwell in the Underdark and have been shaped by it. Some drow individuals and societies avoid the Underdark altogether yet carry its magic. In the Eberron setting, for example, drow dwell in rainforests and cyclopean ruins on the continent of Xen'drik."
-                    },
-                    {
-                        "name": "High Elves",
-                        "description": "High elves have been infused with the magic of crossings between the Feywild and the Material Plane. On some worlds, high elves refer to themselves by other names. For example, they call tl1emselves sun or moon elves in the Forgotten Realms setting, Silvanesti and Qualinesti in the Dragonlance setting, and Aereni in the Eberro11 setting."
-                    },
-                    {
-                        "name": "Wood Elves",
-                        "description": "Wood elves carry the magic of primeval forests within themselves. They are known by many other names, including wild elves, green elves, and forest elves. Grugach are reclusive wood elves of the Greyhawk setting, while the Kagonesti and the Tairnadal are wood elves of the Dragonlance and Eberron settings, respectively."
-                    },
-                    {
-                        "name": "Elven Lineages",
-                        "description": "<table class='table table-condensed table-striped table-hover'><caption>Elven Lineages</caption><thead><tr><th>Lineage</th><th>Level 1</th><th>Level 3</th><th>Level 5</th></tr></thead><tbody><tr><td>Drow</td><td>The range of your Darkvision increases to 120 feet. You also know the <em>Dancing Lights</em> cantrip.</td><td><em>Faerie Fire</em></td><td><em>Darkness</em></td></tr><tr><td>High Elf</td><td>You know the <em>Prestidigitation</em> cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.</td><td><em>Detect Magic</em></td><td><em>Misty Step</em></td></tr><tr><td>Wood Elf</td><td>Your Speed increases to 35 feet. You also know the <em>Druidcraft</em> cantrip.</td><td><em>Longstrider</em></td><td><em>Pass without Trace</em></td></tr></tbody></table>"
-                    }
-                ]
+                "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):<br/><br/><table class='table table-condensed table-striped table-hover'><caption>Elven Lineages</caption><thead><tr><th>Lineage</th><th>Level 1</th><th>Level 3</th><th>Level 5</th></tr></thead><tbody><tr><td>Drow</td><td>The range of your Darkvision increases to 120 feet. You also know the <em>Dancing Lights</em> cantrip.</td><td><em>Faerie Fire</em></td><td><em>Darkness</em></td></tr><tr><td>High Elf</td><td>You know the <em>Prestidigitation</em> cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.</td><td><em>Detect Magic</em></td><td><em>Misty Step</em></td></tr><tr><td>Wood Elf</td><td>Your Speed increases to 35 feet. You also know the <em>Druidcraft</em> cantrip.</td><td><em>Longstrider</em></td><td><em>Pass without Trace</em></td></tr></tbody></table>"
             }
         ]
     },
@@ -146,6 +195,16 @@
         "description": "<p>Gnomes are magical folk created by gods of invention, illusions, and life underground. The earliest gnomes were seldom seen by other folk due to the gnomes' secretive nature and their propensity for living in forests and burrows. What they lacked in size, they made up for in cleverness. They confounded predators with traps and labyrinthine tunnels. They also learned magic from gods like Gari Glittergold, Baelva Wildwanderer, and Baravar Cloakshadow, who visited them in disguise. That magic eventually created the lineages of forest gnomes and rock gnomes. Gnomes are petite folk with big eyes and pointed ears, who live around 425 years. Many gnomes like the feeling of a roof over their head, even if that 'roof' is nothing more than a hat.</p>",
         "size": "Small (about 3-4 feet tall)",
         "speed": 30,
+        "subraces": [
+            {
+                "name": "Forest Gnome",
+                "description": "You know the Minor Illusion cantrip. You also always have the Speak with Animals spell prepared. You can cast it without a spell slot a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. You can also use any spell slots you have to cast the spell."
+            },
+            {
+                "name": "Rock Gnome",
+                "description": "You know the Mending and Prestidigitation cantrips. In addition, you can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device (AC 5, 1 HP), such as a toy, fire starter, or music box. When you create the device, you determine its function by choosing one effect from Prestidigitation; the device produces that effect whenever you or another creature takes a Bonus Action to activate it with a touch. If the chosen effect has options within it, you choose one of those options for the device when you create it. For example, if you choose the spell's ignite-extinguish effect, you determine whether the device ignites or extinguishes fire; the device doesn't do both. You can have three such devices in existence at a time, and each falls apart 8 hours after its creation or when you dismantle it with a touch as a Utilize action."
+            }
+        ],
         "traits": [
             {
                 "name": "Darkvision",
@@ -157,17 +216,7 @@
             },
             {
                 "name": "Gnomish Lineage",
-                "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):",
-                "sub_traits": [
-                    {
-                        "name": "Forest Gnome",
-                        "description": "You know the Minor Illusion cantrip. You also always have the Speak with Animals spell prepared. You can cast it without a spell slot a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. You can also use any spell slots you have to cast the spell."
-                    },
-                    {
-                        "name": "Rock Gnome",
-                        "description": "You know the Mending and Prestidigitation cantrips. In addition, you can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device (AC 5, 1 HP), such as a toy, fire starter, or music box. When you create the device, you determine its function by choosing one effect from Prestidigitation; the device produces that effect whenever you or another creature takes a Bonus Action to activate it with a touch. If the chosen effect has options within it, you choose one of those options for the device when you create it. For example, if you choose the spell's ignite-extinguish effect, you determine whether the device ignites or extinguishes fire; the device doesn't do both. You can have three such devices in existence at a time, and each falls apart 8 hours after its creation or when you dismantle it with a touch as a Utilize action."
-                    }
-                ]
+                "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):"
             }
         ]
     },
@@ -177,6 +226,32 @@
         "description": "<p>Towering over most folk, goliaths are distant descendants of giants. Each goliath bears the favors of the first giants-favors that manifest in various supernatural boons, including the ability to quickly grow and temporarily approach the height of goliaths' gigantic kin. Goliaths have physical characteristics that are reminiscent of the giants in their family lines. For example, some goliaths look like stone giants, while others resemble fire giants. Whatever giants they count as kin, goliaths have forged their own path in the multiverse-unencumbered by the internecine conflicts that have ravaged giantkind for ages-and seek heights above those reached by their ancestors.</p>",
         "size": "Medium (about 7-8 feet tall)",
         "speed": 35,
+        "subraces": [
+            {
+                "name": "Cloud's Jaunt (Cloud Giant)",
+                "description": "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see."
+            },
+            {
+                "name": "Fire's Burn (Fire Giant)",
+                "description": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target."
+            },
+            {
+                "name": "Frost's Chill (Frost Giant)",
+                "description": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn."
+            },
+            {
+                "name": "Hill's Tumble (Hill Giant)",
+                "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition."
+            },
+            {
+                "name": "Stone's Endurance (Stone Giant)",
+                "description": "When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total."
+            },
+            {
+                "name": "Storm's Thunder (Storm Giant)",
+                "description": "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature."
+            }
+        ],
         "traits": [
             {
                 "name": "Large Form",
@@ -188,33 +263,7 @@
             },
             {
                 "name": "Giant Ancestry",
-                "description": "You are descended from Giants. Choose one of the following benefits-a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:",
-                "sub_traits": [
-                    {
-                        "name": "Cloud's Jaunt (Cloud Giant)",
-                        "description": "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see."
-                    },
-                    {
-                        "name": "Fire's Burn (Fire Giant)",
-                        "description": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target."
-                    },
-                    {
-                        "name": "Frost's Chill (Frost Giant)",
-                        "description": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn."
-                    },
-                    {
-                        "name": "Hill's Tumble (Hill Giant)",
-                        "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition."
-                    },
-                    {
-                        "name": "Stone's Endurance (Stone Giant)",
-                        "description": "When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total."
-                    },
-                    {
-                        "name": "Storm's Thunder (Storm Giant)",
-                        "description": "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature."
-                    }
-                ]
+                "description": "You are descended from Giants. Choose one of the following benefits-a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:"
             }
         ]
     },
@@ -289,9 +338,23 @@
     {
         "name": "Tiefling",
         "creature_type": "Humanoid",
-        "description": "<p>Tieflings are either born in the Lower Planes or have fiendish ancestors who originated there. A tiefling (pronounced TEE-fling) is linked by blood to a devil, a demon, or some other Fiend. This connection to the Lower Planes is the tiefling's fiendish legacy, which comes with the promise of power yet has no effect on the tiefling's moral outlook. A tiefling chooses whether to embrace or lament their fiendish legacy. The three legacies are described below.</p><h3>Abyssal</h3><p>The entropy of the Abyss, the chaos of Pandemonium, and the despair of Carceri call to tieflings who have the abyssal legacy. Horns, fur, tusks, and peculiar scents are common physical features of such tieflings, most of whom have the blood of demons coursing through their veins.</p><h3>Chthonic</h3><p>Tieflings who have the chthonic legacy feel not only the tug of Carceri but also the greed of Gehenna and the gloom of Hades. Some of these tieflings look cadaverous. Others possess the unearthly beauty of a succubus, or they have physical features in-common with a night hag, a yugoloth, or some other Neutral Evil fiendish ancestor.</p><h3>Infernal</h3><p>The infernal legacy connects tieflings not only to Gehenna but also the Nine Hells and the raging battlefields of Acheron. Horns, spines, tails, golden eyes, and a faint odor of sulfur or smoke are common physical features of such tieflings, most of whom trace their ancestry to devils.</p>",
+        "description": "<p>Tieflings are either born in the Lower Planes or have fiendish ancestors who originated there. A tiefling (pronounced TEE-fling) is linked by blood to a devil, a demon, or some other Fiend. This connection to the Lower Planes is the tiefling's fiendish legacy, which comes with the promise of power yet has no effect on the tiefling's moral outlook. A tiefling chooses whether to embrace or lament their fiendish legacy.</p>",
         "size": "Medium (about 4-7 feet tall) or Small (about 3-4 feet tall), chosen when you select this race",
         "speed": 30,
+        "subraces": [
+            {
+                "name": "Abyssal",
+                "description": "The entropy of the Abyss, the chaos of Pandemonium, and the despair of Carceri call to tieflings who have the abyssal legacy. Horns, fur, tusks, and peculiar scents are common physical features of such tieflings, most of whom have the blood of demons coursing through their veins."
+            },
+            {
+                "name": "Chthonic",
+                "description": "Tieflings who have the chthonic legacy feel not only the tug of Carceri but also the greed of Gehenna and the gloom of Hades. Some of these tieflings look cadaverous. Others possess the unearthly beauty of a succubus, or they have physical features in-common with a night hag, a yugoloth, or some other Neutral Evil fiendish ancestor."
+            },
+            {
+                "name": "Infernal",
+                "description": "The infernal legacy connects tieflings not only to Gehenna but also the Nine Hells and the raging battlefields of Acheron. Horns, spines, tails, golden eyes, and a faint odor of sulfur or smoke are common physical features of such tieflings, most of whom trace their ancestry to devils."
+            }
+        ],
         "traits": [
             {
                 "name": "Darkvision",
