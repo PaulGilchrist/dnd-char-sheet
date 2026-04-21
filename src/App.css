@@ -18,3 +18,7 @@ button.mutted {
     background-color: grey;
     color: #000;
 }
+/* Hidden buttons - kept for future use */
+button.hidden {
+    display: none;
+}

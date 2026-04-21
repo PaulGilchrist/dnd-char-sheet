@@ -240,7 +240,7 @@ function App() {
                 )
             })}
             {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}>Add Character</button>}
-            {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Characters</button>}
+            {showButton && <button className="clickable mutted no-print hidden" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && (
                 <CharSheet 
                     allAbilityScores={abilityScores} 
@@ -254,7 +254,7 @@ function App() {
                 />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
-            {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download</button>}
+            {activeCharacter && <button className="clickable download no-print hidden" onClick={handleSaveClick}>Download</button>}
             {characters.length > 0 && activeCharacter != null && (
                 <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>
             )}
