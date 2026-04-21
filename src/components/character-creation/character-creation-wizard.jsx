@@ -26,7 +26,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [classSubtypes, setClassSubtypes] = useState([]);
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [errors, setErrors] = useState({});
-  const [tempInventory, setTempInventory] = useState({ backpack: '', equipped: '' });
+  const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
 
   // Load data based on ruleset
   useEffect(() => {
