@@ -8,7 +8,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle 
       
       <div className="form-group">
         <label>Resistances</label>
-        <div className="multi-select-container">
+        <div className="multi-select-container multi-select-compact">
           {RESISTANCES_IMMUNITIES.map(type => (
             <label 
               key={`resistance-${type}`} 
@@ -27,7 +27,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle 
       
       <div className="form-group">
         <label>Immunities</label>
-        <div className="multi-select-container">
+        <div className="multi-select-container multi-select-compact">
           {RESISTANCES_IMMUNITIES.map(type => (
             <label 
               key={`immunity-${type}`} 

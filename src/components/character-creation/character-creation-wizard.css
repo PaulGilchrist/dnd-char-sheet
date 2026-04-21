@@ -25,7 +25,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 0 20px 0 20px;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -60,7 +60,7 @@
 }
 
 .wizard-content {
-  padding: 20px;
+  padding: 10px 20px 0 20px;
 }
 
 .wizard-step h2 {
@@ -151,7 +151,7 @@
 .wizard-footer {
   display: flex;
   justify-content: space-between;
-  padding: 20px;
+  padding: 10px 20px 20px 20px;
   border-top: 1px solid #e0e0e0;
   gap: 10px;
 }
@@ -383,9 +383,30 @@
   font-weight: 600;
 }
 
+/* Compact version for Skills step */
+.multi-select-compact .multi-select-item {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  gap: 4px;
+}
+
+.multi-select-compact .multi-select-container {
+  gap: 6px;
+  margin-top: 6px;
+}
+
 @media (max-width: 600px) {
   .multi-select-container {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 6px;
+  }
+  
+  .multi-select-compact .multi-select-container {
+    gap: 4px;
+  }
+  
+  .multi-select-compact .multi-select-item {
+    padding: 3px 6px;
+    font-size: 0.8rem;
   }
 }

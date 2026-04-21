@@ -8,7 +8,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle })
       
       <div className="form-group">
         <label>Skill Proficiencies</label>
-        <div className="multi-select-container">
+        <div className="multi-select-container multi-select-compact">
           {SKILL_PROFICIENCIES.map(skill => (
             <label 
               key={skill} 
@@ -28,7 +28,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle })
       
       <div className="form-group">
         <label>Languages</label>
-        <div className="multi-select-container">
+        <div className="multi-select-container multi-select-compact">
           {LANGUAGES.map(language => (
             <label 
               key={language} 
