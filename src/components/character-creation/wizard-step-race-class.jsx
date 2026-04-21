@@ -94,6 +94,7 @@ function WizardStepRaceClass({
       
       {availableSubclasses.length > 0 && (
         <div className="form-group">
+
           <label>{subclassLabel} *</label>
           <select
             value={formData.class?.subclass?.name || ''}
@@ -106,8 +107,10 @@ function WizardStepRaceClass({
             }}
             className={errors.class ? 'error' : ''}
           >
+
             <option value="">Select a {subclassLabel.toLowerCase()}</option>
             {availableSubclasses.map(subclass => (
+
               <option key={subclass.name || subclass.index} value={subclass.name || subclass.index}>
                 {subclass.name || subclass.index}
               </option>
@@ -117,7 +120,22 @@ function WizardStepRaceClass({
         </div>
       )}
       
-
+      {availableSubclasses.length > 0 && (
+        <div className="form-group">
+          <label>Subclass Type (Optional)</label>
+          <input
+            type="text"
+            value={formData.class?.subclass?.type || ''}
+            onChange={(e) => {
+              const updatedClass = {
+                ...formData.class,
+                subclass: { ...formData.class.subclass, type: e.target.value }
+              };
+              onInputChange('class', updatedClass);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
