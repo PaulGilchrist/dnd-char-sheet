@@ -242,10 +242,83 @@
   border: 1px solid #ddd;
 }
 
+.spell-levels-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.level-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.level-label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.level-count {
+  font-weight: 700;
+  color: #333;
+  font-size: 0.95rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #e8f5e9;
+  border-radius: 4px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.level-count.exceeded {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.validation-message {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.validation-message.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.validation-message.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.validation-message.warning {
+  background-color: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffe0b2;
+}
+
 .spells-summary h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1rem;
-  color: var(--text-color);
+  color: #333;
+  font-weight: 600;
 }
 
 .selected-spells-list {
@@ -259,10 +332,11 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.35rem 0.75rem;
-  background-color: var(--primary-color);
+  background-color: #4CAF50;
   color: white;
   border-radius: 20px;
   font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .remove-spell-btn {
@@ -282,9 +356,10 @@
 }
 
 .no-spells-selected {
-  color: var(--text-muted);
+  color: #666;
   font-style: italic;
   margin: 0;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {

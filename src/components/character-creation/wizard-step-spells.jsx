@@ -1,14 +1,373 @@
 import React, { useState, useEffect } from 'react';
 import './wizard-step-spells.css';
 
+// Spell limits per class and level
+const SPELL_LIMITS = {
+  Wizard: {
+    1: { cantrip: 4, level1: 2 },
+    2: { cantrip: 4, level1: 3 },
+    3: { cantrip: 4, level1: 4, level2: 2 },
+    4: { cantrip: 4, level1: 4, level2: 3 },
+    5: { cantrip: 4, level1: 4, level2: 3, level3: 2 },
+    6: { cantrip: 4, level1: 4, level2: 3, level3: 3 },
+    7: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2 },
+    9: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2 },
+    11: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    14: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    15: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    16: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    17: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    18: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    19: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    20: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  },
+  Sorcerer: {
+    1: { cantrip: 4, level1: 2 },
+    2: { cantrip: 4, level1: 3 },
+    3: { cantrip: 4, level1: 4, level2: 2 },
+    4: { cantrip: 4, level1: 4, level2: 3 },
+    5: { cantrip: 4, level1: 4, level2: 3, level3: 2 },
+    6: { cantrip: 4, level1: 4, level2: 3, level3: 3 },
+    7: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2 },
+    9: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2 },
+    11: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    14: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    15: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    16: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    17: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    18: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    19: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    20: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  },
+  Warlock: {
+    1: { cantrip: 4, level1: 2 },
+    2: { cantrip: 4, level1: 3 },
+    3: { cantrip: 4, level1: 4, level2: 2 },
+    4: { cantrip: 4, level1: 4, level2: 3 },
+    5: { cantrip: 4, level1: 4, level2: 3, level3: 2 },
+    6: { cantrip: 4, level1: 4, level2: 3, level3: 3 },
+    7: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2 },
+    9: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2 },
+    11: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    14: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    15: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    16: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    17: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    18: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    19: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    20: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  },
+  Paladin: {
+    1: { cantrip: 2, level1: 2 },
+    2: { cantrip: 2, level1: 2 },
+    3: { cantrip: 2, level1: 3, level2: 2 },
+    4: { cantrip: 2, level1: 3, level2: 2 },
+    5: { cantrip: 2, level1: 3, level2: 3, level3: 2 },
+    6: { cantrip: 2, level1: 3, level2: 3, level3: 2 },
+    7: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 1 },
+    9: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 1 },
+    11: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 1 },
+    14: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 1 },
+    15: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 1 },
+    16: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 1 },
+    17: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 1 },
+    18: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 1 },
+    19: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+    20: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+  },
+  Bard: {
+    1: { cantrip: 4, level1: 4 },
+    2: { cantrip: 4, level1: 5, level2: 2 },
+    3: { cantrip: 4, level1: 5, level2: 3 },
+    4: { cantrip: 4, level1: 5, level2: 3, level3: 2 },
+    5: { cantrip: 4, level1: 5, level2: 3, level3: 3 },
+    6: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 1 },
+    7: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2 },
+    8: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 1 },
+    9: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2 },
+    10: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    11: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2 },
+    12: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 1 },
+    13: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2 },
+    14: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 1 },
+    15: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2 },
+    16: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 1 },
+    17: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+    18: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+    19: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+    20: { cantrip: 4, level1: 5, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+  },
+  Cleric: {
+    1: { cantrip: 3, level1: 3 },
+    2: { cantrip: 3, level1: 4 },
+    3: { cantrip: 3, level1: 4, level2: 2 },
+    4: { cantrip: 3, level1: 4, level2: 3 },
+    5: { cantrip: 3, level1: 4, level2: 3, level3: 2 },
+    6: { cantrip: 3, level1: 4, level2: 3, level3: 3 },
+    7: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2 },
+    9: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2 },
+    11: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    14: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    15: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    16: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    17: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    18: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    19: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    20: { cantrip: 3, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  },
+  Druid: {
+    1: { cantrip: 2, level1: 2 },
+    2: { cantrip: 2, level1: 3 },
+    3: { cantrip: 2, level1: 3, level2: 2 },
+    4: { cantrip: 2, level1: 3, level2: 3 },
+    5: { cantrip: 2, level1: 3, level2: 3, level3: 2 },
+    6: { cantrip: 2, level1: 3, level2: 3, level3: 3 },
+    7: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2 },
+    9: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2 },
+    11: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    14: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+    15: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    16: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+    17: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    18: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    19: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+    20: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  },
+  Ranger: {
+    1: { cantrip: 2, level1: 2 },
+    2: { cantrip: 2, level1: 2 },
+    3: { cantrip: 2, level1: 3, level2: 2 },
+    4: { cantrip: 2, level1: 3, level2: 2 },
+    5: { cantrip: 2, level1: 3, level2: 3, level3: 2 },
+    6: { cantrip: 2, level1: 3, level2: 3, level3: 2 },
+    7: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 1 },
+    8: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 1 },
+    9: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 1 },
+    10: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 1 },
+    11: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    12: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+    13: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 1 },
+    14: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 1 },
+    15: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 1 },
+    16: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 1 },
+    17: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 1 },
+    18: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 1 },
+    19: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+    20: { cantrip: 2, level1: 3, level2: 3, level3: 3, level4: 2, level5: 2, level6: 2, level7: 2, level8: 2, level9: 2 },
+  },
+  Barbarian: {
+    // Barbarians don't have spellcasting in standard 5e
+  },
+  Monk: {
+    // Monks don't have spellcasting in standard 5e
+  },
+  Rogue: {
+    // Rogues don't have spellcasting in standard 5e
+  },
+  Fighter: {
+    // Fighters don't have spellcasting in standard 5e (unless Eldritch Knight)
+  },
+  Bard: {
+    // Already defined above
+  },
+  Warlock: {
+    // Already defined above
+  },
+  Sorcerer: {
+    // Already defined above
+  },
+  Wizard: {
+    // Already defined above
+  },
+  Paladin: {
+    // Already defined above
+  },
+  Cleric: {
+    // Already defined above
+  },
+  Druid: {
+    // Already defined above
+  },
+  Ranger: {
+    // Already defined above
+  },
+};
+
+// Default limits for classes not defined
+const DEFAULT_SPELL_LIMITS = {
+  1: { cantrip: 4, level1: 2 },
+  2: { cantrip: 4, level1: 3 },
+  3: { cantrip: 4, level1: 4, level2: 2 },
+  4: { cantrip: 4, level1: 4, level2: 3 },
+  5: { cantrip: 4, level1: 4, level2: 3, level3: 2 },
+  6: { cantrip: 4, level1: 4, level2: 3, level3: 3 },
+  7: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 1 },
+  8: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2 },
+  9: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 1 },
+  10: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2 },
+  11: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+  12: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1 },
+  13: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+  14: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1 },
+  15: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+  16: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1 },
+  17: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  18: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  19: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+  20: { cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 2, level5: 2, level6: 1, level7: 1, level8: 1, level9: 1 },
+};
+
 function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('All');
   const [selectedClass, setSelectedClass] = useState('All');
   const [showFullDetails, setShowFullDetails] = useState({});
+  const [spellCounts, setSpellCounts] = useState({ cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 });
+  const [validationMessage, setValidationMessage] = useState('');
 
   const [levels, setLevels] = useState([]);
   const [classes, setClasses] = useState([]);
+
+  // Calculate spell counts by level
+  useEffect(() => {
+    console.log('=== SPELL COUNTS UPDATE ===');
+    console.log('formData.spells:', formData.spells);
+    console.log('allSpells loaded:', allSpells?.length || 0);
+    
+    const counts = { cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
+    
+    if (formData.spells && formData.spells.length > 0) {
+      formData.spells.forEach(spellName => {
+        console.log('Processing spell:', spellName);
+        const spell = allSpells.find(s => s.name === spellName || s.index === spellName);
+        if (spell) {
+          console.log('Found spell:', spell.name, 'level:', spell.level);
+          const level = spell.level !== undefined ? spell.level : 0;
+          const levelKey = level === 0 ? 'cantrip' : `level${level}`;
+          counts[levelKey] = (counts[levelKey] || 0) + 1;
+        } else {
+          console.log('Spell not found:', spellName);
+        }
+      });
+    } else {
+      console.log('No spells selected yet');
+    }
+    
+    console.log('Final counts:', counts);
+    setSpellCounts(counts);
+  }, [formData.spells, allSpells]);
+
+  // Get spell limits for current class and level
+  const getSpellLimits = () => {
+    if (!formData || !formData.class || !formData.level) {
+      return { cantrip: 4, level1: 2, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
+    }
+    
+    const className = formData.class.name;
+    const charLevel = parseInt(formData.level) || 1;
+    
+    const classLimits = SPELL_LIMITS[className] || DEFAULT_SPELL_LIMITS;
+    const levelLimits = classLimits[charLevel] || classLimits[1] || { cantrip: 4, level1: 2, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
+    
+    // Ensure all keys exist with default values
+    return {
+      cantrip: levelLimits.cantrip || 4,
+      level1: levelLimits.level1 || 2,
+      level2: levelLimits.level2 || 0,
+      level3: levelLimits.level3 || 0,
+      level4: levelLimits.level4 || 0,
+      level5: levelLimits.level5 || 0,
+      level6: levelLimits.level6 || 0,
+      level7: levelLimits.level7 || 0,
+      level8: levelLimits.level8 || 0,
+      level9: levelLimits.level9 || 0
+    };
+  };
+
+  const spellLimits = getSpellLimits();
+
+  // Check if spell selection exceeds limits
+  const getValidationMessage = () => {
+    if (!formData || !formData.class) {
+      return '';
+    }
+    
+    const className = formData.class.name;
+    const charLevel = parseInt(formData.level) || 1;
+    
+    if (className === 'Barbarian' || className === 'Monk' || className === 'Rogue' || className === 'Fighter') {
+      return 'This class does not have spellcasting abilities. Consider choosing a spellcasting class.';
+    }
+    
+    const counts = spellCounts;
+    const limits = spellLimits || { cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
+    
+    const exceeded = [];
+    if (counts && limits && counts.cantrip > (limits.cantrip || 0)) {
+      exceeded.push(`Cantrips (${counts.cantrip}/${limits.cantrip})`);
+    }
+    if (counts && limits && counts.level1 > (limits.level1 || 0)) {
+      exceeded.push(`1st level (${counts.level1}/${limits.level1})`);
+    }
+    if (counts && limits && counts.level2 > (limits.level2 || 0)) {
+      exceeded.push(`2nd level (${counts.level2}/${limits.level2})`);
+    }
+    if (counts && limits && counts.level3 > (limits.level3 || 0)) {
+      exceeded.push(`3rd level (${counts.level3}/${limits.level3})`);
+    }
+    if (counts && limits && counts.level4 > (limits.level4 || 0)) {
+      exceeded.push(`4th level (${counts.level4}/${limits.level4})`);
+    }
+    if (counts && limits && counts.level5 > (limits.level5 || 0)) {
+      exceeded.push(`5th level (${counts.level5}/${limits.level5})`);
+    }
+    if (counts && limits && counts.level6 > (limits.level6 || 0)) {
+      exceeded.push(`6th level (${counts.level6}/${limits.level6})`);
+    }
+    if (counts && limits && counts.level7 > (limits.level7 || 0)) {
+      exceeded.push(`7th level (${counts.level7}/${limits.level7})`);
+    }
+    if (counts && limits && counts.level8 > (limits.level8 || 0)) {
+      exceeded.push(`8th level (${counts.level8}/${limits.level8})`);
+    }
+    if (counts && limits && counts.level9 > (limits.level9 || 0)) {
+      exceeded.push(`9th level (${counts.level9}/${limits.level9})`);
+    }
+    
+    if (exceeded.length > 0) {
+      return `Spell limit exceeded: ${exceeded.join(', ')}`;
+    }
+    
+    return '';
+  };
+
+  useEffect(() => {
+    setValidationMessage(getValidationMessage());
+  }, [spellCounts, spellLimits, formData.class, formData.level]);
 
   useEffect(() => {
     if (allSpells && allSpells.length > 0) {
@@ -177,6 +536,11 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   };
 
   const renderSearchModal = () => {
+    console.log('=== RENDERING SPELLS COMPONENT ===');
+    console.log('spellCounts:', spellCounts);
+    console.log('spellLimits:', spellLimits);
+    console.log('formData.spells:', formData.spells);
+    
     if (!allSpells || allSpells.length === 0) {
       return (
         <div className="wizard-step">
@@ -191,6 +555,34 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     return (
       <div className="wizard-step-spells">
         <h2>Step 6: Spells</h2>
+        
+        {/* Spell Level Summary - Moved to top */}
+        <div className="spells-summary" style={{display: 'block', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '1rem'}}>
+          <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333', fontWeight: '600'}}>Spell Selection Summary</h3>
+          
+          <div className="spell-levels-summary" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', margin: '1rem 0', padding: '0.75rem', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #e0e0e0'}}>
+            <div className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
+              <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>Cantrips:</span>
+              <span className={`level-count ${spellCounts.cantrip > (spellLimits.cantrip || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+                {spellCounts.cantrip}/{spellLimits.cantrip || 0}
+              </span>
+            </div>
+            {['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9'].map(levelKey => (
+              <div key={levelKey} className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
+                <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>{levelKey.replace('level', '')}th level:</span>
+                <span className={`level-count ${spellCounts[levelKey] > (spellLimits[levelKey] || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+                  {spellCounts[levelKey] || 0}/{spellLimits[levelKey] || 0}
+                </span>
+              </div>
+            ))}
+          </div>
+          
+          {validationMessage && (
+            <div className="validation-message error" style={{padding: '0.75rem 1rem', borderRadius: '6px', margin: '1rem 0', fontWeight: '600', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a'}}>
+              ⚠️ {validationMessage}
+            </div>
+          )}
+        </div>
         
         <div className="spells-filters">
           <div className="filter-group">
@@ -254,8 +646,32 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           </div>
         </div>
 
-        <div className="spells-summary">
-          <h3>Selected Spells ({formData.spells?.length || 0})</h3>
+        <div className="spells-summary" style={{display: 'block', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '1rem'}}>
+          <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333', fontWeight: '600'}}>Spell Selection Summary</h3>
+          
+          <div className="spell-levels-summary" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', margin: '1rem 0', padding: '0.75rem', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #e0e0e0'}}>
+            <div className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
+              <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>Cantrips:</span>
+              <span className={`level-count ${spellCounts.cantrip > (spellLimits.cantrip || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+                {spellCounts.cantrip}/{spellLimits.cantrip || 0}
+              </span>
+            </div>
+            {['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9'].map(levelKey => (
+              <div key={levelKey} className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
+                <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>{levelKey.replace('level', '')}th level:</span>
+                <span className={`level-count ${spellCounts[levelKey] > (spellLimits[levelKey] || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+                  {spellCounts[levelKey] || 0}/{spellLimits[levelKey] || 0}
+                </span>
+              </div>
+            ))}
+          </div>
+          
+          {validationMessage && (
+            <div className="validation-message error">
+              ⚠️ {validationMessage}
+            </div>
+          )}
+          
           {formData.spells && formData.spells.length > 0 ? (
             <div className="selected-spells-list">
               {formData.spells.map(spellName => (
