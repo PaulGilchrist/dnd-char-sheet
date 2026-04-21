@@ -32,7 +32,7 @@
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
         "predeploy": "npm run build",
         "preview": "vite preview --host",
-        "start": "concurrently \"caffeinate -d -i\" \"npm run build && npm run preview\" \"npm run api\""
+        "start": "npm install && npm run build && node server.js"
     },
     "type": "module",
     "version": "0.0.0",
