@@ -19,7 +19,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle })
                 checked={(formData.skillProficiencies || []).includes(skill)}
                 onChange={() => onSkillToggle(skill)}
               />
-              {skill}
+              &nbsp;{skill}
             </label>
           ))}
         </div>
@@ -39,7 +39,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle })
                 checked={(formData.languages || []).includes(language)}
                 onChange={() => onLanguageToggle(language)}
               />
-              {language}
+              &nbsp;{language}
             </label>
           ))}
         </div>

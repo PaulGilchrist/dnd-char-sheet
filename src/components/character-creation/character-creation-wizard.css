@@ -113,6 +113,7 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
+  height: 36px;
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
@@ -409,4 +410,13 @@
     padding: 3px 6px;
     font-size: 0.8rem;
   }
+}
+
+/* Ensure checkboxes are 16px */
+.multi-select-item input[type="checkbox"],
+.multi-select-compact .multi-select-item input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px;
+  min-height: 16px;
 }

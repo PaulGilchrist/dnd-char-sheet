@@ -19,7 +19,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle 
                 checked={(formData.resistances || []).includes(type)}
                 onChange={() => onResistanceToggle(type)}
               />
-              {type}
+              &nbsp;{type}
             </label>
           ))}
         </div>
@@ -38,7 +38,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle 
                 checked={(formData.immunities || []).includes(type)}
                 onChange={() => onImmunityToggle(type)}
               />
-              {type}
+              &nbsp;{type}
             </label>
           ))}
         </div>

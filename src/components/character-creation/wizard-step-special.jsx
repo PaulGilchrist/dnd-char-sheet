@@ -1,4 +1,5 @@
 import React from 'react';
+import './wizard-step-special.css'
 
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
   return (
@@ -7,7 +8,7 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
       
       <div className="form-group">
         <label>Feats</label>
-        <textarea
+        <textarea className='special-textarea'
           value={formData.feats.join(', ')}
           onChange={(e) => onArrayFieldChange('feats', e.target.value.split(',').map(f => f.trim()).filter(f => f))}
           placeholder="Enter feats separated by commas"
@@ -18,7 +19,7 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
       
       <div className="form-group">
         <label>Special Actions</label>
-        <textarea
+        <textarea className='special-textarea'
           value={formData.specialActions.join(', ')}
           onChange={(e) => onArrayFieldChange('specialActions', e.target.value.split(',').map(a => a.trim()).filter(a => a))}
           placeholder="Enter special actions separated by commas"
