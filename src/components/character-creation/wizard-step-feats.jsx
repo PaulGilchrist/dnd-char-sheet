@@ -90,7 +90,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
             <div className="feat-full-details">
               {feat.prerequisites && (
                 <div className="feat-prerequisites">
-                  <strong>Prerequisites:</strong> {feat.prerequisites.join(', ')}
+                  <strong>Prerequisites:</strong> {Array.isArray(feat.prerequisites) ? feat.prerequisites.join(', ') : feat.prerequisites}
                 </div>
               )}
               {feat.description && (
