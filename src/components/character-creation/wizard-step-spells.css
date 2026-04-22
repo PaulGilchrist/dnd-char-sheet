@@ -4,8 +4,8 @@
     border-radius: 8px;
     border: 1px solid #ddd;
     flex-shrink: 0;
-    max-height: 180px;
-    overflow-y: auto;
+    max-height: 320px;
+    overflow-y: visible;
 }
 
 .spell-levels-summary {

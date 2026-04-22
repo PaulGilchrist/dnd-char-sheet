@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 // No component-specific CSS needed - uses shared wizard styles
 import { getSpellLimits, validateSpellSelection } from '../../services/spell-limits.js';
-import './wizard-step-spells.css'
+import './wizard-step-spells.css';
+// Dark mode styles loaded via media query
+import './wizard-step-spells-dark.css';
 
 function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
