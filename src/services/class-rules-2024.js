@@ -1,5 +1,15 @@
 import { cloneDeep, uniqBy } from 'lodash';
-import rules from './rules.js';
+
+const getAbilityLongName = (shortName) => {
+    switch (shortName) {
+        case 'STR': return 'Strength';
+        case 'DEX': return 'Dexterity';
+        case 'CON': return 'Constitution';
+        case 'INT': return 'Intelligence';
+        case 'WIS': return 'Wisdom';
+        case 'CHA': return 'Charisma';
+    }
+};
 
 const classRules = {
     getClass: (allClasses, playerSummary) => {
@@ -26,7 +36,7 @@ const classRules = {
         
         // Convert ability names
         if (characterClass.saving_throws) {
-            characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => rules.getAbilityLongName(savingThrow));
+            characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => getAbilityLongName(savingThrow));
         }
         
         return characterClass;

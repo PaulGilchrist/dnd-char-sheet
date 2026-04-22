@@ -1,9 +1,9 @@
 import rules5e from './rules.js';
-import rules2024 from './2024/rules.js';
+import rules2024 from './rules-2024.js';
 import raceRules5e from './race-rules.js';
-import raceRules2024 from './2024/race-rules.js';
+import raceRules2024 from './race-rules-2024.js';
 import classRules5e from './class-rules.js';
-import classRules2024 from './2024/class-rules.js';
+import classRules2024 from './class-rules-2024.js';
 
 const rulesFactory = {
     getRules: (playerSummary, characterName = 'Unknown') => {

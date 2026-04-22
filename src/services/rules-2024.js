@@ -1,9 +1,9 @@
 import { cloneDeep, uniqBy } from 'lodash';
-import { passiveSkills } from '../../data/passive-skills.js';
-import { skills } from '../../data/skills.js';
-import auditRules from '../audit-rules.js';
-import classRules from './class-rules.js';
-import raceRules from './race-rules.js';
+import { passiveSkills } from '../data/passive-skills.js';
+import { skills } from '../data/skills.js';
+import auditRules from './audit-rules.js';
+import classRules from './class-rules-2024.js';
+import raceRules from './race-rules-2024.js';
 
 const rules = {
     getAbilityLongName: (shortName) => {
@@ -157,7 +157,7 @@ const rules = {
             if (!itemName || typeof itemName !== 'string') {
                 return false;
             }
-            if (itemName.charAt(0) === "+") {
+            if (itemName.charAt(0) === '+') {
                 itemName = itemName.substring(3);
             }
             let item = allEquipment.find((item) => item.name === itemName);

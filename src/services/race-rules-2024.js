@@ -1,5 +1,15 @@
 import { cloneDeep, uniqBy } from 'lodash';
-import rules from './rules.js';
+
+const getAbilityLongName = (shortName) => {
+    switch (shortName) {
+        case 'STR': return 'Strength';
+        case 'DEX': return 'Dexterity';
+        case 'CON': return 'Constitution';
+        case 'INT': return 'Intelligence';
+        case 'WIS': return 'Wisdom';
+        case 'CHA': return 'Charisma';
+    }
+};
 
 const raceRules = {
     getImmunities: (playerSummary) => {
@@ -52,7 +62,7 @@ const raceRules = {
         // Convert ability names if present
         if (race.ability_bonuses) {
             race.ability_bonuses = race.ability_bonuses.map((ability_bonus) => {
-                ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
+                ability_bonus.ability_score = getAbilityLongName(ability_bonus.ability_score);
                 return ability_bonus;
             });
         }
@@ -128,7 +138,7 @@ const raceRules = {
             "Keen Senses",
             "Trance",
             "Lucky",
-            "Naturally Stealthy"
+            "Naturally Stealthily"
         ];
         
         const actions = [
