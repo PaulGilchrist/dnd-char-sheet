@@ -7,6 +7,7 @@ export { default as WizardStepBasic } from './wizard-step-basic';
 export { default as WizardStepRaceClass } from './wizard-step-race-class';
 export { default as WizardStepAbilities } from './wizard-step-abilities';
 export { default as WizardStepSkills } from './wizard-step-skills';
+export { default as WizardStepLanguages } from './wizard-step-languages';
 export { default as WizardStepInventory } from './wizard-step-inventory';
 export { default as WizardStepSpecial } from './wizard-step-special';
 export { default as WizardStepResistances } from './wizard-step-resistances';
@@ -21,6 +22,7 @@ export const REQUIRED_FIELDS = [
   'abilities',
   'inventory',
   'skillProficiencies',
+  'expertSkills',
 ];
 
 export const ABILITY_NAMES = [
@@ -135,6 +137,7 @@ export const DEFAULT_FORM_DATA = {
     miscBonus: 0,
   })),
   skillProficiencies: [],
+  expertSkills: [],
   inventory: {
     backpack: [],
     equipped: [],

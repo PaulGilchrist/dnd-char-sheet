@@ -15,6 +15,7 @@ import WizardStepBasic from './wizard-step-basic';
 import WizardStepRaceClass from './wizard-step-race-class';
 import WizardStepAbilities from './wizard-step-abilities';
 import WizardStepSkills from './wizard-step-skills';
+import WizardStepLanguages from './wizard-step-languages';
 import WizardStepInventory from './wizard-step-inventory';
 import WizardStepSpells from './wizard-step-spells';
 import WizardStepFeats from './wizard-step-feats';
@@ -209,6 +210,23 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setErrors(prev => ({ ...prev, skillProficiencies: null }));
   };
 
+  const handleSkillExpertiseToggle = (skill, isExpert) => {
+    setFormData(prev => {
+      if (isExpert) {
+        // Add to expertSkills
+        const currentExpertSkills = prev.expertSkills || [];
+        const newExpertSkills = [...currentExpertSkills, skill];
+        return { ...prev, expertSkills: newExpertSkills };
+      } else {
+        // Remove from expertSkills
+        const currentExpertSkills = prev.expertSkills || [];
+        const newExpertSkills = currentExpertSkills.filter(s => s !== skill);
+        return { ...prev, expertSkills: newExpertSkills };
+      }
+    });
+    setErrors(prev => ({ ...prev, expertSkills: null }));
+  };
+
   const handleLanguageToggle = (language) => {
     setFormData(prev => {
       const currentLanguages = prev.languages || [];
@@ -321,10 +339,18 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             formData={formData}
             errors={errors}
             onSkillToggle={handleSkillToggle}
-            onLanguageToggle={handleLanguageToggle}
+            onSkillExpertiseToggle={handleSkillExpertiseToggle}
           />
         );
       case 6:
+        return (
+          <WizardStepLanguages
+            formData={formData}
+            errors={errors}
+            onLanguageToggle={handleLanguageToggle}
+          />
+        );
+      case 7:
         return (
           <WizardStepResistances
             formData={formData}
@@ -332,7 +358,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onImmunityToggle={handleImmunityToggle}
           />
         );
-      case 7:
+      case 8:
         return (
           <WizardStepSpells
             formData={formData}
@@ -340,7 +366,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 8:
+      case 9:
         return (
           <WizardStepFeats
             formData={formData}
@@ -348,7 +374,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 9:
+      case 10:
         return (
           <WizardStepMagicItems
             formData={formData}
@@ -357,7 +383,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 10:
+      case 11:
         return (
           <WizardStepInventory
             formData={formData}
@@ -366,7 +392,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onTempInventoryChange={handleTempInventoryChange}
           />
         );
-      case 11:
+      case 12:
         return (
           <WizardStepSpecial
             formData={formData}
@@ -387,7 +413,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         />
         <WizardProgressBar
                     currentStep={currentStep}
-                    totalSteps={11}
+                    totalSteps={12}
                   />
         <div className="wizard-content">
           {renderStep()}
@@ -395,7 +421,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         <WizardFooter
           currentStep={currentStep}
           isFirstStep={currentStep === 1}
-          isLastStep={currentStep === 11}
+          isLastStep={currentStep === 12}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}

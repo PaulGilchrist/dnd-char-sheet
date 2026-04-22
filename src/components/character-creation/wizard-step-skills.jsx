@@ -1,7 +1,34 @@
-import React from 'react';
-import { SKILL_PROFICIENCIES, LANGUAGES } from './constants';
+import React, { useState } from 'react';
+import './wizard-step-skills.css';
+import { SKILL_PROFICIENCIES } from './constants';
 
-function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle }) {
+function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle }) {
+  const [showExpertiseFeedback, setShowExpertiseFeedback] = useState(null);
+
+  const handleExpertiseToggle = (skill) => {
+    const isCurrentlyExpert = (formData.expertSkills || []).includes(skill);
+    const isCurrentlyProficient = (formData.skillProficiencies || []).includes(skill);
+
+    if (isCurrentlyExpert) {
+      // Deselecting expertise - remove from expertSkills only
+      onSkillExpertiseToggle(skill, false);
+      setShowExpertiseFeedback(null);
+    } else {
+      // Elevating to expertise
+      if (!isCurrentlyProficient) {
+        setShowExpertiseFeedback(`Please select ${skill} as proficient first`);
+        setTimeout(() => setShowExpertiseFeedback(null), 3000);
+        return;
+      }
+      onSkillExpertiseToggle(skill, true);
+      setShowExpertiseFeedback(`${skill} is now Expert!`);
+      setTimeout(() => setShowExpertiseFeedback(null), 3000);
+    }
+  };
+
+  const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
+  const isSkillProficient = (skill) => (formData.skillProficiencies || []).includes(skill);
+
   return (
     <div className="wizard-step">
       <h2>Step 5: Skills & Proficiencies</h2>
@@ -16,35 +43,36 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onLanguageToggle })
             >
               <input
                 type="checkbox"
-                checked={(formData.skillProficiencies || []).includes(skill)}
+                checked={isSkillProficient(skill)}
                 onChange={() => onSkillToggle(skill)}
               />
-              &nbsp;{skill}
+              &nbsp;
+              <span className={isSkillExpert(skill) ? 'skill-expert-label' : ''}>
+                {skill}
+                {isSkillExpert(skill) && (
+                  <span className="expertise-indicator"> (Expert)</span>
+                )}
+              </span>
+              <button
+                type="button"
+                className={`expertise-toggle-btn ${isSkillExpert(skill) ? 'active' : ''}`}
+                onClick={() => handleExpertiseToggle(skill)}
+                disabled={!isSkillProficient(skill)}
+                title={isSkillProficient(skill) ? 'Click to elevate to Expert' : 'Select proficient first'}
+              >
+                {isSkillExpert(skill) ? '✓ Expert' : 'Elevate'}
+              </button>
             </label>
           ))}
         </div>
         {errors.skillProficiencies && <span className="error-message">{errors.skillProficiencies}</span>}
       </div>
-      
-      <div className="form-group">
-        <label>Languages</label>
-        <div className="multi-select-container multi-select-compact">
-          {LANGUAGES.map(language => (
-            <label 
-              key={language} 
-              className={`multi-select-item ${(formData.languages || []).includes(language) ? 'selected' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={(formData.languages || []).includes(language)}
-                onChange={() => onLanguageToggle(language)}
-              />
-              &nbsp;{language}
-            </label>
-          ))}
+
+      {showExpertiseFeedback && (
+        <div className={`expertise-feedback ${showExpertiseFeedback.includes('Expert') ? 'success' : 'error'}`}>
+          {showExpertiseFeedback}
         </div>
-        {errors.languages && <span className="error-message">{errors.languages}</span>}
-      </div>
+      )}
     </div>
   );
 }
