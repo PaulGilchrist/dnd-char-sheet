@@ -11,7 +11,8 @@
         "class",
         "abilities",
         "inventory",
-        "skillProficiencies"
+        "skillProficiencies",
+        "rules"
     ],
     "properties": {
         "name": {
