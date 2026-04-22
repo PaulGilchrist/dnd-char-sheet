@@ -272,7 +272,7 @@ function App() {
                         className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} 
                         onClick={() => handleCharacterClick(character)}
                     >
-                        {Utils.getFirstName(character.name)}
+                        {character.name}
                     </button>
                 )
             })}
