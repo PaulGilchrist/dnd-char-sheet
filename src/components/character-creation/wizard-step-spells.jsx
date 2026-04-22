@@ -267,7 +267,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     if (!allSpells || allSpells.length === 0) {
       return (
         <div className="wizard-step">
-          <h2>Step 7: Spells</h2>
+          <h2>Step 8: Spells</h2>
           <div className="no-spells-found">
             Spell data not yet loaded. Please try again.
           </div>

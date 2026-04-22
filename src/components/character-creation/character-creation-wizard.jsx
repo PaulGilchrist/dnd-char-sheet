@@ -320,6 +320,14 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 6:
         return (
+          <WizardStepResistances
+            formData={formData}
+            onResistanceToggle={handleResistanceToggle}
+            onImmunityToggle={handleImmunityToggle}
+          />
+        );
+      case 7:
+        return (
           <WizardStepInventory
             formData={formData}
             tempInventory={tempInventory}
@@ -327,7 +335,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onTempInventoryChange={handleTempInventoryChange}
           />
         );
-      case 7:
+      case 8:
         return (
           <WizardStepSpells
             formData={formData}
@@ -335,7 +343,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 8:
+      case 9:
         return (
           <WizardStepFeats
             formData={formData}
@@ -343,19 +351,11 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 9:
+      case 10:
         return (
           <WizardStepSpecial
             formData={formData}
             onArrayFieldChange={handleArrayFieldChange}
-          />
-        );
-      case 10:
-        return (
-          <WizardStepResistances
-            formData={formData}
-            onResistanceToggle={handleResistanceToggle}
-            onImmunityToggle={handleImmunityToggle}
           />
         );
       default:

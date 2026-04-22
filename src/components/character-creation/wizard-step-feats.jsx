@@ -135,8 +135,8 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
     }
 
     return (
-      <div className="wizard-step-feats">
-        <h2>Step 8: Feats</h2>
+      <div className="wizard-step">
+        <h2>Step 9: Feats</h2>
         
         <div className="list-filter-container feats-filters">
           <div className="filter-group">

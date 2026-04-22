@@ -266,7 +266,7 @@ function WizardStepInventory({ formData, tempInventory, onInventoryChange, onTem
 
   return (
     <div className="wizard-step">
-      <h2>Step 6: Inventory</h2>
+      <h2>Step 7: Inventory</h2>
       
       <div className="form-group">
         <label>Gold Pieces *</label>
