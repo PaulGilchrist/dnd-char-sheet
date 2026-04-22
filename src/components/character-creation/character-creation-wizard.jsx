@@ -57,7 +57,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       });
       loadData('/dnd-char-sheet/data/2024/feats.json', setFeats);
     } else {
-      loadData('/dnd-char-sheet/data/backgrounds.json', setBackgrounds);
+      // 5e does not use the same background system as 2024
+      setBackgrounds([]);
       loadData('/dnd-char-sheet/data/races.json', setRacesData);
       loadData('/dnd-char-sheet/data/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
