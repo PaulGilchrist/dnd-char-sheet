@@ -124,8 +124,8 @@ function CharInventory({ playerStats }) {
             {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
             {playerStats.inventory.magicItems && <div>
                 <div className='sectionHeader'>Magic Items</div>
-                {playerStats.inventory.magicItems.map((magicItem) => {
-                    return <div key={magicItem.name+magicItem.rarity}>
+                {playerStats.inventory.magicItems.map((magicItem, index) => {
+                    return <div key={`magic-item-${index}`}>
                         <b>
                             {magicItem.name} {magicItem.quantity ? `(qty ${magicItem.quantity}) ` : '' } -&nbsp;
                             <i>
