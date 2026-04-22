@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './wizard-step-spells.css';
+// No component-specific CSS needed - uses shared wizard styles
 import { getSpellLimits, validateSpellSelection } from '../../services/spell-limits.js';
 
 function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
@@ -192,20 +192,20 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     return (
       <div
         key={spell.index || index}
-        className={`spell-item ${isSelected ? 'selected' : ''}`}
+        className={`list-item spell-item ${isSelected ? 'selected' : ''}`}
         onClick={() => handleSpellToggle(spell.name)}
       >
-        <div className="spell-item-header">
-          <div className="spell-name">{spell.name}</div>
+        <div className="list-item-header">
+          <div className="list-item-name">{spell.name}</div>
           <span className={`spell-level ${getLevelClass(spell)}`}>
             {spell.level !== undefined ? spell.level : '0'}
           </span>
-          <div className="spell-checkbox">
+          <div className={`list-item-checkbox ${isSelected ? 'checked' : ''}`}>
             {isSelected ? '✓' : ''}
           </div>
         </div>
         
-        <div className="spell-item-details">
+        <div className="list-item-details">
           <div className="spell-meta">
             <span className="spell-school">{spell.school || 'Unknown'}</span>
             {spell.ritual && <span className="spell-ritual">Ritual</span>}
@@ -215,7 +215,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           </div>
 
           {isExpanded && (
-            <div className="spell-full-details">
+            <div className="list-item-full-details">
               <div className="spell-description">
                 {spell.desc && spell.desc[0] && spell.desc[0]}
               </div>
@@ -246,7 +246,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
             </div>
           )}
 
-          <div className="spell-full-details">
+          <div className="list-item-full-details">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -276,7 +276,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     }
 
     return (
-      <div className="wizard-step-spells">
+      <div className="wizard-step wizard-step-spells">
         <h2>Step 7: Spells</h2>
         
         {/* Spell Level Summary - Moved to top */}
@@ -307,7 +307,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           )}
         </div>
         
-        <div className="spells-filters">
+        <div className="list-filter-container spells-filters">
           <div className="filter-group">
             <label htmlFor="spell-search">Search Spells</label>
             <input
@@ -349,7 +349,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           </div>
         </div>
 
-        <div className="spell-results-container">
+        <div className="list-results-container spell-results-container">
           <div className="spell-results-header">
             <span className="result-count">
               Showing {filteredSpells.length} spell{filteredSpells.length !== 1 ? 's' : ''}
@@ -358,7 +358,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           
           <div className="spell-results-list">
             {filteredSpells.length === 0 ? (
-              <div className="no-spells-found">
+              <div className="no-results-found">
                 {searchQuery || selectedLevel !== 'All' || selectedClass !== 'All'
                   ? 'No spells found matching your criteria.'
                   : 'No spells available.'}

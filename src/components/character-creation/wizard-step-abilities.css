@@ -1,4 +1,4 @@
-/* Compact Step 3 - Ability Scores Grid Layout */
+/* ===== Ability Scores Grid Layout ===== */
 .ability-scores-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -78,7 +78,7 @@
   border: 1px solid #a5d6a7;
 }
 
-/* Responsive adjustments */
+/* Responsive adjustments for abilities */
 @media (max-width: 768px) {
   .ability-scores-grid {
     grid-template-columns: 1fr;

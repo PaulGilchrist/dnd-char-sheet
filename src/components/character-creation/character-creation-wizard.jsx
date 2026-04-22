@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './character-creation-wizard.css';
-import './character-creation-wizard-compact.css';
 import {
   REQUIRED_FIELDS,
   ABILITY_NAMES,

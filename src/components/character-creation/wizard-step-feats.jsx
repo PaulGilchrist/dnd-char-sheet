@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './wizard-step-feats.css';
+// No component-specific CSS needed - uses shared wizard styles
 
 function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,20 +74,20 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
     return (
       <div
         key={feat.index || index}
-        className={`feat-item ${isSelected ? 'selected' : ''}`}
+        className={`list-item feat-item ${isSelected ? 'selected' : ''}`}
         onClick={() => handleFeatToggle(feat.name)}
       >
-        <div className="feat-item-header">
-          <div className="feat-name">{feat.name}</div>
+        <div className="list-item-header">
+          <div className="list-item-name">{feat.name}</div>
           {feat.type && <span className="feat-type">{feat.type}</span>}
-          <div className="feat-checkbox">
+          <div className={`list-item-checkbox ${isSelected ? 'checked' : ''}`}>
             {isSelected ? '✓' : ''}
           </div>
         </div>
         
-        <div className="feat-item-details">
+        <div className="list-item-details">
           {isExpanded && (
-            <div className="feat-full-details">
+            <div className="list-item-full-details">
               {feat.prerequisites && (
                 <div className="feat-prerequisites">
                   <strong>Prerequisites:</strong> {Array.isArray(feat.prerequisites) ? feat.prerequisites.join(', ') : feat.prerequisites}
@@ -106,7 +106,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
             </div>
           )}
 
-          <div className="feat-full-details">
+          <div className="list-item-full-details">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -138,7 +138,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
       <div className="wizard-step-feats">
         <h2>Step 8: Feats</h2>
         
-        <div className="feats-filters">
+        <div className="list-filter-container feats-filters">
           <div className="filter-group">
             <label htmlFor="feat-search">Search Feats</label>
             <input
@@ -166,7 +166,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
           </div>
         </div>
 
-        <div className="feat-results-container">
+        <div className="list-results-container feat-results-container">
           <div className="feat-results-header">
             <span className="result-count">
               Showing {filteredFeats.length} feat{filteredFeats.length !== 1 ? 's' : ''}
@@ -175,7 +175,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
           
           <div className="feat-results-list">
             {filteredFeats.length === 0 ? (
-              <div className="no-feats-found">
+              <div className="no-results-found">
                 {searchQuery || selectedType !== 'All'
                   ? 'No feats found matching your criteria.'
                   : 'No feats available.'}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './wizard-step-inventory.css';
+// No component-specific CSS needed - uses shared wizard styles
 
 function WizardStepInventory({ formData, tempInventory, onInventoryChange, onTempInventoryChange }) {
   const [equipmentData, setEquipmentData] = useState([]);

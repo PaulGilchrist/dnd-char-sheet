@@ -1,5 +1,5 @@
 import React from 'react';
-import './wizard-step-special.css'
+// No component-specific CSS needed - uses shared wizard styles
 
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
   return (
@@ -8,7 +8,7 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
       
       <div className="form-group">
         <label>Special Actions</label>
-        <textarea className='special-textarea'
+        <textarea className='inventory-textarea'
           value={formData.specialActions.join(', ')}
           onChange={(e) => onArrayFieldChange('specialActions', e.target.value.split(',').map(a => a.trim()).filter(a => a))}
           placeholder="Enter special actions separated by commas"
