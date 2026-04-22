@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './wizard-step-skills.css';
+// Dark mode styles loaded via media query
+import './wizard-step-skills-dark.css';
 import { SKILL_PROFICIENCIES } from './constants';
 
 function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle }) {
