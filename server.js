@@ -10,7 +10,8 @@ const PORT = process.env.PORT || 3000;
 const persistDataDebounceMilliseconds = 1 * 60 * 1000; // 1 minute in milliseconds
 
 const app = express();
-app.use(express.json());
+
+app.use(express.json({ limit: '100kb' }));
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, POST');

@@ -129,7 +129,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       setFormData(prev => ({
         ...prev,
         rules: '5e',
-        spells: allSpells || [],
+        spells: [],
         feats: [],
         magicItems: [],
         background: ''

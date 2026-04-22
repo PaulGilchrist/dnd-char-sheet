@@ -48,7 +48,7 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
                 rules: playerStats.rules || '5e (default)'
             });
             let html = `<b>${spell.name}</b><br/><br/>${spell.desc}<br/>`;
-            if(spell.higher_level) {
+            if(typeof spell.higher_level === 'string' && spell.higher_level.trim()) {
                 html += `<br/><b>At higher levels.</b>&nbsp;${spell.higher_level}`;
             }
             setPopupHtml(html);

@@ -147,5 +147,5 @@ export const DEFAULT_FORM_DATA = {
   feats: [],
   magicItems: [],
   specialActions: [],
-  rules: '2024',
+  rules: '5e',
 };
