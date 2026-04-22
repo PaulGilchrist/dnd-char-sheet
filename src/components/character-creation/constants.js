@@ -46,6 +46,22 @@ export const ALIGNMENTS = [
   'Chaotic Evil',
 ];
 
+export const FIGHTING_STYLES = [
+  "Archery",
+  "Defense",
+  "Dueling",
+  "Great Weapon Fighting",
+  "Protection",
+  "Two-Weapon Fighting",
+  "Blind Fighting",
+  "Interception",
+  "Thrown Weapon Fighting",
+  "Unarmed Fighting",
+  "Blessed Warrior",
+  "Druidic Warrior",
+  "Superior Technique"
+];
+
 export const LANGUAGES = [
   'Common',
   'Dwarvish',

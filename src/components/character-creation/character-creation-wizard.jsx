@@ -240,6 +240,17 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setErrors(prev => ({ ...prev, languages: null }));
   };
 
+  const handleFightingStyleToggle = (style) => {
+    setFormData(prev => {
+      const currentStyles = prev.class?.fightingStyles || [];
+      const newStyles = currentStyles.includes(style)
+        ? currentStyles.filter(s => s !== style)
+        : [...currentStyles, style];
+      return { ...prev, class: { ...prev.class, fightingStyles: newStyles } };
+    });
+    setErrors(prev => ({ ...prev, fightingStyles: null }));
+  };
+
   const handleResistanceToggle = (type) => {
     setFormData(prev => {
       const currentResistances = prev.resistances || [];
@@ -350,6 +361,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             formData={formData}
             errors={errors}
             onLanguageToggle={handleLanguageToggle}
+            onFightingStyleToggle={handleFightingStyleToggle}
           />
         );
       case 7:
