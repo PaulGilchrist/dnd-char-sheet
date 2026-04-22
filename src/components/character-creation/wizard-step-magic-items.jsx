@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// No component-specific CSS needed - uses shared wizard styles
+import './wizard-step-magic-items.css'
 
 function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,10 +134,6 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
     return (
       <div className="wizard-step">
         <h2>Step 9: Magic Items</h2>
-        <p className="step-description">
-          Select 0 or more magic items for your wizard. You can equip items later in the inventory step.
-        </p>
-        
         <div className="list-filter-container magic-items-filters">
           <div className="filter-group">
             <label htmlFor="magic-item-search">Search Magic Items</label>
