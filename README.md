@@ -235,3 +235,12 @@ Click or copy that link to open the app.
 ## That’s it
 The app is now running.
 
+---
+
+Certain features were not added to this application as they are reserved for the Dungeon Master and can be done through the folders and file system.  Examples include:
+
+* Renaming or removing a campaign or character
+* Moving or copying a character from one campaign to another
+* etc.
+
+All campaigns and characters can be found at ./public/characters
