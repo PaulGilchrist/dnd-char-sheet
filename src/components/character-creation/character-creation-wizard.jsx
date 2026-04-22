@@ -328,27 +328,27 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 7:
         return (
-          <WizardStepInventory
-            formData={formData}
-            tempInventory={tempInventory}
-            onInventoryChange={handleInventoryChange}
-            onTempInventoryChange={handleTempInventoryChange}
-          />
-        );
-      case 8:
-        return (
           <WizardStepSpells
             formData={formData}
             allSpells={allSpells || []}
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 9:
+      case 8:
         return (
           <WizardStepFeats
             formData={formData}
             allFeats={feats}
             onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 9:
+        return (
+          <WizardStepInventory
+            formData={formData}
+            tempInventory={tempInventory}
+            onInventoryChange={handleInventoryChange}
+            onTempInventoryChange={handleTempInventoryChange}
           />
         );
       case 10:

@@ -95,10 +95,10 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
               )}
               {feat.description && (
                 <div className="feat-description">
-                  {feat.description[0]}
+                  {Array.isArray(feat.description) ? feat.description[0] : feat.description}
                 </div>
               )}
-              {feat.description && feat.description.length > 1 && (
+              {feat.description && Array.isArray(feat.description) && feat.description.length > 1 && (
                 <div className="feat-more-description">
                   {feat.description.slice(1).join('\n')}
                 </div>
