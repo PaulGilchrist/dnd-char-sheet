@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './character-creation-wizard.css';
+// Import dark mode styles - will be loaded via media query
+import './character-creation-wizard-dark.css';
 import {
   REQUIRED_FIELDS,
   ABILITY_NAMES,

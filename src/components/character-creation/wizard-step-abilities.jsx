@@ -1,5 +1,7 @@
 import React from 'react';
 import './wizard-step-abilities.css';
+// Dark mode styles loaded via media query
+import './wizard-step-abilities-dark.css';
 import { ABILITY_NAMES, POINT_BUY_COSTS } from './constants';
 
 function WizardStepAbilities({ 
