@@ -17,8 +17,9 @@ import WizardStepRaceClass from './wizard-step-race-class';
 import WizardStepAbilities from './wizard-step-abilities';
 import WizardStepSkills from './wizard-step-skills';
 import WizardStepInventory from './wizard-step-inventory';
-import WizardStepSpecial from './wizard-step-special';
 import WizardStepSpells from './wizard-step-spells';
+import WizardStepFeats from './wizard-step-feats';
+import WizardStepSpecial from './wizard-step-special';
 import WizardStepResistances from './wizard-step-resistances';
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
@@ -27,24 +28,25 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [backgrounds, setBackgrounds] = useState([]);
   const [racesData, setRacesData] = useState([]);
   const [classSubtypes, setClassSubtypes] = useState([]);
+  const [feats, setFeats] = useState([]);
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
 
   // Load data based on ruleset
   useEffect(() => {
-    if (ruleset === '2024') {
-      const loadData = async (url, setData) => {
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          setData(data);
-        } catch (error) {
-          console.error(`Failed to load ${url}:`, error);
-          setData([]);
-        }
-      };
+    const loadData = async (url, setData) => {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        setData(data);
+      } catch (error) {
+        console.error(`Failed to load ${url}:`, error);
+        setData([]);
+      }
+    };
 
+    if (ruleset === '2024') {
       loadData('/dnd-char-sheet/data/2024/backgrounds.json', setBackgrounds);
       loadData('/dnd-char-sheet/data/2024/races.json', setRacesData);
       loadData('/dnd-char-sheet/data/2024/classes.json', (data) => {
@@ -53,18 +55,9 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           subtypes: cls.subclasses || cls.majors || []
         })));
       });
+      loadData('/dnd-char-sheet/data/2024/feats.json', setFeats);
     } else {
-      const loadData = async (url, setData) => {
-        try {
-          const response = await fetch(url);
-          const data = await response.json();
-          setData(data);
-        } catch (error) {
-          console.error(`Failed to load ${url}:`, error);
-          setData([]);
-        }
-      };
-
+      loadData('/dnd-char-sheet/data/backgrounds.json', setBackgrounds);
       loadData('/dnd-char-sheet/data/races.json', setRacesData);
       loadData('/dnd-char-sheet/data/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
@@ -72,6 +65,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           subtypes: cls.subclasses || []
         })));
       });
+      loadData('/dnd-char-sheet/data/feats.json', setFeats);
     }
   }, [ruleset]);
 
@@ -123,6 +117,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         ...prev,
         rules: '2024',
         spells: [],
+        feats: [],
         background: ''
       }));
     } else {
@@ -130,6 +125,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         ...prev,
         rules: '5e',
         spells: allSpells || [],
+        feats: [],
         background: ''
       }));
     }
@@ -341,12 +337,20 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 8:
         return (
+          <WizardStepFeats
+            formData={formData}
+            allFeats={feats}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 9:
+        return (
           <WizardStepSpecial
             formData={formData}
             onArrayFieldChange={handleArrayFieldChange}
           />
         );
-      case 9:
+      case 10:
         return (
           <WizardStepResistances
             formData={formData}
@@ -368,7 +372,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         />
         <WizardProgressBar
                     currentStep={currentStep}
-                    totalSteps={9}
+                    totalSteps={10}
                   />
         <div className="wizard-content">
           {renderStep()}
@@ -376,7 +380,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         <WizardFooter
           currentStep={currentStep}
           isFirstStep={currentStep === 1}
-          isLastStep={currentStep === 9}
+          isLastStep={currentStep === 10}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}

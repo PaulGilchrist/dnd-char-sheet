@@ -252,15 +252,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
                 e.stopPropagation();
                 toggleFullDetails(index);
               }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--primary-color)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                padding: '0.25rem 0.5rem',
-                marginTop: '0.5rem'
-              }}
+              className="toggle-details-btn"
             >
               {isExpanded ? 'Show Less' : 'Show More'}
             </button>
@@ -288,20 +280,20 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
         <h2>Step 7: Spells</h2>
         
         {/* Spell Level Summary - Moved to top */}
-        <div className="spells-summary" style={{display: 'block', backgroundColor: '#f5f5f5', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '1rem'}}>
-          <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#333', fontWeight: '600'}}>Spell Selection Summary</h3>
+        <div className="spells-summary">
+          <h3>Spell Selection Summary</h3>
           
-          <div className="spell-levels-summary" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', margin: '1rem 0', padding: '0.75rem', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #e0e0e0'}}>
-            <div className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
-              <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>Cantrips:</span>
-              <span className={`level-count ${spellCounts.cantrip > (spellLimits.cantrip || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+          <div className="spell-levels-summary">
+            <div className="level-summary-item">
+              <span className="level-label">Cantrips:</span>
+              <span className={`level-count ${spellCounts.cantrip > (spellLimits.cantrip || 0) ? 'exceeded' : ''}`}>
                 {spellCounts.cantrip}/{spellLimits.cantrip || 0}
               </span>
             </div>
             {['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9'].map(levelKey => (
-              <div key={levelKey} className="level-summary-item" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
-                <span className="level-label" style={{fontWeight: '600', color: '#555', fontSize: '0.9rem'}}>{levelKey.replace('level', '')}th level:</span>
-                <span className={`level-count ${spellCounts[levelKey] > (spellLimits[levelKey] || 0) ? 'exceeded' : ''}`} style={{fontWeight: '700', color: '#333', fontSize: '0.95rem', padding: '0.25rem 0.5rem', backgroundColor: '#e8f5e9', borderRadius: '4px', minWidth: '50px', textAlign: 'center'}}>
+              <div key={levelKey} className="level-summary-item">
+                <span className="level-label">{levelKey.replace('level', '')}th level:</span>
+                <span className={`level-count ${spellCounts[levelKey] > (spellLimits[levelKey] || 0) ? 'exceeded' : ''}`}>
                   {spellCounts[levelKey] || 0}/{spellLimits[levelKey] || 0}
                 </span>
               </div>
@@ -309,7 +301,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           </div>
           
           {validationMessage && (
-            <div className="validation-message error" style={{padding: '0.75rem 1rem', borderRadius: '6px', margin: '1rem 0', fontWeight: '600', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#ffebee', color: '#c62828', border: '1px solid #ef9a9a'}}>
+            <div className="validation-message error">
               ⚠️ {validationMessage}
             </div>
           )}

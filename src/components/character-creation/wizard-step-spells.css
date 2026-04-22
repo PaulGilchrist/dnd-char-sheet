@@ -108,6 +108,16 @@
   background-color: #f0fff0;
 }
 
+.toggle-details-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  margin-top: 0.5rem;
+}
+
 .spell-item.selected {
   border-color: #4CAF50;
   background-color: #e8f5e9;
