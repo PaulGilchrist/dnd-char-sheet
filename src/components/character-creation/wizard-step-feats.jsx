@@ -71,6 +71,79 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
     const isExpanded = showFullDetails[index];
     const isSelected = featIsSelected(feat.name);
 
+    // Safely extract description text - handle both string and object descriptions
+    const getDescriptionData = () => {
+      let descriptionData = { text: '', isHtml: false };
+
+      // Try 2024 format first (description field) - HTML
+      if (feat.description) {
+        const desc = feat.description;
+
+        if (typeof desc === 'string') {
+          descriptionData = { text: desc, isHtml: true };
+        } else if (Array.isArray(desc) && desc[0]) {
+          const firstItem = desc[0];
+          if (typeof firstItem === 'string') {
+            descriptionData = { text: firstItem, isHtml: true };
+          } else if (typeof firstItem === 'object') {
+            if (firstItem.text) {
+              descriptionData = { text: firstItem.text, isHtml: true };
+            } else if (firstItem.content) {
+              descriptionData = { text: firstItem.content, isHtml: true };
+            } else if (firstItem.description) {
+              descriptionData = { text: firstItem.description, isHtml: true };
+            } else if (firstItem.level !== undefined) {
+              console.warn('Unexpected description object structure:', firstItem);
+              descriptionData = { text: '', isHtml: false };
+            }
+          }
+        }
+      }
+
+      // Try 5e format (desc field) - text/plain
+      if (!descriptionData.isHtml && feat.desc) {
+        const desc = feat.desc;
+
+        if (typeof desc === 'string') {
+          descriptionData = { text: desc, isHtml: false };
+        } else if (Array.isArray(desc) && desc[0]) {
+          const firstItem = desc[0];
+          if (typeof firstItem === 'string') {
+            descriptionData = { text: firstItem, isHtml: false };
+          } else if (typeof firstItem === 'object') {
+            if (firstItem.text) {
+              descriptionData = { text: firstItem.text, isHtml: false };
+            } else if (firstItem.content) {
+              descriptionData = { text: firstItem.content, isHtml: false };
+            } else if (firstItem.description) {
+              descriptionData = { text: firstItem.description, isHtml: false };
+            } else if (firstItem.level !== undefined) {
+              console.warn('Unexpected description object structure:', firstItem);
+              descriptionData = { text: '', isHtml: false };
+            }
+          }
+        }
+      }
+
+      return descriptionData;
+    };
+
+    // Safely render prerequisites
+    const renderPrerequisites = () => {
+      if (!feat.prerequisites) return '';
+
+      if (Array.isArray(feat.prerequisites)) {
+        return feat.prerequisites
+          .filter(p => typeof p === 'string' || (typeof p === 'object' && p.name))
+          .map(p => typeof p === 'string' ? p : (p.name || JSON.stringify(p)))
+          .join(', ');
+      }
+
+      return typeof feat.prerequisites === 'string' ? feat.prerequisites : JSON.stringify(feat.prerequisites);
+    };
+
+    const descData = getDescriptionData();
+
     return (
       <div
         key={feat.index || index}
@@ -90,17 +163,16 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
             <div className="list-item-full-details">
               {feat.prerequisites && (
                 <div className="feat-prerequisites">
-                  <strong>Prerequisites:</strong> {Array.isArray(feat.prerequisites) ? feat.prerequisites.join(', ') : feat.prerequisites}
+                  <strong>Prerequisites:</strong> {renderPrerequisites()}
                 </div>
               )}
-              {feat.description && (
+              {descData.text && (
                 <div className="feat-description">
-                  {Array.isArray(feat.description) ? feat.description[0] : feat.description}
-                </div>
-              )}
-              {feat.description && Array.isArray(feat.description) && feat.description.length > 1 && (
-                <div className="feat-more-description">
-                  {feat.description.slice(1).join('\n')}
+                  {descData.isHtml ? (
+                    <div dangerouslySetInnerHTML={{ __html: descData.text }} />
+                  ) : (
+                    descData.text
+                  )}
                 </div>
               )}
             </div>
@@ -193,3 +265,4 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
 }
 
 export default WizardStepFeats;
+
