@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './wizard-step-magic-items.css'
+import './wizard-step-magic-items-dark.css'
 
 function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -132,53 +133,55 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
     }
 
     return (
-      <div className="wizard-step">
-        <h2>Step 9: Magic Items</h2>
-        <div className="list-filter-container magic-items-filters">
-          <div className="filter-group">
-            <label htmlFor="magic-item-search">Search Magic Items</label>
-            <input
-              type="text"
-              id="magic-item-search"
-              className="magic-item-search-input"
-              placeholder="Search magic items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <div className="wizard-step-magic-items">
+        <div className="wizard-step">
+          <h2>Step 9: Magic Items</h2>
+          <div className="list-filter-container magic-items-filters">
+            <div className="filter-group">
+              <label htmlFor="magic-item-search">Search Magic Items</label>
+              <input
+                type="text"
+                id="magic-item-search"
+                className="magic-item-search-input"
+                placeholder="Search magic items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="filter-group">
+              <label htmlFor="magic-item-type-filter">Item Type</label>
+              <select
+                id="magic-item-type-filter"
+                className="magic-item-type-filter"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                {types.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          
-          <div className="filter-group">
-            <label htmlFor="magic-item-type-filter">Item Type</label>
-            <select
-              id="magic-item-type-filter"
-              className="magic-item-type-filter"
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-            >
-              {types.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div className="list-results-container magic-item-results-container">
-          <div className="magic-item-results-header">
-            <span className="result-count">
-              Showing {filteredMagicItems.length} magic item{filteredMagicItems.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          
-          <div className="magic-item-results-list">
-            {filteredMagicItems.length === 0 ? (
-              <div className="no-results-found">
-                {searchQuery || selectedType !== 'All'
-                  ? 'No magic items found matching your criteria.'
-                  : 'No magic items available.'}
-              </div>
-            ) : (
-              filteredMagicItems.map((item, index) => renderMagicItemDetails(item, index))
-            )}
+          <div className="list-results-container magic-item-results-container">
+            <div className="magic-item-results-header">
+              <span className="result-count">
+                Showing {filteredMagicItems.length} magic item{filteredMagicItems.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            <div className="magic-item-results-list">
+              {filteredMagicItems.length === 0 ? (
+                <div className="no-results-found">
+                  {searchQuery || selectedType !== 'All'
+                    ? 'No magic items found matching your criteria.'
+                    : 'No magic items available.'}
+                </div>
+              ) : (
+                filteredMagicItems.map((item, index) => renderMagicItemDetails(item, index))
+              )}
+            </div>
           </div>
         </div>
       </div>

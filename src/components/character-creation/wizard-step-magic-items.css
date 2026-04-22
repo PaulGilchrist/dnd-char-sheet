@@ -120,3 +120,7 @@
         margin-left: 0;
     }
 }
+/* ===== MIN-HEIGHT OVERRIDE FOR MAGIC ITEMS STEP ===== */
+.wizard-step-magic-items .wizard-step {
+    min-height: 700px;
+}
