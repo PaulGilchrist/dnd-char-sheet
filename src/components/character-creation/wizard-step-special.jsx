@@ -4,7 +4,7 @@ import React from 'react';
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
   return (
     <div className="wizard-step">
-      <h2>Step 10: Special Actions</h2>
+      <h2>Step 11: Special Actions</h2>
       
       <div className="form-group">
         <label>Special Actions</label>
