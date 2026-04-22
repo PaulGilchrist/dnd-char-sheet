@@ -328,7 +328,7 @@
   margin-top: 6px;
 }
 
-/* ===== Spell & Feat List Pattern (Shared) ===== */
+/* ===== List Results Pattern (Shared for Spells, Feats, Magic Items) ===== */
 
 /* Common container styles */
 .list-filter-container {
@@ -341,6 +341,7 @@
   margin-bottom: 1rem;
 }
 
+/* Shared container for all list results (spells, feats, magic items) */
 .list-results-container {
   flex: 1;
   display: flex;
@@ -354,121 +355,9 @@
   width: 100%;
   position: relative;
   height: auto;
-  /* Ensure container can scroll */
-  min-height: 200px;
 }
 
-/* Specific styles for spell results */
-.spell-results-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: white;
-  min-height: 300px;
-  max-height: 500px;
-  overflow: hidden;
-  width: 100%;
-  position: relative;
-  height: auto;
-}
-
-.spell-results-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
-  background-color: #f5f5f5;
-  font-weight: 600;
-  color: #333;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.spell-results-list {
-  padding: 0.5rem;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: block;
-  height: 100%;
-}
-
-/* Specific styles for feat results */
-.feat-results-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: white;
-  min-height: 300px;
-  max-height: 500px;
-  overflow: hidden;
-  width: 100%;
-  position: relative;
-  height: auto;
-}
-
-.feat-results-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
-  background-color: #f5f5f5;
-  font-weight: 600;
-  color: #333;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.feat-results-list {
-  padding: 0.5rem;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: block;
-  height: 100%;
-}
-
-/* Specific styles for magic item results */
-.magic-item-results-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: white;
-  min-height: 300px;
-  max-height: 500px;
-  overflow: hidden;
-  width: 100%;
-  position: relative;
-  height: auto;
-}
-
-.magic-item-results-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
-  background-color: #f5f5f5;
-  font-weight: 600;
-  color: #333;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.magic-item-results-list {
-  padding: 0.5rem;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: block;
-  height: 100%;
-}
-
+/* Shared header for all list results */
 .list-results-header {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #ddd;
@@ -486,6 +375,7 @@
   font-weight: 500;
 }
 
+/* Shared list container for all list results */
 .list-results-list {
   padding: 0.5rem;
   flex: 1;
@@ -493,6 +383,26 @@
   overflow-x: hidden;
   display: block;
   height: 100%;
+}
+
+/* Spell/feat/magic-item variants extend shared list-results classes */
+/* These classes are kept for semantic clarity in JSX but inherit from shared styles */
+.spell-results-container,
+.feat-results-container,
+.magic-item-results-container {
+  /* inherits from .list-results-container */
+}
+
+.spell-results-header,
+.feat-results-header,
+.magic-item-results-header {
+  /* inherits from .list-results-header */
+}
+
+.spell-results-list,
+.feat-results-list,
+.magic-item-results-list {
+  /* inherits from .list-results-list */
 }
 
 .no-results-found {
