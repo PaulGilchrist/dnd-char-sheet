@@ -65,6 +65,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseTog
             </label>
           ))}
         </div>
+        Expertise usually reserver for Bards and Rogues
         {errors.skillProficiencies && <span className="error-message">{errors.skillProficiencies}</span>}
       </div>
 
