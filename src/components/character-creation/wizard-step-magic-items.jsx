@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './wizard-step-magic-items.css';
+// No component-specific CSS needed - uses shared wizard styles
 
 function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
