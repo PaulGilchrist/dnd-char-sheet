@@ -140,8 +140,16 @@ function App() {
     };
 
     const handleCampaignSelected = (campaign, loadedCharacters) => {
-        console.log(`handleCampaignSelected called: campaign='${campaign}', loadedCharacters=`, loadedCharacters);
+        console.log('=== handleCampaignSelected START ===');
+        console.log(`Campaign received: '${campaign}'`);
+        console.log(`loadedCharacters:`, loadedCharacters);
         console.log(`loadedCharacters.length: ${loadedCharacters.length}`);
+        
+        // Verify campaign is stored correctly
+        sessionStorage.setItem('currentCampaign', campaign);
+        console.log(`Stored campaign in sessionStorage: '${campaign}'`);
+        console.log(`Retrieved from sessionStorage: '${sessionStorage.getItem('currentCampaign')}'`);
+        
         loadedCharacters.forEach((char, index) => {
             console.log(`Character ${index}:`, char?.name || 'NO NAME PROPERTY', 'Full object:', char);
         });
@@ -153,8 +161,10 @@ function App() {
         } else {
             // Only auto-open wizard if campaign has no characters at all
             // If campaign has characters, user must click "Add Character" button
+            console.log('Opening wizard (no characters in campaign)');
             setShowCharacterWizard(true);
         }
+        console.log('=== handleCampaignSelected END ===');
     };
 
     const handleAddCharacter = () => {
@@ -168,47 +178,73 @@ function App() {
 
     const handleWizardComplete = async (characterData) => {
         try {
-            const campaign = sessionStorage.getItem('currentCampaign');
-            if (!campaign) {
-                throw new Error('No campaign selected');
+            console.log('=== handleWizardComplete START ===');
+            console.log('Character data received:', characterData);
+            
+            const storedCampaign = sessionStorage.getItem('currentCampaign');
+            console.log('Campaign retrieved from sessionStorage:', storedCampaign);
+            console.log('Full sessionStorage dump:', {
+                currentCampaign: sessionStorage.getItem('currentCampaign'),
+                characters: sessionStorage.getItem('characters')
+            });
+            
+            if (!storedCampaign) {
+                console.error('CRITICAL: No campaign found in sessionStorage!');
+                throw new Error('No campaign selected in sessionStorage');
             }
             
+            console.log('Using campaign:', storedCampaign);
+            
             // Send POST request to API to save character
+            const requestBody = {
+                campaignName: storedCampaign,
+                character: characterData
+            };
+            console.log('Request body:', requestBody);
+            
             const response = await fetch('/api/characters', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    campaignName: campaign,
-                    character: characterData
-                }),
+                body: JSON.stringify(requestBody),
             });
 
+            console.log('Response status:', response.status, response.statusText);
+
             if (!response.ok) {
-                throw new Error('Failed to save character');
+                const errorText = await response.text();
+                console.error('API error response:', errorText);
+                throw new Error(`Failed to save character: ${response.status} ${response.statusText}`);
             }
 
             const result = await response.json();
+            console.log('Character created successfully:', result);
             
             // Load the newly created character
             setActiveCharacter(cloneDeep(result.character));
             setShowCharacterWizard(false);
             
             // Refresh character list
-            const characterFiles = await fetch(`/api/characters/${campaign}`)
+            const characterFiles = await fetch(`/api/characters/${storedCampaign}`)
                 .then(res => res.json())
                 .then(data => data.files);
+            console.log('Character files for campaign:', characterFiles);
+            
             const newCharacters = await Promise.all(
                 characterFiles.map(file => 
-                    fetch(`/api/characters/${campaign}/${file}`)
+                    fetch(`/api/characters/${storedCampaign}/${file}`)
                         .then(res => res.json())
                 )
             );
             setCharacters(newCharacters);
+            console.log('Character list refreshed. Total characters:', newCharacters.length);
+            console.log('=== handleWizardComplete END ===');
         } catch (error) {
+            console.error('=== handleWizardComplete ERROR ===');
             console.error('Error creating character:', error);
-            alert('Failed to create character. Please try again.');
+            console.error('Error stack:', error.stack);
+            alert(`Failed to create character: ${error.message}. Please check the console for details.`);
         }
     };
 

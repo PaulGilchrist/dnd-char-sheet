@@ -1,0 +1,106 @@
+{
+  "name": "Test",
+  "level": 1,
+  "alignment": "Neutral Good",
+  "background": "Soldier",
+  "race": {
+    "name": "Human",
+    "subrace": {
+      "name": ""
+    }
+  },
+  "class": {
+    "name": "Fighter",
+    "subclass": {
+      "name": "Champion",
+      "type": ""
+    },
+    "fightingStyles": [],
+    "expertise": [],
+    "favoredEnemies": [],
+    "favoredTerrain": []
+  },
+  "abilities": [
+    {
+      "name": "Strength",
+      "baseScore": 14,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Dexterity",
+      "baseScore": 16,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Constitution",
+      "baseScore": 14,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Intelligence",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Wisdom",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Charisma",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    }
+  ],
+  "skillProficiencies": [
+    "Acrobatics",
+    "Athletics"
+  ],
+  "inventory": {
+    "backpack": [
+      "Greatsword",
+      "Chain Shirt"
+    ],
+    "equipped": [
+      "Longbow",
+      "Shield"
+    ],
+    "gold": 10,
+    "magicItems": []
+  },
+  "languages": [
+    "Common",
+    "Elvish",
+    "Dwarvish"
+  ],
+  "spells": [
+    "Acid Arrow",
+    "Acid Splash"
+  ],
+  "resistances": [
+    "Bludgeoning",
+    "Radiant"
+  ],
+  "feats": [
+    "Ability Score Improvement",
+    "Athlete"
+  ],
+  "magicItems": [
+    "Adamantine Armor",
+    "Adamantine Weapon"
+  ],
+  "specialActions": [
+    "Action test"
+  ],
+  "rules": "2024",
+  "immunities": [
+    "Bludgeoning",
+    "Poison"
+  ]
+}

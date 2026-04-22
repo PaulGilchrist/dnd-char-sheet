@@ -1,0 +1,9 @@
+{
+  "name": "Test Character",
+  "class": {
+    "name": "Wizard"
+  },
+  "race": {
+    "name": "Human"
+  }
+}

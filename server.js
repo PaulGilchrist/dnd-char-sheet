@@ -128,44 +128,42 @@ app.post('/api/campaigns', (req, res) => {
 app.post('/api/characters', (req, res) => {
     const { campaignName, character } = req.body;
     
+    console.log('=== POST /api/characters ===');
+    console.log('Received campaignName:', campaignName);
+    console.log('Received character:', character);
+    
     if (!campaignName || !character) {
+        console.error('Missing campaignName or character');
         return res.status(400).json({ error: 'Campaign name and character data are required' });
     }
     
     const campaignsDir = path.join(process.cwd(), 'public', 'characters');
     const campaignDir = path.join(campaignsDir, campaignName.trim());
     
+    console.log('Campaign directory path:', campaignDir);
+    
     try {
         if (!fs.existsSync(campaignDir)) {
+            console.error('Campaign directory does not exist:', campaignDir);
             return res.status(404).json({ error: 'Campaign not found' });
         }
         
-        // Generate a safe filename from character name and class
-        const className = character.class?.name || 'Unknown';
+        // Generate a safe filename using only character name
         const charName = character.name || 'Character';
-        const fileName = `${className.toLowerCase()}-${charName.toLowerCase().replace(/\s+/g, '-')}.json`;
+        const fileName = `${charName.toLowerCase().replace(/\s+/g, '-')}.json`;
         const filePath = path.join(campaignDir, fileName);
+        
+        console.log('Character file path:', filePath);
         
         // Check if file already exists
         if (fs.existsSync(filePath)) {
+            console.error('Character file already exists:', filePath);
             return res.status(400).json({ error: 'Character with this name already exists' });
         }
         
         // Write character data to file
         fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
-        
-        // Update the campaign list file
-        const listPath = path.join(campaignDir, '.vite-plugin-campaign-list.json');
-        let fileList = { files: [] };
-        if (fs.existsSync(listPath)) {
-            const listData = fs.readFileSync(listPath, 'utf-8');
-            fileList = JSON.parse(listData);
-        }
-        if (!fileList.files.includes(fileName)) {
-            fileList.files.push(fileName);
-            fs.writeFileSync(listPath, JSON.stringify(fileList, null, 2));
-        }
-        
+        console.log('Character file written successfully:', filePath);
         res.status(201).json({ 
             message: 'Character created successfully', 
             character: character,
