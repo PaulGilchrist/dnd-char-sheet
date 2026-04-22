@@ -33,6 +33,9 @@
 /* Magic Item Results */
 .magic-item-results-container {
   margin-top: 1rem;
+  min-height: 300px;
+  max-height: 500px;
+  overflow: hidden;
 }
 
 .magic-item-results-header {
@@ -42,12 +45,16 @@
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .magic-item-results-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Magic Item Styles */
