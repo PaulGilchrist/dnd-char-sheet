@@ -154,6 +154,9 @@ const rules = {
         
         // Ranged weapons
         let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
+            if (!itemName || typeof itemName !== 'string') {
+                return false;
+            }
             if (itemName.charAt(0) === "+") {
                 itemName = itemName.substring(3);
             }
@@ -170,36 +173,41 @@ const rules = {
                 nonMagicalName = rangedWeaponName.substring(3);
             }
             let rangedWeapon = allEquipment.find((item) => item.name === nonMagicalName);
-            let damage = rangedWeapon.damage.damage_dice;
-            let damageFormula = `Damage Formula = Weapon (${rangedWeapon.damage.damage_dice})`;
-            let toHitBonus = dexterity.bonus + proficiency;
-            let hitBonusFormula = `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`;
-            
-            if (rangedWeaponName.charAt(0) === '+') {
-                let magicBonus = Number(rangedWeaponName.charAt(1));
-                damage += `+${dexterity.bonus + magicBonus}`;
-                damageFormula += ` + Dexterity Bonus (${dexterity.bonus}) + Weapon Magic Bonus (${magicBonus})`;
-                toHitBonus += magicBonus;
-                hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
-            } else {
-                damage += `+${dexterity.bonus}`;
-                damageFormula += ` + Dexterity Bonus (${dexterity.bonus})`;
+            if (rangedWeapon) {
+                let damage = rangedWeapon.damage.damage_dice;
+                let damageFormula = `Damage Formula = Weapon (${rangedWeapon.damage.damage_dice})`;
+                let toHitBonus = dexterity.bonus + proficiency;
+                let hitBonusFormula = `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`;
+                
+                if (rangedWeaponName.charAt(0) === '+') {
+                    let magicBonus = Number(rangedWeaponName.charAt(1));
+                    damage += `+${dexterity.bonus + magicBonus}`;
+                    damageFormula += ` + Dexterity Bonus (${dexterity.bonus}) + Weapon Magic Bonus (${magicBonus})`;
+                    toHitBonus += magicBonus;
+                    hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
+                } else {
+                    damage += `+${dexterity.bonus}`;
+                    damageFormula += ` + Dexterity Bonus (${dexterity.bonus})`;
+                }
+                
+                attacks.push({
+                    "name": rangedWeaponName,
+                    "damage": damage,
+                    "damageType": rangedWeapon.damage.damage_type,
+                    "damageFormula": damageFormula,
+                    "hitBonus": toHitBonus,
+                    "hitBonusFormula": hitBonusFormula,
+                    "range": rangedWeapon.range.normal,
+                    "type": "Action"
+                });
             }
-            
-            attacks.push({
-                "name": rangedWeaponName,
-                "damage": damage,
-                "damageType": rangedWeapon.damage.damage_type,
-                "damageFormula": damageFormula,
-                "hitBonus": toHitBonus,
-                "hitBonusFormula": hitBonusFormula,
-                "range": rangedWeapon.range.normal,
-                "type": "Action"
-            });
         }
         
         // Melee weapons
         let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
+            if (!itemName || typeof itemName !== 'string') {
+                return false;
+            }
             if (itemName.charAt(0) === '+') {
                 itemName = itemName.substring(3);
             }
@@ -210,40 +218,42 @@ const rules = {
             return false;
         });
         
-        if (meleeWeaponNames) {
+        if (meleeWeaponNames && meleeWeaponNames.length > 0) {
             let bonus = Math.max(strength.bonus, dexterity.bonus);
             let nonMagicalName = meleeWeaponNames[0];
             if (meleeWeaponNames[0].charAt(0) === '+') {
                 nonMagicalName = meleeWeaponNames[0].substring(3);
             }
             let mainHandWeapon = allEquipment.find((item) => item.name === nonMagicalName);
-            let damage = mainHandWeapon.damage.damage_dice;
-            let damageFormula = `Damage Formula = Weapon (${mainHandWeapon.damage.damage_dice})`;
-            let toHitBonus = bonus + proficiency;
-            let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
-            
-            let magicBonus = 0;
-            if (meleeWeaponNames[0].charAt(0) === '+') {
-                magicBonus = Number(meleeWeaponNames[0].charAt(1));
-                damage += `+${bonus + magicBonus}`;
-                damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Weapon Magic Bonus (${magicBonus})`;
-                toHitBonus += magicBonus;
-                hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
-            } else {
-                damage += `+${bonus}`;
-                damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus})`;
+            if (mainHandWeapon) {
+                let damage = mainHandWeapon.damage.damage_dice;
+                let damageFormula = `Damage Formula = Weapon (${mainHandWeapon.damage.damage_dice})`;
+                let toHitBonus = bonus + proficiency;
+                let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
+                
+                let magicBonus = 0;
+                if (meleeWeaponNames[0].charAt(0) === '+') {
+                    magicBonus = Number(meleeWeaponNames[0].charAt(1));
+                    damage += `+${bonus + magicBonus}`;
+                    damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Weapon Magic Bonus (${magicBonus})`;
+                    toHitBonus += magicBonus;
+                    hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
+                } else {
+                    damage += `+${bonus}`;
+                    damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus})`;
+                }
+                
+                attacks.push({
+                    "name": meleeWeaponNames[0],
+                    "damage": damage,
+                    "damageType": mainHandWeapon.damage.damage_type,
+                    "damageFormula": damageFormula,
+                    "hitBonus": toHitBonus,
+                    "hitBonusFormula": hitBonusFormula,
+                    "range": mainHandWeapon.range.normal,
+                    "type": "Action"
+                });
             }
-            
-            attacks.push({
-                "name": meleeWeaponNames[0],
-                "damage": damage,
-                "damageType": mainHandWeapon.damage.damage_type,
-                "damageFormula": damageFormula,
-                "hitBonus": toHitBonus,
-                "hitBonusFormula": hitBonusFormula,
-                "range": mainHandWeapon.range.normal,
-                "type": "Action"
-            });
             
             // Off-hand weapon (2024: Two-Weapon Fighting)
             if (meleeWeaponNames.length > 1) {
@@ -258,7 +268,7 @@ const rules = {
                 let hitBonus = bonus + proficiency;
                 let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
                 
-                magicBonus = 0;
+                let magicBonus = 0;
                 if (meleeWeaponNames[1].charAt(0) === "+") {
                     magicBonus = Number(meleeWeaponNames[1].charAt(1));
                     damage += `+${magicBonus}`;

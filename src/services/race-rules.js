@@ -18,7 +18,7 @@ const raceRules = {
         if(playerSummary.immunities) {
             immunities = [...new Set([...immunities, ...playerSummary.immunities])];
         }
-        return immunities.sort((a, b) => a.name.localeCompare(b.name));
+        return immunities.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     getRace: (allRaces, playerSummary) => {
         const race = merge(cloneDeep(allRaces.find((race) => race.name === playerSummary.race.name)), cloneDeep(playerSummary.race));
@@ -87,7 +87,7 @@ const raceRules = {
         if(playerSummary.resistances) {
             resistances = [...new Set([...resistances, ...playerSummary.resistances])];
         }
-        return resistances.sort((a, b) => a.name.localeCompare(b.name));
+        return resistances.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     getSenses: (playerStats) => {
         // Dependencies: Race
@@ -97,7 +97,7 @@ const raceRules = {
         if (darkvisionRace && !darkvisionInSenses) {
             senses.push({ name: 'Darkvision', value: '60 ft.' });
         }
-        return senses.sort((a, b) => a.name.localeCompare(b.name));
+        return senses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     addTraits: (traits) => {
         // Ignore the following traits because they are already accounted for

@@ -226,14 +226,15 @@ function App() {
             setShowCharacterWizard(false);
             
             // Refresh character list
-            const characterFiles = await fetch(`/api/characters/${storedCampaign}`)
+            const encodedCampaign = encodeURIComponent(storedCampaign);
+            const characterFiles = await fetch(`/api/characters/${encodedCampaign}`)
                 .then(res => res.json())
                 .then(data => data.files);
             console.log('Character files for campaign:', characterFiles);
             
             const newCharacters = await Promise.all(
                 characterFiles.map(file => 
-                    fetch(`/api/characters/${storedCampaign}/${file}`)
+                    fetch(`/api/characters/${encodedCampaign}/${encodeURIComponent(file)}`)
                         .then(res => res.json())
                 )
             );

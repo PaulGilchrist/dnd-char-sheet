@@ -17,12 +17,12 @@ function CharSpecialActions({ playerStats }) {
         playerStats.specialActions.push({ "name": "Protection", "description": "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield." });
     }
    
+    const uniqueActions = Array.from(new Map(playerStats.specialActions.map(action => [action.name, action])).values());
     return (
         <div>
             <div className='sectionHeader'>Special Actions</div>
-            {playerStats.specialActions.map((specialAction) => {
-                return <div key={specialAction.name}>
-                    {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}        
+            {uniqueActions.map((specialAction, index) => {
+                return <div key={specialAction.name || `special-action-${index}`}>
                     <b className={specialAction.details ? "clickable" : ""} onClick={() => showPopup(specialAction)}>{specialAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: specialAction.description }}></span>
                 </div>
             })}

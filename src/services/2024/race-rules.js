@@ -23,7 +23,7 @@ const raceRules = {
             immunities = [...new Set([...immunities, ...playerSummary.immunities])];
         }
         
-        return immunities.sort((a, b) => a.name.localeCompare(b.name));
+        return immunities.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     getRace: (allRaces, playerSummary) => {
         const race = cloneDeep(allRaces.find((race) => race.name === playerSummary.race.name));
@@ -84,7 +84,7 @@ const raceRules = {
             resistances = [...new Set([...resistances, ...playerSummary.resistances])];
         }
         
-        return resistances.sort((a, b) => a.name.localeCompare(b.name));
+        return resistances.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     getSenses: (playerStats) => {
         // 2024 Rules: Extract senses from racial traits
@@ -118,7 +118,7 @@ const raceRules = {
         });
         }
         
-        return senses.sort((a, b) => a.name.localeCompare(b.name));
+        return senses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     },
     addTraits: (traits) => {
         // 2024 Rules: Categorize traits including Magic, Utilize, and Craft actions
