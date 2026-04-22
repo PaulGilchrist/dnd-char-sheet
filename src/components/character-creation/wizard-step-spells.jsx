@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // No component-specific CSS needed - uses shared wizard styles
 import { getSpellLimits, validateSpellSelection } from '../../services/spell-limits.js';
+import './wizard-step-spells.css'
 
 function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,11 +43,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   }, [formData.class, formData.level, formData.rules]);
 
   // Calculate spell counts by level
-  useEffect(() => {
-    console.log('=== SPELL COUNTS UPDATE ===');
-    console.log('formData.spells:', formData.spells);
-    console.log('allSpells loaded:', allSpells?.length || 0);
-    
+  useEffect(() => {   
     const counts = { cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
     
     if (formData.spells && formData.spells.length > 0) {
@@ -267,7 +264,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     if (!allSpells || allSpells.length === 0) {
       return (
         <div className="wizard-step">
-          <h2>Step 8: Spells</h2>
+          <h2>Step 7: Spells</h2>
           <div className="no-spells-found">
             Spell data not yet loaded. Please try again.
           </div>
@@ -279,9 +276,8 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
       <div className="wizard-step wizard-step-spells">
         <h2>Step 7: Spells</h2>
         
-        {/* Spell Level Summary - Moved to top */}
         <div className="spells-summary">
-          <h3>Spell Selection Summary</h3>
+          <h4>Spell Selection Summary</h4>
           
           <div className="spell-levels-summary">
             <div className="level-summary-item">
