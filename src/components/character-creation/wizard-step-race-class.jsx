@@ -63,9 +63,9 @@ function WizardStepRaceClass({
             className={errors.race ? 'error' : ''}
           >
             <option value="">Select a {subraceLabel.toLowerCase()}</option>
-            {availableSubraces.map(subrace => (
-              <option key={subrace.name || subrace.index} value={subrace.name || subrace.index}>
-                {subrace.name || subrace.index}
+            {availableSubraces.map((subrace, index) => (
+              <option key={subrace.index || `subrace-${index}`} value={subrace.name}>
+                {subrace.name}
               </option>
             ))}
           </select>
