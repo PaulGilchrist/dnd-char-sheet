@@ -21,25 +21,21 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
     const [forceRefresh, setForceRefresh] = React.useState(0);
     React.useEffect(() => {
         const fetchData = async () => {
-            const fullUrl = `http://${window.location.hostname}:3000/api/${utils.getFirstName(playerSummary.name)}/`;
-            try {
-                const response = await fetch(fullUrl, {
-                    method: 'GET',
-                    mode: 'cors'
-                });
-                if(response.ok) {
-                    const data = await response.json();
-                    localStorage.setItem(playerSummary.name, JSON.stringify(data));
+            // Load prepared spells from localStorage
+            const storedData = localStorage.getItem(playerSummary.name);
+            let preparedSpells = null;
+            
+            if (storedData) {
+                const parsedData = JSON.parse(storedData);
+                if (parsedData && parsedData.preparedSpells) {
+                    preparedSpells = parsedData.preparedSpells;
                 }
-            } catch(e) {
-                // console.log(e.message); 
             }
             
             // Use rules factory to get appropriate rules based on character's rules setting
             const spellData = playerSummary.rules === '2024' ? allSpells2024 : allSpells;
             const stats = rulesFactory.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, spellData, playerSummary);
             
-            let preparedSpells = storage.getProperty(stats.name, 'preparedSpells');
             if (preparedSpells) {
                 stats.spellAbilities.spells.forEach(spell => {
                     if (preparedSpells.includes(spell.name)) {
