@@ -4,385 +4,387 @@
 
 /* ===== Base Overlay & Container ===== */
 .character-creation-wizard-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
 .character-creation-wizard {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* ===== Header & Progress ===== */
 .wizard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .wizard-header h2 {
-  margin: 0;
-  color: #333;
+    margin: 0;
+    color: #333;
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  color: #666;
-  line-height: 1;
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
 }
 
 .close-btn:hover {
-  color: #333;
+    color: #333;
 }
 
 .progress-bar {
-  height: 4px;
-  background-color: #e0e0e0;
-  width: 100%;
+    height: 4px;
+    background-color: #e0e0e0;
+    width: 100%;
 }
 
 .progress-fill {
-  height: 100%;
-  background-color: #4CAF50;
-  transition: width 0.3s ease;
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.3s ease;
 }
 
 /* ===== Content Area ===== */
 .wizard-content {
-  padding: 10px 20px 0 20px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+    padding: 10px 20px 0 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .wizard-step {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  width: 100%;
-  box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .wizard-step h2 {
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #4CAF50;
-  color: #333;
-  font-size: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #4CAF50;
+    color: #333;
+    font-size: 1.5rem;
 }
 
 .step-description {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 0;
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0;
 }
 
 /* ===== Form Elements ===== */
 .form-group {
-  margin-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: #555;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  height: 36px;
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
+    height: 36px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
 }
 
 .form-group input.error,
 .form-group select.error,
 .form-group textarea.error {
-  border-color: #f44336;
+    border-color: #f44336;
 }
 
 .error-message {
-  color: #f44336;
-  font-size: 0.85rem;
-  margin-top: 5px;
-  display: block;
+    color: #f44336;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: block;
 }
 
 .field-description {
-  color: #666;
-  font-size: 0.85rem;
-  margin-top: 5px;
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 5px;
 }
 
 /* ===== Footer & Buttons ===== */
 .wizard-footer {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 20px 20px 20px;
-  border-top: 1px solid #e0e0e0;
-  gap: 10px;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px 20px 20px;
+    border-top: 1px solid #e0e0e0;
+    gap: 10px;
 }
 
 .btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .btn-primary,
 .btn-success {
-  background-color: #4CAF50;
-  color: white;
+    background-color: #4CAF50;
+    color: white;
 }
 
 .btn-primary:hover,
 .btn-success:hover {
-  background-color: #45a049;
+    background-color: #45a049;
 }
 
 .btn-secondary {
-  background-color: #f0f0f0;
-  color: #333;
+    background-color: #f0f0f0;
+    color: #333;
 }
 
 .btn-secondary:hover {
-  background-color: #e0e0e0;
+    background-color: #e0e0e0;
 }
 
 .btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* ===== Rules Selection Screen ===== */
 .rules-selection-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
 }
 
 .rules-option {
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background-color: #fafafa;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
 }
 
 .rules-option:hover {
-  border-color: #4CAF50;
-  background-color: #f0f7f0;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+    border-color: #4CAF50;
+    background-color: #f0f7f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
 }
 
 .rules-option.selected {
-  border-color: #4CAF50;
-  background-color: #4CAF50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+    border-color: #4CAF50;
+    background-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
 }
 
 .rules-option-icon {
-  font-size: 3rem;
-  text-align: center;
-  margin-bottom: 15px;
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 .rules-option h3 {
-  margin: 10px 0;
-  color: #333;
-  text-align: center;
+    margin: 10px 0;
+    color: #333;
+    text-align: center;
 }
 
 .rules-option p {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  text-align: center;
-  margin-bottom: 15px;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 .rules-features {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  text-align: left;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
 }
 
 .rules-features li {
-  padding: 5px 0;
-  color: #555;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
+    padding: 5px 0;
+    color: #555;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
 }
 
 .rules-features li::before {
-  content: "✓";
-  color: #4CAF50;
-  font-weight: bold;
-  margin-right: 8px;
+    content: "✓";
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 8px;
 }
 
 /* ===== Point Buy System ===== */
 .points-remaining {
-  color: #4CAF50;
-  font-size: 1.3em;
-  font-weight: 900;
+    color: #4CAF50;
+    font-size: 1.3em;
+    font-weight: 900;
 }
 
 /* Note: .point-cost, .total-score, and related styles are in wizard-step-abilities.css */
 
 /* ===== Multi-Select Pattern (Skills, Languages, Resistances) ===== */
 .multi-select-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
-  margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
 }
 
 .multi-select-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s;
-  font-size: 0.9rem;
-  color: #555;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    color: #555;
 }
 
 .multi-select-item:hover {
-  background-color: #e0e0e0;
+    background-color: #e0e0e0;
 }
 
 .multi-select-item input[type="checkbox"] {
-  margin: 0;
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
+    margin: 0;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
 }
 
 .multi-select-item.selected {
-  background-color: #4CAF50;
-  color: white;
-  border: 2px solid #4CAF50;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
-  font-weight: 600;
+    background-color: #4CAF50;
+    color: white;
+    border: 2px solid #4CAF50;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+    font-weight: 600;
 }
 
 /* Compact variant for skills */
 .multi-select-compact .multi-select-item {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  gap: 4px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    gap: 4px;
 }
 
 .multi-select-compact .multi-select-container {
-  gap: 6px;
-  margin-top: 6px;
+    gap: 6px;
+    margin-top: 6px;
 }
 
 /* ===== List Results Pattern (Shared for Spells, Feats, Magic Items) ===== */
 
 /* Common container styles */
 .list-filter-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+    color: #111;
+    display: grid;
+    grid-template-columns: auto 80px 80px;
+    gap: 20px;
+    align-items: center;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 1rem;
 }
 
 /* Shared container for all list results (spells, feats, magic items) */
 .list-results-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: white;
-  min-height: 300px;
-  max-height: 500px !important;
-  overflow-y: auto !important;
-  width: 100%;
-  position: relative;
-  height: 400px !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    min-height: 300px;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+    width: 100%;
+    position: relative;
+    height: 400px !important;
 }
 
 /* Shared header for all list results */
 .list-results-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
-  background-color: #f5f5f5;
-  font-weight: 600;
-  color: #333;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #ddd;
+    background-color: #f5f5f5;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .result-count {
-  color: #333;
-  font-weight: 500;
+    color: #333;
+    font-weight: 500;
 }
 
 /* Shared list container for all list results */
 .list-results-list {
-  padding: 0.5rem;
-  flex: 1;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+    padding: 0.5rem;
+    flex: 1;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 /* Spell/feat/magic-item variants extend shared list-results classes */
@@ -390,153 +392,153 @@
 .spell-results-container,
 .feat-results-container,
 .magic-item-results-container {
-  /* inherits from .list-results-container */
+    /* inherits from .list-results-container */
 }
 
 .spell-results-header,
 .feat-results-header,
 .magic-item-results-header {
-  /* inherits from .list-results-header */
+    /* inherits from .list-results-header */
 }
 
 .spell-results-list,
 .feat-results-list,
 .magic-item-results-list {
-  /* inherits from .list-results-list */
+    /* inherits from .list-results-list */
 }
 
 .no-results-found {
-  padding: 2rem;
-  text-align: center;
-  color: #5a6c7d;
-  font-style: italic;
-  font-size: 0.95rem;
+    padding: 2rem;
+    text-align: center;
+    color: #5a6c7d;
+    font-style: italic;
+    font-size: 0.95rem;
 }
 
 /* Wizard Step Specific Container Styles */
 .wizard-step-spells,
 .wizard-step-feats,
 .wizard-step-magic-items {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
 }
 
 /* Common item styles for spells and feats */
 .list-item {
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  background-color: #fff;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    background-color: #fff;
 }
 
 .list-item:hover {
-  border-color: #4CAF50;
-  background-color: #f0fff0;
+    border-color: #4CAF50;
+    background-color: #f0fff0;
 }
 
 .list-item.selected {
-  border-color: #4CAF50;
-  background-color: #e8f5e9;
+    border-color: #4CAF50;
+    background-color: #e8f5e9;
 }
 
 .list-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
 .list-item-name {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #333;
-  flex: 1;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
+    flex: 1;
 }
 
 .list-item-checkbox {
-  width: 24px;
-  height: 24px;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  color: #999;
-  transition: all 0.2s ease;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #999;
+    transition: all 0.2s ease;
 }
 
 .list-item-checkbox.checked {
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-  color: white;
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+    color: white;
 }
 
 .list-item-details {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #ddd;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ddd;
 }
 
 .list-item-full-details {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed #ddd;
-  font-size: 0.85rem;
-  color: #34495e;
-  line-height: 1.4;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #ddd;
+    font-size: 0.85rem;
+    color: #34495e;
+    line-height: 1.4;
 }
 
 .toggle-details-btn {
-  background: none;
-  border: none;
-  color: #4CAF50;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.5rem;
-  margin-top: 0.5rem;
+    background: none;
+    border: none;
+    color: #4CAF50;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    margin-top: 0.5rem;
 }
 
 /* Spell-specific styles */
 .spell-level {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-right: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
 }
 
 .spell-level.cantrip {
-  background-color: #6c757d;
-  color: white;
+    background-color: #6c757d;
+    color: white;
 }
 
 .spell-level.low {
-  background-color: #28a745;
-  color: white;
+    background-color: #28a745;
+    color: white;
 }
 
 .spell-level.mid {
-  background-color: #ffc107;
-  color: #333;
+    background-color: #ffc107;
+    color: #333;
 }
 
 .spell-level.high {
-  background-color: #dc3545;
-  color: white;
+    background-color: #dc3545;
+    color: white;
 }
 
 .spell-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .spell-school,
@@ -544,494 +546,495 @@
 .spell-concentration,
 .spell-duration,
 .spell-casting-time {
-  font-size: 0.8rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  background-color: #f0f0f0;
-  color: #333;
-  font-weight: 500;
+    font-size: 0.8rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    color: #333;
+    font-weight: 500;
 }
 
 .spell-ritual,
 .spell-concentration {
-  font-weight: 600;
-  color: #2e7d32;
+    font-weight: 600;
+    color: #2e7d32;
 }
 
 .spell-description {
-  font-size: 0.9rem;
-  color: #2c3e50;
-  line-height: 1.5;
-  font-weight: 500;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 .spell-higher-level,
 .spell-components,
 .spell-damage {
-  margin-top: 0.25rem;
+    margin-top: 0.25rem;
 }
 
 .spell-material {
-  margin-top: 0.25rem;
-  font-style: italic;
-  color: #34495e;
-  font-weight: 500;
+    margin-top: 0.25rem;
+    font-style: italic;
+    color: #34495e;
+    font-weight: 500;
 }
 
 /* Feat-specific styles */
 .feat-type {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-right: 0.5rem;
-  background-color: #6c757d;
-  color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    background-color: #6c757d;
+    color: white;
 }
 
 .feat-prerequisites,
 .feat-description,
 .feat-more-description {
-  margin-top: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .feat-description {
-  font-size: 0.9rem;
-  color: #2c3e50;
-  line-height: 1.5;
-  font-weight: 500;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    line-height: 1.5;
+    font-weight: 500;
 }
 
 .level-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: #f9f9f9;
 }
 
 .level-label {
-  font-weight: 600;
-  color: #555;
-  font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
 }
 
 .level-count {
-  font-weight: 700;
-  color: #333;
-  font-size: 0.95rem;
-  padding: 0.25rem 0.5rem;
-  background-color: #e8f5e9;
-  border-radius: 4px;
-  min-width: 50px;
-  text-align: center;
+    font-weight: 700;
+    color: #333;
+    font-size: 0.95rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #e8f5e9;
+    border-radius: 4px;
+    min-width: 50px;
+    text-align: center;
 }
 
 .level-count.exceeded {
-  background-color: #ffebee;
-  color: #c62828;
-  border: 1px solid #ef9a9a;
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
 }
 
 /* Spell & Feat Search Inputs */
 .spell-search-input,
 .feat-search-input {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  width: 100%;
-  color: #333;
-  background-color: #fff;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    width: 100%;
+    color: #333;
+    background-color: #fff;
 }
 
 .level-filter,
 .class-filter,
 .type-filter {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  background-color: #fff;
-  color: #333;
-  cursor: pointer;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
 }
 
 /* ===== Validation Messages ===== */
 .validation-message {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-top: 1rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .validation-message.error {
-  background-color: #ffebee;
-  color: #c62828;
-  border: 1px solid #ef9a9a;
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
 }
 
 .validation-message.success {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border: 1px solid #a5d6a7;
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
 }
 
 .validation-message.warning {
-  background-color: #fff3e0;
-  color: #ef6c00;
-  border: 1px solid #ffe0b2;
+    background-color: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffe0b2;
 }
 
 /* ===== Equipment Search Modal ===== */
 .equipment-search-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
 }
 
 .equipment-search-modal {
-  background-color: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .search-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e9ecef;
-  background-color: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
 }
 
 .search-modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #333;
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
 }
 
 .close-modal-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0;
-  line-height: 1;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 0;
+    line-height: 1;
 }
 
 .close-modal-btn:hover {
-  color: #333;
+    color: #333;
 }
 
 .search-modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .category-filters {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
 
 .category-filter-btn {
-  padding: 0.5rem 1rem;
-  background-color: #e9ecef;
-  border: 1px solid #dee2e6;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-  color: #495057;
+    padding: 0.5rem 1rem;
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    color: #495057;
 }
 
 .category-filter-btn:hover {
-  background-color: #dee2e6;
+    background-color: #dee2e6;
 }
 
 .category-filter-btn.active {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
 }
 
 .search-input-container {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .search-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .equipment-results {
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    margin-bottom: 1rem;
 }
 
 .equipment-item {
-  padding: 1rem;
-  border-bottom: 1px solid #e9ecef;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .equipment-item:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 .equipment-item:hover {
-  background-color: #f8f9fa;
+    background-color: #f8f9fa;
 }
 
 .equipment-item-name {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
 }
 
 .equipment-item-details {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-  color: #6c757d;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: #6c757d;
 }
 
 .equipment-item-category {
-  background-color: #e9ecef;
-  padding: 0.25rem 0.5rem;
-  border-radius: 3px;
-  color: #495057;
+    background-color: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    color: #495057;
 }
 
 .equipment-item-cost {
-  color: #28a745;
-  font-weight: 500;
+    color: #28a745;
+    font-weight: 500;
 }
 
 .equipment-item-weight {
-  color: #6c757d;
+    color: #6c757d;
 }
 
 .search-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
 }
 
 .add-custom-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: background-color 0.2s;
+    padding: 0.75rem 1.5rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background-color 0.2s;
 }
 
 .add-custom-btn:hover {
-  background-color: #1e7e34;
+    background-color: #1e7e34;
 }
 
 .add-custom-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 
 .cancel-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  transition: background-color 0.2s;
+    padding: 0.75rem 1.5rem;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background-color 0.2s;
 }
 
 .cancel-btn:hover {
-  background-color: #5a6268;
+    background-color: #5a6268;
 }
 
 /* ===== Inventory Specific Styles ===== */
 .searchable-input-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .inventory-textarea {
-  min-height: 100px;
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-  resize: vertical;
+    min-height: 100px;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    resize: vertical;
 }
 
 .inventory-textarea:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .searchable-input-controls {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .search-equipment-btn {
-  padding: 0.5rem 1rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
 }
 
 .search-equipment-btn:hover {
-  background-color: #0056b3;
+    background-color: #0056b3;
 }
 
 .inventory-items-preview {
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border: 1px solid #e9ecef;
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
 }
 
 .items-count {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-bottom: 0.5rem;
-  display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
 .items-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .item-tag {
-  padding: 0.25rem 0.5rem;
-  background-color: #e9ecef;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  color: #495057;
+    padding: 0.25rem 0.5rem;
+    background-color: #e9ecef;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: #495057;
 }
 
 .item-tag.more-items {
-  background-color: #ffc107;
-  color: #000;
+    background-color: #ffc107;
+    color: #000;
 }
 
 /* ===== Responsive Design ===== */
 @media (max-width: 768px) {
-  .character-creation-wizard {
-    width: 95%;
-  }
-  
-  .wizard-footer {
-    flex-direction: column;
-  }
-  
-  .wizard-footer .btn {
-    width: 100%;
-  }
-  
-  .rules-selection-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .spells-filters,
-  .feats-filters {
-    flex-direction: column;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
-  .list-item-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .spell-level,
-  .feat-type {
-    margin-right: 0;
-  }
+    .character-creation-wizard {
+        width: 95%;
+    }
+
+    .wizard-footer {
+        flex-direction: column;
+    }
+
+    .wizard-footer .btn {
+        width: 100%;
+    }
+
+    .rules-selection-container {
+        grid-template-columns: 1fr;
+    }
+
+    .magic-items-filters,
+    .spells-filters,
+    .feats-filters {
+        flex-direction: column;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .list-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .spell-level,
+    .feat-type {
+        margin-right: 0;
+    }
 }
 
 @media (max-width: 600px) {
-  .multi-select-container {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 6px;
-  }
-  
-  .multi-select-compact .multi-select-container {
-    gap: 4px;
-  }
-  
-  .multi-select-compact .multi-select-item {
-    padding: 3px 6px;
-    font-size: 0.8rem;
-  }
-  
-  .equipment-search-modal {
-    width: 95%;
-    max-height: 90vh;
-  }
-  
-  .category-filters {
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-  }
+    .multi-select-container {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 6px;
+    }
+
+    .multi-select-compact .multi-select-container {
+        gap: 4px;
+    }
+
+    .multi-select-compact .multi-select-item {
+        padding: 3px 6px;
+        font-size: 0.8rem;
+    }
+
+    .equipment-search-modal {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .category-filters {
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
 }
