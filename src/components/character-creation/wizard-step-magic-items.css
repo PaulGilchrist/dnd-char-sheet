@@ -1,0 +1,102 @@
+/* Component-specific CSS for WizardStepMagicItems */
+
+.wizard-step .step-description {
+  color: #666;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+/* Magic Item Filters */
+.magic-items-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.magic-item-search-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.magic-item-type-filter {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background-color: #fff;
+  min-width: 150px;
+}
+
+/* Magic Item Results */
+.magic-item-results-container {
+  margin-top: 1rem;
+}
+
+.magic-item-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.magic-item-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Magic Item Styles */
+.magic-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.magic-item:hover {
+  background-color: #f5f5f5;
+}
+
+.magic-item.selected {
+  background-color: #e8f4fd;
+}
+
+.magic-item-type {
+  font-size: 0.85rem;
+  color: #666;
+  margin-right: 0.5rem;
+}
+
+.magic-item-rarity {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #8b5cf6;
+  margin-right: 0.5rem;
+}
+
+.magic-item-description {
+  font-size: 0.9rem;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.magic-item-more-description {
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.4;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* No magic items message */
+.no-magic-items-found {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-size: 1rem;
+}

@@ -10,6 +10,7 @@ export { default as WizardStepSkills } from './wizard-step-skills';
 export { default as WizardStepInventory } from './wizard-step-inventory';
 export { default as WizardStepSpecial } from './wizard-step-special';
 export { default as WizardStepResistances } from './wizard-step-resistances';
+export { default as WizardStepMagicItems } from './wizard-step-magic-items';
 
 export const REQUIRED_FIELDS = [
   'name',
@@ -144,6 +145,7 @@ export const DEFAULT_FORM_DATA = {
   spells: [],
   resistances: [],
   feats: [],
+  magicItems: [],
   specialActions: [],
   rules: '2024',
 };

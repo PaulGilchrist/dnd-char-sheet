@@ -20,6 +20,7 @@ import WizardStepSpells from './wizard-step-spells';
 import WizardStepFeats from './wizard-step-feats';
 import WizardStepSpecial from './wizard-step-special';
 import WizardStepResistances from './wizard-step-resistances';
+import WizardStepMagicItems from './wizard-step-magic-items';
 
 function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -28,6 +29,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [racesData, setRacesData] = useState([]);
   const [classSubtypes, setClassSubtypes] = useState([]);
   const [feats, setFeats] = useState([]);
+  const [magicItems, setMagicItems] = useState([]);
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
@@ -55,6 +57,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         })));
       });
       loadData('/dnd-char-sheet/data/2024/feats.json', setFeats);
+      loadData('/dnd-char-sheet/data/2024/magic-items.json', setMagicItems);
     } else {
       // 5e does not use the same background system as 2024
       setBackgrounds([]);
@@ -66,6 +69,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         })));
       });
       loadData('/dnd-char-sheet/data/feats.json', setFeats);
+      loadData('/dnd-char-sheet/data/magic-items.json', setMagicItems);
     }
   }, [ruleset]);
 
@@ -118,6 +122,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         rules: '2024',
         spells: [],
         feats: [],
+        magicItems: [],
         background: ''
       }));
     } else {
@@ -126,6 +131,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         rules: '5e',
         spells: allSpells || [],
         feats: [],
+        magicItems: [],
         background: ''
       }));
     }
@@ -344,6 +350,15 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 9:
         return (
+          <WizardStepMagicItems
+            formData={formData}
+            allMagicItems={magicItems}
+            ruleset={ruleset}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 10:
+        return (
           <WizardStepInventory
             formData={formData}
             tempInventory={tempInventory}
@@ -351,7 +366,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onTempInventoryChange={handleTempInventoryChange}
           />
         );
-      case 10:
+      case 11:
         return (
           <WizardStepSpecial
             formData={formData}
@@ -372,7 +387,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         />
         <WizardProgressBar
                     currentStep={currentStep}
-                    totalSteps={10}
+                    totalSteps={11}
                   />
         <div className="wizard-content">
           {renderStep()}
@@ -380,7 +395,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         <WizardFooter
           currentStep={currentStep}
           isFirstStep={currentStep === 1}
-          isLastStep={currentStep === 10}
+          isLastStep={currentStep === 11}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}
