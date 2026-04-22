@@ -26,7 +26,9 @@ const raceRules = {
             ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
             return ability_bonus;
         });
-        const subrace = race.subraces.find((subrace) => subrace.name === playerSummary.race.subrace.name);
+        const subrace = playerSummary.race.subrace 
+            ? race.subraces.find((subrace) => subrace.name === playerSummary.race.subrace.name)
+            : null;
         if (subrace) {
             race.subrace = merge(cloneDeep(subrace), cloneDeep(playerSummary.subrace));
         } else {
