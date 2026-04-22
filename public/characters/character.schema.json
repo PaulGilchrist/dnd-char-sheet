@@ -21,6 +21,7 @@
         },
         "level": {
             "type": "integer",
+            "maximum": 20,
             "minimum": 1,
             "description": "The character's current level"
         },
@@ -243,6 +244,13 @@
             },
             "description": "Array of damage types the character has resistance to (e.g., 'Fire', 'Cold')"
         },
+        "immunities": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Array of damage types the character has immunity to (e.g., 'Fire', 'Cold')"
+        },
         "feats": {
             "type": "array",
             "items": {
@@ -255,7 +263,7 @@
             "items": {
                 "type": "string"
             },
-            "description": "Optional array of special actions the character can perform"
+            "description": "Optional array of special actions the character can perform.  This can be used for custom magic items or other abilities awarded by the Dungeon Master"
         },
         "rules": {
             "type": "string",
