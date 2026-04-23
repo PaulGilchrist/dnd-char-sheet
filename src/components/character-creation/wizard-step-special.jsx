@@ -7,9 +7,15 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
     typeof action === 'string' ? { name: action, description: '', details: null } : action
   );
   
-  const [newActionName, setNewActionName] = useState('');
-  const [newActionDescription, setNewActionDescription] = useState('');
-  const [newActionDetails, setNewActionDetails] = useState('');
+  // Track form fields as part of formData to persist across renders
+  const newActionName = formData.newSpecialAction?.name || '';
+  const newActionDescription = formData.newSpecialAction?.description || '';
+  const newActionDetails = formData.newSpecialAction?.details || '';
+  
+  // Update function for form fields
+  const updateNewActionField = (field, value) => {
+    onArrayFieldChange('newSpecialAction', { ...formData.newSpecialAction, [field]: value });
+  };
 
   const addAction = () => {
     if (newActionName.trim()) {
@@ -24,9 +30,8 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
       const updatedActions = [...existingActions, newAction];
       
       onArrayFieldChange('specialActions', updatedActions);
-      setNewActionName('');
-      setNewActionDescription('');
-      setNewActionDetails('');
+      // Clear the form fields
+      onArrayFieldChange('newSpecialAction', {});
     }
   };
 
@@ -46,20 +51,20 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
         <input
           type="text"
           value={newActionName}
-          onChange={(e) => setNewActionName(e.target.value)}
+          onChange={(e) => updateNewActionField('name', e.target.value)}
           placeholder="Action name (required)"
           className="wizard-input"
         />
         <textarea
           value={newActionDescription}
-          onChange={(e) => setNewActionDescription(e.target.value)}
+          onChange={(e) => updateNewActionField('description', e.target.value)}
           placeholder="Description"
           className="wizard-textarea"
           rows={2}
         />
         <textarea
           value={newActionDetails}
-          onChange={(e) => setNewActionDetails(e.target.value)}
+          onChange={(e) => updateNewActionField('details', e.target.value)}
           placeholder="Additional details (optional)"
           className="wizard-textarea"
           rows={2}
