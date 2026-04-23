@@ -126,10 +126,10 @@ export const POINT_BUY_COSTS = {
   11: 3,
   12: 4,
   13: 5,
-  14: 6,
-  15: 7,
-  16: 9,
-  17: 11,
+  14: 7,
+  15: 9,
+  16: 11,
+  17: 13,
 };
 
 export const DEFAULT_FORM_DATA = {

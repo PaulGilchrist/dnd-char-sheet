@@ -16,7 +16,7 @@ function WizardStepAbilities({
     return sum + (POINT_BUY_COSTS[baseScore] || 0);
   }, 0);
 
-  const pointsRemaining = 27 - totalPointsSpent;
+  const pointsRemaining = 30 - totalPointsSpent;
 
   const calculateTotalScore = (ability) => {
     const base = parseInt(ability.baseScore) || 8;
