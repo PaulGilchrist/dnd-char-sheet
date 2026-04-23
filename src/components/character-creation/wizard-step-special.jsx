@@ -1,21 +1,105 @@
-import React from 'react';
+import React, { useState } from 'react';
 // No component-specific CSS needed - uses shared wizard styles
 
 function WizardStepSpecial({ formData, onArrayFieldChange }) {
+  // Normalize special actions to ensure they're objects with name/description/details
+  const normalizedActions = (formData.specialActions || []).map(action => 
+    typeof action === 'string' ? { name: action, description: '', details: null } : action
+  );
+  
+  const [newActionName, setNewActionName] = useState('');
+  const [newActionDescription, setNewActionDescription] = useState('');
+  const [newActionDetails, setNewActionDetails] = useState('');
+
+  const addAction = () => {
+    if (newActionName.trim()) {
+      const newAction = {
+        name: newActionName.trim(),
+        description: newActionDescription.trim(),
+        details: newActionDetails.trim() || null
+      };
+      
+      // Check if action with same name already exists
+      const existingActions = formData.specialActions || [];
+      const updatedActions = [...existingActions, newAction];
+      
+      onArrayFieldChange('specialActions', updatedActions);
+      setNewActionName('');
+      setNewActionDescription('');
+      setNewActionDetails('');
+    }
+  };
+
+  const removeAction = (normalizedIndex) => {
+    // Remove from normalized array, then pass original to parent
+    const updatedNormalized = normalizedActions.filter((_, i) => i !== normalizedIndex);
+    onArrayFieldChange('specialActions', updatedNormalized);
+  };
+
   return (
     <div className="wizard-step">
       <h2>Step 11: Special Actions</h2>
       
+      {/* Add new action form */}
       <div className="form-group">
-        <label>Special Actions</label>
-        <textarea className='inventory-textarea'
-          value={formData.specialActions.join(', ')}
-          onChange={(e) => onArrayFieldChange('specialActions', e.target.value.split(',').map(a => a.trim()).filter(a => a))}
-          placeholder="Enter special actions separated by commas"
-          rows={3}
+        <label>Add New Action</label>
+        <input
+          type="text"
+          value={newActionName}
+          onChange={(e) => setNewActionName(e.target.value)}
+          placeholder="Action name (required)"
+          className="wizard-input"
         />
-        <p className="field-description">e.g., Second Wind (1d10 + CON modifier), Action Surge</p>
+        <textarea
+          value={newActionDescription}
+          onChange={(e) => setNewActionDescription(e.target.value)}
+          placeholder="Description"
+          className="wizard-textarea"
+          rows={2}
+        />
+        <textarea
+          value={newActionDetails}
+          onChange={(e) => setNewActionDetails(e.target.value)}
+          placeholder="Additional details (optional)"
+          className="wizard-textarea"
+          rows={2}
+        />
+        <button type="button" onClick={addAction} className="btn btn-primary">
+          Add Action
+        </button>
       </div>
+
+      {/* List of existing actions */}
+      {normalizedActions && normalizedActions.length > 0 ? (
+        <div className="form-group">
+          <label>Custom Special Actions</label>
+          <ul style={{ listStyle: 'none', padding: 0, marginBottom: 0 }}>
+            {normalizedActions.map((action, index) => (
+              <li key={index} style={{ borderBottom: '1px solid #ccc', padding: '10px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong>{action.name}</strong>
+                  <button 
+                    type="button" 
+                    onClick={() => removeAction(index)}
+                    className="btn btn-danger"
+                    style={{ padding: '2px 8px', fontSize: '12px' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                {action.description && (
+                  <p style={{ marginBottom: '5px', color: '#666' }}>{action.description}</p>
+                )}
+                {action.details && (
+                  <p style={{ fontSize: '14px', fontStyle: 'italic', color: '#888' }}>{action.details}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+
     </div>
   );
 }

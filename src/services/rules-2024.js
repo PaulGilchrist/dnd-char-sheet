@@ -51,8 +51,13 @@ const rules = {
         const features = classRules.getFeatures(playerStats);
         const traits = raceRules.getTraits(playerStats);
         
+        // Convert string actions to objects with name/description/details
+        const playerActions = (playerStats.actions || []).map(action => 
+            typeof action === 'string' ? { name: action, description: '', details: null } : action
+        );
+        
         const actions = uniqBy([
-            ...(playerStats.actions ? playerStats.actions : []),
+            ...playerActions,
             ...features.actions,
             ...traits.actions,
             ...(playerStats.magicActions ? playerStats.magicActions : []),
@@ -72,10 +77,18 @@ const rules = {
             ...traits.reactions
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
         
+        // Convert string specialActions to objects with name/description/details
+        const playerSpecialActions = (playerStats.specialActions || []).map(action => 
+            typeof action === 'string' ? { name: action, description: '', details: null } : action
+        );
+        
         const specialActions = uniqBy([
-            ...(playerStats.specialActions ? playerStats.specialActions : []),
+            ...playerSpecialActions,
             ...features.specialActions,
-            ...traits.specialActions
+            ...traits.specialActions,
+            ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
+            ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
+            ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
         
         return [actions, bonusActions, reactions, specialActions];
