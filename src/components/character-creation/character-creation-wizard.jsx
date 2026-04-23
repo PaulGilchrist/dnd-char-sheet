@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './character-creation-wizard.css';
 // Import dark mode styles - will be loaded via media query
 import './character-creation-wizard-dark.css';
+import merge from 'lodash/merge';
 import {
   REQUIRED_FIELDS,
   ABILITY_NAMES,
@@ -25,15 +26,20 @@ import WizardStepSpecial from './wizard-step-special';
 import WizardStepResistances from './wizard-step-resistances';
 import WizardStepMagicItems from './wizard-step-magic-items';
 
-function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024 }) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [ruleset, setRuleset] = useState(null);
+function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, allSpells, allSpells2024, characterData, isEditing = false }) {
+  const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
+  const [ruleset, setRuleset] = useState(characterData?.rules ?? null);
   const [backgrounds, setBackgrounds] = useState([]);
   const [racesData, setRacesData] = useState([]);
   const [classSubtypes, setClassSubtypes] = useState([]);
   const [feats, setFeats] = useState([]);
   const [magicItems, setMagicItems] = useState([]);
-  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [formData, setFormData] = useState(() => {
+    if (isEditing && characterData) {
+      return merge({}, DEFAULT_FORM_DATA, characterData);
+    }
+    return DEFAULT_FORM_DATA;
+  });
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
 
@@ -422,24 +428,26 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     <div className="character-creation-wizard-overlay">
       <div className="character-creation-wizard">
         <WizardHeader
-          title="Create New Character"
+          title={isEditing ? "Edit Character" : "Create New Character"}
           onClose={onCancel}
         />
         <WizardProgressBar
                     currentStep={currentStep}
                     totalSteps={12}
+                    isEditing={isEditing}
                   />
         <div className="wizard-content">
           {renderStep()}
         </div>
         <WizardFooter
           currentStep={currentStep}
-          isFirstStep={currentStep === 1}
+          isFirstStep={isEditing ? currentStep === 2 : currentStep === 1}
           isLastStep={currentStep === 12}
           onCancel={onCancel}
           onPrevious={handlePrevious}
           onNext={handleNext}
           onSubmit={handleSubmit}
+          isEditing={isEditing}
         />
       </div>
     </div>

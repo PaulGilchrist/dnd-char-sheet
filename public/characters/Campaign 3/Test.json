@@ -15,7 +15,9 @@
       "name": "Champion",
       "type": ""
     },
-    "fightingStyles": [],
+    "fightingStyles": [
+      "Archery"
+    ],
     "expertise": [],
     "favoredEnemies": [],
     "favoredTerrain": []
@@ -59,9 +61,10 @@
     }
   ],
   "skillProficiencies": [
-    "Acrobatics",
-    "Athletics"
+    "Performance",
+    "Sleight of Hand"
   ],
+  "expertSkills": [],
   "inventory": {
     "backpack": [
       "Greatsword",
@@ -75,32 +78,28 @@
     "magicItems": []
   },
   "languages": [
-    "Common",
-    "Elvish",
-    "Dwarvish"
+    "Infernal",
+    "Primordial",
+    "Sylvan"
   ],
-  "spells": [
-    "Acid Arrow",
-    "Acid Splash"
-  ],
+  "spells": [],
   "resistances": [
-    "Bludgeoning",
-    "Radiant"
+    "Thunder",
+    "Slashing"
   ],
   "feats": [
-    "Ability Score Improvement",
-    "Athlete"
+    "Boon Of Combat Prowess"
   ],
   "magicItems": [
-    "Adamantine Armor",
-    "Adamantine Weapon"
+    "Alchemy Jug",
+    "Ammunition of Slaying"
   ],
   "specialActions": [
-    "Action test"
+    "Action test updated"
   ],
   "rules": "2024",
   "immunities": [
-    "Bludgeoning",
-    "Poison"
+    "Thunder",
+    "Slashing"
   ]
 }

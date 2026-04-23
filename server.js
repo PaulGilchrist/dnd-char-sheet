@@ -14,7 +14,7 @@ const app = express();
 app.use(express.json({ limit: '100kb' }));
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, POST');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS, POST, PUT');
     res.setHeader('Access-Control-Allow-Headers', 'Cache-Control, Connection, Content-Type, Authorization');
     next();
 });
@@ -122,6 +122,35 @@ app.post('/api/campaigns', (req, res) => {
     } catch (error) {
         console.error('Error creating campaign:', error);
         res.status(500).json({ error: 'Failed to create campaign' });
+    }
+});
+
+// API endpoint to update an existing character in a campaign
+app.put('/api/characters/:campaign/:file', (req, res) => {
+    const { campaign, file } = req.params;
+    const character = req.body;
+    
+    if (!campaign || !file || !character) {
+        return res.status(400).json({ error: 'Campaign, file, and character data are required' });
+    }
+    
+    const campaignDir = path.join(process.cwd(), 'public', 'characters', campaign);
+    const filePath = path.join(campaignDir, file);
+    
+    try {
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Character file not found' });
+        }
+        
+        fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
+        
+        res.status(200).json({ 
+            message: 'Character updated successfully', 
+            character: character
+        });
+    } catch (error) {
+        console.error('Error updating character:', error);
+        res.status(500).json({ error: 'Failed to update character' });
     }
 });
 

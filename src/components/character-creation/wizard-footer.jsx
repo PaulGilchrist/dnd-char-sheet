@@ -7,7 +7,8 @@ function WizardFooter({
   onCancel, 
   onPrevious, 
   onNext, 
-  onSubmit 
+  onSubmit,
+  isEditing = false
 }) {
   return (
     <div className="wizard-footer">
@@ -21,7 +22,7 @@ function WizardFooter({
       
       {isLastStep ? (
         <button className="btn btn-success" onClick={onSubmit}>
-          Create Character
+          {isEditing ? 'Save Changes' : 'Create Character'}
         </button>
       ) : (
         <button className="btn btn-primary" onClick={onNext}>

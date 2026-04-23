@@ -22,6 +22,7 @@ function App() {
     const [showCampaignSelection, setShowCampaignSelection] = React.useState(true);
     const [showAddCharacterModal, setShowAddCharacterModal] = React.useState(false);
     const [showCharacterWizard, setShowCharacterWizard] = React.useState(false);
+    const [showEditCharacterWizard, setShowEditCharacterWizard] = React.useState(false);
     const inputRef = React.useRef(null);
 
     useEffect(() => {
@@ -253,6 +254,49 @@ function App() {
         setShowCharacterWizard(false);
     };
 
+    const handleEditCharacter = () => {
+        setShowEditCharacterWizard(true);
+    };
+
+    const handleEditWizardComplete = async (characterData) => {
+        try {
+            const storedCampaign = sessionStorage.getItem('currentCampaign');
+            if (!storedCampaign) {
+                throw new Error('No campaign selected in sessionStorage');
+            }
+
+            const encodedCampaign = encodeURIComponent(storedCampaign);
+            const fileName = `${characterData.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+
+            const response = await fetch(`/api/characters/${encodedCampaign}/${encodeURIComponent(fileName)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(characterData),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update character: ${response.status}`);
+            }
+
+            setActiveCharacter(cloneDeep(characterData));
+            setShowEditCharacterWizard(false);
+
+            const newCharacters = characters.map(char => 
+                char.name === characterData.name ? characterData : char
+            );
+            setCharacters(newCharacters);
+        } catch (error) {
+            console.error('Error updating character:', error);
+            alert(`Failed to update character: ${error.message}`);
+        }
+    };
+
+    const handleEditWizardCancel = () => {
+        setShowEditCharacterWizard(false);
+    };
+
     let combatTrackingActive = characters.length > 0 && activeCharacter == null;
 
     // Show campaign selection if not yet selected
@@ -295,6 +339,9 @@ function App() {
             {characters.length > 0 && activeCharacter != null && (
                 <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>
             )}
+            {activeCharacter != null && (
+                <button className="clickable mutted no-print" onClick={handleEditCharacter}>Edit Character</button>
+            )}
             <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}>Back to Campaigns</button>
             <br />
             {showCharacterWizard && (
@@ -305,6 +352,18 @@ function App() {
                     allClasses={classes}
                     allSpells={spells}
                     allSpells2024={spells2024}
+                />
+            )}
+            {showEditCharacterWizard && (
+                <CharacterCreationWizard
+                    onComplete={handleEditWizardComplete}
+                    onCancel={handleEditWizardCancel}
+                    allRaces={races}
+                    allClasses={classes}
+                    allSpells={spells}
+                    allSpells2024={spells2024}
+                    characterData={activeCharacter}
+                    isEditing={true}
                 />
             )}
         </div>
