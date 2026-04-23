@@ -68,11 +68,11 @@
   "inventory": {
     "backpack": [
       "Greatsword",
-      "Chain Shirt"
+      "Half Plate"
     ],
     "equipped": [
       "Longbow",
-      "Shield"
+      "Longsword"
     ],
     "gold": 10,
     "magicItems": []

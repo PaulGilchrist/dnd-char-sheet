@@ -43,6 +43,14 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
 
+  // Sync tempInventory with formData.inventory when it changes
+  useEffect(() => {
+    setTempInventory({
+      backpack: formData.inventory?.backpack || [],
+      equipped: formData.inventory?.equipped || [],
+    });
+  }, [formData.inventory]);
+
   // Load data based on ruleset
   useEffect(() => {
     const loadData = async (url, setData) => {
