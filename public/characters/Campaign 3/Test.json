@@ -1,105 +1,104 @@
 {
-  "name": "Test",
-  "level": 1,
-  "alignment": "Neutral Good",
-  "background": "Soldier",
-  "race": {
-    "name": "Human",
-    "subrace": {
-      "name": ""
-    }
-  },
-  "class": {
-    "name": "Fighter",
-    "subclass": {
-      "name": "Champion",
-      "type": ""
+    "name": "Test",
+    "level": 1,
+    "alignment": "Neutral Good",
+    "background": "Soldier",
+    "race": {
+        "name": "Human",
+        "subrace": {
+            "name": ""
+        }
     },
-    "fightingStyles": [
-      "Archery"
+    "class": {
+        "name": "Fighter",
+        "subclass": {
+            "name": "Champion",
+            "type": ""
+        },
+        "fightingStyles": [
+            "Archery"
+        ],
+        "expertise": [],
+        "favoredEnemies": [],
+        "favoredTerrain": []
+    },
+    "abilities": [
+        {
+            "name": "Strength",
+            "baseScore": 14,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        },
+        {
+            "name": "Dexterity",
+            "baseScore": 16,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        },
+        {
+            "name": "Constitution",
+            "baseScore": 14,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        },
+        {
+            "name": "Intelligence",
+            "baseScore": 10,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        },
+        {
+            "name": "Wisdom",
+            "baseScore": 10,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        },
+        {
+            "name": "Charisma",
+            "baseScore": 10,
+            "abilityImprovements": 0,
+            "miscBonus": 0
+        }
     ],
-    "expertise": [],
-    "favoredEnemies": [],
-    "favoredTerrain": []
-  },
-  "abilities": [
-    {
-      "name": "Strength",
-      "baseScore": 14,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    },
-    {
-      "name": "Dexterity",
-      "baseScore": 16,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    },
-    {
-      "name": "Constitution",
-      "baseScore": 14,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    },
-    {
-      "name": "Intelligence",
-      "baseScore": 10,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    },
-    {
-      "name": "Wisdom",
-      "baseScore": 10,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    },
-    {
-      "name": "Charisma",
-      "baseScore": 10,
-      "abilityImprovements": 0,
-      "miscBonus": 0
-    }
-  ],
-  "skillProficiencies": [
-    "Performance",
-    "Sleight of Hand"
-  ],
-  "expertSkills": [],
-  "inventory": {
-    "backpack": [
-      "Greatsword",
-      "Half Plate"
+    "skillProficiencies": [
+        "Performance",
+        "Sleight of Hand"
     ],
-    "equipped": [
-      "Longbow",
-      "Longsword"
+    "expertSkills": [],
+    "inventory": {
+        "backpack": [
+            "Greatsword",
+            "Half Plate"
+        ],
+        "equipped": [
+            "Longbow",
+            "Longsword"
+        ],
+        "gold": 10,
+        "magicItems": [
+            "Alchemy Jug",
+            "Ammunition of Slaying"
+        ]
+    },
+    "languages": [
+        "Infernal",
+        "Primordial",
+        "Sylvan"
     ],
-    "gold": 10,
-    "magicItems": []
-  },
-  "languages": [
-    "Infernal",
-    "Primordial",
-    "Sylvan"
-  ],
-  "spells": [],
-  "resistances": [
-    "Thunder",
-    "Slashing"
-  ],
-  "feats": [
-    "Boon Of Combat Prowess"
-  ],
-  "magicItems": [
-    "Alchemy Jug",
-    "Ammunition of Slaying"
-  ],
-  "specialActions": [
-    "Action test updated"
-  ],
-  "rules": "2024",
-  "immunities": [
-    "Thunder",
-    "Slashing"
-  ]
+    "spells": [],
+    "resistances": [
+        "Thunder",
+        "Slashing"
+    ],
+    "feats": [
+        "Boon Of Combat Prowess"
+    ],
+    "specialActions": [
+        "Action test updated"
+    ],
+    "rules": "2024",
+    "immunities": [
+        "Thunder",
+        "Slashing"
+    ]
 }

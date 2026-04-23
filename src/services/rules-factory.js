@@ -182,12 +182,12 @@ const rulesFactory = {
         
         console.log(`[RulesFactory] Calling raceRules...`);
         playerStats.immunities = raceRules.getImmunities(playerSummary);
-        playerStats.race = raceRules.getRace(allRaces, playerSummary);
+        playerStats.race = raceRules.getRace(allRaces, playerStats);
         playerStats.resistances = raceRules.getResistances(playerSummary);
         playerStats.senses = raceRules.getSenses(playerStats);
         
         console.log(`[RulesFactory] Calling classRules...`);
-        playerStats.class = classRules.getClass(allClasses, playerSummary);
+        playerStats.class = classRules.getClass(allClasses, playerStats);
         
         console.log(`[RulesFactory] getPlayerStats COMPLETED for: ${characterName}`);
         console.log(`[RulesFactory] Final stats:`, {

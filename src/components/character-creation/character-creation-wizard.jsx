@@ -139,7 +139,6 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         rules: '2024',
         spells: [],
         feats: [],
-        magicItems: [],
         background: ''
       }));
     } else {
@@ -148,7 +147,6 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         rules: '5e',
         spells: [],
         feats: [],
-        magicItems: [],
         background: ''
       }));
     }

@@ -164,7 +164,6 @@ export const DEFAULT_FORM_DATA = {
   spells: [],
   resistances: [],
   feats: [],
-  magicItems: [],
   specialActions: [],
   rules: '5e',
 };

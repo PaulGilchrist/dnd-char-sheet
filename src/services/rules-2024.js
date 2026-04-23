@@ -361,7 +361,8 @@ const rules = {
     },
     getLanguages: (playerStats) => {
         // 2024 Rules: Simplified language rules
-        let languages = [...playerStats.race.languages];
+        const raceLanguages = playerStats.race?.languages || [];
+        let languages = [...raceLanguages];
         let languagesAllowed = languages.length;
         
         // Background languages (2024: Same as 5e)
@@ -386,21 +387,47 @@ const rules = {
         return [languagesAllowed, languages.sort()];
     },
     getMagicItems: (allMagicItems, playerSummary) => {
-        if(playerSummary.inventory.magicItems) {
-            const playerMagicItems = playerSummary.inventory.magicItems.map(playerMagicItem => {
-                const magicItem = allMagicItems.find(magicItem => magicItem.name === playerMagicItem.name);
-                if(magicItem) {
-                    if(magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
-                        return {...magicItem, details: magicItem.description, description: playerMagicItem.spell}
-                    }
-                    return {...magicItem, quantity: playerMagicItem.quantity, rarity: playerMagicItem.rarity ? playerMagicItem.rarity : magicItem.rarity };
-                }
-                console.log(playerMagicItem);
-                return{...playerMagicItem};
-            });
-            return playerMagicItems;
+        // Check for magic items in inventory (2024 standard location)
+        const inventoryMagicItems = playerSummary.inventory?.magicItems || [];
+        
+        if(!allMagicItems) {
+            return [];
         }
-        return null;
+        
+        if(inventoryMagicItems.length === 0) {
+            return [];
+        }
+        
+        const processedItems = inventoryMagicItems.map(itemNameOrObj => {
+            // Handle both string names and objects
+            let itemName = typeof itemNameOrObj === 'string' ? itemNameOrObj : itemNameOrObj.name;
+            
+            console.log('[Rules2024 getMagicItems] Processing item:', itemName);
+            const magicItem = allMagicItems.find(m => m.name === itemName);
+            
+            if(!magicItem) {
+                console.warn(`[Rules2024 getMagicItems] Item not found in database: ${itemName}`);
+                return null;
+            }
+            
+            // Handle special cases (Ring of Spell Storing, etc.)
+            if(magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
+                return { ...magicItem, details: magicItem.description, description: itemNameOrObj.spell };
+            }
+            
+            // Merge any additional properties from the object
+            const result = { ...magicItem };
+            if(typeof itemNameOrObj === 'object' && itemNameOrObj.quantity) {
+                result.quantity = itemNameOrObj.quantity;
+            }
+            if(typeof itemNameOrObj === 'object' && itemNameOrObj.rarity) {
+                result.rarity = itemNameOrObj.rarity;
+            }
+            
+            return result;
+        }).filter(item => item !== null);
+        
+        return processedItems;
     },
     getProficiencyChoiceCount: (playerStats, skills = true) => {
         // 2024 Rules: Different proficiency structure
@@ -420,7 +447,8 @@ const rules = {
     getProficiencies: (playerStats, skill = true) => {
         // 2024 Rules: Simplified proficiency calculation
         let proficienciesAllowed = 0;
-        let proficiencies = [...new Set([...playerStats.class.proficiencies, ...playerStats.race.starting_proficiencies])];
+        const raceStartingProfs = playerStats.race?.starting_proficiencies || [];
+        let proficiencies = [...new Set([...playerStats.class.proficiencies, ...raceStartingProfs])];
         
         if(skill) {
             proficiencies = proficiencies.filter((proficiency) => proficiency.startsWith('Skill'));
@@ -516,6 +544,7 @@ const rules = {
         return spellMaxLevel;
     },
     getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
+        console.log('[Rules2024 getPlayerStats] START');
         const playerStats = cloneDeep(playerSummary);
         playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
         
@@ -525,9 +554,20 @@ const rules = {
         // Store equipment reference for mastery lookup
         playerStats.equipment = allEquipment;
 
+        console.log('[Rules2024 getPlayerStats] Before getMagicItems:', { 
+            hasInventory: !!playerSummary.inventory, 
+            hasMagicItemsInInventory: !!playerSummary.inventory?.magicItems,
+            magicItemsData: JSON.stringify(playerSummary.inventory?.magicItems)
+        });
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
-        playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
+        const resultMagicItems = rules.getMagicItems(allMagicItems, playerSummary);
+        console.log('[Rules2024 getPlayerStats] getMagicItems returned:', { 
+            hasResult: !!resultMagicItems,
+            length: resultMagicItems?.length || 0,
+            data: JSON.stringify(resultMagicItems)
+        });
+        playerStats.inventory.magicItems = resultMagicItems;
         
         // Dependency on class and race begin here        
         [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions] = rules.getActions(playerStats);

@@ -16,6 +16,8 @@ function App() {
     const [equipment, setEquipment] = React.useState([]);
     const [magicItems, setMagicItems] = React.useState([]);
     const [races, setRaces] = React.useState([]);
+    const [races2024, setRaces2024] = React.useState([]);
+    const [magicItems2024, setMagicItems2024] = React.useState([]);
     const [showButton, setShowButton] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const [spells2024, setSpells2024] = React.useState([]);
@@ -54,10 +56,24 @@ function App() {
             });
     }, []);
     useEffect(() => {
+        fetch('/dnd-char-sheet/data/2024/magic-items.json')
+            .then(response => response.json())
+            .then(data => {
+                setMagicItems2024(data);
+            });
+    }, []);
+    useEffect(() => {
         fetch('/dnd-char-sheet/data/races.json')
             .then(response => response.json())
             .then(data => {
                 setRaces(data);
+            });
+    }, []);
+    useEffect(() => {
+        fetch('/dnd-char-sheet/data/2024/races.json')
+            .then(response => response.json())
+            .then(data => {
+                setRaces2024(data);
             });
     }, []);
     useEffect(() => {
@@ -332,6 +348,8 @@ function App() {
                     allSpells={spells} 
                     allSpells2024={spells2024} 
                     playerSummary={activeCharacter}
+                    allRaces2024={races2024}
+                    allMagicItems2024={magicItems2024}
                 />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
@@ -349,6 +367,7 @@ function App() {
                     onComplete={handleWizardComplete}
                     onCancel={handleWizardCancel}
                     allRaces={races}
+                    allRaces2024={races2024}
                     allClasses={classes}
                     allSpells={spells}
                     allSpells2024={spells2024}
