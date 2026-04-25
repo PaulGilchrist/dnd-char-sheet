@@ -519,9 +519,15 @@ const rules = {
             }
 
             const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
-            spellAbilities.modifier = spellAbility.bonus;
-            spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
-            spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
+            if (!spellAbility) {
+                spellAbilities.modifier = 0;
+                spellAbilities.toHit = playerStats.proficiency;
+                spellAbilities.saveDc = 8 + playerStats.proficiency;
+            } else {
+                spellAbilities.modifier = spellAbility.bonus;
+                spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
+                spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
+            }
 
             // All spells prepared for full caster classes
             spellAbilities.spells.forEach((spell) => {
