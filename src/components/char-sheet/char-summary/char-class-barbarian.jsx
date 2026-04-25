@@ -4,6 +4,7 @@ import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassBarbarian({ playerStats }) {
+    const classLevel = playerStats.class.class_levels[playerStats.level-1];
     const [ragePoints, setRagePoints] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
@@ -16,8 +17,7 @@ function CharClassBarbarian({ playerStats }) {
     const handleRagePointsChange = (ragePoints) => {
         storage.setProperty(playerStats.name, 'ragePoints', ragePoints);
         setRagePoints(ragePoints);
-    };
-    const classLevel = playerStats.class.class_levels[playerStats.level-1];
+     };
     return (<React.Fragment>
         {playerStats.class.name === 'Barbarian' && <div>
             <div className="clickable" onClick={handleRagePointsToggle} onKeyDown={handleRagePointsToggle} tabIndex={0}>
