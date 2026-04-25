@@ -8,8 +8,8 @@ function CharClassBarbarian({ playerStats }) {
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
         let ragePoints = storage.getProperty(playerStats.name, 'ragePoints');
-        setRagePoints(ragePoints ? ragePoints : classSpecific.rage_count);
-    }, [playerStats]);
+        setRagePoints(ragePoints ? ragePoints : classLevel.rages);
+    }, [playerStats, classLevel]);
     const handleRagePointsToggle = () => {
         setShowInput((showInput) => !showInput);
     };
@@ -17,14 +17,14 @@ function CharClassBarbarian({ playerStats }) {
         storage.setProperty(playerStats.name, 'ragePoints', ragePoints);
         setRagePoints(ragePoints);
     };
-    const classSpecific = playerStats.class.class_levels[playerStats.level-1].class_specific;
+    const classLevel = playerStats.class.class_levels[playerStats.level-1];
     return (<React.Fragment>
         {playerStats.class.name === 'Barbarian' && <div>
             <div className="clickable" onClick={handleRagePointsToggle} onKeyDown={handleRagePointsToggle} tabIndex={0}>
-                <b>Rage Points:</b> {classSpecific.rage_count}/<HiddenInput handleInputToggle={handleRagePointsToggle} handleValueChange={(value) => handleRagePointsChange(value)} showInput={showInput} value={ragePoints}></HiddenInput> <span className="text-muted">(max/cur)</span>
+                <b>Rage Points:</b> {classLevel.rages}/<HiddenInput handleInputToggle={handleRagePointsToggle} handleValueChange={(value) => handleRagePointsChange(value)} showInput={showInput} value={ragePoints}></HiddenInput> <span className="text-muted">(max/cur)</span>
             </div>
-            <div><b>Rage Damage Bonus: </b>{classSpecific.rage_damage_bonus}</div>
-            <div><b>Brutal Crit Dice: </b>{classSpecific.brutal_critical_dice}</div>
+            <div><b>Rage Damage Bonus: </b>{classLevel.rage_damage}</div>
+            <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
         </div>}
     </React.Fragment>)
 }
