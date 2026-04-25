@@ -8090,7 +8090,7 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus":4,
+                "proficiency_bonus": 4,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
