@@ -3,51 +3,28 @@
         "index": "barbarian",
         "name": "Barbarian",
         "class_description": "<p><b>A fierce warrior of primal rage.</b></p><p>Barbarians are mighty warriors who are powered by primal forces of the multiverse that manifest as a Rage. More than a mere emotion—and not limited to anger—this Rage is an incarnation of a predator's ferocity, a storm's fury, and a sea's turmoil. Some Barbarians personify their Rage as a fierce spirit or revered forebear. Others see it as a connection to the pain and anguish of the world, as an impersonal tangle of wild magic, or as an expression of their own deepest self. For every Barbarian, their Rage is a power that fuels not just battle prowess, but also uncanny reflexes and heightened senses. Barbarians often serve as protectors and leaders in their communities. They charge headlong into danger so those under their protection don't have to. Their courage in the face of danger makes Barbarians perfectly suited for adventure.</p>",
-        "core_traits": {
-            "primary_ability": "Strength",
-            "hit_point_die": "D12",
-            "saving_throw_proficiencies": "Strength and Constitution",
-            "skill_proficiencies": "Choose 2: Animal Handling, Athletics, Intimidation, Nature, Perception, or Survival",
-            "weapon_proficiencies": "Simple and Martial weapons",
-            "armor_training": "Light and Medium armor and Shields",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Greataxe, 4 Handaxes, Explorer's Pack, and 15 GP; or (B) 75 GP"
-        },
-        "hit_die": 12,
-        "hit_die_type": "d12",
-        "proficiency_choices": [
-            {
-                "name": "Skill Proficiencies",
-                "choose": 2,
-                "from": [
-                    "Animal Handling",
-                    "Athletics",
-                    "Intimidation",
-                    "Nature",
-                    "Perception",
-                    "Survival"
-                ]
-            }
-        ],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons",
-            "Light armor",
-            "Medium armor",
-            "Shields"
-        ],
-        "saving_throws": [
+        "primary_ability": "Strength",
+        "hit_point_die": "D12",
+        "weapon_proficiencies": "Simple and Martial weapons",
+        "armor_training": "Light and Medium armor and Shields",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Greataxe, 4 Handaxes, Explorer's Pack, and 15 GP; or (B) 75 GP",
+        "skill_proficiency_choices": "Choose any 2 from Animal Handling, Athletics, Intimidation, Nature, Perception, or Survival",
+        "saving_throw_proficiencies": [
             "Strength",
             "Constitution"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "rages": 2,
+                "rage_damage": 2,
+                "weapon_mastery": 2,
                 "features": [
                     {
                         "name": "Rage",
-                        "description": "You can imbue yourself with a primal power called Rage, a force that grants you extraordinary might and resilience. You can enter it as a Bonus Action if you aren't wearing Heavy armor. You can enter your Rage the number of times shown for your Barbarian level in the Rages column of the Barbarian Features table. You Regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. While active, your Rage follows the rules below. Damage Resistance. You have Resistance to Bludgeoning, Piercing, and Slashing damage. Rage Damage. When you make an attack using Strength—with either a weapon or an Unarmed Strike—and deal damage to the target, you gain a bonus to the damage that increases as you gain levels as a Barbarian, as shown in the Rage Damage column of the Barbarian Features table. Strength Advantage. You have Advantage on Strength checks and Strength saving throws. No Concentration or Spells. You can't maintain Concentration, and you can't cast spells. Duration. The Rage lasts until the end of your next turn, and it ends early if you don Heavy armor or have the Incapacitated condition. If your Rage is still active on your next turn, you can extend the Rage for another round by doing one of the following: Make an attack roll against an enemy. Force an enemy to make a saving throw. Take a Bonus Action to extend your Rage. Each time the Rage is extended, it lasts until the end of your next turn. You can maintain a Rage for up to 10 minutes.",
+                        "description": "You can imbue yourself with a primal power called Rage, a force that grants you extraordinary might and resilience. You can enter it as a Bonus Action if you aren't wearing Heavy armor. You can enter your Rage the number of times shown for your Barbarian level in the Rages column of the Barbarian Features table. You Regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. While active, your Rage follows the rules below.<br/><br/><b>Damage Resistance.</b> You have Resistance to Bludgeoning, Piercing, and Slashing damage.<br/><br/><b>Rage Damage.</b> When you make an attack using Strength with either a weapon or an Unarmed Strike and deal damage to the target, you gain a bonus to the damage that increases as you gain levels as a Barbarian, as shown in the Rage Damage column of the Barbarian Features table.<br/><br/><b>Strength Advantage.</b> You have Advantage on Strength checks and Strength saving throws.<br/><br/><b>No Concentration or Spells.</b> You can't maintain Concentration, and you can't cast spells.<br/><br/><b>Duration.</b> The Rage lasts until the end of your next turn, and it ends early if you don Heavy armor or have the Incapacitated condition. If your Rage is still active on your next turn, you can extend the Rage for another round by doing one of the following:<ul><li>Make an attack roll against an enemy.</li><li>Force an enemy to make a saving throw.</li><li>Take a Bonus Action to extend your Rage.</li></ul><br/>Each time the Rage is extended, it lasts until the end of your next turn. You can maintain a Rage for up to 10 minutes.",
                         "level": 1,
                         "type": "class_feature"
                     },
@@ -67,7 +44,10 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "rages": 2,
+                "rage_damage": 2,
+                "weapon_mastery": 2,
                 "features": [
                     {
                         "name": "Danger Sense",
@@ -85,7 +65,10 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "rages": 3,
+                "rage_damage": 2,
+                "weapon_mastery": 2,
                 "features": [
                     {
                         "name": "Barbarian Subclass",
@@ -103,7 +86,10 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "rages": 3,
+                "rage_damage": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -115,7 +101,10 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "rages": 3,
+                "rage_damage": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -133,7 +122,10 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "rages": 4,
+                "rage_damage": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -145,7 +137,10 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "rages": 4,
+                "rage_damage": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Feral Instinct",
@@ -163,7 +158,10 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "rages": 4,
+                "rage_damage": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -175,7 +173,10 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "rages": 4,
+                "rage_damage": 3,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Brutal Strike",
@@ -187,7 +188,10 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "rages": 4,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -199,7 +203,10 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "rages": 4,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Relentless Rage",
@@ -211,7 +218,10 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "rages": 5,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -223,7 +233,10 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "rages": 5,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Improved Brutal Strike",
@@ -235,7 +248,10 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "rages": 5,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -247,7 +263,10 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "rages": 5,
+                "rage_damage": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Persistent Rage",
@@ -259,7 +278,10 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "rages": 5,
+                "rage_damage": 4,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -271,7 +293,10 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "rages": 6,
+                "rage_damage": 4,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Improved Brutal Strike",
@@ -283,7 +308,10 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "rages": 6,
+                "rage_damage": 4,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Indomitable Might",
@@ -295,7 +323,10 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "rages": 6,
+                "rage_damage": 4,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -307,7 +338,10 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "rages": 6,
+                "rage_damage": 4,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Primal Champion",
@@ -452,32 +486,22 @@
         "index": "bard",
         "name": "Bard",
         "class_description": "<p><b>Invoicing magic through music, dance, and verse.</b></p><p>Bards are experts at inspiring others, soothing wounds, disappointing foes, and creating illusions. Bards believe the multiverse was spoken into existence and that remnants of its Words of Creation still resonate and glimmer on every plane of existence. Bardic magic attempts to harness those words, which transcend any language. Anything can inspire a new song or tale, so Bards are fascinated by almost everything. They become masters of many things, including performing music, working magic, and making jests. A Bard's life is spent traveling, gathering lore, telling stories, and living on the gratitude of audiences, much like any other entertainer. But Bards' depth of knowledge and mastery of magic sets them apart.</p>",
-        "core_traits": {
-            "primary_ability": "Charisma",
-            "hit_point_die": "D8 per Bard level",
-            "saving_throw_proficiencies": "Dexterity and Charisma",
-            "skill_proficiencies": "Choose any 3 skills (see chapter 1)",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "Light armor",
-            "tool_proficiencies": "Choose 3 Musical Instruments (see chapter 6)",
-            "starting_equipment": "Choose A or B: (A) Leather Armor, 2 Daggers, Musical Instrument of your choice, Entertainer's Pack, and 19 GP; or (B) 90 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Light armor",
-            "3 Musical Instruments"
-        ],
-        "saving_throws": [
+        "primary_ability": "Charisma",
+        "hit_point_die": "8",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "Light armor",
+        "tool_proficiencies": "Choose 3 Musical Instruments (see chapter 6)",
+        "starting_equipment": "Choose A or B: (A) Leather Armor, 2 Daggers, Musical Instrument of your choice, Entertainer's Pack, and 19 GP; or (B) 90 GP",
+        "skill_proficiency_choices": "Choose any 3 (see chapter 1)",
+        "saving_throw_proficiencies": [
             "Dexterity",
             "Charisma"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "bardic_die": 6,
                 "features": [
                     {
                         "name": "Bardic Inspiration",
@@ -494,7 +518,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 4,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -508,7 +532,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "bardic_die": 6,
                 "features": [
                     {
                         "name": "Expertise",
@@ -525,7 +550,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 5,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -539,7 +564,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "bardic_die": 6,
                 "features": [
                     {
                         "name": "Bard Subclass",
@@ -550,7 +576,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 6,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -564,7 +590,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "bardic_die": 6,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -575,7 +602,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 7,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -589,7 +616,8 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "bardic_die": 8,
                 "features": [
                     {
                         "name": "Font of Inspiration",
@@ -600,7 +628,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 8,
+                    "prepared_spells": 8,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -614,7 +642,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "bardic_die": 8,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -625,7 +654,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 9,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -639,7 +668,8 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "bardic_die": 8,
                 "features": [
                     {
                         "name": "Countercharm",
@@ -650,7 +680,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 10,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -664,7 +694,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "bardic_die": 8,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -675,7 +706,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 11,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -689,7 +720,8 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "bardic_die": 8,
                 "features": [
                     {
                         "name": "Expertise",
@@ -700,7 +732,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -714,7 +746,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "bardic_die": 10,
                 "features": [
                     {
                         "name": "Magical Secrets",
@@ -725,7 +758,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -739,11 +772,12 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "bardic_die": 10,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -757,7 +791,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "bardic_die": 10,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -768,7 +803,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -782,11 +817,12 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "bardic_die": 10,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 16,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -800,7 +836,8 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "bardic_die": 10,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -811,7 +848,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 18,
+                    "prepared_spells": 18,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -825,11 +862,12 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "bardic_die": 12,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 19,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -843,7 +881,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "bardic_die": 12,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -854,7 +893,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 19,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -868,11 +907,12 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "bardic_die": 12,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 20,
+                    "prepared_spells": 20,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -886,7 +926,8 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "bardic_die": 12,
                 "features": [
                     {
                         "name": "Superior Inspiration",
@@ -897,7 +938,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -911,7 +952,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "bardic_die": 12,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -922,7 +964,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -936,7 +978,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "bardic_die": 12,
                 "features": [
                     {
                         "name": "Words of Creation",
@@ -947,7 +990,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1097,33 +1140,22 @@
         "index": "cleric",
         "name": "Cleric",
         "class_description": "<p><b>Clerics draw power from the realms of the gods and harness it to work miracles.</b></p><p>Blessed by a deity, a pantheon, or another immortal entity, a Cleric can reach out to the divine magic of the Outer Planes-where gods dwell-and channel it to bolster people and battle foes. Because their power is a divine gift, Clerics typically associate themselves with temples dedicated to the deity or other immortal force that unlocked their magic. Harnessing divine magic doesn't rely on specific training, yet Clerics might learn prayers and rituals that help them draw on power from the Outer Planes. Not every member of a temple or shrine is a Cleric. Some priests are called to a simple life of temple service, carrying out their devotion through prayer and rituals, not through magic. Many mortals claim to speak for the gods, but few can marshal the power of those gods the way a Cleric can.</p>",
-        "core_traits": {
-            "primary_ability": "Wisdom",
-            "hit_point_die": "D8 per Cleric level",
-            "saving_throw_proficiencies": "Wisdom and Charisma",
-            "skill_proficiencies": "Choose 2: History, Insight, Medicine, Persuasion, or Religion",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "Light and Medium armor and Shields",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Chain Shirt, Shield, Mace, Holy Symbol, Priest's Pack, and 7 GP; or (B) 110 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Light armor",
-            "Medium armor",
-            "Shields"
-        ],
-        "saving_throws": [
+        "primary_ability": "Wisdom",
+        "hit_point_die": "8",
+        "skill_proficiencies_choices": "Choose 2 from History, Insight, Medicine, Persuasion, or Religion",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "Light and Medium armor and Shields",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Chain Shirt, Shield, Mace, Holy Symbol, Priest's Pack, and 7 GP; or (B) 110 GP",
+        "saving_throw_proficiencies": [
             "Wisdom",
             "Charisma"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 0,
                 "features": [
                     {
                         "name": "Divine Order",
@@ -1140,7 +1172,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 4,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -1154,7 +1186,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Channel Divinity",
@@ -1165,7 +1198,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 5,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -1179,7 +1212,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Cleric Subclass",
@@ -1190,7 +1224,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 6,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -1204,7 +1238,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -1215,7 +1250,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 7,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -1229,7 +1264,8 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Seer Undead",
@@ -1240,7 +1276,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 8,
+                    "prepared_spells": 8,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -1254,7 +1290,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -1265,7 +1302,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 9,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1279,7 +1316,8 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Blessed Strikes",
@@ -1290,7 +1328,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 10,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1304,7 +1342,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -1315,7 +1354,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 11,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1329,11 +1368,12 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1347,7 +1387,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Divine Intervention",
@@ -1358,7 +1399,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1372,11 +1413,12 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1390,7 +1432,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -1401,7 +1444,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1415,11 +1458,12 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 16,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1433,7 +1477,8 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Improved Blessed Strikes",
@@ -1444,7 +1489,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 18,
+                    "prepared_spells": 18,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1458,11 +1503,12 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 19,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1476,7 +1522,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -1487,7 +1534,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 19,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1501,7 +1548,8 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -1512,7 +1560,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 20,
+                    "prepared_spells": 20,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1526,11 +1574,12 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 4,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1544,7 +1593,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 4,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -1555,7 +1605,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1569,7 +1619,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 4,
                 "features": [
                     {
                         "name": "Greater Divine Intervention",
@@ -1580,7 +1631,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 22,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -1881,33 +1932,25 @@
         "index": "druid",
         "name": "Druid",
         "class_description": "<p><b>Druids belong to ancient orders that call on the forces of nature.</b></p><p>Harnessing the magic of animals, plants, and the four elements, Druids heal, transform into animals, and wield elemental destruction. Revering nature above all, individual Druids gain their magic from nature, a nature deity, or both, and they typically unite with other Druids to perform rites that mark the passage of the seasons and other natural cycles. Druids are concerned with the delicate ecological balance that sustains plant and animal life and with the need for people to live in harmony with nature. Druids often guard sacred sites or watch over regions of unspoiled nature, but when a significant danger arises, Druids take a more active role as adventurers who combat the threat.</p>",
-        "core_traits": {
-            "primary_ability": "Wisdom",
-            "hit_point_die": "D8 per Druid level",
-            "saving_throw_proficiencies": "Intelligence and Wisdom",
-            "skill_proficiencies": "Choose 2: Arcana, Animal Handling, Insight, Medicine, Nature, Perception, Religion, or Survival",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "Light armor and Shields",
-            "tool_proficiencies": "Herbalism Kit",
-            "starting_equipment": "Choose A or B: (A) Leather Armor, Shield, Sickle, Druidic Focus (Quarterstaff), Explorer's Pack, Herbalism Kit, and 9 GP; or (B) 50 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Light armor",
-            "Shields",
-            "Herbalism Kit"
-        ],
-        "saving_throws": [
+        "primary_ability": "Wisdom",
+        "hit_point_die": "8",
+        "skill_proficiency_choices": "Choose 2: Arcana, Animal Handling, Insight, Medicine, Nature, Perception, Religion, or Survival",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "Light armor and Shields",
+        "tool_proficiencies": "Herbalism Kit",
+        "starting_equipment": "Choose A or B: (A) Leather Armor, Shield, Sickle, Druidic Focus (Quarterstaff), Explorer's Pack, Herbalism Kit, and 9 GP; or (B) 50 GP",
+        "saving_throw_proficiencies": [
             "Intelligence",
             "Wisdom"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "wild_shape": 0,
+                "beast_known_forms": 0,
+                "beast_max_cr": 0,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Spellcasting",
@@ -1930,6 +1973,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -1943,7 +1987,11 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "wild_shape": 2,
+                "beast_known_forms": 4,
+                "beast_max_cr": 0.25,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Wild Shape",
@@ -1960,6 +2008,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -1973,7 +2022,11 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "wild_shape": 2,
+                "beast_known_forms": 4,
+                "beast_max_cr": 0.25,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Druid Subclass",
@@ -1984,6 +2037,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -1997,7 +2051,11 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "wild_shape": 2,
+                "beast_known_forms": 6,
+                "beast_max_cr": 0.5,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2008,6 +2066,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -2021,7 +2080,11 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "wild_shape": 2,
+                "beast_known_forms": 6,
+                "beast_max_cr": 0.5,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Wild Resurgence",
@@ -2032,6 +2095,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -2045,7 +2109,11 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "wild_shape": 3,
+                "beast_known_forms": 6,
+                "beast_max_cr": 0.5,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2056,6 +2124,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2069,7 +2138,11 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "wild_shape": 3,
+                "beast_known_forms": 6,
+                "beast_max_cr": 0.5,
+                "beast_fly_speed": "No",
                 "features": [
                     {
                         "name": "Elemental Fury",
@@ -2080,6 +2153,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2093,7 +2167,11 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2104,6 +2182,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2117,10 +2196,15 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2134,7 +2218,11 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2145,6 +2233,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2158,10 +2247,15 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2175,7 +2269,11 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2186,6 +2284,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2199,10 +2298,15 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 17,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2216,7 +2320,11 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2227,6 +2335,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 17,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2240,7 +2349,11 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Improved Elemental Fury",
@@ -2251,6 +2364,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 18,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2264,7 +2378,11 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "wild_shape": 3,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2275,6 +2393,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 18,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2288,10 +2407,15 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "wild_shape": 4,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2305,7 +2429,11 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "wild_shape": 4,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Beast Spells",
@@ -2316,6 +2444,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 20,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2329,7 +2458,11 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "wild_shape": 4,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -2340,6 +2473,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 21,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2353,7 +2487,11 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "wild_shape": 4,
+                "beast_known_forms": 8,
+                "beast_max_cr": 1,
+                "beast_fly_speed": "Yes",
                 "features": [
                     {
                         "name": "Archdruid",
@@ -2364,6 +2502,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -2696,35 +2835,23 @@
         "index": "fighter",
         "name": "Fighter",
         "class_description": "<p><b>Fighters rule the battlefields.</b></p><p>Questing knights, loyal champions, elite soldiers, and hardened mercenaries—as Fighters, they all share an unparalleled prowess with weapons and armor. And they are well acquainted with death, both meeting it out and defying it. Fighters master various weapon techniques, and a well-equipped Fighter always has the right tool at hand for any combat situation. Likewise, a Fighter is adept with every form of armor. Beyond that basic degree of familiarity, each Fighter specializes in certain styles of combat. Some concentrate on archery, some on fighting with two weapons at once, and some on augmenting their martial skills with magic. This combination of broad ability and extensive specialization makes Fighters superior combatants.</p>",
-        "core_traits": {
-            "primary_ability": "Strength or Dexterity",
-            "hit_point_die": "D10 per Fighter level",
-            "saving_throw_proficiencies": "Strength and Constitution",
-            "skill_proficiencies": "Choose 2: Acrobatics, Animal Handling, Athletics, History, Insight, Intimidation, Persuasion, Perception, or Survival",
-            "weapon_proficiencies": "Simple and Martial weapons",
-            "armor_training": "Light, Medium, and Heavy armor and Shields",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A, B, or C: (A) Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer's Pack, and 4 GP; (B) Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Dungeoneer's Pack and 11 GP; or (C) 155 GP"
-        },
-        "hit_die": 10,
-        "hit_die_type": "d10",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons",
-            "Light armor",
-            "Medium armor",
-            "Heavy armor",
-            "Shields"
-        ],
-        "saving_throws": [
+        "primary_ability": "Strength or Dexterity",
+        "hit_point_die": "10",
+        "skill_proficiencies": "Choose 2: Acrobatics, Animal Handling, Athletics, History, Insight, Intimidation, Persuasion, Perception, or Survival",
+        "weapon_proficiencies": "Simple and Martial weapons",
+        "armor_training": "Light, Medium, and Heavy armor and Shields",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A, B, or C: (A) Chain Mail, Greatsword, Flail, 8 Javelins, Dungeoneer's Pack, and 4 GP; (B) Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Dungeoneer's Pack and 11 GP; or (C) 155 GP",
+        "saving_throw_proficiencies": [
             "Strength",
             "Constitution"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "second_wind": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Fighting Style",
@@ -2748,7 +2875,9 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "second_wind": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Action Surge",
@@ -2766,7 +2895,9 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "second_wind": 2,
+                "weapon_mastery": 3,
                 "features": [
                     {
                         "name": "Fighter Subclass",
@@ -2774,11 +2905,27 @@
                         "level": 3,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 6,
+                    "energy_die_num": 4
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 3,
+                    "spell_slots_level_1": 2,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2786,11 +2933,27 @@
                         "level": 4,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 6,
+                    "energy_die_num": 4
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -2804,11 +2967,27 @@
                         "level": 5,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2816,11 +2995,27 @@
                         "level": 6,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2828,11 +3023,27 @@
                         "level": 7,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 5,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2840,11 +3051,27 @@
                         "level": 8,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 6,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "second_wind": 3,
+                "weapon_mastery": 4,
                 "features": [
                     {
                         "name": "Indomitable",
@@ -2858,11 +3085,27 @@
                         "level": 9,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 8
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 2,
+                    "prepared_spells": 6,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2870,11 +3113,27 @@
                         "level": 10,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 8,
+                    "energy_die_num": 8
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 7,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Two Extra Attacks",
@@ -2882,11 +3141,27 @@
                         "level": 11,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 8
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 8,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2894,11 +3169,27 @@
                         "level": 12,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 8
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 8,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Indomitable",
@@ -2912,11 +3203,27 @@
                         "level": 13,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 9,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2924,11 +3231,27 @@
                         "level": 14,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 10,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "second_wind": 4,
+                "weapon_mastery": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -2936,11 +3259,27 @@
                         "level": 15,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 10,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "second_wind": 4,
+                "weapon_mastery": 6,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2948,11 +3287,27 @@
                         "level": 16,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 11,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "second_wind": 4,
+                "weapon_mastery": 6,
                 "features": [
                     {
                         "name": "Action Surge",
@@ -2966,11 +3321,27 @@
                         "level": 17,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 1,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "second_wind": 4,
+                "weapon_mastery": 6,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -2978,11 +3349,27 @@
                         "level": 18,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 11,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "second_wind": 4,
+                "weapon_mastery": 6,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -2990,11 +3377,32 @@
                         "level": 19,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                },
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 12,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 1
+                }
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "second_wind": 4,
+                "weapon_mastery": 6,
+                "energy": {
+                    "required_major": "Psi Warrior",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                },
                 "features": [
                     {
                         "name": "Three Extra Attacks",
@@ -3002,7 +3410,16 @@
                         "level": 20,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Eldritch Knight",
+                    "cantrips_known": 3,
+                    "prepared_spells": 13,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 1
+                }
             }
         ],
         "majors": [
@@ -3190,31 +3607,24 @@
         "index": "monk",
         "name": "Monk",
         "class_description": "<p><b>Monks use rigorous combat training and mental discipline to align themselves with the multiverse and focus their internal reservoirs of power.</b></p><p>Different Monks conceptualize this power in various ways: as breath, energy, life force, essence, or self, for example. Whether channeled as a striking display of martial prowess or as a subtler manifestation of defense and speed, this power infuses all that a Monk does. Monks focus their internal power to create extraordinary, even supernatural, effects. They channel uncanny speed and strength into their attacks, with or without the use of weapons. In a Monk's hands, even the most basic weapons can become sophisticated implements of combat mastery. Many Monks find that a structured life of ascetic withdrawal helps them cultivate the physical and mental focus they need to harness their power. Other Monks believe that immersing themselves in the vibrant confusion of life helps to fuel their determination and discipline. Monks generally view adventures as tests of their physical and mental development. They are driven by a desire to accomplish a greater mission than merely slaying monsters and plundering treasure; they strive to turn themselves into living weapons.</p>",
-        "core_traits": {
-            "primary_ability": "Dexterity and Wisdom",
-            "hit_point_die": "D8 per Monk level",
-            "saving_throw_proficiencies": "Strength and Dexterity",
-            "skill_proficiencies": "Choose 2: Acrobatics, Athletics, History, Insight, Religion, or Stealth",
-            "weapon_proficiencies": "Simple weapons and Martial weapons that have the Light property",
-            "armor_training": "None",
-            "tool_proficiencies": "Choose one type of Artisan's Tools or Musical Instrument",
-            "starting_equipment": "Choose A or B: (A) Spear, 2 Daggers, Artisan's Tools or Musical Instrument chosen for the tool proficiency above, Explorer's Pack, and 11 GP; or (B) 50 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons with the Light property"
-        ],
-        "saving_throws": [
+        "primary_ability": "Dexterity and Wisdom",
+        "hit_point_die": "8",
+        "skill_proficiencies": "Choose 2: Acrobatics, Athletics, History, Insight, Religion, or Stealth",
+        "weapon_proficiencies": "Simple weapons and Martial weapons that have the Light property",
+        "armor_training": "None",
+        "tool_proficiencies": "Choose one type of Artisan's Tools or Musical Instrument",
+        "starting_equipment": "Choose A or B: (A) Spear, 2 Daggers, Artisan's Tools or Musical Instrument chosen for the tool proficiency above, Explorer's Pack, and 11 GP; or (B) 50 GP",
+        "saving_throw_proficiencies": [
             "Strength",
             "Dexterity"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "martial_arts_die": 6,
+                "focus_points": 0,
+                "unarmored_movement_increase": 0,
                 "features": [
                     {
                         "name": "Martial Arts",
@@ -3232,7 +3642,10 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "martial_arts_die": 6,
+                "focus_points": 2,
+                "unarmored_movement_increase": 10,
                 "features": [
                     {
                         "name": "Monk's Focus",
@@ -3256,7 +3669,10 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "martial_arts_die": 6,
+                "focus_points": 3,
+                "unarmored_movement_increase": 10,
                 "features": [
                     {
                         "name": "Monk Subclass",
@@ -3274,7 +3690,10 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "martial_arts_die": 6,
+                "focus_points": 4,
+                "unarmored_movement_increase": 10,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3286,7 +3705,10 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "martial_arts_die": 8,
+                "focus_points": 5,
+                "unarmored_movement_increase": 10,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -3304,7 +3726,10 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "martial_arts_die": 8,
+                "focus_points": 6,
+                "unarmored_movement_increase": 15,
                 "features": [
                     {
                         "name": "Empowered Strikes",
@@ -3316,7 +3741,10 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "martial_arts_die": 8,
+                "focus_points": 7,
+                "unarmored_movement_increase": 15,
                 "features": [
                     {
                         "name": "Evasion",
@@ -3328,7 +3756,10 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "martial_arts_die": 8,
+                "focus_points": 8,
+                "unarmored_movement_increase": 15,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3340,7 +3771,10 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "martial_arts_die": 8,
+                "focus_points": 9,
+                "unarmored_movement_increase": 15,
                 "features": [
                     {
                         "name": "Acrobatic Movement",
@@ -3352,7 +3786,10 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "martial_arts_die": 8,
+                "focus_points": 10,
+                "unarmored_movement_increase": 20,
                 "features": [
                     {
                         "name": "Heightened Focus",
@@ -3370,7 +3807,10 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "martial_arts_die": 10,
+                "focus_points": 11,
+                "unarmored_movement_increase": 20,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -3382,7 +3822,10 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "martial_arts_die": 10,
+                "focus_points": 12,
+                "unarmored_movement_increase": 20,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3394,7 +3837,10 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "martial_arts_die": 10,
+                "focus_points": 13,
+                "unarmored_movement_increase": 20,
                 "features": [
                     {
                         "name": "Deflect Energy",
@@ -3406,7 +3852,10 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "martial_arts_die": 10,
+                "focus_points": 14,
+                "unarmored_movement_increase": 25,
                 "features": [
                     {
                         "name": "Disciplined Survivor",
@@ -3418,7 +3867,10 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "martial_arts_die": 10,
+                "focus_points": 15,
+                "unarmored_movement_increase": 25,
                 "features": [
                     {
                         "name": "Perfect Focus",
@@ -3430,7 +3882,10 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "martial_arts_die": 10,
+                "focus_points": 16,
+                "unarmored_movement_increase": 25,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3442,7 +3897,10 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "martial_arts_die": 12,
+                "focus_points": 17,
+                "unarmored_movement_increase": 25,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -3454,7 +3912,10 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "martial_arts_die": 12,
+                "focus_points": 18,
+                "unarmored_movement_increase": 30,
                 "features": [
                     {
                         "name": "Superior Defense",
@@ -3466,7 +3927,10 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "martial_arts_die": 12,
+                "focus_points": 19,
+                "unarmored_movement_increase": 30,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -3478,7 +3942,10 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "martial_arts_die": 12,
+                "focus_points": 20,
+                "unarmored_movement_increase": 30,
                 "features": [
                     {
                         "name": "Body and Mind",
@@ -3642,35 +4109,22 @@
         "index": "paladin",
         "name": "Paladin",
         "class_description": "<p><b>Paladins are united by their oaths to stand against the forces of annihilation and corruption.</b></p><p>Whether sworn before a god's altar, in a sacred glade before nature spirits, or in a moment of desperation and grief with the dead as the only witnesses, a Paladin's oath is a powerful bond. It is a source of power that turns a devout warrior into a blessed champion. Paladins train to learn the skills of combat, mastering a variety of weapons and armor. Even so, their martial skills are secondary to the magical power they wield: power to heal the injured, smite their foes, and protect the helpless and those who fight at their side. Almost by definition, the life of a Paladin is an adventuring life, for every Paladin lives on the front lines of the cosmic struggle against annihilation.</p>",
-        "core_traits": {
-            "primary_ability": "Strength and Charisma",
-            "hit_point_die": "D10 per Paladin level",
-            "saving_throw_proficiencies": "Wisdom and Charisma",
-            "skill_proficiencies": "Choose 2: Athletics, Insight, Intimidation, Medicine, Persuasion, or Religion",
-            "weapon_proficiencies": "Simple and Martial weapons",
-            "armor_training": "Light, Medium, and Heavy armor and Shields",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest's Pack, and 9 GP; or (B) 150 GP"
-        },
-        "hit_die": 10,
-        "hit_die_type": "d10",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons",
-            "Light armor",
-            "Medium armor",
-            "Heavy armor",
-            "Shields"
-        ],
-        "saving_throws": [
+        "primary_ability": "Strength and Charisma",
+        "hit_point_die": "10",
+        "skill_proficiencies": "Choose 2: Athletics, Insight, Intimidation, Medicine, Persuasion, or Religion",
+        "weapon_proficiencies": "Simple and Martial weapons",
+        "armor_training": "Light, Medium, and Heavy armor and Shields",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Chain Mail, Shield, Longsword, 6 Javelins, Holy Symbol, Priest's Pack, and 9 GP; or (B) 150 GP",
+        "saving_throw_proficiencies": [
             "Wisdom",
             "Charisma"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 0,
                 "features": [
                     {
                         "name": "Lay On Hands",
@@ -3692,7 +4146,8 @@
                     }
                 ],
                 "spellcasting": {
-                    "spell_slots_level_1": 0,
+                    "prepared_spells": 2,
+                    "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
                     "spell_slots_level_4": 0,
@@ -3701,7 +4156,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 0,
                 "features": [
                     {
                         "name": "Fighting Style",
@@ -3717,6 +4173,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 3,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -3726,7 +4183,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Channel Divinity",
@@ -3742,6 +4200,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -3751,7 +4210,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3761,6 +4221,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -3770,7 +4231,8 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -3786,6 +4248,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -3795,7 +4258,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Aura of Protection",
@@ -3805,6 +4269,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -3814,7 +4279,8 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -3824,6 +4290,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -3833,7 +4300,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3843,6 +4311,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -3852,7 +4321,8 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Abjure Foes",
@@ -3862,6 +4332,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -3871,7 +4342,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 2,
                 "features": [
                     {
                         "name": "Aura of Courage",
@@ -3881,6 +4353,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -3890,7 +4363,8 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Radiant Strikes",
@@ -3900,6 +4374,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -3909,7 +4384,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3919,6 +4395,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -3928,7 +4405,8 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -3938,6 +4416,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -3947,7 +4426,8 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Restoring Touch",
@@ -3957,6 +4437,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -3966,7 +4447,8 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -3976,6 +4458,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -3985,7 +4468,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -3995,6 +4479,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4004,7 +4489,8 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4014,6 +4500,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4023,7 +4510,8 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Aura Expansion",
@@ -4033,6 +4521,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4042,7 +4531,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -4052,6 +4542,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4061,7 +4552,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "channel_divinity": 3,
                 "features": [
                     {
                         "name": "(capstone - depends on subclass)",
@@ -4071,6 +4563,7 @@
                     }
                 ],
                 "spellcasting": {
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4372,34 +4865,22 @@
         "index": "ranger",
         "name": "Ranger",
         "class_description": "<p><b>Away from bustling cities, amid the trees of trackless forests and across wide plains, rangers keep their unending watch in the wilderness.</b></p><p>Rangers learn to track their quarry as a predator does, moving stealthily through the wilds and hiding themselves in brush and rubble. Thanks to their deep connection with nature, Rangers can also cast spells that harness primal powers of the wilderness. A Ranger's talents and magic are honed with deadly focus to protect the world from the ravages of monsters and tyrants.</p>",
-        "core_traits": {
-            "primary_ability": "Dexterity and Wisdom",
-            "hit_point_die": "D10 per Ranger level",
-            "saving_throw_proficiencies": "Strength and Dexterity",
-            "skill_proficiencies": "Choose 3: Animal Handling, Athletics, Insight, Investigation, Nature, Perception, Stealth, or Survival",
-            "weapon_proficiencies": "Simple and Martial weapons",
-            "armor_training": "Light and Medium armor and Shields",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Druidic Focus (sprig of mistletoe), Explorer's Pack, and 7 GP; or (B) 50 GP"
-        },
-        "hit_die": 10,
-        "hit_die_type": "d10",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons",
-            "Light armor",
-            "Medium armor",
-            "Shields"
-        ],
-        "saving_throws": [
+        "primary_ability": "Dexterity and Wisdom",
+        "hit_point_die": "10",
+        "skill_proficiencies": "Choose 3: Animal Handling, Athletics, Insight, Investigation, Nature, Perception, Stealth, or Survival",
+        "weapon_proficiencies": "Simple and Martial weapons",
+        "armor_training": "Light and Medium armor and Shields",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Studded Leather Armor, Scimitar, Shortsword, Longbow, 20 Arrows, Quiver, Druidic Focus (sprig of mistletoe), Explorer's Pack, and 7 GP; or (B) 50 GP",
+        "saving_throw_proficiencies": [
             "Strength",
             "Dexterity"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "favored_enemy": 2,
                 "features": [
                     {
                         "name": "Spellcasting",
@@ -4421,8 +4902,8 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 0,
-                    "spell_slots_level_1": 0,
+                    "prepared_spells": 2,
+                    "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
                     "spell_slots_level_4": 0,
@@ -4431,7 +4912,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "favored_enemy": 2,
                 "features": [
                     {
                         "name": "Deft Explorer",
@@ -4447,7 +4929,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 2,
+                    "prepared_spells": 3,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -4457,7 +4939,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "favored_enemy": 2,
                 "features": [
                     {
                         "name": "Ranger Subclass",
@@ -4467,7 +4950,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 3,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -4477,7 +4960,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "favored_enemy": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4487,7 +4971,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 3,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -4497,7 +4981,8 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "favored_enemy": 3,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -4507,7 +4992,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 4,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -4517,7 +5002,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "favored_enemy": 3,
                 "features": [
                     {
                         "name": "Roving",
@@ -4527,7 +5013,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 4,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -4537,7 +5023,8 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "favored_enemy": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4547,7 +5034,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 5,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -4557,7 +5044,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "favored_enemy": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4567,7 +5055,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 5,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -4577,7 +5065,8 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "favored_enemy": 4,
                 "features": [
                     {
                         "name": "Expertise",
@@ -4587,7 +5076,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 6,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -4597,7 +5086,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "favored_enemy": 4,
                 "features": [
                     {
                         "name": "Tireless",
@@ -4607,7 +5097,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 6,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -4617,7 +5107,8 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "favored_enemy": 4,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4627,7 +5118,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 7,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4637,7 +5128,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "favored_enemy": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4647,7 +5139,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 7,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4657,7 +5149,8 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "favored_enemy": 5,
                 "features": [
                     {
                         "name": "Relentless Hunter",
@@ -4667,7 +5160,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 8,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4677,7 +5170,8 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "favored_enemy": 5,
                 "features": [
                     {
                         "name": "Nature's Veil",
@@ -4687,7 +5181,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 8,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4697,7 +5191,8 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "favored_enemy": 5,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4707,7 +5202,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 9,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4717,7 +5212,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "favored_enemy": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4727,7 +5223,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 9,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4737,7 +5233,8 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "favored_enemy": 6,
                 "features": [
                     {
                         "name": "Precise Hunter",
@@ -4747,7 +5244,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 10,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4757,7 +5254,8 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "favored_enemy": 6,
                 "features": [
                     {
                         "name": "Feral Senses",
@@ -4767,7 +5265,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 10,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4777,7 +5275,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "favored_enemy": 6,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -4787,7 +5286,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 11,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4797,7 +5296,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "favored_enemy": 6,
                 "features": [
                     {
                         "name": "Foe Slayer",
@@ -4807,7 +5307,7 @@
                     }
                 ],
                 "spellcasting": {
-                    "spells_known": 11,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -4997,33 +5497,22 @@
         "index": "rogue",
         "name": "Rogue",
         "class_description": "<p><b>Rogues rely on cunning, stealth, and their foes' vulnerabilities to get the upper hand in any situation.</b></p><p>They have a knack for finding the solution to just about any problem. A few even learn magical tricks to supplement their other abilities. Many Rogues focus on stealth and deception, while others refine skills that help them in a dungeon environment, such as climbing, finding and disarming traps, and opening locks. In combat, Rogues prioritize subtle strikes over brute strength. They would rather make one precise strike than wear an opponent down with a barrage of blows. Some Rogues began their careers as criminals, while others used their cunning to fight crime. Whatever a Rogue's relation to the law, no common criminal or officer of the law can match the subtle brilliance of the greatest Rogues.</p>",
-        "core_traits": {
-            "primary_ability": "Dexterity",
-            "hit_point_die": "D8 per Rogue level",
-            "saving_throw_proficiencies": "Dexterity and Intelligence",
-            "skill_proficiencies": "Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, Sleight of Hand, or Stealth",
-            "weapon_proficiencies": "Simple weapons and Martial weapons that have the Finesse or Light property",
-            "armor_training": "Light armor",
-            "tool_proficiencies": "Thieves' Tools",
-            "starting_equipment": "Choose A or B: (A) Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves' Tools, Burglar's Pack, and 8 GP; or (B) 100 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons",
-            "Martial weapons with Finesse or Light property",
-            "Light armor",
-            "Thieves' Tools"
-        ],
-        "saving_throws": [
+        "primary_ability": "Dexterity",
+        "hit_point_die": "8",
+        "skill_proficiencies": "Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, Sleight of Hand, or Stealth",
+        "weapon_proficiencies": "Simple weapons and Martial weapons that have the Finesse or Light property",
+        "armor_training": "Light armor",
+        "tool_proficiencies": "Thieves' Tools",
+        "starting_equipment": "Choose A or B: (A) Leather Armor, 2 Daggers, Shortsword, Shortbow, 20 Arrows, Quiver, Thieves' Tools, Burglar's Pack, and 8 GP; or (B) 100 GP",
+        "saving_throw_proficiencies": [
             "Dexterity",
             "Intelligence"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sneak_attack_num_d6": 1,
                 "features": [
                     {
                         "name": "Expertise",
@@ -5049,11 +5538,21 @@
                         "level": 1,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 0,
+                    "prepared_spells": 0,
+                    "spell_slots_level_1": 0,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sneak_attack_num_d6": 1,
                 "features": [
                     {
                         "name": "Cunning Action",
@@ -5061,11 +5560,21 @@
                         "level": 2,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 0,
+                    "prepared_spells": 0,
+                    "spell_slots_level_1": 0,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                }
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sneak_attack_num_d6": 2,
                 "features": [
                     {
                         "name": "Rogue Subclass",
@@ -5079,11 +5588,26 @@
                         "level": 3,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 3,
+                    "spell_slots_level_1": 2,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 6,
+                    "energy_die_num": 4
+                }
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sneak_attack_num_d6": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5091,11 +5615,26 @@
                         "level": 4,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 6,
+                    "energy_die_num": 4
+                }
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sneak_attack_num_d6": 3,
                 "features": [
                     {
                         "name": "Cunning Strike",
@@ -5109,11 +5648,26 @@
                         "level": 5,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                }
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sneak_attack_num_d6": 3,
                 "features": [
                     {
                         "name": "Expertise",
@@ -5121,11 +5675,26 @@
                         "level": 6,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 4,
+                    "spell_slots_level_1": 3,
+                    "spell_slots_level_2": 0,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                }
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sneak_attack_num_d6": 4,
                 "features": [
                     {
                         "name": "Evasion",
@@ -5139,11 +5708,26 @@
                         "level": 7,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 5,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                }
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sneak_attack_num_d6": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5151,11 +5735,26 @@
                         "level": 8,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 6,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 6
+                }
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sneak_attack_num_d6": 5,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5163,11 +5762,26 @@
                         "level": 9,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 3,
+                    "prepared_spells": 6,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 8
+                }
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sneak_attack_num_d6": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5175,11 +5789,26 @@
                         "level": 10,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 7,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 2,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 8,
+                    "energy_die_num": 8
+                }
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sneak_attack_num_d6": 6,
                 "features": [
                     {
                         "name": "Improved Cunning Strike",
@@ -5187,11 +5816,26 @@
                         "level": 11,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 8,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 8
+                }
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sneak_attack_num_d6": 6,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5199,11 +5843,26 @@
                         "level": 12,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 8,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 0,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 8
+                }
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sneak_attack_num_d6": 7,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5211,11 +5870,26 @@
                         "level": 13,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 9,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                }
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sneak_attack_num_d6": 7,
                 "features": [
                     {
                         "name": "Devious Strikes",
@@ -5223,11 +5897,26 @@
                         "level": 14,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 10,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                }
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sneak_attack_num_d6": 8,
                 "features": [
                     {
                         "name": "Slippery Mind",
@@ -5235,11 +5924,26 @@
                         "level": 15,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 10,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 2,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                }
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sneak_attack_num_d6": 8,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5247,11 +5951,26 @@
                         "level": 16,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 11,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 10,
+                    "energy_die_num": 10
+                }
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sneak_attack_num_d6": 9,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5259,11 +5978,26 @@
                         "level": 17,
                         "type": "subclass_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 11,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 0
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                }
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sneak_attack_num_d6": 9,
                 "features": [
                     {
                         "name": "Elusive",
@@ -5271,11 +6005,26 @@
                         "level": 18,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 12,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 1
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                }
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sneak_attack_num_d6": 10,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -5283,11 +6032,26 @@
                         "level": 19,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 12,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 1
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                }
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sneak_attack_num_d6": 10,
                 "features": [
                     {
                         "name": "Stroke of Luck",
@@ -5295,7 +6059,21 @@
                         "level": 20,
                         "type": "class_feature"
                     }
-                ]
+                ],
+                "spellcasting": {
+                    "required_major": "Arcane Trickster",
+                    "cantrips_known": 4,
+                    "prepared_spells": 13,
+                    "spell_slots_level_1": 4,
+                    "spell_slots_level_2": 3,
+                    "spell_slots_level_3": 3,
+                    "spell_slots_level_4": 1
+                },
+                "energy": {
+                    "required_major": "Soulknife",
+                    "energy_die_type": 12,
+                    "energy_die_num": 12
+                }
             }
         ],
         "majors": [
@@ -5455,30 +6233,22 @@
         "index": "sorcerer",
         "name": "Sorcerer",
         "class_description": "<p><b>Sorcereers wield innate magic that is stamped into their being.</b></p><p>Some Sorcerers can't name the origin of their power, while others trace it to strange events in their personal or family history. The blessing of a dragon or a diviner at a baby's birth or the strike of lightning from a clear sky might spark a Sorcerer's gift. So too might the gift of a deity, exposure to the strange magic of another plane of existence, or a glimpse into the inner workings of reality. Whatever the origin, the result is an indelible mark on the Sorcerer, a churning magic that can be passed down through generations. Sorcerers don't learn magic; the raw, roiling power of magic is part of them. The essential art of a Sorcerer is learning to harness and channel that innate magic, allowing the Sorcerer to discover new and startling ways to unleash their power. As Sorcerers master their innate magic, they grow more attuned to its origin, developing distinct powers that reflect its source. Sorcerers are rare. Some family lines produce exactly one Sorcerer in every generation, but most of the time, the talents of sorcery appear as a fluke. People who have this magical power soon discover that it doesn't like to stay quiet. A Sorcerer's magic wants to be wielded.</p>",
-        "core_traits": {
-            "primary_ability": "Charisma",
-            "hit_point_die": "D6 per Sorcerer level",
-            "saving_throw_proficiencies": "Constitution and Charisma",
-            "skill_proficiencies": "Choose 2: Arcana, Deception, Insight, Intimidation, Persuasion, or Religion",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "None",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Spear, 2 Daggers, Arcane Focus (crystal), Dungeoneer's Pack, and 28 GP; or (B) 50 GP"
-        },
-        "hit_die": 6,
-        "hit_die_type": "d6",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons"
-        ],
-        "saving_throws": [
+        "primary_ability": "Charisma",
+        "hit_point_die": "6",
+        "skill_proficiencies": "Choose 2: Arcana, Deception, Insight, Intimidation, Persuasion, or Religion",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "None",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Spear, 2 Daggers, Arcane Focus (crystal), Dungeoneer's Pack, and 28 GP; or (B) 50 GP",
+        "saving_throw_proficiencies": [
             "Constitution",
             "Charisma"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sorcery_points": 0,
                 "features": [
                     {
                         "name": "Spellcasting",
@@ -5495,7 +6265,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 2,
+                    "prepared_spells": 2,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -5509,7 +6279,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sorcery_points": 2,
                 "features": [
                     {
                         "name": "Font of Magic",
@@ -5526,7 +6297,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 3,
+                    "prepared_spells": 3,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -5540,7 +6311,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sorcery_points": 3,
                 "features": [
                     {
                         "name": "Sorcerer Subclass",
@@ -5551,7 +6323,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 4,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -5565,7 +6337,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "sorcery_points": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5576,7 +6349,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 5,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -5590,7 +6363,8 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sorcery_points": 5,
                 "features": [
                     {
                         "name": "Sorcerous Restoration",
@@ -5601,7 +6375,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 6,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -5615,7 +6389,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sorcery_points": 6,
                 "features": [
                     {
                         "name": "Sorcery Incarnate",
@@ -5626,7 +6401,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 7,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5640,11 +6415,12 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sorcery_points": 7,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 8,
+                    "prepared_spells": 8,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5658,7 +6434,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "sorcery_points": 8,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5669,7 +6446,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 9,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5683,11 +6460,12 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sorcery_points": 9,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
-                    "spells_known": 10,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5701,7 +6479,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sorcery_points": 10,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5712,7 +6491,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 11,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5726,11 +6505,12 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sorcery_points": 11,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5744,7 +6524,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "sorcery_points": 12,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5755,7 +6536,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5769,11 +6550,12 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sorcery_points": 13,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 13,
+                    "prepared_spells": 13,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5787,7 +6569,8 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sorcery_points": 14,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5798,7 +6581,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 13,
+                    "prepared_spells": 13,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5812,11 +6595,12 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 5,
+                "sorcery_points": 15,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5830,7 +6614,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "sorcery_points": 16,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -5841,7 +6626,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5855,7 +6640,8 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sorcery_points": 17,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -5866,7 +6652,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5880,11 +6666,12 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sorcery_points": 18,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5898,7 +6685,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sorcery_points": 19,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -5909,7 +6697,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -5923,7 +6711,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "sorcery_points": 20,
                 "features": [
                     {
                         "name": "Arcane Apotheosis",
@@ -5934,7 +6723,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 6,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -6223,30 +7012,22 @@
         "index": "warlock",
         "name": "Warlock",
         "class_description": "<p><b>Warlock's quest for knowledge that lies hidden in the fabric of the multiverse.</b></p><p>They often begin their search for magical power by delving into tomes of forbidden lore, dabbling in invocations meant to attract the power of extraplanar beings, or seeking places of power where the influence of these beings can be felt. In no time, each Warlock is drawn into a binding pact with a powerful patron. Drawing on the ancient knowledge of beings such as angels, archfey, demons, devils, hags, and alien entities of the Far Realm, Warlocks piece together arcane secrets to bolster their own power. Warlocks view their patrons as resources, as means to the end of achieving magical power. Some Warlocks respect, revere, or even love their patrons; some serve their patrons grudgingly; and some seek to undermine their patrons even as they wield the power their patrons have given them. Once a pact is made, a Warlock's thirst for knowledge and power can't be slaked with mere study. Most Warlocks spend their days pursuing greater power and deeper knowledge, which typically means some kind of adventure.</p>",
-        "core_traits": {
-            "primary_ability": "Charisma",
-            "hit_point_die": "D8 per Warlock level",
-            "saving_throw_proficiencies": "Wisdom and Charisma",
-            "skill_proficiencies": "Choose 2: Arcana, Deception, History, Intimidation, Investigation, Nature, or Religion",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "Light armor",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb), Book (occult lore), Scholar's Pack and 15 GP; or (B) 100 GP"
-        },
-        "hit_die": 8,
-        "hit_die_type": "d8",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons"
-        ],
-        "saving_throws": [
+        "primary_ability": "Charisma",
+        "hit_point_die": "8",
+        "skill_proficiencies": "Choose 2: Arcana, Deception, History, Intimidation, Investigation, Nature, or Religion",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "Light armor",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) Leather Armor, Sickle, 2 Daggers, Arcane Focus (orb), Book (occult lore), Scholar's Pack and 15 GP; or (B) 100 GP",
+        "saving_throw_proficiencies": [
             "Wisdom",
             "Charisma"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "eldritch_invocations": 1,
                 "features": [
                     {
                         "name": "Eldritch Invocations",
@@ -6263,7 +7044,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 2,
+                    "prepared_spells": 2,
                     "spell_slots_level_1": 1,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6277,7 +7058,8 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "eldritch_invocations": 3,
                 "features": [
                     {
                         "name": "Magical Cunning",
@@ -6288,7 +7070,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 3,
+                    "prepared_spells": 3,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6302,7 +7084,8 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "eldritch_invocations": 3,
                 "features": [
                     {
                         "name": "Warlock Subclass",
@@ -6313,7 +7096,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 2,
-                    "spells_known": 4,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -6327,7 +7110,8 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
+                "eldritch_invocations": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -6338,7 +7122,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 5,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -6352,11 +7136,12 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "eldritch_invocations": 5,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 6,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 2,
@@ -6370,7 +7155,8 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "eldritch_invocations": 5,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -6381,7 +7167,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 7,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 2,
@@ -6395,11 +7181,12 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "eldritch_invocations": 6,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 8,
+                    "prepared_spells": 8,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6413,7 +7200,8 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
+                "eldritch_invocations": 6,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -6424,7 +7212,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 9,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6438,7 +7226,8 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "eldritch_invocations": 7,
                 "features": [
                     {
                         "name": "Contact Patron",
@@ -6449,7 +7238,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
-                    "spells_known": 10,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6463,7 +7252,8 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "eldritch_invocations": 7,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -6474,7 +7264,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 10,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6488,7 +7278,8 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "eldritch_invocations": 7,
                 "features": [
                     {
                         "name": "Mystic Arcanum (level 6 spell)",
@@ -6499,7 +7290,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 11,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6513,7 +7304,8 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
+                "eldritch_invocations": 8,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -6524,7 +7316,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 11,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6538,7 +7330,8 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "eldritch_invocations": 8,
                 "features": [
                     {
                         "name": "Mystic Arcanum (level 7 spell)",
@@ -6549,7 +7342,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6563,11 +7356,12 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "eldritch_invocations": 8,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 12,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6581,7 +7375,8 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "eldritch_invocations": 9,
                 "features": [
                     {
                         "name": "Mystic Arcanum (level 8 spell)",
@@ -6592,7 +7387,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 13,
+                    "prepared_spells": 13,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6606,7 +7401,8 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
+                "eldritch_invocations": 9,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -6617,7 +7413,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 13,
+                    "prepared_spells": 13,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6631,7 +7427,8 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "eldritch_invocations": 9,
                 "features": [
                     {
                         "name": "Mystic Arcanum (level 9 spell)",
@@ -6642,7 +7439,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6656,11 +7453,12 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "eldritch_invocations": 10,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 14,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6674,7 +7472,8 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "eldritch_invocations": 10,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -6685,7 +7484,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -6699,7 +7498,8 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
+                "eldritch_invocations": 10,
                 "features": [
                     {
                         "name": "Eldritch Master",
@@ -6710,7 +7510,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
-                    "spells_known": 15,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 0,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -7028,30 +7828,21 @@
         "index": "wizard",
         "name": "Wizard",
         "class_description": "<p><b>Wizards are defined by their exhaustive study of magic's inner workings.</b></p><p>They cast spells of explosive fire, arcing lightning, subtle deception, and spectacular transformations. Their magic conjures monsters from other planes of existence, glimpses the future, or forms protective barriers. Their mightiest spells change one substance into another, call meteors from the sky, or open portals to other worlds. Most Wizards share a scholarly approach to magic. They examine the theoretical underpinnings of magic, particularly the categorization of spells into schools of magic. Renowned Wizards such as Bigby, Tasha, Mordenkainen, and Yolande have built on their studies to invent iconic spells now used across the multiverse. The closest a Wizard is likely to come to an ordinary life is working as a sage or lecturer. Other Wizards sell their services as advisers, serve in military forces, or pursue lives of crime or domination. But the lure of knowledge calls even the most unadventurous Wizards from the safety of their libraries and laboratories and into crumbling ruins and lost cities. Most Wizards believe that their counterparts in ancient civilizations knew secrets of magic that have been lost to the ages, and discovering those secrets could unlock the path to a power greater than any magic available in the present age.</p>",
-        "core_traits": {
-            "primary_ability": "Intelligence",
-            "hit_point_die": "D6 per Wizard level",
-            "saving_throw_proficiencies": "Intelligence and Wisdom",
-            "skill_proficiencies": "Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion",
-            "weapon_proficiencies": "Simple weapons",
-            "armor_training": "None",
-            "tool_proficiencies": "",
-            "starting_equipment": "Choose A or B: (A) 2 Daggers, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, and 5 GP; or (B) 55 GP"
-        },
-        "hit_die": 6,
-        "hit_die_type": "d6",
-        "proficiency_choices": [],
-        "proficiencies": [
-            "Simple weapons"
-        ],
-        "saving_throws": [
+        "primary_ability": "Intelligence",
+        "hit_point_die": "D6 per Wizard level",
+        "skill_proficiencies": "Choose 2: Arcana, History, Insight, Investigation, Medicine, Nature, or Religion",
+        "weapon_proficiencies": "Simple weapons",
+        "armor_training": "None",
+        "tool_proficiencies": "",
+        "starting_equipment": "Choose A or B: (A) 2 Daggers, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, and 5 GP; or (B) 55 GP",
+        "saving_throw_proficiencies": [
             "Intelligence",
             "Wisdom"
         ],
         "class_levels": [
             {
                 "level": 1,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
                 "features": [
                     {
                         "name": "Spellcasting",
@@ -7074,6 +7865,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 4,
                     "spell_slots_level_1": 2,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -7087,7 +7879,7 @@
             },
             {
                 "level": 2,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
                 "features": [
                     {
                         "name": "Scholar",
@@ -7098,6 +7890,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 5,
                     "spell_slots_level_1": 3,
                     "spell_slots_level_2": 0,
                     "spell_slots_level_3": 0,
@@ -7111,7 +7904,7 @@
             },
             {
                 "level": 3,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
                 "features": [
                     {
                         "name": "Wizard Subclass",
@@ -7122,6 +7915,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 3,
+                    "prepared_spells": 6,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 2,
                     "spell_slots_level_3": 0,
@@ -7135,7 +7929,7 @@
             },
             {
                 "level": 4,
-                "proficiency_bonus": "+2",
+                "proficiency_bonus": 2,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -7146,6 +7940,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 7,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 0,
@@ -7159,7 +7954,7 @@
             },
             {
                 "level": 5,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
                 "features": [
                     {
                         "name": "Memorize Spell",
@@ -7170,6 +7965,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 9,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 2,
@@ -7183,7 +7979,7 @@
             },
             {
                 "level": 6,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -7194,6 +7990,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 10,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7207,10 +8004,11 @@
             },
             {
                 "level": 7,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 11,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7224,7 +8022,7 @@
             },
             {
                 "level": 8,
-                "proficiency_bonus": "+3",
+                "proficiency_bonus": 3,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -7235,6 +8033,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 12,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7248,10 +8047,11 @@
             },
             {
                 "level": 9,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 4,
+                    "prepared_spells": 14,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7265,7 +8065,7 @@
             },
             {
                 "level": 10,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -7276,6 +8076,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 15,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7289,10 +8090,11 @@
             },
             {
                 "level": 11,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus":4,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7306,7 +8108,7 @@
             },
             {
                 "level": 12,
-                "proficiency_bonus": "+4",
+                "proficiency_bonus": 4,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -7317,6 +8119,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 16,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7330,10 +8133,11 @@
             },
             {
                 "level": 13,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 17,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7347,7 +8151,7 @@
             },
             {
                 "level": 14,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -7358,6 +8162,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 18,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7371,10 +8176,11 @@
             },
             {
                 "level": 15,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 19,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7388,7 +8194,7 @@
             },
             {
                 "level": 16,
-                "proficiency_bonus": "+5",
+                "proficiency_bonus": 5,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -7399,6 +8205,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 21,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7412,10 +8219,11 @@
             },
             {
                 "level": 17,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
                 "features": [],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 22,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7429,7 +8237,7 @@
             },
             {
                 "level": 18,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
                 "features": [
                     {
                         "name": "Spell Mastery",
@@ -7440,6 +8248,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 23,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7453,7 +8262,7 @@
             },
             {
                 "level": 19,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -7464,6 +8273,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 24,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
@@ -7477,7 +8287,7 @@
             },
             {
                 "level": 20,
-                "proficiency_bonus": "+6",
+                "proficiency_bonus": 6,
                 "features": [
                     {
                         "name": "Signature Spells",
@@ -7488,6 +8298,7 @@
                 ],
                 "spellcasting": {
                     "cantrips_known": 5,
+                    "prepared_spells": 25,
                     "spell_slots_level_1": 4,
                     "spell_slots_level_2": 3,
                     "spell_slots_level_3": 3,
