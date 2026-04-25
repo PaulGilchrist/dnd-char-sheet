@@ -22,14 +22,14 @@ const classRules = {
 
         // Handle major (subclass in 2024)
         if (playerSummary.class.major) {
-           const major = characterClass.majors?.find((major) => major.name === playerSummary.class.major.name);
-           if (major) {
-               characterClass.major = cloneDeep(major);
+            const major = characterClass.majors?.find((major) => major.name === playerSummary.class.major.name);
+            if (major) {
+                characterClass.major = cloneDeep(major);
             } else {
-               characterClass.major = null;
+                characterClass.major = null;
             }
         } else {
-           characterClass.major = null;
+            characterClass.major = null;
         }
 
         delete characterClass.majors;
@@ -41,6 +41,55 @@ const classRules = {
                 const longName = getAbilityLongName(savingThrow);
                 return longName || savingThrow; // Keep original if not a short name
             });
+        }
+
+        // Convert string proficiencies to array format for consistency with rules engine
+        // 2024 classes have weapon_proficiencies, armor_training, and tool_proficiencies as strings
+        characterClass.proficiencies = [];
+
+        // Parse weapon proficiencies
+        if (characterClass.weapon_proficiencies) {
+            const weaponMap = {
+                'Simple weapons': ['Simple Weapons'],
+                'Simple and Martial weapons': ['Simple Weapons', 'Martial Weapons'],
+                'Simple weapons and Martial weapons that have the Light property': ['Simple Weapons', 'Light Martial Weapons'],
+                'Simple weapons and Martial weapons that have the Finesse or Light property': ['Simple Weapons', 'Finesse Martial Weapons', 'Light Martial Weapons']
+            };
+            const weapons = weaponMap[characterClass.weapon_proficiencies] || [];
+            characterClass.proficiencies = [...characterClass.proficiencies, ...weapons];
+        }
+
+        // Parse armor training
+        if (characterClass.armor_training && characterClass.armor_training !== 'None') {
+            const armorMap = {
+                'Light armor': ['Light Armor'],
+                'Light armor and Shields': ['Light Armor', 'Shields'],
+                'Light and Medium armor and Shields': ['Light Armor', 'Medium Armor', 'Shields'],
+                'Light, Medium, and Heavy armor and Shields': ['Light Armor', 'Medium Armor', 'Heavy Armor', 'Shields']
+            };
+            const armor = armorMap[characterClass.armor_training] || [];
+            characterClass.proficiencies = [...characterClass.proficiencies, ...armor];
+        }
+
+        // Parse tool proficiencies
+        // If it starts with "Choose", the player has already selected their tools in character JSON
+        // Otherwise, it's an automatic tool proficiency
+        if (characterClass.tool_proficiencies) {
+            if (!characterClass.tool_proficiencies.startsWith('Choose')) {
+                characterClass.proficiencies = [...characterClass.proficiencies, characterClass.tool_proficiencies];
+            }
+        }
+
+        // Parse skill proficiencies
+        // If it starts with "Choose", the player has already selected their skills in character JSON
+        // Otherwise, parse the skill list into "Skill: Name" format
+        if (characterClass.skill_proficiencies || characterClass.skill_proficiencies_choices) {
+            const skillString = characterClass.skill_proficiencies || characterClass.skill_proficiencies_choices;
+            if (!skillString.startsWith('Choose')) {
+                // Parse skills like "History, Insight, Medicine, Persuasion, or Religion"
+                const skills = skillString.split(',').map(skill => skill.trim().replace(' or ', ''));
+                characterClass.proficiencies = [...characterClass.proficiencies, ...skills.map(skill => `Skill: ${skill}`)];
+            }
         }
 
         return characterClass;
@@ -161,38 +210,38 @@ const classRules = {
         const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
         let features = classRules.addFeatures(classLevels);
 
-                if (playerStats.class.major) {
-                    // 2024 majors have features directly with level property, not class_levels
-                    const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
-                    // Create a dummy level structure for addFeatures
-                    const majorLevels = [{ features: majorFeaturesList }];
-                    const majorFeatures = classRules.addFeatures(majorLevels);
+        if (playerStats.class.major) {
+            // 2024 majors have features directly with level property, not class_levels
+            const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
+            // Create a dummy level structure for addFeatures
+            const majorLevels = [{ features: majorFeaturesList }];
+            const majorFeatures = classRules.addFeatures(majorLevels);
 
-                    features = {
-                        actions: uniqBy([...features.actions, ...majorFeatures.actions], 'name'),
-                        bonusActions: uniqBy([...features.bonusActions, ...majorFeatures.bonusActions], 'name'),
-                        reactions: uniqBy([...features.reactions, ...majorFeatures.reactions], 'name'),
-                        specialActions: uniqBy([...features.specialActions, ...majorFeatures.specialActions], 'name')
-                      };
-                  }
+            features = {
+                actions: uniqBy([...features.actions, ...majorFeatures.actions], 'name'),
+                bonusActions: uniqBy([...features.bonusActions, ...majorFeatures.bonusActions], 'name'),
+                reactions: uniqBy([...features.reactions, ...majorFeatures.reactions], 'name'),
+                specialActions: uniqBy([...features.specialActions, ...majorFeatures.specialActions], 'name')
+            };
+        }
 
         return features;
     },
-        getHighestMajorLevel: (playerStats) => {
-            let highestLevel = 0;
+    getHighestMajorLevel: (playerStats) => {
+        let highestLevel = 0;
 
-            if (playerStats.class.major) {
-                 // 2024 majors have features directly with level property, not class_levels
-                const majorFeatures = playerStats.class.major.features || [];
-                for (const feature of majorFeatures) {
-                    if (feature.level <= playerStats.level && feature.level > highestLevel) {
-                        highestLevel = feature.level;
-                      }
-                  }
-              }
+        if (playerStats.class.major) {
+            // 2024 majors have features directly with level property, not class_levels
+            const majorFeatures = playerStats.class.major.features || [];
+            for (const feature of majorFeatures) {
+                if (feature.level <= playerStats.level && feature.level > highestLevel) {
+                    highestLevel = feature.level;
+                }
+            }
+        }
 
-            return highestLevel;
-          }
+        return highestLevel;
+    }
 };
 
 export default classRules;
