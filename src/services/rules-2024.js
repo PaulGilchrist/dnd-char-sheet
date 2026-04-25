@@ -469,7 +469,7 @@ const rules = {
         // 2024 Rules: Simplified proficiency calculation
         let proficienciesAllowed = 0;
         const raceStartingProfs = playerStats.race?.starting_proficiencies || [];
-        let proficiencies = [...new Set([...playerStats.class.proficiencies, ...raceStartingProfs])];
+        let proficiencies = [...new Set([...(playerStats.class.proficiencies || []), ...raceStartingProfs])];
 
         if (skill) {
             proficiencies = proficiencies.filter((proficiency) => proficiency.startsWith('Skill'));
@@ -498,7 +498,7 @@ const rules = {
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
 
         if (!spellcasting) {
-            spellcasting = classRules.getHighestSubclassLevel(playerStats).spellcasting;
+            spellcasting = classRules.getHighestMajorLevel(playerStats)?.spellcasting;
         }
 
         if (spellcasting) {

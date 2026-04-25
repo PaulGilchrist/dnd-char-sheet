@@ -24,7 +24,7 @@ function CharClassBarbarian({ playerStats }) {
                 <b>Rage Points:</b> {classLevel.rages}/<HiddenInput handleInputToggle={handleRagePointsToggle} handleValueChange={(value) => handleRagePointsChange(value)} showInput={showInput} value={ragePoints}></HiddenInput> <span className="text-muted">(max/cur)</span>
             </div>
             <div><b>Rage Damage Bonus: </b>{classLevel.rage_damage}</div>
-            <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
+            <div><b>Weapon Mastery: </b>{classLevel?.weapon_mastery ?? 'N/A'}</div>
         </div>}
     </React.Fragment>)
 }

@@ -20,19 +20,19 @@ const classRules = {
             Object.assign(characterClass, playerSummary.class);
         }
 
-        // Handle subclass
-        if (playerSummary.class.subclass) {
-            const subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.class.subclass.name);
-            if (subclass) {
-                characterClass.subclass = cloneDeep(subclass);
+        // Handle major (subclass in 2024)
+        if (playerSummary.class.major) {
+           const major = characterClass.majors?.find((major) => major.name === playerSummary.class.major.name);
+           if (major) {
+               characterClass.major = cloneDeep(major);
             } else {
-                characterClass.subclass = null;
+               characterClass.major = null;
             }
         } else {
-            characterClass.subclass = null;
+           characterClass.major = null;
         }
 
-        delete characterClass.subclasses;
+        delete characterClass.majors;
 
         // Convert ability names (2024: saving_throw_proficiencies is now an array)
         // 2024 data may already have long names, so only convert if short names are found
@@ -49,7 +49,7 @@ const classRules = {
         // 2024 Rules: Wild shape may have different mechanics
         let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_max_cr;
 
-        if (playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {
+        if (playerStats.class.major && playerStats.class.major.name === 'Moon' && playerStats.level > 1) {
             maxWildShapeChallengeRating = 1;
             if (playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
@@ -157,39 +157,42 @@ const classRules = {
         return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
-        // 2024 Rules: Process class and subclass features
+        // 2024 Rules: Process class and major features
         const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
         let features = classRules.addFeatures(classLevels);
 
-        if (playerStats.class.subclass) {
-            const subClassLevels = playerStats.class.subclass.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
-            const subclassFeatures = classRules.addFeatures(subClassLevels);
+                if (playerStats.class.major) {
+                    // 2024 majors have features directly with level property, not class_levels
+                    const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
+                    // Create a dummy level structure for addFeatures
+                    const majorLevels = [{ features: majorFeaturesList }];
+                    const majorFeatures = classRules.addFeatures(majorLevels);
 
-            features = {
-                actions: uniqBy([...features.actions, ...subclassFeatures.actions], 'name'),
-                bonusActions: uniqBy([...features.bonusActions, ...subclassFeatures.bonusActions], 'name'),
-                reactions: uniqBy([...features.reactions, ...subclassFeatures.reactions], 'name'),
-                specialActions: uniqBy([...features.specialActions, ...subclassFeatures.specialActions], 'name')
-            };
-        }
+                    features = {
+                        actions: uniqBy([...features.actions, ...majorFeatures.actions], 'name'),
+                        bonusActions: uniqBy([...features.bonusActions, ...majorFeatures.bonusActions], 'name'),
+                        reactions: uniqBy([...features.reactions, ...majorFeatures.reactions], 'name'),
+                        specialActions: uniqBy([...features.specialActions, ...majorFeatures.specialActions], 'name')
+                      };
+                  }
 
         return features;
     },
-    getHighestSubclassLevel: (playerStats) => {
-        let subClassLevel = 0;
+        getHighestMajorLevel: (playerStats) => {
+            let highestLevel = 0;
 
-        if (playerStats.class.subclass) {
-            for (let i = 0; i < playerStats.class.subclass.class_levels.length; i++) {
-                if (playerStats.class.subclass.class_levels[i].level > playerStats.level) {
-                    break;
-                } else {
-                    subClassLevel = playerStats.class.subclass.class_levels[i];
-                }
-            }
-        }
+            if (playerStats.class.major) {
+                 // 2024 majors have features directly with level property, not class_levels
+                const majorFeatures = playerStats.class.major.features || [];
+                for (const feature of majorFeatures) {
+                    if (feature.level <= playerStats.level && feature.level > highestLevel) {
+                        highestLevel = feature.level;
+                      }
+                  }
+              }
 
-        return subClassLevel;
-    }
+            return highestLevel;
+          }
 };
 
 export default classRules;

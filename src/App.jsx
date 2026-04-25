@@ -13,6 +13,7 @@ function App() {
     const [activeCharacter, setActiveCharacter] = React.useState(null);
     const [characters, setCharacters] = React.useState([]);
     const [classes, setClasses] = React.useState([]);
+    const [classes2024, setClasses2024] = React.useState([]);
     const [equipment, setEquipment] = React.useState([]);
     const [magicItems, setMagicItems] = React.useState([]);
     const [races, setRaces] = React.useState([]);
@@ -41,6 +42,13 @@ function App() {
                 setClasses(data);
             });
     }, []);
+    useEffect(() => {
+        fetch('/dnd-char-sheet/data/2024/classes.json')
+            .then(response => response.json())
+            .then(data => {
+                setClasses2024(data);
+            });
+    }, []); 
     useEffect(() => {
         fetch('/dnd-char-sheet/data/equipment.json')
             .then(response => response.json())
@@ -94,15 +102,15 @@ function App() {
     useEffect(() => {
         // Check if characters are pre-loaded from campaign selection or URL
         const preloadedCharacters = sessionStorage.getItem('characters');
-        
+
         if (preloadedCharacters) {
             const loadedCharacters = JSON.parse(preloadedCharacters);
             setCharacters(loadedCharacters);
             setShowCampaignSelection(false);
-            
+
             // Clear session storage after loading
             sessionStorage.removeItem('characters');
-            
+
             if (loadedCharacters.length > 0) {
                 setActiveCharacter(cloneDeep(loadedCharacters[0]));
             }
@@ -161,12 +169,12 @@ function App() {
         console.log(`Campaign received: '${campaign}'`);
         console.log(`loadedCharacters:`, loadedCharacters);
         console.log(`loadedCharacters.length: ${loadedCharacters.length}`);
-        
+
         // Verify campaign is stored correctly
         sessionStorage.setItem('currentCampaign', campaign);
         console.log(`Stored campaign in sessionStorage: '${campaign}'`);
         console.log(`Retrieved from sessionStorage: '${sessionStorage.getItem('currentCampaign')}'`);
-        
+
         loadedCharacters.forEach((char, index) => {
             console.log(`Character ${index}:`, char?.name || 'NO NAME PROPERTY', 'Full object:', char);
         });
@@ -197,28 +205,28 @@ function App() {
         try {
             console.log('=== handleWizardComplete START ===');
             console.log('Character data received:', characterData);
-            
+
             const storedCampaign = sessionStorage.getItem('currentCampaign');
             console.log('Campaign retrieved from sessionStorage:', storedCampaign);
             console.log('Full sessionStorage dump:', {
                 currentCampaign: sessionStorage.getItem('currentCampaign'),
                 characters: sessionStorage.getItem('characters')
             });
-            
+
             if (!storedCampaign) {
                 console.error('CRITICAL: No campaign found in sessionStorage!');
                 throw new Error('No campaign selected in sessionStorage');
             }
-            
+
             console.log('Using campaign:', storedCampaign);
-            
+
             // Send POST request to API to save character
             const requestBody = {
                 campaignName: storedCampaign,
                 character: characterData
             };
             console.log('Request body:', requestBody);
-            
+
             const response = await fetch('/api/characters', {
                 method: 'POST',
                 headers: {
@@ -237,20 +245,20 @@ function App() {
 
             const result = await response.json();
             console.log('Character created successfully:', result);
-            
+
             // Load the newly created character
             setActiveCharacter(cloneDeep(result.character));
             setShowCharacterWizard(false);
-            
+
             // Refresh character list
             const encodedCampaign = encodeURIComponent(storedCampaign);
             const characterFiles = await fetch(`/api/characters/${encodedCampaign}`)
                 .then(res => res.json())
                 .then(data => data.files);
             console.log('Character files for campaign:', characterFiles);
-            
+
             const newCharacters = await Promise.all(
-                characterFiles.map(file => 
+                characterFiles.map(file =>
                     fetch(`/api/characters/${encodedCampaign}/${encodeURIComponent(file)}`)
                         .then(res => res.json())
                 )
@@ -299,7 +307,7 @@ function App() {
             setActiveCharacter(cloneDeep(characterData));
             setShowEditCharacterWizard(false);
 
-            const newCharacters = characters.map(char => 
+            const newCharacters = characters.map(char =>
                 char.name === characterData.name ? characterData : char
             );
             setCharacters(newCharacters);
@@ -325,11 +333,11 @@ function App() {
     return (
         <div className="app">
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
-            {characters.length > 0 && characters.map((character) => { 
+            {characters.length > 0 && characters.map((character) => {
                 return (
-                    <button 
-                        key={Utils.getFirstName(character.name)} 
-                        className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`} 
+                    <button
+                        key={Utils.getFirstName(character.name)}
+                        className={`no-print ${activeCharacter && activeCharacter.name === character.name ? 'active' : ''}`}
                         onClick={() => handleCharacterClick(character)}
                     >
                         {character.name}
@@ -339,14 +347,16 @@ function App() {
             {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}>Add Character</button>}
             {showButton && <button className="clickable mutted no-print hidden" onClick={handleUploadClick}>Upload Characters</button>}
             {activeCharacter != null && (
-                <CharSheet 
-                    allAbilityScores={abilityScores} 
-                    allClasses={classes} 
-                    allEquipment={equipment} 
-                    allMagicItems={magicItems} 
-                    allRaces={races} 
-                    allSpells={spells} 
-                    allSpells2024={spells2024} 
+                <CharSheet
+                    allAbilityScores={abilityScores}
+                    allClasses={classes}
+
+                    allClasses2024={classes2024}
+                    allEquipment={equipment}
+                    allMagicItems={magicItems}
+                    allRaces={races}
+                    allSpells={spells}
+                    allSpells2024={spells2024}
                     playerSummary={activeCharacter}
                     allRaces2024={races2024}
                     allMagicItems2024={magicItems2024}
@@ -363,7 +373,7 @@ function App() {
             <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}>Back to Campaigns</button>
             <br />
             {showCharacterWizard && (
-                <CharacterCreationWizard 
+                <CharacterCreationWizard
                     onComplete={handleWizardComplete}
                     onCancel={handleWizardCancel}
                     allRaces={races}

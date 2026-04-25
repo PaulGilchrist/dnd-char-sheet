@@ -44,8 +44,10 @@ function CharSummary({ playerStats }) {
     }, [playerStats]);
     let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
     if((playerStats.class.name === 'Monk') || (playerStats.class.name === 'Barbarian')) {
-        speed += playerStats.class.class_levels[playerStats.level-1].class_specific.unarmored_movement;
-    }
+        const classLevel = playerStats.class.class_levels[playerStats.level-1];
+        const unarmoredMovement = classLevel?.class_specific?.unarmored_movement || 0;
+        speed += unarmoredMovement;
+     }
     const handleToggleInspiraction = () => {
         const newValue = !hasInspiration;
         storage.setProperty(playerStats.name, 'hasInspiration', newValue);

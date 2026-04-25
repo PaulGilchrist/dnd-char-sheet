@@ -16,7 +16,7 @@ import CharSummary2 from './char-summary2'
 import Subscriber from '../common/subscriber';
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, allRaces2024, allMagicItems2024 }) {
+function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, allRaces2024, allMagicItems2024 }) {
     const [playerStats, setPlayerStats] = React.useState(null);
     const [forceRefresh, setForceRefresh] = React.useState(0);
     React.useEffect(() => {
@@ -34,6 +34,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             
             // Use rules factory to get appropriate rules based on character's rules setting
             const spellData = playerSummary.rules === '2024' ? allSpells2024 : allSpells;
+            const effectiveClasses = playerSummary.rules === '2024' ? allClasses2024 : allClasses;
             const effectiveRaces = playerSummary.rules === '2024' ? allRaces2024 : allRaces;
             const effectiveMagicItems = playerSummary.rules === '2024' ? allMagicItems2024 : allMagicItems;
             console.log('[CharSheet] Processing:', { 
@@ -45,7 +46,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
                 magicItemsCount: playerSummary.inventory?.magicItems?.length || 0
             });
             console.log('[CharSheet] Using magic items:', { source: playerSummary.rules === '2024' ? 'allMagicItems2024' : 'allMagicItems', count: effectiveMagicItems?.length || 0 });
-            const stats = rulesFactory.getPlayerStats(allClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, playerSummary);
+            const stats = rulesFactory.getPlayerStats(effectiveClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, playerSummary);
             console.log('[CharSheet] After getPlayerStats - magic items:', stats.inventory?.magicItems?.length || 0);
             
             if (preparedSpells) {
@@ -64,7 +65,7 @@ function CharSheet({ allAbilityScores, allClasses, allEquipment, allMagicItems, 
             setPlayerStats(stats);
         };
         fetchData();
-    }, [allAbilityScores, allClasses, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, forceRefresh, allRaces2024, allMagicItems2024]);
+    }, [allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, forceRefresh, allRaces2024, allMagicItems2024]);
 
     const handleEvent = (event) => {
         if(!isEqual(storage.get(event.key), event.data)) {
