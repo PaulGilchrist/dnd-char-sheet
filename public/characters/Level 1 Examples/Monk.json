@@ -21,12 +21,13 @@
     },
     "languages": ["Halfling", "Infernal"],
     "level": 1,
-    "name": "Ewyn",
+    "name": "Monk",
     "race": {
         "name": "Human",
         "subrace": {
             "name": "Human"
         }
     },
-    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
+    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
+    "rules": "2024"
 }

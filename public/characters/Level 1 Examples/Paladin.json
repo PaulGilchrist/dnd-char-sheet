@@ -22,10 +22,11 @@
     },
     "languages": ["Elvish"],
     "level": 1,
-    "name": "Ramus",
+    "name": "Paladin",
     "race": {
         "name": "Dragonborn",
         "type": "Gold"
     },
-    "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"]
+    "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
+    "rules": "2024"
 }

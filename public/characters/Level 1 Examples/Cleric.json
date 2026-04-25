@@ -21,7 +21,7 @@
         "gold": 10
     },
     "level": 1,
-    "name": "Seti",
+    "name": "Cleric",
     "race": {
         "name": "Elf",
         "subrace": {
@@ -29,5 +29,6 @@
         }
     },
     "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
-    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"]
+    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"],
+    "rules": "2024"
 }

@@ -22,7 +22,7 @@
     },
     "languages": ["Sylvan"],
     "level": 1,
-    "name": "Immeral",
+    "name": "Druid",
     "race": {
         "name": "Elf",
         "subrace": {
@@ -30,5 +30,6 @@
         }
     },
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],
-    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"]
+    "spells": ["Guidance","Mending","Produce Flame","Shocking Grasp"],
+    "rules": "2024"
 }

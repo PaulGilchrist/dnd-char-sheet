@@ -1,21 +1,19 @@
 {
     "abilities": [
         { "name": "Strength", "abilityImprovements": 0, "baseScore": 8, "miscBonus": 0 },
-        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
-        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 1 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 },
+        { "name": "Constitution", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 2 },
         { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 10, "miscBonus": 0 },
-        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 13, "miscBonus": 1 },
+        { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Charisma", "abilityImprovements": 0, "baseScore": 14, "miscBonus": 0 }
     ],
     "alignment": "Neutral Good",
     "class": {
-        "name": "Warlock",
+        "name": "Sorcerer",
         "subclass": {
-            "name": "The Archfey"
-        },
-        "arcanums": ["Conjure Fey"],
-        "invocations": ["Agonizing Blast","Mask of Many Faces"],
-        "pactBoon": "Tome"
+            "name": "Draconic",
+            "type": "Brass"
+        }
     },
     "inventory": {
         "backpack": ["Blanket","Case,Map or Scroll","Fishing Tackle","Grappling Hook","Ink (4, 1 oz bottles)","Ink Pens (2)","Parchment (20 sheets)","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
@@ -23,10 +21,11 @@
         "gold": 10
     },
     "level": 1,
-    "name": "Naal",
+    "name": "Sorcerer",
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
-    "spells": ["Charm Person","Eldritch Blast","Hellish Rebuke","Mage Hand"]
+    "skillProficiencies": ["Arcana","History","Insight","Investigation","Perception","Survival"],
+    "spells": ["Chill Touch","Fire Bolt","Mage Hand","Magic Missile","Shield","Shocking Grasp"],
+    "rules": "2024"
 }

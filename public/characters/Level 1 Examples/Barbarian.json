@@ -1,7 +1,7 @@
 {
     "abilities": [
-        { "name": "Strength", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
-        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Strength", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
+        { "name": "Dexterity", "abilityImprovements": 0, "baseScore": 12, "miscBonus": 0 },
         { "name": "Constitution", "abilityImprovements": 0, "baseScore": 15, "miscBonus": 0 },
         { "name": "Intelligence", "abilityImprovements": 0, "baseScore": 9, "miscBonus": 0 },
         { "name": "Wisdom", "abilityImprovements": 0, "baseScore": 11, "miscBonus": 0 },
@@ -9,25 +9,24 @@
     ],
     "alignment": "Neutral Good",
     "class": {
-        "name": "Fighter",
-        "fightingStyles": ["Archery"],
+        "name": "Barbarian",
         "subclass": {
-            "name": "Battle Master",
-            "maneuvers": ["Parry","Riposte","Sweeping Attack"]
+            "name": "Berserker"
         }
     },
     "inventory": {
         "backpack": ["Fishing Tackle","Grappling Hook","Playing Card Set","Rations (5 days)","Rope, Silk (50 feet)","String","Waterskin"],
-        "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
+        "equipped": ["Longbow","Greatsword","Dagger"],
         "gold": 10
     },
     "level": 1,
-    "name": "Agron",
+    "name": "Barbarian",
     "race": {
         "name": "Human",
         "subrace": {
             "name": "Human"
         }
     },
-    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"]
+    "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
+    "rules": "2024"
 }

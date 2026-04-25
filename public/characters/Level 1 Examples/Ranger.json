@@ -26,9 +26,10 @@
         "gold": 10
     },
     "level": 1,
-    "name": "Balasar",
+    "name": "Ranger",
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"]
+    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
+    "rules": "2024"
 }

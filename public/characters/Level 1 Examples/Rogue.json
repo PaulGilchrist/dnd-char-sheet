@@ -21,9 +21,10 @@
         "gold": 10
     },
     "level": 1,
-    "name": "Praxen",
+    "name": "Rogue",
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"]
+    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
+    "rules": "2024"
 }
