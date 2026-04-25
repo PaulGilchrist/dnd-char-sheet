@@ -184,10 +184,10 @@ const classRules = {
         for (let i = levels.length - 1; i >= 0; i--) {
             levels[i].features.forEach(feature => {
                 const featureSummary = {
-                    name: feature.name,
-                    description: feature.desc,
-                    details: feature.details
-                };
+                                name: feature.name,
+                                description: feature.description,
+                                details: feature.details
+                             };
 
                 if (!featuresToIgnore.includes(feature.name)) {
                     if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
