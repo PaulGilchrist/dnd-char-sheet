@@ -22,7 +22,7 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "level": 1,
+    "level": 20,
     "name": "Warlock",
     "race": {
         "name": "Half-Elf"

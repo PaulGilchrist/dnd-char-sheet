@@ -20,7 +20,7 @@
         "gold": 400
     },
     "languages": ["Halfling", "Infernal"],
-    "level": 1,
+    "level": 20,
     "name": "Monk",
     "race": {
         "name": "Human",

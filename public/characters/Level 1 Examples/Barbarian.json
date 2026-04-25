@@ -19,7 +19,7 @@
         "equipped": ["Longbow","Greatsword","Dagger"],
         "gold": 10
     },
-    "level": 1,
+    "level": 20,
     "name": "Barbarian",
     "race": {
         "name": "Human",

@@ -19,8 +19,8 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "level": 1,
-    "name": "Amric",
+    "level": 20,
+    "name": "Wizard",
     "race": {
         "name": "Wizard",
         "subrace": {

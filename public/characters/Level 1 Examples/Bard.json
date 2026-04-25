@@ -20,7 +20,7 @@
         "equipped": ["Studded Leather","Crossbow, hand","Rapier","Dagger"],
         "gold": 10
     },
-    "level": 1,
+    "level": 20,
     "name": "Bard",
     "race": {
         "name": "Tiefling"

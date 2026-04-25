@@ -20,7 +20,7 @@
         "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
         "gold": 10
     },
-    "level": 1,
+    "level": 20,
     "name": "Rogue",
     "race": {
         "name": "Half-Elf"

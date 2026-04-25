@@ -21,7 +21,7 @@
         "equipped": ["Chain Mail","Longbow","Scimitar","Scimitar"],
         "gold": 10
     },
-    "level": 1,
+    "level": 20,
     "name": "Fighter",
     "race": {
         "name": "Human",
