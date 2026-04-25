@@ -68,7 +68,7 @@ function CharSpells({ playerStats, handleTogglePreparedSpells }) {
                     </div>
                     <div>
                         <b>Cantrips Known:</b> {playerStats.spellAbilities.cantrips_known ? playerStats.spellAbilities.cantrips_known : 0}<br/>
-                        <b>Spells Known:</b> {playerStats.spellAbilities.spells_known ? playerStats.spellAbilities.spells_known : 'All'}<br/>                    
+                        <b>Prepared Spells:</b> {playerStats.spellAbilities.prepared_spells || playerStats.spellAbilities.spells_known ? (playerStats.spellAbilities.prepared_spells || playerStats.spellAbilities.spells_known) : 'All'}<br/>                    
                         <b>Max Prepared:</b> {playerStats.spellAbilities.maxPreparedSpells ? playerStats.spellAbilities.maxPreparedSpells : 'All'}
                     </div>
                     <CharSpellSlots playerStats={playerStats}></CharSpellSlots>

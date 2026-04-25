@@ -23,7 +23,7 @@ const rules = {
             ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus;
             // No racial bonuses in 2024
             ability.bonus = Math.floor((ability.totalScore - 10) / 2);
-            ability.proficient = playerStats.class.saving_throws.includes(ability.name);
+            ability.proficient = playerStats.class.saving_throw_proficiencies ? playerStats.class.saving_throw_proficiencies.includes(ability.name) : false;
             ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
             ability.skills = skills.filter(skill => skill.ability === ability.name);
             ability.skills = ability.skills.map((skill) => {
@@ -50,12 +50,12 @@ const rules = {
         // 2024 Rules: Includes Magic, Utilize, and Craft actions
         const features = classRules.getFeatures(playerStats);
         const traits = raceRules.getTraits(playerStats);
-        
+
         // Convert string actions to objects with name/description/details
-        const playerActions = (playerStats.actions || []).map(action => 
+        const playerActions = (playerStats.actions || []).map(action =>
             typeof action === 'string' ? { name: action, description: '', details: null } : action
         );
-        
+
         const actions = uniqBy([
             ...playerActions,
             ...features.actions,
@@ -64,24 +64,24 @@ const rules = {
             ...(playerStats.utilizeActions ? playerStats.utilizeActions : []),
             ...(playerStats.craftActions ? playerStats.craftActions : [])
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        
+
         const bonusActions = uniqBy([
             ...(playerStats.bonusActions ? playerStats.bonusActions : []),
             ...features.bonusActions,
             ...traits.bonusActions
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        
+
         const reactions = uniqBy([
             ...(playerStats.reactions ? playerStats.reactions : []),
             ...features.reactions,
             ...traits.reactions
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        
+
         // Convert string specialActions to objects with name/description/details
-        const playerSpecialActions = (playerStats.specialActions || []).map(action => 
+        const playerSpecialActions = (playerStats.specialActions || []).map(action =>
             typeof action === 'string' ? { name: action, description: '', details: null } : action
         );
-        
+
         const specialActions = uniqBy([
             ...playerSpecialActions,
             ...features.specialActions,
@@ -90,7 +90,7 @@ const rules = {
             ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
             ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
         ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        
+
         return [actions, bonusActions, reactions, specialActions];
     },
     getArmorClass: (allEquipment, playerStats) => {
@@ -98,31 +98,31 @@ const rules = {
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
         const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
         const wisdom = playerStats.abilities.find((ability) => ability.name === 'Wisdom');
-        
+
         let armorName = playerStats.inventory.equipped.find(itemName => {
-            if(itemName.charAt(0) === "+") {
+            if (itemName.charAt(0) === "+") {
                 itemName = itemName.substring(3);
-            }        
+            }
             let item = allEquipment.find((item) => item.name === itemName);
-            if(item) {
+            if (item) {
                 return item.equipment_category === 'Armor';
             }
             return false;
         });
-        
+
         let addedBonus = 0;
         let contributions = [];
-        
+
         // 2024: Monk Unarmored Defense
-        if(playerStats.class.name === 'Monk') {
+        if (playerStats.class.name === 'Monk') {
             addedBonus += wisdom.bonus;
             contributions.push(`Monk Wisdom Bonus (${wisdom.bonus})`);
         }
-        
+
         let armorClass;
-        if(armorName) {
+        if (armorName) {
             let magicBonus = 0;
-            if(armorName.charAt(0) === '+') {
+            if (armorName.charAt(0) === '+') {
                 magicBonus = Number(armorName.charAt(1));
                 contributions.push(`Armor Magic Bonus (${magicBonus})`);
                 armorName = armorName.substring(3);
@@ -130,11 +130,11 @@ const rules = {
             let armor = allEquipment.find((item) => item.name === armorName);
             armorClass = armor.armor_class.base + addedBonus + magicBonus;
             contributions.push(`Armor (${armor.armor_class.base})`);
-            
-            if(armor.armor_class.dex_bonus) {
+
+            if (armor.armor_class.dex_bonus) {
                 let armorBonus = dexterity.bonus;
                 contributions.push(`Dexterity Bonus (${dexterity.bonus})`);
-                if(armor.armor_class.max_bonus) {
+                if (armor.armor_class.max_bonus) {
                     armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
                 }
                 armorClass = armor.armor_class.base + armorBonus + addedBonus + magicBonus;
@@ -144,18 +144,18 @@ const rules = {
             armorClass = 10 + dexterity.bonus + addedBonus;
             contributions.push(`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus})`);
         }
-        
+
         // Shield
         let shield = playerStats.inventory.equipped.find(item => item.substring(3) === 'Shield');
-        if(shield) {
+        if (shield) {
             const magicBonus = Number(shield.charAt(1));
             armorClass += 2 + magicBonus;
             contributions.push(`Shield (2) + Shield Magic Bonus (${magicBonus})`);
-        } else if(playerStats.inventory.equipped.find(item => item === 'Shield')) {
+        } else if (playerStats.inventory.equipped.find(item => item === 'Shield')) {
             armorClass += 2;
             contributions.push(`Shield (2)`);
         }
-        
+
         return [armorClass, contributions.join(' + ')];
     },
     getAttacks: (allEquipment, allSpells, playerStats) => {
@@ -164,7 +164,7 @@ const rules = {
         const dexterity = playerStats.abilities.find((ability) => ability.name === 'Dexterity');
         const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         const attacks = [];
-        
+
         // Ranged weapons
         let rangedWeaponName = playerStats.inventory.equipped.find(itemName => {
             if (!itemName || typeof itemName !== 'string') {
@@ -179,7 +179,7 @@ const rules = {
             }
             return false;
         });
-        
+
         if (rangedWeaponName) {
             let nonMagicalName = rangedWeaponName;
             if (rangedWeaponName.charAt(0) === '+') {
@@ -191,7 +191,7 @@ const rules = {
                 let damageFormula = `Damage Formula = Weapon (${rangedWeapon.damage.damage_dice})`;
                 let toHitBonus = dexterity.bonus + proficiency;
                 let hitBonusFormula = `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`;
-                
+
                 if (rangedWeaponName.charAt(0) === '+') {
                     let magicBonus = Number(rangedWeaponName.charAt(1));
                     damage += `+${dexterity.bonus + magicBonus}`;
@@ -202,7 +202,7 @@ const rules = {
                     damage += `+${dexterity.bonus}`;
                     damageFormula += ` + Dexterity Bonus (${dexterity.bonus})`;
                 }
-                
+
                 attacks.push({
                     "name": rangedWeaponName,
                     "damage": damage,
@@ -215,7 +215,7 @@ const rules = {
                 });
             }
         }
-        
+
         // Melee weapons
         let meleeWeaponNames = playerStats.inventory.equipped.filter(itemName => {
             if (!itemName || typeof itemName !== 'string') {
@@ -230,7 +230,7 @@ const rules = {
             }
             return false;
         });
-        
+
         if (meleeWeaponNames && meleeWeaponNames.length > 0) {
             let bonus = Math.max(strength.bonus, dexterity.bonus);
             let nonMagicalName = meleeWeaponNames[0];
@@ -243,7 +243,7 @@ const rules = {
                 let damageFormula = `Damage Formula = Weapon (${mainHandWeapon.damage.damage_dice})`;
                 let toHitBonus = bonus + proficiency;
                 let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
-                
+
                 let magicBonus = 0;
                 if (meleeWeaponNames[0].charAt(0) === '+') {
                     magicBonus = Number(meleeWeaponNames[0].charAt(1));
@@ -255,7 +255,7 @@ const rules = {
                     damage += `+${bonus}`;
                     damageFormula += ` + ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus})`;
                 }
-                
+
                 attacks.push({
                     "name": meleeWeaponNames[0],
                     "damage": damage,
@@ -267,7 +267,7 @@ const rules = {
                     "type": "Action"
                 });
             }
-            
+
             // Off-hand weapon (2024: Two-Weapon Fighting)
             if (meleeWeaponNames.length > 1) {
                 let bonus = Math.max(strength.bonus, dexterity.bonus);
@@ -280,7 +280,7 @@ const rules = {
                 let damageFormula = `Damage Formula = Weapon (${offHandWeapon.damage.damage_dice})`;
                 let hitBonus = bonus + proficiency;
                 let hitBonusFormula = `To Hit Bonus Formula = ${strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity'} Bonus (${bonus}) + Proficiency (${proficiency})`;
-                
+
                 let magicBonus = 0;
                 if (meleeWeaponNames[1].charAt(0) === "+") {
                     magicBonus = Number(meleeWeaponNames[1].charAt(1));
@@ -289,7 +289,7 @@ const rules = {
                     hitBonus += magicBonus;
                     hitBonusFormula += ` + Weapon Magic Bonus (${magicBonus})`;
                 }
-                
+
                 attacks.push({
                     "name": meleeWeaponNames[1],
                     "damage": damage,
@@ -302,7 +302,7 @@ const rules = {
                 });
             }
         }
-        
+
         // Monk unarmed strikes
         if (playerStats.class.name === 'Monk') {
             const martialArts = playerStats.class.class_levels[playerStats.level - 1].class_specific.martial_arts;
@@ -327,7 +327,7 @@ const rules = {
                 "type": "Bonus Action"
             });
         }
-        
+
         // Spell attacks
         if (playerStats.spellAbilities) {
             let spells = playerStats.spellAbilities.spells.map(spell => {
@@ -337,7 +337,7 @@ const rules = {
                 }
                 return { ...spell };
             });
-            
+
             spells = spells.filter(spell => spell.damage && (spell.prepared === 'Always' || spell.prepared === 'Prepared'));
             spells.forEach(spell => {
                 if (!attacks.find((attack) => attack.name === spell.name)) {
@@ -347,7 +347,7 @@ const rules = {
                     } else if (spell.damage.damage_at_character_level) {
                         damage = spell.damage.damage_at_character_level[Object.keys(spell.damage.damage_at_character_level)[0]];
                     }
-                    
+
                     attacks.push({
                         "name": spell.name,
                         "damage": damage,
@@ -359,17 +359,23 @@ const rules = {
                 }
             });
         }
-        
+
         return attacks;
     },
     getHitPoints: (playerStats) => {
         // 2024 Rules: Simplified HP calculation
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
-        let hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
-        
+        // 2024: hit_point_die may be a string like 'D12' or '8', or may not exist (fallback to hit_die)
+        const hitDieStr = playerStats.class.hit_point_die || playerStats.class.hit_die;
+        let hitPointDie = parseInt(String(hitDieStr).replace(/[^0-9]/g, ''), 10);
+        if (isNaN(hitPointDie)) {
+            hitPointDie = 8; // Default fallback
+        }
+        let hitPoints = hitPointDie + ((hitPointDie / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
+
         // 2024: No racial HP bonuses like Hill Dwarf
         // Feature-based HP bonuses handled in class-specific rules
-        
+
         return hitPoints;
     },
     getLanguages: (playerStats) => {
@@ -377,12 +383,12 @@ const rules = {
         const raceLanguages = playerStats.race?.languages || [];
         let languages = [...raceLanguages];
         let languagesAllowed = languages.length;
-        
+
         // Background languages (2024: Same as 5e)
         languagesAllowed += 2;
-        
+
         // Class languages
-        switch(playerStats.class.name) {
+        switch (playerStats.class.name) {
             case 'Druid':
                 languages.push("Druidic");
                 languagesAllowed += 1;
@@ -392,69 +398,71 @@ const rules = {
                 languagesAllowed += 1;
                 break;
         }
-        
-        if(playerStats.languages) {
+
+        if (playerStats.languages) {
             languages = [...new Set([...languages, ...playerStats.languages])];
         }
-        
+
         return [languagesAllowed, languages.sort()];
     },
     getMagicItems: (allMagicItems, playerSummary) => {
         // Check for magic items in inventory (2024 standard location)
         const inventoryMagicItems = playerSummary.inventory?.magicItems || [];
-        
-        if(!allMagicItems) {
+
+        if (!allMagicItems) {
             return [];
         }
-        
-        if(inventoryMagicItems.length === 0) {
+
+        if (inventoryMagicItems.length === 0) {
             return [];
         }
-        
+
         const processedItems = inventoryMagicItems.map(itemNameOrObj => {
             // Handle both string names and objects
             let itemName = typeof itemNameOrObj === 'string' ? itemNameOrObj : itemNameOrObj.name;
-            
+
             console.log('[Rules2024 getMagicItems] Processing item:', itemName);
             const magicItem = allMagicItems.find(m => m.name === itemName);
-            
-            if(!magicItem) {
+
+            if (!magicItem) {
                 console.warn(`[Rules2024 getMagicItems] Item not found in database: ${itemName}`);
                 return null;
             }
-            
+
             // Handle special cases (Ring of Spell Storing, etc.)
-            if(magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
+            if (magicItem.name === 'Ring of Spell Storing' || magicItem.name === 'Spell Ring' || magicItem.name === 'Spell Scroll') {
                 return { ...magicItem, details: magicItem.description, description: itemNameOrObj.spell };
             }
-            
+
             // Merge any additional properties from the object
             const result = { ...magicItem };
-            if(typeof itemNameOrObj === 'object' && itemNameOrObj.quantity) {
+            if (typeof itemNameOrObj === 'object' && itemNameOrObj.quantity) {
                 result.quantity = itemNameOrObj.quantity;
             }
-            if(typeof itemNameOrObj === 'object' && itemNameOrObj.rarity) {
+            if (typeof itemNameOrObj === 'object' && itemNameOrObj.rarity) {
                 result.rarity = itemNameOrObj.rarity;
             }
-            
+
             return result;
         }).filter(item => item !== null);
-        
+
         return processedItems;
     },
     getProficiencyChoiceCount: (playerStats, skills = true) => {
         // 2024 Rules: Different proficiency structure
         let proficiencyChoiceCount = 0;
-        playerStats.class.proficiency_choices.forEach((proficiency) => {
-            if((skills && proficiency.from[0].startsWith('Skill: ') || (!skills && !proficiency.from[0].startsWith('Skill: ')))) {
-                proficiencyChoiceCount += proficiency.choose;
+        // 2024: Parse skill_proficiency_choices string (e.g. "Choose 2 from...")
+        if (skills && playerStats.class.skill_proficiency_choices) {
+            const match = playerStats.class.skill_proficiency_choices.match(/Choose\s+(\d+)/);
+            if (match) {
+                proficiencyChoiceCount = parseInt(match[1], 10);
             }
-        });
-        
-        if(playerStats.race.starting_proficiency_options && ((skills && playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')) || (!skills && !playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')))) {
+        }
+
+        if (playerStats.race.starting_proficiency_options && ((skills && playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')) || (!skills && !playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')))) {
             proficiencyChoiceCount += playerStats.race.starting_proficiency_options.choose;
         }
-        
+
         return proficiencyChoiceCount;
     },
     getProficiencies: (playerStats, skill = true) => {
@@ -462,64 +470,64 @@ const rules = {
         let proficienciesAllowed = 0;
         const raceStartingProfs = playerStats.race?.starting_proficiencies || [];
         let proficiencies = [...new Set([...playerStats.class.proficiencies, ...raceStartingProfs])];
-        
-        if(skill) {
+
+        if (skill) {
             proficiencies = proficiencies.filter((proficiency) => proficiency.startsWith('Skill'));
             proficiencies = proficiencies.map((proficiency) => {
                 return proficiency.substring(7);
             });
             proficienciesAllowed = proficiencies.length + 2; // Background proficiencies
-            
-            if(playerStats.skillProficiencies) {
+
+            if (playerStats.skillProficiencies) {
                 proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
             }
         } else {
             proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
             proficienciesAllowed = proficiencies.length + rules.getProficiencyChoiceCount(playerStats, false);
-            
-            if(playerStats.proficiencies) {
+
+            if (playerStats.proficiencies) {
                 proficiencies = [...new Set([...proficiencies, ...playerStats.proficiencies])];
             }
         }
-        
+
         return [proficienciesAllowed, proficiencies.sort()];
     },
     getSpellAbilities: (allSpells, playerStats) => {
         // 2024 Rules: Simplified spellcasting
         let spellAbilities = null;
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
-        
-        if(!spellcasting) {
+
+        if (!spellcasting) {
             spellcasting = classRules.getHighestSubclassLevel(playerStats).spellcasting;
         }
-        
-        if(spellcasting) {
-            spellAbilities = {...spellcasting};
+
+        if (spellcasting) {
+            spellAbilities = { ...spellcasting };
         }
-        
+
         if (spellAbilities) {
             if (playerStats.spells) {
-                spellAbilities.spells = playerStats.spells.map(spell => {return { name: spell, prepared: ''}});               
+                spellAbilities.spells = playerStats.spells.map(spell => { return { name: spell, prepared: '' } });
                 delete playerStats.spells;
             } else {
                 spellAbilities.spells = [];
             }
-            
+
             // 2024: Spellcasting ability
             if (playerStats.class.spell_casting_ability) {
                 spellAbilities.spellCastingAbility = playerStats.class.spell_casting_ability;
             }
-            
+
             const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
             spellAbilities.modifier = spellAbility.bonus;
             spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
             spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
-            
+
             // All spells prepared for full caster classes
             spellAbilities.spells.forEach((spell) => {
                 spell.prepared = 'Always';
             });
-            
+
             if (spellAbilities.spells.length > 0) {
                 spellAbilities.spells = spellAbilities.spells.map(spell => {
                     let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
@@ -528,7 +536,7 @@ const rules = {
                     }
                     return { ...spell };
                 });
-                
+
                 spellAbilities.spells.sort((a, b) => {
                     if (a.level !== b.level) {
                         return a.level - b.level;
@@ -538,21 +546,21 @@ const rules = {
                 });
             }
         }
-        
+
         return spellAbilities;
     },
     getSpellMaxLevel: (spellAbilities) => {
         let spellMaxLevel = null;
-        if(spellAbilities) {
-            if(spellAbilities.spell_slots_level_1 != null && spellAbilities.spell_slots_level_1 > 0) spellMaxLevel = 1;
-            if(spellAbilities.spell_slots_level_2 != null && spellAbilities.spell_slots_level_2 > 0) spellMaxLevel = 2;
-            if(spellAbilities.spell_slots_level_3 != null && spellAbilities.spell_slots_level_3 > 0) spellMaxLevel = 3;
-            if(spellAbilities.spell_slots_level_4 != null && spellAbilities.spell_slots_level_4 > 0) spellMaxLevel = 4;
-            if(spellAbilities.spell_slots_level_5 != null && spellAbilities.spell_slots_level_5 > 0) spellMaxLevel = 5;
-            if(spellAbilities.spell_slots_level_6 != null && spellAbilities.spell_slots_level_6 > 0) spellMaxLevel = 6;
-            if(spellAbilities.spell_slots_level_7 != null && spellAbilities.spell_slots_level_7 > 0) spellMaxLevel = 7;
-            if(spellAbilities.spell_slots_level_8 != null && spellAbilities.spell_slots_level_8 > 0) spellMaxLevel = 8;
-            if(spellAbilities.spell_slots_level_9 != null && spellAbilities.spell_slots_level_9 > 0) spellMaxLevel = 9;
+        if (spellAbilities) {
+            if (spellAbilities.spell_slots_level_1 != null && spellAbilities.spell_slots_level_1 > 0) spellMaxLevel = 1;
+            if (spellAbilities.spell_slots_level_2 != null && spellAbilities.spell_slots_level_2 > 0) spellMaxLevel = 2;
+            if (spellAbilities.spell_slots_level_3 != null && spellAbilities.spell_slots_level_3 > 0) spellMaxLevel = 3;
+            if (spellAbilities.spell_slots_level_4 != null && spellAbilities.spell_slots_level_4 > 0) spellMaxLevel = 4;
+            if (spellAbilities.spell_slots_level_5 != null && spellAbilities.spell_slots_level_5 > 0) spellMaxLevel = 5;
+            if (spellAbilities.spell_slots_level_6 != null && spellAbilities.spell_slots_level_6 > 0) spellMaxLevel = 6;
+            if (spellAbilities.spell_slots_level_7 != null && spellAbilities.spell_slots_level_7 > 0) spellMaxLevel = 7;
+            if (spellAbilities.spell_slots_level_8 != null && spellAbilities.spell_slots_level_8 > 0) spellMaxLevel = 8;
+            if (spellAbilities.spell_slots_level_9 != null && spellAbilities.spell_slots_level_9 > 0) spellMaxLevel = 9;
         }
         return spellMaxLevel;
     },
@@ -560,34 +568,34 @@ const rules = {
         console.log('[Rules2024 getPlayerStats] START');
         const playerStats = cloneDeep(playerSummary);
         playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
-        
+
         // Initialize senses array early to prevent undefined errors
         playerStats.senses = [];
-        
+
         // Store equipment reference for mastery lookup
         playerStats.equipment = allEquipment;
 
-        console.log('[Rules2024 getPlayerStats] Before getMagicItems:', { 
-            hasInventory: !!playerSummary.inventory, 
+        console.log('[Rules2024 getPlayerStats] Before getMagicItems:', {
+            hasInventory: !!playerSummary.inventory,
             hasMagicItemsInInventory: !!playerSummary.inventory?.magicItems,
             magicItemsData: JSON.stringify(playerSummary.inventory?.magicItems)
         });
         playerStats.class = classRules.getClass(allClasses, playerSummary);
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         const resultMagicItems = rules.getMagicItems(allMagicItems, playerSummary);
-        console.log('[Rules2024 getPlayerStats] getMagicItems returned:', { 
+        console.log('[Rules2024 getPlayerStats] getMagicItems returned:', {
             hasResult: !!resultMagicItems,
             length: resultMagicItems?.length || 0,
             data: JSON.stringify(resultMagicItems)
         });
         playerStats.inventory.magicItems = resultMagicItems;
-        
+
         // Dependency on class and race begin here        
         [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions] = rules.getActions(playerStats);
         [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
         [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false);
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true);
-        
+
         // Dependency on abilities begin here
         playerStats.abilities = rules.getAbilities(playerStats);
         playerStats.hitPoints = rules.getHitPoints(playerStats);
@@ -595,10 +603,10 @@ const rules = {
         [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats);
         playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
         playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats);
-        
+
         // Merge race senses with ability-based senses
         playerStats.senses = playerStats.senses.concat(raceRules.getSenses(playerStats));
-        
+
         playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }

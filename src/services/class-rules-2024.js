@@ -14,12 +14,12 @@ const getAbilityLongName = (shortName) => {
 const classRules = {
     getClass: (allClasses, playerSummary) => {
         let characterClass = cloneDeep(allClasses.find((characterClass) => characterClass.name === playerSummary.class.name));
-        
+
         // Merge with player summary data
         if (playerSummary.class) {
             Object.assign(characterClass, playerSummary.class);
         }
-        
+
         // Handle subclass
         if (playerSummary.class.subclass) {
             const subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.class.subclass.name);
@@ -31,27 +31,31 @@ const classRules = {
         } else {
             characterClass.subclass = null;
         }
-        
+
         delete characterClass.subclasses;
-        
-        // Convert ability names
-        if (characterClass.saving_throws) {
-            characterClass.saving_throws = characterClass.saving_throws.map((savingThrow) => getAbilityLongName(savingThrow));
+
+        // Convert ability names (2024: saving_throw_proficiencies is now an array)
+        // 2024 data may already have long names, so only convert if short names are found
+        if (characterClass.saving_throw_proficiencies) {
+            characterClass.saving_throw_proficiencies = characterClass.saving_throw_proficiencies.map((savingThrow) => {
+                const longName = getAbilityLongName(savingThrow);
+                return longName || savingThrow; // Keep original if not a short name
+            });
         }
-        
+
         return characterClass;
     },
     getDruidMaxWildShapeChallengeRating: (playerStats) => {
         // 2024 Rules: Wild shape may have different mechanics
-        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_max_cr;
-        
-        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {    
+        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_max_cr;
+
+        if (playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {
             maxWildShapeChallengeRating = 1;
-            if(playerStats.level > 5) {
+            if (playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
             }
         }
-        
+
         return maxWildShapeChallengeRating;
     },
     addFeatures: (levels) => {
@@ -89,7 +93,7 @@ const classRules = {
             "Bard Features",
             "Fighter Features"
         ];
-        
+
         const actions = [
             "Action Surge",
             "Breath Weapon",
@@ -98,7 +102,7 @@ const classRules = {
             "Hex",
             "Witch Bolt"
         ];
-        
+
         const bonusActions = [
             "Cunning Action",
             "Flurry of Blows",
@@ -109,7 +113,7 @@ const classRules = {
             "Second Wind",
             "Fighting Style Bonus"
         ];
-        
+
         const reactions = [
             "Parry",
             " Riposte",
@@ -119,48 +123,48 @@ const classRules = {
             "Deflect Missiles",
             "Feather Fall"
         ];
-        
+
         const categorizedFeatures = {
             actions: [],
             bonusActions: [],
             reactions: [],
             specialActions: []
         };
-        
+
         // Go through levels highest to lowest
-        for(let i = levels.length-1; i >= 0; i--) {
+        for (let i = levels.length - 1; i >= 0; i--) {
             levels[i].features.forEach(feature => {
                 const featureSummary = {
                     name: feature.name,
                     description: feature.desc,
                     details: feature.details
                 };
-                
-                if(!featuresToIgnore.includes(feature.name)) {
-                    if(actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
+
+                if (!featuresToIgnore.includes(feature.name)) {
+                    if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
                         categorizedFeatures.actions.push(featureSummary);
-                    } else if(bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
+                    } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
                         categorizedFeatures.bonusActions.push(featureSummary);
-                    } else if(reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
+                    } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
                         categorizedFeatures.reactions.push(featureSummary);
-                    } else if(!categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
+                    } else if (!categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
                         categorizedFeatures.specialActions.push(featureSummary);
                     }
                 }
             });
         }
-        
+
         return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
         // 2024 Rules: Process class and subclass features
         const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
         let features = classRules.addFeatures(classLevels);
-        
-        if(playerStats.class.subclass) {
+
+        if (playerStats.class.subclass) {
             const subClassLevels = playerStats.class.subclass.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
             const subclassFeatures = classRules.addFeatures(subClassLevels);
-            
+
             features = {
                 actions: uniqBy([...features.actions, ...subclassFeatures.actions], 'name'),
                 bonusActions: uniqBy([...features.bonusActions, ...subclassFeatures.bonusActions], 'name'),
@@ -168,22 +172,22 @@ const classRules = {
                 specialActions: uniqBy([...features.specialActions, ...subclassFeatures.specialActions], 'name')
             };
         }
-        
+
         return features;
     },
     getHighestSubclassLevel: (playerStats) => {
         let subClassLevel = 0;
-        
-        if(playerStats.class.subclass) {
-            for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
-                if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
+
+        if (playerStats.class.subclass) {
+            for (let i = 0; i < playerStats.class.subclass.class_levels.length; i++) {
+                if (playerStats.class.subclass.class_levels[i].level > playerStats.level) {
                     break;
                 } else {
                     subClassLevel = playerStats.class.subclass.class_levels[i];
                 }
             }
         }
-        
+
         return subClassLevel;
     }
 };
