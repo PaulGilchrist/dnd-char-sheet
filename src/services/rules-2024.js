@@ -618,7 +618,7 @@ const rules = {
         playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats);
 
         // Merge race senses with ability-based senses
-        playerStats.senses = playerStats.senses.concat(raceRules.getSenses(playerStats));
+        playerStats.senses = raceRules.getSenses(playerStats);
 
         playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
