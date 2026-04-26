@@ -267,13 +267,21 @@ const classRules = {
                                     return classLevel.favored_enemy || 0;
                                   },
                                 getRogueSneakAttack: (playerStats) => {
-                                      // 2024 Rules: Get sneak attack dice count for Rogue
-                                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
-                                    if (!classLevel) {
-                                        return { dice_count: 0, dice_value: 6 };
-                                      }
-                                    return { dice_count: classLevel.sneak_attack_num_d6 || 0, dice_value: 6 };
-                                  }
-                              };
+                                                                       // 2024 Rules: Get sneak attack dice count for Rogue
+                                                                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                                                                    if (!classLevel) {
+                                                                        return { dice_count: 0, dice_value: 6 };
+                                                                       }
+                                                                    return { dice_count: classLevel.sneak_attack_num_d6 || 0, dice_value: 6 };
+                                                                   },
+                                                                getEldritchInvocations: (playerStats) => {
+                                                                       // 2024 Rules: Get eldritch invocations count for Warlock
+                                                                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                                                                    if (!classLevel) {
+                                                                        return 0;
+                                                                       }
+                                                                    return classLevel.eldritch_invocations || 0;
+                                                                   }
+                                                               };
 
 export default classRules;
