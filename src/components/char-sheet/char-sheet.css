@@ -6,4 +6,7 @@
     .char-sheet {
         padding: 0;
     }
+     .no-print {
+        display: none;
+     }
 }

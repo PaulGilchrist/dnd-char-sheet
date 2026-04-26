@@ -109,8 +109,8 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             <CharSpells playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory><hr />
-            <CharCharacterAdvancement playerStats={playerStats}></CharCharacterAdvancement>
-            <CharAudit playerStats={playerStats}></CharAudit>
+            <div className='no-print'><CharCharacterAdvancement playerStats={playerStats}></CharCharacterAdvancement></div>
+                         <div className='no-print'><CharAudit playerStats={playerStats}></CharAudit></div>
             <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>}
     </React.Fragment>)

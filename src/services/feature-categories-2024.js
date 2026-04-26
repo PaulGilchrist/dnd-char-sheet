@@ -6,28 +6,31 @@ export const featuresToIgnore = [
     "Bard Bard Subclass",
     "Bardic Inspiration",
     "Channel Divinity",
-    "Cleric Features",
-    "Druid Features",
+    "Cleric Subclass",
+    "Darkvision",
+    "Druid Subclass",
     "Eldritch Invocations",
     "Epic Boon",
     "Feat",
-    "Fighter Features",
+    "Fighter Subclass",
     "Fighting Style",
-    "Paladin Features",
+    "Paladin Subclass",
     "Rage",
-    "Ranger Features",
-    "Rogue Features",
-    "Sorcerer Features",
+    "Ranger Subclass",
+    "Rogue Subclass",
+    "Sorcerer Subclass",
     "Spellcasting",
     "Subclass feature",
-    "Warlock Features",
-    "Wizard Features"
+    "Warlock Subclass",
+    "Wizard Subclass"
 ];
 
 export const actions = [
     "Action Surge",
+    "Blessed Strikes",
     "Breath Weapon",
     "Channel Divinity",
+    "Divine Intervention",
     "Eldritch Blast",
     "Extra Attack",
     "Hex",
@@ -62,9 +65,12 @@ export const reactions = [
 ];
 
 export const characterAdvancement = [
+    "Divine Order",
+    "Elfish Lineage",
     "Expertise",
     "Fiendish Legacy",
     "Fiendish Legacies",
+    "Keen Senses",
     "Martial Arts",
     "Monastic Traditions",
     "Oath Spells",
