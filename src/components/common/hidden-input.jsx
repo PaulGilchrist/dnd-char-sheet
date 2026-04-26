@@ -39,8 +39,8 @@ function HiddenInput({ handleInputToggle, handleValueChange, showInput, value })
                         value={value}
                     />
                 ) : (
-                    value
-                )
+                                    null
+                                 )
             }
         </span>
     )
