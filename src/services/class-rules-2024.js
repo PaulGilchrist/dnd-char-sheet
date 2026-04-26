@@ -131,7 +131,6 @@ const classRules = {
         // 2024 Rules: Different feature naming and categorization
         const featuresToIgnore = [
             "Ability Score Improvement",
-            "Action Surge",
             "Barbarian Features",
             "Barbarian Subclass",
             "Bard Features",
@@ -141,16 +140,10 @@ const classRules = {
             "Druid Features",
             "Eldritch Invocations",
             "Epic Boon",
-            "Expertise",
-            "Extra Attack",
             "Feat",
             "Fighter Features",
             "Fighting Style",
-            "Martial Arts",
-            "Monastic Traditions",
-            "Oath Spells",
             "Paladin Features",
-            "Pact Boon",
             "Rage",
             "Ranger Features",
             "Rogue Features",
@@ -158,8 +151,6 @@ const classRules = {
             "Sorcerer Features",
             "Spellcasting",
             "Subclass feature",
-            "Unarmored Defense",
-            "Unarmored Movement",
             "Warlock Features",
             "Wizard Features"
         ];
@@ -169,6 +160,7 @@ const classRules = {
             "Breath Weapon",
             "Channel Divinity",
             "Eldritch Blast",
+            "Extra Attack",
             "Hex",
             "Reckless Attack",
             "Witch Bolt"
@@ -198,63 +190,77 @@ const classRules = {
         ];
 
         const characterAdvancement = [
+            "Expertise",
+            "Martial Arts",
+            "Monastic Traditions",
+            "Oath Spells",
+            "Pact Boon",
             "Primal Champion",
-            "Primal Knowledge"
+            "Primal Knowledge",
+            "Skillful",
+            "Versatile"
         ];
 
         const categorizedFeatures = {
-            actions: [],
-            bonusActions: [],
-            reactions: [],
-            specialActions: []
-        };
+                    actions: [],
+                    bonusActions: [],
+                    reactions: [],
+                    specialActions: [],
+                    characterAdvancement: []
+                  };
 
-        // Go through levels highest to lowest
-        for (let i = levels.length - 1; i >= 0; i--) {
-            levels[i].features.forEach(feature => {
-                const featureSummary = {
-                    name: feature.name,
-                    description: feature.description,
-                    details: feature.details
-                };
+                  // Go through levels highest to lowest
+                for (let i = levels.length - 1; i >= 0; i--) {
+                    levels[i].features.forEach(feature => {
+                        const featureSummary = {
+                            name: feature.name,
+                            description: feature.description,
+                            details: feature.details
+                          };
 
-                // featuresToIgnore only prevents adding to specialActions, not from proper arrays
-                if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
-                    categorizedFeatures.actions.push(featureSummary);
-                } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
-                    categorizedFeatures.bonusActions.push(featureSummary);
-                } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
-                    categorizedFeatures.reactions.push(featureSummary);
-                } else if (!featuresToIgnore.includes(feature.name) && !categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
-                    categorizedFeatures.specialActions.push(featureSummary);
-                }
-            });
-        }
+                          // featuresToIgnore prevents adding to any section
+                          // characterAdvancement, actions, bonusActions, and reactions go to their respective sections
+                        if (featuresToIgnore.includes(feature.name)) {
+                             // Do nothing - this feature is ignored entirely
+                          } else if (characterAdvancement.includes(feature.name) && !categorizedFeatures.characterAdvancement.some(f => f.name === feature.name)) {
+                            categorizedFeatures.characterAdvancement.push(featureSummary);
+                          } else if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
+                            categorizedFeatures.actions.push(featureSummary);
+                          } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
+                            categorizedFeatures.bonusActions.push(featureSummary);
+                          } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
+                            categorizedFeatures.reactions.push(featureSummary);
+                          } else if (!categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
+                            categorizedFeatures.specialActions.push(featureSummary);
+                          }
+                      });
+                  }
 
         return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
-        // 2024 Rules: Process class and major features
-        const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
-        let features = classRules.addFeatures(classLevels);
+               // 2024 Rules: Process class and major features
+            const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
+            let features = classRules.addFeatures(classLevels);
 
-        if (playerStats.class.major) {
-            // 2024 majors have features directly with level property, not class_levels
-            const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
-            // Create a dummy level structure for addFeatures
-            const majorLevels = [{ features: majorFeaturesList }];
-            const majorFeatures = classRules.addFeatures(majorLevels);
+            if (playerStats.class.major) {
+                 // 2024 majors have features directly with level property, not class_levels
+                const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
+                 // Create a dummy level structure for addFeatures
+                const majorLevels = [{ features: majorFeaturesList }];
+                const majorFeatures = classRules.addFeatures(majorLevels);
 
-            features = {
-                actions: uniqBy([...features.actions, ...majorFeatures.actions], 'name'),
-                bonusActions: uniqBy([...features.bonusActions, ...majorFeatures.bonusActions], 'name'),
-                reactions: uniqBy([...features.reactions, ...majorFeatures.reactions], 'name'),
-                specialActions: uniqBy([...features.specialActions, ...majorFeatures.specialActions], 'name')
-            };
-        }
+                features = {
+                    actions: uniqBy([...features.actions, ...majorFeatures.actions], 'name'),
+                    bonusActions: uniqBy([...features.bonusActions, ...majorFeatures.bonusActions], 'name'),
+                    reactions: uniqBy([...features.reactions, ...majorFeatures.reactions], 'name'),
+                    specialActions: uniqBy([...features.specialActions, ...majorFeatures.specialActions], 'name'),
+                    characterAdvancement: uniqBy([...features.characterAdvancement, ...majorFeatures.characterAdvancement], 'name')
+                   };
+               }
 
-        return features;
-    },
+            return features;
+          },
     getHighestMajorLevel: (playerStats) => {
         let highestLevel = 0;
 

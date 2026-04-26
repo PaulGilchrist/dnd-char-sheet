@@ -83,16 +83,16 @@ const rules = {
         );
 
         const specialActions = uniqBy([
-            ...playerSpecialActions,
-            ...features.specialActions,
-            ...traits.specialActions,
-            ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
-            ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
-            ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
-        ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-
-        return [actions, bonusActions, reactions, specialActions];
-    },
+               ...playerSpecialActions,
+               ...features.specialActions,
+               ...traits.specialActions,
+               ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
+               ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
+               ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
+               ], 'name').sort((a, b) => a.name.localeCompare(b.name));
+              const characterAdvancement = uniqBy([...features.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+              return [actions, bonusActions, reactions, specialActions, characterAdvancement];
+            },
     getArmorClass: (allEquipment, playerStats) => {
         // 2024 Rules: Simplified AC calculation
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
@@ -604,7 +604,7 @@ const rules = {
         playerStats.inventory.magicItems = resultMagicItems;
 
         // Dependency on class and race begin here        
-        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions] = rules.getActions(playerStats);
+        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats);
         [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
         [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false);
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true);

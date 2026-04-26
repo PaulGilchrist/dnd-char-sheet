@@ -10,6 +10,7 @@ import CharAudit from './char-audit'
 import CharInventory from './char-inventory'
 import CharReactions from './char-reactions'
 import CharSpecialActions from './char-special-actions'
+import CharCharacterAdvancement from './char-character-advancement'
 import CharSpells from './char-spells/char-spells'
 import CharSummary from './char-summary/char-summary'
 import CharSummary2 from './char-summary2'
@@ -107,6 +108,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             <CharReactions playerStats={playerStats}></CharReactions>
             <CharSpells playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)}></CharSpells><hr />
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
+             <CharCharacterAdvancement playerStats={playerStats}></CharCharacterAdvancement><hr />
             <CharInventory playerStats={playerStats}></CharInventory>
             <CharAudit playerStats={playerStats}></CharAudit>
             <Subscriber handleEvent={handleEvent}></Subscriber>

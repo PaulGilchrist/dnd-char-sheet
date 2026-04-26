@@ -57,9 +57,10 @@ const rules = {
         const actions = uniqBy([...playerStats.actions ? playerStats.actions : [], ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         const bonusActions = uniqBy([...playerStats.bonusActions ? playerStats.bonusActions : [], ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         const reactions = uniqBy([...playerStats.reactions ? playerStats.reactions : [], ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        const specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-        return [actions, bonusActions, reactions, specialActions];
-    },
+              const specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+              const characterAdvancement = uniqBy([...features.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+              return [actions, bonusActions, reactions, specialActions, characterAdvancement];
+           },
     getArmorClass: (allEquipment, playerStats) => {
         // Dependencies: Abilities
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
@@ -717,7 +718,7 @@ const rules = {
         playerStats.race = raceRules.getRace(allRaces, playerSummary);
         playerStats.resistances = raceRules.getResistances(playerSummary);
         // Dependency on class and race begin here        
-        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions] = rules.getActions(playerStats); // Dependencies: Class, Race
+        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats); // Dependencies: Class, Race
         [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats); // Dependencies: Class, Race
         [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false); // Dependencies: Class, Race
         [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true); // Dependencies: Class, Race

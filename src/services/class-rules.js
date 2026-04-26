@@ -155,50 +155,64 @@ const classRules = {
         ];
 
 
+        const characterAdvancement = [
+            "Primal Champion",
+            "Primal Knowledge",
+            "Skillful",
+            "Versatile"
+        ];
+        
         const categorizedFeatures = {
-            actions: [],
-            bonusActions: [],
-            reactions: [],
-            specialActions: []
-        }
-        // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
-        for (let i = levels.length - 1; i >= 0; i--) {
-            levels[i].features.forEach(feature => {
-                const featureSummary = {
-                    name: feature.name,
-                    description: feature.desc,
-                    details: feature.details
-                };
-                // featuresToIgnore only prevents adding to specialActions, not from proper arrays
-                if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name == feature.name)) {
-                    categorizedFeatures.actions.push(featureSummary);
-                } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name == feature.name)) {
-                    categorizedFeatures.bonusActions.push(featureSummary);
-                } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name == feature.name)) {
-                    categorizedFeatures.reactions.push(featureSummary);
-                } else if (!featuresToIgnore.includes(feature.name) && !categorizedFeatures.specialActions.some(specialAction => specialAction.name == feature.name)) {
-                    categorizedFeatures.specialActions.push(featureSummary);
-                }
-            });
-        }
-        return categorizedFeatures;
+                    actions: [],
+                    bonusActions: [],
+                    reactions: [],
+                    specialActions: [],
+                    characterAdvancement: []
+                 }
+                 // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
+                for (let i = levels.length - 1; i >= 0; i--) {
+                    levels[i].features.forEach(feature => {
+                        const featureSummary = {
+                            name: feature.name,
+                            description: feature.desc,
+                            details: feature.details
+                         };
+                         // featuresToIgnore prevents adding to any section
+                         // characterAdvancement, actions, bonusActions, and reactions go to their respective sections
+                        if (featuresToIgnore.includes(feature.name)) {
+                            // Do nothing - this feature is ignored entirely
+                         } else if (characterAdvancement.includes(feature.name) && !categorizedFeatures.characterAdvancement.some(f => f.name == feature.name)) {
+                            categorizedFeatures.characterAdvancement.push(featureSummary);
+                         } else if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name == feature.name)) {
+                            categorizedFeatures.actions.push(featureSummary);
+                         } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name == feature.name)) {
+                            categorizedFeatures.bonusActions.push(featureSummary);
+                         } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name == feature.name)) {
+                            categorizedFeatures.reactions.push(featureSummary);
+                         } else if (!categorizedFeatures.specialActions.some(specialAction => specialAction.name == feature.name)) {
+                            categorizedFeatures.specialActions.push(featureSummary);
+                         }
+                     });
+                 }
+                return categorizedFeatures;
     },
     getFeatures: (playerStats) => {
-        // Dependencies: Class
-        const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
-        let features = classRules.addFeatures(classLevels);
-        if (playerStats.class.subclass) {
-            const subClassLevels = playerStats.class.subclass.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
-            const subclassFeatures = classRules.addFeatures(subClassLevels);
-            features = {
-                actions: uniqBy([...features.actions, ...subclassFeatures.actions], 'name'),
-                bonusActions: uniqBy([...features.bonusActions, ...subclassFeatures.bonusActions], 'name'),
-                reactions: uniqBy([...features.reactions, ...subclassFeatures.reactions], 'name'),
-                specialActions: uniqBy([...features.specialActions, ...subclassFeatures.specialActions], 'name')
-            }
-        }
-        return features;
-    },
+              // Dependencies: Class
+            const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
+            let features = classRules.addFeatures(classLevels);
+            if (playerStats.class.subclass) {
+                const subClassLevels = playerStats.class.subclass.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
+                const subclassFeatures = classRules.addFeatures(subClassLevels);
+                features = {
+                    actions: uniqBy([...features.actions, ...subclassFeatures.actions], 'name'),
+                    bonusActions: uniqBy([...features.bonusActions, ...subclassFeatures.bonusActions], 'name'),
+                    reactions: uniqBy([...features.reactions, ...subclassFeatures.reactions], 'name'),
+                    specialActions: uniqBy([...features.specialActions, ...subclassFeatures.specialActions], 'name'),
+                    characterAdvancement: uniqBy([...features.characterAdvancement, ...subclassFeatures.characterAdvancement], 'name')
+                  }
+              }
+            return features;
+         },
     getHighestSubclassLevel: (playerStats) => {
         let subClassLevel = 0
         if (playerStats.class.subclass && playerStats.class.subclass.class_levels) {

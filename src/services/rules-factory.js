@@ -69,11 +69,12 @@ const rulesFactory = {
         const selectedRules = rulesFactory.getRules(playerSummary, characterName);
         const result = selectedRules.rules.getActions(playerStats);
         console.log(`[RulesFactory] getActions completed:`, {
-            actions: result[0]?.length || 0,
-            bonusActions: result[1]?.length || 0,
-            reactions: result[2]?.length || 0,
-            specialActions: result[3]?.length || 0
-        });
+                    actions: result[0]?.length || 0,
+                    bonusActions: result[1]?.length || 0,
+                    reactions: result[2]?.length || 0,
+                    specialActions: result[3]?.length || 0,
+                    characterAdvancement: result[4]?.length || 0
+                 });
         return result;
     },
     
