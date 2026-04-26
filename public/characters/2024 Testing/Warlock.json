@@ -25,7 +25,10 @@
     "level": 20,
     "name": "Warlock",
     "race": {
-        "name": "Half-Elf"
+        "name": "Tiefling",
+        "subrace": {
+            "name": "Abyssal"
+        }
     },
     "skillProficiencies": ["Arcana","Insight","Investigation","Perception","Nature","Survival"],
     "spells": ["Charm Person","Eldritch Blast","Hellish Rebuke","Mage Hand"],

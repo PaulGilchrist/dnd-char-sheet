@@ -22,7 +22,7 @@
     "level": 20,
     "name": "Barbarian",
     "race": {
-        "name": "Human"
+        "name": "Aasimar"
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "rules": "2024"
