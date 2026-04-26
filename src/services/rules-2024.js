@@ -304,29 +304,29 @@ const rules = {
         }
 
         // Monk unarmed strikes
-        if (playerStats.class.name === 'Monk') {
-            const martialArts = playerStats.class.class_levels[playerStats.level - 1].class_specific.martial_arts;
-            attacks.push({
-                "name": 'Unarmed Strike',
-                "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
-                "damageType": 'Bludgeoning',
-                "damageFormula": `Damage Formula = Monk Open Hand (${martialArts.dice_count}d${martialArts.dice_value}) + Dexterity Bonus (${dexterity.bonus})`,
-                "hitBonus": dexterity.bonus + proficiency,
-                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
-                "range": 5,
-                "type": "Action"
-            });
-            attacks.push({
-                "name": 'Unarmed Strike',
-                "damage": `${martialArts.dice_count}d${martialArts.dice_value}+${dexterity.bonus}`,
-                "damageType": 'Bludgeoning',
-                "damageFormula": `Damage Formula = Monk Open Hand (${martialArts.dice_count}d${martialArts.dice_value}) + Dexterity Bonus (${dexterity.bonus})`,
-                "hitBonus": dexterity.bonus + proficiency,
-                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
-                "range": 5,
-                "type": "Bonus Action"
-            });
-        }
+                if (playerStats.class.name === 'Monk') {
+                    const martialArtsDie = classRules.getMartialArtsDie(playerStats);
+                    attacks.push({
+                         "name": 'Unarmed Strike',
+                         "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
+                         "damageType": 'Bludgeoning',
+                         "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
+                         "hitBonus": dexterity.bonus + proficiency,
+                         "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
+                         "range": 5,
+                         "type": "Action"
+                     });
+                    attacks.push({
+                         "name": 'Unarmed Strike',
+                         "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
+                         "damageType": 'Bludgeoning',
+                         "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
+                         "hitBonus": dexterity.bonus + proficiency,
+                         "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
+                         "range": 5,
+                         "type": "Bonus Action"
+                     });
+                 }
 
         // Spell attacks
         if (playerStats.spellAbilities) {

@@ -3,6 +3,7 @@ import React from 'react'
 import './char-summary.css'
 
 import storage from '../../../services/storage'
+import classRules from '../../../services/class-rules-2024.js'
 import CharGold from './char-gold'
 import CharHitPoints from './char-hit-points'
 import CharClassBarbarian from './char-class-barbarian'
@@ -43,11 +44,15 @@ function CharSummary({ playerStats }) {
         setHasInspiration(value ? value : false);
     }, [playerStats]);
     let speed = playerStats.race.subrace && playerStats.race.subrace.speed ? playerStats.race.subrace.speed : playerStats.race.speed;
-    if((playerStats.class.name === 'Monk') || (playerStats.class.name === 'Barbarian')) {
-        const classLevel = playerStats.class.class_levels[playerStats.level-1];
-        const unarmoredMovement = classLevel?.class_specific?.unarmored_movement || 0;
-        speed += unarmoredMovement;
-     }
+        if(playerStats.class.name === 'Monk') {
+            const unarmoredMovementIncrease = classRules.getUnarmoredMovementIncrease(playerStats);
+            speed += unarmoredMovementIncrease;
+          }
+        if(playerStats.class.name === 'Barbarian') {
+            const classLevel = playerStats.class.class_levels[playerStats.level-1];
+            const unarmoredMovement = classLevel?.class_specific?.unarmored_movement || 0;
+            speed += unarmoredMovement;
+          }
     const handleToggleInspiraction = () => {
         const newValue = !hasInspiration;
         storage.setProperty(playerStats.name, 'hasInspiration', newValue);

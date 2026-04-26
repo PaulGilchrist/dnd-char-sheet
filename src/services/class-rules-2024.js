@@ -227,13 +227,37 @@ const classRules = {
         return classLevel.second_wind || 0;
        },
     getWeaponMastery: (playerStats) => {
-           // 2024 Rules: Get weapon mastery count for Fighter and Barbarian
-        const classLevel = playerStats.class.class_levels[playerStats.level - 1];
-        if (!classLevel) {
-            return 0;
-           }
-        return classLevel.weapon_mastery || 0;
-       }
-};
+            // 2024 Rules: Get weapon mastery count for Fighter and Barbarian
+            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+            if (!classLevel) {
+                return 0;
+            }
+            return classLevel.weapon_mastery || 0;
+        },
+        getMartialArtsDie: (playerStats) => {
+            // 2024 Rules: Get martial arts die for Monk
+            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+            if (!classLevel) {
+                return 4; // Default d4 if no level found
+            }
+            return classLevel.martial_arts_die || 4;
+        },
+        getFocusPoints: (playerStats) => {
+            // 2024 Rules: Get focus points (formerly ki points) for Monk
+            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+            if (!classLevel) {
+                return 0;
+            }
+            return classLevel.focus_points || 0;
+        },
+        getUnarmoredMovementIncrease: (playerStats) => {
+            // 2024 Rules: Get unarmored movement increase for Monk
+            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+            if (!classLevel) {
+                return 0;
+            }
+            return classLevel.unarmored_movement_increase || 0;
+        }
+    };
 
 export default classRules;
