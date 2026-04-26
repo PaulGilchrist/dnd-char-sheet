@@ -92,18 +92,26 @@ const classRules = {
             return features;
          },
     getHighestSubclassLevel: (playerStats) => {
-        let subClassLevel = 0
-        if (playerStats.class.subclass && playerStats.class.subclass.class_levels) {
-            for (let i = 0; i < playerStats.class.subclass.class_levels.length; i++) {
-                if (playerStats.class.subclass.class_levels[i].level > playerStats.level) {
-                    break;
-                } else {
-                    subClassLevel = playerStats.class.subclass.class_levels[i];
-                }
-            }
-        }
-        return subClassLevel
+            let subClassLevel = 0
+            if (playerStats.class.subclass && playerStats.class.subclass.class_levels) {
+                for (let i = 0; i < playerStats.class.subclass.class_levels.length; i++) {
+                    if (playerStats.class.subclass.class_levels[i].level > playerStats.level) {
+                        break;
+                     } else {
+                        subClassLevel = playerStats.class.subclass.class_levels[i];
+                     }
+                 }
+             }
+            return subClassLevel
+         },
+        getRogueSneakAttack: (playerStats) => {
+             // 5e Rules: Get sneak attack from class_specific
+            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+            if (!classLevel || !classLevel.class_specific || !classLevel.class_specific.sneak_attack) {
+                return { dice_count: 0, dice_value: 6 };
+             }
+            return classLevel.class_specific.sneak_attack;
+         }
     }
-}
 
 export default classRules

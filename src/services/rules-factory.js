@@ -193,13 +193,23 @@ const rulesFactory = {
      },
     
     getDruidBeastFlySpeed: (playerStats, playerSummary) => {
-        const characterName = playerSummary.name || 'Unknown';
-        console.log(`[RulesFactory] getDruidBeastFlySpeed called for: ${characterName}`);
-        const selectedRules = rulesFactory.getRules(playerSummary, characterName);
-        const result = selectedRules.classRules.getDruidBeastFlySpeed(playerStats);
-        console.log(`[RulesFactory] getDruidBeastFlySpeed result: ${result}`);
-        return result;
-     },
+            const characterName = playerSummary.name || 'Unknown';
+            console.log(`[RulesFactory] getDruidBeastFlySpeed called for: ${characterName}`);
+            const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+            const result = selectedRules.classRules.getDruidBeastFlySpeed(playerStats);
+            console.log(`[RulesFactory] getDruidBeastFlySpeed result: ${result}`);
+            return result;
+          },
+    
+        getRogueSneakAttack: (playerStats, playerSummary) => {
+            const characterName = playerSummary.name || 'Unknown';
+            console.log(`[RulesFactory] getRogueSneakAttack called for: ${characterName}`);
+            const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+            const result = selectedRules.classRules.getRogueSneakAttack(playerStats);
+            console.log(`[RulesFactory] getRogueSneakAttack result:`, result);
+            return result;
+          },
+    
     
     getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
         const characterName = playerSummary.name || 'Unknown';

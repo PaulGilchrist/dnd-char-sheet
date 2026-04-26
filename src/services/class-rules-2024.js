@@ -259,13 +259,21 @@ const classRules = {
                     return classLevel.unarmored_movement_increase || 0;
                  },
                 getFavoredEnemy: (playerStats) => {
-                     // 2024 Rules: Get favored enemy count for Ranger
-                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
-                    if (!classLevel) {
-                        return 0;
-                     }
-                    return classLevel.favored_enemy || 0;
-                 }
-             };
+                                      // 2024 Rules: Get favored enemy count for Ranger
+                                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                                    if (!classLevel) {
+                                        return 0;
+                                      }
+                                    return classLevel.favored_enemy || 0;
+                                  },
+                                getRogueSneakAttack: (playerStats) => {
+                                      // 2024 Rules: Get sneak attack dice count for Rogue
+                                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                                    if (!classLevel) {
+                                        return { dice_count: 0, dice_value: 6 };
+                                      }
+                                    return { dice_count: classLevel.sneak_attack_num_d6 || 0, dice_value: 6 };
+                                  }
+                              };
 
 export default classRules;
