@@ -9,9 +9,10 @@ function CharClassCleric({ playerStats }) {
     const maxChannelDivinity = playerStats.rules === '2024'
         ? classLevel.channel_divinity
         : classLevel.class_specific?.channel_divinity_charges;
-    const destroyUndeadCR = playerStats.rules === '2024'
-        ? classLevel.destroy_undead_cr
-        : classLevel.class_specific?.destroy_undead_cr;
+    // Destroy Undead was removed in 2024 rules, so only show for 5e
+        const destroyUndeadCR = playerStats.rules === '2024'
+             ? null
+             : classLevel.class_specific?.destroy_undead_cr;
     const [channelDivinityCharges, setChannelDivinityCharges] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
     React.useEffect(() => {
@@ -30,7 +31,7 @@ function CharClassCleric({ playerStats }) {
               <div className="clickable" onClick={handleChannelDivinityChargesToggle} onKeyDown={handleChannelDivinityChargesToggle} tabIndex={0}>
                   <b>Channel Divinity Charges:</b> {maxChannelDivinity}/<HiddenInput handleInputToggle={handleChannelDivinityChargesToggle} handleValueChange={(value) => handleChannelDivinityChargesChange(value)} showInput={showInput} value={channelDivinityCharges}></HiddenInput> <span className="text-muted">(max/cur)</span>
               </div>
-              <div><b>Destroy Undead Challenge Rating: </b>{destroyUndeadCR}</div>
+              {destroyUndeadCR !== null && <div><b>Destroy Undead Challenge Rating: </b>{destroyUndeadCR}</div>}
           </div>}
       </React.Fragment>)
 }
