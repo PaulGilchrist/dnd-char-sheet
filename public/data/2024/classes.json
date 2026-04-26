@@ -7302,7 +7302,7 @@
                 "eldritch_invocations": 7,
                 "features": [
                     {
-                        "name": "Mystic Arcanum (level 6 spell)",
+                        "name": "Mystic Arcanum",
                         "description": "Your patron grants you a magical secret called an arcanum. Choose one level 6 Warlock spell as this arcanum. You can cast your arcanum spell once without expending a spell slot, and you must finish a Long Rest before you can cast it in this way again. You gain another Warlock spell of your choice that can be cast in this way when you reach Warlock levels 13 (level 7 spell), 15 (level 8 spell), and 17 (level 9 spell). You regain all uses of your Mystic Arcanum when you finish a Long Rest. Whenever you gain a Warlock level, you can replace one of your arcanum spells with another Warlock spell of the same level.",
                         "level": 11,
                         "type": "class_feature"
