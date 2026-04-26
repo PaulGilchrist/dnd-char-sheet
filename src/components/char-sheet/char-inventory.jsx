@@ -139,7 +139,6 @@ function CharInventory({ playerStats }) {
                         <span dangerouslySetInnerHTML={{ __html: magicItem.description }}></span>
                     </div>}
                 )}
-                <br/>
             </div>}
             {renderItems(playerStats.inventory.equipped, 'Equipped')}
             {renderItems(playerStats.inventory.backpack, 'Backpack')}
