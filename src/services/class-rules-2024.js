@@ -15,15 +15,15 @@ const classRules = {
     getClass: (allClasses, playerSummary) => {
         let characterClass = cloneDeep(allClasses.find((characterClass) => characterClass.name === playerSummary.class.name));
 
-         // Preserve class_levels before merging
+        // Preserve class_levels before merging
         const classLevels = characterClass.class_levels || [];
 
-         // Merge with player summary data
+        // Merge with player summary data
         if (playerSummary.class) {
             Object.assign(characterClass, playerSummary.class);
         }
 
-         // Restore class_levels after merge (they may have been overwritten)
+        // Restore class_levels after merge (they may have been overwritten)
         characterClass.class_levels = classLevels;
 
         // Handle major (subclass in 2024)
@@ -131,35 +131,37 @@ const classRules = {
         // 2024 Rules: Different feature naming and categorization
         const featuresToIgnore = [
             "Ability Score Improvement",
-            "Feat",
-            "Spellcasting",
-            "Expertise",
-            "Fighting Style",
-            "Martial Arts",
-            "Unarmored Defense",
-            "Unarmored Movement",
-            "Extra Attack",
-            "Second Wind",
+            "Action Surge",
+            "Barbarian Features",
+            "Barbarian Subclass",
+            "Bard Features",
             "Bardic Inspiration",
-            "Rage",
-            "Extra Attack",
-            "Spellcasting",
-            "Monastic Traditions",
-            "Oath Spells",
             "Channel Divinity",
-            "Eldritch Invocations",
-            "Pact Boon",
-            "Warlock Features",
-            "Ranger Features",
-            "Rogue Features",
-            "Paladin Features",
-            "Sorcerer Features",
-            "Wizard Features",
             "Cleric Features",
             "Druid Features",
-            "Barbarian Features",
-            "Bard Features",
-            "Fighter Features"
+            "Eldritch Invocations",
+            "Epic Boon",
+            "Expertise",
+            "Extra Attack",
+            "Feat",
+            "Fighter Features",
+            "Fighting Style",
+            "Martial Arts",
+            "Monastic Traditions",
+            "Oath Spells",
+            "Paladin Features",
+            "Pact Boon",
+            "Rage",
+            "Ranger Features",
+            "Rogue Features",
+            "Second Wind",
+            "Sorcerer Features",
+            "Spellcasting",
+            "Subclass feature",
+            "Unarmored Defense",
+            "Unarmored Movement",
+            "Warlock Features",
+            "Wizard Features"
         ];
 
         const actions = [
@@ -168,29 +170,36 @@ const classRules = {
             "Channel Divinity",
             "Eldritch Blast",
             "Hex",
+            "Reckless Attack",
             "Witch Bolt"
         ];
 
         const bonusActions = [
-            "Cunning Action",
-            "Flurry of Blows",
-            "Patient Defense",
-            "Step of the Wind",
-            "Frenzy",
             "Berserker Charge",
+            "Cunning Action",
+            "Fighting Style Bonus",
+            "Flurry of Blows",
+            "Frenzy",
+            "Instinctive Pounce",
+            "Patient Defense",
             "Second Wind",
-            "Fighting Style Bonus"
+            "Step of the Wind"
         ];
 
         const reactions = [
-            "Parry",
-            "Riposte",
-            "Uncanny Dodge",
-            "Opportunity Attack",
-            "Shield Block",
             "Deflect Missiles",
             "Feather Fall",
-            "Indomitable"
+            "Indomitable",
+            "Opportunity Attack",
+            "Parry",
+            "Riposte",
+            "Shield Block",
+            "Uncanny Dodge"
+        ];
+
+        const characterAdvancement = [
+            "Primal Champion",
+            "Primal Knowledge"
         ];
 
         const categorizedFeatures = {
@@ -209,16 +218,15 @@ const classRules = {
                     details: feature.details
                 };
 
-                if (!featuresToIgnore.includes(feature.name)) {
-                    if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
-                        categorizedFeatures.actions.push(featureSummary);
-                    } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
-                        categorizedFeatures.bonusActions.push(featureSummary);
-                    } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
-                        categorizedFeatures.reactions.push(featureSummary);
-                    } else if (!categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
-                        categorizedFeatures.specialActions.push(featureSummary);
-                    }
+                // featuresToIgnore only prevents adding to specialActions, not from proper arrays
+                if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
+                    categorizedFeatures.actions.push(featureSummary);
+                } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name === feature.name)) {
+                    categorizedFeatures.bonusActions.push(featureSummary);
+                } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name === feature.name)) {
+                    categorizedFeatures.reactions.push(featureSummary);
+                } else if (!featuresToIgnore.includes(feature.name) && !categorizedFeatures.specialActions.some(specialAction => specialAction.name === feature.name)) {
+                    categorizedFeatures.specialActions.push(featureSummary);
                 }
             });
         }

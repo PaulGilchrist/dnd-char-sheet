@@ -20,8 +20,8 @@ function CharClassFighter({ playerStats }) {
         if (classLevel.energy && classLevel.energy.required_major === majorName) {
             let psionicEnergy = storage.getProperty(playerStats.name, 'psionicEnergy');
             setPsionicEnergy(psionicEnergy ? psionicEnergy : classLevel.energy.energy_die_num);
-            }
-        }, [playerStats, classLevel]);
+        }
+    }, [playerStats, classLevel]);
 
     const handleSecondWindToggle = () => {
         setShowSecondWindInput((showInput) => !showInput);
@@ -47,21 +47,21 @@ function CharClassFighter({ playerStats }) {
     const hasEnergy = classLevel.energy && classLevel.energy.required_major === majorName;
 
     return (<React.Fragment>
-           {playerStats.class.name === 'Fighter' && <div>
-               <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles?.join(', ') || 'N/A'}</div>
-               <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
-               <div className="clickable" onClick={handleSecondWindToggle} onKeyDown={handleSecondWindToggle} tabIndex={0}>
-                   <b>Second Wind:</b> {secondWindUses}/{classLevel.second_wind}<HiddenInput handleInputToggle={handleSecondWindToggle} handleValueChange={(value) => handleSecondWindChange(value)} showInput={showSecondWindInput} value={secondWindUses}></HiddenInput> <span className="text-muted">(cur/max)</span>
-               </div>
-               {hasEnergy && <div>
-                   <div><b>Psionic Energy (Psi Warrior):</b></div>
-                   <div className="clickable" onClick={handlePsionicEnergyToggle} onKeyDown={handlePsionicEnergyToggle} tabIndex={0}>
-                       <b>Energy Dice:</b> {psionicEnergy}/{classLevel.energy.energy_die_num}<HiddenInput handleInputToggle={handlePsionicEnergyToggle} handleValueChange={(value) => handlePsionicEnergyChange(value)} showInput={showPsionicEnergyInput} value={psionicEnergy}></HiddenInput> <span className="text-muted">(cur/max)</span>
-                   </div>
-                   <div><b>Energy Die Type: </b>d{classLevel.energy.energy_die_type}</div>
-               </div>}
-           </div>}
-       </React.Fragment>)
+        {playerStats.class.name === 'Fighter' && <div>
+            <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles?.join(', ') || 'N/A'}</div>
+            <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
+            <div className="clickable" onClick={handleSecondWindToggle} onKeyDown={handleSecondWindToggle} tabIndex={0}>
+                <b>Second Wind:</b> {secondWindUses}/{classLevel.second_wind}<HiddenInput handleInputToggle={handleSecondWindToggle} handleValueChange={(value) => handleSecondWindChange(value)} showInput={showSecondWindInput} value={secondWindUses}></HiddenInput> <span className="text-muted">(cur/max)</span>
+            </div>
+            {hasEnergy && <div>
+                <div><b>Psionic Energy (Psi Warrior):</b></div>
+                <div className="clickable" onClick={handlePsionicEnergyToggle} onKeyDown={handlePsionicEnergyToggle} tabIndex={0}>
+                    <b>Energy Dice:</b> {psionicEnergy}/{classLevel.energy.energy_die_num}<HiddenInput handleInputToggle={handlePsionicEnergyToggle} handleValueChange={(value) => handlePsionicEnergyChange(value)} showInput={showPsionicEnergyInput} value={psionicEnergy}></HiddenInput> <span className="text-muted">(cur/max)</span>
+                </div>
+                <div><b>Energy Die Type: </b>d{classLevel.energy.energy_die_type}</div>
+            </div>}
+        </div>}
+    </React.Fragment>)
 }
 
 export default CharClassFighter

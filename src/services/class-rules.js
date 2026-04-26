@@ -3,7 +3,7 @@ import rules from './rules'
 
 const classRules = {
     getClass: (allClasses, playerSummary) => {
-         // Dependencies: None
+        // Dependencies: None
         let characterClass = allClasses.find((characterClass) => characterClass.name === playerSummary.class.name)
         characterClass = merge(cloneDeep(characterClass), cloneDeep(playerSummary.class));
         let subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.class.subclass.name);
@@ -17,28 +17,28 @@ const classRules = {
         return characterClass;
     },
     getDruidMaxWildShapeChallengeRating: (playerStats) => {
-        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_max_cr;
-        if(playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {    
+        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_max_cr;
+        if (playerStats.class.subclass && playerStats.class.subclass.name === 'Moon' && playerStats.level > 1) {
             maxWildShapeChallengeRating = 1;
-            if(playerStats.level > 5) {
+            if (playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
+            }
         }
-         }
         return maxWildShapeChallengeRating
-     },
-      getDruidWildShapeUses: (playerStats) => {
-           // 5e Rules: Always 2 uses per day
-          return 2;
-       },
-      getDruidBeastKnownForms: (playerStats) => {
-           // 5e Rules: No limit on known forms (returns null or 0)
-          return 0;
-       },
-      getDruidBeastFlySpeed: (playerStats) => {
-           // 5e Rules: Use class_specific.wild_shape_fly
-          return playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_fly === true;
-       },
-      addFeatures: (levels) => {
+    },
+    getDruidWildShapeUses: (playerStats) => {
+        // 5e Rules: Always 2 uses per day
+        return 2;
+    },
+    getDruidBeastKnownForms: (playerStats) => {
+        // 5e Rules: No limit on known forms (returns null or 0)
+        return 0;
+    },
+    getDruidBeastFlySpeed: (playerStats) => {
+        // 5e Rules: Use class_specific.wild_shape_fly
+        return playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_fly === true;
+    },
+    addFeatures: (levels) => {
         // Ignore the following features because they are already accounted for
         const featuresToIgnore = [
             "Ability Score Improvement",
@@ -86,6 +86,7 @@ const classRules = {
             "Unarmored Defense",
             "Unarmored Movement"
         ];
+
         const actions = [
             "Action Surge",
             "Avenging Angel",
@@ -118,7 +119,8 @@ const classRules = {
             "Vanish",
             "War Priest",
             "Wholeness of Body"
-        ]
+        ];
+
         const bonusActions = [
             "Channel Divinity: Vow of Enmity",
             "Combat Wild Shape",
@@ -133,6 +135,7 @@ const classRules = {
             "Step of the Wind",
             "Versatile Trickster"
         ];
+
         const reactions = [
             "Beguiling Defenses",
             "Channel Divinity: War God's Blessing",
@@ -140,7 +143,7 @@ const classRules = {
             "Dampen Elements",
             "Deflect Missiles",
             "Entropic Ward",
-            "Instinctive Charm",           
+            "Instinctive Charm",
             "Misty Escape",
             "Projected Ward",
             "Retaliation",
@@ -150,6 +153,8 @@ const classRules = {
             "Warding Flare",
             "Wrath of the Storm"
         ];
+
+
         const categorizedFeatures = {
             actions: [],
             bonusActions: [],
@@ -157,23 +162,22 @@ const classRules = {
             specialActions: []
         }
         // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
-        for(let i = levels.length-1; i >= 0; i--) {
+        for (let i = levels.length - 1; i >= 0; i--) {
             levels[i].features.forEach(feature => {
                 const featureSummary = {
                     name: feature.name,
                     description: feature.desc,
                     details: feature.details
                 };
-                if(!featuresToIgnore.includes(feature.name)) {
-                    if(actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name == feature.name)) {
-                        categorizedFeatures.actions.push(featureSummary);
-                    } else if(bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name == feature.name)) {
-                        categorizedFeatures.bonusActions.push(featureSummary);
-                    } else if(reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name == feature.name)) {
-                        categorizedFeatures.reactions.push(featureSummary);
-                    } else if(!categorizedFeatures.specialActions.some(specialAction => specialAction.name == feature.name)) {
-                        categorizedFeatures.specialActions.push(featureSummary);
-                    }
+                // featuresToIgnore only prevents adding to specialActions, not from proper arrays
+                if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name == feature.name)) {
+                    categorizedFeatures.actions.push(featureSummary);
+                } else if (bonusActions.includes(feature.name) && !categorizedFeatures.bonusActions.some(bonusAction => bonusAction.name == feature.name)) {
+                    categorizedFeatures.bonusActions.push(featureSummary);
+                } else if (reactions.includes(feature.name) && !categorizedFeatures.reactions.some(reaction => reaction.name == feature.name)) {
+                    categorizedFeatures.reactions.push(featureSummary);
+                } else if (!featuresToIgnore.includes(feature.name) && !categorizedFeatures.specialActions.some(specialAction => specialAction.name == feature.name)) {
+                    categorizedFeatures.specialActions.push(featureSummary);
                 }
             });
         }
@@ -183,7 +187,7 @@ const classRules = {
         // Dependencies: Class
         const classLevels = playerStats.class.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
         let features = classRules.addFeatures(classLevels);
-        if(playerStats.class.subclass) {
+        if (playerStats.class.subclass) {
             const subClassLevels = playerStats.class.subclass.class_levels.filter(classLevel => classLevel.level <= playerStats.level);
             const subclassFeatures = classRules.addFeatures(subClassLevels);
             features = {
@@ -196,18 +200,18 @@ const classRules = {
         return features;
     },
     getHighestSubclassLevel: (playerStats) => {
-            let subClassLevel = 0
-            if(playerStats.class.subclass && playerStats.class.subclass.class_levels) {
-                for(let i=0; i < playerStats.class.subclass.class_levels.length; i++) {
-                    if(playerStats.class.subclass.class_levels[i].level > playerStats.level) {
-                        break;
-                     } else {
-                        subClassLevel = playerStats.class.subclass.class_levels[i];
-                     }
-                 }
-             }
-            return subClassLevel
-         }
+        let subClassLevel = 0
+        if (playerStats.class.subclass && playerStats.class.subclass.class_levels) {
+            for (let i = 0; i < playerStats.class.subclass.class_levels.length; i++) {
+                if (playerStats.class.subclass.class_levels[i].level > playerStats.level) {
+                    break;
+                } else {
+                    subClassLevel = playerStats.class.subclass.class_levels[i];
+                }
+            }
+        }
+        return subClassLevel
+    }
 }
 
 export default classRules
