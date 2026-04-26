@@ -17,6 +17,7 @@ export const featuresToIgnore = [
     "Feat",
     "Fighter Subclass",
     "Fighting Style",
+    "Monk Subclass",
     "Paladin Subclass",
     "Rage",
     "Ranger Subclass",
@@ -38,12 +39,14 @@ export const actions = [
     "Eldritch Strike",
     "Elemental Fury",
     "Eldritch Blast",
+    "Empowered Strikes",
     "Hex",
     "Improved Elemental Fury",
     "Improved War Magic",
     "Otherworldly Presence",
     "Reckless Attack",
     "Studied Attacks",
+    "Stunning Strike",
     "Tactical Master",
     "Witch Bolt",
     "Words of Creation"
@@ -64,17 +67,20 @@ export const bonusActions = [
 
 export const reactions = [
     "Countercharm",
-    "Deflect Missiles",
+    "Deflect Attacks",
+    "Deflect Energy",
     "Feather Fall",
     "Indomitable",
     "Opportunity Attack",
     "Parry",
     "Riposte",
     "Shield Block",
+    "Slow Fall",
     "Uncanny Dodge"
 ];
 
 export const characterAdvancement = [
+    "Body and Mind",
     "Divine Order",
     "Druidic",
     "Elfish Lineage",
