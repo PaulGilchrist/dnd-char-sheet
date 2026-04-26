@@ -1,5 +1,6 @@
 import { cloneDeep, merge, uniqBy } from 'lodash';
 import rules from './rules'
+import { featuresToIgnore, actions, bonusActions, reactions, characterAdvancement } from './feature-categories-5e'
 
 const classRules = {
     getClass: (allClasses, playerSummary) => {
@@ -22,8 +23,8 @@ const classRules = {
             maxWildShapeChallengeRating = 1;
             if (playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
-            }
-        }
+         }
+          }
         return maxWildShapeChallengeRating
     },
     getDruidWildShapeUses: (playerStats) => {
@@ -39,149 +40,26 @@ const classRules = {
         return playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_fly === true;
     },
     addFeatures: (levels) => {
-        // Ignore the following features because they are already accounted for
-        const featuresToIgnore = [
-            "Ability Score Improvement",
-            "Acolyte of Nature",
-            "Additional Magical Secrets",
-            "Arcane Tradition",
-            "Aura improvements",
-            "Bard College",
-            "Bardic Inspiration",
-            "Blessings of Knowledge",
-            "Bonus Cantrip",
-            "Bonus Proficiencies",
-            "Bonus Proficiency",
-            "Brutal Critical",
-            "Channel Divinity",
-            "Divine Domain",
-            "Divine Health",
-            "Domain Spells",
-            "Draconic Resilience",
-            "Druid Circle",
-            "Druidic",
-            "Expertise",
-            "Extra Attack",
-            "Fast Movement",
-            "Favored Enemy",
-            "Font of Magic",
-            "Ki",
-            "Mage Hand Legerdemain",
-            "Magical Secrets",
-            "Martial Archetype",
-            "Martial Arts",
-            "Monastic Tradition",
-            "Natural Explorer",
-            "Oath Spells",
-            "Otherworldly Patron",
-            "Pact Magic",
-            "Primal Path",
-            "Rage",
-            "Ranger Archetype",
-            "Roguish Archetype",
-            "Sacred Oath",
-            "Sorcerous Origin",
-            "Spellcasting",
-            "Thieves' Cant",
-            "Unarmored Defense",
-            "Unarmored Movement"
-        ];
-
-        const actions = [
-            "Action Surge",
-            "Avenging Angel",
-            "Channel Divinity: Abjure Enemy",
-            "Channel Divinity: Charm Animals and Plants",
-            "Channel Divinity: Cloak of Shadows",
-            "Channel Divinity: Invoke Duplicity",
-            "Channel Divinity: Knowledge of the Ages",
-            "Channel Divinity: Nature's Wrath",
-            "Channel Divinity: Preserve Life",
-            "Channel Divinity: Radiance of the Dawn",
-            "Channel Divinity: Read Thoughts",
-            "Channel Divinity: Turn the Faithless",
-            "Channel Divinity: Turn Undead",
-            "Cleansing Touch",
-            "Cloak of Shadows",
-            "Corona of Light",
-            "Countercharm",
-            "Dark Delirium",
-            "Divine Sense",
-            "Draconic Presence",
-            "Empty Body",
-            "Fey Presence",
-            "Holy Nimbus",
-            "Intimidating Presence",
-            "Lay on Hands",
-            "Master Transmuter",
-            "Primeval Awareness",
-            "The Third Eye",
-            "Vanish",
-            "War Priest",
-            "Wholeness of Body"
-        ];
-
-        const bonusActions = [
-            "Channel Divinity: Vow of Enmity",
-            "Combat Wild Shape",
-            "Cunning Action",
-            "Exceptional Training",
-            "Flexible Casting: Converting Spell Slot",
-            "Flexible Casting: Creating Spell Slots",
-            "Flurry of Blows",
-            "Frenzy",
-            "Patient Defense",
-            "Second Wind",
-            "Step of the Wind",
-            "Versatile Trickster"
-        ];
-
-        const reactions = [
-            "Beguiling Defenses",
-            "Channel Divinity: War God's Blessing",
-            "Cutting Words",
-            "Dampen Elements",
-            "Deflect Missiles",
-            "Entropic Ward",
-            "Instinctive Charm",
-            "Misty Escape",
-            "Projected Ward",
-            "Retaliation",
-            "Slow Fall",
-            "Soul of Vengeance",
-            "Uncanny Dodge",
-            "Warding Flare",
-            "Wrath of the Storm"
-        ];
-
-
-        const characterAdvancement = [
-            "Primal Champion",
-            "Primal Knowledge",
-            "Skillful",
-            "Versatile"
-        ];
-        
         const categorizedFeatures = {
                     actions: [],
                     bonusActions: [],
                     reactions: [],
                     specialActions: [],
                     characterAdvancement: []
-                 }
-                 // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
+                   }
+                   // Go through levels highest to lowest so is an ability increases at higher levels, that is the one retained in the array
                 for (let i = levels.length - 1; i >= 0; i--) {
                     levels[i].features.forEach(feature => {
                         const featureSummary = {
                             name: feature.name,
                             description: feature.desc,
                             details: feature.details
-                         };
-                         // featuresToIgnore prevents adding to any section
-                         // characterAdvancement, actions, bonusActions, and reactions go to their respective sections
+                           };
+                           // featuresToIgnore prevents adding to any section
+                           // characterAdvancement, actions, bonusActions, and reactions go to their respective sections
                         if (featuresToIgnore.includes(feature.name)) {
-                            // Do nothing - this feature is ignored entirely
-                         } else if (characterAdvancement.includes(feature.name) && !categorizedFeatures.characterAdvancement.some(f => f.name == feature.name)) {
+                              // Do nothing - this feature is ignored entirely
+                           } else if (characterAdvancement.includes(feature.name) && !categorizedFeatures.characterAdvancement.some(f => f.name == feature.name)) {
                             categorizedFeatures.characterAdvancement.push(featureSummary);
                          } else if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name == feature.name)) {
                             categorizedFeatures.actions.push(featureSummary);
@@ -191,9 +69,9 @@ const classRules = {
                             categorizedFeatures.reactions.push(featureSummary);
                          } else if (!categorizedFeatures.specialActions.some(specialAction => specialAction.name == feature.name)) {
                             categorizedFeatures.specialActions.push(featureSummary);
-                         }
-                     });
-                 }
+                  }
+                       });
+                   }
                 return categorizedFeatures;
     },
     getFeatures: (playerStats) => {

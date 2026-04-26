@@ -58,8 +58,8 @@ const rules = {
         const bonusActions = uniqBy([...playerStats.bonusActions ? playerStats.bonusActions : [], ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
         const reactions = uniqBy([...playerStats.reactions ? playerStats.reactions : [], ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
               const specialActions = uniqBy([...playerStats.specialActions ? playerStats.specialActions : [], ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-              const characterAdvancement = uniqBy([...features.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
-              return [actions, bonusActions, reactions, specialActions, characterAdvancement];
+              const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+                      return [actions, bonusActions, reactions, specialActions, characterAdvancement];
            },
     getArmorClass: (allEquipment, playerStats) => {
         // Dependencies: Abilities

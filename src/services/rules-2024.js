@@ -90,8 +90,8 @@ const rules = {
                ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
                ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
                ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-              const characterAdvancement = uniqBy([...features.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
-              return [actions, bonusActions, reactions, specialActions, characterAdvancement];
+              const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+                  return [actions, bonusActions, reactions, specialActions, characterAdvancement];
             },
     getArmorClass: (allEquipment, playerStats) => {
         // 2024 Rules: Simplified AC calculation
