@@ -56,7 +56,9 @@ export const actions = [
     "Radiant Strikes",
     "Reckless Attack",
     "Restoring Touch",
+    "Signature Spells",
     "Sneak Attack",
+    "Spell Mastery",
     "Studied Attacks",
     "Stunning Strike",
     "Supreme Sneak",
@@ -86,6 +88,7 @@ export const bonusActions = [
     "Second Wind",
     "Steady Aim",
     "Step of the Wind",
+    "Stonecunning",
     "Tactical Shift"
 ];
 
@@ -112,6 +115,7 @@ export const characterAdvancement = [
     "Divine Order",
     "Draconic Ancestry",
     "Druidic",
+    "Dwarven Toughness",
     "Elfish Lineage",
     "Expertise",
     "Feral Senses",
@@ -129,6 +133,7 @@ export const characterAdvancement = [
     "Primal Champion",
     "Primal Knowledge",
     "Primal Order",
+    "Scholar",
     "Slippery Mind",
     "Skillful",
     "Versatile"
