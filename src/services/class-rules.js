@@ -22,11 +22,23 @@ const classRules = {
             maxWildShapeChallengeRating = 1;
             if(playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
-            }
         }
+         }
         return maxWildShapeChallengeRating
-    },
-    addFeatures: (levels) => {
+     },
+      getDruidWildShapeUses: (playerStats) => {
+           // 5e Rules: Always 2 uses per day
+          return 2;
+       },
+      getDruidBeastKnownForms: (playerStats) => {
+           // 5e Rules: No limit on known forms (returns null or 0)
+          return 0;
+       },
+      getDruidBeastFlySpeed: (playerStats) => {
+           // 5e Rules: Use class_specific.wild_shape_fly
+          return playerStats.class.class_levels[playerStats.level-1].class_specific.wild_shape_fly === true;
+       },
+      addFeatures: (levels) => {
         // Ignore the following features because they are already accounted for
         const featuresToIgnore = [
             "Ability Score Improvement",

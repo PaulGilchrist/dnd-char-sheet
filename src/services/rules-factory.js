@@ -164,6 +164,42 @@ const rulesFactory = {
         return result;
     },
     
+        getDruidMaxWildShapeChallengeRating: (playerStats, playerSummary) => {
+        const characterName = playerSummary.name || 'Unknown';
+        console.log(`[RulesFactory] getDruidMaxWildShapeChallengeRating called for: ${characterName}`);
+        const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+        const result = selectedRules.classRules.getDruidMaxWildShapeChallengeRating(playerStats);
+        console.log(`[RulesFactory] getDruidMaxWildShapeChallengeRating result: ${result}`);
+        return result;
+     },
+    
+    getDruidWildShapeUses: (playerStats, playerSummary) => {
+        const characterName = playerSummary.name || 'Unknown';
+        console.log(`[RulesFactory] getDruidWildShapeUses called for: ${characterName}`);
+        const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+        const result = selectedRules.classRules.getDruidWildShapeUses(playerStats);
+        console.log(`[RulesFactory] getDruidWildShapeUses result: ${result}`);
+        return result;
+     },
+    
+    getDruidBeastKnownForms: (playerStats, playerSummary) => {
+        const characterName = playerSummary.name || 'Unknown';
+        console.log(`[RulesFactory] getDruidBeastKnownForms called for: ${characterName}`);
+        const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+        const result = selectedRules.classRules.getDruidBeastKnownForms(playerStats);
+        console.log(`[RulesFactory] getDruidBeastKnownForms result: ${result}`);
+        return result;
+     },
+    
+    getDruidBeastFlySpeed: (playerStats, playerSummary) => {
+        const characterName = playerSummary.name || 'Unknown';
+        console.log(`[RulesFactory] getDruidBeastFlySpeed called for: ${characterName}`);
+        const selectedRules = rulesFactory.getRules(playerSummary, characterName);
+        const result = selectedRules.classRules.getDruidBeastFlySpeed(playerStats);
+        console.log(`[RulesFactory] getDruidBeastFlySpeed result: ${result}`);
+        return result;
+     },
+    
     getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
         const characterName = playerSummary.name || 'Unknown';
         console.log(`[RulesFactory] getPlayerStats STARTED for: ${characterName}`);

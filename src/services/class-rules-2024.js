@@ -95,8 +95,8 @@ const classRules = {
         return characterClass;
     },
     getDruidMaxWildShapeChallengeRating: (playerStats) => {
-        // 2024 Rules: Wild shape may have different mechanics
-        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level - 1].class_specific.wild_shape_max_cr;
+        // 2024 Rules: Use beast_max_cr from class_levels
+        let maxWildShapeChallengeRating = playerStats.class.class_levels[playerStats.level - 1].beast_max_cr;
 
         if (playerStats.class.major && playerStats.class.major.name === 'Moon' && playerStats.level > 1) {
             maxWildShapeChallengeRating = 1;
@@ -106,6 +106,18 @@ const classRules = {
         }
 
         return maxWildShapeChallengeRating;
+    },
+    getDruidWildShapeUses: (playerStats) => {
+        // 2024 Rules: Use wild_shape from class_levels
+        return playerStats.class.class_levels[playerStats.level - 1].wild_shape;
+    },
+    getDruidBeastKnownForms: (playerStats) => {
+        // 2024 Rules: Use beast_known_forms from class_levels
+        return playerStats.class.class_levels[playerStats.level - 1].beast_known_forms;
+    },
+    getDruidBeastFlySpeed: (playerStats) => {
+        // 2024 Rules: Use beast_fly_speed from class_levels ("Yes" or "No")
+        return playerStats.class.class_levels[playerStats.level - 1].beast_fly_speed === 'Yes';
     },
     addFeatures: (levels) => {
         // 2024 Rules: Different feature naming and categorization
