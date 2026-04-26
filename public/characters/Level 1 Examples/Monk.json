@@ -23,10 +23,7 @@
     "level": 20,
     "name": "Monk",
     "race": {
-        "name": "Human",
-        "subrace": {
-            "name": "Human"
-        }
+        "name": "Human"
     },
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
     "rules": "2024"

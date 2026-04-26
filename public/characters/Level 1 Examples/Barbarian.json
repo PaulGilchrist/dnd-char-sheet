@@ -22,10 +22,7 @@
     "level": 20,
     "name": "Barbarian",
     "race": {
-        "name": "Human",
-        "subrace": {
-            "name": "Human"
-        }
+        "name": "Human"
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "rules": "2024"
