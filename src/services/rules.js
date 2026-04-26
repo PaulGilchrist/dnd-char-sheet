@@ -362,9 +362,9 @@ const rules = {
         return hitPoints
     },
     getLanguages: (playerStats) => {
-        // Dependencies: Class, Race
-        let languages = [...playerStats.race.languages];
-        let languagesAllowed = languages.length;
+             // Dependencies: Class, Race
+            let languages = [...(playerStats.race.languages || [])];
+            let languagesAllowed = languages.length;
         // dndbeyond allows up to 2 languages from the character's backstory (See Acolyte or Sage)
         languagesAllowed += 2;
          switch(playerStats.race.name) {
@@ -374,7 +374,7 @@ const rules = {
                 break;
         }
         if(playerStats.race.subrace) {
-            languages = [...new Set([...languages, ...playerStats.race.subrace.languages])];
+            languages = [...new Set([...languages, ...(playerStats.race.subrace.languages || [])])];
             switch(playerStats.race.subrace.name) {
                 case 'High Elf':
                     languagesAllowed += 1;
@@ -436,33 +436,35 @@ const rules = {
         if(playerStats.race.starting_proficiency_options && ((skills && playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')) || (!skills && !playerStats.race.starting_proficiency_options.from[0].startsWith('Skill: ')))) {
             proficiencyChoiceCount += playerStats.race.starting_proficiency_options.choose;
         }
-        if(playerStats.race.subrace) {
-            playerStats.race.subrace.racial_traits.forEach(racial_trait => {
-                if (racial_trait.proficiency_choices && ((skills && racial_trait.proficiency_choices.from[0].startsWith('Skill: ')) || (!skills && !racial_trait.proficiency_choices.from[0].startsWith('Skill: ')))) {
-                    proficiencyChoiceCount += racial_trait.proficiency_choices.choose;
-                }
-            });
-        }
+        if(playerStats.race.subrace && playerStats.race.subrace.racial_traits) {
+                    playerStats.race.subrace.racial_traits.forEach(racial_trait => {
+                        if (racial_trait.proficiency_choices && ((skills && racial_trait.proficiency_choices.from[0].startsWith('Skill: ')) || (!skills && !racial_trait.proficiency_choices.from[0].startsWith('Skill: ')))) {
+                            proficiencyChoiceCount += racial_trait.proficiency_choices.choose;
+                          }
+                      });
+                  }
         return proficiencyChoiceCount
     },
     getProficiencies: (playerStats, skill = true) => {
-        // Dependencies: Class, Race
-        let proficienciesAllowed = 0;
-        let proficiencies = [...new Set([...playerStats.class.proficiencies, ...playerStats.race.starting_proficiencies])];
-        // Race Specific
-        playerStats.race.traits.forEach(trait => {
-            if (trait.proficiencies.length > 0) {
-                proficiencies = [...new Set([...proficiencies, ...trait.proficiencies])];
-            }
-        });
-        if(playerStats.race.subrace) {
-            proficiencies = [...new Set([...proficiencies, ...playerStats.race.subrace.starting_proficiencies])];
-            playerStats.race.subrace.racial_traits.forEach(racial_trait => {
-                if (racial_trait.proficiencies.length > 0) {
-                    proficiencies = [...new Set([...proficiencies, ...racial_trait.proficiencies])];
-                }
-            });
-        }
+              // Dependencies: Class, Race
+            let proficienciesAllowed = 0;
+            let proficiencies = [...new Set([...(playerStats.class.proficiencies || []), ...(playerStats.race.starting_proficiencies || [])])];
+              // Race Specific
+            playerStats.race.traits.forEach(trait => {
+                if (trait.proficiencies && trait.proficiencies.length > 0) {
+                    proficiencies = [...new Set([...proficiencies, ...trait.proficiencies])];
+                 }
+             });
+            if(playerStats.race.subrace) {
+                            proficiencies = [...new Set([...proficiencies, ...(playerStats.race.subrace.starting_proficiencies || [])])];
+                            if (playerStats.race.subrace.racial_traits) {
+                                playerStats.race.subrace.racial_traits.forEach(racial_trait => {
+                                    if (racial_trait.proficiencies && racial_trait.proficiencies.length > 0) {
+                                        proficiencies = [...new Set([...proficiencies, ...racial_trait.proficiencies])];
+                                      }
+                                  });
+                              }
+                          }
         if(skill) {
             proficiencies = proficiencies.filter((proficiency) => proficiency.startsWith('Skill'));
             proficiencies = proficiencies.map((proficiency) => {

@@ -36,12 +36,12 @@ const raceRules = {
             race.subrace = null;
            }
         delete race.subraces; // We don't need these anymore
-        if (race.subrace) {
-            race.subrace.ability_bonuses = race.subrace.ability_bonuses.map((ability_bonus) => {
-                ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
-                return ability_bonus;
-               });
-           }
+        if (race.subrace && race.subrace.ability_bonuses) {
+                    race.subrace.ability_bonuses = race.subrace.ability_bonuses.map((ability_bonus) => {
+                        ability_bonus.ability_score = rules.getAbilityLongName(ability_bonus.ability_score);
+                        return ability_bonus;
+                        });
+                    }
         return race;
         },
     getRacialBonus: (playerStats, abilityName) => {
@@ -51,12 +51,12 @@ const raceRules = {
         if (ability_bonus) {
             racialBonus += ability_bonus.bonus;
            }
-        if (playerStats.race.subrace) {
-            ability_bonus = playerStats.race.subrace.ability_bonuses.find((ability_bonus) => ability_bonus.ability_score == abilityName);
-            if (ability_bonus) {
-                racialBonus += ability_bonus.bonus;
-               }
-           }
+        if (playerStats.race.subrace && playerStats.race.subrace.ability_bonuses) {
+                    ability_bonus = playerStats.race.subrace.ability_bonuses.find((ability_bonus) => ability_bonus.ability_score == abilityName);
+                    if (ability_bonus) {
+                        racialBonus += ability_bonus.bonus;
+                        }
+                    }
         return racialBonus;
         },
     getResistances: (playerSummary) => {
@@ -135,7 +135,7 @@ const raceRules = {
     getTraits: (playerStats) => {
            // Dependencies: Race
         let traits = raceRules.addTraits(playerStats.race.traits);
-        if(playerStats.race.subrace) {
+        if(playerStats.race.subrace && playerStats.race.subrace.racial_traits) {
             const subraceTraits = raceRules.addTraits(playerStats.race.subrace.racial_traits);
             traits = {
                 actions: uniqBy([...traits.actions, ...subraceTraits.actions], 'name'),
