@@ -28,18 +28,19 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
       const className = formData.class.name;
       const charLevel = parseInt(formData.level) || 1;
       const version = formData.rules || '5e';
+      const majorName = formData.class.major?.name || formData.class.subclass?.name || null;
       
       setIsLoadingLimits(true);
       try {
-        const limits = await getSpellLimits(className, charLevel, version);
+        const limits = await getSpellLimits(className, charLevel, version, majorName);
         setSpellLimits(limits);
       } catch (error) {
         console.error('Error fetching spell limits:', error);
         setSpellLimits({ cantrip: 4, level1: 2, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 });
       } finally {
         setIsLoadingLimits(false);
-      }
-    };
+       }
+     };
     
     fetchSpellLimits();
   }, [formData.class, formData.level, formData.rules]);
@@ -78,9 +79,10 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     const className = formData.class.name;
     const charLevel = parseInt(formData.level) || 1;
     const version = formData.rules || '5e';
+    const majorName = formData.class.major?.name || formData.class.subclass?.name || null;
     
-    // Validate spell selection
-    const validation = await validateSpellSelection(formData.spells || [], allSpells || [], className, charLevel, version);
+     // Validate spell selection
+    const validation = await validateSpellSelection(formData.spells || [], allSpells || [], className, charLevel, version, majorName);
     
     if (className === 'Barbarian' || className === 'Monk' || className === 'Rogue' || className === 'Fighter') {
       if (validation.valid) {

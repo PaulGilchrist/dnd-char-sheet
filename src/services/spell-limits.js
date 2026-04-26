@@ -51,7 +51,7 @@ export async function fetchClassData(className, version = '5e') {
  * @param {string} version - '5e' or '2024'
  * @returns {object} - Object containing spell limits for each level
  */
-export async function getSpellLimits(className, level, version = '5e') {
+export async function getSpellLimits(className, level, version = '5e', majorName = null) {
   try {
     const classData = await fetchClassData(className, version);
     
@@ -64,12 +64,19 @@ export async function getSpellLimits(className, level, version = '5e') {
     const levelEntry = classData.class_levels.find(entry => entry.level === level);
     
     if (!levelEntry || !levelEntry.spellcasting) {
-      // Check if class has spellcasting at higher levels (subclass feature)
-      const spellcasting = findSpellcastingInClass(classData, level, version);
+       // Check if class has spellcasting at higher levels (subclass feature)
+      const spellcasting = findSpellcastingInClass(classData, level, version, majorName);
       if (spellcasting) {
         return convertSpellcastingToLimits(spellcasting);
       }
       return getDefaultSpellLimits(className);
+    }
+    
+    // For 2024 classes, check if spellcasting requires a specific major
+    if (version === '2024' && levelEntry.spellcasting.required_major) {
+      if (levelEntry.spellcasting.required_major !== majorName) {
+        return getDefaultSpellLimits(className);
+      }
     }
     
     return convertSpellcastingToLimits(levelEntry.spellcasting, className);
@@ -82,27 +89,37 @@ export async function getSpellLimits(className, level, version = '5e') {
 /**
  * Finds spellcasting information in class levels or subclass features
  */
-function findSpellcastingInClass(classData, level, version) {
-  // First, try to find spellcasting in current or previous levels
+function findSpellcastingInClass(classData, level, version, majorName = null) {
+   // First, try to find spellcasting in current or previous levels
   for (let i = level - 1; i >= 0; i--) {
     const levelEntry = classData.class_levels[i];
     if (levelEntry && levelEntry.spellcasting) {
+       // For 2024 classes, check if spellcasting requires a specific major
+      if (version === '2024' && levelEntry.spellcasting.required_major) {
+        if (levelEntry.spellcasting.required_major !== majorName) {
+          continue; // Skip this level's spellcasting if major doesn't match
+         }
+       }
       return levelEntry.spellcasting;
-    }
-  }
-  
-  // If not found, check subclass features (for 2024)
+     }
+   }
+   
+   // If not found, check subclass features (for 2024)
   if (version === '2024' && classData.subclass) {
     const subclass = classData.subclass;
     if (subclass.features) {
       for (const feature of subclass.features) {
         if (feature.spellcasting) {
+           // For 2024 classes, check if spellcasting requires a specific major
+          if (feature.spellcasting.required_major && feature.spellcasting.required_major !== majorName) {
+            continue; // Skip this feature's spellcasting if major doesn't match
+           }
           return feature.spellcasting;
-        }
-      }
-    }
-  }
-  
+         }
+       }
+     }
+   }
+   
   return null;
 }
 
@@ -171,8 +188,8 @@ function getDefaultSpellLimits(className) {
 /**
  * Validates if spell selection is within limits for a given class and level
  */
-export async function validateSpellSelection(selectedSpells, allSpells, className, level, version = '5e') {
-  const limits = await getSpellLimits(className, level, version);
+export async function validateSpellSelection(selectedSpells, allSpells, className, level, version = '5e', majorName = null) {
+  const limits = await getSpellLimits(className, level, version, majorName);
   const counts = countSpellsByLevel(selectedSpells, allSpells);
   
   const violations = [];
@@ -254,12 +271,12 @@ function countSpellsByLevel(selectedSpells, allSpells) {
 /**
  * Gets spell limits for all levels (1-20) for a class
  */
-export async function getAllSpellLimits(className, version = '5e') {
+export async function getAllSpellLimits(className, version = '5e', majorName = null) {
   const limits = {};
   
   for (let level = 1; level <= 20; level++) {
-    limits[level] = await getSpellLimits(className, level, version);
-  }
+    limits[level] = await getSpellLimits(className, level, version, majorName);
+   }
   
   return limits;
 }

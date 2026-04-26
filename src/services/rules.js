@@ -506,16 +506,22 @@ const rules = {
         }
         return [proficienciesAllowed, proficiencies.sort()];
     },
-    getSpellAbilities: (allSpells, playerStats) => {
-        // Dependencies: Abilities, Class 
+        getSpellAbilities: (allSpells, playerStats) => {
+          // Dependencies: Abilities, Class 
         let spellAbilities = null;
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
         if(!spellcasting) {
             spellcasting = classRules.getHighestSubclassLevel(playerStats).spellcasting;
         }
         if(spellcasting) {
-            spellAbilities = {...spellcasting};
-        }
+             // Check if spellcasting requires a specific major/subclass
+            if (spellcasting.required_major && spellcasting.required_major !== playerStats.class.major?.name && spellcasting.required_major !== playerStats.class.subclass?.name) {
+                spellcasting = null;
+              }
+            if(spellcasting) {
+                spellAbilities = {...spellcasting};
+              }
+         }
         if (spellAbilities) {
             if (playerStats.spells) {
                 spellAbilities.spells = playerStats.spells.map(spell => {return { name: spell, prepared: ''};})               

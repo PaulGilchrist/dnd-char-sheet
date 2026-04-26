@@ -15,18 +15,26 @@ const classRules = {
     getClass: (allClasses, playerSummary) => {
         let characterClass = cloneDeep(allClasses.find((characterClass) => characterClass.name === playerSummary.class.name));
 
-        // Merge with player summary data
+         // Preserve class_levels before merging
+        const classLevels = characterClass.class_levels || [];
+
+         // Merge with player summary data
         if (playerSummary.class) {
             Object.assign(characterClass, playerSummary.class);
         }
 
+         // Restore class_levels after merge (they may have been overwritten)
+        characterClass.class_levels = classLevels;
+
         // Handle major (subclass in 2024)
-        if (playerSummary.class.major) {
-            const major = characterClass.majors?.find((major) => major.name === playerSummary.class.major.name);
+        // Check for both 'major' (2024 format) and 'subclass' (legacy format)
+        let majorName = playerSummary.class.major?.name || playerSummary.class.subclass?.name;
+        if (majorName) {
+            const major = characterClass.majors?.find((major) => major.name === majorName);
             if (major) {
                 characterClass.major = cloneDeep(major);
             } else {
-                characterClass.major = null;
+                characterClass.major = { name: majorName, features: [] };
             }
         } else {
             characterClass.major = null;
@@ -131,7 +139,6 @@ const classRules = {
             "Unarmored Defense",
             "Unarmored Movement",
             "Extra Attack",
-            "Action Surge",
             "Second Wind",
             "Bardic Inspiration",
             "Rage",
@@ -177,12 +184,13 @@ const classRules = {
 
         const reactions = [
             "Parry",
-            " Riposte",
+            "Riposte",
             "Uncanny Dodge",
             "Opportunity Attack",
             "Shield Block",
             "Deflect Missiles",
-            "Feather Fall"
+            "Feather Fall",
+            "Indomitable"
         ];
 
         const categorizedFeatures = {
@@ -196,10 +204,10 @@ const classRules = {
         for (let i = levels.length - 1; i >= 0; i--) {
             levels[i].features.forEach(feature => {
                 const featureSummary = {
-                                name: feature.name,
-                                description: feature.description,
-                                details: feature.details
-                             };
+                    name: feature.name,
+                    description: feature.description,
+                    details: feature.details
+                };
 
                 if (!featuresToIgnore.includes(feature.name)) {
                     if (actions.includes(feature.name) && !categorizedFeatures.actions.some(action => action.name === feature.name)) {
@@ -253,6 +261,36 @@ const classRules = {
         }
 
         return highestLevel;
+    },
+    getEnergy: (playerStats) => {
+        // 2024 Rules: Get energy properties for Psi Warrior and other classes with energy dice
+        const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+        if (!classLevel || !classLevel.energy) {
+            return null;
+        }
+
+        // Check if energy requires a specific major
+        if (classLevel.energy.required_major && classLevel.energy.required_major !== playerStats.class.major?.name) {
+            return null;
+        }
+
+        return classLevel.energy;
+    },
+    getSecondWind: (playerStats) => {
+        // 2024 Rules: Get second wind uses for Fighter
+        const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+        if (!classLevel) {
+            return 0;
+        }
+        return classLevel.second_wind || 0;
+    },
+    getWeaponMastery: (playerStats) => {
+        // 2024 Rules: Get weapon mastery count for Fighter and Barbarian
+        const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+        if (!classLevel) {
+            return 0;
+        }
+        return classLevel.weapon_mastery || 0;
     }
 };
 

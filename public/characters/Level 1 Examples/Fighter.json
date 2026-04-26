@@ -27,5 +27,6 @@
         "name": "Human"
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
+    "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"],
     "rules": "2024"
 }

@@ -4,51 +4,64 @@ import storage from '../../../services/storage'
 import HiddenInput from '../../common/hidden-input'
 
 function CharClassFighter({ playerStats }) {
-    const [actionSurges, setActionSurges] = React.useState(0);
-    const [showActionSurgesInput, setShowActionSurgesInput] = React.useState(false);
-    const [indomitableUses, setIndomitableUses] = React.useState(0);
-    const [showIndomitableUsesInput, setShowIndomitableUsesInput] = React.useState(false);
+    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+    const [secondWindUses, setSecondWindUses] = React.useState(0);
+    const [showSecondWindInput, setShowSecondWindInput] = React.useState(false);
+    const [psionicEnergy, setPsionicEnergy] = React.useState(0);
+    const [showPsionicEnergyInput, setShowPsionicEnergyInput] = React.useState(false);
+
     React.useEffect(() => {
-            const classSpecific = playerStats.class?.class_levels?.[playerStats.level - 1]?.class_specific;
-            if (!classSpecific) return;
-            let actionSurges = storage.getProperty(playerStats.name, 'actionSurges');
-            setActionSurges(actionSurges ? actionSurges : classSpecific.action_surges);
-            let indomitableUses = storage.getProperty(playerStats.name, 'indomitableUses');
-            setIndomitableUses(indomitableUses ? indomitableUses : classSpecific.indomitable_uses);
-         }, [playerStats]);
-    const handleActionSurgesToggle = () => {
-        setShowActionSurgesInput((showInput) => !showInput);
+        if (!classLevel) return;
+
+        let secondWindUses = storage.getProperty(playerStats.name, 'secondWindUses');
+        setSecondWindUses(secondWindUses ? secondWindUses : classLevel.second_wind);
+
+        const majorName = playerStats.class.major?.name || playerStats.class.subclass?.name;
+        if (classLevel.energy && classLevel.energy.required_major === majorName) {
+            let psionicEnergy = storage.getProperty(playerStats.name, 'psionicEnergy');
+            setPsionicEnergy(psionicEnergy ? psionicEnergy : classLevel.energy.energy_die_num);
+            }
+        }, [playerStats, classLevel]);
+
+    const handleSecondWindToggle = () => {
+        setShowSecondWindInput((showInput) => !showInput);
     };
-    const handleActionSurgesChange = (actionSurges) => {
-        storage.setProperty(playerStats.name, 'actionSurges', actionSurges);
-        setActionSurges(actionSurges);
+    const handleSecondWindChange = (value) => {
+        storage.setProperty(playerStats.name, 'secondWindUses', value);
+        setSecondWindUses(value);
     };
-    const handleIndomitableUsesToggle = () => {
-        setShowIndomitableUsesInput((showInput) => !showInput);
+
+    const handlePsionicEnergyToggle = () => {
+        setShowPsionicEnergyInput((showInput) => !showInput);
     };
-    const handleIndomitableUsesChange = (indomitableUses) => {
-        storage.setProperty(playerStats.name, 'indomitableUses', indomitableUses);
-        setIndomitableUses(indomitableUses);
+    const handlePsionicEnergyChange = (value) => {
+        storage.setProperty(playerStats.name, 'psionicEnergy', value);
+        setPsionicEnergy(value);
     };
-    const classSpecific = playerStats.class?.class_levels?.[playerStats.level - 1]?.class_specific;
-        if (!classSpecific) {
-            return null;
-        }
-        return (<React.Fragment>
-             {playerStats.class.name === 'Fighter' && <div>
-                 <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles.join(', ')}</div>
-                 {playerStats.class.subclass.maneuvers && <div>
-                     <b>Maneuvers: </b>{playerStats.class.subclass.maneuvers.sort().join(', ')}
-                 </div>}
-                 <div><b>Extra Attacks: </b>{classSpecific.extra_attacks}</div>
-                 <div className="clickable" onClick={handleActionSurgesToggle} onKeyDown={handleActionSurgesToggle} tabIndex={0}>
-                     <b>Action Surges:</b> {classSpecific.action_surges}/<HiddenInput handleInputToggle={handleActionSurgesToggle} handleValueChange={(value) => handleActionSurgesChange(value)} showInput={showActionSurgesInput} value={actionSurges}></HiddenInput> <span className="text-muted">(max/cur)</span>
-                 </div>
-                 <div className="clickable" onClick={handleIndomitableUsesToggle} onKeyDown={handleIndomitableUsesToggle} tabIndex={0}>
-                     <b>Indomitable Uses:</b> {classSpecific.indomitable_uses}/<HiddenInput handleInputToggle={handleIndomitableUsesToggle} handleValueChange={(value) => handleIndomitableUsesChange(value)} showInput={showIndomitableUsesInput} value={indomitableUses}></HiddenInput> <span className="text-muted">(max/cur)</span>
-                 </div>
-             </div>}
-         </React.Fragment>)
+
+    if (!classLevel) {
+        return null;
+    }
+
+    const majorName = playerStats.class.major?.name || playerStats.class.subclass?.name;
+    const hasEnergy = classLevel.energy && classLevel.energy.required_major === majorName;
+
+    return (<React.Fragment>
+           {playerStats.class.name === 'Fighter' && <div>
+               <div><b>Fighting Styles: </b>{playerStats.class.fightingStyles?.join(', ') || 'N/A'}</div>
+               <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
+               <div className="clickable" onClick={handleSecondWindToggle} onKeyDown={handleSecondWindToggle} tabIndex={0}>
+                   <b>Second Wind:</b> {secondWindUses}/{classLevel.second_wind}<HiddenInput handleInputToggle={handleSecondWindToggle} handleValueChange={(value) => handleSecondWindChange(value)} showInput={showSecondWindInput} value={secondWindUses}></HiddenInput> <span className="text-muted">(cur/max)</span>
+               </div>
+               {hasEnergy && <div>
+                   <div><b>Psionic Energy (Psi Warrior):</b></div>
+                   <div className="clickable" onClick={handlePsionicEnergyToggle} onKeyDown={handlePsionicEnergyToggle} tabIndex={0}>
+                       <b>Energy Dice:</b> {psionicEnergy}/{classLevel.energy.energy_die_num}<HiddenInput handleInputToggle={handlePsionicEnergyToggle} handleValueChange={(value) => handlePsionicEnergyChange(value)} showInput={showPsionicEnergyInput} value={psionicEnergy}></HiddenInput> <span className="text-muted">(cur/max)</span>
+                   </div>
+                   <div><b>Energy Die Type: </b>d{classLevel.energy.energy_die_type}</div>
+               </div>}
+           </div>}
+       </React.Fragment>)
 }
 
 export default CharClassFighter

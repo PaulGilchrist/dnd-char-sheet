@@ -492,8 +492,8 @@ const rules = {
 
         return [proficienciesAllowed, proficiencies.sort()];
     },
-    getSpellAbilities: (allSpells, playerStats) => {
-        // 2024 Rules: Simplified spellcasting
+        getSpellAbilities: (allSpells, playerStats) => {
+         // 2024 Rules: Simplified spellcasting
         let spellAbilities = null;
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
 
@@ -501,9 +501,16 @@ const rules = {
             spellcasting = classRules.getHighestMajorLevel(playerStats)?.spellcasting;
         }
 
-        if (spellcasting) {
-            spellAbilities = { ...spellcasting };
-        }
+                if (spellcasting) {
+             // Check if spellcasting requires a specific major (subclass)
+            const majorName = playerStats.class.major?.name || playerStats.class.subclass?.name;
+            if (spellcasting.required_major && spellcasting.required_major !== majorName) {
+                spellcasting = null;
+             }
+            if (spellcasting) {
+                spellAbilities = { ...spellcasting };
+         }
+          }
 
         if (spellAbilities) {
             if (playerStats.spells) {
