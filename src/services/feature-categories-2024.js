@@ -30,6 +30,7 @@ export const featuresToIgnore = [
 ];
 
 export const actions = [
+    "Abjure Foes",
     "Action Surge",
     "Arcane Charge",
     "Blessed Strikes",
@@ -44,7 +45,10 @@ export const actions = [
     "Improved Elemental Fury",
     "Improved War Magic",
     "Otherworldly Presence",
+    "Paladin's Smite",
+    "Radiant Strikes",
     "Reckless Attack",
+    "Restoring Touch",
     "Studied Attacks",
     "Stunning Strike",
     "Tactical Master",
@@ -55,6 +59,7 @@ export const actions = [
 export const bonusActions = [
     "Berserker Charge",
     "Cunning Action",
+    "Draconic Flight",
     "Fighting Style Bonus",
     "Flurry of Blows",
     "Frenzy",
@@ -80,8 +85,11 @@ export const reactions = [
 ];
 
 export const characterAdvancement = [
+    "(capstone - depends on subclass)",
     "Body and Mind",
+    "Damage Resistance",
     "Divine Order",
+    "Draconic Ancestry",
     "Druidic",
     "Elfish Lineage",
     "Expertise",
