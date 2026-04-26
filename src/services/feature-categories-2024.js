@@ -11,6 +11,9 @@ export const featuresToIgnore = [
     "Druid Subclass",
     "Eldritch Invocations",
     "Epic Boon",
+    "Extra Attack",
+    "Two Extra Attacks",
+    "Three Extra Attacks",
     "Feat",
     "Fighter Subclass",
     "Fighting Style",
@@ -27,15 +30,21 @@ export const featuresToIgnore = [
 
 export const actions = [
     "Action Surge",
+    "Arcane Charge",
     "Blessed Strikes",
     "Breath Weapon",
     "Channel Divinity",
     "Divine Intervention",
+    "Eldritch Strike",
+    "Elemental Fury",
     "Eldritch Blast",
-    "Extra Attack",
     "Hex",
+    "Improved Elemental Fury",
+    "Improved War Magic",
     "Otherworldly Presence",
     "Reckless Attack",
+    "Studied Attacks",
+    "Tactical Master",
     "Witch Bolt",
     "Words of Creation"
 ];
@@ -49,7 +58,8 @@ export const bonusActions = [
     "Instinctive Pounce",
     "Patient Defense",
     "Second Wind",
-    "Step of the Wind"
+    "Step of the Wind",
+    "Tactical Shift"
 ];
 
 export const reactions = [
@@ -66,6 +76,7 @@ export const reactions = [
 
 export const characterAdvancement = [
     "Divine Order",
+    "Druidic",
     "Elfish Lineage",
     "Expertise",
     "Fiendish Legacy",
@@ -78,6 +89,7 @@ export const characterAdvancement = [
     "Pact Boon",
     "Primal Champion",
     "Primal Knowledge",
+    "Primal Order",
     "Skillful",
     "Versatile"
 ];
