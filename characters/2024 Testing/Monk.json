@@ -23,7 +23,10 @@
     "level": 20,
     "name": "Monk",
     "race": {
-        "name": "Human"
+        "name": "Goliath",
+        "subrace": {
+            "name": "Cloud's Jaunt (Cloud Giant)"
+        }
     },
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
     "rules": "2024"

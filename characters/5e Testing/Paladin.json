@@ -24,9 +24,8 @@
     "level": 20,
     "name": "Paladin",
     "race": {
-        "name": "Dragonborn",
-        "type": "Gold"
+        "name": "Halfling"
     },
     "skillProficiencies": ["Athletics","History","Intimidation","Persuasion"],
-    "rules": "2024"
+    "rules": "5e"
 }

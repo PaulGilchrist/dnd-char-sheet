@@ -10,8 +10,6 @@
     "alignment": "Neutral Good",
     "class": {
         "name": "Ranger",
-        "favoredEnemies": ["Humanoids"],
-        "favoredTerrain": ["Forest"],
         "fightingStyles": [
             "Archery"
         ],
@@ -28,7 +26,10 @@
     "level": 20,
     "name": "Ranger",
     "race": {
-        "name": "Half-Elf"
+        "name": "Goliath",
+        "subrace": {
+            "name": "Cloud's Jaunt (Cloud Giant)"
+        }
     },
     "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
     "rules": "2024"

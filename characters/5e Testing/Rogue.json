@@ -23,8 +23,8 @@
     "level": 20,
     "name": "Rogue",
     "race": {
-        "name": "Half-Elf"
+        "name": "Human"
     },
     "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
-    "rules": "2024"
+    "rules": "5e"
 }
