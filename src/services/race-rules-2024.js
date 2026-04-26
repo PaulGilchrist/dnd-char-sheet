@@ -39,10 +39,15 @@ const raceRules = {
     getRace: (allRaces, playerSummary) => {
         const race = cloneDeep(allRaces.find((race) => race.name === playerSummary.race.name));
 
-            // Merge with player summary data
-        if (playerSummary.race) {
-            Object.assign(race, playerSummary.race);
-            }
+                 // Handle case where race is not found in allRaces
+            if (!race) {
+                return playerSummary.race;
+                 }
+
+                 // Merge with player summary data
+            if (playerSummary.race) {
+                Object.assign(race, playerSummary.race);
+                 }
 
             // 2024: Handle lineage selection if present
         if (playerSummary.race.lineage) {

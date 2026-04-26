@@ -251,13 +251,21 @@ const classRules = {
             return classLevel.focus_points || 0;
         },
         getUnarmoredMovementIncrease: (playerStats) => {
-            // 2024 Rules: Get unarmored movement increase for Monk
-            const classLevel = playerStats.class.class_levels[playerStats.level - 1];
-            if (!classLevel) {
-                return 0;
-            }
-            return classLevel.unarmored_movement_increase || 0;
-        }
-    };
+                     // 2024 Rules: Get unarmored movement increase for Monk
+                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                    if (!classLevel) {
+                        return 0;
+                     }
+                    return classLevel.unarmored_movement_increase || 0;
+                 },
+                getFavoredEnemy: (playerStats) => {
+                     // 2024 Rules: Get favored enemy count for Ranger
+                    const classLevel = playerStats.class.class_levels[playerStats.level - 1];
+                    if (!classLevel) {
+                        return 0;
+                     }
+                    return classLevel.favored_enemy || 0;
+                 }
+             };
 
 export default classRules;
