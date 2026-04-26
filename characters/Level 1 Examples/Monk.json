@@ -20,13 +20,11 @@
         "gold": 400
     },
     "languages": ["Halfling", "Infernal"],
-    "level": 1,
-    "name": "Ewyn",
+    "level": 20,
+    "name": "Monk",
     "race": {
-        "name": "Human",
-        "subrace": {
-            "name": "Human"
-        }
+        "name": "Human"
     },
-    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"]
+    "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
+    "rules": "2024"
 }

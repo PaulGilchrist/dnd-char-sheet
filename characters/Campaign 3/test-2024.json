@@ -1,0 +1,117 @@
+{
+  "name": "Test-2024",
+  "level": 10,
+  "alignment": "Lawful Neutral",
+  "background": "Artisan",
+  "race": {
+    "name": "Dragonborn",
+    "subrace": {
+      "name": "Black",
+      "description": ""
+    }
+  },
+  "class": {
+    "name": "Cleric",
+    "subclass": {
+      "name": "Light Domain",
+      "type": ""
+    }
+  },
+  "abilities": [
+    {
+      "name": "Strength",
+      "baseScore": 14,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Dexterity",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Constitution",
+      "baseScore": 14,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Intelligence",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Wisdom",
+      "baseScore": 16,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    },
+    {
+      "name": "Charisma",
+      "baseScore": 10,
+      "abilityImprovements": 0,
+      "miscBonus": 0
+    }
+  ],
+  "skillProficiencies": [
+    "Perception",
+    "Survival"
+  ],
+  "inventory": {
+    "backpack": [
+      "Rope, Silk",
+      "Ration"
+    ],
+    "equipped": [
+      "Longsword",
+      "Longbow"
+    ],
+    "gold": 10,
+    "magicItems": []
+  },
+  "languages": [
+    "Common",
+    "Abyssal",
+    "Draconic"
+  ],
+  "spells": [
+    "Commune",
+    "Contagion",
+    "Arcane Eye",
+    "Banishment",
+    "Control Water",
+    "Beacon of Hope",
+    "Bestow Curse",
+    "Clairvoyance",
+    "Augury",
+    "Blindness/Deafness",
+    "Calm Emotions",
+    "Bane",
+    "Bless",
+    "Command",
+    "Create or Destroy Water",
+    "Resistance",
+    "Sacred Flame",
+    "Spare the Dying",
+    "Thaumaturgy",
+    "Mending"
+  ],
+  "resistances": [
+    "Fire"
+  ],
+  "feats": [
+    "Crafter",
+    "Athlete",
+    "Actor"
+  ],
+  "magicItems": [
+    "Adamantine Armor",
+    "Adamantine Weapon"
+  ],
+  "specialActions": [
+    "None"
+  ],
+  "rules": "2024"
+}

@@ -20,10 +20,11 @@
         "equipped": ["Arrows","Studded Leather","Crossbow, hand","Shortsword","Shortsword","Thieves' Tools"],
         "gold": 10
     },
-    "level": 1,
-    "name": "Praxen",
+    "level": 20,
+    "name": "Rogue",
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"]
+    "skillProficiencies": ["Acrobatics","Athletics","Deception","Insight","Investigation","Perception","Sleight of Hand","Stealth"],
+    "rules": "2024"
 }

@@ -48,7 +48,48 @@
                 "proficiencies": []
             }
         ],
-        "subraces": [],
+        "subraces": [
+            {
+                "name": "Black",
+                "description": "Acid"
+            },
+            {
+                "name": "Blue",
+                "description": "Lightning"
+            },
+            {
+                "name": "Brass",
+                "description": "Fire"
+            },
+            {
+                "name": "Bronze",
+                "description": "Lightning"
+            },
+            {
+                "name": "Copper",
+                "description": "Acid"
+            },
+            {
+                "name": "Black",
+                "description": "Acid"
+            },
+            {
+                "name": "Gold",
+                "description": "Fire"
+            },
+            {
+                "name": "Green",
+                "description": "Poison"
+            },
+            {
+                "name": "Red",
+                "description": "Fire"
+            },
+            {
+                "name": "Silver",
+                "description": "Cold"
+            }
+        ],
         "book": "Player's Handbook",
         "desc": "Dragonborn look very much like dragons standing erect in humanoid form, though they lack wings or a tail.",
         "page": 32

@@ -25,10 +25,11 @@
         "equipped": ["Arrows", "Studded Leather", "Longbow", "Scimitar", "Scimitar"],
         "gold": 10
     },
-    "level": 1,
-    "name": "Balasar",
+    "level": 20,
+    "name": "Ranger",
     "race": {
         "name": "Half-Elf"
     },
-    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"]
+    "skillProficiencies": ["Animal Handling","Insight","Investigation","Nature","Perception","Stealth","Survival"],
+    "rules": "2024"
 }

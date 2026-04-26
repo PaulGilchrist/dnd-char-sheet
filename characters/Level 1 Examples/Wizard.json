@@ -19,14 +19,15 @@
         "equipped": ["Quarterstaff","Dagger"],
         "gold": 10
     },
-    "level": 1,
-    "name": "Amric",
+    "level": 20,
+    "name": "Wizard",
     "race": {
-        "name": "Elf",
+        "name": "Wizard",
         "subrace": {
             "name": "High Elf"
         }
     },
     "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],
-    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"]
+    "spells": ["Burning Hands","Detect Magic","Disguise Self","Find Familiar","Fire Bolt","Mage Hand","Magic Missile","Minor Illusion","Shield","Shocking Grasp"],
+    "rules": "2024"
 }
