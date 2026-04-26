@@ -64,6 +64,7 @@ export const actions = [
 ];
 
 export const bonusActions = [
+    "Adrenaline Rush",
     "Berserker Charge",
     "Cunning Action",
     "Devious Strikes",
@@ -74,6 +75,7 @@ export const bonusActions = [
     "Flurry of Blows",
     "Frenzy",
     "Improved Cunning Strike",
+    "Innate Sorcery",
     "Instinctive Pounce",
     "Large Form",
     "Nature's Veil",
@@ -115,6 +117,7 @@ export const characterAdvancement = [
     "Giant Ancestry",
     "Keen Senses",
     "Martial Arts",
+    "Metamagic",
     "Monastic Traditions",
     "Oath Spells",
     "Magical Secrets",
