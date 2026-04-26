@@ -52,12 +52,12 @@ function CharClassFighter({ playerStats }) {
                  <div><b>Extra Attacks: </b>{classLevel.extra_attacks || 0}</div>
                  <div><b>Weapon Mastery: </b>{classLevel.weapon_mastery}</div>
                  <div className="clickable" onClick={handleSecondWindToggle} onKeyDown={handleSecondWindToggle} tabIndex={0}>
-                     <b>Second Wind:</b> {secondWindUses}/{classLevel.second_wind}<HiddenInput handleInputToggle={handleSecondWindToggle} handleValueChange={(value) => handleSecondWindChange(value)} showInput={showSecondWindInput} value={secondWindUses}></HiddenInput> <span className="text-muted">(cur/max)</span>
+                     <b>Second Wind:</b> {secondWindUses}/{classLevel.second_wind}<HiddenInput handleInputToggle={handleSecondWindToggle} handleValueChange={(value) => handleSecondWindChange(value)} showInput={showSecondWindInput} value={secondWindUses} displayValue={false}></HiddenInput> <span className="text-muted">(cur/max)</span>
                  </div>
                  {hasEnergy && <div>
                      <div><b>Psionic Energy (Psi Warrior):</b></div>
                      <div className="clickable" onClick={handlePsionicEnergyToggle} onKeyDown={handlePsionicEnergyToggle} tabIndex={0}>
-                         <b>Energy Dice:</b> {psionicEnergy}/{classLevel.energy.energy_die_num}<HiddenInput handleInputToggle={handlePsionicEnergyToggle} handleValueChange={(value) => handlePsionicEnergyChange(value)} showInput={showPsionicEnergyInput} value={psionicEnergy}></HiddenInput> <span className="text-muted">(cur/max)</span>
+                         <b>Energy Dice:</b> {psionicEnergy}/{classLevel.energy.energy_die_num}<HiddenInput handleInputToggle={handlePsionicEnergyToggle} handleValueChange={(value) => handlePsionicEnergyChange(value)} showInput={showPsionicEnergyInput} value={psionicEnergy} displayValue={false}></HiddenInput> <span className="text-muted">(cur/max)</span>
                      </div>
                      <div><b>Energy Die Type: </b>d{classLevel.energy.energy_die_type}</div>
                  </div>}

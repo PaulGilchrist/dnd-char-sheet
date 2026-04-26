@@ -2,13 +2,13 @@
 import React from 'react'
 import './hidden-input.css'
 
-function HiddenInput({ handleInputToggle, handleValueChange, showInput, value }) {
+function HiddenInput({ handleInputToggle, handleValueChange, showInput, value, displayValue = true }) {
     const inputRef = React.useRef(null);
     React.useEffect(() => {
         if(showInput) {
             inputRef.current.focus();
-        }
-    }, [showInput]);
+         }
+     }, [showInput]);
 
     const handleChange = (event) => {
         handleValueChange(event.target.value);
@@ -18,15 +18,15 @@ function HiddenInput({ handleInputToggle, handleValueChange, showInput, value })
         if (event.key === "Enter") {
             handleChange(event);
             handleInputToggle();
-        }
-    };
+         }
+     };
     const handleStopPropagation = (event) => {
         event.stopPropagation();
     };
 
     return (
-        <span className='clickable'>
-            {
+         <span className='clickable'>
+             {
                 showInput ? (
                     <input
                         min="0"
@@ -37,13 +37,13 @@ function HiddenInput({ handleInputToggle, handleValueChange, showInput, value })
                         ref={inputRef}
                         type="number"
                         value={value}
-                    />
-                ) : (
-                                    null
-                                 )
-            }
-        </span>
-    )
+                     />
+                 ) : (
+                                    displayValue ? value : null
+                                  )
+             }
+         </span>
+     )
 }
 
 export default HiddenInput
