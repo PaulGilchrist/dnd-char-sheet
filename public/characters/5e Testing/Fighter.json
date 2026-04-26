@@ -22,9 +22,9 @@
         "gold": 10
     },
     "level": 20,
-    "name": "Fighter",
+    "name": "Gnome",
     "race": {
-        "name": "Human"
+        "name": "Forest Gnome"
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "spells": ["Detect Magic","Guidance","Guiding Bolt","Healing Word","Inflict Wounds","Sacred Flame","Spare the Dying"],

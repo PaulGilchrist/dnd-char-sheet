@@ -23,9 +23,9 @@
     "level": 20,
     "name": "Bard",
     "race": {
-        "name": "Tiefling",
+        "name": "Dragonborn",
         "subrace": {
-            "name": "Infernal"
+            "name": "Black"
         }
     },
     "resistances": ["Fire"],

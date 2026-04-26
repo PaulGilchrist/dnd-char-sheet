@@ -22,9 +22,9 @@
     "level": 20,
     "name": "Wizard",
     "race": {
-        "name": "Wizard",
+        "name": "Elf",
         "subrace": {
-            "name": "High Elf"
+            "name": "Wood Elf"
         }
     },
     "skillProficiencies": ["Arcana","History","Investigation","Medicine","Perception"],

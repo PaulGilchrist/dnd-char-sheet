@@ -26,7 +26,7 @@
     "race": {
         "name": "Elf",
         "subrace": {
-            "name": "Wood Elf"
+            "name": "High Elf"
         }
     },
     "skillProficiencies": ["Animal Handling","Insight","Nature","Nature","Stealth"],

@@ -22,7 +22,10 @@
     "level": 20,
     "name": "Barbarian",
     "race": {
-        "name": "Human"
+        "name": "Genasi",
+        "subrace": {
+            "name": "Earth Genasi"
+        }
     },
     "skillProficiencies": ["Athletics","Intimidation","Perception","Survival"],
     "rules": "5e"

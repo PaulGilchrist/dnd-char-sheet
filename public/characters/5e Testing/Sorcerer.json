@@ -23,7 +23,10 @@
     "level": 20,
     "name": "Sorcerer",
     "race": {
-        "name": "Half-Elf"
+        "name": "Dwarf",
+        "subrace": {
+            "name": "Hill Dwarf"
+        }
     },
     "skillProficiencies": ["Arcana","History","Insight","Investigation","Perception","Survival"],
     "spells": ["Chill Touch","Fire Bolt","Mage Hand","Magic Missile","Shield","Shocking Grasp"],

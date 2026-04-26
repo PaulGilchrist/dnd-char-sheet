@@ -23,7 +23,7 @@
     "level": 20,
     "name": "Monk",
     "race": {
-        "name": "Human"
+        "name": "Half-Elf"
     },
     "skillProficiencies": ["Acrobatics","Insight","Medicine","Religion"],
     "rules": "5e"

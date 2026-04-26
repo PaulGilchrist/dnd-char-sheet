@@ -23,9 +23,9 @@
     "level": 20,
     "name": "Cleric",
     "race": {
-        "name": "Elf",
+        "name": "Dwarf",
         "subrace": {
-            "name": "Wood Elf"
+            "name": "Hill"
         }
     },
     "skillProficiencies": ["Insight","Medicine","Religion","Survival"],
