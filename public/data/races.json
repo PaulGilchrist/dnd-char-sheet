@@ -51,43 +51,43 @@
         "subraces": [
             {
                 "name": "Black",
-                "description": "Acid"
+                "desc": "Black Dragonborn inherit the corrosive power of their chromatic ancestors, marked by acid breath and a harsh resilience shaped by swamps and desolate marshlands."
             },
             {
                 "name": "Blue",
-                "description": "Lightning"
+                "desc": "Blue Dragonborn channel crackling lightning, often displaying disciplined focus and a commanding presence reminiscent of the desert-dwelling blue dragons."
             },
             {
                 "name": "Brass",
-                "description": "Fire"
+                "desc": "Brass Dragonborn are talkative and warm-spirited, breathing fire and carrying the social, curious nature of brass dragons who thrive in sun-baked deserts."
             },
             {
                 "name": "Bronze",
-                "description": "Lightning"
+                "desc": "Bronze Dragonborn wield lightning and possess a strong sense of duty, echoing the coastal guardianship and martial instincts of bronze dragons."
             },
             {
                 "name": "Copper",
-                "description": "Acid"
-            },
-            {
-                "name": "Black",
-                "description": "Acid"
+                "desc": "Copper Dragonborn are clever and quick-witted, breathing acid and often showing the playful, prank-loving tendencies of their copper dragon lineage."
             },
             {
                 "name": "Gold",
-                "description": "Fire"
+                "desc": "Gold Dragonborn embody nobility and inner fire, inheriting a powerful flame breath and the disciplined, honorable nature of gold dragons."
             },
             {
                 "name": "Green",
-                "description": "Poison"
+                "desc": "Green Dragonborn exude a sharp, cunning presence, breathing toxic gas and reflecting the forest-dwelling, manipulative instincts of green dragons."
             },
             {
                 "name": "Red",
-                "description": "Fire"
+                "desc": "Red Dragonborn carry the fierce pride and fiery wrath of their volcanic ancestors, unleashing devastating fire breath and a bold, intense temperament."
             },
             {
                 "name": "Silver",
-                "description": "Cold"
+                "desc": "Silver Dragonborn are compassionate and steadfast, breathing frost and mirroring the protective, community-oriented nature of silver dragons."
+            },
+            {
+                "name": "White",
+                "desc": "White Dragonborn channel bitter cold through their frost breath, often displaying a rugged, survival-driven mindset shaped by their arctic heritage."
             }
         ],
         "book": "Player's Handbook",
@@ -456,7 +456,7 @@
                         "name": "Earth Walk",
                         "desc": [
                             "You can move across difficult terrain made of earth or stone without expending extra movement."
-                         ],
+                        ],
                         "proficiencies": []
                     },
                     {
@@ -464,7 +464,7 @@
                         "name": "Merge With Stone",
                         "desc": [
                             "You can cast the pass without trace spell once with this trait, requiring no material components, and you regain the ability to cast it this way when you finish a long rest. Constitution is your spellcasting ability for this spell."
-                         ],
+                        ],
                         "proficiencies": []
                     }
                 ]
