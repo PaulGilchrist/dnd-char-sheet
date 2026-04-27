@@ -358,5 +358,25 @@ That's it! You're ready to:
 
 ---
 
+## 🧩 Companion App: D&D Tools
+
+This app works alongside **[D&D Tools](https://paulgilchrist.github.io/dnd-tools/spells)** — a quick-reference companion for looking up rules, spells, monsters, items, and more during gameplay.
+
+**[Try D&D Tools →](https://paulgilchrist.github.io/dnd-tools/spells)**
+
+While **D&D Character Sheet** handles character creation and combat tracking, **D&D Tools** is your instant reference guide:
+
+- **Spells** — Browse and filter the complete spell list by level, class, and more
+- **Monsters** — Search the monster compendium with detailed stat blocks
+- **Magic Items** — Find items by rarity, type, and attunement requirements
+- **Rules** — Quick access to conditions, feats, races, classes, and backgrounds
+- **Encounter Builder** — Balance encounters for your party on the fly
+
+Both apps support the same 5e and 2024 rule versions, so they stay in sync with whatever your table is playing.
+
+> *Use D&D Tools to look up rules during play, and D&D Character Sheet to manage your characters and track combat.*
+
+---
+
 *May your rolls be high, your stories be epic, and your characters never run out of hit points!* 🎲✨
 "
