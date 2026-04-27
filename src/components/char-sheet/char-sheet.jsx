@@ -17,7 +17,7 @@ import CharSummary2 from './char-summary2'
 import Subscriber from '../common/subscriber';
 import './char-sheet.css'
 
-function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, allRaces2024, allMagicItems2024 }) {
+function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, allRaces2024, allMagicItems2024, onDeleteCharacter }) {
     const [playerStats, setPlayerStats] = React.useState(null);
     const [forceRefresh, setForceRefresh] = React.useState(0);
     React.useEffect(() => {
@@ -25,22 +25,22 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             // Load prepared spells from localStorage
             const storedData = localStorage.getItem(playerSummary.name);
             let preparedSpells = null;
-            
+
             if (storedData) {
                 const parsedData = JSON.parse(storedData);
                 if (parsedData && parsedData.preparedSpells) {
                     preparedSpells = parsedData.preparedSpells;
                 }
             }
-            
+
             // Use rules factory to get appropriate rules based on character's rules setting
             const spellData = playerSummary.rules === '2024' ? allSpells2024 : allSpells;
             const effectiveClasses = playerSummary.rules === '2024' ? allClasses2024 : allClasses;
             const effectiveRaces = playerSummary.rules === '2024' ? allRaces2024 : allRaces;
             const effectiveMagicItems = playerSummary.rules === '2024' ? allMagicItems2024 : allMagicItems;
-            console.log('[CharSheet] Processing:', { 
-                rules: playerSummary.rules, 
-                hasAllMagicItems2024: !!allMagicItems2024, 
+            console.log('[CharSheet] Processing:', {
+                rules: playerSummary.rules,
+                hasAllMagicItems2024: !!allMagicItems2024,
                 allMagicItems2024Length: allMagicItems2024?.length || 0,
                 inventoryExists: !!playerSummary.inventory,
                 hasInventoryMagicItems: !!playerSummary.inventory?.magicItems,
@@ -49,7 +49,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             console.log('[CharSheet] Using magic items:', { source: playerSummary.rules === '2024' ? 'allMagicItems2024' : 'allMagicItems', count: effectiveMagicItems?.length || 0 });
             const stats = rulesFactory.getPlayerStats(effectiveClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, playerSummary);
             console.log('[CharSheet] After getPlayerStats - magic items:', stats.inventory?.magicItems?.length || 0);
-            
+
             if (preparedSpells) {
                 stats.spellAbilities?.spells.forEach(spell => {
                     if (preparedSpells.includes(spell.name)) {
@@ -69,14 +69,14 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     }, [allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, forceRefresh, allRaces2024, allMagicItems2024]);
 
     const handleEvent = (event) => {
-        if(!isEqual(storage.get(event.key), event.data)) {
+        if (!isEqual(storage.get(event.key), event.data)) {
             localStorage.setItem(event.key, JSON.stringify(event.data));
-            if(event.key === utils.getFirstName(playerStats.name)) {
+            if (event.key === utils.getFirstName(playerStats.name)) {
                 setForceRefresh(utils.guid());
             }
         }
     }
-    
+
     const handleTogglePreparedSpells = (spellName) => {
         const spell = playerStats.spellAbilities.spells.find(spell => spell.name === spellName);
         if (spell) {
@@ -99,9 +99,9 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         }
     }
 
-        return (<React.Fragment>
-              {playerStats && <div className='char-sheet'>
-                  <CharSummary playerStats={playerStats}></CharSummary><hr />
+    return (<React.Fragment>
+        {playerStats && <div className='char-sheet'>
+            <CharSummary playerStats={playerStats} onDeleteCharacter={onDeleteCharacter}></CharSummary><hr />
             <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
             <CharActions playerStats={playerStats}></CharActions><hr />
@@ -110,7 +110,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory><hr />
             <div className='no-print'><CharCharacterAdvancement playerStats={playerStats}></CharCharacterAdvancement></div>
-                         <div className='no-print'><CharAudit playerStats={playerStats}></CharAudit></div>
+            <div className='no-print'><CharAudit playerStats={playerStats}></CharAudit></div>
             <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>}
     </React.Fragment>)

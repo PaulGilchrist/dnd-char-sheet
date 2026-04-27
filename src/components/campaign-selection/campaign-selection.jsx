@@ -20,8 +20,8 @@ function CampaignSelection({ onCampaignSelect }) {
       } catch (err) {
         setError('Failed to load campaigns. Please ensure character folders exist under ./public/characters');
         setLoading(false);
-      }
-    };
+       }
+      };
 
     fetchCampaigns();
   }, []);
@@ -43,18 +43,18 @@ function CampaignSelection({ onCampaignSelect }) {
           console.log(`Current sessionStorage values:`, {
             currentCampaign: sessionStorage.getItem('currentCampaign'),
             characters: sessionStorage.getItem('characters')
-          });
-        
+            });
+          
           // Notify parent to switch views
           if (onCampaignSelect) {
             onCampaignSelect(campaign, characters);
-          }
-        } catch (err) {
+            }
+          } catch (err) {
           setError(`Failed to load campaign ${campaign}: ${err.message}`);
         } finally {
           setLoading(false);
-        }
-      };
+          }
+        };
 
   const handleCreateCampaign = async () => {
     if (!newCampaignName.trim()) {
@@ -67,8 +67,8 @@ function CampaignSelection({ onCampaignSelect }) {
       const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+            'Content-Type': 'application/json',
+            },
         body: JSON.stringify({ campaignName: newCampaignName }),
       });
 
@@ -88,13 +88,13 @@ function CampaignSelection({ onCampaignSelect }) {
       // Reload the page to show the new campaign
       setTimeout(() => {
         window.location.reload();
-      }, 2000);
-    } catch (err) {
+       }, 2000);
+      } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
+      }
+    };
 
   const openNewCampaignModal = () => {
       setShowNewCampaignModal(true);
@@ -109,85 +109,85 @@ function CampaignSelection({ onCampaignSelect }) {
 
   if (loading && campaigns.length === 0) {
     return (
-      <div className="campaign-selection loading">
-        <p>Loading campaigns...</p>
-      </div>
-    );
-  }
+        <div className="campaign-selection loading">
+           <p>Loading campaigns...</p>
+        </div>
+       );
+     }
 
   if (loading && campaigns.length > 0) {
     return (
-      <div className="campaign-selection loading">
-        <p>Creating campaign...</p>
-      </div>
-    );
-  }
+        <div className="campaign-selection loading">
+           <p>Creating campaign...</p>
+        </div>
+       );
+     }
 
   if (error) {
     return (
-      <div className="campaign-selection error">
-        <p className="error-message">{error}</p>
-        <button onClick={() => window.location.reload()}>Reload Page</button>
-      </div>
-    );
-  }
+        <div className="campaign-selection error">
+           <p className="error-message">{error}</p>
+           <button onClick={() => window.location.reload()}>Reload Page</button>
+        </div>
+       );
+     }
 
   return (
-    <div className="campaign-selection">
-      <h1>Select a Campaign</h1>
-      {showSuccessMessage && (
-        <div className="success-message">
-          <p>✅ Campaign created successfully!</p>
-          <p>Reloading...</p>
-        </div>
-      )}
-      <button className="new-campaign-button" onClick={openNewCampaignModal}>
-        + New Campaign
-      </button>
-      {campaigns.length === 0 ? (
-        <p className="no-campaigns">
+       <div className="campaign-selection">
+         <h1>Select a Campaign</h1>
+         {showSuccessMessage && (
+           <div className="success-message">
+             <p>✅ Campaign created successfully!</p>
+             <p>Reloading...</p>
+           </div>
+         )}
+         <button className="new-campaign-button" onClick={openNewCampaignModal}>
+           + New Campaign
+         </button>
+         {campaigns.length === 0 ? (
+           <p className="no-campaigns">
           No campaigns found. Please create folders under ./public/characters to get started.
-        </p>
-      ) : (
-        <div className="campaign-list">
-          {campaigns.map((campaign) => (
-            <button
-              key={campaign}
-              className="campaign-button"
-              onClick={() => handleCampaignSelect(campaign)}
-              disabled={loading}
-            >
-              {campaign}
-            </button>
-          ))}
-        </div>
-      )}
-      
-      {showNewCampaignModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2>Create New Campaign</h2>
-            <input
-              type="text"
-              value={newCampaignName}
-              onChange={(e) => setNewCampaignName(e.target.value)}
-              placeholder="Enter campaign name"
-              className="modal-input"
-              autoFocus
-            />
-            <div className="modal-buttons">
-              <button className="modal-btn-primary" onClick={handleCreateCampaign} disabled={loading}>
+           </p>
+         ) : (
+           <div className="campaign-list">
+             {campaigns.map((campaign) => (
+               <button
+               key={campaign}
+               className="campaign-button"
+               onClick={() => handleCampaignSelect(campaign)}
+               disabled={loading}
+               >
+                 {campaign}
+               </button>
+             ))}
+           </div>
+         )}
+       
+         {showNewCampaignModal && (
+           <div className="modal-overlay">
+             <div className="modal-content">
+               <h2>Create New Campaign</h2>
+               <input
+               type="text"
+               value={newCampaignName}
+               onChange={(e) => setNewCampaignName(e.target.value)}
+               placeholder="Enter campaign name"
+               className="modal-input"
+               autoFocus
+               />
+               <div className="modal-buttons">
+                 <button className="modal-btn-primary" onClick={handleCreateCampaign} disabled={loading}>
                 Create
-              </button>
-              <button className="modal-btn-secondary" onClick={closeModal}>
+                 </button>
+                 <button className="modal-btn-secondary" onClick={closeModal}>
                 Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+       </div>
+     );
 }
 
 export default CampaignSelection;

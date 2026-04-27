@@ -28,6 +28,9 @@ function App() {
     const [showEditCharacterWizard, setShowEditCharacterWizard] = React.useState(false);
     const inputRef = React.useRef(null);
 
+    // Check if we're on localhost
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
     useEffect(() => {
         fetch('/dnd-char-sheet/data/ability-scores.json')
             .then(response => response.json())
@@ -48,7 +51,7 @@ function App() {
             .then(data => {
                 setClasses2024(data);
             });
-    }, []); 
+    }, []);
     useEffect(() => {
         fetch('/dnd-char-sheet/data/equipment.json')
             .then(response => response.json())
@@ -321,8 +324,101 @@ function App() {
         setShowEditCharacterWizard(false);
     };
 
-    let combatTrackingActive = characters.length > 0 && activeCharacter == null;
+    const handleDeleteCharacter = async (characterName) => {
+        try {
+            const storedCampaign = sessionStorage.getItem('currentCampaign');
+            if (!storedCampaign) {
+                throw new Error('No campaign selected in sessionStorage');
+            }
 
+            const encodedCampaign = encodeURIComponent(storedCampaign);
+            const fileName = `${characterName.toLowerCase().replace(/\s+/g, '-')}.json`;
+
+            const response = await fetch(`/api/characters/${encodedCampaign}/${encodeURIComponent(fileName)}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to delete character: ${response.status}`);
+            }
+
+            // Remove character from the list
+            const newCharacters = characters.filter(char => char.name !== characterName);
+            setCharacters(newCharacters);
+
+            // If the deleted character was active, clear it
+            if (activeCharacter && activeCharacter.name === characterName) {
+                setActiveCharacter(null);
+            }
+
+            // If there are remaining characters, set the first one as active
+            if (newCharacters.length > 0) {
+                setActiveCharacter(cloneDeep(newCharacters[0]));
+            }
+        } catch (error) {
+            console.error('Error deleting character:', error);
+            alert(`Failed to delete character: ${error.message}`);
+        }
+    };
+
+    const handleRenameCampaign = async () => {
+        const currentCampaign = sessionStorage.getItem('currentCampaign');
+        const newName = prompt('Enter new campaign name:');
+
+        if (!newName || newName.trim() === '') {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/campaigns/${encodeURIComponent(currentCampaign)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ newName: newName.trim() }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to rename campaign');
+            }
+
+            // Update session storage
+            sessionStorage.setItem('currentCampaign', newName.trim());
+
+            // Reload the page to reflect the changes
+            window.location.reload();
+        } catch (error) {
+            console.error('Error renaming campaign:', error);
+            alert(`Failed to rename campaign: ${error.message}`);
+        }
+    };
+
+    const handleDeleteCampaign = async () => {
+        const currentCampaign = sessionStorage.getItem('currentCampaign');
+        if (window.confirm(`Are you sure you want to delete the campaign '${currentCampaign}'? This will delete all characters in the campaign and cannot be undone.`)) {
+            try {
+                const response = await fetch(`/api/campaigns/${encodeURIComponent(currentCampaign)}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to delete campaign');
+                }
+
+                // Go back to campaign selection
+                setShowCampaignSelection(true);
+                setCharacters([]);
+                setActiveCharacter(null);
+            } catch (error) {
+                console.error('Error deleting campaign:', error);
+                alert(`Failed to delete campaign: ${error.message}`);
+            }
+        }
+    };
+
+    let combatTrackingActive = characters.length > 0 && activeCharacter == null;
     // Show campaign selection if not yet selected
     if (showCampaignSelection) {
         return (
@@ -333,7 +429,15 @@ function App() {
     return (
         <div className="app">
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
-            <div className="campaign-name no-print">{sessionStorage.getItem('currentCampaign')}</div>
+            <div className="campaign-name no-print">
+                {sessionStorage.getItem('currentCampaign')}
+                <button className="icon-button rename-campaign-btn" onClick={handleRenameCampaign} disabled={characters.length > 0} title="Rename Campaign">
+                    <i className="fas fa-pen"></i>
+                </button>
+                <button className="icon-button delete-campaign-btn" onClick={handleDeleteCampaign} disabled={characters.length > 0} title="Delete Campaign">
+                    <i className="fas fa-trash"></i>
+                </button>
+            </div>
             {characters.length > 0 && characters.map((character) => {
                 return (
                     <button
@@ -361,17 +465,20 @@ function App() {
                     playerSummary={activeCharacter}
                     allRaces2024={races2024}
                     allMagicItems2024={magicItems2024}
-                            />
+                    onDeleteCharacter={handleDeleteCharacter}
+                />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
             {activeCharacter && <button className="clickable download no-print hidden" onClick={handleSaveClick}>Download</button>}
+            <button className="no-print icon-button back-to-campaigns-btn" onClick={() => setShowCampaignSelection(true)} title="Back to Campaigns">
+                <i className="fas fa-arrow-left"></i>
+            </button>
             {characters.length > 0 && activeCharacter != null && (
                 <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>
             )}
             {activeCharacter != null && (
                 <button className="clickable mutted no-print" onClick={handleEditCharacter}>Edit Character</button>
             )}
-            <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}>Back to Campaigns</button>
             <br />
             {showCharacterWizard && (
                 <CharacterCreationWizard

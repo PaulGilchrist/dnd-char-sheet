@@ -22,11 +22,13 @@ import CharFeats from '../char-feats/char-feats'
 import HiddenInput from '../../common/hidden-input'
 import Popup from '../../common/popup'
 
-function CharSummary({ playerStats }) {
+function CharSummary({ playerStats, onDeleteCharacter }) {
     const [hasInspiration, setHasInspiration] = React.useState(false);
     const [popupHtml, setPopupHtml] = React.useState(null);
     const [shortRestHitDice, setShortRestHitDice] = React.useState(0);
     const [showInput, setShowInput] = React.useState(false);
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
     React.useEffect(() => {
         let shortRestHitDice = storage.getProperty(playerStats.name, 'shortRestHitDice');
         setShortRestHitDice(shortRestHitDice ? shortRestHitDice : playerStats.level);
@@ -62,10 +64,24 @@ function CharSummary({ playerStats }) {
         const html = `Armor Class (${playerStats.armorClass}) = ${playerStats.armorClassFormula}`
         setPopupHtml(html);
     }
+    
+    const handleDeleteCharacter = () => {
+        if (window.confirm('Are you sure you want to delete this character? This action is irreversible.')) {
+            onDeleteCharacter(playerStats.name);
+           }
+       };
+    
     return (
-        <div>
-            {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
-            <div className='name'>{playerStats.name}</div>
+         <div>
+             {popupHtml && (<Popup html={popupHtml} onClickOrKeyDown={() => setPopupHtml(null)}></Popup>)}
+             <div className='name-row'>
+                 <div className='name'>{playerStats.name}</div>
+                 {isLocalhost && (
+                     <button className="icon-button delete-character-btn" onClick={handleDeleteCharacter} title="Delete Character">
+                         <i className="fas fa-trash"></i>
+                     </button>
+                  )}
+             </div>
             <div className='summary'>
                 {playerStats.race.subrace && playerStats.race.subrace.name ? playerStats.race.subrace.name : playerStats.race.name}
                 {playerStats.race.type ? ` (${playerStats.race.type.toLowerCase()})` : ''},&nbsp;

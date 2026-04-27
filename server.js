@@ -154,6 +154,84 @@ app.put('/api/characters/:campaign/:file', (req, res) => {
     }
 });
 
+// API endpoint to delete a character in a campaign
+app.delete('/api/characters/:campaign/:file', (req, res) => {
+    const { campaign, file } = req.params;
+    const campaignDir = path.join(process.cwd(), 'public', 'characters', campaign);
+    const filePath = path.join(campaignDir, file);
+    
+    try {
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Character file not found' });
+         }
+        
+        fs.unlinkSync(filePath);
+        
+        res.status(200).json({ message: 'Character deleted successfully' });
+     } catch (error) {
+        console.error('Error deleting character:', error);
+        res.status(500).json({ error: 'Failed to delete character' });
+     }
+});
+
+// API endpoint to delete a campaign
+app.delete('/api/campaigns/:campaign', (req, res) => {
+    const { campaign } = req.params;
+    const campaignDir = path.join(process.cwd(), 'public', 'characters', campaign);
+    
+    try {
+        if (!fs.existsSync(campaignDir)) {
+            return res.status(404).json({ error: 'Campaign not found' });
+         }
+        
+        // Remove all files in the campaign directory
+        const files = fs.readdirSync(campaignDir);
+        files.forEach(file => {
+            fs.unlinkSync(path.join(campaignDir, file));
+         });
+        
+        // Remove the campaign directory
+        fs.rmdirSync(campaignDir);
+        
+        res.status(200).json({ message: 'Campaign deleted successfully' });
+     } catch (error) {
+        console.error('Error deleting campaign:', error);
+        res.status(500).json({ error: 'Failed to delete campaign' });
+     }
+});
+
+// API endpoint to rename a campaign
+app.put('/api/campaigns/:campaign', (req, res) => {
+    const { campaign } = req.params;
+    const { newName } = req.body;
+    
+    if (!newName || newName.trim() === '') {
+        return res.status(400).json({ error: 'New campaign name is required' });
+     }
+    
+    const campaignsDir = path.join(process.cwd(), 'public', 'characters');
+    const oldCampaignDir = path.join(campaignsDir, campaign);
+    const newCampaignDir = path.join(campaignsDir, newName.trim());
+    
+    try {
+        if (!fs.existsSync(oldCampaignDir)) {
+            return res.status(404).json({ error: 'Campaign not found' });
+         }
+        
+        if (fs.existsSync(newCampaignDir)) {
+            return res.status(400).json({ error: 'Campaign with this name already exists' });
+         }
+        
+        // Rename the campaign directory
+        fs.renameSync(oldCampaignDir, newCampaignDir);
+        
+        res.status(200).json({ message: 'Campaign renamed successfully', newName: newName.trim() });
+     } catch (error) {
+        console.error('Error renaming campaign:', error);
+        res.status(500).json({ error: 'Failed to rename campaign' });
+     }
+});
+
 // API endpoint to create a new character in the selected campaign
 app.post('/api/characters', (req, res) => {
     const { campaignName, character } = req.body;
@@ -198,8 +276,8 @@ app.post('/api/characters', (req, res) => {
             message: 'Character created successfully', 
             character: character,
             filename: fileName 
-        });
-    } catch (error) {
+         });
+     } catch (error) {
         console.error('Error creating character:', error);
         res.status(500).json({ error: 'Failed to create character' });
     }
