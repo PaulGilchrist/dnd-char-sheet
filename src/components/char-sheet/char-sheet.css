@@ -5,8 +5,8 @@
 @media print {
     .char-sheet {
         padding: 0;
-    }
-     .no-print {
-        display: none;
      }
+      .no-print {
+        display: none;
+      }
 }

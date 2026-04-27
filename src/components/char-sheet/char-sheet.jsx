@@ -99,9 +99,9 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         }
     }
 
-    return (<React.Fragment>
-        {playerStats && <div className='char-sheet'>
-            <CharSummary playerStats={playerStats}></CharSummary><hr />
+        return (<React.Fragment>
+              {playerStats && <div className='char-sheet'>
+                  <CharSummary playerStats={playerStats}></CharSummary><hr />
             <CharAbilities allAbilityScores={allAbilityScores} playerStats={playerStats}></CharAbilities><hr />
             <CharSummary2 playerStats={playerStats}></CharSummary2><hr />
             <CharActions playerStats={playerStats}></CharActions><hr />

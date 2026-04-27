@@ -333,6 +333,7 @@ function App() {
     return (
         <div className="app">
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
+            <div className="campaign-name no-print">{sessionStorage.getItem('currentCampaign')}</div>
             {characters.length > 0 && characters.map((character) => {
                 return (
                     <button
@@ -360,7 +361,7 @@ function App() {
                     playerSummary={activeCharacter}
                     allRaces2024={races2024}
                     allMagicItems2024={magicItems2024}
-                />
+                            />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
             {activeCharacter && <button className="clickable download no-print hidden" onClick={handleSaveClick}>Download</button>}
