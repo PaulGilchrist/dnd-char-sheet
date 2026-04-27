@@ -363,7 +363,7 @@ function App() {
 
     const handleRenameCampaign = async () => {
         const currentCampaign = sessionStorage.getItem('currentCampaign');
-        const newName = prompt('Enter new campaign name:');
+        const newName = prompt('Enter new campaign name:', currentCampaign);
 
         if (!newName || newName.trim() === '') {
             return;
