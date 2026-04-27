@@ -135,7 +135,7 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
     return (
       <div className="wizard-step-magic-items">
         <div className="wizard-step">
-          <h2>Step 9: Magic Items</h2>
+          <h2>Step 10: Magic Items</h2>
           <div className="list-filter-container magic-items-filters">
             <div className="filter-group">
               <label htmlFor="magic-item-search">Search Magic Items</label>

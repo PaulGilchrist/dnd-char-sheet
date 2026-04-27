@@ -43,7 +43,7 @@ function WizardStepSpecial({ formData, onArrayFieldChange }) {
 
   return (
     <div className="wizard-step">
-      <h2>Step 11: Special Actions</h2>
+      <h2>Step 12: Special Actions</h2>
       
       {/* Add new action form */}
       <div className="form-group">
