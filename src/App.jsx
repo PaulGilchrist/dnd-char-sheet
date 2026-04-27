@@ -460,8 +460,8 @@ function App() {
                     </button>
                 )
             })}
-            {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}>Add Character</button>}
-            {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Character</button>}
+            {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}><i className="fas fa-plus"></i>  Add</button>}
+            {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}><i className="fas fa-arrow-up"></i> Upload</button>}
             {activeCharacter != null && (
                 <CharSheet
                     allAbilityScores={abilityScores}
@@ -480,16 +480,14 @@ function App() {
                 />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
-            {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download Character</button>}
-            <button className="no-print icon-button back-to-campaigns-btn" onClick={() => setShowCampaignSelection(true)} title="Back to Campaigns">
-                <i className="fas fa-arrow-left"></i>
-            </button>
+            <button className="clickable mutted no-print" onClick={() => setShowCampaignSelection(true)}><i className="fas fa-arrow-left"></i> Campaigns</button>
             {characters.length > 0 && activeCharacter != null && (
-                <button className="clickable mutted no-print" onClick={handleInitiativeClick}>Combat</button>
+                <button className="clickable mutted no-print" onClick={handleInitiativeClick}><i className="fas fa-shield-alt"></i> Combat</button>
             )}
             {activeCharacter != null && (
-                <button className="clickable mutted no-print" onClick={handleEditCharacter}>Edit Character</button>
+                <button className="clickable mutted no-print" onClick={handleEditCharacter}><i className="fas fa-pen"></i> Edit</button>
             )}
+            {activeCharacter && <button className="clickable mutted no-print" onClick={handleSaveClick}><i className="fas fa-arrow-down"></i> Download</button>}
             <br />
             {showCharacterWizard && (
                 <CharacterCreationWizard
