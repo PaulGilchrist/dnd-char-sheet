@@ -219,7 +219,7 @@ function WizardStepFeats({ formData, allFeats, onArrayFieldChange }) {
 
         return (
             <div className="wizard-step">
-                <h2>Step 9: Feats</h2>
+                <h2>Step 4: Feats</h2>
 
                 {/* Display feat limits info */}
                 <div className="rule-info">
