@@ -18,6 +18,7 @@
             {
                 "level": 1,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "rages": 2,
                 "rage_damage": 2,
                 "weapon_mastery": 2,
@@ -45,6 +46,7 @@
             {
                 "level": 2,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "rages": 2,
                 "rage_damage": 2,
                 "weapon_mastery": 2,
@@ -66,6 +68,7 @@
             {
                 "level": 3,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "rages": 3,
                 "rage_damage": 2,
                 "weapon_mastery": 2,
@@ -87,6 +90,7 @@
             {
                 "level": 4,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "rages": 3,
                 "rage_damage": 2,
                 "weapon_mastery": 3,
@@ -102,6 +106,7 @@
             {
                 "level": 5,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "rages": 3,
                 "rage_damage": 2,
                 "weapon_mastery": 3,
@@ -123,6 +128,7 @@
             {
                 "level": 6,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 2,
                 "weapon_mastery": 3,
@@ -138,6 +144,7 @@
             {
                 "level": 7,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 2,
                 "weapon_mastery": 3,
@@ -159,6 +166,7 @@
             {
                 "level": 8,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 2,
                 "weapon_mastery": 3,
@@ -174,6 +182,7 @@
             {
                 "level": 9,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 3,
                 "weapon_mastery": 3,
@@ -189,6 +198,7 @@
             {
                 "level": 10,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -204,6 +214,7 @@
             {
                 "level": 11,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "rages": 4,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -219,6 +230,7 @@
             {
                 "level": 12,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "rages": 5,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -234,6 +246,7 @@
             {
                 "level": 13,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "rages": 5,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -249,6 +262,7 @@
             {
                 "level": 14,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "rages": 5,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -264,6 +278,7 @@
             {
                 "level": 15,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "rages": 5,
                 "rage_damage": 3,
                 "weapon_mastery": 4,
@@ -279,6 +294,7 @@
             {
                 "level": 16,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "rages": 5,
                 "rage_damage": 4,
                 "weapon_mastery": 4,
@@ -294,6 +310,7 @@
             {
                 "level": 17,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "rages": 6,
                 "rage_damage": 4,
                 "weapon_mastery": 4,
@@ -309,6 +326,7 @@
             {
                 "level": 18,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "rages": 6,
                 "rage_damage": 4,
                 "weapon_mastery": 4,
@@ -324,6 +342,7 @@
             {
                 "level": 19,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "rages": 6,
                 "rage_damage": 4,
                 "weapon_mastery": 4,
@@ -339,6 +358,7 @@
             {
                 "level": 20,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "rages": 6,
                 "rage_damage": 4,
                 "weapon_mastery": 4,
@@ -3642,6 +3662,7 @@
             {
                 "level": 1,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "martial_arts_die": 6,
                 "focus_points": 0,
                 "unarmored_movement_increase": 0,
@@ -3663,6 +3684,7 @@
             {
                 "level": 2,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "martial_arts_die": 6,
                 "focus_points": 2,
                 "unarmored_movement_increase": 10,
@@ -3690,6 +3712,7 @@
             {
                 "level": 3,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "martial_arts_die": 6,
                 "focus_points": 3,
                 "unarmored_movement_increase": 10,
@@ -3711,6 +3734,7 @@
             {
                 "level": 4,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "martial_arts_die": 6,
                 "focus_points": 4,
                 "unarmored_movement_increase": 10,
@@ -3726,6 +3750,7 @@
             {
                 "level": 5,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 5,
                 "unarmored_movement_increase": 10,
@@ -3747,6 +3772,7 @@
             {
                 "level": 6,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 6,
                 "unarmored_movement_increase": 15,
@@ -3762,6 +3788,7 @@
             {
                 "level": 7,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 7,
                 "unarmored_movement_increase": 15,
@@ -3777,6 +3804,7 @@
             {
                 "level": 8,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 8,
                 "unarmored_movement_increase": 15,
@@ -3792,6 +3820,7 @@
             {
                 "level": 9,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 9,
                 "unarmored_movement_increase": 15,
@@ -3807,6 +3836,7 @@
             {
                 "level": 10,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "martial_arts_die": 8,
                 "focus_points": 10,
                 "unarmored_movement_increase": 20,
@@ -3828,6 +3858,7 @@
             {
                 "level": 11,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 11,
                 "unarmored_movement_increase": 20,
@@ -3843,6 +3874,7 @@
             {
                 "level": 12,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 12,
                 "unarmored_movement_increase": 20,
@@ -3858,6 +3890,7 @@
             {
                 "level": 13,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 13,
                 "unarmored_movement_increase": 20,
@@ -3873,6 +3906,7 @@
             {
                 "level": 14,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 14,
                 "unarmored_movement_increase": 25,
@@ -3888,6 +3922,7 @@
             {
                 "level": 15,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 15,
                 "unarmored_movement_increase": 25,
@@ -3903,6 +3938,7 @@
             {
                 "level": 16,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "martial_arts_die": 10,
                 "focus_points": 16,
                 "unarmored_movement_increase": 25,
@@ -3918,6 +3954,7 @@
             {
                 "level": 17,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "martial_arts_die": 12,
                 "focus_points": 17,
                 "unarmored_movement_increase": 25,
@@ -3933,6 +3970,7 @@
             {
                 "level": 18,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "martial_arts_die": 12,
                 "focus_points": 18,
                 "unarmored_movement_increase": 30,
@@ -3948,6 +3986,7 @@
             {
                 "level": 19,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "martial_arts_die": 12,
                 "focus_points": 19,
                 "unarmored_movement_increase": 30,
@@ -3964,6 +4003,7 @@
                 "level": 20,
                 "proficiency_bonus": 6,
                 "martial_arts_die": 12,
+                "extra_attacks": 1,
                 "focus_points": 20,
                 "unarmored_movement_increase": 30,
                 "features": [
@@ -4145,6 +4185,7 @@
                 "level": 1,
                 "proficiency_bonus": 2,
                 "channel_divinity": 0,
+                "extra_attacks": 0,
                 "features": [
                     {
                         "name": "Lay On Hands",
@@ -4178,6 +4219,7 @@
                 "level": 2,
                 "proficiency_bonus": 2,
                 "channel_divinity": 0,
+                "extra_attacks": 0,
                 "features": [
                     {
                         "name": "Fighting Style",
@@ -4205,6 +4247,7 @@
                 "level": 3,
                 "proficiency_bonus": 2,
                 "channel_divinity": 2,
+                "extra_attacks": 0,
                 "features": [
                     {
                         "name": "Channel Divinity",
@@ -4232,6 +4275,7 @@
                 "level": 4,
                 "proficiency_bonus": 2,
                 "channel_divinity": 2,
+                "extra_attacks": 0,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4253,6 +4297,7 @@
                 "level": 5,
                 "proficiency_bonus": 3,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Extra Attack",
@@ -4280,6 +4325,7 @@
                 "level": 6,
                 "proficiency_bonus": 3,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Aura of Protection",
@@ -4301,6 +4347,7 @@
                 "level": 7,
                 "proficiency_bonus": 3,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4322,6 +4369,7 @@
                 "level": 8,
                 "proficiency_bonus": 3,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4343,6 +4391,7 @@
                 "level": 9,
                 "proficiency_bonus": 4,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Abjure Foes",
@@ -4364,6 +4413,7 @@
                 "level": 10,
                 "proficiency_bonus": 4,
                 "channel_divinity": 2,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Aura of Courage",
@@ -4385,6 +4435,7 @@
                 "level": 11,
                 "proficiency_bonus": 4,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Radiant Strikes",
@@ -4406,6 +4457,7 @@
                 "level": 12,
                 "proficiency_bonus": 4,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4427,6 +4479,7 @@
                 "level": 13,
                 "proficiency_bonus": 5,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4448,6 +4501,7 @@
                 "level": 14,
                 "proficiency_bonus": 5,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Restoring Touch",
@@ -4469,6 +4523,7 @@
                 "level": 15,
                 "proficiency_bonus": 5,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4490,6 +4545,7 @@
                 "level": 16,
                 "proficiency_bonus": 5,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Ability Score Improvement",
@@ -4511,6 +4567,7 @@
                 "level": 17,
                 "proficiency_bonus": 6,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Subclass feature",
@@ -4532,6 +4589,7 @@
                 "level": 18,
                 "proficiency_bonus": 6,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Aura Expansion",
@@ -4553,6 +4611,7 @@
                 "level": 19,
                 "proficiency_bonus": 6,
                 "channel_divinity": 3,
+                "extra_attacks": 1,
                 "features": [
                     {
                         "name": "Epic Boon",
@@ -4900,6 +4959,7 @@
             {
                 "level": 1,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "favored_enemy": 2,
                 "features": [
                     {
@@ -4933,6 +4993,7 @@
             {
                 "level": 2,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "favored_enemy": 2,
                 "features": [
                     {
@@ -4960,6 +5021,7 @@
             {
                 "level": 3,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "favored_enemy": 2,
                 "features": [
                     {
@@ -4981,6 +5043,7 @@
             {
                 "level": 4,
                 "proficiency_bonus": 2,
+                "extra_attacks": 0,
                 "favored_enemy": 2,
                 "features": [
                     {
@@ -5002,6 +5065,7 @@
             {
                 "level": 5,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "favored_enemy": 3,
                 "features": [
                     {
@@ -5023,6 +5087,7 @@
             {
                 "level": 6,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "favored_enemy": 3,
                 "features": [
                     {
@@ -5044,6 +5109,7 @@
             {
                 "level": 7,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "favored_enemy": 3,
                 "features": [
                     {
@@ -5065,6 +5131,7 @@
             {
                 "level": 8,
                 "proficiency_bonus": 3,
+                "extra_attacks": 1,
                 "favored_enemy": 3,
                 "features": [
                     {
@@ -5086,6 +5153,7 @@
             {
                 "level": 9,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "favored_enemy": 4,
                 "features": [
                     {
@@ -5107,6 +5175,7 @@
             {
                 "level": 10,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "favored_enemy": 4,
                 "features": [
                     {
@@ -5128,6 +5197,7 @@
             {
                 "level": 11,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "favored_enemy": 4,
                 "features": [
                     {
@@ -5149,6 +5219,7 @@
             {
                 "level": 12,
                 "proficiency_bonus": 4,
+                "extra_attacks": 1,
                 "favored_enemy": 4,
                 "features": [
                     {
@@ -5170,6 +5241,7 @@
             {
                 "level": 13,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "favored_enemy": 5,
                 "features": [
                     {
@@ -5191,6 +5263,7 @@
             {
                 "level": 14,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "favored_enemy": 5,
                 "features": [
                     {
@@ -5212,6 +5285,7 @@
             {
                 "level": 15,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "favored_enemy": 5,
                 "features": [
                     {
@@ -5233,6 +5307,7 @@
             {
                 "level": 16,
                 "proficiency_bonus": 5,
+                "extra_attacks": 1,
                 "favored_enemy": 5,
                 "features": [
                     {
@@ -5254,6 +5329,7 @@
             {
                 "level": 17,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "favored_enemy": 6,
                 "features": [
                     {
@@ -5275,6 +5351,7 @@
             {
                 "level": 18,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "favored_enemy": 6,
                 "features": [
                     {
@@ -5296,6 +5373,7 @@
             {
                 "level": 19,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "favored_enemy": 6,
                 "features": [
                     {
@@ -5317,6 +5395,7 @@
             {
                 "level": 20,
                 "proficiency_bonus": 6,
+                "extra_attacks": 1,
                 "favored_enemy": 6,
                 "features": [
                     {
