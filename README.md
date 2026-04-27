@@ -1,137 +1,225 @@
-# 🐉 The Ultimate D&D Companion App
+"# 🐉 The Ultimate D&D Companion App
 
-**Your Digital Adventurer's Toolkit - Where Strategy Meets Storytelling**
-
----
-
-## 🌟 Welcome, Adventurer!
-
-Are you tired of scribbling notes on napkins, losing track of spell slots mid-combat, or trying to remember whether your Bard has used their Inspiration yet? This app is your **digital dungeon master's best friend** and your party's most reliable scribe.
-
-Whether you're a veteran Dungeon Master orchestrating epic battles or a player eager to dive into the next adventure, this application transforms how you experience Dungeons & Dragons.
+**Your Digital Adventurer's Toolkit — Where Strategy Meets Storytelling**
 
 ---
 
-## 🎯 What Makes This Special?
+## 🌟 What Is This?
+
+This app is your **complete character sheet solution** — whether you want it on your screen or on paper.
+
+**As a digital sheet:** Everything is organized, calculated automatically, and **shared instantly with your entire party**. No more lost notes, no more math errors, no more \"wait, what's your AC?\" mid-combat.
+
+**As a printable sheet:** The app is carefully designed to create **beautiful, well-organized character sheets that fit on a single page** (in most cases!). All the critical stats you need during combat are front and center. Print it out, keep it at the table, and have everything you need at a glance — no flipping through rulebooks.
+
+Whether you're a Dungeon Master running epic battles or a player ready for adventure, this app handles the mechanics so you can focus on what matters: **the story**.
+
+> **No computer expertise required.** If you can open a web browser, you can use this app. The setup instructions at the bottom are written for complete beginners.
+
+---
+
+## 🔄 How It Works — The Magic of Real-Time Sharing
+
+Here's what makes this app special: **everyone sees the same thing, instantly**.
+
+**At the table:**
+1. The **Dungeon Master** starts the app on their computer
+2. The DM shares a **link** with players (via text, email, or group chat)
+3. Players open the link on their own devices (phone, tablet, laptop)
+4. **Everyone views the same character sheets and combat tracker**
+5. When anyone makes a change—spending hit points, using a spell slot, rolling initiative—**everyone sees it right away**
+
+No more "Wait, how many hit points do you have?" mid-combat! No more passing around a single phone! No more lost notes!
+
+---
+
+## 🎯 What Can This App Do for You?
 
 ### 📜 **Campaign Management**
-- **Multiple Campaigns**: Run several adventures simultaneously, each with its own cast of heroes
-- **Easy Campaign Switching**: Jump between your epic fantasy saga and your one-shot dungeon crawl with a single click
-- **Persistent Characters**: Your heroes remember everything from their last adventure
+A **campaign** is one adventure story with its own party of heroes. This app lets you:
+
+- **Run multiple campaigns at once** — Keep your epic fantasy saga separate from your one-shot dungeon crawl
+- **Switch between campaigns** with one click
+- **Rename or delete campaigns** when the story ends
+- **Never lose your characters** — Everything is saved automatically
 
 ### 👤 **Character Creation Made Simple**
-- **Guided Character Builder**: Step-by-step wizard walks you through creating your hero
-  - Choose your race and class with detailed options
-  - Customize your ability scores using the point-buy system
-  - Select your background, skills, and languages
-  - Equip your starting gear and gold
-- **Ruleset Flexibility**: Choose between the classic 5th Edition rules or the updated 2024 Essentials rules
-- **Complete Character Sheets**: Every detail of your hero, from hit points to special abilities, is tracked automatically
+Creating a character doesn't have to be overwhelming. The app guides you step by step:
 
-### 📊 **Comprehensive Character Tracking**
-Your character sheet becomes a living document that follows you through every encounter:
+- **Step-by-step wizard** — No more flipping through rulebooks trying to remember what to do next
+- **Choose your ruleset** — Pick between the classic **5th Edition** rules or the new **2024 Essentials** rules (more on this below)
+- **Race and class selection** — Pick your race, subrace, class, and subclass with clear options
+- **Ability scores made easy** — Use the point-buy system with built-in tracking (you get 30 points to spend)
+- **Skills and expertise** — Choose your skill proficiencies and expertise (for Bards and Rogues)
+- **Languages** — Select from common, elvish, dwarvish, and more
+- **Fighting styles** — Choose your fighting style (for Fighters, Paladins, Rangers, or as a feat)
+- **Starting gear** — Search and select from the full equipment list, or type your own items
+- **Magic items** — Browse, search, and add magic items with full descriptions, rarity, and attunement requirements
+- **Feats** — Select feats with prerequisites and benefits clearly shown
+- **Resistances and immunities** — Track damage resistances and immunities for your character
+- **Custom special actions** — Add homebrew features or abilities not in the standard rules
+- **Backgrounds** — Choose your character's background (especially for 2024 Essentials)
+- **Rules validation** — The app checks your character against the rules and warns you if something doesn't match
 
-**Core Stats Automatically Calculated:**
-- Ability scores with modifiers
-- Armor Class, Hit Points, and Speed
+### 📊 **Your Character Sheet — Digital or Printed**
+
+Your character sheet works two ways:
+
+**On Screen (Digital Mode):**
+Your sheet becomes a **living document** that updates as you play. Click to see details, track resources, and share everything in real time with your party.
+
+**On Paper (Printed Mode):**
+The app is carefully designed to create **beautiful, well-organized character sheets that fit on a single page** (in most cases!). When you print:
+- **All critical combat stats are on the first page** — AC, HP, speed, initiative, attacks, saving throws, and skills are front and center
+- **Clean, easy-to-read layout** — No clutter, no wasted space. Find what you need in seconds during combat
+- **Management sections hide automatically** — Campaign buttons, audit warnings, and other digital-only features disappear when printing
+- **Fits on one page** — The layout is optimized so most characters fit on a single sheet of paper
+
+**Core Stats (All Calculated Automatically):**
+- Ability scores and modifiers
+- Armor Class (click to see the formula!)
+- Hit Points and Hit Dice
+- Speed (including race and class bonuses)
 - Saving throws and skill proficiencies
-- Languages and tool proficiencies
+- Initiative bonus
+- Proficiency bonus
+- Inspiration tracker (toggle on/off)
 
-**Class-Specific Features Tracked:**
-- **Barbarian**: Rage points and when you can rage again
-- **Bard**: Inspiration uses and bardic performance
+**Class-Specific Resources (Tracked During Play):**
+- **Barbarian**: Rage points (max/current), extra attacks, rage damage bonus, weapon mastery
+- **Bard**: Bardic Inspiration uses, bardic performance
 - **Cleric**: Channel Divinity charges
-- **Fighter**: Action Surge and Indomitable uses
-- **Monk**: Ki points for special maneuvers
-- **Paladin**: Divine Smite resources
-- **Ranger**: Favored enemies and terrain expertise
+- **Druid**: Wild Shape uses
+- **Fighter**: Action Surge, Indomitable, second wind
+- **Monk**: Ki points, unarmored movement
+- **Paladin**: Divine Smite resources, lay on hands
+- **Ranger**: Favored enemies, terrain expertise
+- **Rogue**: Sneak attack, expertise
 - **Sorcerer**: Sorcery points for metamagic
-- **Warlock**: Mystic Arcanum and Eldritch Blast
-- **Wizard**: Arcane Recovery and spell preparation
+- **Warlock**: Mystic Arcanum, eldritch blast, pact magic
+- **Wizard**: Arcane Recovery uses, spell preparation
 
 **Spell Management:**
-- Track spell slots by level
-- Mark which spells are prepared
-- Quick reference to your spell list
-- Filter by spell level and school
+- **Visual spell slot tracking** — Click a spell slot to use it, click again to reset after a long rest
+- **Prepare spells** — Toggle which spells are prepared for the day
+- **Filter spells** — Show only prepared spells, or sort by level or name
+- **Spell details** — Click any spell to see its full description, higher-level effects, casting time, range, and duration
+- **Spell attack bonus and save DC** — Automatically calculated and displayed
 
-**Combat Essentials:**
-- Gold and currency tracking
-- Inventory management with categorized equipment
-- Magic items and their powers
-- Resistances and vulnerabilities
+**Combat Readiness:**
+- **Actions** — See your attacks, hit bonuses, damage, and damage types (click to see the formula!)
+- **Bonus actions** — Clearly separated from regular actions
+- **Reactions** — See your available reactions, including opportunity attacks and reaction spells
+- **Special actions** — Class features, fighting styles, and custom abilities
+
+**Inventory & Wealth:**
+- **Gold pieces** — Track your wealth
+- **Equipped items** — See what your character is wearing and wielding
+- **Backpack items** — Track everything in your pack
+- **Equipment details** — Click any item to see its full description, cost, weight, and category
+- **Magic items** — See your magic items with type, rarity, attunement status, and full descriptions
+- **Search equipment** — Browse the full equipment list by category during character creation
 
 ### ⚔️ **Combat Tracking System**
-When battle erupts, this app becomes your tactical command center:
+When battle erupts, the app becomes your **tactical command center**:
 
-**Initiative Management:**
-- Automatic initiative ordering
-- Track player characters and monsters together
-- Add custom NPCs and enemy creatures
-- One-click initiative adjustments
+**Initiative & Turn Order:**
+- All party members and enemies listed in initiative order
+- Add or remove NPCs as needed
+- Edit creature names and add battle notes
+- Clear visual indicator of whose turn it is
 
-**Round Counter:**
-- Visual combat round tracker
-- Easy round advancement
-- Clear turn order visibility
+**Round Tracking:**
+- Visual combat round counter
+- Advance or go back rounds easily
+
+**Keyboard Shortcuts** (for fast combat):
+- **↑ ↓** — Move to the next/previous creature
+- **← →** — Go back/forward one round
+- **+ -** — Add/remove NPCs
 
 **Battle Notes:**
-- Add notes to any creature
-- Track special combat conditions
-- Remember enemy abilities and tactics
+- Add notes to any creature (track conditions, remember tactics, etc.)
 
-### 🎮 **User-Friendly Features**
+### 🎨 **Designed for Gaming Tables — Digital or Printed**
 
-**For Players:**
-- **Character Portability**: Download your character as a file to work on offline, then upload it back later
-- **Quick Access**: Jump between your party members instantly
-- **Print-Ready Sheets**: Generate clean, professional character sheets for reference
-- **No Math Required**: Everything is calculated automatically
+**On Screen:**
+- **Clean, organized layout** — Find what you need quickly during play
+- **Dark mode support** — Easy on the eyes during late-night sessions
+- **Works on any device** — Phone, tablet, laptop, or desktop
+- **Real-time updates** — Everyone sees changes instantly
 
-**For Dungeon Masters:**
-- **Party Overview**: See all your players' characters at a glance
-- **Combat Organizer**: Manage encounters with multiple creatures
-- **Session Notes**: Keep track of important battle details
-- **Quick Setup**: Get combat started in seconds
+**On Paper:**
+- **Print-ready sheets** — One-click printing with a beautiful, professional layout
+- **Single-page design** — Most characters fit on one sheet of paper
+- **Critical stats front and center** — AC, HP, attacks, saving throws, and skills are all on the first page
+- **Smart printing** — Management buttons, audit warnings, and other digital-only features hide automatically
+- **Easy to read** — Clear fonts, spacing, and organization for quick reference during combat
 
-### 🎨 **Beautiful, Intuitive Interface**
-- Clean, organized layout designed for gaming tables
-- Clear sections for quick reference during play
-- Easy-to-read fonts and spacing
-- Print-friendly design for offline use
+**How to print:**
+1. Open your character sheet in the browser
+2. Press **Ctrl+P** (Windows) or **Command+P** (Mac)
+3. Print! The app automatically formats it perfectly for paper
 
 ---
 
-## 🚀 How It Works
+## 📖 Two Rule Sets, One App
 
-### When the Party Is Together (DM Hosts)
-The DM runs the app and hosts the campaign. Players can view their characters and the DM can manage the party, run combat, and track everything in real time.
+This app supports **both** the classic 5th Edition rules and the new 2024 Essentials rules:
 
-### When the Party Is Apart (Offline Work)
-Players can still work on their characters between sessions:
+| Feature | 5th Edition (5e) | 2024 Essentials |
+|---------|-----------------|-----------------|
+| Classes | All 12 classes | All 12 classes with updates |
+| Races | All races | Updated races with subraces |
+| Spells | Full spell list | Updated spell list |
+| Feats | Standard feats | Updated feats |
+| Magic Items | Standard items | Updated items |
+| Backgrounds | Basic support | Full background system |
+| Weapon Mastery | Not included | Included |
 
-1. **At the end of a session**: Click **Download Character** to save your character locally
-2. **Between sessions**: Run the app on your own computer, click **Upload Character** to load your file, make any changes (level up, rest, adjust inventory, etc.)
-3. **Before the next session**: Upload your updated character back to the DM's app, or send the file to your DM to upload for you
+**Which should you choose?**
+- Use **5e** if you play with the original 5th Edition rulebooks
+- Use **2024** if you play with the new Essentials rulebooks
 
----
-
-## 🎲 Perfect For
-
-- **Online Campaigns**: Share liv e party stats during virtual table top sessions
-- **In-Person Gaming**: Each person can view and update from their own device
-- **Character Creation Sessions**: Guide new players through their first character
-- **Quick Reference**: Keep essential info at your fingertips during play
-- **Session Documentation**: Track character progression during and between sessions
+You can even mix and match—different characters in the same campaign can use different rulesets!
 
 ---
 
-## 🏆 Features That Make a Difference
+## 🎲 How to Use It During a Game
 
-**No More Lost Notes**: Everything is saved automatically
-**No More Math Errors**: Calculations are handled for you
-**No More Forgotten Features**: All your abilities are right there
-**No More Character Sheet Chaos**: One clean, organized view
+### **Before the Game**
+1. The DM starts the app on their computer (see setup instructions below)
+2. The DM creates a campaign and adds characters (or uploads player characters)
+3. The DM shares the **Network link** with players
+
+### **During the Game**
+- **Everyone** views character sheets and combat tracker from their own device
+- The **DM** manages combat, adds monsters, and tracks rounds
+- **Players** can see their character's stats, spells, inventory, and abilities
+- When anyone makes a change, **everyone sees it instantly**
+
+### **Between Games**
+Want to level up, buy gear, or prepare spells between sessions?
+
+1. **Download your character** — Click the download button on your character sheet to save a file to your computer
+2. **Work on your character at home** — Run the app on your own computer, upload your character file, make changes, then download it again
+3. **Share with the DM** — Send the updated file to your DM before the next session, or upload it yourself if you have access
+
+---
+
+## 🏆 Why You'll Love This App
+
+**No More Lost Notes** — Everything is saved automatically. Close the browser, restart the app, and your characters are still there.
+
+**No More Math Errors** — Armor class, hit bonuses, damage, spell save DCs—all calculated for you. Click any number to see the formula.
+
+**No More Forgotten Features** — All your class features, spells, and abilities are right there on your sheet. No more flipping through rulebooks mid-combat.
+
+**No More Character Sheet Chaos** — One clean, organized view that works on screen OR on paper. Print a beautiful single-page sheet with all critical stats front and center.
+
+**No More "Wait, What's Your HP?"** — Everyone sees the same info in real time. No more passing around a single device.
+
+**No More Rules Confusion** — The app validates your character against the rules and shows warnings if something doesn't match.
 
 ---
 
@@ -148,72 +236,127 @@ The app takes care of the numbers, so you can take care of the adventure.
 
 ---
 
-*May your rolls be high, your stories be epic, and your characters never run out of hit points!* 🎲✨
+## ❓ Frequently Asked Questions
 
-# How to Run This App
+**Do I need to be a computer expert?**
+No! If you can open a web browser and follow simple instructions, you're good. The setup takes about 5 minutes.
 
-These steps are written for people who are *not* computer experts. Just follow them in order.
+**Do players need to install anything?**
+No! Players just open a link in their browser. That's it.
+
+**Can I use this without an internet connection?**
+Yes! Once the app is started, it works on your local network. You don't need internet access during play (just for the initial setup).
+
+**What happens if I close the browser?**
+Your characters are saved automatically. Just restart the app and everything is still there.
+
+**Can I have multiple campaigns?**
+Yes! Create separate campaigns for different adventures. Switch between them with one click.
+
+**Which rules should I use?**
+If you use the original 5th Edition books, choose "5e". If you use the new 2024 Essentials books, choose "2024". You can even mix them!
+
+**Can I print character sheets?**
+Yes! That's one of the app's main purposes. The sheets are designed to fit on a single page with all critical stats on the first page. Just press **Ctrl+P** (Windows) or **Command+P** (Mac) and print! Management buttons and digital-only features hide automatically.
+
+**Why would I print a digital sheet?**
+Some players prefer having a physical sheet at the table for quick reference. The printed layout is carefully designed to be clean, organized, and easy to read during combat — no flipping through rulebooks needed!
+
+**Can I add homebrew features?**
+Yes! You can add custom special actions, feats, and abilities during character creation.
+
+**What if I make a mistake during character creation?**
+The app validates your character against the rules and shows warnings if something doesn't match. You can go back and fix it.
+
+**Can I work on my character between sessions?**
+Yes! Download your character, work on it at home, then upload it before the next session.
 
 ---
 
-## 1. Install Node.js
-If you don’t already have Node:
+# 🛠️ How to Set Up the App
 
-1. Go to https://nodejs.org  
-2. Download the **LTS** version  
-3. Install it using the default options  
+These steps are written for people who are **not** computer experts. Just follow them in order.
 
 ---
 
-## 2. Download the App
-1. Click the green **Code** button on this page  
-2. Choose **Download ZIP**  
-3. Open the ZIP file  
+## Step 1: Install Node.js (One-Time Setup)
+
+**Node.js** is a free tool that helps the app run on your computer. You only need to do this once.
+
+1. Go to https://nodejs.org
+2. Click the green **LTS** button (LTS means "Long Term Support" — the stable, reliable version)
+3. Run the installer and accept all default options
+4. When it says "Installation Complete," click **Finish**
+
+---
+
+## Step 2: Download the App Files
+
+1. On this page, click the green **Code** button
+2. Click **Download ZIP**
+3. When the download finishes, open the ZIP file
 4. Drag the folder inside to your Desktop (or anywhere you like)
 
 ---
 
-## 3. Open a Terminal / Command Prompt
-- **Windows:** Open *Command Prompt*  
-- **Mac:** Open *Terminal*  
+## Step 3: Start the App
 
-Then type `cd` followed by a space, and drag the app’s folder into the window.  
-This automatically fills in the full path.
+1. **Open your computer's command tool:**
+   - **Windows:** Press the Windows key, type "Command Prompt", and press Enter
+   - **Mac:** Press Command+Space, type "Terminal", and press Enter
 
-Example:  
-cd /Users/you/Desktop/my-app
+2. **Navigate to the app folder:**
+   - Type `cd ` (that's "cd" followed by a space)
+   - Drag the app folder from your Desktop into the command window
+   - Press Enter
 
-Press **Enter**.
-
----
-
-## 4. Start the App
-Type this and press Enter:  
-npm start
-
-This single command will:
-
-1. Install everything the app needs  
-2. Build the app  
-3. Start the server  
+3. **Start the app:**
+   - Type `npm start` and press Enter
+   - The app will install everything it needs, build itself, and start running
 
 ---
 
-## 5. Look for the URL
-When the server starts, it will print a line showing the browser address where the app is running.
+## Step 4: Open the App in Your Browser
 
-It will look something like:  
+When the app starts, you'll see a message like this:
 
-```bash
+```
 Server running at:
 * Local:   http://localhost:3000/dnd-char-sheet/
 * Network: http://192.168.0.187:3000/dnd-char-sheet/
 ```
-The DM should use the "Local" link allowing him access to more capabilities like character delete, campagin rename and delete, etc.
 
-The DM should message the "Network" link to the players so they can browse to the application and share realtime game information.
+**What do these links mean?**
+
+- **Local link** — This is for **you** (the DM). Use this link to access all features, including deleting characters and renaming campaigns.
+- **Network link** — This is for **your players**. Share this link with them so they can join from their own devices.
+
+**To open the app:**
+- Click the **Local** link, or copy it and paste it into your browser
+- The app will open in your browser, ready to use!
+
+**To share with players:**
+- Copy the **Network** link
+- Send it to your players via text, email, or group chat
+- Players open the link on their devices and they're in!
+
+> **Note:** Players must be on the same WiFi network as the DM's computer for the Network link to work.
 
 ---
 
-## That’s it
-The app is now running.
+## Step 5: Start Playing!
+
+That's it! You're ready to:
+1. Create a campaign
+2. Add characters (or upload existing ones)
+3. Share the Network link with your players
+4. Start your adventure!
+
+**To stop the app:** Just close the command window. Your characters are saved automatically.
+
+**To start again:** Repeat Step 3 (open the command tool, navigate to the folder, and run `npm start`).
+
+---
+
+*May your rolls be high, your stories be epic, and your characters never run out of hit points!* 🎲✨
+"
