@@ -17,14 +17,14 @@
     cursor: pointer;
     font-size: 14px;
     color: darkred;
-    opacity: 0.6;
-    transition: opacity 0.2s ease;
+    /* opacity: 0.6;
+    transition: opacity 0.2s ease; */
     line-height: 1;
     align-self: center;
     vertical-align: middle;
 }
 .delete-character-btn:hover {
-    opacity: 1;
+    /* opacity: 1; */
     color: red;
 }
 .summary {

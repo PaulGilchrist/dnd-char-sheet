@@ -17,18 +17,18 @@
     border: none;
     cursor: pointer;
     font-size: 14px;
-    opacity: 0.6;
-    transition: opacity 0.2s ease;
+    /* opacity: 0.6;
+    transition: opacity 0.2s ease; */
     line-height: 1;
     align-self: center;
     vertical-align: middle;
 }
 .icon-button:hover:not(:disabled) {
-    opacity: 1;
+    /* opacity: 1; */
 }
 .icon-button:disabled {
     cursor: not-allowed;
-    opacity: 0.3;
+    /* opacity: 0.3; */
 }
 .rename-campaign-btn {
     color: #666;
