@@ -4,6 +4,7 @@ description: Coding Standards
 ---
 
 - Use JavaScript, not TypeScript.
+- Prefer Grid over Flex
 - Match the existing folder structure.
 - NEVER use inline styles.
 - NEVER use !important in CSS.
