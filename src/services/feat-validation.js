@@ -1,0 +1,177 @@
+/**
+ * Feat validation service for character creation wizard
+ * Provides non-blocking warnings about feat selection rules
+ * Supports both 5e and 2024 rulesets
+ */
+
+/**
+ * Gets the number of feats allowed based on ruleset, level, and class
+ * @param {object} formData - The character form data
+ * @returns {object} - { allowed: number, originRequired: boolean, details: string }
+ */
+export function getFeatLimits(formData) {
+    const ruleset = formData.rules || '5e';
+    const level = formData.level || 1;
+
+    if (ruleset === '2024') {
+          // 2024 rules: Level 1 characters get 1 origin feat
+          // Additional feats at levels 4, 8, 12, 16, 19
+        let allowed = 0;
+        let originRequired = false;
+
+        if (level >= 1) {
+            allowed += 1; // Origin feat
+            originRequired = true;
+          }
+        if (level >= 4) allowed += 1;
+        if (level >= 8) allowed += 1;
+        if (level >= 12) allowed += 1;
+        if (level >= 16) allowed += 1;
+        if (level >= 19) allowed += 1;
+
+        return {
+            allowed,
+            originRequired,
+            details: originRequired
+                  ? `Level 1 2024 characters get 1 Origin feat, plus additional feats at levels 4, 8, 12, 16, and 19`
+                  : `In 2024 rules, feats are available at levels 4, 8, 12, 16, and 19`
+          };
+      }
+
+      // 5e rules: Feats optional at levels 4, 8, 12, 16, 19 (if no ability increase)
+    let allowed = 0;
+    if (level >= 4) allowed += 1;
+    if (level >= 8) allowed += 1;
+    if (level >= 12) allowed += 1;
+    if (level >= 16) allowed += 1;
+    if (level >= 19) allowed += 1;
+
+    return {
+        allowed,
+        originRequired: false,
+        details: `In 5e, feats are optional and can be taken instead of ability score increases at levels 4, 8, 12, 16, and 19`
+      };
+}
+
+/**
+ * Validates feat selections and returns warnings (not blocking errors)
+ * @param {object} formData - The character form data
+ * @param {array} allFeats - All available feats data
+ * @returns {array} - Array of warning objects { message: string, type: 'warning'|'info' }
+ */
+export function validateFeats(formData, allFeats) {
+    const warnings = [];
+    const selectedFeats = formData.feats || [];
+    const ruleset = formData.rules || '5e';
+
+    if (selectedFeats.length === 0) {
+        return warnings; // No warnings if no feats selected
+      }
+
+      // Get feat limits
+    const limits = getFeatLimits(formData);
+
+      // Check if too many feats selected
+    if (selectedFeats.length > limits.allowed) {
+        warnings.push({
+            message: `Rules allow ${limits.allowed} feat(s) at level ${formData.level}. You have selected ${selectedFeats.length}. (${limits.details})`,
+            type: 'warning'
+          });
+      }
+
+      // For 2024 level 1, check origin feat requirement
+    if (ruleset === '2024' && formData.level === 1 && limits.originRequired) {
+        const originFeats = allFeats.filter(f => f.type === 'Origin Feat');
+        const selectedOriginFeats = selectedFeats.filter(f =>
+            originFeats.some(of => of.name === f)
+          );
+
+        if (selectedOriginFeats.length === 0 && selectedFeats.length > 0) {
+            warnings.push({
+                message: `Level 1 2024 characters should select an Origin feat. Your selected feats don't include an Origin feat.`,
+                type: 'warning'
+              });
+          }
+
+          // Warn if non-origin feats selected at level 1
+        const nonOriginFeats = selectedFeats.filter(f =>
+              !originFeats.some(of => of.name === f)
+          );
+        if (nonOriginFeats.length > 0) {
+            warnings.push({
+                message: `Some selected feats are not Origin feats. Level 1 2024 characters typically take an Origin feat.`,
+                type: 'info'
+              });
+          }
+      }
+
+      // Check for Epic Boon feats (typically level 20+)
+    const epicBoonFeats = allFeats.filter(f => f.type === 'Epic Boon');
+    const selectedEpicBoons = selectedFeats.filter(f =>
+        epicBoonFeats.some(eb => eb.name === f)
+      );
+    if (selectedEpicBoons.length > 0 && formData.level < 20) {
+        warnings.push({
+            message: `Epic Boon feats are typically available at level 20+. You are level ${formData.level}.`,
+            type: 'warning'
+          });
+      }
+
+      // Check for prerequisites on selected feats
+    selectedFeats.forEach(featName => {
+        const feat = allFeats.find(f => f.name === featName);
+        if (feat && feat.prerequisites) {
+            const prereqs = Array.isArray(feat.prerequisites)
+                  ? feat.prerequisites.map(p => typeof p === 'string' ? p : (p.name || '')).filter(p => p)
+                  : [typeof feat.prerequisites === 'string' ? feat.prerequisites : (feat.prerequisites.name || '')].filter(p => p);
+
+              // Check for level prerequisites
+            prereqs.forEach(prereq => {
+                if (!prereq || typeof prereq !== 'string') return; // Skip invalid prerequisites
+
+                if (prereq.includes('level') || prereq.includes('Level')) {
+                      // Extract level from prerequisite like "4th level" or "Level 4"
+                    const match = prereq.match(/(\d)(?:st|nd|rd|th)?\s*level/i);
+                    if (match) {
+                        const requiredLevel = parseInt(match[1]);
+                        if (formData.level < requiredLevel) {
+                            warnings.push({
+                                message: `${featName} requires ${prereq}. You are level ${formData.level}.`,
+                                type: 'warning'
+                              });
+                          }
+                      }
+                  }
+
+                  // Check for class/race/ability prerequisites
+                if (prereq.includes('Strength') || prereq.includes('Dexterity') ||
+                    prereq.includes('Constitution') || prereq.includes('Intelligence') ||
+                    prereq.includes('Wisdom') || prereq.includes('Charisma')) {
+                    warnings.push({
+                        message: `${featName} requires: ${prereq}. Verify your character meets this requirement.`,
+                        type: 'info'
+                      });
+                  }
+              });
+          }
+      });
+
+    return warnings;
+}
+
+/**
+ * Gets feat type information for display
+ * @param {string} featName - Name of the feat
+ * @param {array} allFeats - All available feats data
+ * @returns {object} - { type: string, isOrigin: boolean, isEpicBoon: boolean }
+ */
+export function getFeatTypeInfo(featName, allFeats) {
+    const feat = allFeats.find(f => f.name === featName);
+    if (!feat) return { type: 'Unknown', isOrigin: false, isEpicBoon: false };
+
+    return {
+        type: feat.type || 'General',
+        isOrigin: feat.type === 'Origin Feat',
+        isEpicBoon: feat.type === 'Epic Boon'
+      };
+}
