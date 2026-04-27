@@ -296,18 +296,22 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setTempInventory(prev => ({ ...prev, [field]: value }));
   };
 
+   // Check if current step is valid (for disabling Next button)
+  const currentStepErrors = validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
+  const isNextDisabled = Object.keys(currentStepErrors).length > 0;
+
   const handleNext = () => {
-    if (validateStep(currentStep, formData, errors)) {
+    if (validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset)) {
       setCurrentStep(prev => prev + 1);
-    }
-  };
+       }
+     };
 
   const handlePrevious = () => {
     setCurrentStep(prev => prev - 1);
   };
 
   const handleSubmit = () => {
-    if (validateStep(currentStep, formData, errors)) {
+    if (validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset)) {
       const finalErrors = validateFinalFormData(formData);
       if (Object.keys(finalErrors).length > 0) {
         setErrors(finalErrors);
@@ -454,6 +458,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           onNext={handleNext}
           onSubmit={handleSubmit}
           isEditing={isEditing}
+          isNextDisabled={isNextDisabled}
         />
       </div>
     </div>

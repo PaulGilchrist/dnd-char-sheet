@@ -36,31 +36,58 @@ export const validateAbility = (ability, index) => {
   return errors;
 };
 
-export const validateStep = (step, formData, errors) => {
-  const newErrors = { ...errors };
-  
-  if (step === 1) {
+export const validateStep = (step, formData, errors, racesData = [], classSubtypes = [], ruleset) => {
+  const newErrors = {};
+    
+    // Step 2: Basic Information - validate name, level, alignment, and background (2024)
+  if (step === 2) {
     if (!formData.name?.trim()) {
       newErrors.name = 'Character name is required';
     }
-    if (formData.level < 1 || formData.level > 20) {
+    if (!formData.level || formData.level < 1 || formData.level > 20) {
       newErrors.level = 'Level must be between 1 and 20';
     }
     if (!formData.alignment) {
       newErrors.alignment = 'Alignment is required';
+      }
+    if (ruleset === '2024' && !formData.background) {
+      newErrors.background = 'Background is required';
+      }
     }
-  }
-  
-  if (step === 2) {
+    
+    // Step 3: Race & Class - validate race, class, subrace and subclass
+  if (step === 3) {
     if (!formData.race || !formData.race.name) {
       newErrors.race = 'Race is required';
     }
     if (!formData.class || !formData.class.name) {
       newErrors.class = 'Class is required';
     }
+    
+    // Check if subrace is required (when race has subraces)
+    if (formData.race?.name) {
+      const selectedRace = racesData.find(race => race.name === formData.race.name);
+      const availableSubraces = selectedRace?.subraces || [];
+      if (availableSubraces.length > 0) {
+        if (!formData.race.subrace || !formData.race.subrace.name) {
+          newErrors.subrace = 'Subrace is required';
+    }
+       }
+     }
+    
+    // Check if subclass is required (when class has subclasses)
+    if (formData.class?.name) {
+      const selectedClass = classSubtypes.find(cs => cs.className === formData.class.name);
+      const availableSubclasses = selectedClass?.subtypes || [];
+      if (availableSubclasses.length > 0) {
+        if (!formData.class.subclass || !formData.class.subclass.name) {
+          newErrors.subclass = 'Subclass is required';
   }
+       }
+     }
+   }
   
-  if (step === 3) {
+  if (step === 4) {
     let totalPointsSpent = 0;
     formData.abilities.forEach((ability, index) => {
       const abilityErrors = validateAbility(ability, index);
@@ -72,8 +99,8 @@ export const validateStep = (step, formData, errors) => {
 
     if (totalPointsSpent > 27) {
       newErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
-    }
   }
+   }
   
   return newErrors;
 };

@@ -52,15 +52,15 @@ function WizardStepRaceClass({
         <div className="form-group">
           <label>{subraceLabel} *</label>
           <select
-            value={formData.race?.subrace?.name || ''}
-            onChange={(e) => {
-              const updatedRace = {
+           value={formData.race?.subrace?.name || ''}
+           onChange={(e) => {
+             const updatedRace = {
                 ...formData.race,
                 subrace: { name: e.target.value, description: '' }
               };
               onInputChange('race', updatedRace);
             }}
-            className={errors.race ? 'error' : ''}
+           className={errors.subrace ? 'error' : ''}
           >
             <option value="">Select a {subraceLabel.toLowerCase()}</option>
             {availableSubraces.map((subrace, index) => (
@@ -69,7 +69,7 @@ function WizardStepRaceClass({
               </option>
             ))}
           </select>
-          {errors.race && <span className="error-message">{errors.race}</span>}
+          {errors.subrace && <span className="error-message">{errors.subrace}</span>}
         </div>
       )}
       
@@ -97,15 +97,15 @@ function WizardStepRaceClass({
 
           <label>{subclassLabel} *</label>
           <select
-            value={formData.class?.subclass?.name || ''}
-            onChange={(e) => {
-              const updatedClass = {
+          value={formData.class?.subclass?.name || ''}
+          onChange={(e) => {
+            const updatedClass = {
                 ...formData.class,
                 subclass: { name: e.target.value, type: '' }
               };
               onInputChange('class', updatedClass);
             }}
-            className={errors.class ? 'error' : ''}
+          className={errors.subclass ? 'error' : ''}
           >
 
             <option value="">Select a {subclassLabel.toLowerCase()}</option>
@@ -116,7 +116,7 @@ function WizardStepRaceClass({
               </option>
             ))}
           </select>
-          {errors.class && <span className="error-message">{errors.class}</span>}
+          {errors.subclass && <span className="error-message">{errors.subclass}</span>}
         </div>
       )}
       

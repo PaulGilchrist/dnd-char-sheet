@@ -890,7 +890,32 @@
         "index": "human",
         "name": "Human",
         "speed": 30,
-        "ability_bonuses": [],
+        "ability_bonuses": [
+            {
+                "ability_score": "STR",
+                "bonus": 1
+            },
+            {
+                "ability_score": "DEX",
+                "bonus": 1
+            },
+            {
+                "ability_score": "CON",
+                "bonus": 1
+            },
+            {
+                "ability_score": "INT",
+                "bonus": 1
+            },
+            {
+                "ability_score": "WIS",
+                "bonus": 1
+            },
+            {
+                "ability_score": "CHA",
+                "bonus": 1
+            }
+        ],
         "age": "Humans reach adulthood in their late teens and live less than a century.",
         "alignment": "Humans tend toward no particular alignment. The best and the worst are found among them.",
         "size": "Medium",
@@ -920,97 +945,14 @@
             ]
         },
         "language_desc": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
-        "traits": [],
-        "subraces": [
+        "traits": [
             {
-                "index": "human",
-                "name": "Human",
-                "desc": "",
-                "ability_bonuses": [
-                    {
-                        "ability_score": "STR",
-                        "bonus": 1
-                    },
-                    {
-                        "ability_score": "DEX",
-                        "bonus": 1
-                    },
-                    {
-                        "ability_score": "CON",
-                        "bonus": 1
-                    },
-                    {
-                        "ability_score": "INT",
-                        "bonus": 1
-                    },
-                    {
-                        "ability_score": "WIS",
-                        "bonus": 1
-                    },
-                    {
-                        "ability_score": "CHA",
-                        "bonus": 1
-                    }
+                "index": "naturally-stealthy",
+                "name": "Naturally Stealthy",
+                "desc": [
+                    "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
                 ],
-                "starting_proficiencies": [],
-                "languages": [],
-                "racial_traits": [
-                    {
-                        "index": "naturally-stealthy",
-                        "name": "Naturally Stealthy",
-                        "desc": [
-                            "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
-                        ],
-                        "proficiencies": []
-                    }
-                ]
-            },
-            {
-                "index": "variant-human",
-                "name": "Variant Human",
-                "desc": "If your campaign uses the optional feat rules from the Player's Handbook, your Dungeon Master might allow these variant traits, all of which replace the human's Ability Score Increase trait.",
-                "ability_bonuses": [],
-                "ability_bonus_options": {
-                    "choose": 2,
-                    "from": [
-                        {
-                            "ability_score": "STR",
-                            "bonus": 1
-                        },
-                        {
-                            "ability_score": "DEX",
-                            "bonus": 1
-                        },
-                        {
-                            "ability_score": "CON",
-                            "bonus": 1
-                        },
-                        {
-                            "ability_score": "INT",
-                            "bonus": 1
-                        },
-                        {
-                            "ability_score": "WIS",
-                            "bonus": 1
-                        },
-                        {
-                            "ability_score": "CHA",
-                            "bonus": 1
-                        }
-                    ]
-                },
-                "starting_proficiencies": [],
-                "languages": [],
-                "racial_traits": [
-                    {
-                        "index": "naturally-stealthy",
-                        "name": "Naturally Stealthy",
-                        "desc": [
-                            "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you."
-                        ],
-                        "proficiencies": []
-                    }
-                ]
+                "proficiencies": []
             }
         ],
         "book": "Player's Handbook",

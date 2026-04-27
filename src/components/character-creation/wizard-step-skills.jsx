@@ -33,7 +33,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseTog
 
   return (
     <div className="wizard-step">
-      <h2>Step 6: Skills & Proficiencies</h2>
+      <h2>Step 6: Skill Proficiencies</h2>
       
       <div className="form-group">
         <label>Skill Proficiencies</label>
