@@ -431,9 +431,9 @@ function App() {
             <input key={Date.now()} type="file" accept='.json' multiple ref={inputRef} onChange={handleUploadChange} hidden></input>
             <div className="campaign-name no-print">
                 {sessionStorage.getItem('currentCampaign')}
-                <button className="icon-button rename-campaign-btn" onClick={handleRenameCampaign} disabled={characters.length > 0} title="Rename Campaign">
-                    <i className="fas fa-pen"></i>
-                </button>
+                <button className="icon-button rename-campaign-btn" onClick={handleRenameCampaign} disabled={!isLocalhost} title="Rename Campaign">
+                           <i className="fas fa-pen"></i>
+                       </button>
                 <button className="icon-button delete-campaign-btn" onClick={handleDeleteCampaign} disabled={characters.length > 0} title="Delete Campaign">
                     <i className="fas fa-trash"></i>
                 </button>

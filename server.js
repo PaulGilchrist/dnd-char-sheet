@@ -209,8 +209,14 @@ app.put('/api/campaigns/:campaign', (req, res) => {
         return res.status(400).json({ error: 'New campaign name is required' });
      }
     
+    // Validate campaign name - only allow alphanumeric, spaces, hyphens, underscores, and periods
+    const campaignNamePattern = /^[a-zA-Z0-9 _.\-]+$/;
+    if (!campaignNamePattern.test(newName.trim())) {
+        return res.status(400).json({ error: 'Campaign name can only contain letters, numbers, spaces, hyphens, underscores, and periods' });
+      }
+    
     const campaignsDir = path.join(process.cwd(), 'public', 'characters');
-    const oldCampaignDir = path.join(campaignsDir, campaign);
+    const oldCampaignDir = path.join(campaignsDir, decodeURIComponent(campaign));
     const newCampaignDir = path.join(campaignsDir, newName.trim());
     
     try {
