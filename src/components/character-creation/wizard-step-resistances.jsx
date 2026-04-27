@@ -4,7 +4,7 @@ import { RESISTANCES_IMMUNITIES } from './constants';
 function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle }) {
   return (
     <div className="wizard-step">
-      <h2>Step 7: Resistances & Immunities</h2>
+      <h2>Step 8: Resistances & Immunities</h2>
       
       <div className="form-group">
         <label>Resistances</label>

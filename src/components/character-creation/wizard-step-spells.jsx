@@ -278,7 +278,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
 
     return (
       <div className="wizard-step wizard-step-spells">
-        <h2>Step 8: Spells</h2>
+        <h2>Step 9: Spells</h2>
         
         <div className="spells-summary">
           <h4>Spell Selection Summary</h4>

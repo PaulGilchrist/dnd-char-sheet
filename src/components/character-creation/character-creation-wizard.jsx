@@ -350,6 +350,14 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         );
       case 4:
         return (
+          <WizardStepFeats
+            formData={formData}
+            allFeats={feats}
+            onArrayFieldChange={handleArrayFieldChange}
+          />
+        );
+      case 5:
+        return (
           <WizardStepAbilities
             formData={formData}
             errors={errors}
@@ -358,7 +366,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onAbilityMiscBonusChange={handleAbilityMiscBonusChange}
           />
         );
-      case 5:
+      case 6:
         return (
           <WizardStepSkills
             formData={formData}
@@ -367,7 +375,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onSkillExpertiseToggle={handleSkillExpertiseToggle}
           />
         );
-      case 6:
+      case 7:
         return (
           <WizardStepLanguages
             formData={formData}
@@ -376,7 +384,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onFightingStyleToggle={handleFightingStyleToggle}
           />
         );
-      case 7:
+      case 8:
         return (
           <WizardStepResistances
             formData={formData}
@@ -384,19 +392,11 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onImmunityToggle={handleImmunityToggle}
           />
         );
-      case 8:
+      case 9:
         return (
           <WizardStepSpells
             formData={formData}
             allSpells={allSpells || []}
-            onArrayFieldChange={handleArrayFieldChange}
-          />
-        );
-      case 9:
-        return (
-          <WizardStepFeats
-            formData={formData}
-            allFeats={feats}
             onArrayFieldChange={handleArrayFieldChange}
           />
         );

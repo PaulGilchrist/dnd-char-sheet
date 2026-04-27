@@ -6,7 +6,7 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
 
   return (
     <div className="wizard-step">
-      <h2>Step 6: Languages & Fighting Styles</h2>
+      <h2>Step 7: Languages & Fighting Styles</h2>
       
       <div className="form-group">
         <label>Languages</label>
