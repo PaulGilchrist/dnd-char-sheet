@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // No component-specific CSS needed - uses shared wizard styles
 import { getSpellLimits, validateSpellSelection } from '../../services/spell-limits.js';
+import { getSpellValidationInfo } from '../../services/spell-validation.js';
 import './wizard-step-spells.css';
 // Dark mode styles loaded via media query
 import './wizard-step-spells-dark.css';
@@ -13,6 +14,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   const [spellCounts, setSpellCounts] = useState({ cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 });
   const [spellLimits, setSpellLimits] = useState({ cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 });
   const [validationMessage, setValidationMessage] = useState('');
+  const [spellWarnings, setSpellWarnings] = useState([]);
   const [isLoadingLimits, setIsLoadingLimits] = useState(false);
 
   const [levels, setLevels] = useState([]);
@@ -104,6 +106,33 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
     };
     validate();
   }, [spellCounts, spellLimits, formData.class, formData.level, formData.spells, allSpells, formData.rules]);
+
+  // Spell validation warnings using the new spell-validation service
+  useEffect(() => {
+    const validateSpells = async () => {
+      if (!formData || !formData.class || !formData.spells || formData.spells.length === 0) {
+        setSpellWarnings([]);
+        return;
+       }
+      
+      const version = formData.rules || '5e';
+      try {
+        const validationInfo = await getSpellValidationInfo(
+          formData,
+          formData.spells,
+          allSpells || [],
+          version
+          );
+        
+        setSpellWarnings(validationInfo.warnings || []);
+       } catch (error) {
+        console.error('Error validating spells:', error);
+        setSpellWarnings([]);
+        }
+      };
+    
+    validateSpells();
+   }, [formData.class, formData.race, formData.background, formData.feats, formData.spells, formData.level, formData.rules, allSpells]);
 
   useEffect(() => {
     if (allSpells && allSpells.length > 0) {
@@ -303,6 +332,16 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
           {validationMessage && (
             <div className="validation-message error">
               ⚠️ {validationMessage}
+            </div>
+          )}
+          
+          {spellWarnings.length > 0 && (
+            <div className="warning-container">
+              {spellWarnings.map((warning, index) => (
+                <div key={index} className={`warning-message ${warning.type}`}>
+                  {warning.type === 'warning' ? '⚠️' : 'ℹ️'} {warning.message}
+                </div>
+              ))}
             </div>
           )}
         </div>
