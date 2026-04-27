@@ -127,7 +127,7 @@ function CampaignSelection({ onCampaignSelect }) {
     return (
         <div className="campaign-selection error">
            <p className="error-message">{error}</p>
-           <button onClick={() => window.location.reload()}>Reload Page</button>
+           <button className="reload-button" onClick={() => window.location.reload()}>Reload Page</button>
         </div>
        );
      }
@@ -141,9 +141,7 @@ function CampaignSelection({ onCampaignSelect }) {
              <p>Reloading...</p>
            </div>
          )}
-         <button className="new-campaign-button" onClick={openNewCampaignModal}>
-           + New Campaign
-         </button>
+         <button className="new-campaign-button" onClick={openNewCampaignModal}><i className="fas fa-plus"></i> Add</button>
          {campaigns.length === 0 ? (
            <p className="no-campaigns">
           No campaigns found. Please create folders under ./public/characters to get started.

@@ -11,7 +11,7 @@
 .campaign-selection h1 {
   font-size: 2.5rem;
   margin-bottom: 2rem;
-  color: #333;
+  color: #fff;
 }
 
 .campaign-selection.loading p,
@@ -39,9 +39,9 @@
   max-width: 800px;
 }
 
-.campaign-button {
+.campaign-selection .campaign-button {
   background-color: #4a90d9;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 1rem 2rem;
@@ -51,34 +51,36 @@
   min-width: 200px;
 }
 
-.campaign-button:hover:not(:disabled) {
+.campaign-selection .campaign-button:hover:not(:disabled) {
   background-color: #357abd;
+  color: #fff;
   transform: translateY(-2px);
 }
 
-.campaign-button:disabled {
-  /* opacity: 0.6; */
+.campaign-selection .campaign-button:disabled {
+  opacity: 0.8;
   cursor: not-allowed;
 }
 
-.campaign-selection button {
+.campaign-selection button.reload-button {
   margin-top: 1rem;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   background-color: #666;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.campaign-selection button:hover {
+.campaign-selection button.reload-button:hover {
   background-color: #555;
+  color: #fff;
 }
 
-.new-campaign-button {
+.campaign-selection .new-campaign-button {
   background-color: #28a745;
-  color: white;
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 0.75rem 1.5rem;
@@ -88,17 +90,18 @@
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-.new-campaign-button:hover:not(:disabled) {
+.campaign-selection .new-campaign-button:hover:not(:disabled) {
   background-color: #218838;
+  color: #fff;
   transform: translateY(-2px);
 }
 
-.new-campaign-button:disabled {
-  /* opacity: 0.6; */
+.campaign-selection .new-campaign-button:disabled {
+  opacity: 0.8;
   cursor: not-allowed;
 }
 
-.modal-overlay {
+.campaign-selection .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -111,7 +114,7 @@
   z-index: 1000;
 }
 
-.modal-content {
+.campaign-selection .modal-content {
   background-color: white;
   padding: 2rem;
   border-radius: 12px;
@@ -120,14 +123,14 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-.modal-content h2 {
+.campaign-selection .modal-content h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
   color: #333;
   font-size: 1.5rem;
 }
 
-.modal-input {
+.campaign-selection .modal-input {
   width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
@@ -137,51 +140,54 @@
   box-sizing: border-box;
 }
 
-.modal-input:focus {
+.campaign-selection .modal-input:focus {
   outline: none;
   border-color: #4a90d9;
 }
 
-.modal-buttons {
+.campaign-selection .modal-buttons {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
 }
 
-.modal-btn-primary,
-.modal-btn-secondary {
+.campaign-selection .modal-content .modal-btn-primary,
+.campaign-selection .modal-content .modal-btn-secondary {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  color: #fff;
 }
 
-.modal-btn-primary {
+.campaign-selection .modal-content .modal-btn-primary {
   background-color: #4a90d9;
-  color: white;
+  color: #fff;
 }
 
-.modal-btn-primary:hover:not(:disabled) {
+.campaign-selection .modal-content .modal-btn-primary:hover:not(:disabled) {
   background-color: #357abd;
+  color: #fff;
 }
 
-.modal-btn-primary:disabled {
-  /* opacity: 0.6; */
+.campaign-selection .modal-content .modal-btn-primary:disabled {
+    /* opacity: 0.6; */
   cursor: not-allowed;
 }
 
-.modal-btn-secondary {
+.campaign-selection .modal-content .modal-btn-secondary {
   background-color: #6c757d;
-  color: white;
+  color: #fff;
 }
 
-.modal-btn-secondary:hover {
+.campaign-selection .modal-content .modal-btn-secondary:hover {
   background-color: #5a6268;
+  color: #fff;
 }
 
-.success-message {
+.campaign-selection .success-message {
   background-color: #d4edda;
   color: #155724;
   padding: 1rem;
