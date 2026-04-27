@@ -137,23 +137,34 @@ function App() {
     }
 
     const handleUploadChange = async (event) => {
-        const files = event.target.files;
-        const newCharacters = [];
-        for (let i = 0; i < files.length; i++) {
-            const reader = new FileReader();
-            const file = files[i];
-            const readPromise = new Promise((resolve) => {
-                reader.onload = (event) => {
-                    const data = JSON.parse(event.target.result);
-                    newCharacters.push(data);
-                    resolve();
-                };
-            });
-            reader.readAsText(file);
-            await readPromise;
-        }
-        setCharacters(newCharacters);
-    };
+            const files = event.target.files;
+            const uploadedCharacters = [];
+            for (let i = 0; i < files.length; i++) {
+                const reader = new FileReader();
+                const file = files[i];
+                const readPromise = new Promise((resolve) => {
+                    reader.onload = (event) => {
+                        const data = JSON.parse(event.target.result);
+                        uploadedCharacters.push(data);
+                        resolve();
+                     };
+                 });
+                reader.readAsText(file);
+                await readPromise;
+             }
+
+            // Add uploaded characters to the existing party, avoiding duplicates by name
+            const existingNames = new Set(characters.map(char => char.name));
+            const uniqueUploaded = uploadedCharacters.filter(char => !existingNames.has(char.name));
+
+            const updatedCharacters = [...characters, ...uniqueUploaded];
+            setCharacters(updatedCharacters);
+
+            // If there was no active character, set the first uploaded one as active
+            if (!activeCharacter && uniqueUploaded.length > 0) {
+                setActiveCharacter(cloneDeep(uniqueUploaded[0]));
+             }
+         };
 
     const handleSaveClick = async () => {
         let fileName = `${activeCharacter.class.name}-${Utils.getFirstName(activeCharacter.name)}.json`;
@@ -450,7 +461,7 @@ function App() {
                 )
             })}
             {showButton && <button className="clickable mutted no-print" onClick={handleAddCharacter}>Add Character</button>}
-            {showButton && <button className="clickable mutted no-print hidden" onClick={handleUploadClick}>Upload Characters</button>}
+            {showButton && <button className="clickable mutted no-print" onClick={handleUploadClick}>Upload Character</button>}
             {activeCharacter != null && (
                 <CharSheet
                     allAbilityScores={abilityScores}
@@ -469,7 +480,7 @@ function App() {
                 />
             )}
             {combatTrackingActive && <CombatTracking characters={characters} />}
-            {activeCharacter && <button className="clickable download no-print hidden" onClick={handleSaveClick}>Download</button>}
+            {activeCharacter && <button className="clickable download no-print" onClick={handleSaveClick}>Download Character</button>}
             <button className="no-print icon-button back-to-campaigns-btn" onClick={() => setShowCampaignSelection(true)} title="Back to Campaigns">
                 <i className="fas fa-arrow-left"></i>
             </button>

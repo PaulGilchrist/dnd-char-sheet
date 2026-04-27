@@ -83,7 +83,7 @@ When battle erupts, this app becomes your tactical command center:
 ### 🎮 **User-Friendly Features**
 
 **For Players:**
-- **Character Portability**: Export your characters as files to share with friends or back up
+- **Character Portability**: Download your character as a file to work on offline, then upload it back later
 - **Quick Access**: Jump between your party members instantly
 - **Print-Ready Sheets**: Generate clean, professional character sheets for reference
 - **No Math Required**: Everything is calculated automatically
@@ -102,40 +102,27 @@ When battle erupts, this app becomes your tactical command center:
 
 ---
 
-## 🚀 Getting Started
+## 🚀 How It Works
 
-### For Players:
-1. **Download the app** - It's free and runs right in your browser. Instructions below.
-2. **Create your character** - Follow the friendly wizard
-3. **Join a campaign** - Select or create your adventure
-4. **Dive in** - Your character is ready for action!
+### When the Party Is Together (DM Hosts)
+The DM runs the app and hosts the campaign. Players can view their characters and the DM can manage the party, run combat, and track everything in real time.
 
-### For Dungeon Masters:
-1. **Set up campaigns** - Create folders for each adventure
-2. **Import your party** - Upload your players' character files
-3. **Start the adventure** - Load the campaign and begin!
+### When the Party Is Apart (Offline Work)
+Players can still work on their characters between sessions:
+
+1. **At the end of a session**: Click **Download Character** to save your character locally
+2. **Between sessions**: Run the app on your own computer, click **Upload Character** to load your file, make any changes (level up, rest, adjust inventory, etc.)
+3. **Before the next session**: Upload your updated character back to the DM's app, or send the file to your DM to upload for you
 
 ---
 
 ## 🎲 Perfect For
 
-- **Online Campaigns**: Share your screen during virtual table top sessions
-- **In-Person Gaming**: Display on a tablet or projector at the table
+- **Online Campaigns**: Share liv e party stats during virtual table top sessions
+- **In-Person Gaming**: Each person can view and update from their own device
 - **Character Creation Sessions**: Guide new players through their first character
 - **Quick Reference**: Keep essential info at your fingertips during play
-- **Session Documentation**: Track character progression between sessions
-
----
-
-## 💡 Why Players Love It
-
-> "Finally, a character sheet that keeps up with my barbarian's rage!"
-
-> "No more arguing about how many spell slots I have left."
-
-> "My DM can see all our characters at once - it makes combat so much smoother!"
-
-> "Creating a new character used to take an hour. Now it's a breeze."
+- **Session Documentation**: Track character progression during and between sessions
 
 ---
 
@@ -158,16 +145,6 @@ This isn't just a character sheet app. It's your **adventure companion** that ha
 - **Having fun with friends**
 
 The app takes care of the numbers, so you can take care of the adventure.
-
----
-
-## 🌈 Join Thousands of Adventurers
-
-From first-time players to veteran dungeon crawlers, this application has become an essential tool for D&D groups worldwide. Whether you're exploring the Forgotten Realms, creating your own world, or running a homebrew campaign, this app adapts to your needs.
-
-**Ready to level up your D&D experience?**
-
-Start your adventure today and discover why players are saying: *"This app makes D&D better, simpler, and more fun."*
 
 ---
 
@@ -223,24 +200,20 @@ This single command will:
 ---
 
 ## 5. Look for the URL
-When the server starts, it will print a line showing the full URL where the app is running.
+When the server starts, it will print a line showing the browser address where the app is running.
 
 It will look something like:  
-App running at: http://localhost:3000
 
-Click or copy that link to open the app.
+```bash
+Server running at:
+* Local:   http://localhost:3000/dnd-char-sheet/
+* Network: http://192.168.0.187:3000/dnd-char-sheet/
+```
+The DM should use the "Local" link allowing him access to more capabilities like character delete, campagin rename and delete, etc.
+
+The DM should message the "Network" link to the players so they can browse to the application and share realtime game information.
 
 ---
 
 ## That’s it
 The app is now running.
-
----
-
-Certain features were not added to this application as they are reserved for the Dungeon Master and can be done through the folders and file system.  Examples include:
-
-* Renaming or removing a campaign or character
-* Moving or copying a character from one campaign to another
-* etc.
-
-All campaigns and characters can be found at ./public/characters
