@@ -35,11 +35,11 @@
 }
 
 .rename-campaign-btn {
-    color: #666;
+    color: var(--color-body);
 }
 
 .rename-campaign-btn:hover:not(:disabled) {
-    color: #333;
+    color: var(--color-header);
 }
 
 .delete-campaign-btn {
@@ -51,11 +51,11 @@
 }
 
 .back-to-campaigns-btn {
-    color: #666;
+    color: var(--color-body);
 }
 
 .back-to-campaigns-btn:hover:not(:disabled) {
-    color: #333;
+    color: var(--color-header);
 }
 
 button {
