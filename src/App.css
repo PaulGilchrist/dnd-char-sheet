@@ -1,8 +1,9 @@
 .app {
     padding-bottom: 20px;
 }
+
 .campaign-name {
-    color:var(--color-hover);
+    color: var(--color-hover);
     font-size: 1.3em;
     font-weight: bold;
     margin: 0 10px;
@@ -10,61 +11,74 @@
     align-items: center;
     line-height: 1;
 }
+
 .icon-button {
+    color: darkred;
     margin-left: 8px;
     padding: 4px 8px;
     background-color: transparent;
     border: none;
     cursor: pointer;
     font-size: 14px;
-    /* opacity: 0.6;
-    transition: opacity 0.2s ease; */
-    line-height: 1;
-    align-self: center;
-    vertical-align: middle;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
 }
+
 .icon-button:hover:not(:disabled) {
-    /* opacity: 1; */
+    color: red;
+    opacity: 1;
 }
+
 .icon-button:disabled {
     cursor: not-allowed;
-    /* opacity: 0.3; */
+    opacity: 0.3;
 }
+
 .rename-campaign-btn {
     color: #666;
 }
+
 .rename-campaign-btn:hover:not(:disabled) {
     color: #333;
 }
+
 .delete-campaign-btn {
     color: darkred;
 }
+
 .delete-campaign-btn:hover:not(:disabled) {
     color: red;
 }
+
 .back-to-campaigns-btn {
     color: #666;
 }
+
 .back-to-campaigns-btn:hover:not(:disabled) {
     color: #333;
 }
+
 button {
     color: #aaa;
     margin-left: 10px;
     margin-top: 10px;
 }
+
 button.active {
     background-color: green;
     color: #fff;
 }
+
 button.download {
     background-color: darkgreen;
     color: #eee;
 }
+
 button.mutted {
     background-color: grey;
     color: #000;
 }
+
 /* Hidden buttons - kept for future use */
 button.hidden {
     display: none;
