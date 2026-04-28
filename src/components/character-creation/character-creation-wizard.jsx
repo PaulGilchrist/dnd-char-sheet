@@ -232,28 +232,28 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     };
 
     if (ruleset === '2024') {
-      loadData('/dnd-char-sheet/data/2024/backgrounds.json', setBackgrounds);
-      loadData('/dnd-char-sheet/data/2024/races.json', setRacesData);
-      loadData('/dnd-char-sheet/data/2024/classes.json', (data) => {
+      loadData('/data/2024/backgrounds.json', setBackgrounds);
+      loadData('/data/2024/races.json', setRacesData);
+      loadData('/data/2024/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
           className: cls.name,
           subtypes: cls.subclasses || cls.majors || []
             })));
           });
-      loadData('/dnd-char-sheet/data/2024/feats.json', setFeats);
-      loadData('/dnd-char-sheet/data/2024/magic-items.json', setMagicItems);
+      loadData('/data/2024/feats.json', setFeats);
+      loadData('/data/2024/magic-items.json', setMagicItems);
         } else {
           // 5e does not use the same background system as 2024
       setBackgrounds([]);
-      loadData('/dnd-char-sheet/data/races.json', setRacesData);
-      loadData('/dnd-char-sheet/data/classes.json', (data) => {
+      loadData('data/races.json', setRacesData);
+      loadData('/data/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
           className: cls.name,
           subtypes: cls.subclasses || []
             })));
           });
-      loadData('/dnd-char-sheet/data/feats.json', setFeats);
-      loadData('/dnd-char-sheet/data/magic-items.json', setMagicItems);
+      loadData('/data/feats.json', setFeats);
+      loadData('/data/magic-items.json', setMagicItems);
         }
       }, [ruleset]);
 

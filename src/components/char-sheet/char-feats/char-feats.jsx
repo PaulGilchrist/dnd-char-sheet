@@ -11,7 +11,7 @@ function CharFeats({ playerStats, showPopup }) {
         const rulesVersion = playerStats.rules || '5e';
         const featsFile = rulesVersion === '2024' ? '2024/feats.json' : 'feats.json';
         // Use the deployment path from Vite config base
-        const featsUrl = `/dnd-char-sheet/data/${featsFile}`;
+        const featsUrl = `/data/${featsFile}`;
         
         console.log(`[CharFeats] Fetching feats from: ${featsUrl}`);
         

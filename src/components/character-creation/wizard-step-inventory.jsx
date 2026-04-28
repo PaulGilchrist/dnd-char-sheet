@@ -15,7 +15,7 @@ function WizardStepInventory({ formData, tempInventory, onInventoryChange, onTem
   useEffect(() => {
     const loadEquipment = async () => {
       try {
-        const response = await fetch('/dnd-char-sheet/data/equipment.json');
+        const response = await fetch('/data/equipment.json');
         const data = await response.json();
         setEquipmentData(data);
       } catch (error) {

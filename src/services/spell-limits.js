@@ -14,13 +14,10 @@ async function loadClassData(version = '5e') {
   }
   
   try {
-    // Use Vite's base URL configuration with fallback
     const path = version === '2024' ? 'data/2024/classes.json' : 'data/classes.json';
-    const baseUrl = import.meta.env?.BASE_URL || '';
-    const fullPath = baseUrl.endsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
     
-    console.log(`Loading ${version} classes from:`, fullPath);
-    const response = await fetch(fullPath);
+    console.log(`Loading ${version} classes from:`, path);
+    const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load ${version} classes.json from ${fullPath}`);
     }

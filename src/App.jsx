@@ -32,70 +32,70 @@ function App() {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/ability-scores.json')
+        fetch('/data/ability-scores.json')
             .then(response => response.json())
             .then(data => {
                 setAbilityScores(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/classes.json')
+        fetch('/data/classes.json')
             .then(response => response.json())
             .then(data => {
                 setClasses(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/2024/classes.json')
+        fetch('/data/2024/classes.json')
             .then(response => response.json())
             .then(data => {
                 setClasses2024(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/equipment.json')
+        fetch('/data/equipment.json')
             .then(response => response.json())
             .then(data => {
                 setEquipment(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/magic-items.json')
+        fetch('/data/magic-items.json')
             .then(response => response.json())
             .then(data => {
                 setMagicItems(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/2024/magic-items.json')
+        fetch('/data/2024/magic-items.json')
             .then(response => response.json())
             .then(data => {
                 setMagicItems2024(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/races.json')
+        fetch('/data/races.json')
             .then(response => response.json())
             .then(data => {
                 setRaces(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/2024/races.json')
+        fetch('/data/2024/races.json')
             .then(response => response.json())
             .then(data => {
                 setRaces2024(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/spells.json')
+        fetch('/data/spells.json')
             .then(response => response.json())
             .then(data => {
                 setSpells(data);
             });
     }, []);
     useEffect(() => {
-        fetch('/dnd-char-sheet/data/2024/spells.json')
+        fetch('/data/2024/spells.json')
             .then(response => response.json())
             .then(data => {
                 setSpells2024(data);

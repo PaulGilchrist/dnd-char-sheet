@@ -18,10 +18,7 @@ async function loadBackgroundData() {
 
     try {
         const path = 'data/2024/backgrounds.json';
-        const baseUrl = import.meta.env?.BASE_URL || '';
-        const fullPath = baseUrl.endsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
-
-        const response = await fetch(fullPath);
+              const response = await fetch(path);
         if (!response.ok) {
             throw new Error(`Failed to load 2024 backgrounds.json from ${fullPath}`);
         }

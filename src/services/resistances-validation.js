@@ -30,12 +30,9 @@ async function loadClassData(version = '5e') {
 
   try {
     const path = version === '2024' ? 'data/2024/classes.json' : 'data/classes.json';
-    const baseUrl = import.meta.env?.BASE_URL || '';
-    const fullPath = baseUrl.endsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
-
-    const response = await fetch(fullPath);
+    const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load ${version} classes.json from ${fullPath}`);
+      throw new Error(`Failed to load ${version} classes.json from ${path}`);
     }
     const data = await response.json();
     classDataCache[version] = data;
@@ -58,12 +55,9 @@ async function loadRaceData(version = '5e') {
 
   try {
     const path = version === '2024' ? 'data/2024/races.json' : 'data/races.json';
-    const baseUrl = import.meta.env?.BASE_URL || '';
-    const fullPath = baseUrl.endsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
-
-    const response = await fetch(fullPath);
+    const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load ${version} races.json from ${fullPath}`);
+      throw new Error(`Failed to load ${version} races.json from ${path}`);
     }
     const data = await response.json();
     raceDataCache[version] = data;
@@ -84,11 +78,8 @@ async function loadBackgroundData() {
   }
 
   try {
-    const path = 'data/2024/backgrounds.json';
-    const baseUrl = import.meta.env?.BASE_URL || '';
-    const fullPath = baseUrl.endsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`;
-
-    const response = await fetch(fullPath);
+        const path = 'data/2024/backgrounds.json';
+    const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load 2024 backgrounds.json from ${fullPath}`);
     }

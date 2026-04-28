@@ -7,7 +7,7 @@ function CharInventory({ playerStats }) {
     const [popupHtml, setPopupHtml] = React.useState(null);
     
     const handleItemClick = (itemName) => {
-        const equipmentUrl = '/dnd-char-sheet/data/equipment.json';
+        const equipmentUrl = '/data/equipment.json';
         
         console.log(`[CharInventory] Fetching equipment from: ${equipmentUrl}`);
         

@@ -62,7 +62,9 @@
   ],
   "skillProficiencies": [
     "Performance",
-    "Sleight of Hand"
+    "Sleight of Hand",
+    "Athletics",
+    "Intimidation"
   ],
   "expertSkills": [],
   "inventory": {
@@ -83,7 +85,8 @@
   "languages": [
     "Infernal",
     "Primordial",
-    "Sylvan"
+    "Sylvan",
+    "Common"
   ],
   "spells": [],
   "resistances": [
@@ -91,7 +94,8 @@
     "Slashing"
   ],
   "feats": [
-    "Boon Of Combat Prowess"
+    "Boon Of Combat Prowess",
+    "Savage Attacker"
   ],
   "specialActions": [
     {
