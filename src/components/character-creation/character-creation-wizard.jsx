@@ -509,28 +509,28 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [isNextDisabled, setIsNextDisabled] = useState(false);
 
   useEffect(() => {
-   const checkValidation = async () => {
-     const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
-     setIsNextDisabled(Object.keys(stepErrors).length > 0);
-     setErrors(prev => ({ ...prev, ...stepErrors }));
-     };
-   checkValidation();
-   }, [currentStep, formData, errors, racesData, classSubtypes, ruleset]);
+     const checkValidation = async () => {
+       const stepErrors = await validateStep(currentStep, formData, {}, racesData, classSubtypes, ruleset);
+       setIsNextDisabled(Object.keys(stepErrors).length > 0);
+       setErrors(prev => ({ ...prev, ...stepErrors }));
+        };
+     checkValidation();
+      }, [currentStep, formData, racesData, classSubtypes, ruleset]);
 
   const handleNext = async () => {
-   const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
-   if (Object.keys(stepErrors).length === 0) {
-     setCurrentStep(prev => prev + 1);
-     setErrors({});
-     }
-   };
+     const stepErrors = await validateStep(currentStep, formData, {}, racesData, classSubtypes, ruleset);
+     if (Object.keys(stepErrors).length === 0) {
+       setCurrentStep(prev => prev + 1);
+       setErrors({});
+        }
+      };
 
   const handlePrevious = () => {
     setCurrentStep(prev => prev - 1);
   };
 
     const handleSubmit = async () => {
-    const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
+    const stepErrors = await validateStep(currentStep, formData, {}, racesData, classSubtypes, ruleset);
     if (Object.keys(stepErrors).length === 0) {
       const finalErrors = validateFinalFormData(formData);
       if (Object.keys(finalErrors).length > 0) {

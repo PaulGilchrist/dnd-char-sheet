@@ -2,26 +2,6 @@
   "name": "Test-24",
   "level": 1,
   "alignment": "Neutral Good",
-  "background": "Soldier",
-  "race": {
-    "name": "Human",
-    "subrace": {
-      "name": ""
-    }
-  },
-  "class": {
-    "name": "Fighter",
-    "subclass": {
-      "name": "Champion",
-      "type": ""
-    },
-    "fightingStyles": [
-      "Archery"
-    ],
-    "expertise": [],
-    "favoredEnemies": [],
-    "favoredTerrain": []
-  },
   "abilities": [
     {
       "name": "Strength",
@@ -60,13 +40,36 @@
       "miscBonus": 0
     }
   ],
-  "skillProficiencies": [
-    "Performance",
-    "Sleight of Hand",
-    "Athletics",
-    "Intimidation"
-  ],
+  "background": "Soldier",
+  "class": {
+    "name": "Fighter",
+    "subclass": {
+      "name": "Champion",
+      "type": ""
+    },
+    "fightingStyles": [
+      "Archery"
+    ],
+    "expertise": [],
+    "favoredEnemies": [],
+    "favoredTerrain": []
+  },
   "expertSkills": [],
+  "feats": [
+    "Boon Of Combat Prowess",
+    "Savage Attacker"
+  ],
+  "fightingStyles": [],
+  "race": {
+    "name": "Human",
+    "subrace": {
+      "name": ""
+    }
+  },
+  "immunities": [
+    "Thunder",
+    "Slashing"
+  ],
   "inventory": {
     "backpack": [
       "Greatsword",
@@ -88,14 +91,15 @@
     "Sylvan",
     "Common"
   ],
-  "spells": [],
   "resistances": [
     "Thunder",
     "Slashing"
   ],
-  "feats": [
-    "Boon Of Combat Prowess",
-    "Savage Attacker"
+  "skillProficiencies": [
+    "Performance",
+    "Sleight of Hand",
+    "Athletics",
+    "Intimidation"
   ],
   "specialActions": [
     {
@@ -109,10 +113,7 @@
       "details": "This is great"
     }
   ],
+  "spells": [],
   "rules": "2024",
-  "immunities": [
-    "Thunder",
-    "Slashing"
-  ],
   "newSpecialAction": {}
 }
