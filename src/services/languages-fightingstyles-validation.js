@@ -195,68 +195,122 @@ export async function getFightingStyleLimits(formData) {
     
     if (ruleset === '2024') {
          // 2024 rules: Fighting styles can be chosen as feats
-         // Check if class grants fighting style
-        if (classData && classData.features) {
-            const fightingStyleFeature = classData.features.find(f => 
-                f.name === 'Fighting Style' && f.level <= level
+          // Check if class grants fighting style from class_levels
+        if (classData && classData.class_levels) {
+            for (const classLevel of classData.class_levels) {
+                if (classLevel.level <= level && classLevel.features) {
+                    const fightingStyleFeature = classLevel.features.find(f =>
+                        f.name === 'Fighting Style'
                 );
-          
             if (fightingStyleFeature) {
                 allowed += 1;
                 }
           
-            // Check for additional fighting styles at higher levels
-        const additionalFeatures = classData.features.filter(f => 
-            f.name.includes('Fighting Style') && f.name !== 'Fighting Style' && f.level <= level
+                     // Check for additional fighting styles at higher levels in class_levels
+                    const additionalFeatures = classLevel.features.filter(f =>
+                        f.name.includes('Fighting Style') && f.name !== 'Fighting Style'
             );
         allowed += additionalFeatures.length;
         }
+             }
+         }
   
-        // Check for fighting style feats already selected
-    const selectedFeats = formData.feats || [];
-    if (selectedFeats.length > 0) {
-        const feats = await loadFeatData(ruleset);
-        const fightingStyleFeats = feats.filter(f => 
-            f.prerequisites && f.prerequisites.feature === 'Fighting Style'
+          // Also check top-level class features (in case some classes have them)
+        if (classData && classData.features) {
+            const fightingStyleFeature = classData.features.find(f =>
+                f.name === 'Fighting Style' && f.level <= level
             );
+            if (fightingStyleFeature) {
+                allowed += 1;
+           }
+
+            const additionalFeatures = classData.features.filter(f =>
+                                f.name.includes('Fighting Style') && f.name !== 'Fighting Style' && f.level <= level
+                              );
+            allowed += additionalFeatures.length;
+                         }
+
+          // Check subclass/major features for additional fighting styles
+        if (classData && subclass) {
+            const majors = classData.majors || classData.subclasses || [];
+            const subclassData = majors.find(s => s.name === subclass);
+            if (subclassData && subclassData.features) {
+                const subclassAdditionalFeatures = subclassData.features.filter(f =>
+                    f.name.includes('Fighting Style') && f.level <= level
+            );
+                allowed += subclassAdditionalFeatures.length;
+             }
+         }
       
-        selectedFeats.forEach(featName => {
-            const feat = fightingStyleFeats.find(f => f.name === featName);
-            if (feat && !preSelected.includes(featName)) {
-                preSelected.push(featName);
-                }
-            });
-        }
+          // Check for fighting style feats already selected
+        const selectedFeats = formData.feats || [];
+        if (selectedFeats.length > 0) {
+            const feats = await loadFeatData(ruleset);
+            const fightingStyleFeats = feats.filter(f =>
+                f.prerequisites && f.prerequisites.feature === 'Fighting Style'
+              );
+
+            selectedFeats.forEach(featName => {
+                const feat = fightingStyleFeats.find(f => f.name === featName);
+                if (feat && !preSelected.includes(featName)) {
+                    preSelected.push(featName);
+                 }
+             });
+         }
   
         details = `In 2024 rules, ${className}${className ? ' ' : ''}characters may get fighting styles from class features or feats.`;
-                } else {
-                // 5e rules
-                switch (className) {
+            } else {
+         // 5e rules
+        switch (className) {
                     case 'Fighter':
                         allowed = 1;
-                        if (subclass === 'Champion' && level >= 10) {
-                            allowed = 2;
-                            }
-                        details = `Fighters get 1 Fighting Style at level 1. Champions get an additional style at level 10.`;
-                        break;
-                    case 'Paladin':
-                        if (level >= 2) {
-                            allowed = 1;
-                            }
-                        details = `Paladins get 1 Fighting Style at level 2.`;
-                        break;
-                    case 'Ranger':
-                        if (level >= 2) {
-                            allowed = 1;
-                            }
-                        details = `Rangers get 1 Fighting Style at level 2.`;
-                        break;
-                    default:
-                        details = `Fighting styles are typically reserved for Fighters, Paladins, and Rangers in 5e rules.`;
-                        break;
-                    }
-                }
-    
+                 // Check subclass features for additional fighting styles
+                if (subclass && classData) {
+                    const subclasses = classData.subclasses || [];
+                    const subclassData = subclasses.find(s => s.name === subclass);
+                    if (subclassData) {
+                         // Check class_levels for Additional Fighting Style feature
+                        if (subclassData.class_levels) {
+                            for (const classLevel of subclassData.class_levels) {
+                                if (classLevel.level <= level) {
+                                    const additionalStyleFeature = classLevel.features?.find(f =>
+                                        f.name === 'Additional Fighting Style'
+                                      );
+                                    if (additionalStyleFeature) {
+                allowed += 1;
+            }
+                                  }
+                              }
+                          }
+                          // Also check top-level subclass features
+                        if (subclassData.features) {
+                            const subclassAdditionalFeatures = subclassData.features.filter(f =>
+                                f.name.includes('Fighting Style') && f.name !== 'Fighting Style' && f.level <= level
+                              );
+                            allowed += subclassAdditionalFeatures.length;
+                 }
+                      }
+                  }
+                details = `Fighters get 1 Fighting Style at level 1. ${subclass ? `${subclass} ` : ''}may grant additional styles at higher levels.`;
+                    break;
+            case 'Paladin':
+                if (level >= 2) {
+                    allowed = 1;
+               }
+                details = `Paladins get 1 Fighting Style at level 2.`;
+                break;
+            case 'Ranger':
+                if (level >= 2) {
+                    allowed = 1;
+                  }
+                details = `Rangers get 1 Fighting Style at level 2.`;
+                break;
+            default:
+                details = `Fighting styles are typically reserved for Fighters, Paladins, and Rangers in 5e rules.`;
+                break;
+            }
+      }
+
     return { allowed, preSelected, details };
    }
 
@@ -282,68 +336,67 @@ export async function getLanguageLimits(formData) {
         const raceData = await getRaceByName(raceName, '2024');
         const classData = await getClassByName(className, '2024');
         const backgroundData = await getBackgroundByName(backgroundName);
-        
         // Race languages
         if (raceData) {
             const raceLangs = raceData.languages || [];
             preSelected.push(...raceLangs);
             allowed += raceLangs.length;
-           }
-        
-        // Class languages
+            }
+
+         // Class languages
         if (classData) {
             const classLangs = classData.languages || [];
             preSelected.push(...classLangs);
             allowed += classLangs.length;
-           }
-        
-        // Background languages (2024: typically 2)
+            }
+
+         // Background languages (2024: typically 2)
         if (backgroundData) {
             const bgLangs = backgroundData.languages || [];
             preSelected.push(...bgLangs);
             allowed += bgLangs.length;
-           } else {
-            // Default background languages for 2024
+             } else {
+              // Default background languages for 2024
             allowed += 2;
-           }
-        
+            }
+
         details = `In 2024 rules, languages come from your race, class, and background.`;
-       } else {
-        // 5e rules
+         } else {
+          // 5e rules
         const raceData = await getRaceByName(raceName, '5e');
-        
-        // Race languages
+
+         // Race languages
         if (raceData) {
             const raceLangs = raceData.languages || [];
             preSelected.push(...raceLangs);
             allowed += raceLangs.length;
-           }
-        
-        // Racial language bonuses
+            }
+
+         // Racial language bonuses
         switch (raceName) {
             case 'Half-Elf':
             case 'Human':
                 allowed += 1;
                 break;
-           }
-        
-        // Subrace languages
+            }
+
+         // Subrace languages
   if (subraceName) {
            const subraceData = await getSubraceByName(subraceName, ruleset);
             if (subraceData && subraceData.languages) {
                 const subraceLangs = subraceData.languages || [];
                 preSelected.push(...subraceLangs);
-                // Don't add to allowed count if already counted in race
-               }
-            
+                  // Don't add to allowed count if already counted in race
+                 }
+
             switch (subraceName) {
                 case 'High Elf':
                     allowed += 1;
                     break;
-               }
-           }
-        
-        // Class languages
+            }
+             }
+
+         // Class languages
         switch (className) {
             case 'Druid':
                 preSelected.push('Druidic');
@@ -358,15 +411,15 @@ export async function getLanguageLimits(formData) {
                 preSelected.push("Thieves' Cant");
                 allowed += 1;
                 break;
-           }
-        
-        // Background languages (5e: typically 2 from backstory)
+            }
+
+         // Background languages (5e: typically 2 from backstory)
         allowed += 2;
         
         details = `In 5e rules, languages come from your race, class, and background (2 additional from backstory).`;
-       }
-    
-    // Remove duplicates from preSelected
+        }
+
+     // Remove duplicates from preSelected
     preSelected = [...new Set(preSelected)];
     
     return { allowed, preSelected, details };
@@ -435,3 +488,4 @@ export async function validateLanguagesAndFightingStyles(formData) {
     return warnings;
    }
    
+
