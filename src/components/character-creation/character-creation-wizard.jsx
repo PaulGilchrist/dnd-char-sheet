@@ -47,6 +47,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [skillLimits, setSkillLimits] = useState(null);
   const [expertiseLimits, setExpertiseLimits] = useState(null);
   const [skillWarnings, setSkillWarnings] = useState([]);
+  const [preSelectedSkills, setPreSelectedSkills] = useState([]);
   const [languageLimits, setLanguageLimits] = useState(null);
   const [fightingStyleLimits, setFightingStyleLimits] = useState(null);
   const [languageWarnings, setLanguageWarnings] = useState([]);
@@ -75,6 +76,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     const preSelectSkills = async () => {
       try {
         const preSelected = await getPreSelectedSkills(formData);
+        setPreSelectedSkills(preSelected);
 
          // Only update if there are pre-selected skills and the current selection doesn't include them
         if (preSelected.length > 0) {
@@ -289,7 +291,16 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const handleSkillToggle = (skill) => {
     setFormData(prev => {
       const currentSkills = prev.skillProficiencies || [];
-      const newSkills = currentSkills.includes(skill)
+       // Prevent unselection of pre-selected skills
+      const isPreSelected = preSelectedSkills.includes(skill);
+      const isCurrentlySelected = currentSkills.includes(skill);
+
+       // Don't allow unselection if the skill is pre-selected
+      if (isCurrentlySelected && isPreSelected) {
+        return prev;
+       }
+
+      const newSkills = isCurrentlySelected
          ? currentSkills.filter(s => s !== skill)
          : [...currentSkills, skill];
       return { ...prev, skillProficiencies: newSkills };
@@ -453,6 +464,7 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             skillLimits={skillLimits}
             expertiseLimits={expertiseLimits}
             warnings={skillWarnings}
+            preSelectedSkills={preSelectedSkills}
            />
          );
       case 7:

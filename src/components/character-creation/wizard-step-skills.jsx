@@ -5,7 +5,7 @@ import './wizard-step-skills-dark.css';
 import { SKILL_PROFICIENCIES } from './constants';
 import { validateSkills, getSkillLimits, getExpertiseLimits } from '../../services/skill-validation.js';
 
-function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle, skillLimits, expertiseLimits, warnings }) {
+function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle, skillLimits, expertiseLimits, warnings, preSelectedSkills }) {
   const [showExpertiseFeedback, setShowExpertiseFeedback] = useState(null);
 
   const handleExpertiseToggle = (skill) => {
@@ -31,6 +31,7 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseTog
 
   const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
   const isSkillProficient = (skill) => (formData.skillProficiencies || []).includes(skill);
+  const isPreSelected = (skill) => (preSelectedSkills || []).includes(skill);
 
   return (
      <div className="wizard-step">
@@ -69,12 +70,13 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseTog
            {SKILL_PROFICIENCIES.map(skill => (
              <label
               key={skill}
-              className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill) ? 'selected' : ''}`}
+              className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill) ? 'selected' : ''} ${isPreSelected(skill) ? 'pre-selected' : ''}`}
              >
                <input
                 type="checkbox"
                 checked={isSkillProficient(skill)}
                 onChange={() => onSkillToggle(skill)}
+                disabled={isPreSelected(skill)}
                />
                &nbsp;
                <span className={isSkillExpert(skill) ? 'skill-expert-label' : ''}>
