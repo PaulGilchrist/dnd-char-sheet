@@ -6,7 +6,7 @@ import os from 'os';
 import path from 'path';
 import guid from 'guid'
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 const persistDataDebounceMilliseconds = 1 * 60 * 1000; // 1 minute in milliseconds
 
 const app = express();
@@ -20,7 +20,32 @@ app.use((req, res, next) => {
 });
 
 // Serve your React build (dist folder) BEFORE API routes
-app.use('/dnd-char-sheet', express.static(path.join(process.cwd(), 'dist')));
+app.use(express.static(path.join(process.cwd(), 'dist')));
+
+// React Router fallback — MUST be last
+app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+});
+
+
+// Start server
+app.listen(PORT, () => {
+      // Get local network IP (e.g., 192.168.x.x)
+    const interfaces = os.networkInterfaces();
+    let lanIP = 'unknown';
+
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                lanIP = iface.address;
+              }
+          }
+     }
+
+    console.log(`Server running at:`);
+    console.log(`  Local:   http://localhost:${PORT}/`);
+    console.log(`  Network: http://${lanIP}:${PORT}/`);
+});
 
 // Serve static files from the public directory
 app.use(express.static(path.join(process.cwd(), 'public')));
