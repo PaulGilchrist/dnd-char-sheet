@@ -52,6 +52,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [languageLimits, setLanguageLimits] = useState(null);
   const [fightingStyleLimits, setFightingStyleLimits] = useState(null);
   const [languageWarnings, setLanguageWarnings] = useState([]);
+  const [preSelectedLanguages, setPreSelectedLanguages] = useState([]);
+  const [preSelectedFightingStyles, setPreSelectedFightingStyles] = useState([]);
   const [preSelectedFeats, setPreSelectedFeats] = useState([]);
 
    // Validate skills when selection changes
@@ -145,6 +147,10 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
            setLanguageLimits(langLimits);
            setFightingStyleLimits(styleLimits);
            setLanguageWarnings(warnings);
+
+            // Extract and store pre-selected items
+           setPreSelectedLanguages(langLimits?.preSelected || []);
+           setPreSelectedFightingStyles(styleLimits?.preSelected || []);
           } catch (error) {
            console.error('Error validating languages and fighting styles:', error);
             }
@@ -361,6 +367,15 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const handleLanguageToggle = (language) => {
     setFormData(prev => {
       const currentLanguages = prev.languages || [];
+       // Prevent unselection of pre-selected languages
+      const isPreSelected = preSelectedLanguages.includes(language);
+      const isCurrentlySelected = currentLanguages.includes(language);
+
+       // Don't allow unselection if the language is pre-selected
+      if (isCurrentlySelected && isPreSelected) {
+        return prev;
+       }
+
       const newLanguages = currentLanguages.includes(language)
           ? currentLanguages.filter(l => l !== language)
           : [...currentLanguages, language];
@@ -372,6 +387,15 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const handleFightingStyleToggle = (style) => {
     setFormData(prev => {
       const currentStyles = prev.class?.fightingStyles || [];
+       // Prevent unselection of pre-selected fighting styles
+      const isPreSelected = preSelectedFightingStyles.includes(style);
+      const isCurrentlySelected = currentStyles.includes(style);
+
+       // Don't allow unselection if the fighting style is pre-selected
+      if (isCurrentlySelected && isPreSelected) {
+        return prev;
+       }
+
       const newStyles = currentStyles.includes(style)
           ? currentStyles.filter(s => s !== style)
           : [...currentStyles, style];
@@ -511,6 +535,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
               languageLimits={languageLimits}
               fightingStyleLimits={fightingStyleLimits}
               warnings={languageWarnings}
+              preSelectedLanguages={preSelectedLanguages}
+              preSelectedFightingStyles={preSelectedFightingStyles}
                />
           );
       case 8:

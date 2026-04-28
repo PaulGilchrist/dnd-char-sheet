@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LANGUAGES, FIGHTING_STYLES } from './constants';
 
-function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingStyleToggle, languageLimits, fightingStyleLimits, warnings }) {
+function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingStyleToggle, languageLimits, fightingStyleLimits, warnings, preSelectedLanguages, preSelectedFightingStyles }) {
   const fightingStyles = formData.class?.fightingStyles || [];
   const languages = formData.languages || [];
 
@@ -26,6 +26,9 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
        });
      }
    }, [fightingStyleLimits]);
+
+  const isLanguagePreSelected = (language) => (preSelectedLanguages || []).includes(language);
+  const isFightingStylePreSelected = (style) => (preSelectedFightingStyles || []).includes(style);
 
   return (
      <div className="wizard-step">
@@ -64,12 +67,13 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
            {LANGUAGES.map(language => (
              <label 
               key={language} 
-               className={`multi-select-item ${languages.includes(language) ? 'selected' : ''}`}
+               className={`multi-select-item ${languages.includes(language) ? 'selected' : ''} ${isLanguagePreSelected(language) ? 'pre-selected' : ''}`}
              >
                <input
                 type="checkbox"
                  checked={languages.includes(language)}
                 onChange={() => onLanguageToggle(language)}
+                disabled={isLanguagePreSelected(language)}
                />
                &nbsp;{language}
              </label>
@@ -84,12 +88,13 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
            {FIGHTING_STYLES.map(style => (
              <label 
               key={style} 
-              className={`multi-select-item ${fightingStyles.includes(style) ? 'selected' : ''}`}
+              className={`multi-select-item ${fightingStyles.includes(style) ? 'selected' : ''} ${isFightingStylePreSelected(style) ? 'pre-selected' : ''}`}
              >
                <input
                 type="checkbox"
                 checked={fightingStyles.includes(style)}
                 onChange={() => onFightingStyleToggle(style)}
+                disabled={isFightingStylePreSelected(style)}
                />
                &nbsp;{style}
              </label>
