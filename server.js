@@ -38,13 +38,17 @@ app.listen(PORT, () => {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
                 lanIP = iface.address;
-              }
-          }
      }
+           }
+      }
+
+    // Only show port and trailing slash if it's not the default (80)
+    const portStr = PORT === 80 ? '' : `:${PORT}`;
+    const trailingSlash = PORT === 80 ? '' : '/';
 
     console.log(`Server running at:`);
-    console.log(`  Local:   http://localhost:${PORT}/`);
-    console.log(`  Network: http://${lanIP}:${PORT}/`);
+    console.log(`  Local:   http://localhost${portStr}${trailingSlash}`);
+    console.log(`  Network: http://${lanIP}${portStr}${trailingSlash}`);
 });
 
 // Serve static files from the public directory
@@ -380,26 +384,6 @@ setInterval(keepAlive, 60000); // 60 seconds
 // React Router fallback — MUST be last
 app.get(/^\/dnd-char-sheet\/.*/, (req, res) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
-});
-
-
-// Start server
-app.listen(PORT, () => {
-    // Get local network IP (e.g., 192.168.x.x)
-    const interfaces = os.networkInterfaces();
-    let lanIP = 'unknown';
-
-    for (const name of Object.keys(interfaces)) {
-        for (const iface of interfaces[name]) {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                lanIP = iface.address;
-            }
-        }
-    }
-
-    console.log(`Server running at:`);
-    console.log(`  Local:   http://localhost:${PORT}/dnd-char-sheet/`);
-    console.log(`  Network: http://${lanIP}:${PORT}/dnd-char-sheet/`);
 });
 
 let characterChangeData = {}
