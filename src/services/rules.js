@@ -1,8 +1,57 @@
 import { cloneDeep, uniqBy } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
-import { skills } from '../data/skills.js';
 import classRules from './class-rules'
 import raceRules from './race-rules'
+
+// Load skills from public/data/ability-scores.json
+const loadSkills = async () => {
+	try {
+		const response = await fetch('/data/ability-scores.json');
+		if (response.ok) {
+			const abilities = await response.json();
+			const skills = [];
+			abilities.forEach(ability => {
+				ability.skills.forEach(skillName => {
+					skills.push({ name: skillName, ability: ability.full_name });
+				});
+			});
+			return skills;
+		}
+	} catch (error) {
+		console.error('Error loading skills:', error);
+	}
+	// Fallback
+	return [
+		{ name: 'Acrobatics', ability: 'Dexterity' },
+		{ name: 'Animal Handling', ability: 'Wisdom' },
+		{ name: 'Arcana', ability: 'Intelligence' },
+		{ name: 'Athletics', ability: 'Strength' },
+		{ name: 'Deception', ability: 'Charisma' },
+		{ name: 'History', ability: 'Intelligence' },
+		{ name: 'Insight', ability: 'Wisdom' },
+		{ name: 'Intimidation', ability: 'Charisma' },
+		{ name: 'Investigation', ability: 'Intelligence' },
+		{ name: 'Medicine', ability: 'Wisdom' },
+		{ name: 'Nature', ability: 'Intelligence' },
+		{ name: 'Perception', ability: 'Wisdom' },
+		{ name: 'Performance', ability: 'Charisma' },
+		{ name: 'Persuasion', ability: 'Charisma' },
+		{ name: 'Religion', ability: 'Intelligence' },
+		{ name: 'Sleight of Hand', ability: 'Dexterity' },
+		{ name: 'Stealth', ability: 'Dexterity' },
+		{ name: 'Survival', ability: 'Wisdom' }
+	];
+};
+
+let cachedSkills = null;
+
+const getSkills = async () => {
+	if (cachedSkills) {
+		return cachedSkills;
+	}
+	cachedSkills = await loadSkills();
+	return cachedSkills;
+};
 
 const rules = {
     getAbilityLongName: (shortName) => {
@@ -15,40 +64,41 @@ const rules = {
             case 'CHA': return 'Charisma';
         }
     },
-    getAbilities: (playerStats) => {
-        // Dependencies: Class, Race, Skill Proficiencies 
-        // Sets Abilities, Initiative, and Hit Points
-        return playerStats.abilities.map((ability) => {
-            const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
-            ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + raceRules.getRacialBonus(playerStats, ability.name);
-            if((ability.name === 'Strength' || ability.name === 'Constitution') && playerStats.class.name === 'Barbarian' && playerStats.level > 19) {
-                ability.totalScore += 4; // Primal Champion
-            }
-            ability.bonus = Math.floor((ability.totalScore - 10) / 2);
-            ability.proficient = playerStats.class.saving_throws.includes(ability.name);
-            ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
-            ability.skills = skills.filter(skill => skill.ability === ability.name);
-            ability.skills = ability.skills.map((skill) => {
-                const proficient = playerStats.skillProficiencies.includes(skill.name);
-                skill.bonus = proficient ? ability.bonus + proficiency : ability.bonus;
-                if (playerStats.expertise && playerStats.expertise.includes(skill.name)) {
-                    skill.bonus += proficiency; // Rogues can double their proficiency for two selected areas of expertise
-                }
-                if (passiveSkills.includes(skill.name)) {
-                    // Add skill based senses
-                    const newSense = {
-                        name: `Passive ${skill.name}`,
-                        value: 10 + skill.bonus
-                    }
-                    if (!playerStats.senses.some((sense) => sense.name === newSense.name)) {
-                        playerStats.senses.push(newSense);
-                    }
-                }
-                return skill;
-            });
-            return ability;
-        });
-    },
+        getAbilities: async (playerStats) => {
+	 // Dependencies: Class, Race, Skill Proficiencies 
+	 // Sets Abilities, Initiative, and Hit Points
+	const skills = await getSkills();
+	return playerStats.abilities.map((ability) => {
+		const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+		ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus + raceRules.getRacialBonus(playerStats, ability.name);
+		if((ability.name === 'Strength' || ability.name === 'Constitution') && playerStats.class.name === 'Barbarian' && playerStats.level > 19) {
+			ability.totalScore += 4; // Primal Champion
+		 }
+		ability.bonus = Math.floor((ability.totalScore - 10) / 2);
+		ability.proficient = playerStats.class.saving_throws.includes(ability.name);
+		ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
+		ability.skills = skills.filter(skill => skill.ability === ability.name);
+		ability.skills = ability.skills.map((skill) => {
+			const proficient = playerStats.skillProficiencies.includes(skill.name);
+			skill.bonus = proficient ? ability.bonus + proficiency : ability.bonus;
+			if (playerStats.expertise && playerStats.expertise.includes(skill.name)) {
+				skill.bonus += proficiency; // Rogues can double their proficiency for two selected areas of expertise
+			 }
+			if (passiveSkills.includes(skill.name)) {
+			 // Add skill based senses
+				const newSense = {
+					name: `Passive ${skill.name}`,
+					value: 10 + skill.bonus
+				}
+				if (!playerStats.senses.some((sense) => sense.name === newSense.name)) {
+					playerStats.senses.push(newSense);
+				 }
+			 }
+			return skill;
+		 });
+		return ability;
+	 });
+	},
     getActions: (playerStats) => {
         // Dependencies: Class, Race
         const features = classRules.getFeatures(playerStats);
@@ -710,29 +760,29 @@ const rules = {
         }
         return spellMaxLevel;
     },
-    getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
-        const playerStats = cloneDeep(playerSummary);
-        playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
-        playerStats.class = classRules.getClass(allClasses, playerSummary);
-        playerStats.immunities = raceRules.getImmunities(playerSummary);
-        playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
-        playerStats.race = raceRules.getRace(allRaces, playerSummary);
-        playerStats.resistances = raceRules.getResistances(playerSummary);
-        // Dependency on class and race begin here        
-        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats); // Dependencies: Class, Race
-        [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats); // Dependencies: Class, Race
-        [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false); // Dependencies: Class, Race
-        [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true); // Dependencies: Class, Race
-        playerStats.senses = raceRules.getSenses(playerStats); // Dependencies: Race
-        // Dependency on abilities begin here
-        playerStats.abilities = rules.getAbilities(playerStats); // Dependencies: Class, Race, Skill Proficiencies        
-        playerStats.hitPoints = rules.getHitPoints(playerStats) // Dependencies: Abilities, Class
-        playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus; // Dependencies: Abilities
-        [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
-        playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats); // Dependencies: Abilities, Class
-        playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats); // Dependencies: Abilities, Spells 
-        return playerStats;
-    }
+        getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
+	const playerStats = cloneDeep(playerSummary);
+	playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
+	playerStats.class = classRules.getClass(allClasses, playerSummary);
+	playerStats.immunities = raceRules.getImmunities(playerSummary);
+	playerStats.inventory.magicItems = rules.getMagicItems(allMagicItems, playerSummary);
+	playerStats.race = raceRules.getRace(allRaces, playerSummary);
+	playerStats.resistances = raceRules.getResistances(playerSummary);
+	 // Dependency on class and race begin here 
+	[playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats); // Dependencies: Class, Race
+	[playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats); // Dependencies: Class, Race
+	[playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false); // Dependencies: Class, Race
+	[playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true); // Dependencies: Class, Race
+	playerStats.senses = raceRules.getSenses(playerStats); // Dependencies: Race
+	 // Dependency on abilities begin here
+	playerStats.abilities = await rules.getAbilities(playerStats); // Dependencies: Class, Race, Skill Proficiencies 
+	playerStats.hitPoints = rules.getHitPoints(playerStats) // Dependencies: Abilities, Class
+	playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus; // Dependencies: Abilities
+	[playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
+	playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats); // Dependencies: Abilities, Class
+	playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats); // Dependencies: Abilities, Spells 
+	return playerStats;
+	}
 }
 
 export default rules

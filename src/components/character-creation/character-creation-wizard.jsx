@@ -5,7 +5,6 @@ import './character-creation-wizard-dark.css';
 import merge from 'lodash/merge';
 import {
   REQUIRED_FIELDS,
-  ABILITY_NAMES,
   DEFAULT_FORM_DATA
 } from './constants';
 import { validateStep, validateFinalFormData, getPointBuyCosts, getFeatRules } from './utils';

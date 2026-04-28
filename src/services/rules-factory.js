@@ -54,11 +54,11 @@ const rulesFactory = {
         return result;
     },
     
-    getAbilities: (playerStats, playerSummary) => {
+        getAbilities: async (playerStats, playerSummary) => {
         const characterName = playerSummary.name || 'Unknown';
         console.log(`[RulesFactory] getAbilities called for: ${characterName}`);
         const selectedRules = rulesFactory.getRules(playerSummary, characterName);
-        const result = selectedRules.rules.getAbilities(playerStats);
+        const result = await selectedRules.rules.getAbilities(playerStats);
         console.log(`[RulesFactory] getAbilities completed: ${result.length} abilities processed`);
         return result;
     },
@@ -211,7 +211,7 @@ const rulesFactory = {
           },
     
     
-    getPlayerStats: (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
+        getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
         const characterName = playerSummary.name || 'Unknown';
         console.log(`[RulesFactory] getPlayerStats STARTED for: ${characterName}`);
         console.log(`[RulesFactory] Character data:`, {
@@ -225,7 +225,7 @@ const rulesFactory = {
         const { rules, raceRules, classRules } = selectedRules;
         
         console.log(`[RulesFactory] Calling rules.getPlayerStats...`);
-        const playerStats = rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
+        const playerStats = await rules.getPlayerStats(allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary);
         
         console.log(`[RulesFactory] Calling raceRules...`);
         playerStats.immunities = raceRules.getImmunities(playerSummary);

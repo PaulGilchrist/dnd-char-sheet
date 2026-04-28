@@ -2,8 +2,22 @@ import React, { useState, useEffect } from 'react';
 import './wizard-step-abilities.css';
 // Dark mode styles loaded via media query
 import './wizard-step-abilities-dark.css';
-import { ABILITY_NAMES } from './constants';
 import { getPointBuyCosts } from './utils';
+
+// Load ability names from public/data/ability-scores.json
+const loadAbilityNames = async () => {
+	try {
+		const response = await fetch('/data/ability-scores.json');
+		if (response.ok) {
+			const abilities = await response.json();
+			return abilities.map(ability => ability.full_name);
+		}
+	} catch (error) {
+		console.error('Error loading ability names:', error);
+	}
+	// Fallback
+	return ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+};
 
 function WizardStepAbilities({ 
   formData, 
@@ -14,8 +28,18 @@ function WizardStepAbilities({
 }) {
   const [pointBuyCosts, setPointBuyCosts] = useState({});
   const [pointsAllowed, setPointsAllowed] = useState(27);
+  const [abilityNames, setAbilityNames] = useState(['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma']);
 
-      // Load point buy costs from JSON
+	 // Load ability names from JSON
+  useEffect(() => {
+    const loadNames = async () => {
+      const names = await loadAbilityNames();
+      setAbilityNames(names);
+    };
+    loadNames();
+  }, []);
+
+       // Load point buy costs from JSON
   useEffect(() => {
     const loadCosts = async () => {
       const costs = await getPointBuyCosts(formData.rules || '5e');
@@ -28,11 +52,11 @@ function WizardStepAbilities({
           const data = await response.json();
           const rules = data[formData.rules] || data;
           setPointsAllowed(rules.point_buy?.total_points ?? 27);
-           }
-          } catch (error) {
+            }
+           } catch (error) {
         console.error('Error loading validation rules:', error);
-          }
-         };
+           }
+          };
     loadCosts();
        }, [formData.rules]);
 
@@ -51,18 +75,18 @@ function WizardStepAbilities({
   };
 
   return (
-    <div className="wizard-step wizard-step-4">
-      <h2>Step 5: Ability Scores</h2>
-      <div className="step-description">
+     <div className="wizard-step wizard-step-4">
+       <h2>Step 5: Ability Scores</h2>
+       <div className="step-description">
        Use point buy: Each ability base score minimum is 8 and maximum is 15. You have <span className="points-remaining">{Math.max(0, pointsRemaining)} points</span> remaining to spend.
-       (Total points allowed: {pointsAllowed})
-      </div>
-      <div className="step-description">
+        (Total points allowed: {pointsAllowed})
+       </div>
+       <div className="step-description">
         Total score (base + improvements + misc) cannot exceed 20 for any ability.
       </div>
 
-      <div className="ability-scores-grid">
-        {ABILITY_NAMES.map((ability, index) => {
+       <div className="ability-scores-grid">
+         {abilityNames.map((ability, index) => {
           const baseScore = parseInt(formData.abilities[index].baseScore) || 8;
           const improvements = parseInt(formData.abilities[index].abilityImprovements) || 0;
           const misc = parseInt(formData.abilities[index].miscBonus) || 0;
@@ -70,53 +94,53 @@ function WizardStepAbilities({
           const cost = pointBuyCosts[baseScore] || 0;
 
           return (
-            <div key={ability} className="ability-score-card">
-              <h4>{ability}</h4>
-              <div className="form-group ability-score-form-group">
-                <label>Base Score (8-15)</label>
-                <input
+             <div key={ability} className="ability-score-card">
+               <h4>{ability}</h4>
+               <div className="form-group ability-score-form-group">
+                 <label>Base Score (8-15)</label>
+                 <input
                  type="number"
                  min="8"
                  max="15"
                   value={formData.abilities[index].baseScore}
                   onChange={(e) => onAbilityBaseScoreChange(index, e.target.value)}
                   className={errors[`ability_${index}_baseScore`] ? 'error' : ''}
-                />
-                <span className="point-cost">Cost: {cost}</span>
-                {errors[`ability_${index}_baseScore`] && <span className="error-message">{errors[`ability_${index}_baseScore`]}</span>}
-              </div>
-              <div className="form-group ability-score-form-group">
-                <label>Improvements</label>
-                <input
+                 />
+                 <span className="point-cost">Cost: {cost}</span>
+                 {errors[`ability_${index}_baseScore`] && <span className="error-message">{errors[`ability_${index}_baseScore`]}</span>}
+               </div>
+               <div className="form-group ability-score-form-group">
+                 <label>Improvements</label>
+                 <input
                   type="number"
                   min="0"
                   value={formData.abilities[index].abilityImprovements}
                   onChange={(e) => onAbilityImprovementChange(index, parseInt(e.target.value))}
                   className={errors[`ability_${index}_abilityImprovements`] ? 'error' : ''}
-                />
-                {errors[`ability_${index}_abilityImprovements`] && <span className="error-message">{errors[`ability_${index}_abilityImprovements`]}</span>}
-              </div>
-              <div className="form-group ability-score-form-group">
-                <label>Misc Bonus</label>
-                <input
+                 />
+                 {errors[`ability_${index}_abilityImprovements`] && <span className="error-message">{errors[`ability_${index}_abilityImprovements`]}</span>}
+               </div>
+               <div className="form-group ability-score-form-group">
+                 <label>Misc Bonus</label>
+                 <input
                   type="number"
                   min="0"
                   value={formData.abilities[index].miscBonus}
                   onChange={(e) => onAbilityMiscBonusChange(index, parseInt(e.target.value))}
                   className={errors[`ability_${index}_miscBonus`] ? 'error' : ''}
-                />
-                {errors[`ability_${index}_miscBonus`] && <span className="error-message">{errors[`ability_${index}_miscBonus`]}</span>}
-              </div>
-              <div className={`total-score ${totalScore > 20 ? 'error' : ''}`}>
+                 />
+                 {errors[`ability_${index}_miscBonus`] && <span className="error-message">{errors[`ability_${index}_miscBonus`]}</span>}
+               </div>
+               <div className={`total-score ${totalScore > 20 ? 'error' : ''}`}>
                 Total: <strong>{totalScore}</strong>
-                {totalScore > 20 && <span className="error-message"> (max 20)</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+                 {totalScore > 20 && <span className="error-message"> (max 20)</span>}
+               </div>
+             </div>
+           );
+         })}
+       </div>
+     </div>
+   );
 }
 
 export default WizardStepAbilities;

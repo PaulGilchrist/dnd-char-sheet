@@ -46,7 +46,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                 magicItemsCount: playerSummary.inventory?.magicItems?.length || 0
             });
             console.log('[CharSheet] Using magic items:', { source: playerSummary.rules === '2024' ? 'allMagicItems2024' : 'allMagicItems', count: effectiveMagicItems?.length || 0 });
-            const stats = rulesFactory.getPlayerStats(effectiveClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, playerSummary);
+            const stats = await rulesFactory.getPlayerStats(effectiveClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, playerSummary);
             console.log('[CharSheet] After getPlayerStats - magic items:', stats.inventory?.magicItems?.length || 0);
 
             if (preparedSpells) {

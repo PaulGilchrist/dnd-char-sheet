@@ -25,14 +25,20 @@ export const REQUIRED_FIELDS = [
     'expertSkills',
 ];
 
-export const ABILITY_NAMES = [
-    'Strength',
-    'Dexterity',
-    'Constitution',
-    'Intelligence',
-    'Wisdom',
-    'Charisma',
-];
+// Load ability names from public/data/ability-scores.json
+export const loadAbilityNames = async () => {
+	try {
+		const response = await fetch('/data/ability-scores.json');
+		if (response.ok) {
+			const abilities = await response.json();
+			return abilities.map(ability => ability.full_name);
+		}
+	} catch (error) {
+		console.error('Error loading ability names:', error);
+	}
+	// Fallback
+	return ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+};
 
 export const ALIGNMENTS = [
     'Lawful Good',
@@ -104,7 +110,7 @@ export const DEFAULT_FORM_DATA = {
     name: '',
     level: 1,
     alignment: 'True Neutral',
-    abilities: ABILITY_NAMES.map((name) => ({
+    abilities: ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'].map((name) => ({
         name,
         baseScore: 8,
         abilityImprovements: 0,
