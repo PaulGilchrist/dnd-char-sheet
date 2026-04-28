@@ -23,6 +23,7 @@ import WizardStepInventory from './wizard-step-inventory';
 import { validateSkills, getSkillLimits, getExpertiseLimits, getPreSelectedSkills } from '../../services/skill-validation.js';
 import { getLanguageLimits, getFightingStyleLimits, validateLanguagesAndFightingStyles } from '../../services/languages-fightingstyles-validation.js';
 import { getPreSelectedFeats } from '../../services/feat-validation.js';
+import { getPreSelectedResistances, validateResistances } from '../../services/resistances-validation.js';
 import WizardStepSpells from './wizard-step-spells';
 import WizardStepFeats from './wizard-step-feats';
 import WizardStepSpecial from './wizard-step-special';
@@ -55,8 +56,58 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [preSelectedLanguages, setPreSelectedLanguages] = useState([]);
   const [preSelectedFightingStyles, setPreSelectedFightingStyles] = useState([]);
   const [preSelectedFeats, setPreSelectedFeats] = useState([]);
+  const [resistanceWarnings, setResistanceWarnings] = useState([]);
+  const [preSelectedResistancesList, setPreSelectedResistancesList] = useState({ resistances: [], immunities: [] });
 
-   // Validate skills when selection changes
+   // Validate resistances and immunities when selections change
+  useEffect(() => {
+    const validate = async () => {
+      try {
+        const warnings = await validateResistances(formData);
+        setResistanceWarnings(warnings);
+       } catch (error) {
+        console.error('Error validating resistances:', error);
+       }
+     };
+
+    validate();
+   }, [formData.resistances, formData.immunities, formData.class?.name, formData.race?.name, formData.race?.subrace?.name, formData.background, formData.rules, formData.level]);
+
+   // Pre-select resistances and immunities when race/class changes
+  useEffect(() => {
+    const preSelect = async () => {
+      try {
+        const preSelected = await getPreSelectedResistances(formData);
+        setPreSelectedResistancesList(preSelected);
+
+         // Only update if there are pre-selected items and the current selection doesn't include them
+        if (preSelected.resistances.length > 0 || preSelected.immunities.length > 0) {
+          setFormData(prev => {
+            const currentResistances = prev.resistances || [];
+      const currentImmunities = prev.immunities || [];
+
+            const missingResistances = preSelected.resistances.filter(r => !currentResistances.includes(r));
+            const missingImmunities = preSelected.immunities.filter(i => !currentImmunities.includes(i));
+
+            if (missingResistances.length > 0 || missingImmunities.length > 0) {
+              return {
+      ...prev,
+                resistances: [...currentResistances, ...missingResistances],
+                immunities: [...currentImmunities, ...missingImmunities]
+    };
+             }
+            return prev;
+           });
+         }
+       } catch (error) {
+        console.error('Error pre-selecting resistances:', error);
+       }
+  };
+
+    preSelect();
+   }, [formData.race?.name, formData.race?.subrace?.name, formData.class?.name, formData.rules]);
+
+     // Validate skills when selection changes
   useEffect(() => {
     const validate = async () => {
       try {
@@ -69,8 +120,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         setSkillWarnings(warnings);
        } catch (error) {
         console.error('Error validating skills:', error);
-       }
-     };
+         }
+       };
 
     validate();
    }, [formData.skillProficiencies, formData.expertSkills, formData.class?.name, formData.race?.name, formData.background, formData.rules, formData.level]);
@@ -93,15 +144,15 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
               return {
                  ...prev,
                 skillProficiencies: [...currentSkills, ...missingSkills]
-               };
-             }
+  };
+               }
             return prev;
-           });
-         }
-       } catch (error) {
+             });
+           }
+         } catch (error) {
         console.error('Error pre-selecting skills:', error);
-       }
-     };
+         }
+    };
 
     preSelectSkills();
    }, [formData.background, formData.race?.name, formData.class?.name, formData.rules]);
@@ -127,12 +178,12 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
    };
                }
             return prev;
-             });
-           }
-         } catch (error) {
+               });
+             }
+           } catch (error) {
         console.error('Error pre-selecting feats:', error);
-         }
-  };
+           }
+    };
 
     preSelectFeats();
      }, [formData.background, formData.rules]);
@@ -153,8 +204,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
            setPreSelectedFightingStyles(styleLimits?.preSelected || []);
           } catch (error) {
            console.error('Error validating languages and fighting styles:', error);
-            }
-      };
+              }
+        };
 
        validate();
       }, [formData.languages, formData.class?.fightingStyles, formData.class?.name, formData.race?.name, formData.background, formData.rules, formData.level]);
@@ -164,8 +215,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setTempInventory({
       backpack: formData.inventory?.backpack || [],
       equipped: formData.inventory?.equipped || [],
-      });
-    }, [formData.inventory]);
+        });
+      }, [formData.inventory]);
 
   // Load data based on ruleset
   useEffect(() => {
@@ -177,8 +228,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       } catch (error) {
         console.error(`Failed to load ${url}:`, error);
         setData([]);
-       }
-  };
+         }
+    };
 
     if (ruleset === '2024') {
       loadData('/dnd-char-sheet/data/2024/backgrounds.json', setBackgrounds);
@@ -187,24 +238,24 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         setClassSubtypes(data.map(cls => ({
           className: cls.name,
           subtypes: cls.subclasses || cls.majors || []
-          })));
-        });
+            })));
+          });
       loadData('/dnd-char-sheet/data/2024/feats.json', setFeats);
       loadData('/dnd-char-sheet/data/2024/magic-items.json', setMagicItems);
-      } else {
-        // 5e does not use the same background system as 2024
+        } else {
+          // 5e does not use the same background system as 2024
       setBackgrounds([]);
       loadData('/dnd-char-sheet/data/races.json', setRacesData);
       loadData('/dnd-char-sheet/data/classes.json', (data) => {
         setClassSubtypes(data.map(cls => ({
           className: cls.name,
           subtypes: cls.subclasses || []
-          })));
-        });
+            })));
+          });
       loadData('/dnd-char-sheet/data/feats.json', setFeats);
       loadData('/dnd-char-sheet/data/magic-items.json', setMagicItems);
-      }
-    }, [ruleset]);
+        }
+      }, [ruleset]);
 
   // Validate ability scores
   useEffect(() => {
@@ -235,16 +286,16 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         }
         if (misc < 0) {
           abilityErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
-          }
-        });
+            }
+          });
 
       if (totalPointsSpent > 27) {
         abilityErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
       }
 
       setErrors(prev => ({ ...prev, ...abilityErrors }));
-      }
-    }, [formData.abilities, currentStep]);
+        }
+      }, [formData.abilities, currentStep]);
   const handleRulesetChange = async (newRuleset) => {
     setRuleset(newRuleset);
     
@@ -255,16 +306,16 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         spells: [],
         feats: [],
         background: ''
-     }));
-      } else {
+       }));
+        } else {
       setFormData(prev => ({
         ...prev,
         rules: '5e',
         spells: [],
         feats: [],
         background: ''
-        }));
-      }
+          }));
+        }
 
     setCurrentStep(2);
   };
@@ -284,8 +335,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
       const newAbilities = [...prev.abilities];
       newAbilities[index] = { ...newAbilities[index], [field]: value };
       return { ...prev, abilities: newAbilities };
-     });
-   };
+       });
+     };
 
   const handleAbilityBaseScoreChange = (index, value) => {
     const newBaseScore = parseInt(value) || 8;
@@ -308,24 +359,24 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
 
     if (currentTotalSpent <= 27) {
       handleAbilityChange(index, 'baseScore', newBaseScore);
-     }
-   };
+       }
+     };
 
   const handleAbilityImprovementChange = (index, value) => {
     setFormData(prev => {
       const newAbilities = [...prev.abilities];
       newAbilities[index] = { ...newAbilities[index], abilityImprovements: value };
       return { ...prev, abilities: newAbilities };
-      });
-    };
+        });
+      };
 
   const handleAbilityMiscBonusChange = (index, value) => {
     setFormData(prev => {
       const newAbilities = [...prev.abilities];
       newAbilities[index] = { ...newAbilities[index], miscBonus: value };
       return { ...prev, abilities: newAbilities };
-      });
-    };
+        });
+      };
 
   const handleSkillToggle = (skill) => {
     setFormData(prev => {
@@ -340,8 +391,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
        }
 
       const newSkills = isCurrentlySelected
-          ? currentSkills.filter(s => s !== skill)
-          : [...currentSkills, skill];
+            ? currentSkills.filter(s => s !== skill)
+            : [...currentSkills, skill];
       return { ...prev, skillProficiencies: newSkills };
     });
     setErrors(prev => ({ ...prev, skillProficiencies: null }));
@@ -354,13 +405,13 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         const currentExpertSkills = prev.expertSkills || [];
         const newExpertSkills = [...currentExpertSkills, skill];
         return { ...prev, expertSkills: newExpertSkills };
-        } else {
-          // Remove from expertSkills
+          } else {
+            // Remove from expertSkills
         const currentExpertSkills = prev.expertSkills || [];
         const newExpertSkills = currentExpertSkills.filter(s => s !== skill);
         return { ...prev, expertSkills: newExpertSkills };
-        }
-      });
+          }
+        });
     setErrors(prev => ({ ...prev, expertSkills: null }));
   };
 
@@ -377,8 +428,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
        }
 
       const newLanguages = currentLanguages.includes(language)
-          ? currentLanguages.filter(l => l !== language)
-          : [...currentLanguages, language];
+            ? currentLanguages.filter(l => l !== language)
+            : [...currentLanguages, language];
       return { ...prev, languages: newLanguages };
     });
     setErrors(prev => ({ ...prev, languages: null }));
@@ -397,30 +448,40 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
        }
 
       const newStyles = currentStyles.includes(style)
-          ? currentStyles.filter(s => s !== style)
-          : [...currentStyles, style];
+            ? currentStyles.filter(s => s !== style)
+            : [...currentStyles, style];
       return { ...prev, class: { ...prev.class, fightingStyles: newStyles } };
     });
     setErrors(prev => ({ ...prev, fightingStyles: null }));
   };
 
-  const handleResistanceToggle = (type) => {
+  const handleResistanceToggle = (type, isPreSelected) => {
+     // Prevent unselection of pre-selected resistances
+    if (isPreSelected) {
+      return;
+     }
+
     setFormData(prev => {
       const currentResistances = prev.resistances || [];
       const newResistances = currentResistances.includes(type)
-          ? currentResistances.filter(r => r !== type)
-          : [...currentResistances, type];
+            ? currentResistances.filter(r => r !== type)
+            : [...currentResistances, type];
       return { ...prev, resistances: newResistances };
     });
     setErrors(prev => ({ ...prev, resistances: null }));
   };
 
-  const handleImmunityToggle = (type) => {
+  const handleImmunityToggle = (type, isPreSelected) => {
+     // Prevent unselection of pre-selected immunities
+    if (isPreSelected) {
+      return;
+     }
+
     setFormData(prev => {
       const currentImmunities = prev.immunities || [];
       const newImmunities = currentImmunities.includes(type)
-          ? currentImmunities.filter(i => i !== type)
-          : [...currentImmunities, type];
+            ? currentImmunities.filter(i => i !== type)
+            : [...currentImmunities, type];
       return { ...prev, immunities: newImmunities };
     });
     setErrors(prev => ({ ...prev, immunities: null }));
@@ -430,8 +491,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     setFormData(prev => ({
       ...prev,
       inventory: { ...prev.inventory, [field]: value }
-      }));
-    };
+        }));
+      };
 
   const handleTempInventoryChange = (field, value) => {
     setTempInventory(prev => ({ ...prev, [field]: value }));
@@ -444,8 +505,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const handleNext = () => {
     if (validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset)) {
       setCurrentStep(prev => prev + 1);
-         }
-       };
+           }
+         };
 
   const handlePrevious = () => {
     setCurrentStep(prev => prev - 1);
@@ -459,8 +520,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         return;
       }
       onComplete(formData);
-      }
-    };
+        }
+      };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -470,8 +531,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             ruleset={ruleset}
             errors={errors}
             onRulesetChange={handleRulesetChange}
-         />
-   );
+          />
+    );
       case 2:
         return (
           <WizardStepBasic
@@ -480,8 +541,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             backgrounds={backgrounds}
             ruleset={ruleset}
             onInputChange={handleInputChange}
-            />
-          );
+              />
+            );
       case 3:
         return (
           <WizardStepRaceClass
@@ -491,8 +552,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             classSubtypes={classSubtypes}
             ruleset={ruleset}
             onInputChange={handleInputChange}
-            />
-          );
+              />
+            );
       case 4:
         return (
           <WizardStepFeats
@@ -500,8 +561,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             allFeats={feats}
             onArrayFieldChange={handleArrayFieldChange}
             preSelectedFeats={preSelectedFeats}
-            />
-          );
+              />
+            );
       case 5:
         return (
           <WizardStepAbilities
@@ -510,8 +571,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             onAbilityBaseScoreChange={handleAbilityBaseScoreChange}
             onAbilityImprovementChange={handleAbilityImprovementChange}
             onAbilityMiscBonusChange={handleAbilityMiscBonusChange}
-            />
-          );
+              />
+            );
       case 6:
         return (
           <WizardStepSkills
@@ -523,8 +584,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             expertiseLimits={expertiseLimits}
             warnings={skillWarnings}
             preSelectedSkills={preSelectedSkills}
-            />
-          );
+              />
+            );
       case 7:
           return (
              <WizardStepLanguages
@@ -537,24 +598,27 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
               warnings={languageWarnings}
               preSelectedLanguages={preSelectedLanguages}
               preSelectedFightingStyles={preSelectedFightingStyles}
-               />
-          );
+                 />
+            );
       case 8:
         return (
           <WizardStepResistances
             formData={formData}
             onResistanceToggle={handleResistanceToggle}
             onImmunityToggle={handleImmunityToggle}
-            />
-          );
+            warnings={resistanceWarnings}
+            preSelectedResistances={preSelectedResistancesList.resistances}
+            preSelectedImmunities={preSelectedResistancesList.immunities}
+              />
+            );
       case 9:
         return (
           <WizardStepSpells
             formData={formData}
             allSpells={allSpells || []}
             onArrayFieldChange={handleArrayFieldChange}
-            />
-          );
+              />
+            );
       case 10:
         return (
           <WizardStepMagicItems
@@ -562,8 +626,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             allMagicItems={magicItems}
             ruleset={ruleset}
             onArrayFieldChange={handleArrayFieldChange}
-            />
-          );
+              />
+            );
       case 11:
         return (
           <WizardStepInventory
@@ -571,36 +635,36 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             tempInventory={tempInventory}
             onInventoryChange={handleInventoryChange}
             onTempInventoryChange={handleTempInventoryChange}
-            />
-          );
+              />
+            );
       case 12:
         return (
           <WizardStepSpecial
             formData={formData}
             onArrayFieldChange={handleArrayFieldChange}
-            />
-          );
+              />
+            );
       default:
         return null;
 }
    };
 
   return (
-      <div className="character-creation-wizard-overlay">
-        <div className="character-creation-wizard">
-          <WizardHeader
+        <div className="character-creation-wizard-overlay">
+          <div className="character-creation-wizard">
+            <WizardHeader
           title={isEditing ? "Edit Character" : "Create New Character"}
           onClose={onCancel}
-          />
-          <WizardProgressBar
+            />
+            <WizardProgressBar
                     currentStep={currentStep}
                     totalSteps={12}
                     isEditing={isEditing}
-                    />
-          <div className="wizard-content">
-            {renderStep()}
-          </div>
-          <WizardFooter
+                      />
+            <div className="wizard-content">
+              {renderStep()}
+            </div>
+            <WizardFooter
           currentStep={currentStep}
           isFirstStep={isEditing ? currentStep === 2 : currentStep === 1}
           isLastStep={currentStep === 12}
@@ -611,8 +675,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           isEditing={isEditing}
           isNextDisabled={isNextDisabled}
           />
+          </div>
         </div>
-      </div>
     );
 }
 

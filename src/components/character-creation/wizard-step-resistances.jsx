@@ -1,46 +1,67 @@
 import React from 'react';
 import { RESISTANCES_IMMUNITIES } from './constants';
 
-function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle }) {
+function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle, warnings, preSelectedResistances, preSelectedImmunities }) {
   return (
     <div className="wizard-step">
       <h2>Step 8: Resistances & Immunities</h2>
       
+      {/* Display warnings if any */}
+      {warnings && warnings.length > 0 && (
+        <div className="warning-container">
+          {warnings.map((warning, index) => (
+            <div key={index} className={`warning-message ${warning.type}`}>
+              {warning.message}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="form-group">
         <label>Resistances</label>
         <div className="multi-select-container multi-select-compact">
-          {RESISTANCES_IMMUNITIES.map(type => (
-            <label 
-              key={`resistance-${type}`} 
-              className={`multi-select-item ${(formData.resistances || []).includes(type) ? 'selected' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={(formData.resistances || []).includes(type)}
-                onChange={() => onResistanceToggle(type)}
-              />
-              &nbsp;{type}
-            </label>
-          ))}
+          {RESISTANCES_IMMUNITIES.map(type => {
+            const isPreSelected = (preSelectedResistances || []).includes(type);
+            const isSelected = (formData.resistances || []).includes(type);
+            return (
+              <label
+                key={`resistance-${type}`}
+                className={`multi-select-item ${isSelected ? 'selected' : ''} ${isPreSelected ? 'pre-selected' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onResistanceToggle(type, isPreSelected)}
+                  disabled={isPreSelected && !isSelected}
+                />
+                &nbsp;{type}{isPreSelected ? ' (Granted)' : ''}
+              </label>
+            );
+          })}
         </div>
       </div>
       
       <div className="form-group">
         <label>Immunities</label>
         <div className="multi-select-container multi-select-compact">
-          {RESISTANCES_IMMUNITIES.map(type => (
-            <label 
-              key={`immunity-${type}`} 
-              className={`multi-select-item ${(formData.immunities || []).includes(type) ? 'selected' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={(formData.immunities || []).includes(type)}
-                onChange={() => onImmunityToggle(type)}
-              />
-              &nbsp;{type}
-            </label>
-          ))}
+          {RESISTANCES_IMMUNITIES.map(type => {
+            const isPreSelected = (preSelectedImmunities || []).includes(type);
+            const isSelected = (formData.immunities || []).includes(type);
+            return (
+              <label
+                key={`immunity-${type}`}
+                className={`multi-select-item ${isSelected ? 'selected' : ''} ${isPreSelected ? 'pre-selected' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => onImmunityToggle(type, isPreSelected)}
+                  disabled={isPreSelected && !isSelected}
+                />
+                &nbsp;{type}{isPreSelected ? ' (Granted)' : ''}
+              </label>
+            );
+          })}
         </div>
       </div>
     </div>
