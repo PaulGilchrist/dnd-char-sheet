@@ -97,27 +97,6 @@ export const RESISTANCES_IMMUNITIES = [
      "Thunder"
 ];
 
-export const SKILL_PROFICIENCIES = [
-     "Acrobatics",
-     "Animal Handling",
-     "Arcana",
-     "Athletics",
-     "Deception",
-     "History",
-     "Insight",
-     "Intimidation",
-     "Investigation",
-     "Medicine",
-     "Nature",
-     "Perception",
-     "Performance",
-     "Persuasion",
-     "Religion",
-     "Sleight of Hand",
-     "Stealth",
-     "Survival"
-];
-
 // POINT_BUY_COSTS is now loaded from public/data/rules-validation.json
 // Use getPointBuyCosts() from utils.js instead
 

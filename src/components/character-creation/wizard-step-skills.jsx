@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './wizard-step-skills.css';
 // Dark mode styles loaded via media query
 import './wizard-step-skills-dark.css';
-import { SKILL_PROFICIENCIES } from './constants';
+import { skills } from '../../data/skills.js';
 import { validateSkills, getSkillLimits, getExpertiseLimits } from '../../services/skill-validation.js';
 
 function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle, skillLimits, expertiseLimits, warnings, preSelectedSkills }) {
@@ -67,35 +67,35 @@ function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseTog
        <div className="form-group">
          <label>Skill Proficiencies</label>
          <div className="multi-select-container multi-select-compact">
-           {SKILL_PROFICIENCIES.map(skill => (
-             <label
-              key={skill}
-              className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill) ? 'selected' : ''} ${isPreSelected(skill) ? 'pre-selected' : ''}`}
-             >
-               <input
-                type="checkbox"
-                checked={isSkillProficient(skill)}
-                onChange={() => onSkillToggle(skill)}
-                disabled={isPreSelected(skill)}
-               />
-               &nbsp;
-               <span className={isSkillExpert(skill) ? 'skill-expert-label' : ''}>
-                 {skill}
-                 {isSkillExpert(skill) && (
-                   <span className="expertise-indicator"> (Expert)</span>
-                 )}
-               </span>
-               <button
-                type="button"
-                className={`expertise-toggle-btn ${isSkillExpert(skill) ? 'active' : ''}`}
-                onClick={() => handleExpertiseToggle(skill)}
-                disabled={!isSkillProficient(skill) || (!expertiseLimits?.allowed && !isSkillExpert(skill))}
-                title={isSkillProficient(skill) ? 'Click to elevate to Expert' : 'Select proficient first'}
-               >
-                 {isSkillExpert(skill) ? '✓ Expert' : 'Elevate'}
-               </button>
-             </label>
-            ))}
+           {skills.map(skill => (
+                         <label
+                         key={skill.name}
+                         className={`multi-select-item ${(formData.skillProficiencies || []).includes(skill.name) ? 'selected' : ''} ${isPreSelected(skill.name) ? 'pre-selected' : ''}`}
+                         >
+                           <input
+                           type="checkbox"
+                           checked={isSkillProficient(skill.name)}
+                           onChange={() => onSkillToggle(skill.name)}
+                           disabled={isPreSelected(skill.name)}
+                           />
+                           &nbsp;
+                           <span className={isSkillExpert(skill.name) ? 'skill-expert-label' : ''}>
+                             {skill.name}
+                             {isSkillExpert(skill.name) && (
+                               <span className="expertise-indicator"> (Expert)</span>
+                             )}
+                           </span>
+                           <button
+                           type="button"
+                           className={`expertise-toggle-btn ${isSkillExpert(skill.name) ? 'active' : ''}`}
+                           onClick={() => handleExpertiseToggle(skill.name)}
+                           disabled={!isSkillProficient(skill.name) || (!expertiseLimits?.allowed && !isSkillExpert(skill.name))}
+                           title={isSkillProficient(skill.name) ? 'Click to elevate to Expert' : 'Select proficient first'}
+                           >
+                             {isSkillExpert(skill.name) ? '✓ Expert' : 'Elevate'}
+                           </button>
+                         </label>
+                        ))}
          </div>
         {errors.skillProficiencies && <span className="error-message">{errors.skillProficiencies}</span>}
       </div>
