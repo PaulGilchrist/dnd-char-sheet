@@ -14,8 +14,8 @@ export { default as WizardStepResistances } from './wizard-step-resistances';
 export { default as WizardStepMagicItems } from './wizard-step-magic-items';
 
 export const REQUIRED_FIELDS = [
-    'name',
-    'level',
+       'name',
+       'level',
     'alignment',
     'race',
     'class',
@@ -40,69 +40,6 @@ export const loadAbilityNames = async () => {
 	return ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
 };
 
-export const ALIGNMENTS = [
-    'Lawful Good',
-    'Neutral Good',
-    'Chaotic Good',
-    'Lawful Neutral',
-    'True Neutral',
-    'Chaotic Neutral',
-    'Lawful Evil',
-    'Neutral Evil',
-    'Chaotic Evil',
-];
-
-export const FIGHTING_STYLES = [
-    "Archery",
-    "Defense",
-    "Dueling",
-    "Great Weapon Fighting",
-    "Protection",
-    "Two-Weapon Fighting",
-    "Blind Fighting",
-    "Interception",
-    "Thrown Weapon Fighting",
-    "Unarmed Fighting",
-    "Blessed Warrior",
-    "Druidic Warrior",
-    "Superior Technique"
-];
-
-export const LANGUAGES = [
-    'Common',
-    'Dwarvish',
-    'Elvish',
-    'Giant',
-    'Gnomish',
-    'Goblin',
-    'Halfling',
-    'Orc',
-    'Abyssal',
-    'Celestial',
-    'Draconic',
-    'Deep Speech',
-    'Infernal',
-    'Primordial',
-    'Sylvan',
-    'Undercommon',
-];
-
-export const RESISTANCES_IMMUNITIES = [
-     "Acid",
-     "Bludgeoning",
-     "Cold",
-     "Fire",
-     "Force",
-     "Lightning",
-     "Necrotic",
-     "Piercing",
-     "Poison",
-     "Psychic",
-     "Radiant",
-     "Slashing",
-     "Thunder"
-];
-
 // POINT_BUY_COSTS is now loaded from public/data/rules-validation.json
 // Use getPointBuyCosts() from utils.js instead
 
@@ -115,12 +52,12 @@ export const DEFAULT_FORM_DATA = {
         baseScore: 8,
         abilityImprovements: 0,
         miscBonus: 0,
-    })),
+      })),
     background: '',
     class: {
         name: 'Fighter',
         subclass: { name: '' },
-    },
+      },
     expertSkills: [],
     feats: [],
     fightingStyles: [],
@@ -131,7 +68,7 @@ export const DEFAULT_FORM_DATA = {
         equipped: [],
         gold: 10,
         magicItems: [],
-    },
+      },
     languages: [],
     resistances: [],
     skillProficiencies: [],

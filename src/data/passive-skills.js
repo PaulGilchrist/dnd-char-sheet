@@ -1,1 +1,0 @@
-export const passiveSkills = ['Insight', 'Investigation', 'Perception'];

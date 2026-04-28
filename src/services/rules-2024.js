@@ -1,7 +1,30 @@
 import { cloneDeep, uniqBy } from 'lodash';
-import { passiveSkills } from '../data/passive-skills.js';
 import classRules from './class-rules-2024.js';
 import raceRules from './race-rules-2024.js';
+
+// Load passive skills from public/data/passive-skills.json
+const loadPassiveSkills = async () => {
+    try {
+        const response = await fetch('/data/passive-skills.json');
+        if (response.ok) {
+            return await response.json();
+         }
+     } catch (error) {
+        console.error('Error loading passive skills:', error);
+     }
+     // Fallback
+    return ['Insight', 'Investigation', 'Perception'];
+};
+
+let cachedPassiveSkills = null;
+
+const getPassiveSkills = async () => {
+    if (cachedPassiveSkills) {
+        return cachedPassiveSkills;
+     }
+    cachedPassiveSkills = await loadPassiveSkills();
+    return cachedPassiveSkills;
+};
 
 // Load skills from public/data/ability-scores.json
 const loadSkills = async () => {
@@ -64,10 +87,11 @@ const rules = {
             case 'CHA': return 'Charisma';
         }
     },
-        getAbilities: async (playerStats) => {
-	 // 2024 Rules: Simpler ability calculation, no racial bonuses
-	const skills = await getSkills();
-	return playerStats.abilities.map((ability) => {
+                getAbilities: async (playerStats) => {
+       // 2024 Rules: Simpler ability calculation, no racial bonuses
+    const skills = await getSkills();
+    const passiveSkills = await getPassiveSkills();
+    return playerStats.abilities.map((ability) => {
 		const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
 		ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus;
 		 // No racial bonuses in 2024

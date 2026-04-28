@@ -1,7 +1,14 @@
-import React from 'react';
-import { RESISTANCES_IMMUNITIES } from './constants';
+import React, { useState, useEffect } from 'react';
 
 function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle, warnings, preSelectedResistances, preSelectedImmunities }) {
+  const [resistancesImmunities, setResistancesImmunities] = useState([]);
+
+  useEffect(() => {
+    fetch('/data/resistances-immunities.json')
+          .then(response => response.json())
+          .then(data => setResistancesImmunities(data))
+          .catch(error => console.error('Error loading resistances/immunities:', error));
+    }, []);
   return (
     <div className="wizard-step">
       <h2>Step 8: Resistances & Immunities</h2>
@@ -20,7 +27,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle,
       <div className="form-group">
         <label>Resistances</label>
         <div className="multi-select-container multi-select-compact">
-          {RESISTANCES_IMMUNITIES.map(type => {
+          {resistancesImmunities.map(type => {
             const isPreSelected = (preSelectedResistances || []).includes(type);
             const isSelected = (formData.resistances || []).includes(type);
             return (
@@ -44,7 +51,7 @@ function WizardStepResistances({ formData, onResistanceToggle, onImmunityToggle,
       <div className="form-group">
         <label>Immunities</label>
         <div className="multi-select-container multi-select-compact">
-          {RESISTANCES_IMMUNITIES.map(type => {
+          {resistancesImmunities.map(type => {
             const isPreSelected = (preSelectedImmunities || []).includes(type);
             const isSelected = (formData.immunities || []).includes(type);
             return (

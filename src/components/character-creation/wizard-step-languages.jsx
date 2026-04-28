@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { LANGUAGES, FIGHTING_STYLES } from './constants';
 
 function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingStyleToggle, languageLimits, fightingStyleLimits, warnings, preSelectedLanguages, preSelectedFightingStyles }) {
+  const [languagesList, setLanguagesList] = useState([]);
+  const [fightingStylesList, setFightingStylesList] = useState([]);
   const fightingStyles = formData.class?.fightingStyles || [];
   const languages = formData.languages || [];
+
+  useEffect(() => {
+    fetch('/data/languages.json')
+         .then(response => response.json())
+         .then(data => setLanguagesList(data))
+         .catch(error => console.error('Error loading languages:', error));
+   }, []);
+
+  useEffect(() => {
+    fetch('/data/fighting-styles.json')
+         .then(response => response.json())
+         .then(data => setFightingStylesList(data))
+         .catch(error => console.error('Error loading fighting styles:', error));
+   }, []);
 
    // Auto-select pre-selected languages when languageLimits changes
   useEffect(() => {
@@ -64,7 +79,7 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
        <div className="form-group">
          <label>Languages</label>
          <div className="multi-select-container multi-select-compact">
-           {LANGUAGES.map(language => (
+           {languagesList.map(language => (
              <label 
               key={language} 
                className={`multi-select-item ${languages.includes(language) ? 'selected' : ''} ${isLanguagePreSelected(language) ? 'pre-selected' : ''}`}
@@ -85,7 +100,7 @@ function WizardStepLanguages({ formData, errors, onLanguageToggle, onFightingSty
        <div className="form-group">
          <label>Fighting Styles</label>
          <div className="multi-select-container multi-select-compact">
-           {FIGHTING_STYLES.map(style => (
+           {fightingStylesList.map(style => (
              <label 
               key={style} 
               className={`multi-select-item ${fightingStyles.includes(style) ? 'selected' : ''} ${isFightingStylePreSelected(style) ? 'pre-selected' : ''}`}

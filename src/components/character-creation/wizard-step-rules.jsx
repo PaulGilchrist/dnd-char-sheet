@@ -1,5 +1,4 @@
 import React from 'react';
-import { ALIGNMENTS } from './constants';
 
 function WizardStepRules({ ruleset, errors, onRulesetChange }) {
   return (

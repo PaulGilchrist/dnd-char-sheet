@@ -1,10 +1,17 @@
 /* eslint-disable react/prop-types */
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Popup from '../common/popup'
-import { actions } from '../../data/actions';
 import './char-actions.css'
 
 function CharActions({ playerStats }) {
+  const [actions, setActions] = useState([]);
+
+  useEffect(() => {
+    fetch('/data/actions.json')
+          .then(response => response.json())
+          .then(data => setActions(data))
+          .catch(error => console.error('Error loading actions:', error));
+    }, []);
     const [popupHtml, setPopupHtml] = React.useState(null);
     const showActionsPopup = (actionOrBonusAction) => {
         if (actionOrBonusAction.details) {
