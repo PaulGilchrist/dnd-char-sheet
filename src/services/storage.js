@@ -10,7 +10,7 @@ const storage = {
     set: (key, value) => {
         const json = JSON.stringify(value);
         localStorage.setItem(key, json);
-        const fullUrl = `http://${window.location.hostname}:3000/api/${key}/`;
+        const fullUrl = `http://${window.location.hostname}/api/${key}/`;
         // console.log(fullUrl)
         fetch(fullUrl, {
             method: 'POST',

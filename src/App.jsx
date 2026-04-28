@@ -167,7 +167,7 @@ function App() {
          };
 
     const handleSaveClick = async () => {
-        let fileName = `${activeCharacter.class.name}-${Utils.getFirstName(activeCharacter.name)}.json`;
+        let fileName = `${Utils.getFirstName(activeCharacter.name)}.json`;
         fileName = fileName.toLowerCase();
         const json = JSON.stringify(activeCharacter, null, 4);
         const blob = new Blob([json], { type: 'application/json' });

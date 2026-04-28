@@ -28,8 +28,8 @@ const raceRules = {
             return ability_bonus;
            });
         const subrace = playerSummary.race.subrace
-               ? race.subraces.find((subrace) => subrace.name === playerSummary.race.subrace.name)
-               : null;
+                        ? race.subraces?.find((subrace) => subrace.name === playerSummary.race.subrace.name)
+                        : null;
         if (subrace) {
             race.subrace = merge(cloneDeep(subrace), cloneDeep(playerSummary.subrace));
            } else {

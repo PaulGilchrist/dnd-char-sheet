@@ -322,8 +322,8 @@ When the app starts, you'll see a message like this:
 
 ```
 Server running at:
-* Local:   http://localhost:3000/
-* Network: http://192.168.0.187:3000/
+* Local:   http://localhost
+* Network: http://192.168.0.187
 ```
 
 **What do these links mean?**
