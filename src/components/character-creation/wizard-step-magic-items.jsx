@@ -6,8 +6,8 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [showFullDetails, setShowFullDetails] = useState({});
-
   const [types, setTypes] = useState([]);
+  const [warnings, setWarnings] = useState([]);
 
   // Load magic item types from the data
   useEffect(() => {
@@ -21,6 +21,28 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
       setTypes(Array.from(typeSet).sort());
     }
   }, [allMagicItems]);
+
+  // Check for attunement limit warnings
+  useEffect(() => {
+    const warnings = [];
+    const selectedItems = formData.magicItems || [];
+
+    if (selectedItems.length > 0 && allMagicItems) {
+      const attunementItems = selectedItems.filter(itemName => {
+        const item = allMagicItems.find(i => i.name === itemName || i.index === itemName);
+        return item && item.requiresAttunement;
+      });
+
+      if (attunementItems.length > 3) {
+        warnings.push({
+          message: `You have selected ${attunementItems.length} items requiring attunement, but a character can only attune to a maximum of 3 items.`,
+          type: 'warning'
+        });
+      }
+    }
+
+    setWarnings(warnings);
+  }, [formData.magicItems, allMagicItems]);
 
   const filteredMagicItems = (() => {
     if (!allMagicItems || allMagicItems.length === 0) return [];
@@ -136,55 +158,67 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
       <div className="wizard-step-magic-items">
         <div className="wizard-step">
           <h2>Step 10: Magic Items</h2>
-          <div className="list-filter-container magic-items-filters">
-            <div className="filter-group">
-              <label htmlFor="magic-item-search">Search Magic Items</label>
-              <input
+
+           {/* Display warnings if any */}
+           {warnings.length > 0 && (
+             <div className="warning-container">
+               {warnings.map((warning, index) => (
+                 <div key={index} className={`warning-message ${warning.type}`}>
+                   {warning.message}
+                 </div>
+               ))}
+            </div>
+              )}
+
+           <div className="list-filter-container magic-items-filters">
+             <div className="filter-group">
+               <label htmlFor="magic-item-search">Search Magic Items</label>
+               <input
                 type="text"
                 id="magic-item-search"
                 className="magic-item-search-input"
                 placeholder="Search magic items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <div className="filter-group">
-              <label htmlFor="magic-item-type-filter">Item Type</label>
-              <select
+               />
+        </div>
+
+             <div className="filter-group">
+               <label htmlFor="magic-item-type-filter">Item Type</label>
+               <select
                 id="magic-item-type-filter"
                 className="magic-item-type-filter"
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-              >
-                {types.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="list-results-container magic-item-results-container">
-            <div className="magic-item-results-header">
-              <span className="result-count">
-                Showing {filteredMagicItems.length} magic item{filteredMagicItems.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            <div className="magic-item-results-list">
-              {filteredMagicItems.length === 0 ? (
-                <div className="no-results-found">
-                  {searchQuery || selectedType !== 'All'
-                    ? 'No magic items found matching your criteria.'
-                    : 'No magic items available.'}
-                </div>
-              ) : (
-                filteredMagicItems.map((item, index) => renderMagicItemDetails(item, index))
-              )}
-            </div>
-          </div>
-        </div>
+               >
+                 {types.map(type => (
+                   <option key={type} value={type}>{type}</option>
+                 ))}
+               </select>
       </div>
+           </div>
+
+           <div className="list-results-container magic-item-results-container">
+             <div className="magic-item-results-header">
+               <span className="result-count">
+                Showing {filteredMagicItems.length} magic item{filteredMagicItems.length !== 1 ? 's' : ''}
+               </span>
+             </div>
+
+             <div className="magic-item-results-list">
+               {filteredMagicItems.length === 0 ? (
+                 <div className="no-results-found">
+                   {searchQuery || selectedType !== 'All'
+                     ? 'No magic items found matching your criteria.'
+                     : 'No magic items available.'}
+                 </div>
+               ) : (
+                filteredMagicItems.map((item, index) => renderMagicItemDetails(item, index))
+               )}
+             </div>
+           </div>
+         </div>
+       </div>
     );
   };
 
@@ -192,3 +226,4 @@ function WizardStepMagicItems({ formData, allMagicItems, ruleset, onArrayFieldCh
 }
 
 export default WizardStepMagicItems;
+
