@@ -105,14 +105,14 @@ export function validateFeats(formData, allFeats) {
           }
       }
 
-      // Check for Epic Boon feats (typically level 20+)
-    const epicBoonFeats = allFeats.filter(f => f.type === 'Epic Boon');
+      // Check for Epic Boon feats (typically level 19+)
+    const epicBoonFeats = allFeats.filter(f => f.type === 'Epic Boon' || f.type === 'Epic Boon Feat');
     const selectedEpicBoons = selectedFeats.filter(f =>
         epicBoonFeats.some(eb => eb.name === f)
       );
-    if (selectedEpicBoons.length > 0 && formData.level < 20) {
+    if (selectedEpicBoons.length > 0 && formData.level < 19) {
         warnings.push({
-            message: `Epic Boon feats are typically available at level 20+. You are level ${formData.level}.`,
+            message: `Epic Boon feats are typically available at level 19. You are level ${formData.level}.`,
             type: 'warning'
           });
       }
@@ -172,6 +172,7 @@ export function getFeatTypeInfo(featName, allFeats) {
     return {
         type: feat.type || 'General',
         isOrigin: feat.type === 'Origin Feat',
-        isEpicBoon: feat.type === 'Epic Boon'
+        isEpicBoon: feat.type === 'Epic Boon' || feat.type === 'Epic Boon Feat'
       };
 }
+
