@@ -20,6 +20,7 @@ import WizardStepAbilities from './wizard-step-abilities';
 import WizardStepSkills from './wizard-step-skills';
 import WizardStepLanguages from './wizard-step-languages';
 import WizardStepInventory from './wizard-step-inventory';
+import { validateSkills, getSkillLimits, getExpertiseLimits } from '../../services/skill-validation.js';
 import WizardStepSpells from './wizard-step-spells';
 import WizardStepFeats from './wizard-step-feats';
 import WizardStepSpecial from './wizard-step-special';
@@ -42,6 +43,28 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   });
   const [errors, setErrors] = useState({});
   const [tempInventory, setTempInventory] = useState({ backpack: [], equipped: [] });
+  const [skillLimits, setSkillLimits] = useState(null);
+  const [expertiseLimits, setExpertiseLimits] = useState(null);
+  const [skillWarnings, setSkillWarnings] = useState([]);
+
+   // Validate skills when selection changes
+  useEffect(() => {
+    const validate = async () => {
+      try {
+        const limits = await getSkillLimits(formData);
+        const expertise = await getExpertiseLimits(formData);
+        const warnings = await validateSkills(formData);
+
+        setSkillLimits(limits);
+        setExpertiseLimits(expertise);
+        setSkillWarnings(warnings);
+       } catch (error) {
+        console.error('Error validating skills:', error);
+       }
+     };
+
+    validate();
+   }, [formData.skillProficiencies, formData.expertSkills, formData.class?.name, formData.race?.name, formData.background, formData.rules, formData.level]);
 
   // Sync tempInventory with formData.inventory when it changes
   useEffect(() => {
@@ -377,6 +400,9 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
             errors={errors}
             onSkillToggle={handleSkillToggle}
             onSkillExpertiseToggle={handleSkillExpertiseToggle}
+            skillLimits={skillLimits}
+            expertiseLimits={expertiseLimits}
+            warnings={skillWarnings}
           />
         );
       case 7:

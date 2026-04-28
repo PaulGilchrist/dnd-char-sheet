@@ -87,20 +87,9 @@ export const validateStep = (step, formData, errors, racesData = [], classSubtyp
      }
    }
   
-  if (step === 4) {
-    let totalPointsSpent = 0;
-    formData.abilities.forEach((ability, index) => {
-      const abilityErrors = validateAbility(ability, index);
-      Object.keys(abilityErrors).forEach(key => {
-        newErrors[`ability_${index}_${key}`] = abilityErrors[key];
-      });
-      totalPointsSpent += calculatePointBuyCost(ability.baseScore);
-    });
-
-    if (totalPointsSpent > 27) {
-      newErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
-  }
-   }
+    // Steps 4+ (Feats, Abilities, Skills, etc.) should NOT block progression
+  // Validation warnings for these steps are informational only, not blocking
+  // The Next button should only be disabled for steps 1-3 which have required fields
   
   return newErrors;
 };
