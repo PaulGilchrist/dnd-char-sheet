@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './wizard-step-abilities.css';
 // Dark mode styles loaded via media query
 import './wizard-step-abilities-dark.css';
-import { ABILITY_NAMES, POINT_BUY_COSTS } from './constants';
+import { ABILITY_NAMES } from './constants';
+import { getPointBuyCosts } from './utils';
 
 function WizardStepAbilities({ 
   formData, 
@@ -11,12 +12,36 @@ function WizardStepAbilities({
   onAbilityImprovementChange,
   onAbilityMiscBonusChange
 }) {
+  const [pointBuyCosts, setPointBuyCosts] = useState({});
+  const [pointsAllowed, setPointsAllowed] = useState(27);
+
+      // Load point buy costs from JSON
+  useEffect(() => {
+    const loadCosts = async () => {
+      const costs = await getPointBuyCosts(formData.rules || '5e');
+      setPointBuyCosts(costs);
+          // Also load the total points allowed from validation rules
+      try {
+        const path = formData.rules === '2024' ? '/data/2024/rules-validation.json' : '/data/rules-validation.json';
+        const response = await fetch(path);
+        if (response.ok) {
+          const data = await response.json();
+          const rules = data[formData.rules] || data;
+          setPointsAllowed(rules.point_buy?.total_points ?? 27);
+           }
+          } catch (error) {
+        console.error('Error loading validation rules:', error);
+          }
+         };
+    loadCosts();
+       }, [formData.rules]);
+
   const totalPointsSpent = formData.abilities.reduce((sum, ability) => {
     const baseScore = parseInt(ability.baseScore) || 8;
-    return sum + (POINT_BUY_COSTS[baseScore] || 0);
-  }, 0);
+    return sum + (pointBuyCosts[baseScore] || 0);
+       }, 0);
 
-  const pointsRemaining = 30 - totalPointsSpent;
+  const pointsRemaining = pointsAllowed - totalPointsSpent;
 
   const calculateTotalScore = (ability) => {
     const base = parseInt(ability.baseScore) || 8;
@@ -29,8 +54,8 @@ function WizardStepAbilities({
     <div className="wizard-step wizard-step-4">
       <h2>Step 5: Ability Scores</h2>
       <div className="step-description">
-        Use point buy: Each ability base score minimum is 8 and maximum is 17. You have <span className="points-remaining">{Math.max(0, pointsRemaining)} points</span> remaining to spend.
-        Each point from 9-15 costs 1; each point from 15-17 costs 2
+       Use point buy: Each ability base score minimum is 8 and maximum is 15. You have <span className="points-remaining">{Math.max(0, pointsRemaining)} points</span> remaining to spend.
+       (Total points allowed: {pointsAllowed})
       </div>
       <div className="step-description">
         Total score (base + improvements + misc) cannot exceed 20 for any ability.
@@ -42,17 +67,17 @@ function WizardStepAbilities({
           const improvements = parseInt(formData.abilities[index].abilityImprovements) || 0;
           const misc = parseInt(formData.abilities[index].miscBonus) || 0;
           const totalScore = baseScore + improvements + misc;
-          const cost = POINT_BUY_COSTS[baseScore] || 0;
+          const cost = pointBuyCosts[baseScore] || 0;
 
           return (
             <div key={ability} className="ability-score-card">
               <h4>{ability}</h4>
               <div className="form-group ability-score-form-group">
-                <label>Base Score (8-17)</label>
+                <label>Base Score (8-15)</label>
                 <input
-                  type="number"
-                  min="8"
-                  max="17"
+                 type="number"
+                 min="8"
+                 max="15"
                   value={formData.abilities[index].baseScore}
                   onChange={(e) => onAbilityBaseScoreChange(index, e.target.value)}
                   className={errors[`ability_${index}_baseScore`] ? 'error' : ''}

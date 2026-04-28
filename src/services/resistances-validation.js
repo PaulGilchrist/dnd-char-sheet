@@ -5,13 +5,13 @@
  */
 
 let classDataCache = {
-  '5e': null,
-  '2024': null
+    '5e': null,
+    '2024': null
 };
 
 let raceDataCache = {
-  '5e': null,
-  '2024': null
+    '5e': null,
+    '2024': null
 };
 
 let backgroundDataCache = {
@@ -29,7 +29,7 @@ async function loadClassData(version = '5e') {
   }
 
   try {
-    const path = version === '2024' ? 'data/2024/classes.json' : 'data/classes.json';
+    const path = version === '2024' ? '/data/2024/classes.json' : '/data/classes.json';
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load ${version} classes.json from ${path}`);
@@ -54,7 +54,7 @@ async function loadRaceData(version = '5e') {
   }
 
   try {
-    const path = version === '2024' ? 'data/2024/races.json' : 'data/races.json';
+    const path = version === '2024' ? '/data/2024/races.json' : '/data/races.json';
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load ${version} races.json from ${path}`);
@@ -78,11 +78,11 @@ async function loadBackgroundData() {
   }
 
   try {
-        const path = 'data/2024/backgrounds.json';
+    const path = '/data/2024/backgrounds.json';
     const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load 2024 backgrounds.json from ${fullPath}`);
-    }
+      throw new Error(`Failed to load 2024 backgrounds.json from ${path}`);
+      }
     const data = await response.json();
     backgroundDataCache['2024'] = data;
     return data;
@@ -125,23 +125,8 @@ export async function fetchBackgroundData(backgroundName) {
 }
 
 /**
- * Maps dragon ancestry types to their damage resistance types
- */
-const DRAGON_ANCESTRY_RESISTANCE = {
-  'Black': 'Acid',
-  'Blue': 'Lightning',
-  'Brass': 'Fire',
-  'Bronze': 'Lightning',
-  'Copper': 'Acid',
-  'Gold': 'Fire',
-  'Green': 'Poison',
-  'Red': 'Fire',
-  'Silver': 'Cold',
-  'White': 'Cold'
-};
-
-/**
  * Extracts resistances from race traits for 5e
+ * Reads from race JSON data instead of hardcoded mappings
  * @param {object} raceData - The race data object
  * @param {string} subraceName - The selected subrace name (optional)
  * @returns {string[]} - Array of resistance types
@@ -169,11 +154,12 @@ function extract5eRaceResistances(raceData, subraceName) {
     }
 
     // Dragonborn: Damage Resistance - depends on draconic ancestry
+      // Read from subrace data instead of hardcoded mapping
     if (name.includes('Damage Resistance') || name.includes('damage resistance')) {
-      // For dragonborn, the resistance type depends on ancestry choice
-      // We'll handle this in the main function based on subrace
-    }
-  });
+        // For dragonborn, the resistance type depends on ancestry choice
+        // We'll handle this in the subrace check below
+      }
+    });
 
   // Check subrace traits
   if (subraceName && raceData.subraces) {
@@ -188,16 +174,35 @@ function extract5eRaceResistances(raceData, subraceName) {
         // Stout Halfling: Scout Resilience - poison damage resistance
         if (name.includes('Scout Resilience') && desc.includes('resistance against poison damage')) {
           resistances.add('Poison');
-        }
-      });
+          }
+          
+          // Check for damage resistance in subrace traits
+        if (desc.match(/resistance to (\w+) damage/i)) {
+          const match = desc.match(/resistance to (\w+) damage/i);
+          if (match) {
+            const resistanceType = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+            resistances.add(resistanceType);
+            }
+          }
+          
+          // For Dragonborn, read resistance from subrace description
+        if (raceData.name === 'Dragonborn' && desc.match(/resistance to (\w+)/i)) {
+          const match = desc.match(/resistance to (\w+)/i);
+          if (match) {
+            const resistanceType = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+            resistances.add(resistanceType);
+            }
+          }
+        });
+      }
     }
-  }
 
   return Array.from(resistances);
 }
 
 /**
  * Extracts resistances from race traits for 2024
+ * Reads from race JSON data instead of hardcoded mappings
  * @param {object} raceData - The race data object
  * @param {string} subraceName - The selected subrace name (optional)
  * @returns {string[]} - Array of resistance types
@@ -226,23 +231,16 @@ function extract2024RaceResistances(raceData, subraceName) {
     }
 
     // Dragonborn: Damage Resistance - depends on ancestry
+      // Read from subrace data instead of hardcoded mapping
     if (name.includes('Damage Resistance') && desc.includes('Resistance to')) {
-      // Handle in subrace check below
-    }
+        // Handle in subrace check below
+      }
 
     // Tiefling: Fiendish Legacy - check for resistance in the table description
     if (name.includes('Fiendish Legacy') || name.includes('Fiendish Legacies')) {
-      // Parse the table for resistance types based on legacy
-      if (desc.includes('Abyssal') && desc.includes('Resistance to Poison')) {
-        // Abyssal legacy gives Poison resistance
+        // Parse the table for resistance types based on legacy
+        // This will be handled by subrace-specific data
       }
-      if (desc.includes('Chthonic') && desc.includes('Resistance to Necrotic')) {
-        // Chthonic legacy gives Necrotic resistance
-      }
-      if (desc.includes('Infernal') && desc.includes('Resistance to Fire')) {
-        // Infernal legacy gives Fire resistance
-      }
-    }
   });
 
   // Check subrace-specific resistances
@@ -254,34 +252,44 @@ function extract2024RaceResistances(raceData, subraceName) {
 
       subraceTraits.forEach(trait => {
         const desc = trait.description || '';
-        if (desc.match(/Resistance to (\w+)/)) {
-          const match = desc.match(/Resistance to (\w+)/);
+        if (desc.match(/Resistance to (\w+)/i)) {
+          const match = desc.match(/Resistance to (\w+)/i);
           if (match) {
             resistances.add(match[1]);
+            }
           }
-        }
       });
+      }
     }
-  }
 
-  // For Dragonborn, determine resistance based on subrace/ancestry
+    // For Dragonborn, determine resistance based on subrace/ancestry from JSON
   if (raceData.name === 'Dragonborn' && subraceName) {
-    const resistanceType = DRAGON_ANCESTRY_RESISTANCE[subraceName];
-    if (resistanceType) {
-      resistances.add(resistanceType);
+    const subrace = raceData.subraces?.find(sr => sr.name === subraceName);
+    if (subrace) {
+        // Check subrace description for resistance type
+      const desc = subrace.description || '';
+      if (desc.match(/Resistance to (\w+)/i)) {
+        const match = desc.match(/Resistance to (\w+)/i);
+        resistances.add(match[1]);
+        }
+      }
     }
-  }
 
-  // For Tiefling, determine resistance based on subrace/legacy
+    // For Tiefling, determine resistance based on subrace/legacy from JSON
   if (raceData.name === 'Tiefling' && subraceName) {
-    if (subraceName === 'Abyssal') {
-      resistances.add('Poison');
-    } else if (subraceName === 'Chthonic') {
-      resistances.add('Necrotic');
-    } else if (subraceName === 'Infernal') {
-      resistances.add('Fire');
+    const subrace = raceData.subraces?.find(sr => sr.name === subraceName);
+    if (subrace) {
+        // Check subrace traits for resistance
+      const subraceTraits = subrace.traits || [];
+      subraceTraits.forEach(trait => {
+        const desc = trait.description || '';
+        if (desc.match(/Resistance to (\w+)/i)) {
+          const match = desc.match(/Resistance to (\w+)/i);
+          resistances.add(match[1]);
+          }
+        });
+      }
     }
-  }
 
   return Array.from(resistances);
 }
@@ -312,9 +320,9 @@ function extractClassImmunities(classData, version, level) {
 
       // 2024 Barbarian Path of the Berserker: Mindless Rage gives Immunity to Charmed and Frightened
       if (name.includes('Mindless Rage') && desc.includes('Immunity to')) {
-        // These are condition immunities, not damage immunities
-        // We don't track condition immunities in the resistances step
-      }
+          // These are condition immunities, not damage immunities
+          // We don't track condition immunities in the resistances step
+        }
 
       // Check for damage immunities in feature descriptions
       if (desc.match(/Immunity to (\w+)/gi)) {
@@ -326,13 +334,13 @@ function extractClassImmunities(classData, version, level) {
             'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
           if (validTypes.includes(immunityType)) {
             immunities.add(immunityType);
-          }
-        });
       }
+          });
+        }
+      });
     });
-  });
 
-  // Check subclass features
+    // Check subclass features for 2024
   if (version === '2024' && classData.majors) {
     classData.majors.forEach(major => {
       const features = major.features || [];
@@ -349,11 +357,11 @@ function extractClassImmunities(classData, version, level) {
               'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
             if (validTypes.includes(immunityType)) {
               immunities.add(immunityType);
-            }
-          });
         }
+            });
+          }
+        });
       });
-    });
   }
 
   // 5e subclass features
@@ -375,12 +383,12 @@ function extractClassImmunities(classData, version, level) {
                 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
               if (validTypes.includes(immunityType)) {
                 immunities.add(immunityType);
-              }
-            });
           }
+              });
+            }
+          });
         });
       });
-    });
   }
 
   return Array.from(immunities);
@@ -412,36 +420,45 @@ export async function getResistanceLimits(formData) {
     if (className) {
       const classData = await fetchClassData(className, '2024');
       immunities = extractClassImmunities(classData, '2024', level);
-    }
-  } else {
-    // 5e rules: Check race traits for resistances
+      }
+    } else {
+      // 5e rules: Check race traits for resistances
     if (raceName) {
       const raceData = await fetchRaceData(raceName, '5e');
       resistances = extract5eRaceResistances(raceData, subraceName);
     }
 
-    // Dragonborn special case - determine resistance from subrace
+      // Dragonborn special case - determine resistance from subrace JSON data
     if (raceName === 'Dragonborn' && subraceName) {
-      const resistanceType = DRAGON_ANCESTRY_RESISTANCE[subraceName];
-      if (resistanceType && !resistances.includes(resistanceType)) {
-        resistances.push(resistanceType);
+      const raceData = await fetchRaceData(raceName, '5e');
+      const subrace = raceData?.subraces?.find(sr => sr.name === subraceName);
+      if (subrace) {
+          // Check subrace description for resistance type
+        const desc = subrace.desc || subrace.description || '';
+        if (desc.match(/resistance to (\w+)/i)) {
+          const match = desc.match(/resistance to (\w+)/i);
+          const resistanceType = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+          if (!resistances.includes(resistanceType)) {
+            resistances.push(resistanceType);
+            }
+          }
+        }
       }
-    }
 
     // Check class features for immunities (rare in 5e base rules)
     if (className) {
       const classData = await fetchClassData(className, '5e');
       immunities = extractClassImmunities(classData, '5e', level);
+      }
     }
-  }
 
   return {
     resistances,
     immunities,
     details: ruleset === '2024'
-      ? `In 2024 rules, resistances and immunities come from your race (${raceName}) and class (${className}) features`
-      : `In 5e rules, resistances come from your race (${raceName}) and class (${className}) features`
-  };
+       ? `In 2024 rules, resistances and immunities come from your race (${raceName}) and class (${className}) features`
+       : `In 5e rules, resistances come from your race (${raceName}) and class (${className}) features`
+    };
 }
 
 /**
@@ -477,8 +494,8 @@ export async function validateResistances(formData) {
     warnings.push({
       message: `These resistances are not granted by your race, class, or background: ${ungrantedResistances.join(', ')}. Verify with your DM.`,
       type: 'warning'
-    });
-  }
+      });
+    }
 
   // Check for immunities that aren't granted by race/class/background
   const ungrantedImmunities = selectedImmunities.filter(i => !limits.immunities.includes(i));
@@ -486,8 +503,8 @@ export async function validateResistances(formData) {
     warnings.push({
       message: `These immunities are not granted by your race, class, or background: ${ungrantedImmunities.join(', ')}. Verify with your DM.`,
       type: 'warning'
-    });
-  }
+      });
+    }
 
   // Check for duplicate selections
   const uniqueResistances = new Set(selectedResistances);
@@ -495,24 +512,24 @@ export async function validateResistances(formData) {
     warnings.push({
       message: 'Some resistances are selected multiple times. Each resistance should only be selected once.',
       type: 'warning'
-    });
-  }
+      });
+    }
 
   const uniqueImmunities = new Set(selectedImmunities);
   if (uniqueImmunities.size < selectedImmunities.length) {
     warnings.push({
       message: 'Some immunities are selected multiple times. Each immunity should only be selected once.',
       type: 'warning'
-    });
-  }
+      });
+    }
 
   // Info message if character has no resistances or immunities
   if (selectedResistances.length === 0 && selectedImmunities.length === 0) {
     warnings.push({
       message: `Your ${ruleset === '2024' ? '2024' : '5e'} ${formData.race?.name || 'race'} ${formData.class?.name || 'class'} does not grant any resistances or immunities at level ${formData.level || 1}.`,
       type: 'info'
-    });
-  }
+      });
+    }
 
   // Info message about granted but unselected resistances/immunities
   const unselectedResistances = limits.resistances.filter(r => !selectedResistances.includes(r));
@@ -520,16 +537,16 @@ export async function validateResistances(formData) {
     warnings.push({
       message: `Your race/class grants these resistances that are not selected: ${unselectedResistances.join(', ')}. You may want to select them.`,
       type: 'info'
-    });
-  }
+      });
+    }
 
   const unselectedImmunities = limits.immunities.filter(i => !selectedImmunities.includes(i));
   if (unselectedImmunities.length > 0) {
     warnings.push({
       message: `Your race/class grants these immunities that are not selected: ${unselectedImmunities.join(', ')}. You may want to select them.`,
       type: 'info'
-    });
-  }
+      });
+    }
 
   return warnings;
 }
@@ -559,21 +576,21 @@ export async function getResistanceInfo(type, category, formData) {
     if (raceName) {
       const raceData = await fetchRaceData(raceName, ruleset);
       const raceResistances = ruleset === '2024'
-        ? extract2024RaceResistances(raceData, formData.race?.subrace?.name || '')
-        : extract5eRaceResistances(raceData, formData.race?.subrace?.name || '');
+         ? extract2024RaceResistances(raceData, formData.race?.subrace?.name || '')
+         : extract5eRaceResistances(raceData, formData.race?.subrace?.name || '');
       if (raceResistances.includes(type)) {
         sources.push('Race');
+        }
       }
-    }
 
     if (className && category === 'immunity') {
       const classData = await fetchClassData(className, ruleset);
       const classImmunities = extractClassImmunities(classData, ruleset, formData.level || 1);
       if (classImmunities.includes(type)) {
         sources.push('Class');
+        }
       }
     }
-  }
 
   return {
     isGranted: grantedTypes.includes(type),

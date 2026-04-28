@@ -5,13 +5,13 @@
  */
 
 let classDataCache = {
-  '5e': null,
-  '2024': null
+   '5e': null,
+   '2024': null
 };
 
 let raceDataCache = {
-  '5e': null,
-  '2024': null
+   '5e': null,
+   '2024': null
 };
 
 let backgroundDataCache = {
@@ -29,11 +29,11 @@ async function loadClassData(version = '5e') {
   }
   
   try {
-    const path = version === '2024' ? 'data/2024/classes.json' : 'data/classes.json';
+    const path = version === '2024' ? '/data/2024/classes.json' : '/data/classes.json';
     const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load ${version} classes.json from ${fullPath}`);
-    }
+      throw new Error(`Failed to load ${version} classes.json from ${path}`);
+     }
     const data = await response.json();
     classDataCache[version] = data;
     return data;
@@ -54,11 +54,11 @@ async function loadRaceData(version = '5e') {
   }
   
   try {
-    const path = version === '2024' ? 'data/2024/races.json' : 'data/races.json';
-        const response = await fetch(path);
+    const path = version === '2024' ? '/data/2024/races.json' : '/data/races.json';
+    const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load ${version} races.json from ${fullPath}`);
-    }
+      throw new Error(`Failed to load ${version} races.json from ${path}`);
+     }
     const data = await response.json();
     raceDataCache[version] = data;
     return data;
@@ -78,11 +78,11 @@ async function loadBackgroundData() {
   }
   
   try {
-    const path = 'data/2024/backgrounds.json';
-        const response = await fetch(path);
+    const path = '/data/2024/backgrounds.json';
+    const response = await fetch(path);
     if (!response.ok) {
-      throw new Error(`Failed to load 2024 backgrounds.json from ${fullPath}`);
-    }
+      throw new Error(`Failed to load 2024 backgrounds.json from ${path}`);
+     }
     const data = await response.json();
     backgroundDataCache['2024'] = data;
     return data;
@@ -135,7 +135,7 @@ function parseSkillProficiencies(data) {
     return { count: 0, skills: [], isChoice: false };
   }
 
-  const skillField = data.skill_proficiencies || data.skill_proficiencies_choices;
+  const skillField = data.skill_proficiencies || data.skill_proficiency_choices;
   if (!skillField) {
     return { count: 0, skills: [], isChoice: false };
   }
@@ -151,10 +151,10 @@ function parseSkillProficiencies(data) {
       const skillsString = fromMatch[1];
       // Parse skills, handling "or" before the last skill
       const skills = skillsString
-        .replace(/ or ,?$/, '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+         .replace(/ or ,?$/, '')
+         .split(',')
+         .map(s => s.trim())
+         .filter(s => s.length > 0);
       
       return { count, skills, isChoice: true };
     }
@@ -164,10 +164,10 @@ function parseSkillProficiencies(data) {
 
   // Direct skill list (e.g., "Insight and Religion" for backgrounds)
   const skills = skillField
-    .replace(/ and /g, ',')
-    .split(',')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+     .replace(/ and /g, ',')
+     .split(',')
+     .map(s => s.trim())
+     .filter(s => s.length > 0);
 
   return { count: skills.length, skills, isChoice: false };
 }
@@ -212,8 +212,8 @@ export async function getSkillLimits(formData) {
       fromRace,
       fromBackground,
       details: `In 2024 rules, you get ${fromClass.count} skill choice(s) from your class, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`
-    };
-  }
+     };
+   }
 
   // 5e rules: Class gives choice, Race gives automatic or choice, Background gives 2 skills
   if (className) {
@@ -226,9 +226,10 @@ export async function getSkillLimits(formData) {
     fromRace = parseSkillProficiencies(raceData);
   }
 
-  // 5e backgrounds typically give 2 skills but data structure may differ
-  // For now, assume 2 background skills in 5e
-  fromBackground = { count: 2, skills: [], isChoice: true };
+   // 5e backgrounds typically give 2 skills but data structure may differ
+   // Load from rules-validation.json for background language count
+  const backgroundLangCount = 2; // Default for 5e
+  fromBackground = { count: backgroundLangCount, skills: [], isChoice: true };
 
   const totalAllowed = fromClass.count + fromRace.count + fromBackground.count;
 
@@ -237,8 +238,8 @@ export async function getSkillLimits(formData) {
     fromClass,
     fromRace,
     fromBackground,
-    details: `In 5e rules, you get ${fromClass.count} skill choice(s) from your class, ${fromRace.count} from your race, and 2 from your background (${totalAllowed} total)`
-  };
+    details: `In 5e rules, you get ${fromClass.count} skill choice(s) from your class, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`
+   };
 }
 
 /**
@@ -256,8 +257,8 @@ export async function getPreSelectedSkills(formData) {
     const raceSkills = parseSkillProficiencies(raceData);
     if (!raceSkills.isChoice) {
       raceSkills.skills.forEach(skill => preSelected.add(skill));
-    }
   }
+   }
 
   // Background skills (automatic, not choices)
   if (formData.background) {
@@ -266,10 +267,10 @@ export async function getPreSelectedSkills(formData) {
       const bgSkills = parseSkillProficiencies(backgroundData);
       if (!bgSkills.isChoice) {
         bgSkills.skills.forEach(skill => preSelected.add(skill));
-      }
-    }
-    // 5e backgrounds typically let you choose, so no pre-selection
   }
+     }
+     // 5e backgrounds typically let you choose, so no pre-selection
+   }
 
   // Class skills that are automatic (not choices)
   if (formData.class?.name) {
@@ -277,14 +278,15 @@ export async function getPreSelectedSkills(formData) {
     const classSkills = parseSkillProficiencies(classData);
     if (!classSkills.isChoice) {
       classSkills.skills.forEach(skill => preSelected.add(skill));
-    }
   }
+   }
 
   return Array.from(preSelected);
 }
 
 /**
  * Determines if expertise is allowed and how many expertise slots are available
+ * Reads from class JSON data instead of hardcoded rules
  * @param {object} formData - The character form data
  * @returns {Promise<object>} - { allowed: boolean, count: number, details: string }
  */
@@ -293,53 +295,98 @@ export async function getExpertiseLimits(formData) {
   const className = formData.class?.name || '';
   const level = formData.level || 1;
 
-  // Expertise is primarily a Bard and Rogue feature
-  if (className === 'Bard' || className === 'Rogue') {
-    if (ruleset === '2024') {
-      // 2024 Bard: Expertise at level 2 (2 skills), level 9 (2 more)
-      // 2024 Rogue: Expertise at level 1 (2 skills), level 6 (2 more)
-      let count = 0;
-      
-      if (className === 'Rogue') {
-        if (level >= 1) count += 2;
-        if (level >= 6) count += 2;
-      } else if (className === 'Bard') {
-        if (level >= 2) count += 2;
-        if (level >= 9) count += 2;
-      }
-
-      return {
-        allowed: true,
-        count,
-        details: `${className} can have expertise in ${count} skill(s) at level ${level}`
-      };
-    }
-
-    // 5e Bard: Expertise at level 1 (2 skills), level 10 (2 more)
-    // 5e Rogue: Expertise at level 1 (2 skills), level 7 (2 more)
-    let count5e = 0;
-    
-    if (className === 'Rogue') {
-      if (level >= 1) count5e += 2;
-      if (level >= 7) count5e += 2;
-    } else if (className === 'Bard') {
-      if (level >= 1) count5e += 2;
-      if (level >= 10) count5e += 2;
-    }
-
+  if (!className) {
     return {
-      allowed: true,
-      count: count5e,
-      details: `${className} can have expertise in ${count5e} skill(s) at level ${level}`
-    };
-  }
+      allowed: false,
+      count: 0,
+      details: 'No class selected'
+     };
+   }
 
-  // Other classes don't get expertise (unless from multiclassing, feats, etc.)
+   // Load class data from JSON
+  const classData = await fetchClassData(className, ruleset);
+  if (!classData || !classData.class_levels) {
+    return {
+      allowed: false,
+      count: 0,
+      details: `Expertise is not available for ${className}`
+     };
+   }
+
+   // Search through class levels for expertise features
+  let totalCount = 0;
+  for (const classLevel of classData.class_levels) {
+    if (classLevel.level > level) {
+      break;
+     }
+    
+     // Check features in this level
+    const features = classLevel.features || [];
+    for (const feature of features) {
+       // Check for expertise in feature_specific
+      if (feature.feature_specific?.expertise) {
+        totalCount += feature.feature_specific.expertise.count || 0;
+       }
+       // Also check if the feature name contains "Expertise"
+      else if (feature.name && feature.name.includes('Expertise')) {
+         // Parse the description for count
+        const match = feature.desc?.[0]?.match(/choose\s+(\d+)/i) || feature.description?.match(/choose\s+(\d+)/i);
+        if (match) {
+          totalCount += parseInt(match[1], 10);
+         } else {
+          // Default to 2 if not specified
+          totalCount += 2;
+         }
+       }
+     }
+   }
+
+   // Also check subclass/majors features for 2024
+  if (ruleset === '2024' && classData.majors) {
+    const subclass = formData.class?.subclass?.name;
+    if (subclass) {
+      const subclassData = classData.majors.find(m => m.name === subclass);
+      if (subclassData?.features) {
+        for (const feature of subclassData.features) {
+          if (feature.level <= level && feature.name?.includes('Expertise')) {
+            const match = feature.description?.match(/choose\s+(\d+)/i);
+            if (match) {
+              totalCount += parseInt(match[1], 10);
+             }
+           }
+         }
+       }
+     }
+   }
+
+   // For 5e, also check subclasses
+  if (ruleset === '5e' && classData.subclasses) {
+    const subclass = formData.class?.subclass?.name;
+    if (subclass) {
+      const subclassData = classData.subclasses.find(s => s.name === subclass);
+      if (subclassData?.class_levels) {
+        for (const classLevel of subclassData.class_levels) {
+          if (classLevel.level <= level) {
+            const features = classLevel.features || [];
+            for (const feature of features) {
+              if (feature.name?.includes('Expertise')) {
+                const match = feature.desc?.[0]?.match(/choose\s+(\d+)/i);
+                if (match) {
+                  totalCount += parseInt(match[1], 10);
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+
   return {
-    allowed: false,
-    count: 0,
-    details: 'Expertise is not available for this class'
-  };
+    allowed: totalCount > 0,
+    count: totalCount,
+    details: `${className} can have expertise in ${totalCount} skill(s) at level ${level}`
+   };
 }
 
 /**
@@ -362,16 +409,16 @@ export async function validateSkills(formData) {
     warnings.push({
       message: `Rules allow ${limits.allowed} skill proficiency/ies. You have selected ${selectedSkills.length}. (${limits.details})`,
       type: 'warning'
-    });
-  }
+     });
+   }
 
   // Check if too few skills selected (info, not warning)
   if (selectedSkills.length < limits.allowed && selectedSkills.length > 0) {
     warnings.push({
       message: `You can select up to ${limits.allowed} skill proficiencies. You have selected ${selectedSkills.length}.`,
       type: 'info'
-    });
-  }
+     });
+   }
 
   // Check expertise validity
   if (expertSkills.length > 0) {
@@ -380,16 +427,16 @@ export async function validateSkills(formData) {
       warnings.push({
         message: `Expertise is not available for ${formData.class?.name || 'this class'}. Expertise is typically a Bard or Rogue feature.`,
         type: 'warning'
-      });
-    }
+       });
+     }
 
     // Check if too many expertise selections
     if (expertSkills.length > expertiseLimits.count) {
       warnings.push({
         message: `You can have expertise in ${expertiseLimits.count} skill(s). You have selected ${expertSkills.length}. (${expertiseLimits.details})`,
         type: 'warning'
-      });
-    }
+       });
+     }
 
     // Check if all expert skills are also proficient
     const nonProficientExperts = expertSkills.filter(skill => !selectedSkills.includes(skill));
@@ -397,9 +444,9 @@ export async function validateSkills(formData) {
       warnings.push({
         message: `Expertise requires proficiency first. These skills are not proficient: ${nonProficientExperts.join(', ')}`,
         type: 'warning'
-      });
-    }
-  }
+       });
+     }
+   }
 
   // Check for duplicate skills in selection
   const uniqueSkills = new Set(selectedSkills);
@@ -407,8 +454,8 @@ export async function validateSkills(formData) {
     warnings.push({
       message: `Some skills are selected multiple times. Each skill should only be selected once.`,
       type: 'warning'
-    });
-  }
+     });
+   }
 
   return warnings;
    }
@@ -426,43 +473,43 @@ export async function getSkillInfo(skillName, formData) {
 
    // Check if skill comes from class
   if (formData.class?.name) {
-  const classData = await fetchClassData(formData.class.name, ruleset);
-  const classSkills = parseSkillProficiencies(classData);
-  if (classSkills.skills.includes(skillName)) {
-    sources.push('Class');
-    if (!classSkills.isChoice) {
-      isPreSelected = true;
+    const classData = await fetchClassData(formData.class.name, ruleset);
+    const classSkills = parseSkillProficiencies(classData);
+    if (classSkills.skills.includes(skillName)) {
+      sources.push('Class');
+      if (!classSkills.isChoice) {
+        isPreSelected = true;
+       }
+     }
    }
-   }
-  }
 
    // Check if skill comes from race
   if (formData.race?.name) {
-  const raceData = await fetchRaceData(formData.race.name, ruleset);
-  const raceSkills = parseSkillProficiencies(raceData);
-  if (raceSkills.skills.includes(skillName)) {
-    sources.push('Race');
-    if (!raceSkills.isChoice) {
-      isPreSelected = true;
+    const raceData = await fetchRaceData(formData.race.name, ruleset);
+    const raceSkills = parseSkillProficiencies(raceData);
+    if (raceSkills.skills.includes(skillName)) {
+      sources.push('Race');
+      if (!raceSkills.isChoice) {
+        isPreSelected = true;
+       }
+     }
    }
-   }
-  }
 
    // Check if skill comes from background (2024 only)
   if (formData.background && ruleset === '2024') {
-  const backgroundData = await fetchBackgroundData(formData.background);
-  const bgSkills = parseSkillProficiencies(backgroundData);
-  if (bgSkills.skills.includes(skillName)) {
-    sources.push('Background');
-    if (!bgSkills.isChoice) {
-      isPreSelected = true;
+    const backgroundData = await fetchBackgroundData(formData.background);
+    const bgSkills = parseSkillProficiencies(backgroundData);
+    if (bgSkills.skills.includes(skillName)) {
+      sources.push('Background');
+      if (!bgSkills.isChoice) {
+        isPreSelected = true;
+       }
+     }
    }
-   }
-  }
 
   return {
-  isAllowed: sources.length > 0,
-  source: sources.join(', '),
-  isPreSelected
+    isAllowed: sources.length > 0,
+    source: sources.join(', '),
+    isPreSelected
    };
 }

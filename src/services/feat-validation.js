@@ -5,8 +5,46 @@
  */
 
 let backgroundDataCache = {
-    '2024': null
-};
+      '2024': null
+     };
+
+let validationRulesCache = {
+      '5e': null,
+      '2024': null
+     };
+
+/**
+ * Fetches validation rules from JSON files (with caching)
+ * @param {string} version - '5e' or '2024'
+ * @returns {Promise<object>} - Validation rules object
+ */
+async function loadValidationRules(version = '5e') {
+    if (validationRulesCache[version]) {
+        return validationRulesCache[version];
+         }
+     
+    try {
+        const path = version === '2024' ? '/data/2024/rules-validation.json' : '/data/rules-validation.json';
+        const response = await fetch(path);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${version} rules-validation.json from ${path}`);
+             }
+        const data = await response.json();
+        validationRulesCache[version] = data[version] || data;
+        return validationRulesCache[version];
+         } catch (error) {
+        console.error(`Error loading ${version} rules-validation.json:`, error);
+         // Fallback to defaults
+        return {
+            feats: {
+                available_levels: version === '2024' ? [1, 4, 8, 12, 16, 19] : [4, 8, 12, 16, 19],
+                origin_feat_required: version === '2024',
+                origin_feat_level: 1
+                 }
+             };
+         }
+     }
+
 /**
  * Fetches background data from JSON files (with caching) - 2024 only
  * @returns {Promise<object[]>} - Array of background data
@@ -17,19 +55,20 @@ async function loadBackgroundData() {
     }
 
     try {
-        const path = 'data/2024/backgrounds.json';
-              const response = await fetch(path);
+        const path = '/data/2024/backgrounds.json';
+        const response = await fetch(path);
         if (!response.ok) {
-            throw new Error(`Failed to load 2024 backgrounds.json from ${fullPath}`);
-        }
+            throw new Error(`Failed to load 2024 backgrounds.json from ${path}`);
+             }
         const data = await response.json();
         backgroundDataCache['2024'] = data;
         return data;
     } catch (error) {
         console.error(`Error loading 2024 backgrounds.json:`, error);
         return [];
-    }
 }
+     }
+
 /**
  * Fetches a specific background by name from the JSON data (2024 only)
  * @param {string} backgroundName - The name of the background
@@ -41,60 +80,52 @@ async function fetchBackgroundData(backgroundName) {
 }
 
 /**
- * Gets the number of feats allowed based on ruleset, level, and class
+ * Gets the number of feats allowed based on ruleset, level, and class from JSON
  * @param {object} formData - The character form data
- * @returns {object} - { allowed: number, originRequired: boolean, details: string }
+ * @returns {Promise<object>} - { allowed: number, originRequired: boolean, details: string }
  */
-export function getFeatLimits(formData) {
+export async function getFeatLimits(formData) {
     const ruleset = formData.rules || '5e';
     const level = formData.level || 1;
 
-    if (ruleset === '2024') {
-        // 2024 rules: Level 1 characters get 1 origin feat
-        // Additional feats at levels 4, 8, 12, 16, 19
-        let allowed = 0;
-        let originRequired = false;
+    const rules = await loadValidationRules(ruleset);
+    const featRules = rules.feats || {};
+     
+    const availableLevels = featRules.available_levels || (ruleset === '2024' ? [1, 4, 8, 12, 16, 19] : [4, 8, 12, 16, 19]);
+    const originRequired = featRules.origin_feat_required || false;
+    const originFeatLevel = featRules.origin_feat_level || 1;
 
-        if (level >= 1) {
-            allowed += 1; // Origin feat
-            originRequired = true;
-          }
-        if (level >= 4) allowed += 1;
-        if (level >= 8) allowed += 1;
-        if (level >= 12) allowed += 1;
-        if (level >= 16) allowed += 1;
-        if (level >= 19) allowed += 1;
-        return {
-            allowed,
-            originRequired,
-            details: originRequired
-                ? `Level 1 2024 characters get 1 Origin feat, plus additional feats at levels 4, 8, 12, 16, and 19`
-                : `In 2024 rules, feats are available at levels 4, 8, 12, 16, and 19`
-        };
-    }
-
-      // 5e rules: Feats optional at levels 4, 8, 12, 16, 19 (if no ability increase)
     let allowed = 0;
-    if (level >= 4) allowed += 1;
-    if (level >= 8) allowed += 1;
-    if (level >= 12) allowed += 1;
-    if (level >= 16) allowed += 1;
-    if (level >= 19) allowed += 1;
-
+    for (const featLevel of availableLevels) {
+        if (level >= featLevel) {
+            allowed += 1;
+             }
+         }
+     
+    let details = '';
+    if (ruleset === '2024') {
+        details = originRequired
+            ? `Level 1 2024 characters get 1 Origin feat, plus additional feats at levels ${availableLevels.join(', ')}`
+            : `In 2024 rules, feats are available at levels ${availableLevels.join(', ')}`;
+         } else {
+        details = `In 5e, feats are optional and can be taken instead of ability score increases at levels ${availableLevels.join(', ')}`;
+         }
+     
     return {
         allowed,
-        originRequired: false,
-        details: `In 5e, feats are optional and can be taken instead of ability score increases at levels 4, 8, 12, 16, and 19`
-      };
-}
+        originRequired,
+        originFeatLevel,
+        details
+         };
+     }
 
 /**
  * Validates feat selections and returns warnings (not blocking errors)
  * @param {object} formData - The character form data
  * @param {array} allFeats - All available feats data
- * @returns {array} - Array of warning objects { message: string, type: 'warning'|'info' }
+ * @returns {Promise<object>} - Array of warning objects { message: string, type: 'warning'|'info' }
  */
-export function validateFeats(formData, allFeats) {
+export async function validateFeats(formData, allFeats) {
     const warnings = [];
     const selectedFeats = formData.feats || [];
     const ruleset = formData.rules || '5e';
@@ -103,16 +134,16 @@ export function validateFeats(formData, allFeats) {
         return warnings; // No warnings if no feats selected
       }
 
-      // Get feat limits
-    const limits = getFeatLimits(formData);
+       // Get feat limits from JSON
+    const limits = await getFeatLimits(formData);
 
       // Check if too many feats selected
     if (selectedFeats.length > limits.allowed) {
         warnings.push({
             message: `Rules allow ${limits.allowed} feat(s) at level ${formData.level}. You have selected ${selectedFeats.length}. (${limits.details})`,
             type: 'warning'
-        });
-    }
+             });
+         }
 
       // For 2024 level 1, check origin feat requirement
     if (ruleset === '2024' && formData.level === 1 && limits.originRequired) {
@@ -125,20 +156,20 @@ export function validateFeats(formData, allFeats) {
             warnings.push({
                 message: `Level 1 2024 characters should select an Origin feat. Your selected feats don't include an Origin feat.`,
                 type: 'warning'
-            });
-        }
+                 });
+             }
 
           // Warn if non-origin feats selected at level 1
         const nonOriginFeats = selectedFeats.filter(f =>
-            !originFeats.some(of => of.name === f)
-        );
+             !originFeats.some(of => of.name === f)
+             );
         if (nonOriginFeats.length > 0) {
             warnings.push({
                 message: `Some selected feats are not Origin feats. Level 1 2024 characters typically take an Origin feat.`,
                 type: 'info'
-            });
-        }
-    }
+                 });
+             }
+         }
 
       // Check for Epic Boon feats (typically level 19+)
     const epicBoonFeats = allFeats.filter(f => f.type === 'Epic Boon' || f.type === 'Epic Boon Feat');
@@ -149,16 +180,16 @@ export function validateFeats(formData, allFeats) {
         warnings.push({
             message: `Epic Boon feats are typically available at level 19. You are level ${formData.level}.`,
             type: 'warning'
-        });
-    }
+             });
+         }
 
       // Check for prerequisites on selected feats
     selectedFeats.forEach(featName => {
         const feat = allFeats.find(f => f.name === featName);
         if (feat && feat.prerequisites) {
             const prereqs = Array.isArray(feat.prerequisites)
-                ? feat.prerequisites.map(p => typeof p === 'string' ? p : (p.name || '')).filter(p => p)
-                : [typeof feat.prerequisites === 'string' ? feat.prerequisites : (feat.prerequisites.name || '')].filter(p => p);
+                 ? feat.prerequisites.map(p => typeof p === 'string' ? p : (p.name || '')).filter(p => p)
+                 : [typeof feat.prerequisites === 'string' ? feat.prerequisites : (feat.prerequisites.name || '')].filter(p => p);
 
               // Check for level prerequisites
             prereqs.forEach(prereq => {
@@ -173,10 +204,10 @@ export function validateFeats(formData, allFeats) {
                             warnings.push({
                                 message: `${featName} requires ${prereq}. You are level ${formData.level}.`,
                                 type: 'warning'
-                            });
-                        }
-                    }
-                }
+                                 });
+                             }
+                         }
+                     }
 
                   // Check for class/race/ability prerequisites
                 if (prereq.includes('Strength') || prereq.includes('Dexterity') ||
@@ -185,11 +216,11 @@ export function validateFeats(formData, allFeats) {
                     warnings.push({
                         message: `${featName} requires: ${prereq}. Verify your character meets this requirement.`,
                         type: 'info'
-      });
-                }
-            });
-        }
     });
+                     }
+                 });
+             }
+         });
 
     return warnings;
 }
@@ -208,8 +239,8 @@ export function getFeatTypeInfo(featName, allFeats) {
         type: feat.type || 'General',
         isOrigin: feat.type === 'Origin Feat',
         isEpicBoon: feat.type === 'Epic Boon' || feat.type === 'Epic Boon Feat'
-      };
-}
+         };
+     }
 
 /**
  * Determines which feats are pre-selected (automatically granted) from background
@@ -226,9 +257,8 @@ export async function getPreSelectedFeats(formData) {
         if (backgroundData && backgroundData.feat) {
              // The feat field contains the feat name as a string
             preSelected.add(backgroundData.feat);
-         }
      }
+          }
 
     return Array.from(preSelected);
-}
-
+     }

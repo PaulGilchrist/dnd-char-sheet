@@ -6,10 +6,9 @@ import merge from 'lodash/merge';
 import {
   REQUIRED_FIELDS,
   ABILITY_NAMES,
-  DEFAULT_FORM_DATA,
-  POINT_BUY_COSTS
+  DEFAULT_FORM_DATA
 } from './constants';
-import { validateStep, validateFinalFormData } from './utils';
+import { validateStep, validateFinalFormData, getPointBuyCosts, getFeatRules } from './utils';
 import WizardHeader from './wizard-header';
 import WizardProgressBar from './wizard-progress-bar';
 import WizardFooter from './wizard-footer';
@@ -257,45 +256,50 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
         }
       }, [ruleset]);
 
-  // Validate ability scores
+  // Validate ability scores (async, loads rules from JSON)
   useEffect(() => {
-    if (currentStep === 3) {
-      const abilityErrors = {};
-      let totalPointsSpent = 0;
-      
-      formData.abilities.forEach((ability, index) => {
-        const baseScore = parseInt(ability.baseScore) || 8;
-        const improvements = parseInt(ability.abilityImprovements) || 0;
-        const misc = parseInt(ability.miscBonus) || 0;
-        const totalScore = baseScore + improvements + misc;
+   const validateAbilities = async () => {
+     if (currentStep === 5) {  // Abilities step is step 5
+       const abilityErrors = {};
+       const rules = await getPointBuyCosts(formData.rules || '5e');
+       let totalPointsSpent = 0;
+        
+       formData.abilities.forEach((ability, index) => {
+         const baseScore = parseInt(ability.baseScore) || 8;
+         const improvements = parseInt(ability.abilityImprovements) || 0;
+         const misc = parseInt(ability.miscBonus) || 0;
+         const totalScore = baseScore + improvements + misc;
 
-        const cost = POINT_BUY_COSTS[baseScore] || 0;
-        totalPointsSpent += cost;
+         const cost = rules[baseScore] || 0;
+         totalPointsSpent += cost;
 
-        if (baseScore < 8) {
-          abilityErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
-        }
-        if (baseScore > 18) {
-          abilityErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 18';
-        }
-        if (totalScore > 20) {
-          abilityErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
-        }
-        if (improvements < 0) {
-          abilityErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
-        }
-        if (misc < 0) {
-          abilityErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
+         if (baseScore < 8) {
+           abilityErrors[`ability_${index}_baseScore`] = 'Base score must be at least 8';
+          }
+         if (baseScore > 15) {
+           abilityErrors[`ability_${index}_baseScore`] = 'Base score cannot exceed 15 (point buy max)';
+          }
+         if (totalScore > 20) {
+           abilityErrors[`ability_${index}_totalScore`] = `Total score (base + improvements + misc) cannot exceed 20`;
+          }
+         if (improvements < 0) {
+           abilityErrors[`ability_${index}_abilityImprovements`] = 'Improvements must be 0 or above';
+          }
+         if (misc < 0) {
+           abilityErrors[`ability_${index}_miscBonus`] = 'Misc bonus must be 0 or above';
             }
           });
 
-      if (totalPointsSpent > 27) {
-        abilityErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
-      }
+       if (totalPointsSpent > 27) {
+         abilityErrors.pointsExceeded = `You have spent ${totalPointsSpent} points. You only have 27 points to spend.`;
+        }
 
       setErrors(prev => ({ ...prev, ...abilityErrors }));
         }
-      }, [formData.abilities, currentStep]);
+      };
+
+     validateAbilities();
+    }, [formData.abilities, currentStep, formData.rules]);
   const handleRulesetChange = async (newRuleset) => {
     setRuleset(newRuleset);
     
@@ -338,12 +342,15 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
        });
      };
 
-  const handleAbilityBaseScoreChange = (index, value) => {
+    const handleAbilityBaseScoreChange = async (index, value) => {
     const newBaseScore = parseInt(value) || 8;
     const oldBaseScore = parseInt(formData.abilities[index].baseScore) || 8;
+    
+    // Load point buy costs from JSON
+    const rules = await getPointBuyCosts(formData.rules || '5e');
     const calculateCost = (score) => {
-      return POINT_BUY_COSTS[score] || 0;
-  };
+      return rules[score] || 0;
+   };
 
     const newCost = calculateCost(newBaseScore);
     const oldCost = calculateCost(oldBaseScore);
@@ -359,8 +366,8 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
 
     if (currentTotalSpent <= 27) {
       handleAbilityChange(index, 'baseScore', newBaseScore);
-       }
-     };
+        }
+      };
 
   const handleAbilityImprovementChange = (index, value) => {
     setFormData(prev => {
@@ -499,29 +506,40 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   };
 
    // Check if current step is valid (for disabling Next button)
-  const currentStepErrors = validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
-  const isNextDisabled = Object.keys(currentStepErrors).length > 0;
+  const [isNextDisabled, setIsNextDisabled] = useState(false);
 
-  const handleNext = () => {
-    if (validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset)) {
-      setCurrentStep(prev => prev + 1);
-           }
-         };
+  useEffect(() => {
+   const checkValidation = async () => {
+     const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
+     setIsNextDisabled(Object.keys(stepErrors).length > 0);
+     setErrors(prev => ({ ...prev, ...stepErrors }));
+     };
+   checkValidation();
+   }, [currentStep, formData, errors, racesData, classSubtypes, ruleset]);
+
+  const handleNext = async () => {
+   const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
+   if (Object.keys(stepErrors).length === 0) {
+     setCurrentStep(prev => prev + 1);
+     setErrors({});
+     }
+   };
 
   const handlePrevious = () => {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleSubmit = () => {
-    if (validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset)) {
+    const handleSubmit = async () => {
+    const stepErrors = await validateStep(currentStep, formData, errors, racesData, classSubtypes, ruleset);
+    if (Object.keys(stepErrors).length === 0) {
       const finalErrors = validateFinalFormData(formData);
       if (Object.keys(finalErrors).length > 0) {
         setErrors(finalErrors);
         return;
-      }
-      onComplete(formData);
         }
-      };
+      onComplete(formData);
+       }
+     };
 
   const renderStep = () => {
     switch (currentStep) {
