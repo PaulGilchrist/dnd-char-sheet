@@ -334,21 +334,15 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
             ))}
           </div>
           
-          {validationMessage && (
-            <div className="validation-message error">
-              ⚠️ {validationMessage}
-            </div>
-          )}
-          
           {spellWarnings.length > 0 && (
-            <div className="warning-container">
-              {spellWarnings.map((warning, index) => (
-                <div key={index} className={`warning-message ${warning.type}`}>
-                  {warning.type === 'warning' ? '⚠️' : 'ℹ️'} {warning.message}
-                </div>
-              ))}
-            </div>
-          )}
+                       <div className="warning-container">
+                         {spellWarnings.map((warning, index) => (
+                           <div key={index} className={`warning-message ${warning.type}`}>
+                             {warning.type === 'warning' ? '⚠️' : 'ℹ️'} {warning.message}
+                           </div>
+                         ))}
+                       </div>
+                     )}
         </div>
         
         <div className="list-filter-container spells-filters">

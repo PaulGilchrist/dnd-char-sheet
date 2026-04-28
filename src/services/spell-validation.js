@@ -521,24 +521,8 @@ export async function validateSpells(formData, selectedSpells, allSpells, versio
      }
    }
   
-  // Check spell level limits (use existing spell-limits service)
-  const { validateSpellSelection } = await import('./spell-limits.js');
-  if (formData.class?.name && formData.level) {
-    const className = formData.class.name;
-    const level = formData.level;
-    const majorName = formData.class.major?.name || formData.class.subclass?.name || null;
-    
-    const limitValidation = await validateSpellSelection(selectedSpellNames, allSpells, className, level, version, majorName);
-    
-    if (!limitValidation.valid) {
-      limitValidation.violations.forEach(violation => {
-        warnings.push({
-          message: `Spell limit exceeded: ${violation}`,
-          type: 'warning'
-         });
-       });
-     }
-   }
+  // Note: Spell limit validation is handled in the UI by showing exceeded counts in red
+  // We don't add redundant warnings here since the summary already shows this visually
   
   return {
     warnings,
