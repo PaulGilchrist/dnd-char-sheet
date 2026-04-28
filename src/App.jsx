@@ -137,34 +137,48 @@ function App() {
     }
 
     const handleUploadChange = async (event) => {
-            const files = event.target.files;
-            const uploadedCharacters = [];
-            for (let i = 0; i < files.length; i++) {
-                const reader = new FileReader();
-                const file = files[i];
-                const readPromise = new Promise((resolve) => {
-                    reader.onload = (event) => {
-                        const data = JSON.parse(event.target.result);
-                        uploadedCharacters.push(data);
-                        resolve();
-                     };
+                const files = event.target.files;
+                const uploadedCharacters = [];
+                for (let i = 0; i < files.length; i++) {
+                    const reader = new FileReader();
+                    const file = files[i];
+                    const readPromise = new Promise((resolve) => {
+                        reader.onload = (event) => {
+                            const data = JSON.parse(event.target.result);
+                            uploadedCharacters.push(data);
+                            resolve();
+                          };
+                      });
+                    reader.readAsText(file);
+                    await readPromise;
+                  }
+
+                 // Add uploaded characters to the existing party, replacing if name exists
+                const updatedCharacters = characters.map(char => {
+                    const uploaded = uploadedCharacters.find(uc => uc.name === char.name);
+                    return uploaded || char;
                  });
-                reader.readAsText(file);
-                await readPromise;
-             }
 
-            // Add uploaded characters to the existing party, avoiding duplicates by name
-            const existingNames = new Set(characters.map(char => char.name));
-            const uniqueUploaded = uploadedCharacters.filter(char => !existingNames.has(char.name));
+                 // Add any new characters that weren't in the existing list
+                const existingNames = new Set(updatedCharacters.map(char => char.name));
+                const newCharacters = uploadedCharacters.filter(char => !existingNames.has(char.name));
+                updatedCharacters.push(...newCharacters);
 
-            const updatedCharacters = [...characters, ...uniqueUploaded];
-            setCharacters(updatedCharacters);
+                setCharacters(updatedCharacters);
 
-            // If there was no active character, set the first uploaded one as active
-            if (!activeCharacter && uniqueUploaded.length > 0) {
-                setActiveCharacter(cloneDeep(uniqueUploaded[0]));
-             }
-         };
+                 // Update active character if it was replaced
+                if (activeCharacter) {
+                    const updatedActive = updatedCharacters.find(char => char.name === activeCharacter.name);
+                    if (updatedActive) {
+                        setActiveCharacter(cloneDeep(updatedActive));
+                    }
+                 }
+
+                 // If there was no active character, set the first uploaded one as active
+                if (!activeCharacter && uploadedCharacters.length > 0) {
+                    setActiveCharacter(cloneDeep(uploadedCharacters[0]));
+                  }
+              };
 
     const handleSaveClick = async () => {
         let fileName = `${Utils.getFirstName(activeCharacter.name)}.json`;
