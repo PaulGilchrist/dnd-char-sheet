@@ -82,25 +82,41 @@ export const LANGUAGES = [
 ];
 
 export const RESISTANCES_IMMUNITIES = [
-    "Acid",
-    "Bludgeoning",
-    "Cold",
-    "Fire",
-    "Force",
-    "Lightning",
-    "Necrotic",
-    "Piercing",
-    "Poison",
-    "Psychic",
-    "Radiant",
-    "Slashing",
-    "Thunder"
+     "Acid",
+     "Bludgeoning",
+     "Cold",
+     "Fire",
+     "Force",
+     "Lightning",
+     "Necrotic",
+     "Piercing",
+     "Poison",
+     "Psychic",
+     "Radiant",
+     "Slashing",
+     "Thunder"
 ];
 
-
-
-// SKILL_PROFICIENCIES should be loaded from public/data/ability-scores.json
-// Use getSkillsFromAbilityScores() utility function instead
+export const SKILL_PROFICIENCIES = [
+     "Acrobatics",
+     "Animal Handling",
+     "Arcana",
+     "Athletics",
+     "Deception",
+     "History",
+     "Insight",
+     "Intimidation",
+     "Investigation",
+     "Medicine",
+     "Nature",
+     "Perception",
+     "Performance",
+     "Persuasion",
+     "Religion",
+     "Sleight of Hand",
+     "Stealth",
+     "Survival"
+];
 
 // POINT_BUY_COSTS is now loaded from public/data/rules-validation.json
 // Use getPointBuyCosts() from utils.js instead

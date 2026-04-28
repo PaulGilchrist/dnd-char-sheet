@@ -5,16 +5,16 @@
  */
 
 let classDataCache = {
-     '5e': null,
-     '2024': null
-    };
+      '5e': null,
+      '2024': null
+     };
 let raceDataCache = {
-     '5e': null,
-     '2024': null
-    };
+      '5e': null,
+      '2024': null
+     };
 let backgroundDataCache = {
-     '2024': null
-    };
+      '2024': null
+     };
 
 /**
  * Fetches class data from JSON files (with caching)
@@ -38,8 +38,8 @@ async function loadClassData(version = '5e') {
        } catch (error) {
         console.error(`Error loading ${version} classes.json:`, error);
         return [];
-   }
     }
+     }
 
 /**
  * Fetches race data from JSON files (with caching)
@@ -63,8 +63,8 @@ async function loadRaceData(version = '5e') {
        } catch (error) {
         console.error(`Error loading ${version} races.json:`, error);
         return [];
-   }
     }
+     }
 
 /**
  * Fetches background data from JSON files (with caching) - 2024 only
@@ -87,8 +87,8 @@ async function loadBackgroundData() {
        } catch (error) {
         console.error('Error loading 2024 backgrounds.json:', error);
         return [];
-   }
     }
+     }
 
 /**
  * Fetches feat data from JSON files (with caching) - for fighting style feats
@@ -107,8 +107,8 @@ async function loadFeatData(version = '5e') {
        } catch (error) {
         console.error(`Error loading ${version} feats.json:`, error);
         return [];
-   }
     }
+     }
 
 /**
  * Gets the class data for a specific class name
@@ -144,8 +144,8 @@ async function getSubraceByName(subraceName, version = '5e') {
             if (race.subraces) {
                 const subrace = race.subraces.find(s => s.name === subraceName);
                 if (subrace) return subrace;
-            }
              }
+              }
         return null;
         }
       
@@ -186,8 +186,8 @@ export async function getFightingStyleLimits(formData) {
         }
     
     if (ruleset === '2024') {
-          // 2024 rules: Fighting styles can be chosen as feats or from class features
-           // Check if class grants fighting style from class_levels
+           // 2024 rules: Fighting styles can be chosen as feats or from class features
+            // Check if class grants fighting style from class_levels
         if (classData.class_levels) {
             for (const classLevel of classData.class_levels) {
                 if (classLevel.level <= level && classLevel.features) {
@@ -204,9 +204,9 @@ export async function getFightingStyleLimits(formData) {
                         f.name?.includes('Additional Fighting Style') || (f.name?.includes('Fighting Style') && f.name !== 'Fighting Style')
              );
         allowed += additionalFeatures.length;
-         }
-              }
           }
+               }
+           }
   
            // Also check top-level class features (in case some classes have them)
         if (classData.features) {
@@ -231,8 +231,8 @@ export async function getFightingStyleLimits(formData) {
                     f.name?.includes('Fighting Style') && f.level <= level
              );
                 allowed += subclassAdditionalFeatures.length;
-         }
           }
+           }
       
           // Check for fighting style feats already selected
         const selectedFeats = formData.feats || [];
@@ -246,13 +246,13 @@ export async function getFightingStyleLimits(formData) {
                 const feat = fightingStyleFeats.find(f => f.name === featName);
                 if (feat && !preSelected.includes(featName)) {
                     preSelected.push(featName);
-         }
-              });
           }
+               });
+           }
   
         details = `In 2024 rules, ${className}${className ? ' ' : ''}characters may get fighting styles from class features or feats.`;
-             } else {
-          // 5e rules - read from class JSON data
+              } else {
+           // 5e rules - read from class JSON data
         if (classData.class_levels) {
             for (const classLevel of classData.class_levels) {
                 if (classLevel.level <= level && classLevel.features) {
@@ -261,10 +261,10 @@ export async function getFightingStyleLimits(formData) {
                  );
             if (fightingStyleFeature) {
                 allowed += fightingStyleFeature.feature_specific?.fighting_style?.count || 1;
-                 }
-              }
-            }
           }
+               }
+             }
+           }
   
            // Check subclass features for additional fighting styles
         if (subclass && classData.subclasses) {
@@ -279,20 +279,19 @@ export async function getFightingStyleLimits(formData) {
                                );
                             if (additionalStyleFeature) {
                 allowed += 1;
-             }
-                                   }
-                               }
-                           }
-                           // Also check top-level subclass features
+              }
+                                    }
+                                }
+                            }
+                            // Also check top-level subclass features
                         if (subclassData.features) {
                             const subclassAdditionalFeatures = subclassData.features.filter(f =>
                                 f.name?.includes('Fighting Style') && f.name !== 'Fighting Style' && f.level <= level
                                );
                             allowed += subclassAdditionalFeatures.length;
-                  }
-      }
                    }
           }
+                    }
   
         details = `${className} may get fighting styles from class features. ${subclass ? `${subclass} ` : ''}may grant additional styles at higher levels.`;
          }
@@ -341,14 +340,14 @@ export async function getLanguageLimits(formData) {
             const bgLangs = backgroundData.languages || [];
             preSelected.push(...bgLangs);
             allowed += bgLangs.length;
-              } else {
-               // Default background languages for 2024
+               } else {
+                // Default background languages for 2024
             allowed += 2;
             }
 
         details = `In 2024 rules, languages come from your race, class, and background.`;
-          } else {
-           // 5e rules
+           } else {
+            // 5e rules
         const raceData = await getRaceByName(raceName, '5e');
         const classData = await getClassByName(className, '5e');
 
@@ -371,12 +370,12 @@ export async function getLanguageLimits(formData) {
             if (subraceData && subraceData.languages && subraceData.languages.length > 0) {
                 const subraceLangs = subraceData.languages;
                 preSelected.push(...subraceLangs);
-                  // Don't add to allowed count if already counted in race
-            }
+                   // Don't add to allowed count if already counted in race
+             }
             if (subraceData?.language_options) {
                 allowed += subraceData.language_options.choose || 0;
-                }
              }
+              }
 
           // Class languages from JSON
         if (classData) {
@@ -395,12 +394,12 @@ export async function getLanguageLimits(formData) {
                             const match = feature.desc?.[0]?.match(/(?:gain|learn)\s+(\d+)\s+language/i);
                             if (match) {
                                 allowed += parseInt(match[1], 10);
-                                }
-                            }
-                        }
-                    }
-                }
             }
+                             }
+                         }
+                     }
+                 }
+             }
          
           // Background languages (5e: typically 2 from backstory)
         allowed += 2;
@@ -432,15 +431,15 @@ export async function validateLanguagesAndFightingStyles(formData) {
             warnings.push({
                 message: `Rules allow ${langLimits.allowed} language(s). You have selected ${selectedLanguages.length}. (${langLimits.details})`,
                 type: 'warning'
-                });
-            }
+                 });
+             }
         
         if (selectedLanguages.length === 0 && langLimits.preSelected.length > 0) {
             warnings.push({
                 message: `Your race, class, and background grant you these languages: ${langLimits.preSelected.join(', ')}. Consider selecting them.`,
                 type: 'info'
-                });
-            }
+                 });
+             }
         
         // Validate fighting styles
         const styleLimits = await getFightingStyleLimits(formData);
@@ -449,15 +448,15 @@ export async function validateLanguagesAndFightingStyles(formData) {
             warnings.push({
                 message: `Rules allow ${styleLimits.allowed} fighting style(s). You have selected ${selectedFightingStyles.length}. (${styleLimits.details})`,
                 type: 'warning'
-                });
-            }
+                 });
+             }
         
         if (selectedFightingStyles.length === 0 && styleLimits.allowed > 0) {
             warnings.push({
                 message: `Your class allows ${styleLimits.allowed} fighting style(s). Consider selecting one.`,
                 type: 'info'
-                });
-            }
+                 });
+             }
         
         // Check for fighting style feats in 2024 rules
         if (formData.rules === '2024' && styleLimits.preSelected.length > 0) {
@@ -466,13 +465,13 @@ export async function validateLanguagesAndFightingStyles(formData) {
                 warnings.push({
                     message: `You have selected fighting style feats: ${missingStyles.join(', ')}. These should be pre-selected.`,
                     type: 'info'
-                    });
-                }
-            }
+                     });
+                 }
+             }
         
-       } catch (error) {
-        console.error('Error validating languages and fighting styles:', error);
-       }
+         } catch (error) {
+            console.error('Error validating languages and fighting styles:', error);
+         }
     
-    return warnings;
+        return warnings;
     }
