@@ -6,7 +6,6 @@ import utils from '../../services/utils'
 import rulesFactory from '../../services/rules-factory'
 import CharAbilities from './char-abilities'
 import CharActions from './char-actions'
-import CharAudit from './char-audit'
 import CharInventory from './char-inventory'
 import CharReactions from './char-reactions'
 import CharSpecialActions from './char-special-actions'
@@ -110,7 +109,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             <CharSpecialActions playerStats={playerStats}></CharSpecialActions><hr />
             <CharInventory playerStats={playerStats}></CharInventory><hr />
             <div className='no-print'><CharCharacterAdvancement playerStats={playerStats}></CharCharacterAdvancement></div>
-            <div className='no-print'><CharAudit playerStats={playerStats}></CharAudit></div>
             <Subscriber handleEvent={handleEvent}></Subscriber>
         </div>}
     </React.Fragment>)

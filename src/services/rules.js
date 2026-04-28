@@ -1,7 +1,6 @@
 import { cloneDeep, uniqBy } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
-import auditRules from './audit-rules'
 import classRules from './class-rules'
 import raceRules from './race-rules'
 
@@ -732,8 +731,6 @@ const rules = {
         [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats); // Dependencies: Abilities
         playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats); // Dependencies: Abilities, Class
         playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats); // Dependencies: Abilities, Spells 
-        // Dependency on full player statistics
-        playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }
 }

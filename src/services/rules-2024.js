@@ -1,7 +1,6 @@
 import { cloneDeep, uniqBy } from 'lodash';
 import { passiveSkills } from '../data/passive-skills.js';
 import { skills } from '../data/skills.js';
-import auditRules from './audit-rules.js';
 import classRules from './class-rules-2024.js';
 import raceRules from './race-rules-2024.js';
 
@@ -83,16 +82,16 @@ const rules = {
         );
 
         const specialActions = uniqBy([
-               ...playerSpecialActions,
-               ...features.specialActions,
-               ...traits.specialActions,
-               ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
-               ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
-               ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
-               ], 'name').sort((a, b) => a.name.localeCompare(b.name));
-              const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
-                  return [actions, bonusActions, reactions, specialActions, characterAdvancement];
-            },
+            ...playerSpecialActions,
+            ...features.specialActions,
+            ...traits.specialActions,
+            ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
+            ...(playerStats.utilizeSpecialActions ? playerStats.utilizeSpecialActions : []),
+            ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
+        ], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+        return [actions, bonusActions, reactions, specialActions, characterAdvancement];
+    },
     getArmorClass: (allEquipment, playerStats) => {
         // 2024 Rules: Simplified AC calculation
         const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
@@ -304,29 +303,29 @@ const rules = {
         }
 
         // Monk unarmed strikes
-                if (playerStats.class.name === 'Monk') {
-                    const martialArtsDie = classRules.getMartialArtsDie(playerStats);
-                    attacks.push({
-                         "name": 'Unarmed Strike',
-                         "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
-                         "damageType": 'Bludgeoning',
-                         "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
-                         "hitBonus": dexterity.bonus + proficiency,
-                         "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
-                         "range": 5,
-                         "type": "Action"
-                     });
-                    attacks.push({
-                         "name": 'Unarmed Strike',
-                         "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
-                         "damageType": 'Bludgeoning',
-                         "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
-                         "hitBonus": dexterity.bonus + proficiency,
-                         "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
-                         "range": 5,
-                         "type": "Bonus Action"
-                     });
-                 }
+        if (playerStats.class.name === 'Monk') {
+            const martialArtsDie = classRules.getMartialArtsDie(playerStats);
+            attacks.push({
+                "name": 'Unarmed Strike',
+                "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
+                "damageType": 'Bludgeoning',
+                "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
+                "hitBonus": dexterity.bonus + proficiency,
+                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
+                "range": 5,
+                "type": "Action"
+            });
+            attacks.push({
+                "name": 'Unarmed Strike',
+                "damage": `1d${martialArtsDie}+${dexterity.bonus}`,
+                "damageType": 'Bludgeoning',
+                "damageFormula": `Damage Formula = Monk Open Hand (1d${martialArtsDie}) + Dexterity Bonus (${dexterity.bonus})`,
+                "hitBonus": dexterity.bonus + proficiency,
+                "hitBonusFormula": `To Hit Bonus Formula = Dexterity Bonus (${dexterity.bonus}) + Proficiency (${proficiency})`,
+                "range": 5,
+                "type": "Bonus Action"
+            });
+        }
 
         // Spell attacks
         if (playerStats.spellAbilities) {
@@ -379,24 +378,18 @@ const rules = {
         return hitPoints;
     },
     getLanguages: (playerStats) => {
-        // 2024 Rules: Simplified language rules
+        // 2024 Rules: Read languages from class and race JSON data
         const raceLanguages = playerStats.race?.languages || [];
-        let languages = [...raceLanguages];
+        const classLanguages = playerStats.class?.languages || [];
+        let languages = [...new Set([...raceLanguages, ...classLanguages])];
         let languagesAllowed = languages.length;
 
-        // Background languages (2024: Same as 5e)
+        // Background languages (2024: from background JSON, default to 2)
         languagesAllowed += 2;
 
-        // Class languages
-        switch (playerStats.class.name) {
-            case 'Druid':
-                languages.push("Druidic");
-                languagesAllowed += 1;
-                break;
-            case 'Rogue':
-                languages.push("Thieves' Cant");
-                languagesAllowed += 1;
-                break;
+        // Check for language_choices in class JSON (e.g., Rogue can choose extra languages)
+        if (playerStats.class?.language_choices) {
+            languagesAllowed += playerStats.class.language_choices.choose || 0;
         }
 
         if (playerStats.languages) {
@@ -492,25 +485,25 @@ const rules = {
 
         return [proficienciesAllowed, proficiencies.sort()];
     },
-        getSpellAbilities: (allSpells, playerStats) => {
-         // 2024 Rules: Simplified spellcasting
-                let spellAbilities = null;
+    getSpellAbilities: (allSpells, playerStats) => {
+        // 2024 Rules: Simplified spellcasting
+        let spellAbilities = null;
         let spellcasting = playerStats.class.class_levels[playerStats.level - 1].spellcasting;
 
         if (!spellcasting) {
             spellcasting = classRules.getHighestMajorLevel(playerStats)?.spellcasting;
         }
 
-                if (spellcasting) {
-             // Check if spellcasting requires a specific major (subclass)
+        if (spellcasting) {
+            // Check if spellcasting requires a specific major (subclass)
             const majorName = playerStats.class.major?.name || playerStats.class.subclass?.name;
             if (spellcasting.required_major && spellcasting.required_major !== majorName) {
                 spellcasting = null;
-             }
+            }
             if (spellcasting) {
                 spellAbilities = { ...spellcasting };
-         }
-          }
+            }
+        }
 
         if (spellAbilities) {
             if (playerStats.spells) {
@@ -620,7 +613,6 @@ const rules = {
         // Merge race senses with ability-based senses
         playerStats.senses = raceRules.getSenses(playerStats);
 
-        playerStats.audits = auditRules.auditPlayerStats(playerStats);
         return playerStats;
     }
 };
