@@ -16,6 +16,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
   const [validationMessage, setValidationMessage] = useState('');
   const [spellWarnings, setSpellWarnings] = useState([]);
   const [isLoadingLimits, setIsLoadingLimits] = useState(false);
+  const [showOnlySelected, setShowOnlySelected] = useState(false);
 
   const [levels, setLevels] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -178,6 +179,10 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
         spell.classes && spell.classes.includes(selectedClass)
       );
     }
+
+    if (showOnlySelected) {
+      results = results.filter(spell => (formData.spells || []).includes(spell.name));
+      }
 
     return results.sort((a, b) => a.name.localeCompare(b.name));
   })();
@@ -386,28 +391,42 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange }) {
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="list-results-container spell-results-container">
-          <div className="spell-results-header">
-            <span className="result-count">
-              Showing {filteredSpells.length} spell{filteredSpells.length !== 1 ? 's' : ''}
-            </span>
+          <div className="filter-group">
+              <label className="filter-checkbox-label">
+                <input
+                type="checkbox"
+                checked={showOnlySelected}
+                onChange={(e) => setShowOnlySelected(e.target.checked)}
+                />
+               Show Only Selected&nbsp;(
+              </label>
+              <span className="filter-checkbox-count">
+                {(formData.spells || []).length} selected)
+              </span>
           </div>
-          
-          <div className="spell-results-list">
-            {filteredSpells.length === 0 ? (
-              <div className="no-results-found">
-                {searchQuery || selectedLevel !== 'All' || selectedClass !== 'All'
-                  ? 'No spells found matching your criteria.'
-                  : 'No spells available.'}
               </div>
-            ) : (
-              filteredSpells.map((spell, index) => renderSpellDetails(spell, index))
-            )}
+
+         <div className="list-results-container spell-results-container">
+           <div className="spell-results-header">
+             <span className="result-count">
+              Showing {filteredSpells.length} spell{filteredSpells.length !== 1 ? 's' : ''}
+             </span>
+           </div>
+
+           <div className="spell-results-list">
+             {filteredSpells.length === 0 ? (
+               <div className="no-results-found">
+                 {searchQuery || selectedLevel !== 'All' || selectedClass !== 'All'
+                   ? 'No spells found matching your criteria.'
+                   : 'No spells available.'}
           </div>
-        </div>
+             ) : (
+              filteredSpells.map((spell, index) => renderSpellDetails(spell, index))
+             )}
       </div>
+         </div>
+       </div>
     );
   };
 
