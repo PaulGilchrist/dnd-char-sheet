@@ -478,6 +478,8 @@ export async function validateSpells(formData, selectedSpells, allSpells, versio
   sources.feats.grantedCantrips.forEach(spell => allowedSpells.add(spell));
   
   // Check each selected spell
+  const spellsOutsideClassList = [];
+
   for (const spellName of selectedSpellNames) {
     const spellData = allSpells.find(s => s.name === spellName || s.index === spellName);
     if (!spellData) {
@@ -495,32 +497,21 @@ export async function validateSpells(formData, selectedSpells, allSpells, versio
     const isClassSpell = spellClasses.includes(sources.class.name);
     const isGrantedSpell = allowedSpells.has(spellName);
     
-    // If not a class spell and not granted by another source, warn
+      // If not a class spell and not granted by another source, collect it
     if (!isClassSpell && !isGrantedSpell) {
-      // Check if the character has any spellcasting
-      if (!sources.class.isSpellcaster) {
-        warnings.push({
-          message: `${spellName} is not available to ${sources.class.name} characters. This class does not have spellcasting.`,
-          type: 'warning'
-         });
-       } else {
-         // Character is a spellcaster but this spell is not on their list
-        const grantedBy = getSpellSourceName(spellName, sources);
-        if (grantedBy) {
-          warnings.push({
-            message: `${spellName} is granted by ${grantedBy}, which is allowed.`,
-            type: 'info'
-           });
-         } else {
-          warnings.push({
-            message: `${spellName} is not on the ${sources.class.name} spell list. Verify you have a feature that grants this spell.`,
-            type: 'warning'
-           });
-         }
-       }
+      spellsOutsideClassList.push(spellName);
      }
    }
-  
+
+    // Add a single consolidated warning for all spells outside the class list
+  if (spellsOutsideClassList.length > 0) {
+    const count = spellsOutsideClassList.length;
+    const spellText = count === 1 ? 'Spell' : 'Spell(s)';
+        warnings.push({
+      message: `${spellText} (${count}) chosen outside of the class spell list.`,
+          type: 'warning'
+         });
+   }
   // Note: Spell limit validation is handled in the UI by showing exceeded counts in red
   // We don't add redundant warnings here since the summary already shows this visually
   
