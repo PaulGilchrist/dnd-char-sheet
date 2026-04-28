@@ -51,43 +51,53 @@
         "subraces": [
             {
                 "name": "Black",
-                "desc": "Black Dragonborn inherit the corrosive power of their chromatic ancestors, marked by acid breath and a harsh resilience shaped by swamps and desolate marshlands."
+                "desc": "Black Dragonborn inherit the corrosive power of their chromatic ancestors, marked by acid breath and a harsh resilience shaped by swamps and desolate marshlands.",
+                "damage_resistance": "Acid"
             },
             {
                 "name": "Blue",
-                "desc": "Blue Dragonborn channel crackling lightning, often displaying disciplined focus and a commanding presence reminiscent of the desert-dwelling blue dragons."
+                "desc": "Blue Dragonborn channel crackling lightning, often displaying disciplined focus and a commanding presence reminiscent of the desert-dwelling blue dragons.",
+                "damage_resistance": "Lightning"
             },
             {
                 "name": "Brass",
-                "desc": "Brass Dragonborn are talkative and warm-spirited, breathing fire and carrying the social, curious nature of brass dragons who thrive in sun-baked deserts."
+                "desc": "Brass Dragonborn are talkative and warm-spirited, breathing fire and carrying the social, curious nature of brass dragons who thrive in sun-baked deserts.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Bronze",
-                "desc": "Bronze Dragonborn wield lightning and possess a strong sense of duty, echoing the coastal guardianship and martial instincts of bronze dragons."
+                "desc": "Bronze Dragonborn wield lightning and possess a strong sense of duty, echoing the coastal guardianship and martial instincts of bronze dragons.",
+                "damage_resistance": "Lightning"
             },
             {
                 "name": "Copper",
-                "desc": "Copper Dragonborn are clever and quick-witted, breathing acid and often showing the playful, prank-loving tendencies of their copper dragon lineage."
+                "desc": "Copper Dragonborn are clever and quick-witted, breathing acid and often showing the playful, prank-loving tendencies of their copper dragon lineage.",
+                "damage_resistance": "Acid"
             },
             {
                 "name": "Gold",
-                "desc": "Gold Dragonborn embody nobility and inner fire, inheriting a powerful flame breath and the disciplined, honorable nature of gold dragons."
+                "desc": "Gold Dragonborn embody nobility and inner fire, inheriting a powerful flame breath and the disciplined, honorable nature of gold dragons.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Green",
-                "desc": "Green Dragonborn exude a sharp, cunning presence, breathing toxic gas and reflecting the forest-dwelling, manipulative instincts of green dragons."
+                "desc": "Green Dragonborn exude a sharp, cunning presence, breathing toxic gas and reflecting the forest-dwelling, manipulative instincts of green dragons.",
+                "damage_resistance": "Poison"
             },
             {
                 "name": "Red",
-                "desc": "Red Dragonborn carry the fierce pride and fiery wrath of their volcanic ancestors, unleashing devastating fire breath and a bold, intense temperament."
+                "desc": "Red Dragonborn carry the fierce pride and fiery wrath of their volcanic ancestors, unleashing devastating fire breath and a bold, intense temperament.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Silver",
-                "desc": "Silver Dragonborn are compassionate and steadfast, breathing frost and mirroring the protective, community-oriented nature of silver dragons."
+                "desc": "Silver Dragonborn are compassionate and steadfast, breathing frost and mirroring the protective, community-oriented nature of silver dragons.",
+                "damage_resistance": "Cold"
             },
             {
                 "name": "White",
-                "desc": "White Dragonborn channel bitter cold through their frost breath, often displaying a rugged, survival-driven mindset shaped by their arctic heritage."
+                "desc": "White Dragonborn channel bitter cold through their frost breath, often displaying a rugged, survival-driven mindset shaped by their arctic heritage.",
+                "damage_resistance": "Cold"
             }
         ],
         "book": "Player's Handbook",
@@ -439,7 +449,7 @@
             {
                 "index": "earth-genasi",
                 "name": "Earth Genasi",
-                "desc": "As an earth genasi, you are descended from the cruel and greedy dao, though you aren’t necessarily evil. You have inherited some measure of control over earth, reveling in superior strength and solid power. You tend to avoid rash decisions, pausing long enough to consider your options before taking action. Elemental earth manifests differently from one individual to the next. Some earth genasi always have bits of dust falling from their bodies and mud clinging to their clothes, never getting clean no matter how often they bathe. Others are as shiny and polished as gemstones, with skin tones of deep brown or black, eyes sparkling like agates. Earth genasi can also have smooth metallic flesh, dull iron skin spotted with rust, a pebbled and rough hide, or even a coating of tiny embedded crystals. The most arresting have fissures in their flesh, from which faint light shines.",
+                "desc": "As an earth genasi, you are descended from the cruel and greedy dao, though you aren\u2019t necessarily evil. You have inherited some measure of control over earth, reveling in superior strength and solid power. You tend to avoid rash decisions, pausing long enough to consider your options before taking action. Elemental earth manifests differently from one individual to the next. Some earth genasi always have bits of dust falling from their bodies and mud clinging to their clothes, never getting clean no matter how often they bathe. Others are as shiny and polished as gemstones, with skin tones of deep brown or black, eyes sparkling like agates. Earth genasi can also have smooth metallic flesh, dull iron skin spotted with rust, a pebbled and rough hide, or even a coating of tiny embedded crystals. The most arresting have fissures in their flesh, from which faint light shines.",
                 "ability_bonuses": [
                     {
                         "ability_score": "STR",
@@ -1012,6 +1022,7 @@
         "subraces": [],
         "book": "Player's Handbook",
         "desc": "To be greeted with stares and whispers, to suffer violence and insult on the street, to see mistrust and fear in every eye: this is the life of the tiefling",
-        "page": 42
+        "page": 42,
+        "damage_resistance": "Fire"
     }
 ]

@@ -52,43 +52,53 @@
         "subraces": [
             {
                 "name": "Black",
-                "desc": "Black Dragonborn inherit the corrosive power of their chromatic ancestors, marked by acid breath and a harsh resilience shaped by swamps and desolate marshlands."
+                "desc": "Black Dragonborn inherit the corrosive power of their chromatic ancestors, marked by acid breath and a harsh resilience shaped by swamps and desolate marshlands.",
+                "damage_resistance": "Acid"
             },
             {
                 "name": "Blue",
-                "desc": "Blue Dragonborn channel crackling lightning, often displaying disciplined focus and a commanding presence reminiscent of the desert-dwelling blue dragons."
+                "desc": "Blue Dragonborn channel crackling lightning, often displaying disciplined focus and a commanding presence reminiscent of the desert-dwelling blue dragons.",
+                "damage_resistance": "Lightning"
             },
             {
                 "name": "Brass",
-                "desc": "Brass Dragonborn are talkative and warm-spirited, breathing fire and carrying the social, curious nature of brass dragons who thrive in sun‑baked deserts."
+                "desc": "Brass Dragonborn are talkative and warm-spirited, breathing fire and carrying the social, curious nature of brass dragons who thrive in sun\u2011baked deserts.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Bronze",
-                "desc": "Bronze Dragonborn wield lightning and possess a strong sense of duty, echoing the coastal guardianship and martial instincts of bronze dragons."
+                "desc": "Bronze Dragonborn wield lightning and possess a strong sense of duty, echoing the coastal guardianship and martial instincts of bronze dragons.",
+                "damage_resistance": "Lightning"
             },
             {
                 "name": "Copper",
-                "desc": "Copper Dragonborn are clever and quick-witted, breathing acid and often showing the playful, prank-loving tendencies of their copper dragon lineage."
+                "desc": "Copper Dragonborn are clever and quick-witted, breathing acid and often showing the playful, prank-loving tendencies of their copper dragon lineage.",
+                "damage_resistance": "Acid"
             },
             {
                 "name": "Gold",
-                "desc": "Gold Dragonborn embody nobility and inner fire, inheriting a powerful flame breath and the disciplined, honorable nature of gold dragons."
+                "desc": "Gold Dragonborn embody nobility and inner fire, inheriting a powerful flame breath and the disciplined, honorable nature of gold dragons.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Green",
-                "desc": "Green Dragonborn exude a sharp, cunning presence, breathing toxic gas and reflecting the forest‑dwelling, manipulative instincts of green dragons."
+                "desc": "Green Dragonborn exude a sharp, cunning presence, breathing toxic gas and reflecting the forest\u2011dwelling, manipulative instincts of green dragons.",
+                "damage_resistance": "Poison"
             },
             {
                 "name": "Red",
-                "desc": "Red Dragonborn carry the fierce pride and fiery wrath of their volcanic ancestors, unleashing devastating fire breath and a bold, intense temperament."
+                "desc": "Red Dragonborn carry the fierce pride and fiery wrath of their volcanic ancestors, unleashing devastating fire breath and a bold, intense temperament.",
+                "damage_resistance": "Fire"
             },
             {
                 "name": "Silver",
-                "desc": "Silver Dragonborn are compassionate and steadfast, breathing frost and mirroring the protective, community‑oriented nature of silver dragons."
+                "desc": "Silver Dragonborn are compassionate and steadfast, breathing frost and mirroring the protective, community\u2011oriented nature of silver dragons.",
+                "damage_resistance": "Cold"
             },
             {
                 "name": "White",
-                "desc": "White Dragonborn channel bitter cold through their frost breath, often displaying a rugged, survival‑driven mindset shaped by their arctic heritage."
+                "desc": "White Dragonborn channel bitter cold through their frost breath, often displaying a rugged, survival\u2011driven mindset shaped by their arctic heritage.",
+                "damage_resistance": "Cold"
             }
         ],
         "traits": [
@@ -431,21 +441,24 @@
                 "description": "The entropy of the Abyss, the chaos of Pandemonium, and the despair of Carceri call to tieflings who have the abyssal legacy. Horns, fur, tusks, and peculiar scents are common physical features of such tieflings, most of whom have the blood of demons coursing through their veins.",
                 "languages": [
                     "Abyssal"
-                ]
+                ],
+                "damage_resistance": "Poison"
             },
             {
                 "name": "Chthonic",
                 "description": "Tieflings who have the chthonic legacy feel not only the tug of Carceri but also the greed of Gehenna and the gloom of Hades. Some of these tieflings look cadaverous. Others possess the unearthly beauty of a succubus, or they have physical features in-common with a night hag, a yugoloth, or some other Neutral Evil fiendish ancestor.",
                 "languages": [
                     "Common"
-                ]
+                ],
+                "damage_resistance": "Necrotic"
             },
             {
                 "name": "Infernal",
                 "description": "The infernal legacy connects tieflings not only to Gehenna but also the Nine Hells and the raging battlefields of Acheron. Horns, spines, tails, golden eyes, and a faint odor of sulfur or smoke are common physical features of such tieflings, most of whom trace their ancestry to devils.",
                 "languages": [
                     "Infernal"
-                ]
+                ],
+                "damage_resistance": "Fire"
             }
         ],
         "traits": [
