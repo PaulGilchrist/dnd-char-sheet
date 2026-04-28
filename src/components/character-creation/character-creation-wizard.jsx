@@ -21,6 +21,7 @@ import WizardStepSkills from './wizard-step-skills';
 import WizardStepLanguages from './wizard-step-languages';
 import WizardStepInventory from './wizard-step-inventory';
 import { validateSkills, getSkillLimits, getExpertiseLimits } from '../../services/skill-validation.js';
+import { getLanguageLimits, getFightingStyleLimits, validateLanguagesAndFightingStyles } from '../../services/languages-fightingstyles-validation.js';
 import WizardStepSpells from './wizard-step-spells';
 import WizardStepFeats from './wizard-step-feats';
 import WizardStepSpecial from './wizard-step-special';
@@ -46,6 +47,9 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
   const [skillLimits, setSkillLimits] = useState(null);
   const [expertiseLimits, setExpertiseLimits] = useState(null);
   const [skillWarnings, setSkillWarnings] = useState([]);
+  const [languageLimits, setLanguageLimits] = useState(null);
+  const [fightingStyleLimits, setFightingStyleLimits] = useState(null);
+  const [languageWarnings, setLanguageWarnings] = useState([]);
 
    // Validate skills when selection changes
   useEffect(() => {
@@ -66,7 +70,25 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
     validate();
    }, [formData.skillProficiencies, formData.expertSkills, formData.class?.name, formData.race?.name, formData.background, formData.rules, formData.level]);
 
-  // Sync tempInventory with formData.inventory when it changes
+      // Validate languages and fighting styles when selections change
+     useEffect(() => {
+       const validate = async () => {
+         try {
+           const langLimits = await getLanguageLimits(formData);
+           const styleLimits = await getFightingStyleLimits(formData);
+           const warnings = await validateLanguagesAndFightingStyles(formData);
+           setLanguageLimits(langLimits);
+           setFightingStyleLimits(styleLimits);
+           setLanguageWarnings(warnings);
+          } catch (error) {
+           console.error('Error validating languages and fighting styles:', error);
+          }
+        };
+
+       validate();
+      }, [formData.languages, formData.class?.fightingStyles, formData.class?.name, formData.race?.name, formData.background, formData.rules, formData.level]);
+
+      // Sync tempInventory with formData.inventory when it changes
   useEffect(() => {
     setTempInventory({
       backpack: formData.inventory?.backpack || [],
@@ -406,13 +428,16 @@ function CharacterCreationWizard({ onComplete, onCancel, allRaces, allClasses, a
           />
         );
       case 7:
-        return (
-          <WizardStepLanguages
-            formData={formData}
-            errors={errors}
-            onLanguageToggle={handleLanguageToggle}
-            onFightingStyleToggle={handleFightingStyleToggle}
-          />
+          return (
+             <WizardStepLanguages
+              formData={formData}
+              errors={errors}
+              onLanguageToggle={handleLanguageToggle}
+              onFightingStyleToggle={handleFightingStyleToggle}
+              languageLimits={languageLimits}
+              fightingStyleLimits={fightingStyleLimits}
+              warnings={languageWarnings}
+             />
         );
       case 8:
         return (
