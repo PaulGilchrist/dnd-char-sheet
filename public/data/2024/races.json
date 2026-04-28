@@ -173,7 +173,8 @@
         "languages": [
             "Common",
             "Dwarvish"
-        ]
+        ],
+        "damage_resistance": "Poison"
     },
     {
         "name": "Elf",

@@ -224,7 +224,8 @@
         ],
         "book": "Player's Handbook",
         "desc": "Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal.",
-        "page": 18
+        "page": 18,
+        "damage_resistance": "Poison"
     },
     {
         "index": "elf",
@@ -477,6 +478,88 @@
                         ],
                         "proficiencies": []
                     }
+                ],
+                "damage_resistance": [
+                    "Bludgeoning",
+                    "Piercing",
+                    "Slashing"
+                ]
+            },
+            {
+                "index": "fire-genasi",
+                "name": "Fire Genasi",
+                "desc": "As a fire genasi, you are descended from the passionate and destructive efreeti, though you aren't necessarily evil. You have inherited some measure of control over fire, reveling in superior strength and solid power. Elemental fire manifests differently from one individual to the next. Some fire genasi have skin that is warm to the touch, with hair that resembles flames. Others have skin that is red or orange, with eyes that glow like embers.",
+                "ability_bonuses": [
+                    {
+                        "ability_score": "STR",
+                        "bonus": 1
+                    }
+                ],
+                "starting_proficiencies": [],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "fire-walk",
+                        "name": "Fire Walk",
+                        "desc": [
+                            "You can create or extinguish a flame no larger than 10 feet in any dimension as a bonus action. Additionally, you have resistance to fire damage."
+                        ],
+                        "proficiencies": []
+                    }
+                ],
+                "damage_resistance": "Fire"
+            },
+            {
+                "index": "air-genasi",
+                "name": "Air Genasi",
+                "desc": "As an air genasi, you are descended from the cunning and aloof djinn, though you aren't necessarily good. You have inherited some measure of control over air, reveling in superior agility and speed. Elemental air manifests differently from one individual to the next. Some air genasi have skin that is cool to the touch, with hair that resembles clouds. Others have skin that is blue or gray, with eyes that glow like lightning.",
+                "ability_bonuses": [
+                    {
+                        "ability_score": "DEX",
+                        "bonus": 1
+                    }
+                ],
+                "starting_proficiencies": [],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "air-walk",
+                        "name": "Air Walk",
+                        "desc": [
+                            "You can create a gentle breeze as a bonus action. Additionally, you have resistance to lightning damage."
+                        ],
+                        "proficiencies": []
+                    }
+                ],
+                "damage_resistance": "Lightning"
+            },
+            {
+                "index": "water-genasi",
+                "name": "Water Genasi",
+                "desc": "As a water genasi, you are descended from the calm and patient marids, though you aren't necessarily good. You have inherited some measure of control over water, reveling in superior endurance and adaptability. Elemental water manifests differently from one individual to the next. Some water genasi have skin that is cool and damp to the touch, with hair that resembles seaweed. Others have skin that is blue or green, with eyes that glow like the ocean.",
+                "ability_bonuses": [
+                    {
+                        "ability_score": "CON",
+                        "bonus": 1
+                    }
+                ],
+                "starting_proficiencies": [
+                    "Athletics"
+                ],
+                "languages": [],
+                "racial_traits": [
+                    {
+                        "index": "water-walk",
+                        "name": "Water Walk",
+                        "desc": [
+                            "You can swim at the end of your movement to enter water without the first 5 feet of it counting as difficult terrain. Additionally, you have resistance to acid and cold damage."
+                        ],
+                        "proficiencies": []
+                    }
+                ],
+                "damage_resistance": [
+                    "Acid",
+                    "Cold"
                 ]
             }
         ],

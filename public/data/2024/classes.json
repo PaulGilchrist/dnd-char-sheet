@@ -5620,6 +5620,19 @@
             "requirements": "",
             "core_traits_gained": "Gain Hit Point Die, proficiency with Martial weapons, proficiency in one skill of your choice from the Ranger's skill list, and training with Light and Medium armor and Shields.",
             "features_gained": "Gain the Ranger's level 1 features."
+        },
+        "languages": [],
+        "language_choices": {
+            "choose": 1,
+            "from": [
+                "Celestial",
+                "Draconic",
+                "Deep Speech",
+                "Infernal",
+                "Primordial",
+                "Sylvan",
+                "Undercommon"
+            ]
         }
     },
     {
@@ -6368,6 +6381,19 @@
             "requirements": "Dexterity 13",
             "core_traits_gained": "Gain Hit Point Die, proficiency in one skill of your choice from the Rogue's skill list, proficiency with Thieves' Tools, and training with Light armor.",
             "features_gained": "Gain the Rogue's level 1 features."
+        },
+        "languages": [],
+        "language_choices": {
+            "choose": 1,
+            "from": [
+                "Celestial",
+                "Draconic",
+                "Deep Speech",
+                "Infernal",
+                "Primordial",
+                "Sylvan",
+                "Undercommon"
+            ]
         }
     },
     {

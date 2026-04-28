@@ -8686,7 +8686,20 @@
         "page": 89,
         "spell_casting_ability": "Wisdom",
         "starting_wealth": "5d4 x 10 gp",
-        "features": []
+        "features": [],
+        "languages": [],
+        "language_choices": {
+            "choose": 1,
+            "from": [
+                "Celestial",
+                "Draconic",
+                "Deep Speech",
+                "Infernal",
+                "Primordial",
+                "Sylvan",
+                "Undercommon"
+            ]
+        }
     },
     {
         "index": "rogue",
