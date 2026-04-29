@@ -22,6 +22,27 @@ app.use((req, res, next) => {
 // Serve your React build (dist folder) BEFORE API routes
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
+// SSE endpoint — must be BEFORE the catch-all fallback route
+app.get('/subscribe', (req, res) => {
+    const headers = {
+          'Content-Type': 'text/event-stream',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache'
+      };
+    res.writeHead(200, headers);
+    const clientId = guid.create().value;
+    const newClient = {
+        id: clientId,
+        res
+     };
+    subscribers.push(newClient);
+    req.on('close', () => {
+        console.log(`${clientId} Connection closed`);
+        subscribers = subscribers.filter(client => client.id !== clientId);
+     });
+    console.log(`Current subscriber count = ${subscribers.length}`)
+});
+
 // React Router fallback — MUST be last
 app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
@@ -344,25 +365,7 @@ app.post('/api/:key', (req, res) => {
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'Healthy' });
 });
-app.get('/subscribe', (req, res) => {
-    const headers = {
-        'Content-Type': 'text/event-stream',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache'
-    };
-    res.writeHead(200, headers);
-    const clientId = guid.create().value;
-    const newClient = {
-        id: clientId,
-        res
-    };
-    subscribers.push(newClient);
-    req.on('close', () => {
-        console.log(`${clientId} Connection closed`);
-        subscribers = subscribers.filter(client => client.id !== clientId);
-    });
-    console.log(`Current subscriber count = ${subscribers.length}`)
-});
+
 const publish = (key, data) => {
     const event = {
         key,
@@ -370,12 +373,13 @@ const publish = (key, data) => {
     }
     subscribers.forEach(subscriber => subscriber.res.write(`data: ${JSON.stringify(event)}\n\n`));
 }
+
 const keepAlive = () => {
     fetch(`http://localhost:${PORT}/health`)
         .then((response) => {
             console.log(`Response: ${response.status}`);
-        })
-        .catch((error) => {
+         })
+         .catch((error) => {
             console.error(`Error: ${error.message}`);
         });
 }
