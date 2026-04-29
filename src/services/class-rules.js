@@ -7,7 +7,7 @@ const classRules = {
         // Dependencies: None
         let characterClass = allClasses.find((characterClass) => characterClass.name === playerSummary.class.name)
         characterClass = merge(cloneDeep(characterClass), cloneDeep(playerSummary.class));
-        let subclass = characterClass.subclasses.find((subclass) => subclass.name === playerSummary.class.subclass.name);
+        let subclass = playerSummary.class.subclass ? characterClass.subclasses?.find((subclass) => subclass.name === playerSummary.class.subclass.name) : undefined;
         if (subclass) {
             characterClass.subclass = merge(cloneDeep(subclass), cloneDeep(playerSummary.class.subclass));
         } else {
