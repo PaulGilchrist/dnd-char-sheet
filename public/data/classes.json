@@ -1415,7 +1415,8 @@
                             "additional_magical_secrets_max_lvl": 3
                         }
                     }
-                ]
+                ],
+                "bonus_skill_proficiencies": 3
             },
             {
                 "index": "valor",
@@ -1460,6 +1461,11 @@
                             }
                         ]
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Medium Armor",
+                    "Shields",
+                    "Martial Weapons"
                 ]
             }
         ],
@@ -2318,6 +2324,9 @@
                             }
                         ]
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor"
                 ]
             },
             {
@@ -2516,7 +2525,8 @@
                             }
                         ]
                     }
-                ]
+                ],
+                "bonus_skill_proficiencies": 2
             },
             {
                 "index": "light",
@@ -2941,7 +2951,11 @@
                             }
                         ]
                     }
-                ]
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor"
+                ],
+                "bonus_skill_proficiencies": 1
             },
             {
                 "index": "tempest",
@@ -3160,6 +3174,10 @@
                             }
                         ]
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor",
+                    "Martial Weapons"
                 ]
             },
             {
@@ -3590,6 +3608,10 @@
                             }
                         ]
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor",
+                    "Martial Weapons"
                 ]
             }
         ],
@@ -9298,6 +9320,10 @@
                             }
                         ]
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Disguise Kit",
+                    "Poisoner's Kit"
                 ]
             },
             {
@@ -9517,7 +9543,30 @@
         "page": 94,
         "spell_casting_ability": "Intelligence",
         "starting_wealth": "4d4 x 10 gp",
-        "features": []
+        "features": [],
+        "languages": [
+            "Thieves' Cant"
+        ],
+        "language_choices": {
+            "choose": 1,
+            "from": [
+                "Dwarvish",
+                "Elvish",
+                "Giant",
+                "Gnomish",
+                "Goblin",
+                "Halfling",
+                "Orc",
+                "Abyssal",
+                "Celestial",
+                "Draconic",
+                "Deep Speech",
+                "Infernal",
+                "Primordial",
+                "Sylvan",
+                "Undercommon"
+            ]
+        }
     },
     {
         "index": "sorcerer",
@@ -10638,7 +10687,8 @@
                             }
                         ]
                     }
-                ]
+                ],
+                "hit_point_bonus_per_level": 1
             },
             {
                 "index": "wild-magic",

@@ -423,64 +423,63 @@ const rules = {
         return attacks;
     },
     getHitPoints: (playerStats) => {
-        // Dependencies: Abilities, Class
-        const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
-        let hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
-        if(playerStats.race.subrace && playerStats.race.subrace.name === "Hill Dwarf") {
-            hitPoints += playerStats.level; // Dwarven Toughness
-        }
-        if(playerStats.class.subclass && playerStats.class.subclass.name === "Draconic") {
-            hitPoints += playerStats.level; // Draconic Resilience
-        }
-        return hitPoints
-    },
+             // Dependencies: Abilities, Class
+            const constitution = playerStats.abilities.find((ability) => ability.name === 'Constitution');
+            let hitPoints = playerStats.class.hit_die + ((playerStats.class.hit_die / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
+        
+            // Check for racial hit point bonus (e.g., Hill Dwarf Dwarven Toughness)
+            if(playerStats.race.subrace && playerStats.race.subrace.hit_point_bonus_per_level) {
+                hitPoints += playerStats.race.subrace.hit_point_bonus_per_level * playerStats.level;
+             }
+        
+            // Check for subclass hit point bonus (e.g., Draconic Sorcerer Draconic Resilience)
+            if(playerStats.class.subclass && playerStats.class.subclass.hit_point_bonus_per_level) {
+                hitPoints += playerStats.class.subclass.hit_point_bonus_per_level * playerStats.level;
+             }
+            return hitPoints
+         },
     getLanguages: (playerStats) => {
-             // Dependencies: Class, Race
-            let languages = [...(playerStats.race.languages || [])];
-            let languagesAllowed = languages.length;
-        // dndbeyond allows up to 2 languages from the character's backstory (See Acolyte or Sage)
-        languagesAllowed += 2;
-         switch(playerStats.race.name) {
-            case 'Half-Elf':
-            case 'Human':
-                languagesAllowed += 1;
-                break;
-        }
-        if(playerStats.race.subrace) {
-            languages = [...new Set([...languages, ...(playerStats.race.subrace.languages || [])])];
-            switch(playerStats.race.subrace.name) {
-                case 'High Elf':
-                    languagesAllowed += 1;
-                    break;
-            }
-        }
-        switch(playerStats.class.name) {
-            case 'Druid':
-                languages.push("Druidic");
-                languagesAllowed += 1;
-                break;
-            case 'Ranger': // Favored Enemies
-                languagesAllowed += 1;
-                if(playerStats.level > 5) languagesAllowed += 1;
-                if(playerStats.level > 13) languagesAllowed += 1;
-                break;
-            case 'Rogue':
-                languages.push("Thieves' Cant");
-                languagesAllowed += 1;
-                break;
-        }
-        if(playerStats.class.subclass) {
-            switch(playerStats.class.subclass.name) {
-                case 'Knowledge': // Blessings of Knowledge
-                    languagesAllowed += 1;
-                    break;
-            }
-        }
-        if(playerStats.languages) {
-            languages = [...new Set([...languages, ...playerStats.languages])];
-        }
-        return [languagesAllowed, languages.sort()];
-    },
+                // Dependencies: Class, Race
+              let languages = [...(playerStats.race.languages || [])];
+              let languagesAllowed = languages.length;
+              // dndbeyond allows up to 2 languages from the character's backstory (See Acolyte or Sage)
+            languagesAllowed += 2;
+
+             // Check for race language choices (e.g., Half-Elf, Human, High Elf)
+            if(playerStats.race.language_choices) {
+                languagesAllowed += playerStats.race.language_choices.choose || 0;
+              }
+            if(playerStats.race.subrace && playerStats.race.subrace.language_options) {
+                languages = [...new Set([...languages, ...(playerStats.race.subrace.languages || [])])];
+                languagesAllowed += playerStats.race.subrace.language_options.choose || 0;
+              }
+
+             // Add class languages from JSON (e.g., Druid adds Druidic, Rogue adds Thieves' Cant)
+            languages = [...new Set([...languages, ...(playerStats.class.languages || [])])];
+
+             // Check for class language choices (e.g., Ranger Favored Enemies)
+            if(playerStats.class.language_choices) {
+                let rangerLanguageBonus = playerStats.class.language_choices.choose || 0;
+                languagesAllowed += rangerLanguageBonus;
+                // Ranger gets additional languages at levels 6 and 14
+                if(playerStats.class.name === 'Ranger') {
+                    if(playerStats.level > 5) languagesAllowed += 1;
+                    if(playerStats.level > 13) languagesAllowed += 1;
+                 }
+              }
+
+             // Check for subclass language bonuses (e.g., Cleric/Knowledge Blessings of Knowledge)
+            if(playerStats.class.subclass) {
+                if(playerStats.class.subclass.language_choices) {
+                    languagesAllowed += playerStats.class.subclass.language_choices.choose || 0;
+                 }
+              }
+
+            if(playerStats.languages) {
+                languages = [...new Set([...languages, ...playerStats.languages])];
+              }
+            return [languagesAllowed, languages.sort()];
+          },
     getMagicItems: (allMagicItems, playerSummary) => {
         if(playerSummary.inventory.magicItems) {
             const playerMagicItems = playerSummary.inventory.magicItems.map(playerMagicItem => {
@@ -520,66 +519,52 @@ const rules = {
     },
     getProficiencies: (playerStats, skill = true) => {
               // Dependencies: Class, Race
-            let proficienciesAllowed = 0;
-            let proficiencies = [...new Set([...(playerStats.class.proficiencies || []), ...(playerStats.race.starting_proficiencies || [])])];
-              // Race Specific
-            playerStats.race.traits.forEach(trait => {
-                if (trait.proficiencies && trait.proficiencies.length > 0) {
-                    proficiencies = [...new Set([...proficiencies, ...trait.proficiencies])];
-                 }
-             });
-            if(playerStats.race.subrace) {
+          let proficienciesAllowed = 0;
+          let proficiencies = [...new Set([...(playerStats.class.proficiencies || []), ...(playerStats.race.starting_proficiencies || [])])];
+            // Race Specific
+        playerStats.race.traits.forEach(trait => {
+            if (trait.proficiencies && trait.proficiencies.length > 0) {
+                proficiencies = [...new Set([...proficiencies, ...trait.proficiencies])];
+               }
+           });
+        if(playerStats.race.subrace) {
                             proficiencies = [...new Set([...proficiencies, ...(playerStats.race.subrace.starting_proficiencies || [])])];
                             if (playerStats.race.subrace.racial_traits) {
                                 playerStats.race.subrace.racial_traits.forEach(racial_trait => {
                                     if (racial_trait.proficiencies && racial_trait.proficiencies.length > 0) {
                                         proficiencies = [...new Set([...proficiencies, ...racial_trait.proficiencies])];
-                                      }
-                                  });
-                              }
                           }
+                                   });
+                               }
+                           }
         if(skill) {
             proficiencies = proficiencies.filter((proficiency) => proficiency.startsWith('Skill'));
             proficiencies = proficiencies.map((proficiency) => {
                 return proficiency.substring(7);
-            });
-            // Allowed Count
+               });
+             // Allowed Count
             proficienciesAllowed = proficiencies.length + 2; // dndbeyond allows one given based on background and another choosen based on background
-            // Manually enforced rules
-            if(playerStats.class.name === "Bard" && playerStats.level.subclass && playerStats.class.subclass.name === 'Lore') { // Bonus Proficiencies
-                proficienciesAllowed += 3;
-            } else if(playerStats.class.name === "Cleric") {
-                if(playerStats.class.subclass && playerStats.class.subclass.name === 'Knowledge') { // Blessings of Knowledge
-                    proficienciesAllowed += 2;
-                } else if(playerStats.class.subclass && playerStats.class.subclass.name === 'Nature') { // Acolyte of Nature
-                    proficienciesAllowed += 1;
-                }
-            }
-            // Allowed - Both class and race
+             // Check for subclass skill proficiency bonuses from JSON (e.g., Bard/Lore, Cleric/Knowledge, Cleric/Nature)
+            if(playerStats.class.subclass && playerStats.class.subclass.bonus_skill_proficiencies) {
+                proficienciesAllowed += playerStats.class.subclass.bonus_skill_proficiencies;
+             }
+             // Allowed - Both class and race
             proficienciesAllowed += rules.getProficiencyChoiceCount(playerStats, true);
             if(playerStats.skillProficiencies) {
                 proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
-            }
-        } else {
+             }
+         } else {
             proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
-            // Manually enforced rules
-            if(playerStats.class.name === "Bard" && playerStats.class.subclass && playerStats.class.subclass.name === 'Valor') {
-                proficiencies = [...new Set([...proficiencies, ...['Medium Armor','Shields','Martial Weapons']])];
-            } else if(playerStats.class.name === "Cleric" && playerStats.class.subclass) {
-                if(playerStats.class.subclass.name === 'Life' || playerStats.class.subclass.name === 'Nature') {
-                    proficiencies = [...new Set([...proficiencies, ...['Heavy Armor']])];
-                } else if(playerStats.class.subclass.name === 'Tempest' || playerStats.class.subclass.name === 'War') {
-                    proficiencies = [...new Set([...proficiencies, ...['Heavy Armor','Martial Weapons']])];
-                }
-            } else if(playerStats.class.name === "Thief" && playerStats.class.subclass && playerStats.class.subclass.name === 'Assassin') {
-                proficiencies = [...new Set([...proficiencies, ...['Disguise Kit',"Poisoner's Kit"]])];
-            }
-            // Allowed Count
+             // Add subclass proficiencies from JSON (e.g., Bard/Valor, Cleric subclasses, Rogue/Assassin)
+            if(playerStats.class.subclass && playerStats.class.subclass.bonus_proficiencies) {
+                proficiencies = [...new Set([...proficiencies, ...playerStats.class.subclass.bonus_proficiencies])];
+             }
+             // Allowed Count
             proficienciesAllowed = proficiencies.length + rules.getProficiencyChoiceCount(playerStats, false);
             if(playerStats.proficiencies) {
                 proficiencies = [...new Set([...proficiencies, ...playerStats.proficiencies])];
-            }
         }
+         }
         return [proficienciesAllowed, proficiencies.sort()];
     },
         getSpellAbilities: (allSpells, playerStats) => {

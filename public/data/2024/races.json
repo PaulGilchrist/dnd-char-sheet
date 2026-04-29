@@ -141,7 +141,8 @@
                 "languages": [
                     "Common",
                     "Dwarvish"
-                ]
+                ],
+                "hit_point_bonus_per_level": 1
             },
             {
                 "name": "Mountain",

@@ -8,11 +8,11 @@ const loadPassiveSkills = async () => {
         const response = await fetch('/data/passive-skills.json');
         if (response.ok) {
             return await response.json();
-         }
-     } catch (error) {
+        }
+    } catch (error) {
         console.error('Error loading passive skills:', error);
-     }
-     // Fallback
+    }
+    // Fallback
     return ['Insight', 'Investigation', 'Perception'];
 };
 
@@ -21,59 +21,59 @@ let cachedPassiveSkills = null;
 const getPassiveSkills = async () => {
     if (cachedPassiveSkills) {
         return cachedPassiveSkills;
-     }
+    }
     cachedPassiveSkills = await loadPassiveSkills();
     return cachedPassiveSkills;
 };
 
 // Load skills from public/data/ability-scores.json
 const loadSkills = async () => {
-	try {
-		const response = await fetch('/data/ability-scores.json');
-		if (response.ok) {
-			const abilities = await response.json();
-			const skills = [];
-			abilities.forEach(ability => {
-				ability.skills.forEach(skillName => {
-					skills.push({ name: skillName, ability: ability.full_name });
-				});
-			});
-			return skills;
-		}
-	} catch (error) {
-		console.error('Error loading skills:', error);
-	}
-	// Fallback
-	return [
-		{ name: 'Acrobatics', ability: 'Dexterity' },
-		{ name: 'Animal Handling', ability: 'Wisdom' },
-		{ name: 'Arcana', ability: 'Intelligence' },
-		{ name: 'Athletics', ability: 'Strength' },
-		{ name: 'Deception', ability: 'Charisma' },
-		{ name: 'History', ability: 'Intelligence' },
-		{ name: 'Insight', ability: 'Wisdom' },
-		{ name: 'Intimidation', ability: 'Charisma' },
-		{ name: 'Investigation', ability: 'Intelligence' },
-		{ name: 'Medicine', ability: 'Wisdom' },
-		{ name: 'Nature', ability: 'Intelligence' },
-		{ name: 'Perception', ability: 'Wisdom' },
-		{ name: 'Performance', ability: 'Charisma' },
-		{ name: 'Persuasion', ability: 'Charisma' },
-		{ name: 'Religion', ability: 'Intelligence' },
-		{ name: 'Sleight of Hand', ability: 'Dexterity' },
-		{ name: 'Stealth', ability: 'Dexterity' },
-		{ name: 'Survival', ability: 'Wisdom' }
-	];
+    try {
+        const response = await fetch('/data/ability-scores.json');
+        if (response.ok) {
+            const abilities = await response.json();
+            const skills = [];
+            abilities.forEach(ability => {
+                ability.skills.forEach(skillName => {
+                    skills.push({ name: skillName, ability: ability.full_name });
+                });
+            });
+            return skills;
+        }
+    } catch (error) {
+        console.error('Error loading skills:', error);
+    }
+    // Fallback
+    return [
+        { name: 'Acrobatics', ability: 'Dexterity' },
+        { name: 'Animal Handling', ability: 'Wisdom' },
+        { name: 'Arcana', ability: 'Intelligence' },
+        { name: 'Athletics', ability: 'Strength' },
+        { name: 'Deception', ability: 'Charisma' },
+        { name: 'History', ability: 'Intelligence' },
+        { name: 'Insight', ability: 'Wisdom' },
+        { name: 'Intimidation', ability: 'Charisma' },
+        { name: 'Investigation', ability: 'Intelligence' },
+        { name: 'Medicine', ability: 'Wisdom' },
+        { name: 'Nature', ability: 'Intelligence' },
+        { name: 'Perception', ability: 'Wisdom' },
+        { name: 'Performance', ability: 'Charisma' },
+        { name: 'Persuasion', ability: 'Charisma' },
+        { name: 'Religion', ability: 'Intelligence' },
+        { name: 'Sleight of Hand', ability: 'Dexterity' },
+        { name: 'Stealth', ability: 'Dexterity' },
+        { name: 'Survival', ability: 'Wisdom' }
+    ];
 };
 
 let cachedSkills = null;
 
 const getSkills = async () => {
-	if (cachedSkills) {
-		return cachedSkills;
-	}
-	cachedSkills = await loadSkills();
-	return cachedSkills;
+    if (cachedSkills) {
+        return cachedSkills;
+    }
+    cachedSkills = await loadSkills();
+    return cachedSkills;
 };
 
 const rules = {
@@ -87,38 +87,38 @@ const rules = {
             case 'CHA': return 'Charisma';
         }
     },
-                getAbilities: async (playerStats) => {
-       // 2024 Rules: Simpler ability calculation, no racial bonuses
-    const skills = await getSkills();
-    const passiveSkills = await getPassiveSkills();
-    return playerStats.abilities.map((ability) => {
-		const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
-		ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus;
-		 // No racial bonuses in 2024
-		ability.bonus = Math.floor((ability.totalScore - 10) / 2);
-		ability.proficient = playerStats.class.saving_throw_proficiencies ? playerStats.class.saving_throw_proficiencies.includes(ability.name) : false;
-		ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
-		ability.skills = skills.filter(skill => skill.ability === ability.name);
-		ability.skills = ability.skills.map((skill) => {
-			const proficient = playerStats.skillProficiencies.includes(skill.name);
-			skill.bonus = proficient ? ability.bonus + proficiency : ability.bonus;
-			if (playerStats.expertise && playerStats.expertise.includes(skill.name)) {
-				skill.bonus += proficiency;
-			 }
-			if (passiveSkills.includes(skill.name)) {
-				const newSense = {
-					name: `Passive ${skill.name}`,
-					value: 10 + skill.bonus
-				}
-				if (playerStats.senses && !playerStats.senses.some((sense) => sense.name === newSense.name)) {
-					playerStats.senses.push(newSense);
-				 }
-			 }
-			return skill;
-		 });
-		return ability;
-	 });
-	},
+    getAbilities: async (playerStats) => {
+        // 2024 Rules: Simpler ability calculation, no racial bonuses
+        const skills = await getSkills();
+        const passiveSkills = await getPassiveSkills();
+        return playerStats.abilities.map((ability) => {
+            const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
+            ability.totalScore = ability.baseScore + ability.abilityImprovements + ability.miscBonus;
+            // No racial bonuses in 2024
+            ability.bonus = Math.floor((ability.totalScore - 10) / 2);
+            ability.proficient = playerStats.class.saving_throw_proficiencies ? playerStats.class.saving_throw_proficiencies.includes(ability.name) : false;
+            ability.save = ability.proficient ? ability.bonus + proficiency : ability.bonus;
+            ability.skills = skills.filter(skill => skill.ability === ability.name);
+            ability.skills = ability.skills.map((skill) => {
+                const proficient = playerStats.skillProficiencies.includes(skill.name);
+                skill.bonus = proficient ? ability.bonus + proficiency : ability.bonus;
+                if (playerStats.expertise && playerStats.expertise.includes(skill.name)) {
+                    skill.bonus += proficiency;
+                }
+                if (passiveSkills.includes(skill.name)) {
+                    const newSense = {
+                        name: `Passive ${skill.name}`,
+                        value: 10 + skill.bonus
+                    }
+                    if (playerStats.senses && !playerStats.senses.some((sense) => sense.name === newSense.name)) {
+                        playerStats.senses.push(newSense);
+                    }
+                }
+                return skill;
+            });
+            return ability;
+        });
+    },
     getActions: (playerStats) => {
         // 2024 Rules: Includes Magic, Utilize, and Craft actions
         const features = classRules.getFeatures(playerStats);
@@ -446,24 +446,54 @@ const rules = {
         }
         let hitPoints = hitPointDie + ((hitPointDie / 2 + 1) * (playerStats.level - 1)) + (constitution.bonus * playerStats.level);
 
-        // 2024: No racial HP bonuses like Hill Dwarf
-        // Feature-based HP bonuses handled in class-specific rules
+        // Check for racial hit point bonus (e.g., Hill Dwarf Dwarven Toughness)
+        if (playerStats.race.subrace && playerStats.race.subrace.hit_point_bonus_per_level) {
+            hitPoints += playerStats.race.subrace.hit_point_bonus_per_level * playerStats.level;
+        }
+
+        // Check for major hit point bonus (e.g., Draconic Sorcerer Draconic Resilience)
+        if (playerStats.class.major && playerStats.class.major.hit_point_bonus_per_level) {
+            hitPoints += playerStats.class.major.hit_point_bonus_per_level * playerStats.level;
+        }
 
         return hitPoints;
     },
     getLanguages: (playerStats) => {
         // 2024 Rules: Read languages from class and race JSON data
-        const raceLanguages = playerStats.race?.languages || [];
-        const classLanguages = playerStats.class?.languages || [];
-        let languages = [...new Set([...raceLanguages, ...classLanguages])];
+        let languages = [...(playerStats.race?.languages || [])];
         let languagesAllowed = languages.length;
 
         // Background languages (2024: from background JSON, default to 2)
         languagesAllowed += 2;
 
-        // Check for language_choices in class JSON (e.g., Rogue can choose extra languages)
+        // Check for race language choices (e.g., Half-Elf, Human, High Elf)
+        if (playerStats.race.language_choices) {
+            languagesAllowed += playerStats.race.language_choices.choose || 0;
+        }
+        if (playerStats.race.subrace && playerStats.race.subrace.language_options) {
+            languages = [...new Set([...languages, ...(playerStats.race.subrace.languages || [])])];
+            languagesAllowed += playerStats.race.subrace.language_options.choose || 0;
+        }
+
+        // Add class languages from JSON (e.g., Druid adds Druidic, Rogue adds Thieves' Cant)
+        languages = [...new Set([...languages, ...(playerStats.class?.languages || [])])];
+
+        // Check for class language choices (e.g., Ranger Favored Enemies)
         if (playerStats.class?.language_choices) {
-            languagesAllowed += playerStats.class.language_choices.choose || 0;
+            let rangerLanguageBonus = playerStats.class.language_choices.choose || 0;
+            languagesAllowed += rangerLanguageBonus;
+            // Ranger gets additional languages at levels 6 and 14
+            if (playerStats.class.name === 'Ranger') {
+                if (playerStats.level > 5) languagesAllowed += 1;
+                if (playerStats.level > 13) languagesAllowed += 1;
+            }
+        }
+
+        // Check for major language bonuses (e.g., Cleric/Knowledge Blessings of Knowledge)
+        if (playerStats.class.major) {
+            if (playerStats.class.major.language_choices) {
+                languagesAllowed += playerStats.class.major.language_choices.choose || 0;
+            }
         }
 
         if (playerStats.languages) {
@@ -545,11 +575,20 @@ const rules = {
             });
             proficienciesAllowed = proficiencies.length + 2; // Background proficiencies
 
+            // Check for major skill proficiency bonuses from JSON (e.g., Bard/Lore, Cleric/Knowledge, Cleric/Nature)
+            if (playerStats.class.major && playerStats.class.major.bonus_skill_proficiencies) {
+                proficienciesAllowed += playerStats.class.major.bonus_skill_proficiencies;
+            }
+
             if (playerStats.skillProficiencies) {
                 proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
             }
         } else {
             proficiencies = proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
+            // Add major proficiencies from JSON (e.g., Bard/Valor, Cleric majors, Rogue/Assassin)
+            if (playerStats.class.major && playerStats.class.major.bonus_proficiencies) {
+                proficiencies = [...new Set([...proficiencies, ...playerStats.class.major.bonus_proficiencies])];
+            }
             proficienciesAllowed = proficiencies.length + rules.getProficiencyChoiceCount(playerStats, false);
 
             if (playerStats.proficiencies) {
@@ -644,51 +683,51 @@ const rules = {
         }
         return spellMaxLevel;
     },
-        getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
-	console.log('[Rules2024 getPlayerStats] START');
-	const playerStats = cloneDeep(playerSummary);
-	playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
+    getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
+        console.log('[Rules2024 getPlayerStats] START');
+        const playerStats = cloneDeep(playerSummary);
+        playerStats.proficiency = Math.floor((playerSummary.level - 1) / 4 + 2);
 
-	 // Initialize senses array early to prevent undefined errors
-	playerStats.senses = [];
+        // Initialize senses array early to prevent undefined errors
+        playerStats.senses = [];
 
-	 // Store equipment reference for mastery lookup
-	playerStats.equipment = allEquipment;
+        // Store equipment reference for mastery lookup
+        playerStats.equipment = allEquipment;
 
-	console.log('[Rules2024 getPlayerStats] Before getMagicItems:', {
-		hasInventory: !!playerSummary.inventory,
-		hasMagicItemsInInventory: !!playerSummary.inventory?.magicItems,
-		magicItemsData: JSON.stringify(playerSummary.inventory?.magicItems)
-	});
-	playerStats.class = classRules.getClass(allClasses, playerSummary);
-	playerStats.race = raceRules.getRace(allRaces, playerSummary);
-	const resultMagicItems = rules.getMagicItems(allMagicItems, playerSummary);
-	console.log('[Rules2024 getPlayerStats] getMagicItems returned:', {
-		hasResult: !!resultMagicItems,
-		length: resultMagicItems?.length || 0,
-		data: JSON.stringify(resultMagicItems)
-	});
-	playerStats.inventory.magicItems = resultMagicItems;
+        console.log('[Rules2024 getPlayerStats] Before getMagicItems:', {
+            hasInventory: !!playerSummary.inventory,
+            hasMagicItemsInInventory: !!playerSummary.inventory?.magicItems,
+            magicItemsData: JSON.stringify(playerSummary.inventory?.magicItems)
+        });
+        playerStats.class = classRules.getClass(allClasses, playerSummary);
+        playerStats.race = raceRules.getRace(allRaces, playerSummary);
+        const resultMagicItems = rules.getMagicItems(allMagicItems, playerSummary);
+        console.log('[Rules2024 getPlayerStats] getMagicItems returned:', {
+            hasResult: !!resultMagicItems,
+            length: resultMagicItems?.length || 0,
+            data: JSON.stringify(resultMagicItems)
+        });
+        playerStats.inventory.magicItems = resultMagicItems;
 
-	 // Dependency on class and race begin here 
-	[playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats);
-	[playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
-	[playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false);
-	[playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true);
+        // Dependency on class and race begin here 
+        [playerStats.actions, playerStats.bonusActions, playerStats.reactions, playerStats.specialActions, playerStats.characterAdvancement] = rules.getActions(playerStats);
+        [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats);
+        [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false);
+        [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true);
 
-	 // Dependency on abilities begin here
-	playerStats.abilities = await rules.getAbilities(playerStats);
-	playerStats.hitPoints = rules.getHitPoints(playerStats);
-	playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
-	[playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats);
-	playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
-	playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats);
+        // Dependency on abilities begin here
+        playerStats.abilities = await rules.getAbilities(playerStats);
+        playerStats.hitPoints = rules.getHitPoints(playerStats);
+        playerStats.initiative = playerStats.abilities.find((ability) => ability.name === 'Dexterity').bonus;
+        [playerStats.armorClass, playerStats.armorClassFormula] = rules.getArmorClass(allEquipment, playerStats);
+        playerStats.spellAbilities = rules.getSpellAbilities(allSpells, playerStats);
+        playerStats.attacks = rules.getAttacks(allEquipment, allSpells, playerStats);
 
-	 // Merge race senses with ability-based senses
-	playerStats.senses = raceRules.getSenses(playerStats);
+        // Merge race senses with ability-based senses
+        playerStats.senses = raceRules.getSenses(playerStats);
 
-	return playerStats;
-	}
+        return playerStats;
+    }
 };
 
 export default rules;

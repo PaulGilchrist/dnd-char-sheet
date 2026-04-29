@@ -1131,7 +1131,8 @@
                         "level": 14
                     }
                 ],
-                "spells": []
+                "spells": [],
+                "bonus_skill_proficiencies": 3
             },
             {
                 "name": "College of Valor",
@@ -1159,7 +1160,12 @@
                         "level": 14
                     }
                 ],
-                "spells": []
+                "spells": [],
+                "bonus_proficiencies": [
+                    "Medium Armor",
+                    "Shields",
+                    "Martial Weapons"
+                ]
             }
         ],
         "multiclassing": {
@@ -1744,6 +1750,9 @@
                         "name": "Mass Cure Wounds",
                         "level": 9
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor"
                 ]
             },
             {
@@ -1951,6 +1960,10 @@
                         "name": "Steel Wind Strike",
                         "level": 9
                     }
+                ],
+                "bonus_proficiencies": [
+                    "Heavy Armor",
+                    "Martial Weapons"
                 ]
             }
         ],
@@ -6308,7 +6321,11 @@
                         "level": 17
                     }
                 ],
-                "spells": []
+                "spells": [],
+                "bonus_proficiencies": [
+                    "Disguise Kit",
+                    "Poisoner's Kit"
+                ]
             },
             {
                 "name": "Soulknife",
@@ -6382,7 +6399,9 @@
             "core_traits_gained": "Gain Hit Point Die, proficiency in one skill of your choice from the Rogue's skill list, proficiency with Thieves' Tools, and training with Light armor.",
             "features_gained": "Gain the Rogue's level 1 features."
         },
-        "languages": [],
+        "languages": [
+            "Thieves' Cant"
+        ],
         "language_choices": {
             "choose": 1,
             "from": [
@@ -7133,7 +7152,8 @@
                         "name": "Summon Dragon",
                         "level": 9
                     }
-                ]
+                ],
+                "hit_point_bonus_per_level": 1
             },
             {
                 "name": "Wild Magic Sorcery",

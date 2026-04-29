@@ -201,7 +201,8 @@
                         ],
                         "proficiencies": []
                     }
-                ]
+                ],
+                "hit_point_bonus_per_level": 1
             },
             {
                 "index": "mountain-dwarf",
