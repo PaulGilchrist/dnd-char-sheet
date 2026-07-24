@@ -73,6 +73,10 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 vi.mock('../../combat/automation/automationService.js', () => ({
   hasTwoWeaponFighting: vi.fn(() => false),
   collectWeaponMastery: vi.fn(),
+  evaluateAutoExpression: vi.fn((expr, playerStats) => {
+    if (expr === 'proficiency_bonus') return playerStats?.proficiency || 0;
+    return null;
+  }),
 }));
 
 vi.mock('../../rules/combat/applyDamage.js', () => ({

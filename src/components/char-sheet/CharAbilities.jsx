@@ -394,7 +394,7 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
                                     const skill = item;
                                     const skillBonus = getSkillBonus(skill);
                                     const isExpert = playerStats.expertise?.includes(skill.name);
-                                    return <span key={skill.name}>
+                                    return <span key={skill.name} className='skills'>
                                         <span className={'clickable' + (exhaustionPenalty > 0 || conditionEffects?.abilityCheckDisadvantage || (conditionEffects?.abilityCheckDisadvantageAbilities?.includes(ability.name)) ? ' stat--penalized' : '')} onClick={() => {
                                             const checkCtx = { ...makeCheckContext(skill.name) };
                                             const biDie = getRuntimeValue(playerStats.name, 'bardicInspirationDie', campaignName);

@@ -1,5 +1,4 @@
 .char-abilities {
-    font-size: 1em;
     margin-top: 5px;
     overflow: visible;
 }
@@ -18,6 +17,10 @@
 }
 .char-abilities .abilities > div {
     padding-right: 10px;
+}
+
+.char-abilities .abilities .skills {
+    font-size: 1em;
 }
 
 @media print {

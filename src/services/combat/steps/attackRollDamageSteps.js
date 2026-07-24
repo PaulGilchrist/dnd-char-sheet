@@ -3,7 +3,7 @@ import { getCombatContext, getTargetFromAttacker } from '../../rules/combat/dama
 import { getCurrentCombatRound, loadCombatSummary } from '../../encounters/combatData.js';
 import { getRuntimeValue, setRuntimeObject, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getChosenRuntimeValue } from '../../automation/common/choiceStorage.js';
-import { hasTwoWeaponFighting, collectWeaponMastery } from '../../combat/automation/automationService.js';
+import { hasTwoWeaponFighting, collectWeaponMastery, evaluateAutoExpression } from '../../combat/automation/automationService.js';
 import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
 import { addEntry } from '../../ui/logService.js';
 import { getAttackRiderOptions, getAttackRiderOptionsByContext } from '../../automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
@@ -502,10 +502,15 @@ export function buildAttackRollDamageSteps() {
         if (heavy.length > 0 && (ctx.attack?.properties || []).includes('Heavy')) {
           for (const a of heavy) {
             const r = rollExpression(a.damageExpression);
-            if (r) {
+            const evalResult = evaluateAutoExpression(a.damageExpression, ctx.playerStats);
+            const bonusValue = r ? r.total : evalResult;
+            if (bonusValue) {
               const dt = a.damageType || ctx.attack?.damageType || 'Slashing';
-              formula += ` + ${a.damageExpression} [${dt === 'same_as_weapon' ? 'Slashing' : dt}]`;
-              total += r.total; rolls = [...rolls, ...r.rolls];
+              const label = dt === 'same_as_weapon' ? (a.name || 'Slashing') : dt;
+              const displayExpr = r ? a.damageExpression : String(bonusValue);
+              formula += ` + ${displayExpr} [${label}]`;
+              total += bonusValue;
+              if (r) rolls = [...rolls, ...r.rolls];
             }
           }
         }

@@ -6,7 +6,7 @@
     {
       "name": "Strength",
       "baseScore": 10,
-      "featIncrease": 0,
+      "featIncrease": 1,
       "backgroundIncrease": 0,
       "miscIncrease": 0
     },
@@ -59,7 +59,7 @@
   ],
   "feats": [
     "Magic Initiate",
-    "Grappler"
+    "Healer"
   ],
   "fightingStyles": [],
   "race": {
@@ -85,10 +85,9 @@
       "Waterskin"
     ],
     "equipped": [
-      "Quarterstaff",
       "Hand Crossbow",
       "Hand Crossbow",
-      "Dagger"
+      "Greatsword"
     ],
     "gold": 10,
     "magicItems": []

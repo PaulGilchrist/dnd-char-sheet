@@ -87,12 +87,13 @@ export async function resolveAttackDamageStandalone(attack, ctxOverrides, { play
  */
 export function normalizeAutoDamage(autoDamage, isCrit, playerStats) {
   const isUnarmed = autoDamage.name?.includes('Unarmed Strike');
+  const weaponAttack = playerStats?.attacks?.find(a => a.name === autoDamage.name);
   const attack = {
     name: autoDamage.name,
     damage: autoDamage.formula,
     damageType: autoDamage.damageType,
-    weaponType: isUnarmed ? 'unarmed' : 'weapon',
-    properties: [],
+    weaponType: isUnarmed ? 'unarmed' : (weaponAttack?.weaponType || 'weapon'),
+    properties: weaponAttack?.properties || [],
   };
 
   // Compute Empowered Evocation modifier
