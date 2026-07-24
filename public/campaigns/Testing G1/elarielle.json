@@ -59,7 +59,7 @@
   ],
   "feats": [
     "Magic Initiate",
-    "Shadow Touched"
+    "Grappler"
   ],
   "fightingStyles": [],
   "race": {
@@ -150,8 +150,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Shadow Touched-0": {
-      "assignment": "Intelligence"
+    "Grappler-0": {
+      "assignment": "Strength"
     }
   },
   "proficiencies": [

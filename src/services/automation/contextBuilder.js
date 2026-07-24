@@ -191,6 +191,22 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
 
+        // Grappler feat: advantage on attacks against grappled targets
+        if (targetName && forcedMode === undefined) {
+            const hasGrapplerAdvantage = (playerStats.saveModifiers || []).some(
+                mod => mod.target === 'attack_roll' || mod.target === 'attack_rolls'
+            );
+            if (hasGrapplerAdvantage) {
+                const targetConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                if (Array.isArray(targetConditions)) {
+                    const condSet = new Set(targetConditions.map(c => String(c).toLowerCase()));
+                    if (condSet.has('grappled')) {
+                        adv++;
+                    }
+                }
+            }
+        }
+
         // Dodge: attackers have disadvantage on attacks against the target
         if (targetName && forcedMode === undefined) {
             const targetBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];

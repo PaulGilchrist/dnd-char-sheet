@@ -160,6 +160,41 @@ describe('saveModifierApplies — creature_grappled_by_you', () => {
 });
 
 // ---------------------------------------------------------------------------
+// saveModifierApplies — grappling_target
+// ---------------------------------------------------------------------------
+
+describe('saveModifierApplies — grappling_target', () => {
+  const modifier = { target: 'attack_roll', condition: 'grappling_target', effect: 'advantage' };
+  const baseArgs = ['DEX', 'STR', false, false, false, false];
+
+  it('returns true when attacker has grappled target (5e Grappler feat)', () => {
+    const combatContext = {
+      creatures: [
+        { name: 'Player', targetName: 'Goblin' },
+        { name: 'Goblin', conditions: ['grappled'] },
+      ],
+      activeCreatureName: 'Player',
+    };
+    expect(saveModifierApplies(modifier, ...baseArgs, combatContext, [])).toBe(true);
+  });
+
+  it('returns false when target is not grappled', () => {
+    const combatContext = {
+      creatures: [
+        { name: 'Player', targetName: 'Goblin' },
+        { name: 'Goblin', conditions: ['blinded'] },
+      ],
+      activeCreatureName: 'Player',
+    };
+    expect(saveModifierApplies(modifier, ...baseArgs, combatContext, [])).toBe(false);
+  });
+
+  it('returns false when combatContext is null', () => {
+    expect(saveModifierApplies(modifier, ...baseArgs, null, [])).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // saveModifierApplies — mounted_and_target_one_size_smaller
 // ---------------------------------------------------------------------------
 

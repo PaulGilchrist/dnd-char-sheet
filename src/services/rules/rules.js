@@ -1388,11 +1388,11 @@ const rules = {
               let castingTime = featFeature.automation?.casting_time;
               if (castingTime) {
                   const ct = castingTime;
-                  if (ct === '1 action' && !playerStats.actions.some(f => f.name === featFeature.name)) {
+                  if ((ct === '1 action' || ct === 'action') && !playerStats.actions.some(f => f.name === featFeature.name)) {
                       playerStats.actions = [...playerStats.actions, featEntry];
-                  } else if (ct === '1 bonus action' && !playerStats.bonusActions.some(f => f.name === featFeature.name)) {
+                  } else if ((ct === '1 bonus action' || ct === 'bonus action') && !playerStats.bonusActions.some(f => f.name === featFeature.name)) {
                       playerStats.bonusActions = [...playerStats.bonusActions, featEntry];
-                  } else if (ct === '1 reaction' && !playerStats.reactions.some(f => f.name === featFeature.name)) {
+                  } else if ((ct === '1 reaction' || ct === 'reaction') && !playerStats.reactions.some(f => f.name === featFeature.name)) {
                       playerStats.reactions = [...playerStats.reactions, featEntry];
                   } else if (ct === 'passive' && featureCategories.characterAdvancement.includes(featFeature.name) && !playerStats.characterAdvancement.some(f => f.name === featFeature.name)) {
                       playerStats.characterAdvancement = [...playerStats.characterAdvancement, featEntry];

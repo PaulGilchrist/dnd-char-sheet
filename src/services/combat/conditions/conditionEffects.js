@@ -19,7 +19,7 @@ function saveModifierApplies(modifier, saveType, abilityName, isRaging = false, 
   if (modifier.effect === 'potent_cantrip') return true;
   if (modifier.effect === 'soulstitch_spells') return true;
   if (modifier.condition === 'trance_of_order_active') return isTranceOfOrderActive;
-  if (modifier.condition === 'creature_grappled_by_you') {
+  if (modifier.condition === 'grappling_target' || modifier.condition === 'creature_grappled_by_you') {
     if (!combatContext || !combatContext.creatures) return false;
     const attackerName = combatContext.activeCreatureName || combatContext.attackerName;
     if (!attackerName) return false;
