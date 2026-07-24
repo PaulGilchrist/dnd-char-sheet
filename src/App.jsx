@@ -163,6 +163,11 @@ function App() {
             const miStore = getStore(stats.name);
             miStore.set('_magicInitiateInstances', char.magicInitiateInstances);
           }
+          // Seed Fey Touched spell from character data into runtime store
+          if (char.feyTouchedSpell) {
+            const ftStore = getStore(stats.name);
+            ftStore.set('feyTouchedSpell', char.feyTouchedSpell);
+          }
         }
       })();
     }, [computedCharacters, campaignName]);

@@ -58,8 +58,8 @@
     "Perception"
   ],
   "feats": [
-    "Magic Initiate",
-    "Fey Touched"
+    "Fey Touched",
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -127,20 +127,22 @@
   ],
   "specialActions": [],
   "spells": [
-    "Find Familiar",
-    "Fire Bolt",
-    "Mage Hand",
-    "Magic Missile",
-    "Shield",
-    "Enlarge/Reduce",
-    "Invisibility",
     "Misty Step",
-    "Poison Spray",
-    "Chill Touch",
-    "Feather Fall",
-    "Haste"
+    "Guidance",
+    "Light",
+    "Healing Word",
+    "Detect Evil and Good"
   ],
-  "magicInitiateInstances": [],
+  "magicInitiateInstances": [
+    {
+      "class": "Cleric",
+      "cantrips": [
+        "Guidance",
+        "Light"
+      ],
+      "level1Spell": "Healing Word"
+    }
+  ],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
@@ -153,5 +155,6 @@
   },
   "proficiencies": [
     "3 from: Artisan's Tools"
-  ]
+  ],
+  "feyTouchedSpell": "Detect Evil and Good"
 }

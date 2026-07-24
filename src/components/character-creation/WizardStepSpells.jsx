@@ -5,6 +5,7 @@ import { getSpellLimits, validateSpellSelection } from '../../services/rules/spe
 import { getSpellValidationInfo } from '../../services/rules/spells/spellValidation.js';
 import { renderMarkdown } from '../../services/ui/sanitize.js';
 import MagicInitiateModal from './MagicInitiateModal.jsx';
+import FeyTouchedModal from './FeyTouchedModal.jsx';
 import './WizardStepSpells.css';
 
 // Mystic Arcanum level requirements for Warlock
@@ -27,6 +28,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
   const charLevel = parseInt(formData?.level) || 1;
   const [expandedArcanumSpell, setExpandedArcanumSpell] = useState(null);
   const [showMagicInitiateModal, setShowMagicInitiateModal] = useState(false);
+  const [showFeyTouchedModal, setShowFeyTouchedModal] = useState(false);
   const miSpells = useMemo(() => {
     const spells = new Set();
     (formData.magicInitiateInstances || []).forEach(inst => {
@@ -36,6 +38,12 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
     });
     return spells;
   }, [formData.magicInitiateInstances]);
+
+  const ftSpells = useMemo(() => {
+    const spells = new Set();
+    if (formData.feyTouchedSpell) spells.add(formData.feyTouchedSpell);
+    return spells;
+  }, [formData.feyTouchedSpell]);
 
   const qualifyingArcanumLevels = useMemo(() => {
     if (!isWarlock) return [];
@@ -106,6 +114,18 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
     }
   }, [formData.feats, formData.magicInitiateInstances]);
 
+  // Show Fey Touched modal when feat is selected and spell not yet configured
+  useEffect(() => {
+    const feats = formData.feats || [];
+    const hasFeyTouched = feats.some(f => f === 'Fey Touched' || f.index === 'fey-touched');
+    if (!hasFeyTouched) {
+      return;
+    }
+    if (!formData.feyTouchedSpell) {
+      setShowFeyTouchedModal(true);
+    }
+  }, [formData.feats, formData.feyTouchedSpell]);
+
     // Calculate spell counts by level (excluding pre-selected spells and Magic Initiate spells)
     useEffect(() => {   
       const counts = { cantrip: 0, level1: 0, level2: 0, level3: 0, level4: 0, level5: 0, level6: 0, level7: 0, level8: 0, level9: 0 };
@@ -114,6 +134,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
         formData.spells.forEach(spellName => {
           if (preSelected.includes(spellName)) return;
           if (miSpells.has(spellName)) return;
+          if (ftSpells.has(spellName)) return;
           const spell = allSpells.find(s => s.name === spellName || s.index === spellName);
           if (spell) {
             const level = spell.level !== undefined ? spell.level : 0;
@@ -122,9 +143,9 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
            }
           });
        }
-      
+       
       setSpellCounts(counts);
-      }, [formData.spells, allSpells, preSelected, miSpells]);
+      }, [formData.spells, allSpells, preSelected, miSpells, ftSpells]);
 
      // Filter spells to only those of levels for which the character has at least one spell slot.
     // Cantrips are always available since they don't require spell slots.
@@ -498,6 +519,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
 
     const magicInitiateFeats = (formData.feats || []).filter(f => f === 'Magic Initiate' || (typeof f === 'object' && f.name === 'Magic Initiate'));
     const hasMagicInitiate = magicInitiateFeats.length > 0;
+    const hasFeyTouched = (formData.feats || []).some(f => f === 'Fey Touched' || (typeof f === 'object' && f.name === 'Fey Touched'));
 
     return (
         <div className="wizard-step-spells">
@@ -509,6 +531,14 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
           onClose={() => setShowMagicInitiateModal(false)}
         />
       )}
+      {showFeyTouchedModal && (
+        <FeyTouchedModal
+          formData={formData}
+          allSpells={allSpells}
+          onArrayFieldChange={onArrayFieldChange}
+          onClose={() => setShowFeyTouchedModal(false)}
+        />
+      )}
       {renderArcanumSelection()}
       {hasMagicInitiate && !showMagicInitiateModal && (
         <div className="mi-wizard-banner">
@@ -518,6 +548,17 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
             onClick={() => setShowMagicInitiateModal(true)}
           >
             <i className="fa-solid fa-hat-wizard"></i> Edit Magic Initiate
+          </button>
+        </div>
+      )}
+      {hasFeyTouched && formData.feyTouchedSpell && !showFeyTouchedModal && (
+        <div className="mi-wizard-banner">
+          <button
+            type="button"
+            className="mi-wizard-edit-btn"
+            onClick={() => setShowFeyTouchedModal(true)}
+          >
+            <i className="fa-solid fa-leaf"></i> Edit Fey Magic
           </button>
         </div>
       )}

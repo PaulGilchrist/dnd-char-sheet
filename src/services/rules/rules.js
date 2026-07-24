@@ -1444,6 +1444,39 @@ const rules = {
             }
           });
 
+          // Add Fey Touched level 1 spell free_spell feature
+          const ftSpell = playerStats.feyTouchedSpell;
+          if (ftSpell) {
+            const ftAutomation = playerStats.automation?.specialActions || [];
+            const ftAlreadyAdded = ftAutomation.some(a => 
+              a.type === 'free_spell' && 
+              (a.spell === ftSpell || (Array.isArray(a.spell) && a.spell.includes(ftSpell)))
+            );
+            if (!ftAlreadyAdded) {
+              const ftFeatureName = 'Fey Magic';
+              const newFtFeature = {
+                name: ftFeatureName,
+                description: `Fey Touched: Cast ${ftSpell} once for free. Recharges on long rest.`,
+                type: 'free_spell',
+                automation: {
+                  type: 'free_spell',
+                  spell: ftSpell,
+                  name: ftFeatureName,
+                  uses: 1,
+                  recharge: 'long_rest',
+                },
+              };
+              playerStats.specialActions.push(newFtFeature);
+              playerStats.automation.specialActions.push({
+                type: 'free_spell',
+                spell: ftSpell,
+                name: ftFeatureName,
+                uses: 1,
+                recharge: 'long_rest',
+              });
+            }
+          }
+
           // Re-sort all action arrays after feat features are merged
           playerStats.actions = uniqBy(playerStats.actions, 'name').sort((a, b) => a.name.localeCompare(b.name));
           playerStats.bonusActions = uniqBy(playerStats.bonusActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
