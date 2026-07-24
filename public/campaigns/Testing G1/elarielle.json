@@ -58,8 +58,8 @@
     "Perception"
   ],
   "feats": [
-    "Fey Touched",
-    "Magic Initiate"
+    "Magic Initiate",
+    "Shadow Touched"
   ],
   "fightingStyles": [],
   "race": {
@@ -131,7 +131,8 @@
     "Guidance",
     "Light",
     "Healing Word",
-    "Detect Evil and Good"
+    "Detect Evil and Good",
+    "Disguise Self"
   ],
   "magicInitiateInstances": [
     {
@@ -149,12 +150,13 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Fey Touched-0": {
+    "Shadow Touched-0": {
       "assignment": "Intelligence"
     }
   },
   "proficiencies": [
     "3 from: Artisan's Tools"
   ],
-  "feyTouchedSpell": "Detect Evil and Good"
+  "feyTouchedSpell": "Detect Evil and Good",
+  "shadowTouchedSpell": "Disguise Self"
 }

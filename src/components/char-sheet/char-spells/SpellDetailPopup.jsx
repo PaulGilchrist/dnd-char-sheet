@@ -98,6 +98,8 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     if (entry.perSpellTracking) {
+      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+      if (!spells.includes(spellName)) continue;
       const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
       const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
       const hasFreeCast = !!getRuntimeValue(playerName, freeKey);
@@ -146,6 +148,8 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     if (entry.perSpellTracking) {
+      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+      if (!spells.includes(spellName)) continue;
       const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
       const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
       const hasFreeCast = !!getRuntimeValue(playerName, freeKey);
@@ -195,6 +199,8 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     if (entry.perSpellTracking) {
+      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+      if (!spells.includes(spellName)) continue;
       const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
       const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
       const hasFreeCast = !!getRuntimeValue(playerName, freeKey);

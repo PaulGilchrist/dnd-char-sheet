@@ -363,6 +363,11 @@ export async function validateSpells(formData, selectedSpells, allSpells, versio
     allowedSpells.add(formData.feyTouchedSpell);
   }
   
+  // Add Shadow Touched spells — they are granted by the feat and should not trigger the "outside class list" warning
+  if (formData.shadowTouchedSpell) {
+    allowedSpells.add(formData.shadowTouchedSpell);
+  }
+  
   // Check if Bard has Magical Secrets (2024) — load class data once
   const className = sources.class.name;
   const isMagicalSecretsBard = className === 'Bard' && version === '2024';

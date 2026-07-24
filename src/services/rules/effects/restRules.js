@@ -755,6 +755,11 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue(name, '_feyTouchedSpell_freeCastCount', null, campaignName, true)
     }
 
+    // Reset Shadow Touched free cast counter on long rest
+    if (playerStats.shadowTouchedSpell) {
+      setRuntimeValue(name, '_shadowTouchedSpell_freeCastCount', null, campaignName, true)
+    }
+
     // Reset Undying Sentinel (Oath of Glory level 15) on long rest
     setRuntimeValue(name, 'undyingSentinelUsed', false, campaignName, true)
 

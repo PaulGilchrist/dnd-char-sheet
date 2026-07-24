@@ -887,8 +887,14 @@ const rules = {
      },
 
      // === SHARED: getPlayerStats (handles both rulesets internally) ===
-    getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
-        const playerStats = cloneDeep(playerSummary);
+     getPlayerStats: async (allClasses, allEquipment, allMagicItems, allRaces, allSpells, playerSummary) => {
+         const playerStats = cloneDeep(playerSummary);
+
+         // Read Fey Touched and Shadow Touched spells from runtime store
+         const ftSpell = getRuntimeValue(playerStats.name, 'feyTouchedSpell');
+         if (ftSpell) playerStats.feyTouchedSpell = ftSpell;
+         const stSpell = getRuntimeValue(playerStats.name, 'shadowTouchedSpell');
+         if (stSpell) playerStats.shadowTouchedSpell = stSpell;
 
          // Preserve rules type for downstream dispatch
         playerStats.rules = playerSummary.rules || '5e';
@@ -1471,6 +1477,39 @@ const rules = {
                 type: 'free_spell',
                 spell: ftSpell,
                 name: ftFeatureName,
+                uses: 1,
+                recharge: 'long_rest',
+              });
+            }
+          }
+
+          // Add Shadow Touched level 1 spell free_spell feature
+          const stSpell = playerStats.shadowTouchedSpell;
+          if (stSpell) {
+            const stAutomation = playerStats.automation?.specialActions || [];
+            const stAlreadyAdded = stAutomation.some(a => 
+              a.type === 'free_spell' && 
+              (a.spell === stSpell || (Array.isArray(a.spell) && a.spell.includes(stSpell)))
+            );
+            if (!stAlreadyAdded) {
+              const stFeatureName = 'Shadow Magic';
+              const newStFeature = {
+                name: stFeatureName,
+                description: `Shadow Touched: Cast ${stSpell} once for free. Recharges on long rest.`,
+                type: 'free_spell',
+                automation: {
+                  type: 'free_spell',
+                  spell: stSpell,
+                  name: stFeatureName,
+                  uses: 1,
+                  recharge: 'long_rest',
+                },
+              };
+              playerStats.specialActions.push(newStFeature);
+              playerStats.automation.specialActions.push({
+                type: 'free_spell',
+                spell: stSpell,
+                name: stFeatureName,
                 uses: 1,
                 recharge: 'long_rest',
               });

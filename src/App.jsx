@@ -168,6 +168,11 @@ function App() {
             const ftStore = getStore(stats.name);
             ftStore.set('feyTouchedSpell', char.feyTouchedSpell);
           }
+          // Seed Shadow Touched spell from character data into runtime store
+          if (char.shadowTouchedSpell) {
+            const stStore = getStore(stats.name);
+            stStore.set('shadowTouchedSpell', char.shadowTouchedSpell);
+          }
         }
       })();
     }, [computedCharacters, campaignName]);
