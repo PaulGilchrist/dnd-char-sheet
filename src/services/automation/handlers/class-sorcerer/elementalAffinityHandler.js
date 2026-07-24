@@ -75,13 +75,18 @@ export async function applyTypeChoice(action, playerStats, campaignName, chosenT
         description: `${name} — damage type ${isChange ? 'changed to' : 'set to'} ${chosenType}`,
     }).catch(() => {});
 
+    const isElementalAdept = action.effect === 'elemental_adept';
+    const popupDescription = isElementalAdept
+        ? `${name}: ${chosenType} selected. Spells you cast ignore Resistance to damage of the chosen type. In addition, when you roll damage for a spell you cast that deals damage of that type, you can treat any 1 on a damage die as a 2.`
+        : `${name}: ${chosenType} selected. You gain resistance to ${chosenType} damage. When you cast a spell that deals ${chosenType} damage, add your Charisma modifier.`;
+
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
             name,
             automationType: action.type,
-            description: `${name}: ${chosenType} selected. You gain resistance to ${chosenType} damage. When you cast a spell that deals ${chosenType} damage, add your Charisma modifier.`,
+            description: popupDescription,
             automation: action,
         },
     };

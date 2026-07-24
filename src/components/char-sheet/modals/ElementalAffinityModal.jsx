@@ -41,7 +41,7 @@ function ElementalAffinityModal({ action, playerStats, campaignName, onClose }) 
                     <i className="fa-solid fa-bolt"></i> {action?.name || 'Elemental Affinity'}
                 </div>
                 <div className="sp-body">
-                    <p>{existingType ? 'Change damage type (currently ' + existingType + '):' : 'Choose one damage type (Acid, Cold, Fire, Lightning, or Poison). You gain resistance to that type. When you cast a spell that deals damage of that type, add your Charisma modifier to one damage roll.'}</p>
+                    <p>{existingType ? 'Change damage type (currently ' + existingType + '):' : (action?.automation?.effect === 'elemental_adept' ? 'Choose one of the following damage types (Acid, Cold, Fire, Lightning, or Thunder). Spells you cast ignore Resistance to damage of the chosen type. In addition, when you roll damage for a spell you cast that deals damage of that type, you can treat any 1 on a damage die as a 2.' : 'Choose one damage type (Acid, Cold, Fire, Lightning, or Poison). You gain resistance to that type. When you cast a spell that deals damage of that type, add your Charisma modifier to one damage roll.')}</p>
                     <div style={{ textAlign: 'left', marginTop: '12px' }}>
                         {damageTypes.map((type, i) => {
                             const isSelected = selected === type;

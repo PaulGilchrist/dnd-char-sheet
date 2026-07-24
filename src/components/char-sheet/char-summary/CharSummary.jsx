@@ -245,6 +245,14 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const fiendishResilienceType = getRuntimeValue(playerStats.name, '_Fiendish_Resilience_chosenType', campaignName);
     const boonEnergyResistanceTypes = useRuntimeValue(playerStats.name, '_Energy_Resistances_chosenTypes', campaignName) || [];
 
+    const elementalAdeptTypes = (playerStats.automation?.passives || [])
+        .filter(p => p.type === 'damage_type_choice' && p.effect === 'elemental_adept')
+        .map(p => {
+            const key = '_' + (p.name || '').replace(/\s+/g, '_') + '_chosenType';
+            return getRuntimeValue(playerStats.name, key, campaignName);
+        })
+        .filter(Boolean);
+
     const rageActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.name === 'Rage');
     const rageConditionalImmunities = rageActive
         ? (playerStats.automationConditionalImmunities || [])
@@ -255,7 +263,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const automationImmunities = playerStats.automationConditionImmunities || [];
     const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;

@@ -59,8 +59,7 @@
   ],
   "feats": [
     "Magic Initiate",
-    "Durable",
-    "Lucky"
+    "Elemental Adept"
   ],
   "fightingStyles": [],
   "race": {
@@ -148,35 +147,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Ability Score Improvement-1": {
-      "mode": "single",
-      "assignments": {
-        "single": "Constitution",
-        "dual": [
-          "Constitution",
-          "Intelligence"
-        ]
-      }
-    },
-    "Ability Score Improvement-2": {
-      "mode": "single",
-      "assignments": {
-        "single": "Intelligence",
-        "dual": [
-          "Strength",
-          ""
-        ]
-      }
-    },
-    "Ability Score Improvement-0": {
-      "mode": "single",
-      "assignments": {
-        "single": "Strength",
-        "dual": [
-          "Strength",
-          ""
-        ]
-      }
+    "Elemental Adept-0": {
+      "assignment": "Intelligence"
     }
   },
   "proficiencies": [

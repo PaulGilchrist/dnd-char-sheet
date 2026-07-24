@@ -168,6 +168,7 @@ const categories2024 = {
         "Inner Radiance", // Included in Celestial Revelation
         "Keen Senses",
         "Level 1 Spell",
+        "Luck Points",
         "Monk Subclass",
         "Mystic Arcanum (level 7 spell)",
         "Mystic Arcanum (level 8 spell)",
