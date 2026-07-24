@@ -588,7 +588,8 @@
     "description": "A fierce warrior of primitive background who can enter a battle rage",
     "page": 46,
     "starting_wealth": "2d4 x 10 gp",
-    "features": []
+    "features": [],
+    "spell_casting_ability": "Intelligence"
   },
   {
     "index": "bard",
@@ -12414,8 +12415,8 @@
                 "prerequisites": [],
                 "description": "You can call on your patron to alter fate in your favor. When you make an ability check or a saving throw, you can use this feature to add a d10 to your roll. You can do so after seeing the initial roll but before any of the roll's effects occur. Once you use this feature, you can't use it again until you finish a short or long rest.",
                 "automation": {
-                    "type": "dark_ones_luck",
-                    "diceExpression": "1d10"
+                  "type": "dark_ones_luck",
+                  "diceExpression": "1d10"
                 }
               }
             ]

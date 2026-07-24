@@ -46,12 +46,10 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Hermit",
   "class": {
     "name": "Rogue",
     "subclass": {
-      "name": "Arcane Trickster",
-      "type": ""
+      "name": "Assassin"
     },
     "divineOrder": "",
     "primalOrder": "",
@@ -66,7 +64,9 @@
     "Deception",
     "Sleight of Hand"
   ],
-  "feats": [],
+  "feats": [
+    "Healer"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Tiefling",
@@ -106,12 +106,20 @@
     "Sleight of Hand",
     "Deception",
     "Perception",
-    "Stealth"
+    "Stealth",
+    "Medicine",
+    "Religion"
+  ],
+  "toolProficiencies": [
+    "Herbalism Kit",
+    "Thieves' Tools"
   ],
   "specialActions": [],
   "spells": [],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Hermit",
   "imagePath": "images/Vexiron.png"
 }

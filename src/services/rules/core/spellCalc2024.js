@@ -62,6 +62,55 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             spells_known: 0,
         };
     }
+    
+    // Fallback: if no spellcasting from class/major but character has spells from feats/races/etc
+    if (!spellAbilities && playerStats.spells && playerStats.spells.length > 0) {
+        const highestSpellLevel = Math.max(...playerStats.spells.map(spellName => {
+            const spellDetail = allSpells.find(s => s.name === spellName);
+            return spellDetail ? spellDetail.level : 0;
+        }));
+        
+        const halfCasterSlots = {
+            1: { 1: 2 },
+            2: { 1: 2 },
+            3: { 1: 3 },
+            4: { 1: 3 },
+            5: { 1: 3 },
+            6: { 1: 3 },
+            7: { 1: 4, 2: 2 },
+            8: { 1: 4, 2: 2 },
+            9: { 1: 4, 2: 2 },
+            10: { 1: 4, 2: 3 },
+            11: { 1: 4, 2: 3 },
+            12: { 1: 4, 2: 3 },
+            13: { 1: 4, 2: 3, 3: 2 },
+            14: { 1: 4, 2: 3, 3: 2 },
+            15: { 1: 4, 2: 3, 3: 2 },
+            16: { 1: 4, 2: 3, 3: 3 },
+            17: { 1: 4, 2: 3, 3: 3 },
+            18: { 1: 4, 2: 3, 3: 3 },
+            19: { 1: 4, 2: 3, 3: 3 },
+            20: { 1: 4, 2: 3, 3: 3, 4: 1 }
+        };
+        
+        const baseSlots = halfCasterSlots[playerStats.level] || {};
+        const cappedSlots = {};
+        for (const [level, count] of Object.entries(baseSlots)) {
+            if (parseInt(level) <= highestSpellLevel) {
+                cappedSlots[level] = count;
+            }
+        }
+        
+        spellAbilities = {
+            cantrips_known: 0,
+            spells: [],
+            spells_known: 0,
+        };
+        
+        for (const [slotLevel, slotCount] of Object.entries(cappedSlots)) {
+            spellAbilities[`spell_slots_level_${slotLevel}`] = slotCount;
+        }
+    }
 
     if (spellAbilities) {
         if (playerStats.spells) {
@@ -161,6 +210,10 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     if (lineageName) {
                         const lineageData = feature.options?.find(o => o.name === lineageName);
                         if (lineageData) {
+                            // Set spellcasting ability from lineage if specified
+                            if (lineageData.spellcastingAbility) {
+                                spellAbilities.spellCastingAbility = lineageData.spellcastingAbility;
+                            }
                             // Track cantrips and level spells for counters
                             let cantripCount = 0;
                             let levelSpellCount = 0;
@@ -375,15 +428,6 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             }
         }
 
-        // For non-spellcasting characters, set spellCastingAbility to the character's primary ability (highest bonus)
-        if (!playerStats.class.spell_casting_ability && !playerStats.class.major?.spell_casting_ability) {
-            const primaryAbility = playerStats.abilities.reduce((best, ability) => {
-                return (ability.bonus || 0) > (best.bonus || 0) ? ability : best;
-            }, playerStats.abilities[0]);
-            if (primaryAbility) {
-                spellAbilities.spellCastingAbility = primaryAbility.name;
-            }
-        }
 
         // Recalculate spellcasting ability stats if lineage/feat set it after the initial calculation
         if (spellAbilities.spellCastingAbility) {

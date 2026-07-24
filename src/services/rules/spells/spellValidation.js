@@ -265,15 +265,8 @@ export async function getSpellSources(formData, version = '5e') {
     const classes = await loadClassData(version);
     const classData = classes.find(c => c.name === formData.class.name);
     
-    if (classData) {
-      // Check if this class has spellcasting
-      const hasSpellcasting = classData.class_levels?.some(level => level.spellcasting) ||
-                            classData.subclass?.features?.some(feature => feature.spellcasting) ||
-                            classData.subclasses?.some(sub => sub.class_levels?.some(level => level.spellcasting));
-      
-      sources.class.isSpellcaster = !!hasSpellcasting;
-      sources.class.spellList = [formData.class.name];
-    }
+    sources.class.isSpellcaster = true;
+    sources.class.spellList = classData ? [formData.class.name] : [];
   }
   
   // Get race spells

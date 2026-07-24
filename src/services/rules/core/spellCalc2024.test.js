@@ -788,6 +788,7 @@ describe('spellCalc2024', () => {
         class: {
           name: 'Fighter',
           class_levels: [{ level: 3 }],
+          spell_casting_ability: 'Intelligence',
         },
         abilities: [
           { name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 },

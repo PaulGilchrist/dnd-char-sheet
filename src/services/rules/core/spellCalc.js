@@ -42,9 +42,62 @@ export function getSpellAbilities(allSpells, playerStats) {
              }
          } else {
             spellAbilities.spells = [];
-         }
-     }
-    if (playerStats.race.name === 'Tiefling') {
+          }
+      }
+      
+      // Fallback: if no spellcasting from class/subclass but character has spells from feats/races/etc
+      if (!spellAbilities && playerStats.spells && playerStats.spells.length > 0) {
+        const highestSpellLevel = Math.max(...playerStats.spells.map(spellName => {
+          const spellDetail = allSpells.find(s => s.name === spellName);
+          return spellDetail ? spellDetail.level : 0;
+        }));
+        
+        const halfCasterSlots = {
+          1: { 1: 2 },
+          2: { 1: 2 },
+          3: { 1: 3 },
+          4: { 1: 3 },
+          5: { 1: 3 },
+          6: { 1: 3 },
+          7: { 1: 4, 2: 2 },
+          8: { 1: 4, 2: 2 },
+          9: { 1: 4, 2: 2 },
+          10: { 1: 4, 2: 3 },
+          11: { 1: 4, 2: 3 },
+          12: { 1: 4, 2: 3 },
+          13: { 1: 4, 2: 3, 3: 2 },
+          14: { 1: 4, 2: 3, 3: 2 },
+          15: { 1: 4, 2: 3, 3: 2 },
+          16: { 1: 4, 2: 3, 3: 3 },
+          17: { 1: 4, 2: 3, 3: 3 },
+          18: { 1: 4, 2: 3, 3: 3 },
+          19: { 1: 4, 2: 3, 3: 3 },
+          20: { 1: 4, 2: 3, 3: 3, 4: 1 }
+        };
+        
+        const baseSlots = halfCasterSlots[playerStats.level] || {};
+        const cappedSlots = {};
+        for (const [level, count] of Object.entries(baseSlots)) {
+          if (parseInt(level) <= highestSpellLevel) {
+            cappedSlots[level] = count;
+          }
+        }
+        
+        spellAbilities = {
+          cantrips_known: 0,
+          spells_known: 0,
+          spells: [],
+        };
+        if (playerStats.class.spell_casting_ability) {
+          spellAbilities.spellCastingAbility = playerStats.class.spell_casting_ability;
+        }
+        
+        for (const [slotLevel, slotCount] of Object.entries(cappedSlots)) {
+          spellAbilities[`spell_slots_level_${slotLevel}`] = slotCount;
+        }
+      }
+      
+     if (playerStats.race.name === 'Tiefling') {
         if (!spellAbilities) {
             spellAbilities = {
                 cantrips_known: 0,
@@ -113,10 +166,16 @@ export function getSpellAbilities(allSpells, playerStats) {
         if (playerStats.class.spell_casting_ability) {
             spellAbilities.spellCastingAbility = playerStats.class.spell_casting_ability;
          }
-        const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
-        spellAbilities.modifier = spellAbility.bonus;
-        spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
-        spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
+         const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
+         if (!spellAbility) {
+             spellAbilities.modifier = 0;
+             spellAbilities.toHit = playerStats.proficiency;
+             spellAbilities.saveDc = 8 + playerStats.proficiency;
+         } else {
+             spellAbilities.modifier = spellAbility.bonus;
+             spellAbilities.toHit = spellAbility.bonus + playerStats.proficiency;
+             spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
+         }
          // subclass specific adjustments
         if(playerStats.class.subclass) {
             switch (playerStats.class.subclass.name) {

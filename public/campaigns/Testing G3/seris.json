@@ -46,12 +46,10 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Farmer",
   "class": {
     "name": "Monk",
     "subclass": {
-      "name": "Warrior of the Elements",
-      "type": ""
+      "name": "Warrior of the Open Hand"
     },
     "divineOrder": "",
     "primalOrder": ""
@@ -96,13 +94,20 @@
     "Acrobatics",
     "Insight",
     "Medicine",
-    "Religion"
+    "Religion",
+    "Animal Handling",
+    "Nature"
+  ],
+  "toolProficiencies": [
+    "Carpenter's Tools"
   ],
   "specialActions": [],
   "spells": [],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Farmer",
   "imagePath": "images/Seris.png",
   "proficiencies": [
     "3 from: Artisan's Tools"

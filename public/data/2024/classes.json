@@ -1190,7 +1190,8 @@
       "requirements": "Strength 13",
       "core_traits_gained": "Hit Point Die, proficiency with Martial weapons, and training with Shields.",
       "features_gained": "The Barbarian's level 1 features, which are listed in the Barbarian Features table."
-    }
+    },
+    "spell_casting_ability": "Intelligence"
   },
   {
     "index": "bard",
@@ -5600,7 +5601,8 @@
       "requirements": "None specified",
       "core_traits_gained": "Hit Point Die, proficiency with Martial weapons, and training with Light and Medium armor and Shields",
       "features_gained": "Fighter's level 1 features"
-    }
+    },
+    "spell_casting_ability": "Intelligence"
   },
   {
     "index": "monk",
@@ -6783,7 +6785,8 @@
       "requirements": "Prerequisite: Dexterity and Wisdom 13",
       "core_traits_gained": "Gain the Hit Point Die trait. Gain the Monk's level 1 features.",
       "features_gained": "Gain the Monk's level 1 features."
-    }
+    },
+    "spell_casting_ability": "Wisdom"
   },
   {
     "index": "paladin",
@@ -9769,7 +9772,7 @@
             "automation": {
               "type": "passive_rule",
               "effect": "magical_ambush",
-               "casting_time": "passive"
+              "casting_time": "passive"
             }
           },
           {
@@ -10100,7 +10103,8 @@
         "Sylvan",
         "Undercommon"
       ]
-    }
+    },
+    "spell_casting_ability": "Intelligence"
   },
   {
     "index": "sorcerer",

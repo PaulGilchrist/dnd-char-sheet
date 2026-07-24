@@ -94,7 +94,7 @@ describe('spellValidation', () => {
 
         const result = await getSpellSources({ class: { name: 'Fighter' } }, '5e');
 
-        expect(result.class.isSpellcaster).toBe(false);
+        expect(result.class.isSpellcaster).toBe(true);
       });
     });
 
@@ -480,7 +480,7 @@ describe('spellValidation', () => {
       );
 
       expect(result.spellCount).toBe(1);
-      expect(result.isSpellcaster).toBe(false);
+      expect(result.isSpellcaster).toBe(true);
       expect(result.sources).toBeDefined();
       expect(result.sources.class).toBeDefined();
       expect(result.sources.race).toBeDefined();

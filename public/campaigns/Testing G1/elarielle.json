@@ -59,7 +59,7 @@
   ],
   "feats": [
     "Magic Initiate",
-    "Elemental Adept"
+    "Fey Touched"
   ],
   "fightingStyles": [],
   "race": {
@@ -147,7 +147,7 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Elemental Adept-0": {
+    "Fey Touched-0": {
       "assignment": "Intelligence"
     }
   },
