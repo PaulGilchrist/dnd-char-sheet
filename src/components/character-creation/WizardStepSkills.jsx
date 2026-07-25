@@ -121,6 +121,19 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 
 	const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
 	const isSkillProficient = (skill) => (formData.skillProficiencies || []).includes(skill);
+	const handleProficiencyToggle = (skill) => {
+		const isCurrentlyProficient = (formData.skillProficiencies || []).includes(skill);
+		const isCurrentlyExpert = (formData.expertSkills || []).includes(skill);
+
+		if (!isCurrentlyProficient) {
+			onSkillToggle(skill);
+		} else {
+			onSkillToggle(skill);
+			if (isCurrentlyExpert) {
+				onSkillExpertiseToggle(skill, false);
+			}
+		}
+	};
 	const isPreSelected = (skill) => (preSelectedSkills || []).includes(skill);
 
 	return (
@@ -157,7 +170,7 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 							<input
 							type="checkbox"
 							checked={isSkillProficient(skill.name)}
-							onChange={() => onSkillToggle(skill.name)}
+							onChange={() => handleProficiencyToggle(skill.name)}
 							disabled={isPreSelected(skill.name) && isSkillProficient(skill.name)}
 							/>
 							&nbsp;
@@ -171,9 +184,10 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 							type="button"
 							className={`expertise-toggle-btn ${isSkillExpert(skill.name) ? 'active' : ''}`}
 							onClick={() => handleExpertiseToggle(skill.name)}
-							disabled={!isSkillProficient(skill.name) || !canElevateSkill(skill.name)}
+							disabled={isSkillExpert(skill.name) ? false : (!isSkillProficient(skill.name) || !canElevateSkill(skill.name))}
 							title={
-								!isSkillProficient(skill.name) ? 'Select proficient first'
+								isSkillExpert(skill.name) ? 'Click to remove Expert status'
+								: !isSkillProficient(skill.name) ? 'Select proficient first'
 								: !canElevateSkill(skill.name) ? 'All expertise slots exhausted'
 								: 'Click to elevate to Expert'
 							}
