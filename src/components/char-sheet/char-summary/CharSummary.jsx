@@ -548,7 +548,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
           </div>}
           {playerStats.vulnerabilities != null && playerStats.vulnerabilities.length > 0 && <span><b>Vulnerabilities: </b>{playerStats.vulnerabilities.join(', ')}</span>}
             {playerStats.senses != null && playerStats.senses.length > 0 && <div><b>Senses: </b>{playerStats.senses.map((sense) => { return `${sense.name} ${sense.value}`;}).join(', ')}</div>}
-            {playerStats.proficiencies != null && playerStats.proficiencies.length > 0 && <div><b>Proficiencies: </b>{playerStats.proficiencies.filter(p => !/^(\d+) from: (.+)$/.test(p)).join(', ')}</div>}
+            {playerStats.proficiencies?.length > 0 && <div><b>Proficiencies: </b>{[...playerStats.proficiencies.filter(p => !/^(\d+) from: (.+)$/.test(p)), ...(playerStats.toolProficiencies || [])].join(', ')}</div>}
             {playerStats.languages != null && playerStats.languages.length > 0 && <span><b>Languages: </b>{playerStats.languages.join(', ')}</span>}<br />
             {showShortRest && (
                 <ShortRestModal

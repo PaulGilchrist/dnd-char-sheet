@@ -58,8 +58,9 @@
     "Arcana"
   ],
   "feats": [
+    "Musician",
     "Tough",
-    "Musician"
+    "Observant"
   ],
   "fightingStyles": [],
   "race": {
@@ -155,8 +156,8 @@
   "background": "Farmer",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Chef-0": {
-      "assignment": "Constitution"
+    "Observant-0": {
+      "assignment": "Intelligence"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",
