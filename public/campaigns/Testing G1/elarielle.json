@@ -7,21 +7,21 @@
       "name": "Strength",
       "baseScore": 10,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
       "name": "Dexterity",
       "baseScore": 12,
       "featIncrease": 2,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 2
     },
     {
       "name": "Constitution",
       "baseScore": 15,
       "featIncrease": 0,
-      "backgroundIncrease": 2,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
@@ -35,14 +35,14 @@
       "name": "Wisdom",
       "baseScore": 9,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
       "name": "Charisma",
       "baseScore": 10,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     }
   ],
@@ -58,9 +58,8 @@
     "Arcana"
   ],
   "feats": [
-    "Magic Initiate",
-    "Musician",
-    "Chef"
+    "Tough",
+    "Musician"
   ],
   "fightingStyles": [],
   "race": {
@@ -109,10 +108,20 @@
     "History",
     "Acrobatics",
     "Sleight of Hand",
-    "Perception"
+    "Perception",
+    "Insight",
+    "Religion",
+    "Investigation",
+    "Persuasion",
+    "Deception",
+    "Stealth",
+    "Performance",
+    "Animal Handling",
+    "Nature"
   ],
   "toolProficiencies": [
-    "Calligrapher's Supplies"
+    "Cook's Utensils",
+    "Carpenter's Tools"
   ],
   "specialActions": [],
   "spells": [
@@ -141,7 +150,7 @@
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
-  "background": "Sage",
+  "background": "Farmer",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
     "Chef-0": {

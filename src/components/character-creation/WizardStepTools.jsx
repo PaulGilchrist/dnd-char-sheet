@@ -104,6 +104,7 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
             {toolLimits && Object.keys(toolLimits).length > 0 && (
                 <div className="rule-info">
                     <p><strong>Rules:</strong> You get tool proficiencies from your class, background, and feats.</p>
+                    <p>You may choose {Array.from(toolLimits.categoryLimits || []).filter(([, count]) => count > 0).map(([cat, count]) => `${count} ${cat}`).join(', ')}.</p>
                     <p>You have selected {realToolCount} tool proficiency/ies ({preSelected.length} pre-selected, {realToolCount - preSelected.length} chosen).</p>
                 </div>
             )}
