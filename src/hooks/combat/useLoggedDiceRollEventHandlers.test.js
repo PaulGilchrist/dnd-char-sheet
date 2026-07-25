@@ -432,6 +432,18 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
             expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({ type: 'roll', rollType: 'concentration-save', name: 'Constitution', condition: 'Concentration: Fireball' }));
         });
 
+        it('logs mode from event detail when provided', () => {
+            setup();
+            window.dispatchEvent(new CustomEvent('concentration-result', { detail: { targetName: 'TestWizard', roll: 15, total: 18, saveBonus: 3, bonusDetail: '+3', spellName: 'Fireball', dc: 15, success: true, mode: 'disadvantage' } }));
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({ mode: 'disadvantage' }));
+        });
+
+        it('logs normal mode when no mode in event detail', () => {
+            setup();
+            window.dispatchEvent(new CustomEvent('concentration-result', { detail: { targetName: 'TestWizard', roll: 15, total: 18, saveBonus: 3, bonusDetail: '+3', spellName: 'Fireball', dc: 15, success: true } }));
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({ mode: 'normal' }));
+        });
+
         it('clears concentration on failed save and updates combat summary', () => {
             setup();
             getCombatSummary.mockReturnValue({ creatures: [{ name: 'TestWizard', concentration: 'Fireball' }] });

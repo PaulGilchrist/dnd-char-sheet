@@ -35,46 +35,47 @@ vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
   hasSaveModifier: vi.fn(() => false),
 }))
 
-vi.mock('./Subscriber.jsx', () => ({
-  default: function MockSubscriber({ handleEvent, campaignName }) {
-    return React.createElement(
-      'div',
-      { 'data-testid': 'subscriber', 'data-campaign': campaignName },
-      React.createElement(
-        'button',
-        {
-          'data-testid': 'subscriber-trigger',
-          onClick: () =>
-            handleEvent({
-              key: `change-${campaignName}-concentrationPrompt-testTarget`,
-              data: {
-                promptId: 'test-prompt-1',
-                targetName: 'testTarget',
-                spellName: 'Bless',
-                dc: 10,
-              },
-            }),
-        },
-      ),
-      React.createElement(
-        'button',
-        {
-          'data-testid': 'subscriber-trigger-second',
-          onClick: () =>
-            handleEvent({
-              key: `change-${campaignName}-concentrationPrompt-testTarget2`,
-              data: {
-                promptId: 'test-prompt-2',
-                targetName: 'testTarget2',
-                spellName: 'Haste',
-                dc: 13,
-              },
-            }),
-        },
-      ),
-    )
-  },
-}))
+  vi.mock('./Subscriber.jsx', () => ({
+    default: function MockSubscriber({ handleEvent, campaignName }) {
+      return React.createElement(
+        'div',
+        { 'data-testid': 'subscriber', 'data-campaign': campaignName },
+        React.createElement(
+          'button',
+          {
+            'data-testid': 'subscriber-trigger',
+            onClick: () =>
+              handleEvent({
+                key: `change-${campaignName}-concentrationPrompt-testTarget`,
+                data: {
+                  promptId: 'test-prompt-1',
+                  targetName: 'testTarget',
+                  spellName: 'Bless',
+                  dc: 10,
+                  attackerName: 'Elarielle',
+                },
+              }),
+          },
+        ),
+        React.createElement(
+          'button',
+          {
+            'data-testid': 'subscriber-trigger-second',
+            onClick: () =>
+              handleEvent({
+                key: `change-${campaignName}-concentrationPrompt-testTarget2`,
+                data: {
+                  promptId: 'test-prompt-2',
+                  targetName: 'testTarget2',
+                  spellName: 'Haste',
+                  dc: 13,
+                },
+              }),
+          },
+        ),
+      )
+    },
+  }))
 
 const MockEventSource = vi.fn()
 MockEventSource.prototype.close = vi.fn()
@@ -307,6 +308,44 @@ describe('ConcentrationPromptModal', () => {
       />,
     )
 
+    fireEvent.click(screen.getByTestId('subscriber-trigger'))
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /roll con save/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/total:/i)).toBeInTheDocument()
+    })
+
+    expect(rollD20).toHaveBeenCalledTimes(2)
+  })
+
+  it('rolls with disadvantage when attacker has concentration_breaker', async () => {
+    vi.mocked(rollD20).mockReturnValue(5)
+
+    const attackerModifiers = [{
+      source: 'Mage Slayer',
+      target: 'saving_throw',
+      condition: 'concentration_breaker',
+      effect: 'disadvantage',
+      abilities: ['CON'],
+    }]
+
+    const attacker = createCharacter('Elarielle', attackerModifiers)
+    const target = createCharacter('testTarget', [])
+
+    render(
+      <ConcentrationPromptModal
+        campaignName="test-campaign"
+        characters={[target, attacker]}
+        activeMapName={null}
+      />,
+    )
+
+    // Update the subscriber mock to include attackerName
     fireEvent.click(screen.getByTestId('subscriber-trigger'))
 
     await waitFor(() => {

@@ -16,13 +16,13 @@ function hasDragonConstellation(creature, characters) {
     return activeBuffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
 }
 
-async function rollConcentrationSave(creature, concentration, characters, campaignNpcs, campaignName, mapName, getName) {
+async function rollConcentrationSave(creature, concentration, characters, campaignNpcs, campaignName, mapName, getName, disadvantage = false) {
     const saveBonus = await getCreatureSaveBonus(creature, 'con', characters, campaignNpcs, getName)
     const aura = await computeAuraBonus({ targetName: creature.name, characters, campaignName, activeMapName: mapName, allCreatures: getCombatSummary(campaignName)?.creatures })
     const auraBonus = aura.bonus
     const effectiveSaveBonus = saveBonus + auraBonus
     const dragonConstellationActive = hasDragonConstellation(creature, characters)
-    const { roll: r1, success } = concentrationRules.rollConcentrationSave(effectiveSaveBonus, concentration.dc, dragonConstellationActive)
+    const { roll: r1, success } = concentrationRules.rollConcentrationSave(effectiveSaveBonus, concentration.dc, dragonConstellationActive, disadvantage)
     const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined
     return { roll: r1, success, bonus: effectiveSaveBonus, bonusDetail }
 }

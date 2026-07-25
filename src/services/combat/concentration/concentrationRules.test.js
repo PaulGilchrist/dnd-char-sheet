@@ -63,6 +63,34 @@ describe('rollConcentrationSave', () => {
     const result = rollConcentrationSave(3, 15, true)
     expect(result.roll).toBe(10)
   })
+
+  it('applies disadvantage by taking the lower of two rolls', () => {
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(7)
+    const result = rollConcentrationSave(3, 15, false, true)
+    expect(result.roll).toBe(7)
+    expect(result.total).toBe(10)
+    expect(result.success).toBe(false)
+    expect(result.rawRolls).toEqual([15, 7])
+  })
+
+  it('disadvantage still clamps low rolls with dragon constellation', () => {
+    rollD20.mockReturnValueOnce(3).mockReturnValueOnce(18)
+    const result = rollConcentrationSave(3, 15, true, true)
+    expect(result.roll).toBe(10)
+    expect(result.rawRolls).toEqual([3, 18])
+  })
+
+  it('does not apply disadvantage when flag is false or undefined', () => {
+    rollD20.mockReturnValue(12)
+    const result1 = rollConcentrationSave(3, 15, false, false)
+    expect(result1.roll).toBe(12)
+    expect(result1.rawRolls).toEqual([12])
+
+    rollD20.mockReturnValue(8)
+    const result2 = rollConcentrationSave(3, 15, false, undefined)
+    expect(result2.roll).toBe(8)
+    expect(result2.rawRolls).toEqual([8])
+  })
 })
 
 describe('breakConcentration', () => {

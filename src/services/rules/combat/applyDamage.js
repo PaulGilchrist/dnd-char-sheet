@@ -447,6 +447,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
           targetName: creature.name,
           spellName: creature.concentration.spell,
           dc: creature.concentration.dc,
+          attackerName,
         });
         combatSummaryChanged = true;
       }
@@ -477,7 +478,12 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         return (currentLevel?.level || 0) >= 13;
       })();
       if (!relentlessHunterActive) {
-        const { success, roll, total } = rollConcentrationSave(saveBonus, creature.concentration.dc, dragonConstellationActive);
+        const attacker = attackerName ? characters.find(c => c.name === attackerName || c.name.startsWith(attackerName + ' ')) : null;
+        const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers;
+        const hasConcentrationBreaker = attackerModifiers?.some(mod =>
+          mod.condition === 'concentration_breaker' && mod.effect === 'disadvantage'
+        ) ?? false;
+        const { success, roll, total, rawRolls } = rollConcentrationSave(saveBonus, creature.concentration.dc, dragonConstellationActive, hasConcentrationBreaker);
         if (!success) {
           const spellName = creature.concentration.spell;
           creature.concentration = null;
@@ -496,7 +502,8 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             rollType: 'save',
             name: 'Concentration Save',
             targetName: creature.concentration.spell,
-            rolls: [roll],
+            rolls: rawRolls || [roll],
+            mode: hasConcentrationBreaker ? 'disadvantage' : 'normal',
             total: total,
             bonus: total - roll,
             saveType: 'CON',

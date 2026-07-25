@@ -172,6 +172,12 @@ function RollEntry({ entry }) {
         {entry.condition && entry.dc !== undefined && (
           <span className={`log-condition-save ${entry.success ? 'log-condition-success' : 'log-condition-failure'}`}>
             vs {entry.condition} (DC {entry.dc}): {entry.success ? 'SUCCESS' : 'FAILURE'}
+            {entry.mode === 'disadvantage' && (
+              <span className="log-mode-badge disadvantage">DISADVANTAGE</span>
+            )}
+            {entry.mode === 'advantage' && (
+              <span className="log-mode-badge advantage">ADVANTAGE</span>
+            )}
           </span>
         )}
         {entry.resistanceNotice && (

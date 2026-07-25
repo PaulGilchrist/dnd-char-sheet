@@ -138,6 +138,26 @@ describe('logConcentrationSave', () => {
         });
     });
 
+    it('uses custom mode when provided', () => {
+        logConcentrationSave(campaignName, 'Gortha', 14, 2, '+2 DEX', 'Fireball', 15, true, 'disadvantage');
+
+        const entry = capturedEntry();
+        expect(entry.mode).toBe('disadvantage');
+    });
+
+    it('posts a failed concentration save entry', () => {
+        logConcentrationSave(campaignName, 'Gortha', 5, 3, '+3 CON', 'Bless', 12, false);
+
+        const entry = capturedEntry();
+        expect(entry.success).toBe(false);
+        expect(entry.condition).toBe('Concentration: Bless');
+    });
+
+    it('logConcentrationSave does not throw when addEntry rejects', async () => {
+        vi.mocked(addEntry).mockRejectedValue(new Error('fail'));
+        await expect(logConcentrationSave(campaignName, 'Gortha', 14, 2, '+2', 'Fireball', 15, true)).resolves.toBeUndefined();
+    });
+
 });
 
 describe('logConditionSave', () => {

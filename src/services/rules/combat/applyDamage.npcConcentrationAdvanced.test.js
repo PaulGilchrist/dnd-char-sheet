@@ -147,7 +147,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
         createMinimalCharacter('Druid', 1),
       ]);
 
-      expect(rollConcentrationSave).toHaveBeenCalledWith(0, 10, true);
+      expect(rollConcentrationSave).toHaveBeenCalledWith(0, 10, true, false);
     });
 
     it('does not grant advantage for non-Dragon constellations', () => {
@@ -179,7 +179,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
         createMinimalCharacter('Druid', 1),
       ]);
 
-      expect(rollConcentrationSave).toHaveBeenCalledWith(0, 10, false);
+      expect(rollConcentrationSave).toHaveBeenCalledWith(0, 10, false, false);
     });
   });
 
@@ -351,7 +351,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
         createMinimalCharacter('Orc', 1),
       ]);
 
-      expect(rollConcentrationSave).toHaveBeenCalledWith(3, 10, false);
+      expect(rollConcentrationSave).toHaveBeenCalledWith(3, 10, false, false);
     });
   });
 });

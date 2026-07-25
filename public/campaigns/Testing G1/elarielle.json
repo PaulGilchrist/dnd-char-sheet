@@ -58,7 +58,7 @@
     "Arcana"
   ],
   "feats": [
-    "Lightly Armored",
+    "Mage Slayer",
     "Magic Initiate"
   ],
   "fightingStyles": [],
@@ -119,7 +119,12 @@
     "Light",
     "Healing Word",
     "Detect Evil and Good",
-    "Disguise Self"
+    "Disguise Self",
+    "Fire Bolt",
+    "Mage Hand",
+    "Poison Spray",
+    "Ray of Frost",
+    "Ice Knife"
   ],
   "magicInitiateInstances": [
     {
@@ -137,7 +142,10 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Lightly Armored-0": {
+    "Mage Slayer-1": {
+      "assignment": "Strength"
+    },
+    "Mage Slayer-0": {
       "assignment": "Strength"
     }
   },

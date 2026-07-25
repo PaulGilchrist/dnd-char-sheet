@@ -31,14 +31,14 @@ function logConditionEvent(campaignName, action, creatureName, conditionLabel, d
     }).catch((e) => { console.error("[combatLogging] Error:", e); })
 }
 
-function logConcentrationSave(campaignName, creatureName, roll, bonus, bonusDetail, spellName, dc, success) {
+function logConcentrationSave(campaignName, creatureName, roll, bonus, bonusDetail, spellName, dc, success, mode = 'normal') {
     return addEntry(campaignName, {
         type: 'roll',
         rollType: 'concentration-save',
         characterName: creatureName,
         name: 'Constitution',
         rolls: [roll],
-        mode: 'normal',
+        mode,
         total: roll,
         bonus,
         bonusDetail,

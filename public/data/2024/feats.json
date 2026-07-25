@@ -1762,7 +1762,7 @@
                     "type": "passive_rule",
                     "effect": "concentration_disadvantage_on_damage_dealt",
                     "target": "creature_you_damage",
-                    "casting_time": "1 action"
+                    "casting_time": "passive"
                 }
             },
             {

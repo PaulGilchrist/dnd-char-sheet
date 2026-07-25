@@ -61,6 +61,17 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
         mod.effect === 'advantage' &&
         mod.abilities && mod.abilities.includes('Constitution')
       ));
+    const hasDisadvantage = (() => {
+      if (!current.attackerName) return false;
+      const attacker = (characters || []).find(c => {
+        const name = typeof c === 'string' ? c : c.name;
+        return name && utils.getName(name) === utils.getName(current.attackerName);
+      });
+      const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers;
+      return attackerModifiers?.some(mod =>
+        mod.condition === 'concentration_breaker' && mod.effect === 'disadvantage'
+      ) ?? false;
+    })();
     const starryFormBuff = (saveModifiers || []).length > 0 && (() => {
       const character = (characters || []).find(c => {
         const name = typeof c === 'string' ? c : c.name;
@@ -69,13 +80,26 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
       const buffs = character?.activeBuffs || character?.computedStats?.activeBuffs || [];
       return buffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
     })();
-    let roll = hasAdvantage ? Math.max(rollD20(), rollD20()) : rollD20();
+    let roll;
+    let rawRolls = [rollD20()];
+    if (hasAdvantage && hasDisadvantage) {
+      roll = rawRolls[0];
+    } else if (hasAdvantage) {
+      rawRolls.push(rollD20());
+      roll = Math.max(rawRolls[0], rawRolls[1]);
+    } else if (hasDisadvantage) {
+      rawRolls.push(rollD20());
+      roll = Math.min(rawRolls[0], rawRolls[1]);
+    } else {
+      roll = rawRolls[0];
+    }
     if (starryFormBuff && roll <= 9) {
       roll = 10;
     }
     const total = roll + saveBonus + auraBonus;
     const success = total >= current.dc;
     const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined;
+    const mode = (hasAdvantage || hasDisadvantage) ? (hasAdvantage ? 'advantage' : 'disadvantage') : 'normal';
 
     sendConcentrationResult(campaignName, current.targetName, {
       promptId: current.promptId,
@@ -85,6 +109,8 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
       saveBonus: saveBonus + auraBonus,
       spellName: current.spellName,
       dc: current.dc,
+      mode,
+      rawRolls,
     });
 
     window.dispatchEvent(new CustomEvent('concentration-result', {
@@ -98,12 +124,14 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
         bonusDetail,
         spellName: current.spellName,
         dc: current.dc,
+        mode,
+        rawRolls,
       },
     }));
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll, total, saveBonus: saveBonus + auraBonus, bonusDetail } }
+        ? { ...p, result: { success, roll, total, saveBonus: saveBonus + auraBonus, bonusDetail, mode, rawRolls } }
         : p
     ));
 
@@ -143,6 +171,23 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
                 <div className={`cnp-result ${current.result.success ? 'cnp-result-success' : 'cnp-result-fail'}`}>
                   <p className="cnp-result-label">{current.result.success ? 'CONCENTRATION MAINTAINED' : 'CONCENTRATION BROKEN'}</p>
                   <p className="cnp-result-total">Total: <strong>{current.result.total}</strong> vs DC {current.dc}</p>
+                  <div className="cnp-dice-row">
+                    {current.result.rawRolls && current.result.rawRolls.length === 2 ? (
+                      <>
+                        <span className={`cnp-die${current.result.rawRolls[0] <= current.result.rawRolls[1] ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
+                          d20: {current.result.rawRolls[0]} {current.result.rawRolls[0] <= current.result.rawRolls[1] ? '(kept)' : '(discarded)'}
+                        </span>
+                        <span className={`cnp-die${current.result.rawRolls[1] < current.result.rawRolls[0] ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
+                          d20: {current.result.rawRolls[1]} {current.result.rawRolls[1] < current.result.rawRolls[0] ? '(kept)' : '(discarded)'}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="cnp-die cnp-die-selected">d20: {current.result.roll}</span>
+                    )}
+                    {current.result.mode && current.result.mode !== 'normal' && (
+                      <span className={`cnp-mode-badge ${current.result.mode}`}>{current.result.mode.toUpperCase()}</span>
+                    )}
+                  </div>
                   <p className="cnp-result-breakdown">d20 ({current.result.roll}) + {current.result.saveBonus}{current.result.bonusDetail ? ' ' + current.result.bonusDetail : ''}</p>
                 </div>
               )}

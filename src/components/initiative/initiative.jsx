@@ -706,8 +706,15 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         const concentration = creature.concentration
 
+        const attackerName = combatSummary.lastAttack?.attackerName
+        const attacker = attackerName ? characters.find(c => c.name === attackerName || c.name.startsWith(attackerName + ' ')) : null
+        const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers
+        const hasConcentrationBreaker = attackerModifiers?.some(mod =>
+          mod.condition === 'concentration_breaker' && mod.effect === 'disadvantage'
+        ) ?? false
+
         const { roll: r1, success, bonus, bonusDetail } = await rollConcentrationSave(
-            creature, concentration, characters, campaignNpcs, campaignName, mapName, utils.getName
+            creature, concentration, characters, campaignNpcs, campaignName, mapName, utils.getName, hasConcentrationBreaker
         )
 
         if (!success) {
@@ -719,7 +726,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         setConditionPopup(buildConcentrationPopup(r1, bonus, bonusDetail, concentration.spell, concentration.dc, success))
 
-        logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success)
+        logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, hasConcentrationBreaker ? 'disadvantage' : 'normal')
     }
 
     const handleBreakConcentration = (creatureName) => {

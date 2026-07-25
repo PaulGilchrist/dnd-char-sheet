@@ -117,7 +117,22 @@ describe('rollConcentrationSave', () => {
             creature, { spell: 'Shield', dc: 13 }, chars, [], '', null, (n) => n
         )
 
-        expect(rollConcentrationRules).toHaveBeenCalledWith(3, 13, true)
+        expect(rollConcentrationRules).toHaveBeenCalledWith(3, 13, true, false)
+    })
+
+    it('passes disadvantage flag to concentrationRules when attacker has concentration_breaker', async () => {
+        rollConcentrationRules.mockReturnValue({ roll: 10, success: true })
+        getCreatureSaveBonus.mockResolvedValue(3)
+        computeAuraBonus.mockResolvedValue({ bonus: 0 })
+
+        const creature = { name: 'Wizard', type: 'player' }
+        const chars = [createCharacter('Wizard', { activeBuffs: [] })]
+
+        await rollConcentrationSaveSvc(
+            creature, { spell: 'Bless', dc: 10 }, chars, [], '', null, (n) => n, true
+        )
+
+        expect(rollConcentrationRules).toHaveBeenCalledWith(3, 10, false, true)
     })
 
     it('handles negative save bonus combined with aura bonus', async () => {
