@@ -58,8 +58,6 @@
     "Arcana"
   ],
   "feats": [
-    "Mage Slayer",
-    "Martial Weapon Training",
     "Magic Initiate"
   ],
   "fightingStyles": [],
@@ -144,14 +142,11 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Mage Slayer-1": {
-      "assignment": "Strength"
-    },
-    "Mage Slayer-0": {
-      "assignment": "Dexterity"
-    },
     "Martial Weapon Training-1": {
       "assignment": "Dexterity"
+    },
+    "Martial Weapon Training-0": {
+      "assignment": "Strength"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

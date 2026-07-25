@@ -650,10 +650,10 @@ const rules = {
             contributions.push(`Armor (${armor.armor_class.base})`);
             if (armor.armor_class.dex_bonus) {
                 let armorBonus = dexterity.bonus;
-                contributions.push(`Dexterity Bonus (${dexterity.bonus})`);
                 if (armor.armor_class.max_bonus) {
                     armorBonus = Math.min(armor.armor_class.max_bonus, armorBonus);
                  }
+                contributions.push(`Dexterity Bonus (${armorBonus})`);
                 armorClass = armor.armor_class.base + armorBonus + addedBonus + parsedArmor.magicBonus;
              }
          } else {

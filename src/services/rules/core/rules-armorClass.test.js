@@ -129,6 +129,27 @@ describe('rules.getArmorClass', () => {
   // === 5E RULES: Armor ===
 
   describe('armored defense', () => {
+    it('caps Dexterity bonus with chain shirt max_bonus of 2', () => {
+      const equipment = [
+        { name: 'Chain Shirt', equipment_category: 'Armor', armor_category: 'Medium', armor_class: { base: 13, dex_bonus: true, max_bonus: 2 } }
+      ];
+      const playerStats = {
+        rules: '2024',
+        class: { name: 'Wizard', subclass: { name: 'Diviner' } },
+        abilities: [
+          { name: 'Dexterity', bonus: 3, totalScore: 16 },
+          { name: 'Constitution', bonus: 3 },
+          { name: 'Intelligence', bonus: 3 }
+        ],
+        inventory: { equipped: ['Chain Shirt'] },
+        automation: { passives: [] }
+      };
+
+      const [ac] = rules.getArmorClass(equipment, playerStats);
+
+      expect(ac).toBe(15);
+    });
+
     it('calculates AC with leather armor (dex bonus allowed)', () => {
       const playerStats = {
         class: { name: 'Fighter' },
