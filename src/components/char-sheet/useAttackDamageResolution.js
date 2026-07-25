@@ -141,10 +141,10 @@ export default function useAttackDamageResolution({
 }) {
     let pendingCtxOverrides = {};
 
-    const proceedWithDamage = (attack, formula, total, rolls, modifier) => {
+    const proceedWithDamage = (attack, formula, total, rolls, modifier, critLabels) => {
         if (buildCtxSync) {
             (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
-                rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...pendingCtxOverrides });
+                rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...pendingCtxOverrides, critLabels });
             }).catch((e) => { console.error("[useAttackDamageResolution] Error:", e); });
         } else {
             const o = pendingCtxOverrides;
@@ -152,6 +152,7 @@ export default function useAttackDamageResolution({
                 damageType: attack.damageType,
                 targetName: o.targetName || null,
                 attackerName: attack.name,
+                critLabels: critLabels || null,
             };
             rollDamage(attack.name, formula, total, rolls, modifier, minimalCtx);
         }

@@ -2178,7 +2178,7 @@
           "effect": "extra_damage_die",
           "extraDice": 1,
           "diceType": "weapon_die",
-          "casting_time": "1 action"
+          "casting_time": "passive"
         }
       }
     ],

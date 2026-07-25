@@ -10,7 +10,7 @@ export const piercer = {
     let total = prevData.total;
     let formula = prevData.formula;
 
-    // Piercer crit bonus die
+    // Piercer crit bonus die: roll 1 extra weapon die and add as "plus 1dX [Enhanced Critical]"
     if (isPiercing && ctx.isCrit && ctx.attack?.damage && ctx.playerStats.automation?.passives) {
       const pc = ctx.playerStats.automation.passives.find(a => a.type === 'damage_bonus' && a.trigger === 'critical_hit_piercing');
       if (pc) {
@@ -18,10 +18,11 @@ export const piercer = {
         if (m) {
           const ds = parseInt(m[2], 10);
           const ev = Math.floor(Math.random() * ds) + 1;
-          formula += ` + 1 [${ctx.attack.damageType}]`;
+          formula += ` plus 1d${ds} [Enhanced Critical]`;
           total += ev;
           rolls = [...rolls, ev];
-          return { data: { formula, total, rolls } };
+          const critLabels = [...(prevData.critLabels || []), 'Enhanced Critical'];
+          return { data: { formula, total, rolls, critLabels } };
         }
       }
     }

@@ -104,6 +104,7 @@ describe('useDiceRoll', () => {
         total: 7,
         bonus: 0,
         modifier: 3,
+        critLabels: null,
       });
     });
 

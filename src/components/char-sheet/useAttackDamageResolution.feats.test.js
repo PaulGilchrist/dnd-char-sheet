@@ -421,7 +421,7 @@ describe('useAttackDamageResolution - feats', () => {
             await tick();
             expect(mockRollDamage).toHaveBeenCalledWith(
                 'Rapier',
-                expect.stringContaining('+ 1 [Piercing]'),
+                expect.stringContaining('plus 1d8 [Enhanced Critical]'),
                 expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)
             );
         });

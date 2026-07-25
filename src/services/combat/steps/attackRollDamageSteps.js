@@ -935,7 +935,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'damage:applied',
       condition: (ctx) => ctx.formula != null,
       handler: async (ctx) => {
-        ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier);
+        ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier, ctx.critLabels);
         return { data: { _done: true } };
       },
     },
