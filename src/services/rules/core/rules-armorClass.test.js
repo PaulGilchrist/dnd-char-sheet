@@ -414,6 +414,104 @@ describe('rules.getArmorClass', () => {
     });
   });
 
+  // === 5E RULES: Medium Armor Master ===
+
+  describe('5e medium armor master', () => {
+    it('applies Medium Armor Master dex bonus increase when wearing medium armor and Dex >= 16', () => {
+      const equipment = [
+        { name: 'Chain Shirt', equipment_category: 'Armor', armor_category: 'Medium', armor_class: { base: 13, dex_bonus: true, max_bonus: 2 } }
+      ];
+      const playerStats = {
+        rules: '5e',
+        class: { name: 'Fighter' },
+        abilities: [
+          { name: 'Dexterity', bonus: 3, totalScore: 16 },
+          { name: 'Constitution', bonus: 2 }
+        ],
+        inventory: { equipped: ['Chain Shirt'] },
+        automation: {
+          passives: [
+            { type: 'passive_buff', name: 'Medium Armor Master', effect: 'medium_armor_dex_bonus_increase', bonusExpression: '1' }
+          ]
+        }
+      };
+
+      const [ac, formula] = rules.getArmorClass(equipment, playerStats);
+
+      expect(ac).toBe(16);
+      expect(formula).toContain('Medium Armor Master (+1)');
+    });
+
+    it('does not apply Medium Armor Master when Dex < 16', () => {
+      const equipment = [
+        { name: 'Chain Shirt', equipment_category: 'Armor', armor_category: 'Medium', armor_class: { base: 13, dex_bonus: true, max_bonus: 2 } }
+      ];
+      const playerStats = {
+        rules: '5e',
+        class: { name: 'Fighter' },
+        abilities: [
+          { name: 'Dexterity', bonus: 2, totalScore: 14 },
+          { name: 'Constitution', bonus: 2 }
+        ],
+        inventory: { equipped: ['Chain Shirt'] },
+        automation: {
+          passives: [
+            { type: 'passive_buff', name: 'Medium Armor Master', effect: 'medium_armor_dex_bonus_increase', bonusExpression: '1' }
+          ]
+        }
+      };
+
+      const [ac] = rules.getArmorClass(equipment, playerStats);
+
+      expect(ac).toBe(15);
+    });
+
+    it('does not apply Medium Armor Master when wearing light armor', () => {
+      const equipment = [
+        { name: 'Studded Leather', equipment_category: 'Armor', armor_category: 'Light', armor_class: { base: 12, dex_bonus: true, max_bonus: null } }
+      ];
+      const playerStats = {
+        rules: '5e',
+        class: { name: 'Rogue' },
+        abilities: [
+          { name: 'Dexterity', bonus: 5, totalScore: 20 },
+          { name: 'Constitution', bonus: 2 }
+        ],
+        inventory: { equipped: ['Studded Leather'] },
+        automation: {
+          passives: [
+            { type: 'passive_buff', name: 'Medium Armor Master', effect: 'medium_armor_dex_bonus_increase', bonusExpression: '1' }
+          ]
+        }
+      };
+
+      const [ac] = rules.getArmorClass(equipment, playerStats);
+
+      expect(ac).toBe(17);
+    });
+
+    it('does not apply Medium Armor Master when not wearing any armor', () => {
+      const playerStats = {
+        rules: '5e',
+        class: { name: 'Wizard' },
+        abilities: [
+          { name: 'Dexterity', bonus: 3, totalScore: 16 },
+          { name: 'Constitution', bonus: 2 }
+        ],
+        inventory: { equipped: [] },
+        automation: {
+          passives: [
+            { type: 'passive_buff', name: 'Medium Armor Master', effect: 'medium_armor_dex_bonus_increase', bonusExpression: '1' }
+          ]
+        }
+      };
+
+      const [ac] = rules.getArmorClass([], playerStats);
+
+      expect(ac).toBe(13);
+    });
+  });
+
   // === 5E RULES: Formula ===
 
   describe('formula output', () => {

@@ -462,7 +462,7 @@ function parse2024Benefit(benefit, feat) {
           name: benefit.name,
           description: benefit.description,
           type: benefit.type,
-          automation: benefit.automation,
+          automation: benefit.automation || feat.automation,
         });
       }
       break;
@@ -502,6 +502,19 @@ export function computeFeatBuffs(feat, ruleset = '2024') {
         result.features.push(...parsed.features);
       }
     });
+
+    // 5e feats may have a single automation object at the feat level
+    if (feat.automation) {
+      const automations = Array.isArray(feat.automation) ? feat.automation : [feat.automation];
+      automations.forEach(auto => {
+        result.features.push({
+          name: feat.name,
+          description: feat.description,
+          type: auto.type || 'passive',
+          automation: auto,
+        });
+      });
+    }
   }
 
   return result;

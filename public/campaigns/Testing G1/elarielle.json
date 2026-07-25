@@ -58,7 +58,8 @@
     "Arcana"
   ],
   "feats": [
-    "Magic Initiate"
+    "Magic Initiate",
+    "Moderately Armored"
   ],
   "fightingStyles": [],
   "race": {
@@ -142,10 +143,10 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Martial Weapon Training-1": {
-      "assignment": "Dexterity"
+    "Moderately Armored-1": {
+      "assignment": "Strength"
     },
-    "Martial Weapon Training-0": {
+    "Moderately Armored-0": {
       "assignment": "Strength"
     }
   },

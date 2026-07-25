@@ -661,7 +661,30 @@ const rules = {
             contributions.push(`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus})`);
          }
 
-        let shield = playerStats.inventory.equipped.find(item => parseMagicItemName(item).baseName === 'Shield');
+          // 5e: Medium Armor Master – increase medium armor dex bonus cap from 2 to 3 when Dex >= 16
+          if (!is2024(playerStats, playerSummary)) {
+              const passives = playerStats.automation?.passives;
+              if (Array.isArray(passives)) {
+                  const mediumArmorMasterPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'medium_armor_dex_bonus_increase');
+                  if (mediumArmorMasterPassive && armorName) {
+                      const armor = allEquipment.find(item => item.name === parseMagicItemName(armorName).baseName);
+                      if (armor && armor.armor_category === 'Medium' && dexterity.totalScore >= 16) {
+                          const dexMod = dexterity.bonus;
+                          const currentMaxBonus = armor.armor_class.max_bonus != null ? armor.armor_class.max_bonus : 99;
+                          const bonusToAdd = parseInt(mediumArmorMasterPassive.bonusExpression || mediumArmorMasterPassive.bonus || '1', 10);
+                          const newMaxBonus = currentMaxBonus + bonusToAdd;
+                          const actualBonus = Math.min(dexMod, newMaxBonus);
+                          const originalBonus = Math.min(dexMod, currentMaxBonus);
+                          if (actualBonus > originalBonus) {
+                              armorClass += (actualBonus - originalBonus);
+                              contributions.push(`Medium Armor Master (+${actualBonus - originalBonus})`);
+                          }
+                      }
+                  }
+              }
+          }
+
+          let shield = playerStats.inventory.equipped.find(item => parseMagicItemName(item).baseName === 'Shield');
         if (shield) {
             const parsedShield = parseMagicItemName(shield);
             armorClass += 2 + parsedShield.magicBonus;
@@ -754,23 +777,23 @@ const rules = {
                   }
               }
 
-              // 2024: Medium Armor Master – increase medium armor dex bonus cap from 2 to 3 when Dex >= 16
-              const mediumArmorMasterPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'medium_armor_dex_bonus_increase');
-              if (mediumArmorMasterPassive && armorName) {
-                  const armor = allEquipment.find(item => item.name === parseMagicItemName(armorName).baseName);
-                  if (armor && armor.armor_category === 'Medium' && dexterity.totalScore >= 16) {
-                      const dexMod = dexterity.bonus;
-                      const currentMaxBonus = armor.armor_class.max_bonus != null ? armor.armor_class.max_bonus : 99;
-                      const bonusToAdd = parseInt(mediumArmorMasterPassive.bonusExpression || mediumArmorMasterPassive.bonus || '1', 10);
-                      const newMaxBonus = currentMaxBonus + bonusToAdd;
-                      const actualBonus = Math.min(dexMod, newMaxBonus);
-                      const originalBonus = Math.min(dexMod, currentMaxBonus);
-                      if (actualBonus > originalBonus) {
-                          armorClass += (actualBonus - originalBonus);
-                          contributions.push(`Medium Armor Master (+${actualBonus - originalBonus})`);
-                      }
-                  }
-              }
+               // 2024: Medium Armor Master – increase medium armor dex bonus cap from 2 to 3 when Dex >= 16
+               const mediumArmorMasterPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'medium_armor_dex_bonus_increase');
+               if (mediumArmorMasterPassive && armorName) {
+                   const armor = allEquipment.find(item => item.name === parseMagicItemName(armorName).baseName);
+                   if (armor && armor.armor_category === 'Medium' && dexterity.totalScore >= 16) {
+                       const dexMod = dexterity.bonus;
+                       const currentMaxBonus = armor.armor_class.max_bonus != null ? armor.armor_class.max_bonus : 99;
+                       const bonusToAdd = parseInt(mediumArmorMasterPassive.bonusExpression || mediumArmorMasterPassive.bonus || '1', 10);
+                       const newMaxBonus = currentMaxBonus + bonusToAdd;
+                       const actualBonus = Math.min(dexMod, newMaxBonus);
+                       const originalBonus = Math.min(dexMod, currentMaxBonus);
+                       if (actualBonus > originalBonus) {
+                           armorClass += (actualBonus - originalBonus);
+                           contributions.push(`Medium Armor Master (+${actualBonus - originalBonus})`);
+                       }
+                   }
+               }
           }
 
           return [armorClass, contributions.join(' + ')];
