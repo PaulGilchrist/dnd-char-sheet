@@ -341,6 +341,13 @@ describe('SavePromptModal', () => {
     fireEvent.click(rollBtn);
 
     await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    await waitFor(() => {
       expect(eventHandler).toHaveBeenCalled();
     });
 
@@ -474,6 +481,11 @@ describe('SavePromptModal', () => {
     await waitFor(() => {
       expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
+
+    expect(sendSaveResult).not.toHaveBeenCalled();
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
 
     expect(sendSaveResult).toHaveBeenCalled();
   });

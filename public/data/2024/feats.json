@@ -1774,7 +1774,7 @@
                     "trigger": "failed_int_wis_cha_save",
                     "effect": "override_fail_to_success",
                     "oncePer": "short_or_long_rest",
-                    "casting_time": "1 action"
+                    "casting_time": "passive"
                 }
             }
         ],

@@ -6,28 +6,28 @@
     {
       "name": "Strength",
       "baseScore": 10,
-      "featIncrease": 1,
+      "featIncrease": 0,
       "backgroundIncrease": 0,
       "miscIncrease": 0
     },
     {
       "name": "Dexterity",
       "baseScore": 12,
-      "featIncrease": 6,
+      "featIncrease": 0,
       "backgroundIncrease": 0,
       "miscIncrease": 0
     },
     {
       "name": "Constitution",
       "baseScore": 15,
-      "featIncrease": 4,
+      "featIncrease": 0,
       "backgroundIncrease": 2,
       "miscIncrease": 0
     },
     {
       "name": "Intelligence",
       "baseScore": 15,
-      "featIncrease": 4,
+      "featIncrease": 0,
       "backgroundIncrease": 1,
       "miscIncrease": 0
     },
@@ -59,6 +59,7 @@
   ],
   "feats": [
     "Mage Slayer",
+    "Martial Weapon Training",
     "Magic Initiate"
   ],
   "fightingStyles": [],
@@ -88,7 +89,8 @@
     "equipped": [
       "Hand Crossbow",
       "Hand Crossbow",
-      "Greatsword"
+      "Greatsword",
+      "Chain Shirt"
     ],
     "gold": 10,
     "magicItems": []
@@ -146,6 +148,9 @@
       "assignment": "Strength"
     },
     "Mage Slayer-0": {
+      "assignment": "Strength"
+    },
+    "Martial Weapon Training-1": {
       "assignment": "Strength"
     }
   },

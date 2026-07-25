@@ -423,6 +423,8 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'auto_reroll':
                 if (info.casting_time === '1 action') {
                     result.actions.push(info)
+                } else if (info.casting_time === 'passive') {
+                    result.specialActions.push(info)
                 } else {
                     result.reactions.push(info)
                 }

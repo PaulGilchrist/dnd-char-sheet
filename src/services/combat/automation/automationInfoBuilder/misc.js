@@ -52,6 +52,7 @@ export const miscHandlers = {
         return {
             type: 'auto_reroll',
             name: feature.name,
+            description: feature.description || '',
             target: auto.target || 'd20',
             condition: auto.condition || '',
             effect: auto.effect || 'reroll',

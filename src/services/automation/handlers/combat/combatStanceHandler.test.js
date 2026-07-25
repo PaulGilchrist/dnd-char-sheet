@@ -21,6 +21,10 @@ vi.mock('../class-warlock/tempTeleportHandler.js', () => ({
     clearExtendedFlag: vi.fn(),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 const campaignName = 'TestCampaign';
 
 function makePlayerStats(overrides = {}) {
@@ -1094,10 +1098,6 @@ describe('combatStanceHandler - Rage of the Wilds', () => {
     });
 
     it('logs wild selection to campaign log', async () => {
-        vi.mock('../../../ui/logService.js', () => ({
-            addEntry: vi.fn(() => Promise.resolve()),
-        }));
-
         const { addEntry } = await import('../../../ui/logService.js');
 
         setupRuntimeMocks({

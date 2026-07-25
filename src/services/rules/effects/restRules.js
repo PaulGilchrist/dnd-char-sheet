@@ -209,7 +209,8 @@ export const LONG_REST_RESOURCES = [
     'boonOfCombatProwessUsed',
     'strokeOfLuckUsed',
       '_boonOfEnergyResistanceUsedThisRest',
-      '_Energy_Resistances_chosenTypes'
+      '_Energy_Resistances_chosenTypes',
+  '_guardedMind_usedRest'
 ]
 
 export function getLongRestResources() {
