@@ -141,10 +141,20 @@ export default function useAttackDamageResolution({
 }) {
     let pendingCtxOverrides = {};
 
-    const proceedWithDamage = (attack, formula, total, rolls, modifier, critLabels) => {
+    const proceedWithDamage = (attack, formula, total, rolls, modifier, critLabels, pipelineCtx) => {
         if (buildCtxSync) {
             (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
-                rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...pendingCtxOverrides, critLabels });
+                const merged = {
+                    ...ctx,
+                    ...pendingCtxOverrides,
+                    autoDamageSecondaryFormula: pipelineCtx?.autoDamageSecondaryFormula || pendingCtxOverrides?.autoDamageSecondaryFormula || null,
+                    autoDamageSecondaryName: pipelineCtx?.autoDamageSecondaryName || pendingCtxOverrides?.autoDamageSecondaryName || null,
+                    autoDamageSecondaryDamageType: pipelineCtx?.autoDamageSecondaryDamageType || pendingCtxOverrides?.autoDamageSecondaryDamageType || null,
+                    saveDc: pipelineCtx?.saveDc || pendingCtxOverrides?.saveDc || null,
+                    saveType: pipelineCtx?.saveType || pendingCtxOverrides?.saveType || null,
+                    dcSuccess: pipelineCtx?.dcSuccess || pendingCtxOverrides?.dcSuccess || null,
+                };
+                rollDamage(attack.name, formula, total, rolls, modifier, { ...merged, ...critLabels });
             }).catch((e) => { console.error("[useAttackDamageResolution] Error:", e); });
         } else {
             const o = pendingCtxOverrides;
@@ -153,6 +163,12 @@ export default function useAttackDamageResolution({
                 targetName: o.targetName || null,
                 attackerName: attack.name,
                 critLabels: critLabels || null,
+                autoDamageSecondaryFormula: o.autoDamageSecondaryFormula || null,
+                autoDamageSecondaryName: o.autoDamageSecondaryName || null,
+                autoDamageSecondaryDamageType: o.autoDamageSecondaryDamageType || null,
+                saveDc: o.saveDc || null,
+                saveType: o.saveType || null,
+                dcSuccess: o.dcSuccess || null,
             };
             rollDamage(attack.name, formula, total, rolls, modifier, minimalCtx);
         }

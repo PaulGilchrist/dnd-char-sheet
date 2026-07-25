@@ -35,6 +35,13 @@ export function createSaveListener(campaignName, config) {
         advantage: config.advantage || false,
         disadvantage: config.disadvantage || false,
         condition: config.condition || null,
+        damageFormula: config.damageFormula || null,
+        damageType: config.damageType || null,
+        rawDamage: config.rawDamage || 0,
+        sourceName: config.sourceName || null,
+        secondaryFormula: config.secondaryFormula || null,
+        secondaryDamageType: config.secondaryDamageType || null,
+        secondaryRawDamage: config.secondaryRawDamage || 0,
     };
     setRuntimeValue(campaignName, 'pendingSavePrompts', pendingSaves, campaignName);
 
@@ -48,6 +55,13 @@ export function createSaveListener(campaignName, config) {
         advantage: config.advantage || false,
         disadvantage: config.disadvantage || false,
         condition: config.condition || null,
+        damageFormula: config.damageFormula || null,
+        damageType: config.damageType || null,
+        rawDamage: config.rawDamage || 0,
+        sourceName: config.sourceName || null,
+        secondaryFormula: config.secondaryFormula || null,
+        secondaryDamageType: config.secondaryDamageType || null,
+        secondaryRawDamage: config.secondaryRawDamage || 0,
      });
 
     const promise = new Promise((resolve) => {

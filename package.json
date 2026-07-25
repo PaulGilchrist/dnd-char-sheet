@@ -36,7 +36,7 @@
         "test:coverage": "vitest run --coverage"
     },
     "type": "module",
-    "version": "0.0.0",
+    "version": "0.9.0",
     "dependencies": {
         "@fortawesome/fontawesome-free": "^7.2.0",
         "archiver": "^8.0.0",

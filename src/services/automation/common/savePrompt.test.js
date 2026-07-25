@@ -156,6 +156,13 @@ describe('createSaveListener', () => {
             advantage: false,
             disadvantage: false,
             condition: null,
+            damageFormula: null,
+            damageType: null,
+            rawDamage: 0,
+            sourceName: null,
+            secondaryFormula: null,
+            secondaryDamageType: null,
+            secondaryRawDamage: 0,
         });
     });
 
@@ -181,6 +188,13 @@ describe('createSaveListener', () => {
             advantage: true,
             disadvantage: false,
             condition: null,
+            damageFormula: null,
+            damageType: null,
+            rawDamage: 0,
+            sourceName: null,
+            secondaryFormula: null,
+            secondaryDamageType: null,
+            secondaryRawDamage: 0,
         });
     });
 

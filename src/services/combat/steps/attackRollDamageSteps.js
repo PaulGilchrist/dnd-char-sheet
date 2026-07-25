@@ -935,7 +935,125 @@ export function buildAttackRollDamageSteps() {
       emit: 'damage:applied',
       condition: (ctx) => ctx.formula != null,
       handler: async (ctx) => {
-        ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier, ctx.critLabels);
+        let saveResult = null;
+        let saveDc = 0;
+        const poisonedActive = getRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', ctx.campaignName);
+        if (poisonedActive) {
+          const cs = await loadCombatSummary(ctx.campaignName);
+          const lastAttack = cs?.lastAttack;
+          if (lastAttack?.hit) {
+            const targetName = lastAttack.targetName;
+            const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
+            const intMod = ctx.playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0;
+            const poisonerAbilityModifier = Math.max(dexMod, intMod);
+            const proficiencyBonus = ctx.playerStats.proficiency || 0;
+            saveDc = 8 + poisonerAbilityModifier + proficiencyBonus;
+
+            const { promise } = createSaveListener(ctx.campaignName, {
+              targetName: targetName,
+              saveType: 'CON',
+              saveDc: saveDc,
+              attackerName: ctx.playerStats.name,
+              damageFormula: `${lastAttack.damageFormula || '1d8'}+${lastAttack.modifier || 0}`,
+              damageType: lastAttack.damageType || lastAttack.primaryDamageType || 'slashing',
+              rawDamage: lastAttack.primaryDamage || 0,
+              sourceName: lastAttack.attackName || 'Weapon',
+            });
+
+            addEntry(ctx.campaignName, {
+              type: 'save_result',
+              characterName: ctx.playerStats.name,
+              targetName: targetName,
+              saveType: 'CON',
+              saveDc: saveDc,
+              description: `Poisoned weapon: ${targetName} must make a DC ${saveDc} CON save or take ${lastAttack.damageType || 'weapon'} damage plus 2d8 Poison damage and gain the Poisoned condition until the end of your next turn.`,
+              success: null,
+            }).catch(() => {});
+
+            saveResult = await promise;
+
+            setRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', null, ctx.campaignName);
+
+            if (saveResult && !saveResult.success) {
+              ctx.autoDamageSecondaryFormula = '2d8';
+              ctx.autoDamageSecondaryName = 'Poison';
+              ctx.autoDamageSecondaryDamageType = 'Poison';
+            }
+          }
+        }
+
+        ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier, ctx.critLabels, ctx);
+
+        if (saveResult && !saveResult.success) {
+          const cs = await loadCombatSummary(ctx.campaignName);
+          const lastAttack = cs?.lastAttack;
+          const targetName = lastAttack?.targetName;
+          if (targetName) {
+            const rollResult = rollExpression('2d8');
+            const poisonDamage = rollResult?.total || 7;
+            const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
+            const creature = cs.creatures?.find(c => c.name === targetName);
+            const isPlayer = creature?.type === 'player';
+            const playerComputed = isPlayer ? (characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)?.computedStats || characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)) : null;
+            let resistances = isPlayer ? (playerComputed?.resistances || []) : (creature?.resistances || []);
+            const immunities = isPlayer ? (playerComputed?.immunities || []) : (creature?.immunities || []);
+            const actualPoisonDamage = Math.max(0, immunities.includes('Poison') ? 0 : (resistances.includes('Poison') ? Math.ceil(poisonDamage / 2) : poisonDamage));
+
+            if (actualPoisonDamage > 0) {
+              if (isPlayer) {
+                const storedCurrentHp = getRuntimeValue(targetName, 'currentHitPoints');
+                const currentTempHp = Number(getRuntimeValue(targetName, 'tempHp', ctx.campaignName) || 0);
+                let damageAfterTempHp = actualPoisonDamage;
+                if (currentTempHp > 0) {
+                  const absorbed = Math.min(damageAfterTempHp, currentTempHp);
+                  damageAfterTempHp -= absorbed;
+                  setRuntimeValue(targetName, 'tempHp', currentTempHp - absorbed, ctx.campaignName);
+                }
+                const oldHp = storedCurrentHp;
+                const newHp = Math.max(0, oldHp - damageAfterTempHp);
+                setRuntimeValue(targetName, 'currentHitPoints', newHp, ctx.campaignName);
+              } else {
+                const oldHp = creature.currentHp;
+                creature.currentHp = Math.max(0, oldHp - actualPoisonDamage);
+              }
+
+              cs.lastAttack.secondaryDamage = actualPoisonDamage;
+              cs.lastAttack.secondaryDamageType = 'Poison';
+              cs.lastAttack.actualDamage = (cs.lastAttack.actualDamage || 0) + actualPoisonDamage;
+            }
+
+            const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
+            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+            if (!conditions.includes('poisoned')) {
+              await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'poisoned'], ctx.campaignName);
+            }
+
+            const primaryDmg = lastAttack?.primaryDamage || 0;
+            const primaryType = lastAttack?.primaryDamageType || 'weapon';
+            const totalDmg = primaryDmg + actualPoisonDamage;
+            let desc = `<strong>${targetName}</strong> failed the CON save (DC ${saveDc}).`;
+            if (primaryDmg > 0) {
+              desc += `<br/>Took <strong>${primaryDmg} ${primaryType}</strong> + <strong>${actualPoisonDamage} Poison</strong> = <strong>${totalDmg} total damage</strong>.`;
+            } else {
+              desc += `<br/>Took <strong>${actualPoisonDamage} Poison damage</strong>.`;
+            }
+            desc += `<br/><br/><em>Condition lasts until the end of your next turn.</em>`;
+            ctx.setPopupHtml?.({
+              type: 'automation_info',
+              name: 'Poisoned Weapons',
+              description: desc,
+            });
+
+            addEntry(ctx.campaignName, {
+              type: 'ability_use',
+              characterName: ctx.playerStats.name,
+              abilityName: 'Poisoned Weapons',
+              description: `Poison dose triggered on ${targetName} — target failed CON save (DC ${saveDc}), took ${actualPoisonDamage || poisonDamage} Poison damage (plus ${primaryDmg} ${primaryType} damage) and gained Poisoned condition.`,
+              targetName: targetName,
+            }).catch(() => {});
+          }
+        }
+
         return { data: { _done: true } };
       },
     },
@@ -1235,97 +1353,11 @@ export function buildAttackRollDamageSteps() {
     // =========================================================
     // Step: poisonWeaponEffect — Poisoner feat poison on weapon hit
     // =========================================================
-    {
-      name: 'poisonWeaponEffect',
-      subscribe: 'mastery:done',
-      emit: 'poison:done',
-      condition: (ctx) => ctx.attack?.name && ctx.playerStats,
-      handler: async (ctx) => {
-        const cs = await loadCombatSummary(ctx.campaignName);
-        const lastAttack = cs?.lastAttack;
-        if (!lastAttack?.hit) return { data: {} };
-
-        const poisonedActive = getRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', ctx.campaignName);
-        if (!poisonedActive) return { data: {} };
-
-        const targetName = lastAttack.targetName;
-        const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
-        const intMod = ctx.playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0;
-        const poisonerAbilityModifier = Math.max(dexMod, intMod);
-        const proficiencyBonus = ctx.playerStats.proficiency || 0;
-        const saveDc = 8 + poisonerAbilityModifier + proficiencyBonus;
-
-        const { promise } = createSaveListener(ctx.campaignName, {
-          targetName: targetName,
-          saveType: 'CON',
-          saveDc: saveDc,
-          attackerName: ctx.playerStats.name,
-        });
-
-        addEntry(ctx.campaignName, {
-          type: 'save_result',
-          characterName: ctx.playerStats.name,
-          targetName: targetName,
-          saveType: 'CON',
-          saveDc: saveDc,
-          description: `Poisoned weapon: ${targetName} must make a DC ${saveDc} CON save or take 2d8 Poison damage and be Poisoned until end of your next turn.`,
-          success: null,
-        }).catch(() => {});
-
-        const saveResult = await promise;
-
-        setRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', null, ctx.campaignName);
-
-        if (saveResult && !saveResult.success) {
-          const rollResult = rollExpression('2d8');
-          const poisonDamage = rollResult?.total || 7;
-          if (poisonDamage > 0) {
-            const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
-            await applyDamageToTarget(
-              cs,
-              targetName,
-              poisonDamage,
-              ['Poison'],
-              ctx.campaignName,
-              characters,
-              false,
-              ctx.playerStats.name
-            );
-          }
-
-          const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
-          const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-          if (!conditions.includes('poisoned')) {
-            await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'poisoned'], ctx.campaignName);
-          }
-
-          addEntry(ctx.campaignName, {
-            type: 'ability_use',
-            characterName: ctx.playerStats.name,
-            abilityName: 'Poisoned Weapons',
-            description: `Poison dose triggered on ${targetName} — target failed CON save (DC ${saveDc}), took ${poisonDamage} Poison damage and gained Poisoned condition.`,
-            targetName: targetName,
-          }).catch(() => {});
-        } else {
-          addEntry(ctx.campaignName, {
-            type: 'ability_use',
-            characterName: ctx.playerStats.name,
-            abilityName: 'Poisoned Weapons',
-            description: `Poison dose triggered on ${targetName} — target succeeded on CON save (DC ${saveDc}), no effect.`,
-            targetName: targetName,
-          }).catch(() => {});
-        }
-
-        return { data: {} };
-      },
-    },
-
-    // =========================================================
     // Step: masteryDone — Final step
     // =========================================================
     {
       name: 'masteryDone',
-      subscribe: 'poison:done',
+      subscribe: 'cleave:check',
       emit: 'pipeline:complete',
       condition: () => true,
       handler: async () => {

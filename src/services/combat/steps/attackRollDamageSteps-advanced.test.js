@@ -1345,6 +1345,7 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation, fe
           [12, 4],
           4,
           undefined,
+          ctx,
         );
         expect(result.data._done).toBe(true);
       });

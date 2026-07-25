@@ -57,7 +57,7 @@ import { collectWeaponMastery, hasTwoWeaponFighting } from '../../services/comba
 import { addEntry } from '../../services/ui/logService.js';
 
 const defaultRollResult = { total: 5, rolls: [5], modifier: 3 };
-const defaultCtx = { targetName: 'Goblin' };
+const defaultCtx = { targetName: 'Goblin', autoDamageSecondaryFormula: null, autoDamageSecondaryName: null, autoDamageSecondaryDamageType: null, saveDc: null, saveType: null, dcSuccess: null };
 
 function createMockDeps(overrides = {}) {
     const mockPlayerStats = {

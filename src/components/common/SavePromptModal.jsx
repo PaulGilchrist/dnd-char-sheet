@@ -275,6 +275,12 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         primaryDamageType: current.damageType || null,
         actualDamage: current.rawDamage || 0,
         damageApplied: (current.rawDamage || 0) > 0,
+        ...(current.secondaryFormula ? {
+          secondaryFormula: current.secondaryFormula,
+          secondaryDamageType: current.secondaryDamageType || null,
+          secondaryRawDamage: current.secondaryRawDamage || 0,
+          secondaryTotal: current.secondaryRawDamage || 0,
+        } : {}),
         timestamp: Date.now(),
       };
       storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName);
@@ -385,6 +391,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     const {
       promptId, targetName, success, roll, total, saveBonus, rawRolls, mode, bonusDetail,
       saveType, saveDc, condition, sourceName, damageFormula, damageType, rawDamage, dcSuccess,
+      secondaryFormula, secondaryDamageType, secondaryRawDamage,
     } = saveData;
 
     sendSaveResult(campaignName, targetName, {
@@ -430,6 +437,12 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         saveResult: success ? 'success' : 'failure',
         saveConditions: condition ? [condition] : [],
         timestamp: Date.now(),
+        ...(secondaryFormula ? {
+          secondaryFormula,
+          secondaryDamageType: secondaryDamageType || null,
+          secondaryRawDamage: secondaryRawDamage || 0,
+          secondaryTotal: secondaryRawDamage || 0,
+        } : {}),
       };
       storage.set('combatSummary', cs, campaignName);
     }
@@ -506,6 +519,9 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       damageType: current.damageType,
       rawDamage: current.rawDamage,
       dcSuccess: current.dcSuccess,
+      secondaryFormula: current.secondaryFormula,
+      secondaryDamageType: current.secondaryDamageType,
+      secondaryRawDamage: current.secondaryRawDamage,
       note: 'fanatical_focus_reroll',
       healingName: 'Fanatical Focus',
       healingNote: 'fanatical_focus_hp_restore',
@@ -552,6 +568,9 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       damageType: current.damageType,
       rawDamage: current.rawDamage,
       dcSuccess: current.dcSuccess,
+      secondaryFormula: current.secondaryFormula,
+      secondaryDamageType: current.secondaryDamageType,
+      secondaryRawDamage: current.secondaryRawDamage,
       note: 'disciplined_survivor_reroll',
       healingName: 'Disciplined Survivor',
       healingNote: 'disciplined_survivor_hp_restore',
@@ -583,6 +602,9 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       damageType: current.damageType,
       rawDamage: current.rawDamage,
       dcSuccess: current.dcSuccess,
+      secondaryFormula: current.secondaryFormula,
+      secondaryDamageType: current.secondaryDamageType,
+      secondaryRawDamage: current.secondaryRawDamage,
       note: 'guarded_mind_reroll',
       healingName: 'Guarded Mind',
       healingNote: 'guarded_mind_hp_restore',
@@ -690,6 +712,9 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                         damageType: current.damageType,
                         rawDamage: current.rawDamage,
                         dcSuccess: current.dcSuccess,
+                        secondaryFormula: current.secondaryFormula,
+                        secondaryDamageType: current.secondaryDamageType,
+                        secondaryRawDamage: current.secondaryRawDamage,
                         note: 'living_legend_reroll',
                         healingName: 'Living Legend',
                         healingNote: 'living_legend_hp_restore',
