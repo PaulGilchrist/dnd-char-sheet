@@ -27,7 +27,7 @@
     {
       "name": "Intelligence",
       "baseScore": 15,
-      "featIncrease": 3,
+      "featIncrease": 4,
       "backgroundIncrease": 1,
       "miscIncrease": 0
     },
@@ -55,11 +55,11 @@
     "primalOrder": ""
   },
   "expertSkills": [
-    "Perception"
+    "Arcana"
   ],
   "feats": [
-    "Inspiring Leader",
-    "Magic Initiate"
+    "Magic Initiate",
+    "Keen Mind"
   ],
   "fightingStyles": [],
   "race": {
@@ -105,22 +105,9 @@
   "skillProficiencies": [
     "Arcana",
     "History",
-    "Investigation",
-    "Medicine",
-    "Perception",
-    "Acrobatics",
-    "Animal Handling",
     "Athletics",
-    "Deception",
-    "Insight",
-    "Intimidation",
-    "Nature",
-    "Performance",
-    "Persuasion",
-    "Religion",
-    "Sleight of Hand",
-    "Stealth",
-    "Survival"
+    "Acrobatics",
+    "Sleight of Hand"
   ],
   "toolProficiencies": [
     "Calligrapher's Supplies"
@@ -158,7 +145,8 @@
     }
   },
   "proficiencies": [
-    "3 from: Artisan's Tools"
+    "3 from: Artisan's Tools",
+    "1 from: Arcana, History, Investigation, Nature, Religion"
   ],
   "feyTouchedSpell": "Detect Evil and Good",
   "shadowTouchedSpell": "Disguise Self"

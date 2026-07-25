@@ -247,10 +247,8 @@ describe('rules.getPlayerStats - feat buffs proficiency handling', () => {
     expect(result.expertise).toContain('Insight');
     expect(result.expertise).toContain('History');
   });
-});
 
-describe('rules.getPlayerStats - 2024 expertise feat handling', () => {
-  beforeEach(() => {
+  it('should merge expertSkills field alongside existing expertise for 2024', async () => {
     vi.clearAllMocks();
     setupDefaults();
     raceRules2024.getRace.mockReturnValue({ name: 'Human', languages: ['Common'], traits: [] });
@@ -267,38 +265,14 @@ describe('rules.getPlayerStats - 2024 expertise feat handling', () => {
     abilityCalc2024.getAbilities.mockResolvedValue(defaultAbilities);
     abilityCalc2024.getHitPoints.mockReturnValue(12);
     abilityCalc2024.getCarryingCapacity.mockReturnValue(150);
-  });
 
-  it('should mark expertise for 2024 feat proficiency choices', async () => {
-    vi.mocked(featBuffService.computeAllFeatBuffs).mockReturnValue({
-      abilityScoreIncreases: [],
-      proficiencies: [{ type: 'proficiency', isChoice: true, choose: 1, from: ['Knowledge'], grantsExpertise: true }],
-      features: [],
-    });
     const playerSummary = makePlayerSummary({
       rules: '2024',
-      proficiencies: ['1 from: Knowledge'],
-      expertise: [],
-    });
-    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
-    expect(result.expertise).toContain('Knowledge');
-  });
-
-  it('should support expertSkills field alongside expertise for 2024', async () => {
-    vi.mocked(featBuffService.computeAllFeatBuffs).mockReturnValue({
-      abilityScoreIncreases: [],
-      proficiencies: [{ type: 'proficiency', isChoice: true, choose: 1, from: ['Perception'], grantsExpertise: true }],
-      features: [],
-    });
-    const playerSummary = makePlayerSummary({
-      rules: '2024',
-      proficiencies: ['1 from: Perception'],
       expertise: ['Insight'],
       expertSkills: ['History'],
     });
     const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
     expect(result.expertise).toContain('Insight');
     expect(result.expertise).toContain('History');
-    expect(result.expertise).toContain('Perception');
   });
 });

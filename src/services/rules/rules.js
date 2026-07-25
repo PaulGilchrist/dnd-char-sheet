@@ -1264,8 +1264,8 @@ const rules = {
         }
 
         // Apply expertise feat buffs (e.g., Keen Mind Lore Knowledge, Observant's Keen Observer)
-        // When a player has a proficiency choice from a feat that grants expertise,
-        // mark any selected skill from that choice list as expertise
+        // The user's expertise choices are stored in formData.expertSkills and merged here.
+        // The wizard enforces proficiency-first and feat-restricted skill lists.
         // Also support expertSkills field (wizard form field name) for both 5e and 2024
         if (playerStats.expertSkills && Array.isArray(playerStats.expertSkills)) {
             playerStats.expertSkills.forEach(s => {
@@ -1273,45 +1273,6 @@ const rules = {
                     playerStats.expertise.push(s);
                 }
             });
-        }
-        if (is2024(playerStats, playerSummary)) {
-            let expertiseProfs = playerStats.expertise;
-            if (!Array.isArray(expertiseProfs)) {
-                console.error('rules: expected expertise to be an array for', playerStats.name);
-                throw new Error('Missing array: expertise for ' + playerStats.name);
-            }
-            const expertiseSkills = new Set(expertiseProfs);
-            featProficiencyChoices.forEach(fp => {
-                if (!fp.grantsExpertise) return;
-                if (fp.from) {
-                    const listName = fp.from[0];
-                    const profName = `${fp.choose} from: ${listName}`;
-                    const profs = playerStats.proficiencies;
-                    if (!Array.isArray(profs)) {
-                        console.error('rules: expected proficiencies to be an array for', playerStats.name);
-                        throw new Error('Missing array: proficiencies for ' + playerStats.name);
-                    }
-                    const existingProfIdx = profs.indexOf(profName);
-                    if (existingProfIdx !== -1) {
-                        const chosenSkills = profs.filter(s => {
-                            if (typeof s !== 'string') return false;
-                            const match = s.match(/^(\d+) from: (.+)$/);
-                            if (!match) return false;
-                            return match[2] === listName;
-                        });
-                        chosenSkills.forEach(chosenSkill => {
-                            const skillMatch = chosenSkill.match(/^\d+ from: (.+)$/);
-                            if (skillMatch) {
-                                const skillName = skillMatch[1].trim();
-                                if (!expertiseSkills.has(skillName)) {
-                                    expertiseSkills.add(skillName);
-                                }
-                            }
-                        });
-                    }
-                }
-            });
-            playerStats.expertise = Array.from(expertiseSkills);
         }
 
         // Apply non-choice, non-skill proficiency feat buffs (e.g., Heavily Armored → Heavy Armor)

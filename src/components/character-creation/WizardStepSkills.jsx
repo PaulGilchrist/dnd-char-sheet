@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import WarningList from '../common/WarningList.jsx';
 import './WizardStepSkills.css';
 import { loadSkills } from '../../services/ui/dataLoader.js';
@@ -29,9 +29,36 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 		loadSkillsData();
 	}, []);
 
+  const expertiseData = useMemo(() => {
+    const expertSkills = formData.expertSkills || [];
+    const featExpertiseSkillLists = expertiseLimits?.featExpertiseSkillLists;
+
+    // Build the set of feat-restricted skill names
+    let featRestrictedSkills = null;
+    if (featExpertiseSkillLists && featExpertiseSkillLists.length > 0) {
+      featRestrictedSkills = new Set(
+        featExpertiseSkillLists.flat().map(s => s.trim()).filter(Boolean)
+      );
+    }
+
+    // Count how many expert skills are in the restricted set (feat slots used)
+    const featSlotsUsed = featRestrictedSkills
+      ? expertSkills.filter(s => featRestrictedSkills.has(s)).length
+      : 0;
+
+    // Class-based expertise slots available
+    const classSlotsAvailable = (expertiseLimits?.classCount || 0) - (expertSkills.length - featSlotsUsed);
+
+    return {
+      featRestrictedSkills,
+      featSlotsUsed,
+      featCount: expertiseLimits?.featCount || 0,
+      classSlotsAvailable,
+    };
+  }, [formData.expertSkills, expertiseLimits]);
+
 	const handleExpertiseToggle = (skill) => {
 		const isCurrentlyExpert = (formData.expertSkills || []).includes(skill);
-		const isCurrentlyProficient = (formData.skillProficiencies || []).includes(skill);
 
 		if (isCurrentlyExpert) {
       // Deselecting expertise - remove from expertSkills only
@@ -39,16 +66,58 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 			setShowExpertiseFeedback(null);
 			} else {
 			// Elevating to expertise
+			const isCurrentlyProficient = (formData.skillProficiencies || []).includes(skill);
 			if (!isCurrentlyProficient) {
 				setShowExpertiseFeedback(`Please select ${skill} as proficient first`);
 				setTimeout(() => setShowExpertiseFeedback(null), 3000);
 				return;
 				}
+
+        // Check if this skill is in a feat-restricted list
+        const isFeatRestricted = expertiseLimits?.featExpertiseSkillLists?.some(list =>
+          list.some(s => s.trim() === skill)
+        );
+
+        if (isFeatRestricted && expertiseLimits?.featCount && expertiseLimits.featCount > 0) {
+          // Check if feat slots are exhausted
+          if (expertiseData.featSlotsUsed >= expertiseLimits.featCount) {
+            setShowExpertiseFeedback('All feat expertise slots are used');
+            setTimeout(() => setShowExpertiseFeedback(null), 3000);
+            return;
+          }
+        }
+
+        // Check if class slots are exhausted for non-restricted skills
+        if (!isFeatRestricted && expertiseLimits?.classCount && expertiseLimits.classCount > 0) {
+          if (expertiseData.classSlotsAvailable <= 0) {
+            setShowExpertiseFeedback('All class expertise slots are used');
+            setTimeout(() => setShowExpertiseFeedback(null), 3000);
+            return;
+          }
+        }
+
 			onSkillExpertiseToggle(skill, true);
 			setShowExpertiseFeedback(`${skill} is now Expert!`);
 			setTimeout(() => setShowExpertiseFeedback(null), 3000);
 			}
 		};
+
+  const canElevateSkill = (skill) => {
+    const isFeatRestricted = expertiseLimits?.featExpertiseSkillLists?.some(list =>
+      list.some(s => s.trim() === skill)
+    );
+
+    if (isFeatRestricted && expertiseLimits?.featCount && expertiseLimits.featCount > 0) {
+      return expertiseData.featSlotsUsed < expertiseLimits.featCount;
+    }
+
+    if (expertiseLimits?.classCount && expertiseLimits.classCount > 0) {
+      return expertiseData.classSlotsAvailable > 0;
+    }
+
+    // No limits - allow all
+    return true;
+  };
 
 	const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
 	const isSkillProficient = (skill) => (formData.skillProficiencies || []).includes(skill);
@@ -102,8 +171,12 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 							type="button"
 							className={`expertise-toggle-btn ${isSkillExpert(skill.name) ? 'active' : ''}`}
 							onClick={() => handleExpertiseToggle(skill.name)}
-							disabled={!isSkillProficient(skill.name)}
-							title={isSkillProficient(skill.name) ? 'Click to elevate to Expert' : 'Select proficient first'}
+							disabled={!isSkillProficient(skill.name) || !canElevateSkill(skill.name)}
+							title={
+								!isSkillProficient(skill.name) ? 'Select proficient first'
+								: !canElevateSkill(skill.name) ? 'All expertise slots exhausted'
+								: 'Click to elevate to Expert'
+							}
 							>
 								{isSkillExpert(skill.name) ? '✓ Expert' : 'Elevate'}
 							</button>
