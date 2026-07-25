@@ -138,6 +138,9 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             }
             setRuntimeValue(playerStats.name, 'awakenedMindTarget', null, campaignName);
 
+            // Clear Poisoned Weapons badge on initiative roll (new combat)
+            setRuntimeValue(playerStats.name, 'poisonedWeaponsActive', null, campaignName);
+
             const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
 
             // Check for Perfect Focus (Monk level 15)

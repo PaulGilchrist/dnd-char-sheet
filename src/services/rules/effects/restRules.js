@@ -97,7 +97,8 @@ export const SHORT_REST_RESOURCES = [
    'strokeOfLuckUsed',
    'boonOfCombatProwessUsed',
    'encouragingsongUses',
-   'piercerPunctureUsedThisTurn'
+   'piercerPunctureUsedThisTurn',
+   'poisonedWeaponsActive'
 ]
 
 export function getShortRestResources() {
@@ -212,9 +213,10 @@ export const LONG_REST_RESOURCES = [
     '_fiendishResilienceUsed',
     'boonOfCombatProwessUsed',
     'strokeOfLuckUsed',
-      '_boonOfEnergyResistanceUsedThisRest',
-      '_Energy_Resistances_chosenTypes',
-  '_guardedMind_usedRest'
+   '_boonOfEnergyResistanceUsedThisRest',
+   '_Energy_Resistances_chosenTypes',
+   '_guardedMind_usedRest',
+   'poisonedWeaponsActive'
 ]
 
 export function getLongRestResources() {

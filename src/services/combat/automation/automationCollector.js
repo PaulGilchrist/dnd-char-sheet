@@ -973,6 +973,12 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'web_area_save':
                 result.specialActions.push(info)
                 break;
+            case 'brew_poison':
+                result.specialActions.push(info)
+                break
+            case 'apply_poison':
+                result.bonusActions.push(info)
+                break
             default:
                 result.specialActions.push(info)
                 break;

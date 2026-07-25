@@ -162,8 +162,8 @@ describe('buildAttackRollDamageSteps', () => {
       expect(steps.length).toBeGreaterThan(0);
     });
 
-    it('has 23 steps', () => {
-      expect(steps).toHaveLength(23);
+    it('has 24 steps', () => {
+      expect(steps).toHaveLength(24);
     });
 
     it('has steps with correct names in order', () => {
@@ -191,6 +191,7 @@ describe('buildAttackRollDamageSteps', () => {
         'cleaveMastery',
         'tacticalMaster',
         'toppleMastery',
+        'poisonWeaponEffect',
         'masteryDone',
       ]);
     });
@@ -223,24 +224,28 @@ describe('buildAttackRollDamageSteps', () => {
       }
     });
 
-    it('has masteryDone step subscribing to cleave:done (cleaveDone -> tacticalDone -> masteryDone chain)', () => {
+    it('has masteryDone step subscribing to poison:done (cleaveDone -> tacticalDone -> masteryDone -> poison:done -> pipeline:complete chain)', () => {
       const names = steps.map((s) => s.name);
       const cleaveIdx = names.indexOf('cleaveMastery');
       const tacticalIdx = names.indexOf('tacticalMaster');
       const toppleIdx = names.indexOf('toppleMastery');
+      const poisonIdx = names.indexOf('poisonWeaponEffect');
       const masteryDoneIdx = names.indexOf('masteryDone');
 
       expect(cleaveIdx).toBeGreaterThan(0);
       expect(tacticalIdx).toBeGreaterThan(cleaveIdx);
       expect(toppleIdx).toBeGreaterThan(tacticalIdx);
-      expect(masteryDoneIdx).toBeGreaterThan(toppleIdx);
+      expect(poisonIdx).toBeGreaterThan(toppleIdx);
+      expect(masteryDoneIdx).toBeGreaterThan(poisonIdx);
 
       expect(steps[cleaveIdx].emit).toBe('cleave:done');
       expect(steps[tacticalIdx].subscribe).toBe('cleave:done');
       expect(steps[tacticalIdx].emit).toBe('tactical:done');
       expect(steps[toppleIdx].subscribe).toBe('tactical:done');
       expect(steps[toppleIdx].emit).toBe('mastery:done');
-      expect(steps[masteryDoneIdx].subscribe).toBe('mastery:done');
+      expect(steps[poisonIdx].subscribe).toBe('mastery:done');
+      expect(steps[poisonIdx].emit).toBe('poison:done');
+      expect(steps[masteryDoneIdx].subscribe).toBe('poison:done');
       expect(steps[masteryDoneIdx].emit).toBe('pipeline:complete');
     });
   });

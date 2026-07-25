@@ -49,8 +49,7 @@
   "class": {
     "name": "Fighter",
     "subclass": {
-      "name": "Psi Warrior",
-      "type": ""
+      "name": "Eldritch Knight"
     },
     "divineOrder": "",
     "primalOrder": "",
@@ -107,7 +106,9 @@
   ],
   "toolProficiencies": [],
   "specialActions": [],
-  "spells": [],
+  "spells": [
+    "Poison Spray"
+  ],
   "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,

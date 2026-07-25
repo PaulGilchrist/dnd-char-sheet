@@ -8,6 +8,8 @@ function CharFeatFeatures({ playerStats, campaignName }) {
     const chefBolsteringTreats = useRuntimeValue(playerStats.name, 'chefBolsteringTreats', campaignName);
     const bolsteringTreat = useRuntimeValue(playerStats.name, 'bolsteringTreat', campaignName);
     const luckyPoints = useRuntimeValue(playerStats.name, 'luckyPoints', campaignName);
+    const poisonDoses = useRuntimeValue(playerStats.name, 'poisonDoses', campaignName);
+    const poisonedWeaponsActive = useRuntimeValue(playerStats.name, 'poisonedWeaponsActive', campaignName);
 
     const hasChefFeat = (playerStats.automation?.specialActions ?? []).some(
         p => p.type === 'temp_hp_buff' && p.name === 'Bolstering Treats'
@@ -21,9 +23,13 @@ function CharFeatFeatures({ playerStats, campaignName }) {
         f?.toLowerCase?.().includes('lucky')
     );
 
+    const hasPoisonerFeat = (playerStats.automation?.specialActions ?? []).some(
+        p => p.type === 'brew_poison' && p.name === 'Brew Poison'
+    );
+
     const lpMax = playerStats.proficiency || 0;
 
-    const hasAnyResources = (replenishingMeals > 0) || (hasChefFeat && chefBolsteringTreats > 0) || bolsteringTreat > 0 || (hasLuckyFeat && lpMax > 0);
+    const hasAnyResources = (replenishingMeals > 0) || (hasChefFeat && chefBolsteringTreats > 0) || bolsteringTreat > 0 || (hasLuckyFeat && lpMax > 0) || hasPoisonerFeat;
     if (!hasAnyResources) {
         return null;
     }
@@ -40,6 +46,23 @@ function CharFeatFeatures({ playerStats, campaignName }) {
                     campaignName={campaignName}
                     playerStats={playerStats}
                 />
+            )}
+            {hasPoisonerFeat && (
+                <div>
+                    <TrackedResourceInput
+                        label="Poison Doses"
+                        resourceKey="poisonDoses"
+                        playerName={playerStats.name}
+                        getMax={() => playerStats.proficiency || 0}
+                        deps={[playerStats, poisonDoses]}
+                        campaignName={campaignName}
+                        playerStats={playerStats}
+                        defaultValue={0}
+                    />
+                    {poisonedWeaponsActive && (
+                        <span className="automation-badge"><i className="fa-solid fa-vial"></i> Poisoned Weapons active</span>
+                    )}
+                </div>
             )}
             {replenishingMeals > 0 && (
                 <TrackedResourceInput

@@ -196,6 +196,54 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         setBolsteringTreatsModal(null);
     }, [bolsteringTreatsModal, chefBolsteringTreats, bolsteringTreatsMax, campaignName, setPopupHtml, playerStats.name]);
 
+    const hasPoisonerFeat = (playerStats.automation?.specialActions ?? []).some(
+        p => p.type === 'brew_poison' && p.name === 'Brew Poison'
+    );
+    const poisonDoses = useRuntimeValue(playerStats.name, 'poisonDoses', campaignName);
+    const poisonDosesMax = hasPoisonerFeat ? (playerStats.proficiency || 0) : 0;
+
+    const handleBrewPoisonClick = useCallback(async () => {
+        if (cannotAct) return;
+        if (!hasPoisonerFeat) return;
+        const current = Number(poisonDoses ?? 0);
+        const max = poisonDosesMax;
+        if (current >= max) {
+            const html = `<b>Brew Poison</b><br/>Poison doses are already at maximum (${max}/${max}).<br/>Cost: 50 GP + 1 hour using a Poisoner's Kit.<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+            return;
+        }
+        const allItems = [
+            ...(playerStats.inventory?.equipped || []),
+            ...(playerStats.inventory?.backpack || []),
+        ];
+        const hasPoisonersKit = allItems.some(item => {
+            const itemName = typeof item === 'string' ? item : (item.name || '');
+            return itemName.toLowerCase().includes("poisoner's kit");
+        });
+        if (!hasPoisonersKit) {
+            const html = `<b>Brew Poison</b><br/>You need a Poisoner's Kit in your inventory (equipped or backpack) to brew poison.<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+            return;
+        }
+        const existingGold = Number(getRuntimeValue(playerStats.name, 'gold', campaignName) ?? playerStats.inventory?.gold ?? 0);
+        if (existingGold < 50) {
+            const html = `<b>Brew Poison</b><br/>You need at least 50 GP to brew poison. You have ${existingGold} GP.<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+            return;
+        }
+        setRuntimeValue(playerStats.name, 'gold', existingGold - 50, campaignName);
+        setRuntimeValue(playerStats.name, 'poisonDoses', max, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Brew Poison',
+            description: `${playerStats.name} brewed poison doses using a Poisoner's Kit, expending 50 GP and 1 hour. Doses: ${max}/${max}.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+        const html = `<b>Brew Poison</b><br/>Brewed ${max - current} poison dose${max - current !== 1 ? 's' : ''} using a Poisoner's Kit (50 GP, 1 hour). Poison Doses: ${max}/${max}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
+        setPopupHtml(html);
+    }, [cannotAct, hasPoisonerFeat, poisonDoses, poisonDosesMax, campaignName, setPopupHtml, playerStats.inventory, playerStats.name]);
+
     const handleBolsteringPerformanceConfirm = useCallback(async (selectedTargets) => {
         if (!bolsteringPerformanceModal) return;
         const result = await confirmBolsteringPerformance(
@@ -380,6 +428,10 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             handleBolsteringTreatsClick();
             return;
         }
+        if (auto?.type === 'brew_poison') {
+            handleBrewPoisonClick();
+            return;
+        }
         const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
         if (!result) return;
         if (result.type === 'modal') {
@@ -445,7 +497,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             const html = `<b>${name}</b><br/>${description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
-    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick]);
+    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick, handleBrewPoisonClick]);
     const handleStrideConfirm = useCallback(async (optionName, buffEntry) => {
         if (!strideModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign } = strideModal;

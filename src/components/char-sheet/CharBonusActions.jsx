@@ -44,6 +44,34 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     const hasChefBolsteringTreats = Number(chefBolsteringTreats ?? 0) > 0;
     const showEatTreat = hasBolsteringTreat || hasChefBolsteringTreats;
 
+    const hasApplyPoison = (playerStats.automation?.bonusActions ?? []).some(
+        a => a.type === 'apply_poison' && a.name === 'Apply Poison'
+    );
+    const poisonDoses = useRuntimeValue(playerStats.name, 'poisonDoses', campaignName);
+    const showApplyPoison = hasApplyPoison && Number(poisonDoses ?? 0) > 0 && !cannotAct;
+
+    const handleApplyPoison = React.useCallback(async () => {
+        if (cannotAct) return;
+        const currentDoses = Number(getRuntimeValue(playerStats.name, 'poisonDoses', campaignName) ?? 0);
+        if (currentDoses <= 0) return;
+        const dexMod = playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
+        const intMod = playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0;
+        const poisonerAbilityModifier = Math.max(dexMod, intMod);
+        const proficiencyBonus = playerStats.proficiency || 0;
+        const saveDc = 8 + poisonerAbilityModifier + proficiencyBonus;
+        setRuntimeValue(playerStats.name, 'poisonDoses', currentDoses - 1, campaignName);
+        setRuntimeValue(playerStats.name, 'poisonedWeaponsActive', true, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Apply Poison',
+            description: `${playerStats.name} applied a poison dose to a weapon. Doses remaining: ${currentDoses - 1}. Poisoned weapons active until initiative roll, short rest, or long rest.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+        const html = `<b>Apply Poison</b><br/>Poison applied to weapons. Doses Remaining ${currentDoses - 1}.<br/>When a creature takes damage from a poisoned weapon, it must succeed on a CON save (DC ${saveDc}) or take 2d8 Poison damage and have the Poisoned condition until the end of your next turn.<br/><span class="dice-roll-hint">click to dismiss</span>`;
+        setPopupHtml(html);
+    }, [cannotAct, campaignName, setPopupHtml, playerStats.abilities, playerStats.name, playerStats.proficiency]);
+
     const handleEatBolsteringTreat = React.useCallback(async () => {
         if (cannotAct) return;
         const isChef = hasChefBolsteringTreats;
@@ -283,6 +311,12 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                 {showEatTreat && (
                     <div>
                         <b className="clickable" onClick={handleEatBolsteringTreat}>Eat Bolstering Treat:</b> <span>Eat treat to gain a number of Temporary Hit Points equal to your Proficiency Bonus.</span>
+                    </div>
+                )}
+
+                {showApplyPoison && (
+                    <div>
+                        <b className="clickable" onClick={handleApplyPoison}>Apply Poison:</b> <span>Apply a poison dose to a weapon. Target must succeed on a CON save (DC {8 + Math.max(playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0, playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0) + (playerStats.proficiency || 0)}) or take 2d8 Poison damage and have the Poisoned condition until the end of your next turn.</span>
                     </div>
                 )}
 

@@ -57,7 +57,7 @@
   "expertSkills": [],
   "feats": [
     "Magic Initiate",
-    "Piercer"
+    "Poisoner"
   ],
   "fightingStyles": [],
   "race": {
@@ -81,7 +81,8 @@
       "Rope, Silk (50 feet)",
       "String",
       "Waterskin",
-      "Healer's Kit"
+      "Healer's Kit",
+      "Poisoner's Kit"
     ],
     "equipped": [
       "Hand Crossbow",
@@ -138,8 +139,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Piercer-0": {
-      "assignment": "Strength"
+    "Poisoner-0": {
+      "assignment": "Dexterity"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

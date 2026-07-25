@@ -1233,11 +1233,99 @@ export function buildAttackRollDamageSteps() {
     },
 
     // =========================================================
+    // Step: poisonWeaponEffect — Poisoner feat poison on weapon hit
+    // =========================================================
+    {
+      name: 'poisonWeaponEffect',
+      subscribe: 'mastery:done',
+      emit: 'poison:done',
+      condition: (ctx) => ctx.attack?.name && ctx.playerStats,
+      handler: async (ctx) => {
+        const cs = await loadCombatSummary(ctx.campaignName);
+        const lastAttack = cs?.lastAttack;
+        if (!lastAttack?.hit) return { data: {} };
+
+        const poisonedActive = getRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', ctx.campaignName);
+        if (!poisonedActive) return { data: {} };
+
+        const targetName = lastAttack.targetName;
+        const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
+        const intMod = ctx.playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0;
+        const poisonerAbilityModifier = Math.max(dexMod, intMod);
+        const proficiencyBonus = ctx.playerStats.proficiency || 0;
+        const saveDc = 8 + poisonerAbilityModifier + proficiencyBonus;
+
+        const { promise } = createSaveListener(ctx.campaignName, {
+          targetName: targetName,
+          saveType: 'CON',
+          saveDc: saveDc,
+          attackerName: ctx.playerStats.name,
+        });
+
+        addEntry(ctx.campaignName, {
+          type: 'save_result',
+          characterName: ctx.playerStats.name,
+          targetName: targetName,
+          saveType: 'CON',
+          saveDc: saveDc,
+          description: `Poisoned weapon: ${targetName} must make a DC ${saveDc} CON save or take 2d8 Poison damage and be Poisoned until end of your next turn.`,
+          success: null,
+        }).catch(() => {});
+
+        const saveResult = await promise;
+
+        setRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', null, ctx.campaignName);
+
+        if (saveResult && !saveResult.success) {
+          const rollResult = rollExpression('2d8');
+          const poisonDamage = rollResult?.total || 7;
+          if (poisonDamage > 0) {
+            const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
+            await applyDamageToTarget(
+              cs,
+              targetName,
+              poisonDamage,
+              ['Poison'],
+              ctx.campaignName,
+              characters,
+              false,
+              ctx.playerStats.name
+            );
+          }
+
+          const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
+          const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+          if (!conditions.includes('poisoned')) {
+            await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'poisoned'], ctx.campaignName);
+          }
+
+          addEntry(ctx.campaignName, {
+            type: 'ability_use',
+            characterName: ctx.playerStats.name,
+            abilityName: 'Poisoned Weapons',
+            description: `Poison dose triggered on ${targetName} — target failed CON save (DC ${saveDc}), took ${poisonDamage} Poison damage and gained Poisoned condition.`,
+            targetName: targetName,
+          }).catch(() => {});
+        } else {
+          addEntry(ctx.campaignName, {
+            type: 'ability_use',
+            characterName: ctx.playerStats.name,
+            abilityName: 'Poisoned Weapons',
+            description: `Poison dose triggered on ${targetName} — target succeeded on CON save (DC ${saveDc}), no effect.`,
+            targetName: targetName,
+          }).catch(() => {});
+        }
+
+        return { data: {} };
+      },
+    },
+
+    // =========================================================
     // Step: masteryDone — Final step
     // =========================================================
     {
       name: 'masteryDone',
-      subscribe: 'mastery:done',
+      subscribe: 'poison:done',
       emit: 'pipeline:complete',
       condition: () => true,
       handler: async () => {

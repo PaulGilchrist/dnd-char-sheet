@@ -1,7 +1,7 @@
 import React from 'react';
 import { getRuntimeValue, setRuntimeValue, addStorageChangeListener, hasRuntimeValue } from './useRuntimeState.js';
 
-function resolveCurrent(storageKey, playerName, playerStats, maxGetter) {
+function resolveCurrent(storageKey, playerName, playerStats, maxGetter, defaultValue = null) {
   const hasKey = hasRuntimeValue(playerName, storageKey);
   const storedValue = getRuntimeValue(playerName, storageKey);
   if (hasKey && storedValue != null) return storedValue;
@@ -9,22 +9,22 @@ function resolveCurrent(storageKey, playerName, playerStats, maxGetter) {
   if (playerStats?._trackedResources?.[storageKey]) {
     return playerStats._trackedResources[storageKey].current;
   }
-  return maxGetter();
+  return defaultValue !== null ? defaultValue : maxGetter();
 }
 
-function useTrackedResource(storageKey, playerName, maxGetter, deps, campaignName, playerStats) {
+function useTrackedResource(storageKey, playerName, maxGetter, deps, campaignName, playerStats, defaultValue = null) {
   const [current, setCurrent] = React.useState(() =>
-    resolveCurrent(storageKey, playerName, playerStats, maxGetter)
+    resolveCurrent(storageKey, playerName, playerStats, maxGetter, defaultValue)
   );
 
   React.useEffect(() => {
-    const resolved = resolveCurrent(storageKey, playerName, playerStats, maxGetter);
+    const resolved = resolveCurrent(storageKey, playerName, playerStats, maxGetter, defaultValue);
     setCurrent(resolved);
-  }, [deps, maxGetter, playerName, storageKey, campaignName, playerStats]);
+  }, [deps, maxGetter, playerName, storageKey, campaignName, playerStats, defaultValue]);
 
   React.useEffect(() => {
     const reReadHandler = () => {
-      const resolved = resolveCurrent(storageKey, playerName, playerStats, maxGetter);
+      const resolved = resolveCurrent(storageKey, playerName, playerStats, maxGetter, defaultValue);
       setCurrent(resolved);
     };
 
@@ -39,7 +39,7 @@ function useTrackedResource(storageKey, playerName, maxGetter, deps, campaignNam
       window.removeEventListener('innate-sorcery-updated', reReadHandler);
       removeListener();
      };
-  }, [playerName, storageKey, campaignName, maxGetter, playerStats]);
+  }, [playerName, storageKey, campaignName, maxGetter, playerStats, defaultValue]);
 
   const update = async (val) => {
     await setRuntimeValue(playerName, storageKey, val, campaignName);
