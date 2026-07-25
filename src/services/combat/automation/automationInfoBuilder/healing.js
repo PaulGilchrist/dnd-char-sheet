@@ -6,6 +6,23 @@ export const healingHandlers = {
         const auto = feature.automation
         const prof = playerStats.proficiency || 0
         const level = playerStats.level || 1
+
+        if (auto.requiresHealersKit === true) {
+            const action = auto.action || 'action'
+            const range = auto.range || ''
+            return {
+                type: 'healing',
+                name: feature.name,
+                healAmount: 0,
+                healExpression: `1d? + ${prof}`,
+                action,
+                range,
+                casting_time: auto.casting_time || '',
+                requiresHealersKit: true,
+                hasAutomation: true
+            }
+        }
+
         const healAmount = auto.healExpression
             ? evaluateAutoExpression(auto.healExpression, playerStats, prof, level)
             : 0

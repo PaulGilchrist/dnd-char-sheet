@@ -331,7 +331,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             handleBolsteringTreatsClick();
             return;
         }
-        const result = await executeHandler(action, playerStats, campaignName, mapName);
+        const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
         if (!result) return;
         if (result.type === 'modal') {
             if (result.modalName === 'teleport') {
@@ -392,7 +392,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             const html = `<b>${name}</b><br/>${description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
-    }, [playerStats, campaignName, cannotAct, mapName, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick]);
+    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick]);
     const handleStrideConfirm = useCallback(async (optionName, buffEntry) => {
         if (!strideModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign } = strideModal;

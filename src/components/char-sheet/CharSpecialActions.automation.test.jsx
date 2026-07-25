@@ -140,6 +140,7 @@ describe('CharSpecialActions - Automation', () => {
           playerStats.specialActions[0],
           playerStats,
           'test',
+          undefined,
           undefined
         );
       });

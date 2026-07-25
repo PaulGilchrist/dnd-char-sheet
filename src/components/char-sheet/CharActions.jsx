@@ -1099,7 +1099,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
             }
         }
 
-        const result = await executeHandler(action, playerStats, campaignName, mapName, playerStats.equipment);
+        const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
         if (!result) return;
 
         switch (result.type) {

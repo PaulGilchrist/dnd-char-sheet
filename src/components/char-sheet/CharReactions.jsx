@@ -196,7 +196,7 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         const auto = reaction.automation;
         if (!auto) return;
 
-        const result = await executeHandler(reaction, playerStats, campaignName, mapName, playerStats.equipment);
+        const result = await executeHandler(reaction, playerStats, campaignName, mapName, characters);
         if (!result) {
             const html = buildFeatureDetailHtml(reaction);
             if (html) setPopupHtml(html);
@@ -551,7 +551,7 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                             numDice: diceToSpend,
                             preRollResult: rollResultData,
                         };
-                        const result = await executeHandler(action, playerStats, campaignName, mapName, playerStats.equipment);
+                        const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
                         if (result) {
                             if (result.type === 'popup') {
                                 setPopupHtml(result.payload);

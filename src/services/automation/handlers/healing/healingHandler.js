@@ -7,13 +7,132 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { getHitDieSize, computeHitDieRecovery } from '../../../rules/effects/restRules.js';
 import { resolveDiceExpression, evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 
-export async function handle(action, playerStats, campaignName, _mapName) {
+async function fetchTargetCharacterData(targetName, campaignName) {
+    try {
+        const encodedCampaign = encodeURIComponent(campaignName);
+        const fileName = `${targetName.toLowerCase().replace(/\s+/g, '-')}.json`;
+        const response = await fetch(`/api/campaigns/${encodedCampaign}/${encodeURIComponent(fileName)}`);
+        if (response.ok) {
+            return await response.json();
+        }
+    } catch {
+        // Return null on failure
+    }
+    return null;
+}
+
+export async function handle(action, playerStats, campaignName, _mapName, characters) {
     const auto = action.automation;
     const isSelf = auto.type === 'self_healing';
     const slotLevel = auto.slotLevel || 1;
 
     const expression = auto.healExpression || '';
     const isMonkHealing = expression.includes('martial_arts_die') && expression.includes('WIS');
+
+    if (!isSelf && auto.requiresHealersKit === true && auto.healExpression) {
+        const allItems = [...(playerStats.inventory?.equipped || []), ...(playerStats.inventory?.backpack || [])];
+        const hasKit = allItems.some(item => {
+            const name = typeof item === 'string' ? item : (item.name || '');
+            return name.toLowerCase().includes("healer's kit") || name.toLowerCase().includes("healer kit");
+        });
+        if (!hasKit) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: `${action.name} requires a Healer's Kit.`,
+                },
+            };
+        }
+
+        const targetInfo = await resolveTarget(campaignName, playerStats.name);
+        const targetName = targetInfo?.target?.name || playerStats.name;
+
+        // Try to find target in the characters prop first (player characters with computedStats)
+        const targetChar = (characters || []).find(c => c.name === targetName);
+        const targetStats = targetChar?.computedStats || targetChar || playerStats;
+        let hitDieSize = getHitDieSize(targetStats);
+
+        // If no hit die found and target is different from healer, fetch target character data
+        if (!hitDieSize && targetName !== playerStats.name) {
+            const targetData = await fetchTargetCharacterData(targetName, campaignName);
+            if (targetData) {
+                const classIndex = targetData.class?.index || targetData.class;
+                if (classIndex) {
+                    const is2024 = targetData.rules === '2024';
+                    const classes = await (await fetch(`/api/data/classes${is2024 ? '2024' : ''}`)).json();
+                    const classEntry = classes.find(c => c.index === classIndex || c.name === classIndex);
+                    hitDieSize = parseInt((classEntry?.hit_point_die || 'd8').replace(/[^0-9]/g, ''), 10) || 8;
+                }
+            }
+        }
+        hitDieSize = hitDieSize || 8;
+
+        const targetHitDice = Number(getRuntimeValue(targetName, 'shortRestHitDice', campaignName) ?? 0);
+        if (targetHitDice < 1) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: `${targetName} has no hit dice remaining.`,
+                },
+            };
+        }
+
+        const maximize = hasHealingMaximization(playerStats);
+        const rerollOnes = hasRerollHealingOnes(playerStats);
+        const rollResult = maximize
+            ? rollExpressionMaximized(`1d${hitDieSize}`)
+            : rerollOnes
+                ? rollExpression(`1d${hitDieSize}`, { rerollOnes: true })
+                : rollExpression(`1d${hitDieSize}`);
+        if (!rollResult) {
+            console.error(`[healingHandler] ${action.name}: rollExpression returned null for 1d${hitDieSize}`);
+            return null;
+        }
+
+        const profBonus = playerStats.proficiency || 0;
+        const healAmount = rollResult.total + profBonus;
+
+        const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, targetName, healAmount, campaignName);
+
+        const rollDisplay = maximize ? 'maximized' : (rerollOnes ? 'rerolled ones' : rollResult.rolls.join(', '));
+        const rollInfo = `1d${hitDieSize}=${rollResult.total} (${rollDisplay})`;
+
+        logHealingToSSE(campaignName, {
+            targetName,
+            sourceName: action.name,
+            actualHeal,
+            newHp,
+            maxHp,
+            rollInfo,
+            maximize: false,
+            healingName: action.name,
+            bonusDetails: [],
+            skipPopup: true,
+        });
+
+        const remainingHitDice = Math.max(0, targetHitDice - 1);
+        await setRuntimeValue(targetName, 'shortRestHitDice', remainingHitDice, campaignName, true);
+
+        const healDesc = actualHeal > 0 ? `Regained ${actualHeal} HP` : 'Already at full HP';
+        const formula = `1d${hitDieSize} + ${profBonus}`;
+        const description = `${action.name} on ${targetName}: ${formula} = ${healAmount} — ${healDesc} (${remainingHitDice} hit dice remaining).`;
+
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                automationType: auto.type,
+                description,
+            },
+        };
+    }
 
     if (isMonkHealing) {
         const monkFeatures = getClassFeatures(playerStats);
@@ -274,8 +393,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     const hasFortifiedHealth = bonusDetails.some(d => d.name === 'Fortified Health');
                     if (hasFortifiedHealth) {
                         await markFortifiedHealthUsed(playerStats, campaignName);
-                    }
-                }
+    }
+}
+
 
                 await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName);
 
