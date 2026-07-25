@@ -58,9 +58,15 @@ function useWizardFeatBuffs(formData, allFeats, setFormData) {
     setFormData(prev => buildFormDataWithBuffs(prev, buffs));
   }, [setFormData]);
 
-  const clearBuffs = useCallback(() => {
+  const clearBuffs = useCallback((resetAll) => {
     setFormData(prev => {
       if (!prev.abilities) return prev;
+      if (resetAll) {
+        return {
+          ...prev,
+          abilities: prev.abilities.map(a => ({ ...a, featIncrease: 0 })),
+        };
+      }
       const nonChoiceIncreases = (computedBuffs?.abilityScoreIncreases || []).filter(inc => inc.name && inc.name !== 'any');
       return {
         ...prev,
@@ -92,11 +98,12 @@ function useWizardFeatBuffs(formData, allFeats, setFormData) {
 
     if (currentFeats.length > 0 && allFeats.length > 0) {
       const buffs = computeAllFeatBuffs(formData, allFeats);
-      clearBuffs();
+      const hadNoPreviousFeats = prev.length === 0;
+      clearBuffs(hadNoPreviousFeats);
       applyBuffs(buffs);
       setComputedBuffs(buffs);
     } else {
-      if (prevFeatsRef.current.length === 0) {
+      if (prevFeatsRef.current.length === 0 || currentFeats.length === 0) {
         clearBuffs();
       }
       setComputedBuffs(null);

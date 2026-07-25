@@ -13,9 +13,9 @@
     {
       "name": "Dexterity",
       "baseScore": 12,
-      "featIncrease": 0,
+      "featIncrease": 2,
       "backgroundIncrease": 0,
-      "miscIncrease": 0
+      "miscIncrease": 2
     },
     {
       "name": "Constitution",
@@ -148,10 +148,10 @@
       "assignment": "Strength"
     },
     "Mage Slayer-0": {
-      "assignment": "Strength"
+      "assignment": "Dexterity"
     },
     "Martial Weapon Training-1": {
-      "assignment": "Strength"
+      "assignment": "Dexterity"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",
