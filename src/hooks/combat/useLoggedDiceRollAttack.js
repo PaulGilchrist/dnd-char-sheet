@@ -216,7 +216,7 @@ export function createLogAndShow(deps) {
         let hit = isAutoMiss ? false : (target ? (effectiveD20Roll + effectiveBonus >= effectiveAc) : undefined);
         const targetName = (rollType === 'attack' || rollType === 'save') ? (target?.name || context?.targetName) : undefined;
         const attackerName = context?.attackerName || characterName;
-        if (rollType === 'save' && !context?.attackerName) {
+        if (rollType === 'save' && !context?.attackerName && context?.saveDc) {
             console.error('[useLoggedDiceRollAttack] Save roll missing context.attackerName:', { characterName, targetName, name, context });
         }
 
@@ -536,7 +536,7 @@ export function createLogAndShow(deps) {
             advantageReason: context?.advantageReason,
         });
 
-        const shouldSkipPopup = rollType === 'save' && target?.type === 'player';
+        const shouldSkipPopup = rollType === 'save' && target?.type === 'player' && context?.saveDc != null;
         if (!shouldSkipPopup) {
             setPopupHtml({
                 type: 'd20',
@@ -1148,7 +1148,7 @@ export function createLogAndShow(deps) {
                     rollType: 'save',
                     name: actionName,
                     rolls: [effectiveD20ForSave],
-                    mode: 'normal',
+                    mode: context?.forcedMode || 'normal',
                     total: saveTotal,
                     bonus,
                     isNatural20: effectiveD20ForSave === 20,
@@ -1156,7 +1156,7 @@ export function createLogAndShow(deps) {
                     targetName: targetName,
                     saveType: saveType,
                     saveDc: saveDc,
-                    saveResult: saveSuccess ? 'success' : 'failure',
+                    saveResult: saveSuccess != null ? (saveSuccess ? 'success' : 'failure') : null,
                     attackerName: attackerName,
                     dcSuccess: context?.dcSuccess,
                     timestamp: Date.now(),

@@ -316,6 +316,12 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
               </div>
             )}
 
+            {rollType === 'save' && saveDc == null && (
+              <div className="dice-roll-save-info">
+                <i className="fa-solid fa-triangle-exclamation"></i> DC Unknown — no success or failure
+              </div>
+            )}
+
             {dc !== undefined && success === undefined && !waitingForPlayerSave && !isSaveDamageType && (
               <div className="dice-roll-save-info">
                 Save DC {dc} {dcType}: {dcSuccess === 'half' ? 'half damage on save' : 'no damage on save'}
