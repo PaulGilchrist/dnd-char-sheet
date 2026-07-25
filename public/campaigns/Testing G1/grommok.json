@@ -46,7 +46,6 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Entertainer",
   "class": {
     "name": "Fighter",
     "subclass": {
@@ -55,10 +54,14 @@
     },
     "divineOrder": "",
     "primalOrder": "",
-    "fightingStyles": []
+    "fightingStyles": [
+      "Defense"
+    ]
   },
   "expertSkills": [],
-  "feats": [],
+  "feats": [
+    "Musician"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Orc",
@@ -98,16 +101,19 @@
     "Athletics",
     "Intimidation",
     "Perception",
-    "Survival"
+    "Survival",
+    "Acrobatics",
+    "Performance"
   ],
+  "toolProficiencies": [],
   "specialActions": [],
-  "spells": [
-  ],
+  "spells": [],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Entertainer",
   "imagePath": "images/Grommok.png",
-  "originalFileName": "Grommok.json",
   "featAbilityChoices": {
     "0": "Strength",
     "1": "Strength",

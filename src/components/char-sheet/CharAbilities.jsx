@@ -285,13 +285,15 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
                       if (!toolsByAbility[abilityName]) {
                           toolsByAbility[abilityName] = [];
                       }
-                      toolsByAbility[abilityName].push({
-                          name: itemName,
-                          ability: abilityName,
-                          bonus,
-                          isProficient,
-                          utilize: tool.utilize,
-                      });
+                      if (!toolsByAbility[abilityName].some(t => t.name === itemName)) {
+                          toolsByAbility[abilityName].push({
+                              name: itemName,
+                              ability: abilityName,
+                              bonus,
+                              isProficient,
+                              utilize: tool.utilize,
+                          });
+                      }
                   }
                   const entries = [];
                   for (const ability of playerStats.abilities || []) {

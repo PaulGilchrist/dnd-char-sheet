@@ -43,6 +43,7 @@ import { applyPortentChoice } from '../../services/automation/handlers/class-wiz
 import { addEntry } from '../../services/ui/logService.js';
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
+import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
 import './CharSpecialActions.css';
 
 
@@ -75,6 +76,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [portentModal, setPortentModal] = useState(null);
     const [replenishingMealModal, setReplenishingMealModal] = useState(null);
     const [bolsteringTreatsModal, setBolsteringTreatsModal] = useState(null);
+    const [bolsteringPerformanceModal, setBolsteringPerformanceModal] = useState(null);
     const [fightingStylesMap, setFightingStylesMap] = useState(null);
     const { setPopupHtml } = useDiceRollPopup();
     const { rollAttack, rollDamage } = useLoggedDiceRoll(playerStats?.name, campaignName, {
@@ -191,6 +193,22 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         setPopupHtml(html);
         setBolsteringTreatsModal(null);
     }, [bolsteringTreatsModal, chefBolsteringTreats, bolsteringTreatsMax, campaignName, setPopupHtml, playerStats.name]);
+
+    const handleBolsteringPerformanceConfirm = useCallback(async (selectedTargets) => {
+        if (!bolsteringPerformanceModal) return;
+        const result = await confirmBolsteringPerformance(
+            bolsteringPerformanceModal.action,
+            bolsteringPerformanceModal.playerStats,
+            bolsteringPerformanceModal.campaignName,
+            selectedTargets,
+            bolsteringPerformanceModal.tempHp
+        );
+        if (result?.payload) {
+            const html = `<b>${result.payload.name}</b><br/>${result.payload.description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+        }
+        setBolsteringPerformanceModal(null);
+    }, [bolsteringPerformanceModal, setPopupHtml]);
 
     useEffect(() => {
         let cancelled = false;
@@ -384,6 +402,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setFiendishResilienceModal(result.payload);
             } else if (result.modalName === 'boonOfEnergyResistance') {
                 setMultiResistanceModal(result.payload);
+            } else if (result.modalName === 'bolsteringPerformanceTarget') {
+                setBolsteringPerformanceModal(result.payload);
             }
         } else if (result.type === 'popup') {
             const payload = result.payload;
@@ -957,6 +977,20 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                     confirmIcon="fa-cookie-bite"
                     onConfirm={handleBolsteringTreatsConfirm}
                     onSkip={() => setBolsteringTreatsModal(null)}
+                />
+            )}
+            {bolsteringPerformanceModal && (
+                <CreatureSelectionModal
+                    title="Bolstering Performance"
+                    icon="fa-bullhorn"
+                    targets={bolsteringPerformanceModal.creatureTargets}
+                    maxTargets={bolsteringPerformanceModal.maxTargets}
+                    description="Choose up to 6 allies to gain temporary hit points."
+                    note={`Each target gains ${bolsteringPerformanceModal.tempHp} temporary hit points.`}
+                    confirmLabel="Inspire"
+                    confirmIcon="fa-bullhorn"
+                    onConfirm={handleBolsteringPerformanceConfirm}
+                    onSkip={() => setBolsteringPerformanceModal(null)}
                 />
             )}
             {uniqueActions.map((specialAction, index) => {

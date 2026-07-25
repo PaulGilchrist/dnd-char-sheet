@@ -1554,11 +1554,11 @@
                 "type": "special",
                 "automation": {
                     "type": "temp_hp_buff",
-                    "tempHpExpression": "level + cha_modifier",
+                    "tempHpExpression": "level + Math.max(CHA modifier, WIS modifier)",
                     "range": "30 ft",
                     "targets": 6,
                     "includesSelf": true,
-                    "casting_time": "1 bonus action",
+                    "casting_time": "passive",
                     "multiTargetAlly": true
                 }
             }

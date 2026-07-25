@@ -58,8 +58,8 @@
     "Perception"
   ],
   "feats": [
-    "Magic Initiate",
-    "Healer"
+    "Inspiring Leader",
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -150,8 +150,11 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Grappler-0": {
-      "assignment": "Strength"
+    "Inspiring Leader-1": {
+      "assignment": "Wisdom"
+    },
+    "Inspiring Leader-0": {
+      "assignment": "Wisdom"
     }
   },
   "proficiencies": [

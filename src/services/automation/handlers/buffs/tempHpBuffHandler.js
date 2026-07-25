@@ -1,9 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
-import { loadMapData } from '../../../maps/mapsService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
-import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getCurrentCombatRound } from '../../../encounters/combatData.js';
@@ -37,8 +34,8 @@ export async function handle(action, playerStats, campaignName, mapName) {
         return handleMantleOfInspiration(action, playerStats, campaignName, mapName);
     }
 
-    if (auto.multiTargetAlly && auto.tempHpExpression) {
-        return handleMultiTargetAllyTempHp(action, playerStats, campaignName, mapName);
+    if (auto.multiTargetAlly) {
+        return handleMultiTargetAllyTempHp(action, playerStats, campaignName);
     }
 
     if (auto.ongoingHealingExpression && auto.healingStartOfTurn) {
@@ -92,12 +89,42 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-async function handleMultiTargetAllyTempHp(action, playerStats, campaignName, mapName) {
-    const auto = action.automation;
-    const playerName = playerStats.name;
+function resolveInspiringLeaderTempHp(action, playerStats) {
+    const featAbilityChoices = playerStats.featAbilityChoices || {};
+    const featName = action.name || 'Inspiring Leader';
+    let chosenAbility = null;
 
-    const tempHpExpression = auto.tempHpExpression || '';
+    for (const [key, value] of Object.entries(featAbilityChoices)) {
+        if (!key.startsWith(featName)) continue;
+        if (value && typeof value === 'object' && value.assignment) {
+            chosenAbility = value.assignment;
+            break;
+        }
+        if (typeof value === 'string') {
+            chosenAbility = value;
+            break;
+        }
+    }
+
+    const level = playerStats.level || 1;
+    if (chosenAbility) {
+        const modifier = getAbilityModifier(playerStats, chosenAbility);
+        return level + modifier;
+    }
+
+    const tempHpExpression = action.automation?.tempHpExpression || '';
     const amount = evaluateAutoExpression(tempHpExpression, playerStats);
+    if (typeof amount === 'number' && amount > 0) return amount;
+
+    const chaMod = getAbilityModifier(playerStats, 'Charisma');
+    const wisMod = getAbilityModifier(playerStats, 'Wisdom');
+    return level + Math.max(chaMod, wisMod);
+}
+
+async function handleMultiTargetAllyTempHp(action, playerStats, campaignName) {
+    const auto = action.automation;
+
+    const amount = resolveInspiringLeaderTempHp(action, playerStats);
     if (typeof amount !== 'number' || amount <= 0) {
         return {
             type: 'popup',
@@ -105,56 +132,51 @@ async function handleMultiTargetAllyTempHp(action, playerStats, campaignName, ma
                 type: 'automation_info',
                 name: action.name,
                 automationType: auto.type,
-                description: `${action.name}: Could not calculate temp HP (${tempHpExpression}).`,
+                description: `${action.name}: Could not calculate temp HP.`,
                 automation: auto,
             },
         };
     }
 
     const maxTargets = auto.targets || 6;
-    const rangeFt = rangeToFeet(auto.range || '30 ft');
-    const allies = [];
+    const combatSummary = await getCombatContext(campaignName);
+    const creatureTargets = combatSummary?.creatures
+        ? combatSummary.creatures.map(c => ({ name: c.name }))
+        : [];
 
-    if (mapName && rangeFt != null) {
-        const mapPlayers = (await loadMapData(campaignName))?.players || [];
-        for (const p of mapPlayers) {
-            if (allies.length >= maxTargets) break;
-            if (auto.includesSelf && p.name === playerName) {
-                allies.push(p.name);
-                continue;
-            }
-            if (p.name === playerName) continue;
-            const inRange = await isWithinRange(playerName, p.name, rangeFt);
-            if (inRange) {
-                allies.push(p.name);
-                if (allies.length >= maxTargets) break;
-            }
-        }
-    } else if (!auto.includesSelf) {
-        if (!mapName) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: action.name,
-                    automationType: auto.type,
-                    description: `${action.name}: Could not resolve allies without a map.`,
-                    automation: auto,
-                },
-            };
-        }
-    } else if (auto.includesSelf) {
-        allies.push(playerName);
-    }
+    return {
+        type: 'modal',
+        modalName: 'bolsteringPerformanceTarget',
+        payload: {
+            action,
+            playerStats,
+            campaignName,
+            creatureTargets,
+            tempHp: amount,
+            maxTargets,
+        },
+    };
+}
 
-    for (const targetName of allies) {
+export async function confirmBolsteringPerformance(action, playerStats, campaignName, selectedTargets, tempHp) {
+    const auto = action.automation;
+    const finalTargets = (selectedTargets || []).slice(0, auto?.targets || 6);
+
+    for (const targetName of finalTargets) {
         const existingTempHp = Number(getRuntimeValue(targetName, 'tempHp') || 0);
-        const newTotal = Math.max(existingTempHp, amount);
+        const newTotal = Math.max(existingTempHp, tempHp);
         setRuntimeValue(targetName, 'tempHp', newTotal, campaignName);
     }
 
-    const targetList = allies.length > 0 ? allies.join(', ') : 'no targets available';
-    const description = `${action.name}: Granted ${amount} temporary hit points to ${allies.length} creature${allies.length !== 1 ? 's' : ''} (${targetList}).`;
+    const targetList = finalTargets.length > 0 ? finalTargets.join(', ') : 'no targets selected';
+    const description = `${action.name}: Granted ${tempHp} temporary hit points to ${finalTargets.length} creature${finalTargets.length !== 1 ? 's' : ''} (${targetList}).`;
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: action.name,
+        description: `${playerStats.name} used ${action.name}, granting ${tempHp} temporary hit points to ${targetList}.`,
+    }).catch(() => {});
 
     return {
         type: 'popup',
