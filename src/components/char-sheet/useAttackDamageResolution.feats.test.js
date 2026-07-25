@@ -399,36 +399,6 @@ describe('useAttackDamageResolution - feats', () => {
     });
 
     describe('Piercer feat', () => {
-        it('applies Piercer reroll on piercing hit', async () => {
-            getCombatContext.mockResolvedValue(createCombatContext());
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-            const stats = {
-                ...mockPlayerStats,
-                automation: {
-                    actions: [],
-                    passives: [
-                        {
-                            type: 'attack_rider', trigger: 'piercing_damage_hit',
-                            oncePerTurn: true, name: 'Piercer',
-                        },
-                    ],
-                },
-            };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Rapier', damage: '1d8+5', damageType: 'Piercing',
-                weaponType: 'melee', properties: [],
-            };
-            await resolveAttackDamage(attack);
-            await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Piercer_usedRound', 1, 'test-campaign');
-            expect(mockRollDamage).toHaveBeenCalledWith(
-                'Rapier',
-                expect.stringContaining('[Piercer Reroll]'),
-                expect.any(Number), expect.any(Array), expect.any(Number), expect.any(Object)
-            );
-        });
-
         it('applies Piercer extra damage die on crit', async () => {
             const stats = {
                 ...mockPlayerStats,

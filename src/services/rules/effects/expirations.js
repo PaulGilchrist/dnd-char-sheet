@@ -165,6 +165,14 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         }
     }
 
+    // Clear Piercer - Puncture at start of each creature's turn
+    if (activeName) {
+        const punctureUsed = getRuntimeValue(activeName, 'piercerPunctureUsedThisTurn', campaignName);
+        if (punctureUsed) {
+            setRuntimeValue(activeName, 'piercerPunctureUsedThisTurn', null, campaignName);
+        }
+    }
+
     // Cloak of Shadows: end when incapacitated
     if (activeName) {
         const cloakBuffs = getRuntimeValue(activeName, 'activeBuffs', campaignName);

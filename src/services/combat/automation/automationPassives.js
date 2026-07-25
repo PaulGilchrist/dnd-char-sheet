@@ -4,6 +4,7 @@ import { parseMagicItemName } from '../../rules/core/attackCalc.js'
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { getChosenRuntimeValue } from '../../automation/common/choiceStorage.js'
 import { applyGreatWeaponFighting } from '../../rules/core/greatWeaponFighting.js'
+import { markOncePerTurn } from '../../automation/common/oncePerTurn.js'
 
 /**
  * Check if playerStats has a passive automation matching type and effect.
@@ -191,7 +192,6 @@ export function resolveHealingBonusesWithDetails(playerStats, prof, level, slotL
 }
 
 export async function markFortifiedHealthUsed(playerStats, campaignName) {
-    const { markOncePerTurn } = await import('../../automation/common/oncePerTurn.js');
     return markOncePerTurn('Fortified Health', '_fortifiedHealth_usedRound', playerStats, campaignName);
 }
 

@@ -2160,13 +2160,12 @@
         "description": "Once per turn, when you hit a creature with an attack that deals Piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll.",
         "type": "damage",
         "automation": {
-          "type": "attack_rider",
-          "trigger": "piercing_damage_hit",
+          "type": "piercer_puncture",
           "effect": "reroll_damage_die",
           "rerollCount": 1,
           "oncePerTurn": true,
           "mustUseNew": true,
-          "casting_time": "1 action"
+          "casting_time": "reaction"
         }
       },
       {

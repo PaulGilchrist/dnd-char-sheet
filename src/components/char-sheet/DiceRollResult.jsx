@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './diceRollResult.css';
 
-function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, targetName, targetAc, hit, resistanceNotice, hunterLoreNotice, forcedMode, advantageReason, isAutoMiss, rangeReason, coverReason, isAutoCrit, isCrit, isNatural1, dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, onQuickRoll, autoDamage, coverLevel, coverAcBonus, autoReroll, autoRerollBonus, autoRerollCondition, strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus, reliableTalent, onReroll, tacticalMind, tacticalMindBonus, darkOnesLuck, onDarkOnesLuck, strokeOfLuck, onStrokeOfLuck, defensiveDuelistBonus, baitAndSwitchBonus, isPotentCantrip, luckyAdvantage, luckyDisadvantage, onLuckyAdvantage, onLuckyDisadvantage, secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType, secondaryFinalDamage, secondarySaveResult, availableSuperiorityManeuvers, onSuperiorityManeuver, onTacticalMind, gwfApplied, gwfOriginalRolls, gwfDisplayRolls, elementalAdeptBonus, types, baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls, finalHeal, healReduced, bonusHeal, bonusHealDetail, psiBolsteredKnack, onPsiBolsteredKnack, psiBolsteredKnackDieSize, bardicInspiration, bardicInspirationDie, onBardicInspiration, luckyRerolled, luckyRerollValue, bardicInspirationDefense, bardicInspirationDefenseDieSize, bardicInspirationDefenseTargetName: _bardicInspirationDefenseTargetName, bardicInspirationOffense, bardicInspirationOffenseDieSize, onBardicInspirationDefense, onBardicInspirationOffense, unerringStrikeApplied, onDone, interceptedFeature, empoweredSpell, _empoweredSpellChaMod, spellName, onEmpoweredSpell, d20Floor10, autoRerollForAttack, healingRerollOriginalRolls, healingRerollDisplayRolls }) {
+function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, targetName, targetAc, hit, resistanceNotice, hunterLoreNotice, forcedMode, advantageReason, isAutoMiss, rangeReason, coverReason, isAutoCrit, isCrit, isNatural1, dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, onQuickRoll, autoDamage, coverLevel, coverAcBonus, autoReroll, autoRerollBonus, autoRerollCondition, strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus, reliableTalent, onReroll, tacticalMind, tacticalMindBonus, darkOnesLuck, onDarkOnesLuck, strokeOfLuck, onStrokeOfLuck, defensiveDuelistBonus, baitAndSwitchBonus, isPotentCantrip, luckyAdvantage, luckyDisadvantage, onLuckyAdvantage, onLuckyDisadvantage, secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType, secondaryFinalDamage, secondarySaveResult, availableSuperiorityManeuvers, onSuperiorityManeuver, onTacticalMind, gwfApplied, gwfOriginalRolls, gwfDisplayRolls, elementalAdeptBonus, types, baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls, finalHeal, healReduced, bonusHeal, bonusHealDetail, psiBolsteredKnack, onPsiBolsteredKnack, psiBolsteredKnackDieSize, bardicInspiration, bardicInspirationDie, onBardicInspiration, luckyRerolled, luckyRerollValue, bardicInspirationDefense, bardicInspirationDefenseDieSize, bardicInspirationDefenseTargetName: _bardicInspirationDefenseTargetName, bardicInspirationOffense, bardicInspirationOffenseDieSize, onBardicInspirationDefense, onBardicInspirationOffense, unerringStrikeApplied, onDone, interceptedFeature, empoweredSpell, _empoweredSpellChaMod, spellName, onEmpoweredSpell, d20Floor10, autoRerollForAttack, healingRerollOriginalRolls, healingRerollDisplayRolls, piercerPuncture, onPuncture }) {
     const isD20 = type === 'd20';
     const [mode, setMode] = useState(forcedMode || 'normal');
     const [rerollUsed, setRerollUsed] = useState(false);
@@ -26,6 +26,8 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
     const [darkOnesLuckUsed, setDarkOnesLuckUsed] = useState(false);
     const [darkOnesLuckResult, setDarkOnesLuckResult] = useState(null);
     const [boonUsed, setBoonUsed] = useState(false);
+    const [punctureUsed, setPunctureUsed] = useState(false);
+    const [punctureResult, setPunctureResult] = useState(null);
 
     let finalRoll = 0;
     const safeRolls = Array.isArray(rolls) ? rolls : [];
@@ -130,6 +132,41 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
             setEmpoweredSpellResult(result);
             setEmpoweredSpellUsed(true);
         }
+    };
+
+    const handlePuncture = async () => {
+        if (!rolls || rolls.length === 0 || !onPuncture) return;
+        
+        const sortedWithIndex = rolls
+            .map((r, i) => ({ value: r, index: i }))
+            .sort((a, b) => a.value - b.value);
+        const lowestIndex = sortedWithIndex[0].index;
+        const originalRolls = [...rolls];
+        const newRoll = Math.floor(Math.random() * (rolls[0] > 0 ? rolls[0] : 6)) + 1;
+        const newRolls = [...rolls];
+        newRolls[lowestIndex] = newRoll;
+        
+        setPunctureResult({
+            originalDice: originalRolls,
+            newDice: newRolls,
+            rerolledIndex: lowestIndex,
+            originalValue: originalRolls[lowestIndex],
+            newValue: newRoll,
+        });
+        setPunctureUsed(true);
+        
+        await onPuncture({
+            damageFormula: formula,
+            rolls: newRolls,
+            rawDamage: total,
+            targetName: targetName,
+            damageTypes: damageType ? [damageType] : [],
+            originalRolls,
+            newRolls,
+            rerolledIndex: lowestIndex,
+            originalValue: originalRolls[lowestIndex],
+            newValue: newRoll,
+        });
     };
 
     const handleSuperiorityManeuver = async (maneuver) => {
@@ -509,6 +546,14 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
               </div>
             )}
 
+            {piercerPuncture && !punctureUsed && isDamageType && (
+              <div className="dice-roll-reroll">
+                <button className="dice-roll-reroll-btn" onClick={handlePuncture} type="button">
+                  <i className="fa-solid fa-bolt"></i> Piercer - Puncture
+                </button>
+              </div>
+            )}
+
             {psiKnackClicked && !psiKnackConsumed && psiKnackResult !== null && (
               <div className="dice-roll-reroll-result">
                 <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack: +{psiKnackResult.dieValue} (d{psiKnackResult.dieSize}) → <strong>{psiKnackResult.newTotal}</strong>
@@ -575,6 +620,12 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
               <div className="dice-roll-reroll-result">
                 <i className="fa-solid fa-wand-magic-sparkles"></i> Empowered Spell: rerolled {empoweredSpellResult.rerollCount} dice ({empoweredSpellResult.originalDice?.join(', ')} → {empoweredSpellResult.newDice?.join(', ')}) → <strong>{empoweredSpellResult.newTotal}</strong>{empoweredSpellResult.damageDifference > 0 ? ` (+${empoweredSpellResult.damageDifference})` : empoweredSpellResult.damageDifference < 0 ? ` (${empoweredSpellResult.damageDifference})` : ''}
                 {empoweredSpellResult.damageDifference === 0 && !empoweredSpellResult.message ? '' : empoweredSpellResult.message ? ` — ${empoweredSpellResult.message}` : ''}
+              </div>
+            )}
+
+            {punctureUsed && punctureResult && (
+              <div className="dice-roll-reroll-result">
+                <i className="fa-solid fa-bolt"></i> Piercer - Puncture: {punctureResult.originalDice?.join(', ')} → {punctureResult.newDice?.join(', ')}
               </div>
             )}
 

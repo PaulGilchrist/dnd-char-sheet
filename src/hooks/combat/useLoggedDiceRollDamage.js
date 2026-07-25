@@ -1507,7 +1507,31 @@ export function createLogDamageAndShow(deps) {
         popupData.empoweredSpellChaMod = context?.empoweredSpellChaMod || getChaModifier(context?.playerStats);
         popupData.spellName = context?.spellName || '';
 
+        // Check for Piercer - Puncture availability
+        const isPiercing = (damageType || '').toLowerCase() === 'piercing';
+        const hasPiercerFeat = context?.playerStats?.reactions?.some(r =>
+            r.automation?.type === 'piercer_puncture'
+        ) || false;
+        const punctureUsed = hasPiercerFeat ? getRuntimeValue(characterName, 'piercerPunctureUsedThisTurn', campaignName) : false;
+        popupData.piercerPuncture = isPiercing && hasPiercerFeat && !punctureUsed;
+
         setPopupHtml(popupData);
+
+        // Store damage rolls for later access (e.g., Piercer feat)
+        if (popupData.rolls && popupData.damageType) {
+            const lastAttackData = {
+                rolls: displayRolls,
+                rawDamage: adjustedTotal,
+                primaryDamage: adjustedTotal,
+                primaryDamageType: damageType,
+                damageTypes: [damageType],
+                actualDamage: applyResult?.finalDamage ?? adjustedTotal,
+                damageApplied: true,
+            };
+            storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName).catch(e => {
+                console.error('[useLoggedDiceRollDamage] Error storing damage rolls:', e);
+            });
+        }
 
         if (context?.metamagicTwinTarget && target) {
             const twinTarget = combatSummary?.creatures?.find(c => c.name === context.metamagicTwinTarget);

@@ -210,5 +210,19 @@ export const damageHandlers = {
             }
         }
         return null
+    },
+
+    'piercer_puncture': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'piercer_puncture',
+            name: feature.name,
+            effect: auto.effect || 'reroll_damage_die',
+            rerollCount: auto.rerollCount || 1,
+            oncePerTurn: !!auto.oncePerTurn,
+            mustUseNew: !!auto.mustUseNew,
+            casting_time: auto.casting_time || 'reaction',
+            hasAutomation: true
+        }
     }
 }

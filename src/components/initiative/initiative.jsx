@@ -327,9 +327,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                            setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName);
                            setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName);
                            setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName);
-                           setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName);
-                      }
+                            setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName);
+                            setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName);
+                            setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName);
+                       }
                   }
               }
               expireStaleEffects(campaignName, newActiveName)
@@ -487,6 +488,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName)
                     setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName)
                 }
                 if (creature.concentration?.spell === "Hunter's Mark") {
                     creature.concentration = null

@@ -21,7 +21,7 @@
       "name": "Constitution",
       "baseScore": 15,
       "featIncrease": 0,
-      "backgroundIncrease": 1,
+      "backgroundIncrease": 2,
       "miscIncrease": 0
     },
     {
@@ -35,7 +35,7 @@
       "name": "Wisdom",
       "baseScore": 9,
       "featIncrease": 0,
-      "backgroundIncrease": 1,
+      "backgroundIncrease": 0,
       "miscIncrease": 0
     },
     {
@@ -56,9 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "Observant",
-    "Tough",
-    "Keen Mind"
+    "Magic Initiate",
+    "Piercer"
   ],
   "fightingStyles": [],
   "race": {
@@ -103,19 +102,11 @@
     "Radiant"
   ],
   "skillProficiencies": [
-    "Animal Handling",
-    "Nature",
-    "Perception",
-    "Insight",
-    "Investigation",
-    "Medicine",
-    "Arcana"
+    "Arcana",
+    "History"
   ],
   "toolProficiencies": [
-    "Carpenter's Tools",
-    "Lute",
-    "Pan flute",
-    "Flute"
+    "Calligrapher's Supplies"
   ],
   "specialActions": [],
   "spells": [
@@ -144,11 +135,11 @@
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
-  "background": "Farmer",
+  "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Observant-0": {
-      "assignment": "Intelligence"
+    "Piercer-0": {
+      "assignment": "Strength"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

@@ -415,6 +415,7 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 break
             case 'reaction_bonus':
             case 'bardic_inspiration_offense':
+            case 'piercer_puncture':
                 result.reactions.push(info)
                 break
             case 'nature_sanctuary_move':

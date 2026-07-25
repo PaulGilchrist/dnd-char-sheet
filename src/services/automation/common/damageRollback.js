@@ -2,6 +2,7 @@ import { getCombatContext } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
 import { addEntry } from '../../ui/logService.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import storage from '../../../services/ui/storage.js';
 
 /**
  * Get the last attack from combatSummary.lastAttack, falling back to
@@ -186,4 +187,24 @@ export async function findMostRecentRollAcrossCreatures(campaignName) {
         eventData: lastAttack,
         isStale: false,
     };
+}
+
+/**
+ * Store damage rolls in combatSummary.lastAttack for later access by features like Piercer.
+ * Called after damage resolves for plain weapon attacks.
+ *
+ * @param {string} campaignName - Campaign name
+ * @param {Object} lastAttack - The lastAttack object to update
+ */
+export async function storeDamageRolls(campaignName, lastAttack) {
+    if (!lastAttack) return;
+    const cs = await getCombatContext(campaignName);
+    if (!cs?.lastAttack) return;
+
+    const updatedLastAttack = {
+        ...cs.lastAttack,
+        ...lastAttack,
+    };
+
+    await storage.setProperty('combatSummary', 'lastAttack', updatedLastAttack, campaignName);
 }

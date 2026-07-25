@@ -19,6 +19,7 @@ import CharSummary from './char-summary/CharSummary.jsx'
 import { computeAuraComboEffects } from '../../services/combat/auras/auraComboEffects.js';
 import { computeConditionEffects, getNetAttackMode, CONDITIONS_THAT_CANNOT_ACT } from '../../services/combat/conditions/conditionEffects.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { getDistanceFeet } from '../../services/rules/combat/rangeValidation.js';
 import { isDistanceInRange } from '../../services/rules/combat/rangeCheck.js';
 import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
@@ -604,6 +605,64 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         return null;
     }, [playerStats, campaignName, characters, popupHtml]);
 
+    const handlePuncture = React.useCallback(async (punctureData) => {
+        if (!playerStats || !campaignName || !punctureData) return null;
+        
+        const playerName = playerStats.name;
+        const usedKey = 'piercerPunctureUsedThisTurn';
+        const used = getRuntimeValue(playerName, usedKey, campaignName);
+        if (used) return null;
+        
+        const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
+        
+        const combatSummary = await getCombatContext(campaignName);
+        if (!combatSummary || !targetName) return null;
+        
+        const damageDifference = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0) - rawDamage;
+        
+        if (damageDifference !== 0) {
+            applyDamageToTarget(
+                combatSummary,
+                targetName,
+                damageDifference,
+                damageTypes || [popupHtml?.damageType || 'Piercing'],
+                campaignName,
+                characters,
+                false,
+                playerName
+            );
+        }
+        
+        await setRuntimeValue(playerName, usedKey, true, campaignName);
+        
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: 'Piercer - Puncture',
+            description: `${playerName} used Piercer - Puncture: rerolled die ${rerolledIndex + 1} from ${originalValue} → ${newValue} (${originalRolls.join(', ')} → ${newRolls.join(', ')}).`,
+            timestamp: Date.now(),
+        });
+        
+        const newTotal = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0);
+        const newFinalDamage = Math.max(0, newTotal);
+        
+        setPopupHtml({
+            ...popupHtml,
+            total: newTotal,
+            adjustedTotal: newTotal,
+            rolls: newRolls,
+            finalDamage: newFinalDamage,
+        });
+        
+        return {
+            originalDice: originalRolls,
+            newDice: newRolls,
+            rerolledIndex,
+            originalValue,
+            newValue,
+        };
+    }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
+
     const handleTacticalMind = React.useCallback(async (dieResult) => {
         if (!playerStats) return;
         const playerName = playerStats.name;
@@ -848,6 +907,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                         onBardicInspiration={popupHtml?.bardicInspiration ? handleBardicInspiration : undefined}
                         onBardicInspirationOffense={popupHtml?.bardicInspirationOffense ? handleBardicInspirationOffense : undefined}
                         onEmpoweredSpell={popupHtml?.empoweredSpell ? handleEmpoweredSpell : undefined}
+                        onPuncture={popupHtml?.piercerPuncture ? handlePuncture : undefined}
                         onAfterBiDefense={handleBiDefenseCombatSummary}
                         onStrokeOfLuck={handleStrokeOfLuck}
                     />;
