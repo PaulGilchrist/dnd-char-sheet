@@ -260,7 +260,7 @@ describe('healingHandlers.heroic_inspiration_buff', () => {
         const result = healingHandlers.heroic_inspiration_buff(feature, BASE_STATS)
 
         expect(result).toMatchObject({
-            type: 'buff_ally',
+            type: 'heroic_inspiration_buff',
             name: 'Test Feature',
             buffExpression: '',
             range: '60_ft',

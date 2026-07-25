@@ -111,6 +111,7 @@ export const healingHandlers = {
         return {
             type: 'buff_ally',
             name: feature.name,
+            description: feature.description || '',
             buffExpression: auto.buffExpression || '',
             range: auto.range || '60_ft',
             action: auto.action || 'bonus_action',
@@ -126,13 +127,15 @@ export const healingHandlers = {
             ? evaluateAutoExpression(auto.uses_expression, playerStats)
             : 0
         return {
-            type: 'buff_ally',
+            type: 'heroic_inspiration_buff',
             name: feature.name,
+            description: feature.description || '',
             buffExpression: auto.buffExpression || '',
             range: auto.range || '60_ft',
             action: auto.action || 'action',
             usesMax,
             usesRecharge: auto.recharge || 'short_or_long_rest',
+            casting_time: auto.casting_time || '',
             targetsExpression: auto.targetsExpression || '',
             hasAutomation: true
         }

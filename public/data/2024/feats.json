@@ -2073,11 +2073,9 @@
         "automation": {
           "type": "heroic_inspiration_buff",
           "effect": "heroic_inspiration",
-          "action": "action",
-          "range": "30_ft",
-          "uses_expression": "proficiency_bonus",
+          "uses_expression": "1",
           "recharge": "short_or_long_rest",
-          "casting_time": "1 action",
+          "casting_time": "passive",
           "buffExpression": "heroic_inspiration",
           "targetsExpression": "proficiency_bonus"
         }

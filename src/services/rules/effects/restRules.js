@@ -95,7 +95,8 @@ export const SHORT_REST_RESOURCES = [
   '_War_Gods_Blessing_active',
    'spellthiefUses',
    'strokeOfLuckUsed',
-   'boonOfCombatProwessUsed'
+   'boonOfCombatProwessUsed',
+   'encouragingsongUses'
 ]
 
 export function getShortRestResources() {
@@ -127,9 +128,10 @@ export const LONG_REST_RESOURCES = [
   '_celestialRevelationUses',
   '_War_Gods_Blessing_active',
   'spellthiefUses',
-  'strokeOfLuckUsed',
-  'boonOfCombatProwessUsed',
-  '_Charge_Attack_usedRound',
+   'strokeOfLuckUsed',
+   'boonOfCombatProwessUsed',
+   'encouragingsongUses',
+   '_Charge_Attack_usedRound',
   '_FastHands_usedRound',
   '_CunningAction_usedRound',
   '_Cleave_UsedRound',

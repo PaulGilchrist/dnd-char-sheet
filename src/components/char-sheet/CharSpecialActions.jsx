@@ -44,6 +44,7 @@ import { addEntry } from '../../services/ui/logService.js';
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
 import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
+import { confirmEncouragingSong, skipEncouragingSong } from '../../services/automation/handlers/buffs/encouragingSongHandler.js';
 import './CharSpecialActions.css';
 
 
@@ -77,6 +78,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [replenishingMealModal, setReplenishingMealModal] = useState(null);
     const [bolsteringTreatsModal, setBolsteringTreatsModal] = useState(null);
     const [bolsteringPerformanceModal, setBolsteringPerformanceModal] = useState(null);
+    const [encouragingSongModal, setEncouragingSongModal] = useState(null);
     const [fightingStylesMap, setFightingStylesMap] = useState(null);
     const { setPopupHtml } = useDiceRollPopup();
     const { rollAttack, rollDamage } = useLoggedDiceRoll(playerStats?.name, campaignName, {
@@ -209,6 +211,35 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setBolsteringPerformanceModal(null);
     }, [bolsteringPerformanceModal, setPopupHtml]);
+
+    const handleEncouragingSongConfirm = useCallback(async (selectedTargets) => {
+        if (!encouragingSongModal) return;
+        const result = await confirmEncouragingSong(
+            encouragingSongModal.action,
+            encouragingSongModal.playerStats,
+            encouragingSongModal.campaignName,
+            selectedTargets
+        );
+        if (result?.payload) {
+            const html = `<b>${result.payload.name}</b><br/>${result.payload.description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+        }
+        setEncouragingSongModal(null);
+    }, [encouragingSongModal, setPopupHtml]);
+
+    const handleEncouragingSongSkip = useCallback(async () => {
+        if (!encouragingSongModal) return;
+        const result = await skipEncouragingSong(
+            encouragingSongModal.action,
+            encouragingSongModal.playerStats,
+            encouragingSongModal.campaignName
+        );
+        if (result?.payload) {
+            const html = `<b>${result.payload.name}</b><br/>${result.payload.description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+        }
+        setEncouragingSongModal(null);
+    }, [encouragingSongModal, setPopupHtml]);
 
     useEffect(() => {
         let cancelled = false;
@@ -404,6 +435,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setMultiResistanceModal(result.payload);
             } else if (result.modalName === 'bolsteringPerformanceTarget') {
                 setBolsteringPerformanceModal(result.payload);
+            } else if (result.modalName === 'encouragingSongTarget') {
+                setEncouragingSongModal(result.payload);
             }
         } else if (result.type === 'popup') {
             const payload = result.payload;
@@ -991,6 +1024,19 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                     confirmIcon="fa-bullhorn"
                     onConfirm={handleBolsteringPerformanceConfirm}
                     onSkip={() => setBolsteringPerformanceModal(null)}
+                />
+            )}
+            {encouragingSongModal && (
+                <CreatureSelectionModal
+                    title="Encouraging Song"
+                    icon="fa-music"
+                    targets={encouragingSongModal.creatureTargets}
+                    maxTargets={encouragingSongModal.maxTargets}
+                    description="Choose up to your Proficiency Bonus allies to hear your song and gain Heroic Inspiration."
+                    confirmLabel="Inspire"
+                    confirmIcon="fa-music"
+                    onConfirm={handleEncouragingSongConfirm}
+                    onSkip={handleEncouragingSongSkip}
                 />
             )}
             {uniqueActions.map((specialAction, index) => {
