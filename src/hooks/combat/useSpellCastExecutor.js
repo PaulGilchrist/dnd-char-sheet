@@ -49,6 +49,8 @@ export function useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTar
                     finalHeal: result.healAmount,
                     bonusHeal: result.bonusHeal || 0,
                     bonusHealDetail,
+                    healingRerollOriginalRolls: result.healingRerollOriginalRolls || null,
+                    healingRerollDisplayRolls: result.healingRerollDisplayRolls || null,
                 });
             }
         }).catch((e) => { console.error(`[useSpellCastExecutor] executeSpellCast error for ${spell.name}:`, e); });

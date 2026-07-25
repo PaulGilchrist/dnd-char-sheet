@@ -1,9 +1,9 @@
-import { rollExpression, rollExpressionMaximized } from '../../dice/diceRoller.js';
+import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../dice/diceRoller.js';
 import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.js';
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
 
 const HEALING_WORD_NAME = 'Healing Word';
 
@@ -46,7 +46,15 @@ export async function triggerHealingWord(spell, metaCtx, playerStats, campaignNa
     if (!targetName) return null;
 
     const maximize = hasHealingMaximization(playerStats);
+    const rerollOnes = hasRerollHealingOnes(playerStats);
     const result = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+    let displayRolls = result?.rolls || null;
+    let healingRerollOriginalRolls = null;
+    if (result && rerollOnes && !maximize) {
+        const { displayRolls: rerolled, originalRolls } = applyHealingRerollOnes(result.rolls, healExpression);
+        displayRolls = rerolled;
+        healingRerollOriginalRolls = originalRolls;
+    }
     if (!result) return null;
 
     const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
@@ -88,5 +96,5 @@ export async function triggerHealingWord(spell, metaCtx, playerStats, campaignNa
 
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
-    return { targetName, healAmount: actualHeal, formula: healExpression, rolls: result.rolls, rawTotal: result.total + bonusHeal };
+    return { targetName, healAmount: actualHeal, formula: healExpression, rolls: displayRolls || result.rolls, rawTotal: result.total + bonusHeal, healingRerollOriginalRolls, healingRerollDisplayRolls: displayRolls };
 }

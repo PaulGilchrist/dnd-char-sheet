@@ -159,4 +159,17 @@ function formatDamageFormula(formula, rolls, isCrit) {
   return `${formulaStr}${rollStr}`;
 }
 
-export { rollD20, rollDie, rollDice, rollAdvantage, rollDisadvantage, parseExpression, rollExpression, rollExpressionDoubled, rollExpressionMaximized, formatDamageFormula };
+function applyHealingRerollOnes(rolls, expression) {
+  if (!rolls || !Array.isArray(rolls)) return { displayRolls: rolls, originalRolls: null };
+  const parsed = parseExpression(expression);
+  if (!parsed) return { displayRolls: rolls, originalRolls: null };
+  const { sides } = parsed;
+  const originalRolls = [...rolls];
+  const rerolled = rolls.map(r => r === 1 ? rollDie(sides) : r);
+  if (rerolled.some((r, i) => r !== originalRolls[i])) {
+    return { displayRolls: rerolled, originalRolls };
+  }
+  return { displayRolls: rolls, originalRolls: null };
+}
+
+export { rollD20, rollDie, rollDice, rollAdvantage, rollDisadvantage, parseExpression, rollExpression, rollExpressionDoubled, rollExpressionMaximized, formatDamageFormula, applyHealingRerollOnes };

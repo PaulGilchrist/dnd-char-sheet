@@ -1,4 +1,4 @@
-import { rollExpression } from '../../dice/diceRoller.js';
+import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../dice/diceRoller.js';
 import { computeRangeEffect, computeEffectiveSpellRange, getDistanceFeet, rangeToFeet } from '../combat/rangeValidation.js';
 import { isInnateSorceryActive, getActiveBuffs } from '../../combat/buffs/buffService.js';
 import { triggerPostCastRiderSaves, triggerSpellThief, triggerBewitchingMagic, triggerSoulstitchSpells, getEmpoweredEvocationFeatures, getEmpoweredEvocationIntModifier } from './postCastRiderService.js';
@@ -12,7 +12,6 @@ import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { addEntry } from '../../ui/logService.js';
 import { executeHandler } from '../../automation/index.js';
-import { rollExpressionMaximized } from '../../dice/diceRoller.js';
 import storage from '../../ui/storage.js';
 import { addExpiration } from '../effects/expirations.js';
 import { triggerFalseLife } from '../features/falseLifeService.js';
@@ -52,7 +51,7 @@ import { onAbjurationSpellCast } from '../../automation/handlers/class-wizard/ar
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
 import { getPsychicSpellsConfig } from '../../automation/handlers/class-warlock/psychicSpellsHandler.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization } from '../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasRerollHealingOnes } from '../../combat/automation/automationService.js';
 
 function applyHexEffects(spell, playerStats, campaignName, targetName, ability) {
     if (spell.name !== 'Hex') return;
@@ -513,7 +512,15 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                     } else {
                         let resolvedExpression = expression.replace(/\bMOD\b/g, String(spellCastingMod));
                         const maximize = hasHealingMaximization(playerStats);
+                        const rerollOnes = hasRerollHealingOnes(playerStats);
                         const result = maximize ? rollExpressionMaximized(resolvedExpression) : rollExpression(resolvedExpression);
+                        let displayRolls = result?.rolls || null;
+                        let healingRerollOriginalRolls = null;
+                        if (result && rerollOnes && !maximize) {
+                            const { displayRolls: rerolled, originalRolls } = applyHealingRerollOnes(result.rolls, resolvedExpression);
+                            displayRolls = rerolled;
+                            healingRerollOriginalRolls = originalRolls;
+                        }
                         if (result) {
                             const combatSummary = await getCombatContext(campaignName);
                             if (combatSummary) {
@@ -530,7 +537,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                                 if (actualHeal > 0) {
                                     applyHealingToTarget(combatSummary, target.name, actualHeal, campaignName);
                                 }
-                                genericHealResult = { targetName: target.name, healAmount: actualHeal, formula: resolvedExpression, rolls: result.rolls, rawTotal: result.total + bonusHeal, bonusHeal, bonusDetails };
+                                genericHealResult = { targetName: target.name, healAmount: actualHeal, formula: resolvedExpression, rolls: displayRolls || result.rolls, rawTotal: result.total + bonusHeal, bonusHeal, bonusDetails, healingRerollOriginalRolls, healingRerollDisplayRolls: displayRolls };
                                 const formulaParts = [resolvedExpression];
                                 if (bonusDetails.length > 0) {
                                     const bonusParts = bonusDetails.map(d => `${d.amount} ${d.name}`).join(' + ');
@@ -1350,7 +1357,12 @@ async function applyRegenerateSpell(spell, target, caster, campaignName) {
     // Apply initial healing
     if (expression) {
         const maximize = hasHealingMaximization(caster);
+        const rerollOnes = hasRerollHealingOnes(caster);
         result = maximize ? rollExpressionMaximized(expression) : rollExpression(expression);
+        if (result && rerollOnes && !maximize) {
+            const { displayRolls } = applyHealingRerollOnes(result.rolls, expression);
+            result = { ...result, rolls: displayRolls };
+        }
         if (result) {
             const combatSummary = await getCombatContext(campaignName);
             if (combatSummary) {

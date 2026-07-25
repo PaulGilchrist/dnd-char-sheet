@@ -301,6 +301,8 @@ describe('useSpellCastExecutor', () => {
         finalHeal: 15,
         bonusHeal: 3,
         bonusHealDetail: '3 Divine Favor',
+        healingRerollOriginalRolls: null,
+        healingRerollDisplayRolls: null,
       });
     });
 

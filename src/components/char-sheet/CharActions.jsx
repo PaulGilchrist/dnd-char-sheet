@@ -1379,6 +1379,8 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                         finalHeal: healResult.healAmount,
                         bonusHeal: healResult.bonusHeal || 0,
                         bonusHealDetail,
+                        healingRerollOriginalRolls: healResult.healingRerollOriginalRolls || null,
+                        healingRerollDisplayRolls: healResult.healingRerollDisplayRolls || null,
                     });
                 }
             }).catch((e) => { console.error('[CharActions] executeSpellCast error:', e); });
