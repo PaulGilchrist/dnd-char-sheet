@@ -13,6 +13,7 @@ import { getCombatContext } from '../combat/damageUtils.js';
 import { addEntry } from '../../ui/logService.js';
 import { executeHandler } from '../../automation/index.js';
 import storage from '../../ui/storage.js';
+import { resolveSpellDamageWithTypes } from '../core/spellDamageUtils.js';
 import { addExpiration } from '../effects/expirations.js';
 import { triggerFalseLife } from '../features/falseLifeService.js';
 import { triggerHealingWord } from '../features/healingWordService.js';
@@ -170,16 +171,11 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         setRuntimeValue(playerStats.name, 'lastActionSpellCast', 1, campaignName);
     }
 
+    const spellLevel = spell.level || 1;
     const innateSorceryActive = isInnateSorceryActive(playerStats.name, campaignName);
-    const slotDmg = spell.damage?.damage_at_slot_level;
-    const charDmg = spell.damage?.damage_at_character_level;
-    const formula =
-        (slotDmg && slotDmg[spell.level]) ||
-        (charDmg && charDmg[spell.level]) ||
-        (slotDmg && Object.keys(slotDmg).length ? slotDmg[Object.keys(slotDmg)[0]] : null) ||
-        (charDmg && Object.keys(charDmg).length ? charDmg[Object.keys(charDmg)[0]] : null) ||
-        null;
-    const damageType = spell.damage?.damage_type || '';
+    const damageInfo = resolveSpellDamageWithTypes(spell, spellLevel);
+    const formula = damageInfo?.formula || null;
+    const damageType = damageInfo?.primaryType || spell.damage?.damage_type || '';
     let effectiveDamageType = damageType;
     if (psychicSpellsConfig && spell.damage && damageType) {
         effectiveDamageType = psychicSpellsConfig.damageType || 'Psychic';

@@ -338,7 +338,8 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
 
-        const autoDamageFormula = [attack.damage, stanceDamageBonus > 0 ? stanceDamageBonus : null, frenzyDamageFormula, brutalStrikeFormulaPart].filter(v => v !== null).join(' plus ');
+        const primaryDamage = attack.damage || attack.damage_dice_primary || '';
+        const autoDamageFormula = [primaryDamage, stanceDamageBonus > 0 ? stanceDamageBonus : null, frenzyDamageFormula, brutalStrikeFormulaPart].filter(v => v !== null).join(' plus ');
 
         const effectiveHitBonus = attack.hitBonus + sacredWeaponBonus + blessedWarriorBonus + sunderingBonus;
         const hitBonusFormulaParts = [attack.hitBonusFormula];
@@ -572,7 +573,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
         }
 
         return {
-            damageType: attack.damageType,
+            damageType: attack.damageType || attack.damage_type_primary || '',
             resistanceNotice,
             hunterLoreNotice,
             targetName,

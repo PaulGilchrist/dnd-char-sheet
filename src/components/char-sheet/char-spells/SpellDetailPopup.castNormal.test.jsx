@@ -7,6 +7,8 @@ import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
 import * as storageService from '../../../services/ui/storage.js';
 
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
+
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
@@ -98,7 +100,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
   });
 
   describe('non-upcastable spell casting', () => {
-    it('calls onCast with unmodified spell and decrements slot', () => {
+    it('calls onCast with unmodified spell and decrements slot', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
@@ -112,6 +114,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.level).toBe(1);
@@ -124,7 +127,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       );
     });
 
-    it('uses stored slot value when available over spellAbilities max', () => {
+    it('uses stored slot value when available over spellAbilities max', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
@@ -138,6 +141,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Elara',
         'spell_slots_level_1',
@@ -146,7 +150,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       );
     });
 
-    it('falls back to spellAbilities max when no stored value', () => {
+    it('falls back to spellAbilities max when no stored value', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
@@ -157,6 +161,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
       // maxSlots = 4 from spellAbilities, availableSlots = 4, decremented to 3
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Elara',
@@ -168,7 +173,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
   });
 
   describe('upcast spell casting', () => {
-    it('calls onCast with upcasted level and decrements the upcast slot', () => {
+    it('calls onCast with upcasted level and decrements the upcast slot', async () => {
       const onCast = vi.fn();
       const upcastLevels = [
         { level: 1, formula: '3d4+1', availableSlots: 4 },
@@ -188,6 +193,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       fireEvent.click(screen.getByText('Level 2'));
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
+      await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.level).toBe(2);
@@ -200,7 +206,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       );
     });
 
-    it('uses base level when upcast level is selected but matches spell level', () => {
+    it('uses base level when upcast level is selected but matches spell level', async () => {
       const onCast = vi.fn();
       const upcastLevels = [
         { level: 1, formula: '3d4+1', availableSlots: 4 },
@@ -219,6 +225,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
 
       // Since isUpcast is false (selected level 1 === spell level 1),
       // and freeCastAuthorized is false, it falls to the else branch
+      await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.level).toBe(1);

@@ -1489,6 +1489,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                 if (cannotAct) return;
                                 if (isSpellAtk && spell.saveDc) { resolveSpellDamage(attackItem); return; }
                                 if (isSpellAtk) { actionCastAction(spell, {}); return; }
+                                if (resolvedDamage) { resolveSpellDamage(attackItem); return; }
                                 actionCastAction(spell, {});
                             }}>{getSpellDamageDisplay(spell)}</div>
                             <div className='left'>{damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility')}</div>

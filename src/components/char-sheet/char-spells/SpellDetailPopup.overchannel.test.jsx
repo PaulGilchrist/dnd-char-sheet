@@ -5,6 +5,8 @@ import SpellDetailPopup from './SpellDetailPopup.jsx';
 import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
+
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
   setRuntimeValue: vi.fn(),
@@ -123,7 +125,7 @@ describe('SpellDetailPopup - Overchannel', () => {
     it.each([
       { toggled: true, expected: true },
       { toggled: false, expected: false },
-    ])('passes overchannel: $expected in metaCtx when checkbox is $toggled', ({ toggled, expected }) => {
+    ])('passes overchannel: $expected in metaCtx when checkbox is $toggled', async ({ toggled, expected }) => {
       vi.mocked(useRuntimeValue).mockReturnValue(0);
       const onCast = vi.fn();
       const spell = {
@@ -138,6 +140,7 @@ describe('SpellDetailPopup - Overchannel', () => {
       }
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+      await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const metaCtx = onCast.mock.calls[0][1];
       expect(metaCtx.overchannel).toBe(expected);

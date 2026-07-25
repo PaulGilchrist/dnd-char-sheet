@@ -16,6 +16,7 @@ import {
 } from '../../services/automation/index.js'
 import { useConfirmableFlow } from './useConfirmableFlow.js'
 import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js'
+import { prepareSpellCast, isFreeCastAuthorized } from '../../services/rules/spells/spellPreparationService.js'
 
 function getCreatureTargets(excludeName, campaignName, characters = []) {
   const cs = getCombatSummary(campaignName);
@@ -42,7 +43,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingRemoveCurse = getPending('removeCurse');
   const pendingMagicMissile = getPending('magicMissile');
 
-  const gateMetamagic = React.useCallback((spell, metaCtx = {}) => {
+  const gateMetamagic = React.useCallback(async (spell, metaCtx = {}) => {
     const isGreaterRestoration = (spell.name || '').toLowerCase() === 'greater restoration';
     const isLesserRestoration = (spell.name || '').toLowerCase() === 'lesser restoration';
     const isRemoveCurse = (spell.name || '').toLowerCase() === 'remove curse';
@@ -276,21 +277,32 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     }
 
     if (!isSorcerer) {
-      let castSpell = spell;
-      if (spell.level === 0 && spell.damage) {
+      const isCantrip = spell.level === 0;
+      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
+      const cantripAutoLevel = (function() {
+        if (!isCantrip || !spell.damage) return null;
         const charDmg = spell.damage?.damage_at_character_level;
         const slotDmg = spell.damage?.damage_at_slot_level;
         const dmgObj = (charDmg && Object.keys(charDmg).length) ? charDmg : (slotDmg && Object.keys(slotDmg).length ? slotDmg : null);
-        if (dmgObj) {
-          const levels = Object.keys(dmgObj).map(Number).sort((a, b) => a - b);
-          const applicable = levels.filter(l => l <= playerStats.level);
-          if (applicable.length > 0) {
-            const autoLevel = Math.max(...applicable);
-            castSpell = { ...spell, level: autoLevel, baseLevel: 0 };
-          }
-        }
+        if (!dmgObj) return null;
+        const levels = Object.keys(dmgObj).map(Number).sort((a, b) => a - b);
+        const applicable = levels.filter(l => l <= playerStats.level);
+        return applicable.length > 0 ? Math.max(...applicable) : null;
+      })();
+
+      if (isCantrip && cantripAutoLevel) {
+        const preparedSpell = { ...spell, level: cantripAutoLevel, baseLevel: 0 };
+        onExecute(preparedSpell, metaCtx);
+      } else {
+        const result = await prepareSpellCast(spell, metaCtx, {
+          playerName: playerStats.name,
+          playerStats,
+          campaignName,
+          isUpcast: false,
+          freeCastAuthorized,
+        });
+        onExecute(result.modifiedSpell, result.metaCtx);
       }
-      onExecute(castSpell, metaCtx);
       return;
     }
 
@@ -326,7 +338,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     });
     }, [isSorcerer, playerStats, campaignName, onExecute, cfSetPending, setSecondaryTargetModal, characters]);
 
-  const handleConfirm = React.useCallback((result) => {
+  const handleConfirm = React.useCallback(async (result) => {
     const pending = pendingMetamagic;
     if (!pending) return;
 
@@ -376,10 +388,18 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       metaCtx.psionicSpell = true;
     }
 
-    onExecute(pending.spell, metaCtx);
+    const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName);
+    const result2 = await prepareSpellCast(pending.spell, metaCtx, {
+      playerName: playerStats.name,
+      playerStats,
+      campaignName,
+      isUpcast: false,
+      freeCastAuthorized,
+    });
+    onExecute(result2.modifiedSpell, result2.metaCtx);
   }, [pendingMetamagic, playerStats, campaignName, onExecute, cfClearPending]);
 
-  const handleSkip = React.useCallback(() => {
+  const handleSkip = React.useCallback(async () => {
     const pending = pendingMetamagic;
     if (!pending) return;
 
@@ -396,8 +416,16 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       timestamp: Date.now(),
     }).catch(() => {});
 
-    onExecute(pending.spell, {});
-  }, [pendingMetamagic, playerStats.name, campaignName, onExecute, cfClearPending]);
+    const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName);
+    const result = await prepareSpellCast(pending.spell, {}, {
+      playerName: playerStats.name,
+      playerStats,
+      campaignName,
+      isUpcast: false,
+      freeCastAuthorized,
+    });
+    onExecute(result.modifiedSpell, result.metaCtx);
+  }, [pendingMetamagic, playerStats, campaignName, onExecute, cfClearPending]);
 
   const handleMultiTargetConfirm = React.useCallback((result) => {
     const pending = pendingMultiTarget;

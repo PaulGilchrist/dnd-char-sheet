@@ -3971,12 +3971,16 @@
     "damage": {
       "damage_type": "Fire",
       "damage_at_slot_level": {
-        "5": "4d6 + 4d6",
-        "6": "4d6 + 5d6",
-        "7": "4d6 + 6d6",
-        "8": "4d6 + 7d6",
-        "9": "4d6 + 8d6"
-      }
+        "5": "4d6 plus 4d6",
+        "6": "4d6 plus 5d6",
+        "7": "4d6 plus 6d6",
+        "8": "4d6 plus 7d6",
+        "9": "4d6 plus 8d6"
+      },
+      "damage_dice_primary": "4d6",
+      "damage_type_primary": "Fire",
+      "damage_dice_secondary": "4d6",
+      "damage_type_secondary": "Fire"
     },
     "dc": {
       "dc_type": "DEX",
@@ -5500,16 +5504,20 @@
     "damage": {
       "damage_type": "Piercing",
       "damage_at_slot_level": {
-        "1": "1d10+1d6",
-        "2": "1d10+2d6",
-        "3": "1d10+3d6",
-        "4": "1d10+4d6",
-        "5": "1d10+5d6",
-        "6": "1d10+6d6",
-        "7": "1d10+7d6",
-        "8": "1d10+8d6",
-        "9": "1d10+9d6"
-      }
+        "1": "1d10 plus 1d6",
+        "2": "1d10 plus 2d6",
+        "3": "1d10 plus 3d6",
+        "4": "1d10 plus 4d6",
+        "5": "1d10 plus 5d6",
+        "6": "1d10 plus 6d6",
+        "7": "1d10 plus 7d6",
+        "8": "1d10 plus 8d6",
+        "9": "1d10 plus 9d6"
+      },
+      "damage_dice_primary": "1d10",
+      "damage_type_primary": "Piercing",
+      "damage_dice_secondary": "1d6",
+      "damage_type_secondary": "Cold"
     },
     "dc": {
       "dc_type": "DEX",
@@ -5549,13 +5557,17 @@
     "damage": {
       "damage_type": "Bludgeoning",
       "damage_at_slot_level": {
-        "4": "2d8 + 4d6",
-        "5": "3d8 + 4d6",
-        "6": "4d8 + 4d6",
-        "7": "5d8 + 4d6",
-        "8": "6d8 + 4d6",
-        "9": "7d8 + 4d6"
-      }
+        "4": "2d8 plus 4d6",
+        "5": "3d8 plus 4d6",
+        "6": "4d8 plus 4d6",
+        "7": "5d8 plus 4d6",
+        "8": "6d8 plus 4d6",
+        "9": "7d8 plus 4d6"
+      },
+      "damage_dice_primary": "2d8",
+      "damage_type_primary": "Bludgeoning",
+      "damage_dice_secondary": "4d6",
+      "damage_type_secondary": "Cold"
     },
     "dc": {
       "dc_type": "DEX",

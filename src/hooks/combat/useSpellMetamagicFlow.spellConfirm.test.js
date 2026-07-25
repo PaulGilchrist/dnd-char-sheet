@@ -11,6 +11,8 @@ import { confirmRemoveCurse } from '../../services/rules/features/removeCurseSer
 import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js';
 import { spendSorceryPoints } from './useMetamagic.js';
 
+const flushMicrotasks = () => new Promise(r => setTimeout(r, 0));
+
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
   getMaxSorceryPoints: vi.fn(() => 10),
@@ -444,12 +446,14 @@ describe('useSpellMetamagicFlow — handleConfirm with psionic sorcery', () => {
     return { result, onExecute };
   }
 
-  it('adds psionic cost to total cost when psionic and no Subtle Spell', () => {
+  it('adds psionic cost to total cost when psionic and no Subtle Spell', async () => {
     const { result, onExecute } = setupPsionicPending();
 
     act(() => {
       result.current.handleConfirm({ totalCost: 1, options: ['Empowered Spell'] });
     });
+
+    await flushMicrotasks();
 
     expect(spendSorceryPoints).toHaveBeenCalledWith(
       'TestSorcerer', 3, 'TestCampaign', expect.any(Number)
@@ -494,7 +498,7 @@ describe('useSpellMetamagicFlow — handleConfirm with psionic sorcery', () => {
     });
   });
 
-  it('does not add Psionic Sorcery to options or metaCtx when psionicCost is 0', () => {
+  it('does not add Psionic Sorcery to options or metaCtx when psionicCost is 0', async () => {
     isPsionicSpell.mockReturnValueOnce(false);
 
     const onExecute = vi.fn();
@@ -509,6 +513,8 @@ describe('useSpellMetamagicFlow — handleConfirm with psionic sorcery', () => {
     act(() => {
       result.current.handleConfirm({ totalCost: 2, options: ['Empowered Spell'] });
     });
+
+    await flushMicrotasks();
 
     expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
       type: 'spell',
@@ -533,6 +539,8 @@ describe('useSpellMetamagicFlow — handleConfirm with psionic sorcery', () => {
     act(() => {
       result2.current.handleConfirm({ totalCost: 0, options: [] });
     });
+
+    await flushMicrotasks();
 
     expect(onExecute).toHaveBeenCalledWith(
       expect.any(Object),
