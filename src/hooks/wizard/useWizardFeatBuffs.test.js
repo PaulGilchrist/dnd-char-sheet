@@ -22,6 +22,7 @@ describe('useWizardFeatBuffs', () => {
       { name: 'Dexterity', featIncrease: 0 },
       { name: 'Constitution', featIncrease: 0 },
     ],
+    proficiencies: [],
     resistances: [],
     specialActions: [],
     ...overrides,
@@ -140,7 +141,7 @@ describe('useWizardFeatBuffs', () => {
       expect(result.skillProficiencies.filter((s) => s === 'Perception')).toHaveLength(1);
     });
 
-    it('handles choice proficiencies from feats', () => {
+    it('does not add placeholder strings for proficiency choice feat buffs', () => {
       const mockBuffs = {
         abilityScoreIncreases: [],
         resistances: [],
@@ -158,7 +159,7 @@ describe('useWizardFeatBuffs', () => {
 
       const applyFn = mockSetFormData.mock.calls[1][0];
       const result = applyFn(formData);
-      expect(result.proficiencies).toContain('1 from: Weapons');
+      expect(result.proficiencies).not.toContain('1 from: Weapons');
     });
   });
 

@@ -222,10 +222,10 @@ describe('rules.getPlayerStats - feat buffs proficiency handling', () => {
   });
 
   it.each`
-    proficiencyType    | profBuff                                     | expectedProficiency
-    ${'choice'}        | ${{ type: 'proficiency', isChoice: true, choose: 3, from: ['Artisan\'s Tools'] }} | ${"3 from: Artisan's Tools"}
-    ${'non-choice'}    | ${{ name: 'Heavy Armor', type: 'proficiency', isChoice: false }}                    | ${'Heavy Armor'}
-  `('should add proficiency feat buff (type: $proficiencyType) to proficiencies', async ({ profBuff, expectedProficiency }) => {
+    proficiencyType    | profBuff                                     | expectedProficiency | expectedToolProficiency
+    ${'choice'}        | ${{ type: 'proficiency', isChoice: true, choose: 3, from: ['Artisan\'s Tools'] }} | ${null}              | ${null}
+    ${'non-choice'}    | ${{ name: 'Heavy Armor', type: 'proficiency', isChoice: false }}                    | ${'Heavy Armor'}   | ${null}
+  `('should add proficiency feat buff (type: $proficiencyType) to proficiencies', async ({ profBuff, expectedProficiency, expectedToolProficiency }) => {
     vi.mocked(featBuffService.computeAllFeatBuffs).mockReturnValue({
       abilityScoreIncreases: [],
       proficiencies: [profBuff],
@@ -235,7 +235,12 @@ describe('rules.getPlayerStats - feat buffs proficiency handling', () => {
       proficiencies: ['Light Armor'],
     });
     const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
-    expect(result.proficiencies).toContain(expectedProficiency);
+    if (expectedProficiency) {
+      expect(result.proficiencies).toContain(expectedProficiency);
+    }
+    if (expectedToolProficiency) {
+      expect(result.toolProficiencies).toContain(expectedToolProficiency);
+    }
   });
 
   it('should merge expertSkills field into expertise array', async () => {

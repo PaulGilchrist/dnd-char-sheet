@@ -1,15 +1,10 @@
 /**
  * Tool proficiency validation service for character creation wizard (2024 ruleset only)
- * Parses tool proficiencies from class, background, and feats data
- * Provides limits, pre-selection, and validation for tool proficiency selections
+ * Simple approach: collect all tool grants by category, count selected tools per category, warn if over limit.
  */
 
 import { loadEquipment, fetchBackgroundData, fetchClassData, loadFeatData } from '../ui/dataLoader.js';
 
-/**
- * Category normalization map — backgrounds/classes use singular forms
- * that need to match equipment.json tool_category values
- */
 const CATEGORY_NORMALIZATION = {
     "Gaming Set": "Gaming Sets",
     "Gaming Sets": "Gaming Sets",
@@ -19,44 +14,29 @@ const CATEGORY_NORMALIZATION = {
     "Other Tools": "Other Tools",
 };
 
-/**
- * Normalizes a category name from background/class data to match equipment.json tool_category
- * @param {string} category - Raw category name from data
- * @returns {string} - Normalized category name
- */
 export function normalizeCategory(category) {
     if (!category) return category;
     const normalized = CATEGORY_NORMALIZATION[category.trim()];
     return normalized || category.trim();
 }
 
-/**
- * Parses a tool proficiency choice string from background/class data
- * @param {string} choiceString - Tool proficiency string (e.g., "Choose one kind of Artisan's Tools")
- * @returns {object} - { count, categories[], isChoice }
- */
-export function parseToolChoiceString(choiceString) {
+function parseToolChoiceString(choiceString) {
     if (!choiceString || typeof choiceString !== 'string') {
         return { count: 0, categories: [], isChoice: false };
     }
 
     const trimmed = choiceString.trim();
 
-    // Check if it's a "Choose" pattern
     if (!trimmed.startsWith('Choose')) {
         return { count: 0, categories: [], isChoice: false };
     }
 
-    // Pattern: "Choose one type of Artisan's Tools or Musical Instrument"
-    // → count: 1, categories: ["Artisan's Tools", "Musical Instrument"]
     const orMatch = trimmed.match(/Choose\s+one\s+type\s+of\s+(.+)$/i);
     if (orMatch) {
         const categories = orMatch[1].split(/\s+or\s+/).map(c => normalizeCategory(c));
         return { count: 1, categories, isChoice: true };
     }
 
-    // Pattern: "Choose 3 Musical Instruments (see chapter 6)"
-    // → count: 3, categories: ["Musical Instrument"]
     const countMatch = trimmed.match(/Choose\s+(\d+)\s+(.+?)(?:\s*\(see[^)]*\)|\s*of\s+your\s+choice)?\.?\s*$/i);
     if (countMatch) {
         const count = parseInt(countMatch[1], 10);
@@ -64,8 +44,6 @@ export function parseToolChoiceString(choiceString) {
         return { count, categories: [category], isChoice: true };
     }
 
-    // Pattern: "Choose one kind of Artisan's Tools"
-    // → count: 1, categories: ["Artisan's Tools"]
     const kindMatch = trimmed.match(/Choose\s+(?:one\s+)?kind\s+of\s+(.+)$/i);
     if (kindMatch) {
         const category = normalizeCategory(kindMatch[1]);
@@ -76,8 +54,58 @@ export function parseToolChoiceString(choiceString) {
 }
 
 /**
+ * Parses a feat's tool proficiency benefit description
+ * @param {object} feat - The feat data object
+ * @returns {object|null} - { count, categories[], isAny } or null
+ */
+export function parseFeatToolProficiency(feat) {
+    if (!feat || !feat.benefits) return null;
+
+    const toolBenefit = feat.benefits.find(b =>
+        b.type === 'proficiency' &&
+        b.description &&
+        /tool.*proficien|proficien.*tool|instrument.*proficien|proficien.*instrument/i.test(b.description)
+    );
+
+    if (!toolBenefit) return null;
+
+    const desc = toolBenefit.description;
+
+    // Common patterns for number words
+    const numWords = '(?:one|two|three|four|five|six|seven|eight|nine|ten|1|2|3|4|5|6|7|8|9|10)';
+    const wordToNum = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+
+    // Crafter: "You gain proficiency with three different Artisan's Tools of your choice"
+    const crafterMatch = desc.match(new RegExp(numWords + '\\s+different\\s+(Artisan).*Tools', 'i'));
+    if (crafterMatch) {
+        const firstWord = crafterMatch[0].split(' ')[0].toLowerCase();
+        const count = wordToNum[firstWord] || 1;
+        return { count, categories: [normalizeCategory("Artisan's Tools")], isAny: false };
+    }
+
+    // Skilled: "You gain proficiency in any combination of three skills or tools of your choice"
+    const skilledMatch = desc.match(new RegExp(numWords + '\\s+skills\\s+or\\s+tools', 'i'));
+    if (skilledMatch) {
+        const firstWord = skilledMatch[0].split(' ')[0].toLowerCase();
+        const count = wordToNum[firstWord] || 1;
+        return { count, categories: [], isAny: true };
+    }
+
+    // Musician/others: "You gain proficiency with three Musical Instruments of your choice"
+    const genericMatch = desc.match(new RegExp(numWords + '\\s+(?:different\\s+)?(\\w+(?:\\s+(?:and\\s+)?\\w+)*)\\s+of\\s+your\\s+choice', 'i'));
+    if (genericMatch) {
+        const firstWord = genericMatch[0].split(' ')[0].toLowerCase();
+        const count = wordToNum[firstWord] || 1;
+        const category = normalizeCategory(genericMatch[1]);
+        return { count, categories: [category], isAny: false };
+    }
+
+    return null;
+}
+
+/**
  * Gets all tool entries from equipment.json filtered by category
- * @param {string} category - Tool category name (e.g., "Artisan's Tools")
+ * @param {string} category - Tool category name
  * @returns {Promise<object[]>} - Array of tool objects
  */
 export async function getToolsByCategory(category) {
@@ -91,229 +119,94 @@ export async function getToolsByCategory(category) {
 }
 
 /**
- * Parses a feat's tool proficiency benefit description
- * @param {object} feat - The feat data object
- * @returns {object|null} - { count, categories[], isAny } or null if not a tool proficiency feat
- */
-export function parseFeatToolProficiency(feat) {
-    if (!feat || !feat.benefits) return null;
-
-    const toolBenefit = feat.benefits.find(b =>
-        b.type === 'proficiency' &&
-        b.description &&
-        /tool.*proficien|proficien.*tool/i.test(b.description)
-    );
-
-    if (!toolBenefit) return null;
-
-    const desc = toolBenefit.description;
-
-    // Crafter: "You gain proficiency with three different Artisan's Tools of your choice"
-    // → { count: 3, categories: ["Artisan's Tools"], isAny: false }
-    const crafterMatch = desc.match(/(\d+)\s+different\s+(\w+)'?\s+Tools/i);
-    if (crafterMatch) {
-        const count = parseInt(crafterMatch[1], 10);
-        const category = normalizeCategory(crafterMatch[2]);
-        return { count, categories: [category], isAny: false };
-    }
-
-    // Skilled: "You gain proficiency in any combination of three skills or tools of your choice"
-    // → { count: 3, categories: [], isAny: true }
-    const skilledMatch = desc.match(/(\d+)\s+skills\s+or\s+tools/i);
-    if (skilledMatch) {
-        const count = parseInt(skilledMatch[1], 10);
-        return { count, categories: [], isAny: true };
-    }
-
-    return null;
-}
-
-/**
- * Gets tool limits based on class, background, and feats
+ * Aggregates tool proficiency grants by category
+ * Returns a map of category -> total count from all sources
  * @param {object} formData - The character form data
- * @returns {Promise<object>} - { allowed, fromClass, fromBackground, fromFeats, details, preSelected }
+ * @returns {Promise<object>} - { categoryLimits: Map<category, count>, preSelected: string[] }
  */
-export async function getToolLimits(formData) {
+export async function getToolLimitsByCategory(formData) {
     const ruleset = formData.rules || '5e';
     const className = formData.class?.name || '';
     const backgroundName = formData.background || '';
     const selectedFeats = formData.feats || [];
 
-    // Tool proficiencies are a 2024 mechanic
     if (ruleset !== '2024') {
-        return {
-            allowed: 0,
-            fromClass: { count: 0, categories: [] },
-            fromBackground: { count: 0, categories: [] },
-            fromFeats: { count: 0, categories: [] },
-            details: 'Tool proficiencies are a 2024 ruleset feature',
-            preSelected: [],
-        };
+        return { categoryLimits: new Map(), preSelected: [] };
     }
 
+    const categoryLimits = new Map();
     const preSelected = new Set();
-    let fromClassCount = 0;
-    let fromClassCategories = [];
-    let fromBackgroundCount = 0;
-    let fromBackgroundCategories = [];
-    let fromFeatsCount = 0;
-    let fromFeatsCategories = [];
 
-    // Background tool proficiencies
+    // Background
     if (backgroundName) {
-        const backgroundData = await fetchBackgroundData(backgroundName, '2024');
-        if (backgroundData?.tool_proficiencies && backgroundData.tool_proficiencies !== '') {
-            const bgTool = backgroundData.tool_proficiencies;
-            const parsed = parseToolChoiceString(bgTool);
+        const bgData = await fetchBackgroundData(backgroundName, '2024');
+        if (bgData?.tool_proficiencies) {
+            const parsed = parseToolChoiceString(bgData.tool_proficiencies);
             if (parsed.isChoice) {
-                fromBackgroundCount = parsed.count;
-                fromBackgroundCategories = parsed.categories;
+                for (const cat of parsed.categories) {
+                    categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + parsed.count);
+                }
             } else {
-                // Fixed tool — add to pre-selected
-                preSelected.add(bgTool);
+                preSelected.add(bgData.tool_proficiencies);
             }
         }
     }
 
-    // Class tool proficiencies
+    // Class
     if (className) {
         const classData = await fetchClassData(className, '2024');
-        if (classData?.tool_proficiencies && classData.tool_proficiencies !== '') {
-            const classTool = classData.tool_proficiencies;
-            const parsed = parseToolChoiceString(classTool);
+        if (classData?.tool_proficiencies) {
+            const parsed = parseToolChoiceString(classData.tool_proficiencies);
             if (parsed.isChoice) {
-                fromClassCount = parsed.count;
-                fromClassCategories = parsed.categories;
+                for (const cat of parsed.categories) {
+                    categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + parsed.count);
+                }
             } else {
-                // Fixed tool — add to pre-selected (deduplicate)
-                preSelected.add(classTool);
+                preSelected.add(classData.tool_proficiencies);
             }
         }
     }
 
-    // Feat tool proficiencies
+    // Feats
     if (selectedFeats.length > 0) {
         const featData = await loadFeatData('2024');
         for (const featName of selectedFeats) {
             const feat = featData.find(f => f.name === featName || f.index === featName.toLowerCase());
             if (feat) {
+                // Chef: auto-selects Cook's Utensils (fixed tool, no choice limit)
+                const chefBenefit = feat.benefits.find(b =>
+                    b.type === 'proficiency' &&
+                    b.description &&
+                    /cook['\u2019]?\w*\s*utensil/i.test(b.description)
+                );
+                if (chefBenefit) {
+                    preSelected.add("Cook's Utensils");
+                    continue;
+                }
+
                 const toolProf = parseFeatToolProficiency(feat);
                 if (toolProf) {
-                    fromFeatsCount += toolProf.count;
                     if (toolProf.isAny) {
-                        // Skilled feat: any tools, no category restriction
-                        fromFeatsCategories.push({ isAny: true });
+                        // Any-tool grants apply to all tool categories
+                        const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+                        for (const cat of toolCategories) {
+                            categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + toolProf.count);
+                        }
                     } else {
-                        fromFeatsCategories.push(...toolProf.categories);
+                        for (const cat of toolProf.categories) {
+                            categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + toolProf.count);
+                        }
                     }
                 }
             }
         }
     }
 
-    const totalAllowed = fromClassCount + fromBackgroundCount + fromFeatsCount;
-
-    // Build details string
-    const detailsParts = [];
-    if (fromBackgroundCount > 0) {
-        detailsParts.push(`${fromBackgroundCount} from background`);
-    }
-    if (fromClassCount > 0) {
-        detailsParts.push(`${fromClassCount} from class`);
-    }
-    if (fromFeatsCount > 0) {
-        detailsParts.push(`${fromFeatsCount} from feats`);
-    }
-    if (preSelected.size > 0) {
-        detailsParts.push(`${preSelected.size} fixed`);
-    }
-
-    const details = detailsParts.length > 0
-        ? `You get ${detailsParts.join(', ')} (${totalAllowed} choice tool proficiency/ies)`
-        : 'No tool proficiencies granted by class, background, or feats';
-
-    return {
-        allowed: totalAllowed,
-        fromClass: { count: fromClassCount, categories: fromClassCategories },
-        fromBackground: { count: fromBackgroundCount, categories: fromBackgroundCategories },
-        fromFeats: { count: fromFeatsCount, categories: fromFeatsCategories },
-        details,
-        preSelected: Array.from(preSelected),
-    };
+    return { categoryLimits, preSelected: Array.from(preSelected) };
 }
 
 /**
- * Gets category-level choice info for the UI
- * Aggregates all "Choose X from category" sources into a flat list
- * @param {object} formData - The character form data
- * @param {object} toolLimits - Result from getToolLimits
- * @returns {Promise<object[]>} - Array of { category, total, selected, remaining, hasOrOptions }
- */
-export async function getCategoryChoices(formData, toolLimits) {
-    const { fromClass, fromBackground, fromFeats } = toolLimits;
-
-    // Collect all category choices with their counts
-    const categoryMap = new Map();
-
-    const addCategoryChoices = (categories, count) => {
-        if (count === 0) return;
-        categories.forEach(cat => {
-            if (typeof cat === 'object' && cat.isAny) {
-                // Skilled feat: any tools — add as "any" category
-                categoryMap.set('__any__', {
-                    category: 'Any Tool',
-                    total: count,
-                    choices: [],
-                    hasOrOptions: false,
-                    isAny: true,
-                });
-            } else {
-                const existing = categoryMap.get(cat);
-                if (existing) {
-                    existing.total += count;
-                } else {
-                    categoryMap.set(cat, {
-                        category: cat,
-                        total: count,
-                        choices: [],
-                        hasOrOptions: false,
-                        isAny: false,
-                    });
-                }
-            }
-        });
-    };
-
-    addCategoryChoices(fromClass.categories, fromClass.count);
-    addCategoryChoices(fromBackground.categories, fromBackground.count);
-    addCategoryChoices(fromFeats.categories, fromFeats.count);
-
-    // Load tools for each category and detect "or" patterns
-    const result = [];
-    for (const [categoryKey, info] of categoryMap) {
-        if (categoryKey === '__any__') {
-            result.push(info);
-            continue;
-        }
-
-        const tools = await getToolsByCategory(categoryKey);
-        info.choices = tools.map(t => t.name);
-        info.toolCount = tools.length;
-
-        // Detect "or" patterns: if both Artisan's Tools and Musical Instrument exist,
-        // this is a Monk-style "pick one category" situation
-        const orCategories = ['Artisan\'s Tools', 'Musical Instrument'];
-        const orMatched = orCategories.filter(c => categoryMap.has(c));
-        info.hasOrOptions = orMatched.length > 1;
-
-        result.push(info);
-    }
-
-    return result;
-}
-
-/**
- * Validates tool selections and returns warnings (not blocking errors)
+ * Validates tool selections and returns warnings
  * @param {object} formData - The character form data
  * @returns {Promise<object[]>} - Array of warning objects { message, type }
  */
@@ -326,53 +219,42 @@ export async function validateTools(formData) {
         return warnings;
     }
 
-    const limits = await getToolLimits(formData);
-    const categoryChoices = await getCategoryChoices(formData, limits);
+    const { categoryLimits, preSelected } = await getToolLimitsByCategory(formData);
+    const preSelectedSet = new Set(preSelected);
+    const isPlaceholder = (t) => /^(\d+) from: (.+)$/.test(t);
+    const userSelectedTools = selectedTools.filter(t => !preSelectedSet.has(t) && !isPlaceholder(t));
 
-    // Subtract pre-selected tools from the count — they don't cost slots
-    const preSelectedSet = new Set(limits.preSelected || []);
-    const userSelectedTools = selectedTools.filter(t => !preSelectedSet.has(t));
-
-    // Check if too many tools selected (only user-selected, not pre-selected)
-    if (userSelectedTools.length > limits.allowed) {
-        warnings.push({
-            message: `Rules allow ${limits.allowed} choice tool proficiency/ies. You have selected ${userSelectedTools.length}. (${limits.details})`,
-            type: 'warning',
-        });
+    // Load all tools and categorize them
+    const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+    const toolsByCategory = {};
+    for (const cat of toolCategories) {
+        const tools = await getToolsByCategory(cat);
+        toolsByCategory[cat] = new Set(tools.map(t => t.name));
     }
 
-    // Check if too few tools selected (info, not warning)
-    if (userSelectedTools.length < limits.allowed && userSelectedTools.length > 0 && limits.allowed > 0) {
-        warnings.push({
-            message: `You can select up to ${limits.allowed} choice tool proficiencies. You have selected ${userSelectedTools.length}.`,
-            type: 'info',
-        });
+    // Count selected tools per category and warn if over limit
+    for (const [category, limit] of categoryLimits) {
+        const selectedInCategory = userSelectedTools.filter(t => toolsByCategory[category]?.has(t)).length;
+        if (selectedInCategory > limit) {
+            warnings.push({
+                message: `You have selected ${selectedInCategory} from ${category}, but your class/background/feats only grant ${limit} proficiency/ies from ${category}.`,
+                type: 'warning',
+            });
+        }
     }
 
-    // Validate category choices: for "or" patterns, ensure all selections come from one category
-    const selectedToolNames = new Set(selectedTools);
-    categoryChoices.forEach(choice => {
-        if (!choice.hasOrOptions || choice.isAny) return;
-
-        // Find which categories have selected tools
-        const selectedCategories = new Set();
-        choice.choices.forEach(toolName => {
-            if (selectedToolNames.has(toolName)) {
-                selectedCategories.add(choice.category);
+    // Warn if user selects any tool from a category with 0 allowed
+    for (const category of toolCategories) {
+        const limit = categoryLimits.get(category) || 0;
+        if (limit === 0) {
+            const selectedInCategory = userSelectedTools.filter(t => toolsByCategory[category]?.has(t));
+            if (selectedInCategory.length > 0) {
+                warnings.push({
+                    message: `You have selected ${selectedInCategory.length} from ${category} (${selectedInCategory.join(', ')}), but your class/background/feats do not grant any proficiencies from ${category}.`,
+                    type: 'warning',
+                });
             }
-        });
-
-        // If tools selected from multiple "or" categories, warn
-        // (This is handled by the UI preventing cross-category selection, but as a safety net)
-    });
-
-    // Check for duplicates
-    const uniqueTools = new Set(selectedTools);
-    if (uniqueTools.size < selectedTools.length) {
-        warnings.push({
-            message: 'Some tools are selected multiple times. Each tool should only be selected once.',
-            type: 'warning',
-        });
+        }
     }
 
     return warnings;

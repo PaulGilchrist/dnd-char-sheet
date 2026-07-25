@@ -1,17 +1,17 @@
 import useWizardConfig from './useWizardConfig.js';
-import { getToolLimits, validateTools } from '../../services/character/toolValidation.js';
+import { getToolLimitsByCategory, validateTools } from '../../services/character/toolValidation.js';
 
 function useWizardTools(formData, setFormData) {
   const {
     toolLimits,
-    toolWarnings,
+    warnings: toolWarnings,
     preSelectedTools,
   } = useWizardConfig({
     formData,
     setFormData,
     validateFn: validateTools,
     slots: [
-      { get: getToolLimits, state: { initial: null, key: 'toolLimits' }, isLimit: true },
+      { get: getToolLimitsByCategory, state: { initial: null, key: 'toolLimits' }, isLimit: true },
     ],
     getDeps: (f) => [
       f.toolProficiencies,
@@ -24,7 +24,7 @@ function useWizardTools(formData, setFormData) {
     ],
     preSelect: {
       getFn: async (f) => {
-        const limits = await getToolLimits(f);
+        const limits = await getToolLimitsByCategory(f);
         return limits.preSelected || [];
       },
       merge: (prev, items, _prevItems) => ({

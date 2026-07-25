@@ -30,23 +30,6 @@ function buildFormDataWithBuffs(prev, buffs) {
     }
   }
 
-  const featProficiencies = (buffs.proficiencies || []).filter(
-    p => p.type === 'proficiency' && p.isChoice
-  );
-  if (featProficiencies.length > 0) {
-    const existingProfs = new Set(prev.proficiencies || []);
-    featProficiencies.forEach(fp => {
-      if (fp.choose && fp.from) {
-        const listName = fp.from[0];
-        const profName = `${fp.choose} from: ${listName}`;
-        if (!existingProfs.has(profName)) {
-          next.proficiencies = [...(prev.proficiencies || []), profName];
-          existingProfs.add(profName);
-        }
-      }
-    });
-  }
-
   return next;
 }
 

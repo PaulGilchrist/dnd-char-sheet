@@ -1243,17 +1243,12 @@ const rules = {
            [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false, playerSummary);
            [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true, playerSummary);
 
-        // Clean up any leftover grantsExpertise proficiency choice entries from previous saves
-        // (e.g., "1 from: Arcana, History, Investigation, Nature, Religion" for Keen Mind Lore Knowledge)
+        // Clean up any leftover placeholder proficiency entries from previous saves
+        // (e.g., "1 from: Arcana, History" for skill expertise, "3 from: Musical Instruments" for Musician feat)
         if (Array.isArray(playerStats.proficiencies)) {
             playerStats.proficiencies = playerStats.proficiencies.filter(p => {
                 if (typeof p !== 'string') return true;
-                const match = p.match(/^(\d+) from: (.+)$/);
-                if (!match) return true;
-                const listName = match[2];
-                // Filter out entries that match a feat's skill expertise list
-                const skillNames = listName.split(/,\s*/).map(s => s.trim());
-                return !skillNames.every(s => ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History','Insight','Intimidation','Investigation','Medicine','Nature','Perception','Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'].includes(s));
+                return !/^(\d+) from: (.+)$/.test(p);
             });
         }
 
@@ -1279,29 +1274,8 @@ const rules = {
             playerStats.skillProficiencies = [...new Set([...playerStats.skillProficiencies, ...allSkillNames])];
         }
 
-        // Apply proficiency choice feat buffs (e.g., Crafter's 3 Artisan's Tools)
-        const featProficiencyChoices = featBuffs.proficiencies.filter(p => p.type === 'proficiency' && p.isChoice);
-        if (featProficiencyChoices.length > 0) {
-            let profs = playerStats.proficiencies;
-            if (!Array.isArray(profs)) {
-                console.error('rules: expected proficiencies to be an array for', playerStats.name);
-                throw new Error('Missing array: proficiencies for ' + playerStats.name);
-            }
-            const existingProfs = new Set(profs);
-            featProficiencyChoices.forEach(fp => {
-                // Skip skill expertise choices (e.g., Keen Mind Lore Knowledge) — these are handled via expertSkills
-                if (fp.grantsExpertise) return;
-                if (fp.choose && fp.from) {
-                    const listName = fp.from[0];
-                    const profName = `${fp.choose} from: ${listName}`;
-                    if (!existingProfs.has(profName)) {
-                        profs = [...profs, profName];
-                        existingProfs.add(profName);
-                    }
-                }
-            });
-            playerStats.proficiencies = profs;
-        }
+        // Proficiency choice feat buffs (tool choices handled by toolLimits, skill/armor choices handled by wizard)
+        // No placeholder strings are added to proficiencies — the user makes explicit choices elsewhere.
 
         // Apply expertise feat buffs (e.g., Keen Mind Lore Knowledge, Observant's Keen Observer)
         // The user's expertise choices are stored in formData.expertSkills and merged here.

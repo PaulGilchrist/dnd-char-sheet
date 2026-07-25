@@ -309,7 +309,8 @@ const proficiencyBuffCases = [
     name: 'should handle proficiency choice feat buffs (e.g., Crafter\'s 3 Artisan\'s Tools)',
     buff: { name: 'Artisan\'s Tools', type: 'proficiency', isChoice: true, choose: 3, from: ['Artisan\'s Tools'] },
     existingProfs: [],
-    expectedProf: '3 from: Artisan\'s Tools',
+    expectedProf: null,
+    expectedToolProfs: null,
     expectedSkillProfs: null,
     checkDup: false,
   },
@@ -321,20 +322,12 @@ const proficiencyBuffCases = [
     expectedSkillProfs: null,
     checkDup: true,
   },
-  {
-    name: 'should not duplicate proficiency choice feat buffs',
-    buff: { name: 'Artisan\'s Tools', type: 'proficiency', isChoice: true, choose: 3, from: ['Artisan\'s Tools'] },
-    existingProfs: ['3 from: Artisan\'s Tools'],
-    expectedProf: '3 from: Artisan\'s Tools',
-    expectedSkillProfs: null,
-    checkDup: true,
-  },
 ];
 
 describe('rules.getPlayerStats - feat proficiency buffs', () => {
   beforeEach(() => { vi.clearAllMocks(); setupDefaults(); });
 
-  it.each(proficiencyBuffCases)('$name', async ({ buff, existingProfs, expectedProf, expectedSkillProfs, checkDup }) => {
+  it.each(proficiencyBuffCases)('$name', async ({ buff, existingProfs, expectedProf, expectedToolProfs, expectedSkillProfs, checkDup }) => {
     vi.mocked(featBuffService.computeAllFeatBuffs).mockReturnValue({
       abilityScoreIncreases: [],
       proficiencies: [buff],
@@ -346,6 +339,9 @@ describe('rules.getPlayerStats - feat proficiency buffs', () => {
     const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
     if (expectedProf) {
       expect(result.proficiencies).toContain(expectedProf);
+    }
+    if (expectedToolProfs) {
+      expect(result.toolProficiencies).toContain(expectedToolProfs);
     }
     if (expectedSkillProfs) {
       for (const skill of expectedSkillProfs) {

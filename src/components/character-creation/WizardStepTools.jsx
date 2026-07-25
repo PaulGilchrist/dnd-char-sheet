@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import WarningList from '../common/WarningList.jsx';
 import { getToolsByCategory } from '../../services/character/toolValidation.js';
+import { loadEquipment } from '../../services/ui/dataLoader.js';
 import './WizardStepTools.css';
 
 const ABILITY_ABBREVIATIONS = {
@@ -30,6 +31,9 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
     const tools = useMemo(() => formData.toolProficiencies || [], [formData.toolProficiencies]);
     const preSelected = useMemo(() => preSelectedTools || [], [preSelectedTools]);
 
+    const isPlaceholder = useCallback((toolName) => /^(\d+) from: (.+)$/.test(toolName), []);
+    const realToolCount = useMemo(() => tools.filter(t => !isPlaceholder(t)).length, [tools, isPlaceholder]);
+
     useEffect(() => {
         const loadTools = async () => {
             const categories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
@@ -56,6 +60,33 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
         [preSelected]
     );
 
+    useEffect(() => {
+        const logLimits = async () => {
+            const categoryNames = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+            const effectiveLimits = {};
+            for (const cat of categoryNames) {
+                const limitsCount = toolLimits?.categoryLimits?.get(cat) || 0;
+                let preSelectedCount = 0;
+                if (toolLimits?.preSelected && preSelectedTools) {
+                    const toolsInCat = await getToolsByCategory(cat);
+                    const toolNamesInCat = new Set(toolsInCat.map(t => t.name));
+                    for (const tool of toolLimits.preSelected) {
+                        if (toolNamesInCat.has(tool)) {
+                            preSelectedCount++;
+                        }
+                    }
+                }
+                effectiveLimits[cat] = {
+                    choiceAllowed: limitsCount,
+                    preSelected: preSelectedCount,
+                    total: limitsCount + preSelectedCount
+                };
+            }
+            console.log('[WizardStepTools] Tool limits by category:', JSON.stringify(effectiveLimits, null, 2));
+        };
+        logLimits();
+    }, [toolLimits, preSelectedTools]);
+
     const handleToolToggle = useCallback(
         (toolName) => {
             if (isToolPreSelected(toolName) && isToolSelected(toolName)) {
@@ -70,10 +101,10 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
         <div className="wizard-step wizard-step-tools">
             <h2>Step 11: Tool Proficiencies</h2>
 
-            {toolLimits && (
+            {toolLimits && Object.keys(toolLimits).length > 0 && (
                 <div className="rule-info">
-                    <p><strong>Rules:</strong> {toolLimits.details}</p>
-                    <p>You have selected {tools.length} tool proficiency/ies ({preSelected.length} pre-selected, {tools.length - preSelected.length} chosen).</p>
+                    <p><strong>Rules:</strong> You get tool proficiencies from your class, background, and feats.</p>
+                    <p>You have selected {realToolCount} tool proficiency/ies ({preSelected.length} pre-selected, {realToolCount - preSelected.length} chosen).</p>
                 </div>
             )}
 

@@ -59,7 +59,8 @@
   ],
   "feats": [
     "Magic Initiate",
-    "Moderately Armored"
+    "Musician",
+    "Chef"
   ],
   "fightingStyles": [],
   "race": {
@@ -143,11 +144,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Moderately Armored-1": {
-      "assignment": "Strength"
-    },
-    "Moderately Armored-0": {
-      "assignment": "Strength"
+    "Chef-0": {
+      "assignment": "Constitution"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",
