@@ -91,7 +91,7 @@ describe('applyFeatBuffsToFormData', () => {
       const result = applyFeatBuffsToFormData(formData, []);
 
       expect(result.proficiencies).toEqual([
-        { name: 'heavy armor' },
+        { name: 'Heavy Armor', type: 'proficiency' },
       ]);
     });
 

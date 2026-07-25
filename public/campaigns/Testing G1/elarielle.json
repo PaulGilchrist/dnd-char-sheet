@@ -58,8 +58,8 @@
     "Arcana"
   ],
   "feats": [
-    "Magic Initiate",
-    "Keen Mind"
+    "Lightly Armored",
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -105,9 +105,9 @@
   "skillProficiencies": [
     "Arcana",
     "History",
-    "Athletics",
     "Acrobatics",
-    "Sleight of Hand"
+    "Sleight of Hand",
+    "Perception"
   ],
   "toolProficiencies": [
     "Calligrapher's Supplies"
@@ -137,17 +137,10 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Inspiring Leader-1": {
-      "assignment": "Wisdom"
-    },
-    "Inspiring Leader-0": {
-      "assignment": "Wisdom"
+    "Lightly Armored-0": {
+      "assignment": "Strength"
     }
   },
-  "proficiencies": [
-    "3 from: Artisan's Tools",
-    "1 from: Arcana, History, Investigation, Nature, Religion"
-  ],
   "feyTouchedSpell": "Detect Evil and Good",
   "shadowTouchedSpell": "Disguise Self"
 }

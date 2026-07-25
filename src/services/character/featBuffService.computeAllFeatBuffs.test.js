@@ -96,7 +96,7 @@ describe('computeAllFeatBuffs', () => {
         { name: 'Strength', amount: 2, isChoice: false, featName: 'Tough', featDescription: undefined, max_value: 20 },
       ]);
       expect(result.proficiencies).toEqual([
-        { name: 'shields' },
+        { name: 'Shields', type: 'proficiency' },
       ]);
       expect(result.resistances).toEqual([]);
       expect(result.features).toEqual([]);
@@ -222,7 +222,7 @@ describe('computeAllFeatBuffs', () => {
       );
 
       expect(result.proficiencies).toEqual([
-        { name: 'heavy armor' },
+        { name: 'Heavy Armor', type: 'proficiency' },
       ]);
     });
 
@@ -239,7 +239,7 @@ describe('computeAllFeatBuffs', () => {
       );
 
       expect(result.proficiencies).toEqual([
-        { name: 'skills', isChoice: true },
+        { name: 'Skills', type: 'proficiency', isChoice: true },
       ]);
     });
 

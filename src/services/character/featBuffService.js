@@ -64,13 +64,17 @@ function parse5eBenefitText(text) {
 
   match = text.match(PROFICIENCY_PATTERN);
   if (match) {
-    buffs.proficiencies.push({ name: match[1].trim() });
+    const name = match[1].trim();
+    const capitalized = name.replace(/\b\w/g, c => c.toUpperCase());
+    buffs.proficiencies.push({ name: capitalized, type: 'proficiency' });
     return buffs;
   }
 
   match = text.match(PROFICIENCY_CHOICE_PATTERN);
   if (match) {
-    buffs.proficiencies.push({ name: match[1].trim(), isChoice: true });
+    const name = match[1].trim();
+    const capitalized = name.replace(/\b\w/g, c => c.toUpperCase());
+    buffs.proficiencies.push({ name: capitalized, type: 'proficiency', isChoice: true });
     return buffs;
   }
 

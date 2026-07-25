@@ -1217,8 +1217,22 @@ const rules = {
         playerStats.turnStartEffects = collectTurnStartEffects(allFeatures);
         playerStats.saveProficiencies = getAllSaveProficiencies(allFeatures, playerStats);
           [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats, playerSummary);
-          [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false, playerSummary);
-          [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true, playerSummary);
+           [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false, playerSummary);
+           [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true, playerSummary);
+
+        // Clean up any leftover grantsExpertise proficiency choice entries from previous saves
+        // (e.g., "1 from: Arcana, History, Investigation, Nature, Religion" for Keen Mind Lore Knowledge)
+        if (Array.isArray(playerStats.proficiencies)) {
+            playerStats.proficiencies = playerStats.proficiencies.filter(p => {
+                if (typeof p !== 'string') return true;
+                const match = p.match(/^(\d+) from: (.+)$/);
+                if (!match) return true;
+                const listName = match[2];
+                // Filter out entries that match a feat's skill expertise list
+                const skillNames = listName.split(/,\s*/).map(s => s.trim());
+                return !skillNames.every(s => ['Acrobatics','Animal Handling','Arcana','Athletics','Deception','History','Insight','Intimidation','Investigation','Medicine','Nature','Perception','Performance','Persuasion','Religion','Sleight of Hand','Stealth','Survival'].includes(s));
+            });
+        }
 
         // Apply feat buffs to ability featIncrease before computing abilities
         const featData = await loadFeatData(is2024(playerStats, playerSummary) ? '2024' : '5e');
@@ -1252,15 +1266,18 @@ const rules = {
             }
             const existingProfs = new Set(profs);
             featProficiencyChoices.forEach(fp => {
+                // Skip skill expertise choices (e.g., Keen Mind Lore Knowledge) — these are handled via expertSkills
+                if (fp.grantsExpertise) return;
                 if (fp.choose && fp.from) {
                     const listName = fp.from[0];
                     const profName = `${fp.choose} from: ${listName}`;
                     if (!existingProfs.has(profName)) {
-                        playerStats.proficiencies = [...profs, profName];
+                        profs = [...profs, profName];
                         existingProfs.add(profName);
                     }
                 }
             });
+            playerStats.proficiencies = profs;
         }
 
         // Apply expertise feat buffs (e.g., Keen Mind Lore Knowledge, Observant's Keen Observer)
@@ -1286,10 +1303,11 @@ const rules = {
             const existingProfs = new Set(profs);
             featNonChoiceProfs.forEach(fp => {
                 if (fp.name && !existingProfs.has(fp.name)) {
-                    playerStats.proficiencies = [...profs, fp.name];
+                    profs = [...profs, fp.name];
                     existingProfs.add(fp.name);
                 }
             });
+            playerStats.proficiencies = profs;
         }
 
         // Add feat features to their proper action arrays based on casting_time for display
@@ -1740,9 +1758,9 @@ const rules = {
                playerStats.resistances = rr.getResistances(playerSummary);
                playerStats.senses = rr.getSenses(playerStats);
                // Apply The Third Eye darkvision enhancement from active buffs (5e)
-               playerStats.senses = applyThirdEyeDarkvision(playerStats, playerStats.senses, playerSummary.campaignName);
-               // Apply Truesight from passive_buff automation (e.g., Boon of Truesight)
-               playerStats.senses = applyTruesightSenses(playerStats, playerStats.senses);
+                playerStats.senses = applyThirdEyeDarkvision(playerStats, playerStats.senses, playerSummary.campaignName);
+                // Apply Truesight from passive_buff automation (e.g., Boon of Truesight)
+                playerStats.senses = applyTruesightSenses(playerStats, playerStats.senses);
             }
 
         return playerStats;

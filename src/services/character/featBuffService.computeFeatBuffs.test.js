@@ -116,7 +116,7 @@ describe('computeFeatBuffs', () => {
         );
 
         expect(result.proficiencies).toEqual([
-          { name: 'heavy armor' },
+          { name: 'Heavy Armor', type: 'proficiency' },
         ]);
       });
 
@@ -127,7 +127,7 @@ describe('computeFeatBuffs', () => {
         );
 
         expect(result.proficiencies).toEqual([
-          { name: 'two skills', isChoice: true },
+          { name: 'Two Skills', type: 'proficiency', isChoice: true },
         ]);
       });
     });
@@ -246,7 +246,7 @@ describe('computeFeatBuffs', () => {
           { name: 'Strength', amount: 2, isChoice: false, max_value: 20 },
         ]);
         expect(result.proficiencies).toEqual([
-          { name: 'heavy armor' },
+          { name: 'Heavy Armor', type: 'proficiency' },
         ]);
         expect(result.features).toEqual([
           { name: 'Speed Bonus', description: 'Your speed increases by 10 feet', type: 'speed', value: 10 },
