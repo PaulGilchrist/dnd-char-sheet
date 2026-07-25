@@ -78,3 +78,68 @@
     transform: translateY(0);
   }
 }
+
+/* Skill Count Summary */
+.wizard-step-skills .skill-count-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.wizard-step-skills .skill-count-text {
+  font-size: 1rem;
+}
+
+/* Breakdown Toggle Button */
+.wizard-step-skills .breakdown-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  background-color: var(--background-color-card);
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.wizard-step-skills .breakdown-toggle-btn:hover {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+/* Skill Choice Breakdown */
+.wizard-step-skills .skill-choice-breakdown {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--background-color-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.wizard-step-skills .breakdown-source {
+  margin-bottom: 8px;
+}
+
+.wizard-step-skills .breakdown-source:last-child {
+  margin-bottom: 0;
+}
+
+.wizard-step-skills .breakdown-source-label {
+  display: inline-block;
+  font-weight: 600;
+  margin-right: 8px;
+  font-size: 0.9rem;
+}
+
+.wizard-step-skills .breakdown-source-skills {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}

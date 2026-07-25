@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import WarningList from '../common/WarningList.jsx';
 import { getToolsByCategory } from '../../services/character/toolValidation.js';
-import { loadEquipment } from '../../services/ui/dataLoader.js';
 import './WizardStepTools.css';
 
 const ABILITY_ABBREVIATIONS = {

@@ -19,15 +19,16 @@ const areEqual = (prevProps, nextProps) => {
 
 const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors, onSkillToggle, onSkillExpertiseToggle, skillLimits, expertiseLimits, warnings, preSelectedSkills }) {
   const [showExpertiseFeedback, setShowExpertiseFeedback] = useState(null);
-	const [skills, setSkills] = useState([]);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [skills, setSkills] = useState([]);
 
-	useEffect(() => {
-		const loadSkillsData = async () => {
-			const skillsData = await loadSkills();
-			setSkills(skillsData);
-			};
-		loadSkillsData();
-	}, []);
+  useEffect(() => {
+    const loadSkillsData = async () => {
+      const skillsData = await loadSkills();
+      setSkills(skillsData);
+    };
+    loadSkillsData();
+  }, []);
 
   const expertiseData = useMemo(() => {
     const expertSkills = formData.expertSkills || [];
@@ -78,17 +79,25 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
           list.some(s => s.trim() === skill)
         );
 
-        if (isFeatRestricted && expertiseLimits?.featCount && expertiseLimits.featCount > 0) {
-          // Check if feat slots are exhausted
+        if (isFeatRestricted) {
+          // Feat-restricted skills can only use feat slots
+          if (!expertiseLimits?.featCount || expertiseLimits.featCount <= 0) {
+            setShowExpertiseFeedback('This skill requires a feat expertise slot');
+            setTimeout(() => setShowExpertiseFeedback(null), 3000);
+            return;
+          }
           if (expertiseData.featSlotsUsed >= expertiseLimits.featCount) {
             setShowExpertiseFeedback('All feat expertise slots are used');
             setTimeout(() => setShowExpertiseFeedback(null), 3000);
             return;
           }
-        }
-
-        // Check if class slots are exhausted for non-restricted skills
-        if (!isFeatRestricted && expertiseLimits?.classCount && expertiseLimits.classCount > 0) {
+        } else {
+          // Non-restricted skills can only use class slots
+          if (!expertiseLimits?.classCount || expertiseLimits.classCount <= 0) {
+            setShowExpertiseFeedback('This class does not grant expertise slots');
+            setTimeout(() => setShowExpertiseFeedback(null), 3000);
+            return;
+          }
           if (expertiseData.classSlotsAvailable <= 0) {
             setShowExpertiseFeedback('All class expertise slots are used');
             setTimeout(() => setShowExpertiseFeedback(null), 3000);
@@ -107,16 +116,19 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
       list.some(s => s.trim() === skill)
     );
 
-    if (isFeatRestricted && expertiseLimits?.featCount && expertiseLimits.featCount > 0) {
+    if (isFeatRestricted) {
+      // Feat-restricted skills can only use feat slots
+      if (!expertiseLimits?.featCount || expertiseLimits.featCount <= 0) {
+        return false;
+      }
       return expertiseData.featSlotsUsed < expertiseLimits.featCount;
     }
 
-    if (expertiseLimits?.classCount && expertiseLimits.classCount > 0) {
-      return expertiseData.classSlotsAvailable > 0;
+    // Non-restricted skills can only use class slots
+    if (!expertiseLimits?.classCount || expertiseLimits.classCount <= 0) {
+      return false;
     }
-
-    // No limits - allow all
-    return true;
+    return expertiseData.classSlotsAvailable > 0;
   };
 
 	const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
@@ -140,11 +152,89 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 		<div className="wizard-step wizard-step-skills">
 			<h2>Step 6: Skill Proficiencies</h2>
 
-			{/* Display skill limits info */}
+			{/* Display skill limits info with expandable breakdown */}
 			{skillLimits && (
 				<div className="rule-info">
-					<p><strong>Rules:</strong> {skillLimits.details}</p>
-					<p>You have selected {formData.skillProficiencies?.length || 0} of {skillLimits.allowed} allowed skill proficiency/ies.</p>
+					<p className="skill-count-summary">
+						<span className="skill-count-text">
+							You have selected <strong>{formData.skillProficiencies?.length || 0}</strong> of <strong>{skillLimits.allowed}</strong> allowed skill proficiency/ies.
+						</span>
+						{skillLimits.skillChoiceSources && skillLimits.skillChoiceSources.length > 0 && (
+							<button
+								type="button"
+								className="breakdown-toggle-btn"
+								onClick={() => setShowBreakdown(!showBreakdown)}
+								aria-expanded={showBreakdown}
+							>
+								<i className={`fa-solid ${showBreakdown ? 'fa-chevron-down' : 'fa-chevron-right'}`}></i> Breakdown
+							</button>
+						)}
+					</p>
+					{skillLimits.skillChoiceSources && skillLimits.skillChoiceSources.length > 0 && showBreakdown && (
+						<div className="skill-choice-breakdown">
+							{(() => {
+								const assignedSkills = new Set();
+								const sourceAssignments = {};
+								skillLimits.skillChoiceSources.forEach(s => {
+									sourceAssignments[s.source + '_' + (s.featName || '0')] = 0;
+								});
+								const selectedSkills = formData.skillProficiencies || [];
+								const remainingSkills = [...selectedSkills];
+								const assignments = [];
+								while (remainingSkills.length > 0) {
+									let bestSource = null;
+									let bestSize = Infinity;
+									skillLimits.skillChoiceSources.forEach(source => {
+										const key = source.source + '_' + (source.featName || '0');
+										const remainingCapacity = source.count - sourceAssignments[key];
+										if (remainingCapacity <= 0) return;
+										const unassignedInPool = remainingSkills.filter(s =>
+											source.skills.includes(s) && !assignedSkills.has(s)
+										);
+										if (unassignedInPool.length > 0 && source.skills.length < bestSize) {
+											bestSource = source;
+											bestSize = source.skills.length;
+										}
+									});
+									if (!bestSource) break;
+									const assigned = remainingSkills.find(s =>
+										bestSource.skills.includes(s) && !assignedSkills.has(s)
+									);
+									if (!assigned) break;
+									const key = bestSource.source + '_' + (bestSource.featName || '0');
+									sourceAssignments[key]++;
+									assignedSkills.add(assigned);
+									const idx = remainingSkills.indexOf(assigned);
+									remainingSkills.splice(idx, 1);
+									assignments.push({ source: bestSource, skill: assigned });
+								}
+								const assignmentMap = {};
+								assignments.forEach(a => {
+									const key = a.source.source + '_' + (a.source.featName || '0');
+									if (!assignmentMap[key]) assignmentMap[key] = 0;
+									assignmentMap[key]++;
+								});
+								return skillLimits.skillChoiceSources.map((source, idx) => {
+									const key = source.source + '_' + (source.featName || '0');
+									const selectedFromSource = assignmentMap[key] || 0;
+									const sourceLabel = source.featName || source.source.charAt(0).toUpperCase() + source.source.slice(1);
+									return (
+										<div key={idx} className="breakdown-source">
+											<span className="breakdown-source-label">
+												{sourceLabel}: {selectedFromSource} of {source.count}
+											</span>
+											<span className="breakdown-source-skills">
+												{source.skills.join(', ')}
+											</span>
+										</div>
+									);
+								});
+							})()}
+						</div>
+					)}
+					{skillLimits.details && (!skillLimits.skillChoiceSources || skillLimits.skillChoiceSources.length === 0) && (
+						<p><strong>Rules:</strong> {skillLimits.details}</p>
+					)}
 				</div>
 			)}
 

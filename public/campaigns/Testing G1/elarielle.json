@@ -27,7 +27,7 @@
     {
       "name": "Intelligence",
       "baseScore": 15,
-      "featIncrease": 0,
+      "featIncrease": 1,
       "backgroundIncrease": 1,
       "miscIncrease": 0
     },
@@ -54,13 +54,11 @@
     "divineOrder": "",
     "primalOrder": ""
   },
-  "expertSkills": [
-    "Arcana"
-  ],
+  "expertSkills": [],
   "feats": [
-    "Musician",
+    "Observant",
     "Tough",
-    "Observant"
+    "Keen Mind"
   ],
   "fightingStyles": [],
   "race": {
@@ -105,20 +103,13 @@
     "Radiant"
   ],
   "skillProficiencies": [
-    "Arcana",
-    "History",
-    "Acrobatics",
-    "Sleight of Hand",
+    "Animal Handling",
+    "Nature",
     "Perception",
     "Insight",
-    "Religion",
     "Investigation",
-    "Persuasion",
-    "Deception",
-    "Stealth",
-    "Performance",
-    "Animal Handling",
-    "Nature"
+    "Medicine",
+    "Arcana"
   ],
   "toolProficiencies": [
     "Carpenter's Tools",

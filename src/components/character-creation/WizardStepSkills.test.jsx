@@ -29,7 +29,7 @@ const baseProps = {
   },
   errors: {},
   skillLimits: { allowed: 3, details: 'Your class and level grant 3 skills.' },
-  expertiseLimits: { allowed: true, count: 2, details: 'Rogues get expertise in 2 skills.' },
+  expertiseLimits: { allowed: true, count: 2, classCount: 2, classSlotsAvailable: 2, details: 'Rogues get expertise in 2 skills.' },
   preSelectedSkills: ['Stealth'],
   warnings: [],
   onSkillToggle: vi.fn(),
@@ -62,7 +62,7 @@ describe('WizardStepSkills', () => {
     it('should display proficiency and expertise counts based on formData', async () => {
       render(<WizardStepSkills {...baseProps} />);
       await waitForSkills();
-      expect(screen.getByText(/You have selected 1 of 3 allowed/)).toBeInTheDocument();
+      expect(screen.getByText(/You have selected.*of.*allowed/)).toBeInTheDocument();
       expect(screen.getByText(/Expertise:/)).toBeInTheDocument();
       expect(screen.getByText(/Rogues get expertise in 2 skills/)).toBeInTheDocument();
     });

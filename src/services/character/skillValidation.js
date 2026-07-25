@@ -180,6 +180,138 @@ async function getFeatExpertiseSkillLists(formData, allFeats) {
 import { fetchClassData, fetchRaceData, fetchBackgroundData, loadFeatData } from '../ui/dataLoader.js';
 
 /**
+ * Extracts skill choice lists from race traits with proficiency_choices
+ * (e.g., Human "Skillful": choose 1 from all 18 skills)
+ * @param {object} formData - The character form data
+ * @returns {Array<{count: number, skills: string[]}>} Race proficiency choice sources
+ */
+async function getRaceProficiencyChoiceSources(formData) {
+  if (!formData.race?.name) return [];
+
+  const raceData = await fetchRaceData(formData.race.name, formData.rules || '2024');
+  if (!raceData || !raceData.traits) return [];
+
+  const sources = [];
+  raceData.traits.forEach(trait => {
+    if (trait.proficiency_choices && trait.proficiency_choices.from && trait.proficiency_choices.from[0].startsWith('Skill: ')) {
+      const skills = trait.proficiency_choices.from
+        .map(s => s.replace('Skill: ', '').trim())
+        .filter(s => s.length > 0);
+      if (skills.length > 0 && trait.proficiency_choices.choose > 0) {
+        sources.push({
+          source: 'race',
+          count: trait.proficiency_choices.choose,
+          skills: skills,
+        });
+      }
+    }
+  });
+
+  return sources;
+}
+
+/**
+ * Extracts skill choice lists from race origin feats
+ * (e.g., Human's Versatile trait grants an origin feat like Keen Mind)
+ * @param {object} formData - The character form data
+ * @param {Array} allFeats - Array of all feat data objects (may be empty during initial load)
+ * @returns {Array<{count: number, skills: string[], featName: string}>} Race feat proficiency choice sources
+ */
+async function getRaceFeatProficiencyChoiceSources(formData, allFeats) {
+  if (!formData.race?.name) return [];
+
+  const raceData = await fetchRaceData(formData.race.name, formData.rules || '2024');
+  if (!raceData || !raceData.traits) return [];
+
+  const originFeats = [];
+  raceData.traits.forEach(trait => {
+    if (trait.proficiency_choices && trait.proficiency_choices.from && !trait.proficiency_choices.from[0].startsWith('Skill: ')) {
+      originFeats.push(...trait.proficiency_choices.from);
+    }
+  });
+
+  if (originFeats.length === 0) return [];
+
+  const featData = (allFeats && allFeats.length > 0) ? allFeats : await loadFeatData(formData.rules || '5e');
+  if (!featData || featData.length === 0) return [];
+
+  const sources = [];
+  originFeats.forEach(featName => {
+    const feat = featData.find(f => f.name === featName || f.index === featName.toLowerCase());
+    if (!feat || !feat.benefits) return;
+
+    feat.benefits.forEach(benefit => {
+      if (benefit.type === 'proficiency' && benefit.description) {
+        const match = benefit.description.match(/(?:Choose one of the following skills:\s*|Choose one skill:\s*)(.+?)\.\s*(?:If|You|This|When)/i);
+        if (match) {
+          const skills = match[1]
+            .split(/,\s*|,\s*(?:and\s+|\bor\s+)|(?:and\s+|\bor\s+)/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+          if (skills.length > 0) {
+            sources.push({
+              source: 'race_feat',
+              count: 1,
+              skills: skills,
+              featName: feat.name,
+            });
+          }
+        }
+      }
+    });
+  });
+
+  return sources;
+}
+
+/**
+ * Gets proficiency choice data from character feats
+ * Returns { count, skillLists } where skillLists is an array of skill arrays
+ * @param {object} formData - The character form data
+ * @param {Array} allFeats - Array of all feat data objects (may be empty during initial load)
+ * @returns {Promise<{count: number, skillLists: Array<{skills: string[], featName: string}>}>}
+ */
+async function getFeatProficiencyChoiceData(formData, allFeats) {
+  if (!formData.feats || formData.feats.length === 0) {
+    return { count: 0, skillLists: [] };
+  }
+
+  const featData = (allFeats && allFeats.length > 0) ? allFeats : await loadFeatData(formData.rules || '5e');
+  if (!featData || featData.length === 0) {
+    return { count: 0, skillLists: [] };
+  }
+
+  let totalCount = 0;
+  const skillLists = [];
+
+  formData.feats.forEach(featName => {
+    const feat = featData.find(f => f.name === featName || f.index === featName.toLowerCase());
+    if (!feat || !feat.benefits) return;
+
+    feat.benefits.forEach(benefit => {
+      if (benefit.type === 'proficiency' && benefit.description) {
+        const match = benefit.description.match(/(?:Choose one of the following skills:\s*|Choose one skill:\s*)(.+?)\.\s*(?:If|You|This|When)/i);
+        if (match) {
+          const skills = match[1]
+            .split(/,\s*|,\s*(?:and\s+|\bor\s+)|(?:and\s+|\bor\s+)/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+          if (skills.length > 0) {
+            totalCount += 1;
+            skillLists.push({
+              skills: skills,
+              featName: feat.name,
+            });
+          }
+        }
+      }
+    });
+  });
+
+  return { count: totalCount, skillLists };
+}
+
+/**
  * Parses skill proficiencies from a class/race/background data object
  * Handles both "Choose X from..." format and direct skill lists
  * @param {object} data - The class/race/background data object
@@ -199,6 +331,12 @@ function parseSkillProficiencies(data, ruleset = '5e') {
         const pc = trait.proficiency_choices;
         if (pc.from && pc.from.length > 0 && pc.from[0].startsWith('Skill: ')) {
           choiceCount += pc.choose || 0;
+          pc.from.forEach(s => {
+            const skillName = s.replace('Skill: ', '').trim();
+            if (skillName && !skills.includes(skillName)) {
+              skills.push(skillName);
+            }
+          });
         }
         return;
       }
@@ -220,7 +358,7 @@ function parseSkillProficiencies(data, ruleset = '5e') {
         }
       }
     });
-    return { count: skills.length + choiceCount, skills, isChoice: choiceCount > 0 };
+    return { count: choiceCount > 0 ? choiceCount : skills.length, skills, isChoice: choiceCount > 0 };
   }
 
   const skillField = data.skill_proficiencies || data.skill_proficiency_choices;
@@ -228,18 +366,18 @@ function parseSkillProficiencies(data, ruleset = '5e') {
     return { count: 0, skills: [], isChoice: false };
   }
 
-  // Check if it's a "Choose X from..." format
+  // Check if it's a "Choose X from..." or "Choose X:" format
   const chooseMatch = skillField.match(/Choose\s+(\d+)/i);
   if (chooseMatch) {
     const count = parseInt(chooseMatch[1], 10);
     
-    // Extract the list of available skills
-    const fromMatch = skillField.match(/from\s+(.+)$/i);
+    // Extract the list of available skills - try "from" first, then ":"
+    const fromMatch = skillField.match(/(?:from|:)\s*(.+)$/i);
     if (fromMatch) {
       const skillsString = fromMatch[1];
-      // Parse skills, handling "or" before the last skill
+      // Parse skills, handling "or" before the last skill (with or without comma)
       const skills = skillsString
-         .replace(/ or ,?$/, '')
+         .replace(/\s+or\s+/g, ',')
          .split(',')
          .map(s => s.trim())
          .filter(s => s.length > 0);
@@ -253,6 +391,7 @@ function parseSkillProficiencies(data, ruleset = '5e') {
   // Direct skill list (e.g., "Insight and Religion" for backgrounds)
   const skills = skillField
      .replace(/ and /g, ',')
+     .replace(/\s+or\s+/g, ',')
      .split(',')
      .map(s => s.trim())
      .filter(s => s.length > 0);
@@ -288,7 +427,7 @@ export async function getSkillLimits(formData, allFeats) {
   }
 
   if (ruleset === '2024') {
-    // 2024 rules: Class gives choice, Race gives automatic, Background gives 2 skills
+    // 2024 rules: Class gives choice, Race gives choice(s) via traits, Background gives specific skills
     if (className) {
       const classData = await fetchClassData(className, '2024');
       fromClass = parseSkillProficiencies(classData, '2024');
@@ -308,37 +447,126 @@ export async function getSkillLimits(formData, allFeats) {
     const featProfs = await countFeatProficiencyChoices(formData, allFeats);
     const finalTotal = totalAllowed + featProfs;
 
-    let details = `In 2024 rules, you get ${fromClass.count} skill choice(s) from your class, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
-    if (featProfs > 0) {
-      const featDetails = formData.feats
-        .map(featName => {
-          const feat = (allFeats && allFeats.length > 0)
-            ? allFeats.find(f => f.name === featName || f.index === featName.toLowerCase())
-            : null;
-          if (!feat || !feat.benefits) return null;
-          const profBenefit = feat.benefits.find(b =>
-            b.type === 'proficiency' &&
-            b.description &&
-            /choose\s+(\d+|one)/i.test(b.description) &&
-            !/proficiency in (all|every).?skill/i.test(b.description)
-          );
-          if (!profBenefit) return null;
-          const chooseMatch = profBenefit.description.match(/choose\s+(\d+)/i);
-          const count = chooseMatch ? parseInt(chooseMatch[1], 10) : 1;
-          if (profBenefit.description.includes('Expertise')) {
-            const listMatch = profBenefit.description.match(/(?:Choose one of the following skills:\s*|Choose one skill:\s*)(.+?)\.\s*(?:If|You|This|When)/i);
-            if (listMatch) {
-              const skillList = listMatch[1]
-                .split(/,\s*|,\s*(?:and\s+|\bor\s+)|(?:and\s+|\bor\s+)/)
-                .map(s => s.trim())
-                .filter(s => s.length > 0);
-              return `${featName}: choose ${count} from ${skillList.join(', ')} (proficiency or expertise)`;
-            }
-          }
-          return `${featName}: choose ${count} from your available skill choices`;
-        })
-        .filter(Boolean)
-        .join('. ');
+    // Build skillChoiceSources array with restricted pools
+    const skillChoiceSources = [];
+    const raceChoiceSources = [];
+    // Background skills (non-choice) are always allowed
+    if (fromBackground.skills.length > 0 && !fromBackground.isChoice) {
+      skillChoiceSources.push({
+        source: 'background',
+        count: fromBackground.count,
+        skills: fromBackground.skills,
+      });
+    }
+    if (fromClass.isChoice && fromClass.skills.length > 0) {
+      skillChoiceSources.push({
+        source: 'class',
+        count: fromClass.count,
+        skills: fromClass.skills,
+      });
+    }
+    if (fromRace.isChoice && fromRace.count > 0) {
+      // Race with "from" format has skills populated
+      if (fromRace.skills.length > 0) {
+        skillChoiceSources.push({
+          source: 'race',
+          count: fromRace.count,
+          skills: fromRace.skills,
+        });
+      } else {
+        // Race with proficiency_choices in traits (e.g., Human Skillful)
+        const raceSources = await getRaceProficiencyChoiceSources(formData);
+        skillChoiceSources.push(...raceSources);
+        raceChoiceSources.push(...raceSources);
+      }
+    }
+    // Race origin feats (e.g., Human Versatile -> Keen Mind)
+    const raceFeatSources = await getRaceFeatProficiencyChoiceSources(formData, allFeats);
+    skillChoiceSources.push(...raceFeatSources);
+    // Character feats with restricted skill lists
+    const featChoiceData = await getFeatProficiencyChoiceData(formData, allFeats);
+    featChoiceData.skillLists.forEach(sl => {
+      skillChoiceSources.push({
+        source: 'feat',
+        count: 1,
+        skills: sl.skills,
+        featName: sl.featName,
+      });
+    });
+
+    // Build details string
+    let details = `You get ${fromClass.count} skill choice(s)${fromClass.skills.length > 0 ? ' from ' + fromClass.skills.join(', ') : ''}, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
+    if (raceChoiceSources.length > 0 || raceFeatSources.length > 0 || featChoiceData.skillLists.length > 0) {
+      const allSources = [...raceChoiceSources, ...raceFeatSources, ...featChoiceData.skillLists.map(sl => ({ featName: sl.featName, skills: sl.skills }))];
+      const featDetails = allSources.map(s => {
+        const label = s.featName ? s.featName : (s.source === 'race' ? 'Race trait' : 'Feat');
+        return `${label}: choose 1 from ${s.skills.join(', ')}`;
+      }).join('. ');
+      if (featDetails) {
+        details += `. + ${featProfs} from feats/traits: ${featDetails}`;
+      }
+    }
+
+    return {
+      allowed: finalTotal,
+      fromClass,
+      fromRace,
+      fromBackground,
+      skillChoiceSources,
+      details
+     };
+   }
+
+    // 5e rules: Class gives choice, Race gives automatic or choice, Background gives 2 skills
+    if (className) {
+      const classData = await fetchClassData(className, '5e');
+      fromClass = parseSkillProficiencies(classData, '5e');
+    }
+
+    if (raceName) {
+      const raceData = await fetchRaceData(raceName, '5e');
+      fromRace = parseSkillProficiencies(raceData, '5e');
+    }
+
+    // 5e backgrounds typically give 2 skills but data structure may differ
+    // Load from rules-validation.json for background language count
+    const backgroundLangCount = 2; // Default for 5e
+    fromBackground = { count: backgroundLangCount, skills: [], isChoice: true };
+
+    const totalAllowed = fromClass.count + fromRace.count + fromBackground.count;
+    const featProfs = await countFeatProficiencyChoices(formData, allFeats);
+    const finalTotal = totalAllowed + featProfs;
+
+    // Build skillChoiceSources array with restricted pools
+    const skillChoiceSources = [];
+    if (fromClass.isChoice && fromClass.skills.length > 0) {
+      skillChoiceSources.push({
+        source: 'class',
+        count: fromClass.count,
+        skills: fromClass.skills,
+      });
+    }
+    if (fromRace.isChoice && fromRace.skills.length > 0) {
+      skillChoiceSources.push({
+        source: 'race',
+        count: fromRace.count,
+        skills: fromRace.skills,
+      });
+    }
+    // Character feats with restricted skill lists
+    const featChoiceData = await getFeatProficiencyChoiceData(formData, allFeats);
+    featChoiceData.skillLists.forEach(sl => {
+      skillChoiceSources.push({
+        source: 'feat',
+        count: 1,
+        skills: sl.skills,
+        featName: sl.featName,
+      });
+    });
+
+    let details = `In 5e rules, you get ${fromClass.count} skill choice(s)${fromClass.skills.length > 0 ? ' from ' + fromClass.skills.join(', ') : ''}, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
+    if (featChoiceData.skillLists.length > 0) {
+      const featDetails = featChoiceData.skillLists.map(sl => `${sl.featName}: choose 1 from ${sl.skills.join(', ')}`).join('. ');
       if (featDetails) {
         details += `. + ${featProfs} from feats: ${featDetails}`;
       }
@@ -349,74 +577,10 @@ export async function getSkillLimits(formData, allFeats) {
       fromClass,
       fromRace,
       fromBackground,
+      skillChoiceSources,
       details
      };
    }
-
-   // 5e rules: Class gives choice, Race gives automatic or choice, Background gives 2 skills
-   if (className) {
-     const classData = await fetchClassData(className, '5e');
-     fromClass = parseSkillProficiencies(classData, '5e');
-   }
-
-   if (raceName) {
-     const raceData = await fetchRaceData(raceName, '5e');
-     fromRace = parseSkillProficiencies(raceData, '5e');
-   }
-
-    // 5e backgrounds typically give 2 skills but data structure may differ
-    // Load from rules-validation.json for background language count
-   const backgroundLangCount = 2; // Default for 5e
-   fromBackground = { count: backgroundLangCount, skills: [], isChoice: true };
-
-   const totalAllowed = fromClass.count + fromRace.count + fromBackground.count;
-   const featProfs = await countFeatProficiencyChoices(formData, allFeats);
-   const finalTotal = totalAllowed + featProfs;
-
-   let details = `In 5e rules, you get ${fromClass.count} skill choice(s) from your class, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
-   if (featProfs > 0) {
-     const featDetails = formData.feats
-       .map(featName => {
-         const feat = (allFeats && allFeats.length > 0)
-           ? allFeats.find(f => f.name === featName || f.index === featName.toLowerCase())
-           : null;
-         if (!feat || !feat.benefits) return null;
-         const profBenefit = feat.benefits.find(b =>
-           b.type === 'proficiency' &&
-           b.description &&
-           /choose\s+(\d+|one)/i.test(b.description) &&
-           !/proficiency in (all|every).?skill/i.test(b.description)
-         );
-         if (!profBenefit) return null;
-         const chooseMatch = profBenefit.description.match(/choose\s+(\d+)/i);
-         const count = chooseMatch ? parseInt(chooseMatch[1], 10) : 1;
-         if (profBenefit.description.includes('Expertise')) {
-           const listMatch = profBenefit.description.match(/(?:Choose one of the following skills:\s*|Choose one skill:\s*)(.+?)\.\s*(?:If|You|This|When)/i);
-           if (listMatch) {
-             const skillList = listMatch[1]
-               .split(/,\s*|,\s*(?:and\s+|\bor\s+)|(?:and\s+|\bor\s+)/)
-               .map(s => s.trim())
-               .filter(s => s.length > 0);
-             return `${featName}: choose ${count} from ${skillList.join(', ')} (proficiency or expertise)`;
-           }
-         }
-         return `${featName}: choose ${count} from your available skill choices`;
-       })
-       .filter(Boolean)
-       .join('. ');
-     if (featDetails) {
-       details += `. + ${featProfs} from feats: ${featDetails}`;
-     }
-   }
-
-   return {
-     allowed: finalTotal,
-     fromClass,
-     fromRace,
-     fromBackground,
-     details
-    };
-}
 
 /**
  * Determines which skills are pre-selected (automatically granted) from race/class/background
@@ -766,6 +930,91 @@ export async function validateSkills(formData, allFeats) {
   const limits = await getSkillLimits(formData, allFeats);
   const expertiseLimits = await getExpertiseLimits(formData, allFeats);
 
+  // Validate skill selections against allowed pools
+  if (limits.skillChoiceSources && limits.skillChoiceSources.length > 0) {
+    // Build a map of which sources each skill belongs to
+    const skillSourceMap = new Map();
+    limits.skillChoiceSources.forEach(source => {
+      source.skills.forEach(skill => {
+        if (!skillSourceMap.has(skill)) {
+          skillSourceMap.set(skill, []);
+        }
+        skillSourceMap.get(skill).push(source);
+      });
+    });
+
+    // Check each selected skill belongs to at least one allowed pool
+    const skillsOutsidePools = [];
+    selectedSkills.forEach(skill => {
+      const sources = skillSourceMap.get(skill);
+      if (!sources || sources.length === 0) {
+        skillsOutsidePools.push(skill);
+      }
+    });
+    if (skillsOutsidePools.length > 0) {
+      warnings.push({
+        message: `The following skills are not available from your class/race/feat choices: ${skillsOutsidePools.join(', ')}. Only select from allowed skill pools.`,
+        type: 'warning'
+      });
+    }
+
+    // Count how many selected skills come from each source
+    // For overlapping skills, assign them to the source that needs them most
+    const sourceCounts = {};
+    limits.skillChoiceSources.forEach(source => {
+      sourceCounts[source.source + '_' + (source.featName || '0')] = {
+        source: source,
+        count: 0,
+      };
+    });
+
+    // Track which selected skills have been assigned
+    const assignedSkills = new Set();
+
+    // First pass: assign skills that only belong to one source
+    limits.skillChoiceSources.forEach(source => {
+      const key = source.source + '_' + (source.featName || '0');
+      const sourceSkillSet = new Set(source.skills);
+      selectedSkills.forEach(skill => {
+        if (assignedSkills.has(skill)) return;
+        const sourcesForSkill = skillSourceMap.get(skill) || [];
+        const isOnlySource = sourcesForSkill.length === 1 && sourcesForSkill[0].source === source.source && sourcesForSkill[0].featName === source.featName;
+        if (sourceSkillSet.has(skill) && isOnlySource) {
+          sourceCounts[key].count++;
+          assignedSkills.add(skill);
+        }
+      });
+    });
+
+    // Second pass: assign remaining skills to any source that contains them
+    selectedSkills.forEach(skill => {
+      if (assignedSkills.has(skill)) return;
+      const sourcesForSkill = skillSourceMap.get(skill) || [];
+      sourcesForSkill.forEach(source => {
+        const key = source.source + '_' + (source.featName || '0');
+        if (sourceCounts[key] && sourceCounts[key].count < source.count) {
+          sourceCounts[key].count++;
+          assignedSkills.add(skill);
+        }
+      });
+    });
+
+    // Check for over-selection from any source
+    const overSelectionWarnings = [];
+    Object.values(sourceCounts).forEach(({ source, count }) => {
+      if (count > source.count) {
+        const label = source.featName || source.source;
+        overSelectionWarnings.push(`Too many from ${label}: ${count} selected, only ${source.count} allowed`);
+      }
+    });
+    if (overSelectionWarnings.length > 0) {
+      warnings.push({
+        message: overSelectionWarnings.join('. '),
+        type: 'warning'
+      });
+    }
+  }
+
   // Check if too many skills selected
   if (selectedSkills.length > limits.allowed) {
     warnings.push({
@@ -808,9 +1057,25 @@ export async function validateSkills(formData, allFeats) {
         type: 'warning'
        });
      }
+
+    // Check that feat-restricted expertise skills are from the allowed lists
+    if (expertiseLimits?.featExpertiseSkillLists) {
+      const allFeatSkills = new Set(expertiseLimits.featExpertiseSkillLists.flat().map(s => s.trim()));
+      const featExpertSkills = expertSkills.filter(skill => allFeatSkills.has(skill));
+      const classExpertSkills = expertSkills.filter(skill => !allFeatSkills.has(skill));
+      const featSlotsUsed = Math.min(featExpertSkills.length, expertiseLimits.featCount || 0);
+      const classSlotsUsed = classExpertSkills.length;
+      const totalExpertiseUsed = featSlotsUsed + classSlotsUsed;
+      if (totalExpertiseUsed > expertiseLimits.count) {
+        warnings.push({
+          message: `You have selected ${expertSkills.length} skill(s) for expertise but only have ${expertiseLimits.count} slot(s) available. (${expertiseLimits.details})`,
+          type: 'warning'
+         });
+       }
+      }
    }
 
-  // Check for duplicate skills in selection
+   // Check for duplicate skills in selection
   const uniqueSkills = new Set(selectedSkills);
   if (uniqueSkills.size < selectedSkills.length) {
     warnings.push({
