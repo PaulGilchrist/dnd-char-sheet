@@ -779,7 +779,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 }
             }
 
-            if (isRanged && !base.isAutoMiss && targetPos) {
+            if (!base.isAutoMiss && targetPos) {
                 const walls = mapData?.walls || new Set();
                 let coverResult = computeCover(
                     { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY },
@@ -788,7 +788,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                     mapData?.placedItems || [],
                 );
 
-                // Check ignore_cover_ranged passive (e.g., Sharpshooter feat bypass cover)
+                // Check ignore_cover_ranged passive (e.g., Sharpshooter/Spell Sniper feat bypass cover)
                 const hasIgnoreCoverRanged = (playerStats.automation?.passives || []).some(
                     p => p.type === 'passive_rule' && p.effect === 'ignore_cover_ranged'
                 );

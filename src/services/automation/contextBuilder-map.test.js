@@ -342,7 +342,7 @@ describe('contextBuilder: buildAttackContext (map-based)', () => {
       expect(result.coverAcBonus).toBeUndefined();
     });
 
-    it('does not apply cover when isRanged is false', async () => {
+    it('applies cover for melee attacks when no ignore_cover_ranged passive', async () => {
       loadMapData.mockResolvedValue(makeMapData(
         [{ name: 'Fighter1', gridX: 1, gridY: 1 }],
         [{ name: 'Orc', gridX: 10, gridY: 10, type: 'npc' }],
@@ -356,7 +356,38 @@ describe('contextBuilder: buildAttackContext (map-based)', () => {
       const meleeAttack = { ...mockRangedAttack, range: 5, weaponType: 'melee' };
       const result = await buildAttackContext(meleeAttack, mockStats, 'camp', 'test-map', 'normal', {});
 
+      expect(result.coverAcBonus).toBe(2);
+      expect(result.coverLevel).toBe('half');
+    });
+
+    it('ignores cover for melee spell attacks when ignore_cover_ranged passive exists', async () => {
+      loadMapData.mockResolvedValue(makeMapData(
+        [{ name: 'Fighter1', gridX: 1, gridY: 1 }],
+        [{ name: 'Orc', gridX: 10, gridY: 10, type: 'npc' }],
+      ));
+      getCombatContext.mockResolvedValue(makeCombatContext('Fighter1', 'Orc', 10, 10));
+      getTargetFromAttacker.mockReturnValue({ name: 'Orc', gridX: 10, gridY: 10 });
+      getNearestPlacedItem.mockReturnValue({ name: 'Orc', gridX: 10, gridY: 10 });
+      getDistanceFeet.mockReturnValue(50);
+      computeCover.mockReturnValue({ level: 'three_quarters', acBonus: 4 });
+
+      const meleeSpellAttack = {
+        name: 'Inflict Wounds',
+        damage: '3d10',
+        damageType: 'Necrotic',
+        hitBonus: 7,
+        weaponType: 'melee',
+        range: 5,
+        school: 'Necromancy',
+      };
+      const stats = {
+        ...mockStats,
+        automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] },
+      };
+      const result = await buildAttackContext(meleeSpellAttack, stats, 'camp', 'test-map', 'normal', {});
+
       expect(result.coverAcBonus).toBeUndefined();
+      expect(result.coverLevel).toBeUndefined();
     });
 
     it('does not apply cover when target position cannot be resolved', async () => {

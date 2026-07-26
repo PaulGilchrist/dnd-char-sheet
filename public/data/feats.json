@@ -674,11 +674,18 @@
             "ignoresMeleeDisadvantage": true,
             "appliesToAttackType": "spell"
         },
-        "automation": {
-            "type": "passive_rule",
-            "effect": "spell_range_doubled",
-            "casting_time": "1 action"
-        }
+        "automation": [
+            {
+                "type": "passive_rule",
+                "effect": "ignore_cover_ranged",
+                "casting_time": "1 action"
+            },
+            {
+                "type": "passive_rule",
+                "effect": "spell_range_doubled",
+                "casting_time": "1 action"
+            }
+        ]
     },
     {
         "index": "tavern-brawler",

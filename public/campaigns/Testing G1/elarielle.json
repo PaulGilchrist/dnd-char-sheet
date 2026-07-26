@@ -56,8 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "Magic Initiate",
-    "Speedy"
+    "Tavern Brawler",
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -143,8 +143,11 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Speedy-0": {
-      "assignment": "Dexterity"
+    "Spell Sniper-1": {
+      "assignment": "Intelligence"
+    },
+    "Spell Sniper-0": {
+      "assignment": "Intelligence"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",
