@@ -10,9 +10,19 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(async () => {}),
 }));
 
+vi.mock('../../common/damageRollback.js', () => ({
+    findLastAttack: vi.fn().mockResolvedValue({ attackEvent: { bonus: 5 }, targetName: 'Goblin' }),
+}));
+
+vi.mock('../../common/polearmUtils.js', () => ({
+    isPolearmWeapon: vi.fn(async () => true),
+}));
+
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { findLastAttack } from '../../common/damageRollback.js';
+import { isPolearmWeapon } from '../../common/polearmUtils.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -120,73 +130,112 @@ describe('bonusActionAttackHandler', () => {
 
         describe('polearm trigger', () => {
             it('should reject when no equipped weapons', async () => {
+                isPolearmWeapon.mockResolvedValue(false);
                 const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
                 const stats = makePlayerStats({ inventory: { equipped: [] } });
 
                 const result = await handle(action, stats, 'campaign', 'map', []);
 
+                expect(result.type).toBe('popup');
                 expect(result.payload.description).toContain('requires you to be holding');
             });
 
-            it('should accept Quarterstaff', async () => {
-                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
-                const stats = makePlayerStats({ inventory: { equipped: ['Quarterstaff'] } });
+            it('should return attack_roll with Quarterstaff', async () => {
+                isPolearmWeapon.mockResolvedValue(true);
+                findLastAttack.mockResolvedValue({ attackEvent: { bonus: 7 }, targetName: 'Goblin' });
+                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm', damage: '1d4', damageType: 'Bludgeoning' }, name: 'Pole Strike' });
+                const stats = makePlayerStats({ inventory: { equipped: ['Quarterstaff'] }, proficiency: 2 });
                 const allEquipment = [{ name: 'Quarterstaff', properties: [] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
-                expect(result.type).toBe('popup');
+                expect(result.type).toBe('attack_roll');
+                expect(result.payload.attack.name).toBe('Pole Strike');
+                expect(result.payload.attack.type).toBe('Bonus Action');
+                expect(result.payload.attack.hitBonus).toBe(7);
+                expect(result.payload.attack.damage).toBe('1d4');
+                expect(result.payload.attack.damageType).toBe('Bludgeoning');
+                expect(result.payload.targetName).toBe('Goblin');
             });
 
-            it('should accept Spear', async () => {
-                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
+            it('should return attack_roll with Spear', async () => {
+                isPolearmWeapon.mockResolvedValue(true);
+                findLastAttack.mockResolvedValue({ attackEvent: { bonus: 5 }, targetName: 'Orc' });
+                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' }, name: 'Polearm Master' });
                 const stats = makePlayerStats({ inventory: { equipped: ['Spear'] } });
                 const allEquipment = [{ name: 'Spear', properties: [] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
-                expect(result.type).toBe('popup');
+                expect(result.type).toBe('attack_roll');
+                expect(result.payload.attack.hitBonus).toBe(5);
+                expect(result.payload.attack.autoDamageFormula).toBe('1d4');
             });
 
-            it('should accept weapon with Heavy + Reach properties', async () => {
-                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
-                const stats = makePlayerStats({ inventory: { equipped: ['Maul'] } });
-                const allEquipment = [{ name: 'Maul', properties: ['Heavy', 'Reach', 'Two-Handed'] }];
+            it('should return attack_roll with Heavy + Reach weapon', async () => {
+                isPolearmWeapon.mockResolvedValue(true);
+                findLastAttack.mockResolvedValue({ attackEvent: { bonus: 6 }, targetName: 'Troll' });
+                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm', extraDamageExpression: '1d4' }, name: 'Polearm Master' });
+                const stats = makePlayerStats({ inventory: { equipped: ['Glaive'] } });
+                const allEquipment = [{ name: 'Glaive', properties: ['Heavy', 'Reach', 'Two-Handed'] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
-                expect(result.type).toBe('popup');
+                expect(result.type).toBe('attack_roll');
+                expect(result.payload.attack.hitBonus).toBe(6);
+                expect(result.payload.attack.autoDamageFormula).toBe('1d4');
             });
 
             it('should reject weapon missing Heavy or Reach properties', async () => {
+                isPolearmWeapon.mockResolvedValue(false);
                 const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' } });
                 const stats = makePlayerStats({ inventory: { equipped: ['Warhammer'] } });
                 const allEquipment = [{ name: 'Warhammer', properties: ['Heavy'] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
+                expect(result.type).toBe('popup');
                 expect(result.payload.description).toContain('requires you to be holding');
+            });
+
+            it('should fall back to proficiency bonus when no lastAttack', async () => {
+                isPolearmWeapon.mockResolvedValue(true);
+                findLastAttack.mockResolvedValue({ attackEvent: null, targetName: null });
+                const action = makeAction({ automation: { trigger: 'after_attack_action_with_polearm' }, name: 'Pole Strike' });
+                const stats = makePlayerStats({ inventory: { equipped: ['Halberd'] }, proficiency: 4 });
+                const allEquipment = [{ name: 'Halberd', properties: ['Heavy', 'Reach', 'Two-Handed'] }];
+
+                const result = await handle(action, stats, 'campaign', 'map', allEquipment);
+
+                expect(result.type).toBe('attack_roll');
+                expect(result.payload.attack.hitBonus).toBe(4);
             });
         });
 
         describe('weaponRequirement trigger', () => {
-            it('should accept Heavy + Reach weapon via weaponRequirement', async () => {
-                const action = makeAction({ automation: { weaponRequirement: 'quarterstaff_spear_heavy_reach' } });
-                const stats = makePlayerStats({ inventory: { equipped: ['Maul'] } });
-                const allEquipment = [{ name: 'Maul', properties: ['Heavy', 'Reach', 'Two-Handed'] }];
+            it('should return attack_roll with Heavy + Reach weapon via weaponRequirement + trigger', async () => {
+                isPolearmWeapon.mockResolvedValue(true);
+                findLastAttack.mockResolvedValue({ attackEvent: { bonus: 8 }, targetName: 'Dragon' });
+                const action = makeAction({ automation: { weaponRequirement: 'quarterstaff_spear_heavy_reach', trigger: 'after_attack_action_with_polearm', damage: '1d4', damageType: 'Bludgeoning' }, name: 'Pole Strike' });
+                const stats = makePlayerStats({ inventory: { equipped: ['Pike'] }, proficiency: 3 });
+                const allEquipment = [{ name: 'Pike', properties: ['Heavy', 'Reach', 'Two-Handed'] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
-                expect(result.type).toBe('popup');
+                expect(result.type).toBe('attack_roll');
+                expect(result.payload.attack.hitBonus).toBe(8);
+                expect(result.payload.attack.damageType).toBe('Bludgeoning');
             });
 
             it('should reject weapon missing required properties via weaponRequirement', async () => {
+                isPolearmWeapon.mockResolvedValue(false);
                 const action = makeAction({ automation: { weaponRequirement: 'quarterstaff_spear_heavy_reach' } });
                 const stats = makePlayerStats({ inventory: { equipped: ['Warhammer'] } });
                 const allEquipment = [{ name: 'Warhammer', properties: ['Heavy'] }];
 
                 const result = await handle(action, stats, 'campaign', 'map', allEquipment);
 
+                expect(result.type).toBe('popup');
                 expect(result.payload.description).toContain('requires you to be holding');
             });
         });

@@ -49,6 +49,10 @@ vi.mock('../../common/damageRollback.js', () => ({
     findLastAttack: vi.fn(),
 }));
 
+vi.mock('../../common/polearmUtils.js', () => ({
+    isPolearmWeapon: vi.fn(async () => true),
+}));
+
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { addEntry } = await import('../../../ui/logService.js');
 const { resolveTarget } = await import('../../common/targetResolver.js');
@@ -84,6 +88,10 @@ describe('reactionDamageHandler', () => {
             const ps = makePlayerStats({ inventory: { equipped: ['Longsword'] } });
             const action = makeAction({ automation: { trigger: 'creature_enters_reach_while_holding_polearm' } });
 
+            findLastAttack.mockResolvedValue({ attackEvent: { attackName: 'Longsword' } });
+            const { isPolearmWeapon } = await import('../../common/polearmUtils.js');
+            isPolearmWeapon.mockResolvedValue(false);
+
             let result = await handle(action, ps, 'test-campaign', null, []);
             expect(result.payload.description).toContain('requires you to be holding');
 
@@ -91,23 +99,23 @@ describe('reactionDamageHandler', () => {
             expect(result.type).toBe('popup');
 
             const ps2 = makePlayerStats({ inventory: null });
-            const allEquipment = [{ name: 'Quarterstaff', properties: [] }];
-            result = await handle(action, ps2, 'test-campaign', null, allEquipment);
+            result = await handle(action, ps2, 'test-campaign', null, []);
             expect(result.type).toBe('popup');
         });
 
         it('passes polearm check with Quarterstaff, Spear, or Heavy+Reach weapon', async () => {
             const action = makeAction({ automation: { trigger: 'creature_enters_reach_while_holding_polearm' } });
 
+            const { isPolearmWeapon } = await import('../../common/polearmUtils.js');
+
             // Quarterstaff
             const ps1 = makePlayerStats({
                 inventory: { equipped: ['Quarterstaff'] },
                 attacks: [{ name: 'Shortsword', type: 'Action', range: 5, damage: '1d6+3' }],
             });
-            const allEquipment1 = [{ name: 'Quarterstaff', properties: [] }];
-            getCombatContext.mockResolvedValue({});
-            findLastAttack.mockResolvedValue({ attackerName: 'Enemy' });
-            let result = await handle(action, ps1, 'test-campaign', null, allEquipment1);
+            findLastAttack.mockResolvedValue({ attackEvent: { damageName: 'Quarterstaff' } });
+            isPolearmWeapon.mockResolvedValue(true);
+            let result = await handle(action, ps1, 'test-campaign', null, []);
             expect(result.payload.attack.name).toBe('Shortsword');
 
             // Spear
@@ -115,8 +123,8 @@ describe('reactionDamageHandler', () => {
                 inventory: { equipped: ['Spear'] },
                 attacks: [{ name: 'Spear', type: 'Action', range: 5, damage: '1d6+3' }],
             });
-            const allEquipment2 = [{ name: 'Spear', properties: [] }];
-            result = await handle(action, ps2, 'test-campaign', null, allEquipment2);
+            findLastAttack.mockResolvedValue({ attackEvent: { damageName: 'Spear' } });
+            result = await handle(action, ps2, 'test-campaign', null, []);
             expect(result.payload.attack.name).toBe('Spear');
 
             // Heavy+Reach
@@ -124,8 +132,8 @@ describe('reactionDamageHandler', () => {
                 inventory: { equipped: ['Greatclub'] },
                 attacks: [{ name: 'Greatclub', type: 'Action', range: 5, damage: '1d8+3' }],
             });
-            const allEquipment3 = [{ name: 'Greatclub', properties: ['Heavy', 'Reach'] }];
-            result = await handle(action, ps3, 'test-campaign', null, allEquipment3);
+            findLastAttack.mockResolvedValue({ attackEvent: { damageName: 'Greatclub' } });
+            result = await handle(action, ps3, 'test-campaign', null, []);
             expect(result.payload.attack.name).toBe('Greatclub');
         });
 

@@ -9,24 +9,7 @@ import { MELEE_REACH_FEET } from '../../../combat/baseCombatActions.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget, computeDamageAfterSave } from '../../../rules/combat/applyDamage.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
-
-const POLEARM_WEAPONS = ['Quarterstaff', 'Spear'];
-
-function hasPolearmWeapon(allEquipment, equippedWeapons) {
-    if (!allEquipment || !equippedWeapons) return false;
-    for (const equippedName of equippedWeapons) {
-        let baseName = equippedName;
-        if (equippedName && typeof equippedName === 'string' && equippedName.charAt(0) === '+') {
-            baseName = equippedName.substring(3);
-        }
-        const weapon = allEquipment.find(item => item.name === baseName);
-        if (!weapon) continue;
-        if (POLEARM_WEAPONS.some(pw => weapon.name === pw)) return true;
-        const props = weapon.properties || [];
-        if (props.includes('Heavy') && props.includes('Reach')) return true;
-    }
-    return false;
-}
+import { isPolearmWeapon } from '../../common/polearmUtils.js';
 
 function getChosenResistanceTypes(playerName, campaignName) {
     const stored = getRuntimeValue(playerName, '_Energy_Resistances_chosenTypes', campaignName);
@@ -71,7 +54,7 @@ async function consumeResourceCost(auto, playerStats, campaignName, actionName) 
     return { ok: true };
 }
 
-export async function handle(action, playerStats, campaignName, mapName, allEquipment) {
+export async function handle(action, playerStats, campaignName, _mapName, _allEquipment) {
     const auto = action.automation;
 
     if (auto?.trigger === 'psychic_damage_received') {
@@ -79,7 +62,10 @@ export async function handle(action, playerStats, campaignName, mapName, allEqui
     }
 
     if (auto?.trigger === 'creature_enters_reach_while_holding_polearm') {
-        const hasWeapon = hasPolearmWeapon(allEquipment, playerStats.inventory?.equipped);
+        const lastAttackResult = await findLastAttack(campaignName);
+        const lastAttack = lastAttackResult.attackEvent;
+        const weaponName = lastAttack?.damageName || lastAttack?.attackName;
+        const hasWeapon = await isPolearmWeapon(weaponName);
         if (!hasWeapon) {
             return {
                 type: 'popup',

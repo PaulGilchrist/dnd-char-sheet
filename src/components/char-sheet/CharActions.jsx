@@ -1310,6 +1310,15 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                     );
                 }
                 break;
+            case 'attack_roll':
+                {
+                    const { attack, targetName } = result.payload;
+                    const autoDamageFormula = attack?.autoDamageFormula || null;
+                    const autoDamageName = attack?.autoDamageName || attack?.name;
+                    const damageType = attack?.damageType || 'Slashing';
+                    rollAttack(attack.name, attack.hitBonus, { targetName, forcedMode: undefined, isOpportunityAttack: false, autoDamageFormula, autoDamageName, damageType });
+                }
+                break;
             case 'notify_buffs_changed':
                 if (onBuffsChange) onBuffsChange();
                 break;

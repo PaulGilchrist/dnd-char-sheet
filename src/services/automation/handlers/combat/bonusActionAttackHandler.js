@@ -1,30 +1,18 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { automationInfoPopup } from '../../../shared/popupResponse.js';
+import { isPolearmWeapon } from '../../common/polearmUtils.js';
+import { findLastAttack } from '../../common/damageRollback.js';
+import { MELEE_REACH_FEET } from '../../../combat/baseCombatActions.js';
 
-const POLEARM_WEAPONS = ['Quarterstaff', 'Spear'];
-
-function hasPolearmWeapon(allEquipment, equippedWeapons) {
-    if (!allEquipment || !equippedWeapons) return false;
-    for (const equippedName of equippedWeapons) {
-        let baseName = equippedName;
-        if (equippedName && typeof equippedName === 'string' && equippedName.charAt(0) === '+') {
-            baseName = equippedName.substring(3);
-        }
-        const weapon = allEquipment.find(item => item.name === baseName);
-        if (!weapon) continue;
-        if (POLEARM_WEAPONS.some(pw => weapon.name === pw)) return true;
-        const props = weapon.properties || [];
-        if (props.includes('Heavy') && props.includes('Reach')) return true;
-    }
-    return false;
-}
-
-export async function handle(action, playerStats, campaignName, _mapName, allEquipment) {
+export async function handle(action, playerStats, campaignName, _mapName, _allEquipment) {
     const auto = action.automation;
 
     if (auto?.trigger === 'after_attack_action_with_polearm' || auto?.weaponRequirement === 'quarterstaff_spear_heavy_reach') {
-        const hasWeapon = hasPolearmWeapon(allEquipment, playerStats.inventory?.equipped);
-        if (!hasWeapon) {
+        const lastAttackResult = await findLastAttack(campaignName);
+        const lastAttack = lastAttackResult.attackEvent;
+        const weaponName = lastAttack?.damageName || lastAttack?.attackName;
+        const isPolearm = await isPolearmWeapon(weaponName);
+        if (!isPolearm) {
             return {
                 type: 'popup',
                 payload: {
@@ -70,6 +58,35 @@ export async function handle(action, playerStats, campaignName, _mapName, allEqu
                 name: action.name,
                 description: `You take the Disengage action and the Grappled condition ends on you.`,
                 automation: auto,
+            },
+        };
+    }
+
+    if (auto?.trigger === 'after_attack_action_with_polearm') {
+        const lastAttackResult = await findLastAttack(campaignName);
+        const targetName = lastAttackResult.targetName || null;
+        const hitBonus = lastAttackResult.attackEvent?.bonus ?? (playerStats.proficiency || 0);
+
+        const damageExpression = auto.damage || auto.extraDamageExpression || '1d4';
+        const damageType = auto.damageType || 'Bludgeoning';
+
+        const poleStrikeAttack = {
+            name: action.name || 'Pole Strike',
+            type: 'Bonus Action',
+            range: MELEE_REACH_FEET,
+            hitBonus,
+            damage: damageExpression,
+            damageType,
+            autoDamageFormula: damageExpression,
+            autoDamageName: action.name || 'Pole Strike',
+        };
+
+        return {
+            type: 'attack_roll',
+            payload: {
+                attack: poleStrikeAttack,
+                targetName,
+                sourceName: action.name,
             },
         };
     }
