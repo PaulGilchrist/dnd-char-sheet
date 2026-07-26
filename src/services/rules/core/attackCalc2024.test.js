@@ -480,7 +480,7 @@ describe('attackCalc2024', () => {
       const result = getAttacks([], [], playerStats);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Unarmed Strike (Tavern Brawler)');
+      expect(result[0].name).toBe('Unarmed Strike');
       expect(result[0].damage).toBe('1d4+3');
       expect(result[0].damageType).toBe('Bludgeoning');
       expect(result[0].type).toBe('Action');

@@ -11,9 +11,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || playerStats.name;
 
-    const { promptId } = createSaveListener(campaignName, {
+    const saveType = auto.saveType || 'STR';
+
+    const { promptId, promise } = createSaveListener(campaignName, {
         targetName,
-        saveType: auto.saveType || 'STR',
+        saveType,
         saveDc,
     });
 
@@ -21,55 +23,53 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: action.name,
-        description: `${action.name} triggered — target ${targetName} must make ${auto.saveType || 'STR'} save (DC ${saveDc}) or be pushed ${pushDistance} feet`,
+        description: `${action.name} triggered — target ${targetName} must make ${saveType} save (DC ${saveDc}) or be pushed ${pushDistance} feet`,
         promptId,
     }).catch((e) => { console.error("[telekineticShove] Error:", e); });
 
-    const handleSaveResult = async (event) => {
-        if (event.detail.promptId !== promptId) return;
+    const saveResult = await promise;
+    const success = saveResult.success;
 
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
-        const isSuccessful = event.detail.success;
+    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
 
-        if (!isSuccessful) {
-            const newEffect = {
-                target: targetName,
-                source: action.name,
-                effect: 'push',
-                value: pushDistance,
-                direction: 'toward_or_away',
-                duration: 'immediate',
-            };
-            const updatedEffects = [...storedEffects, newEffect];
-            setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    if (!success) {
+        const newEffect = {
+            target: targetName,
+            source: action.name,
+            effect: 'push',
+            value: pushDistance,
+            direction: 'toward_or_away',
+            duration: 'immediate',
+        };
+        const updatedEffects = [...storedEffects, newEffect];
+        setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
 
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: playerStats.name,
-                rollType: `save-${auto.type}`,
-                targetName,
-                saveDc,
-                saveType: auto.saveType || 'STR',
-                success: false,
-                description: `${targetName} failed ${auto.saveType || 'STR'} save. Pushed ${pushDistance} feet.`,
-            }).catch((e) => { console.error("[telekineticShove] Error:", e); });
-        } else {
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: playerStats.name,
-                rollType: `save-${auto.type}`,
-                targetName,
-                saveDc,
-                saveType: auto.saveType || 'STR',
-                success: true,
-                description: `${targetName} succeeded on ${auto.saveType || 'STR'} save. No effect.`,
-            }).catch((e) => { console.error("[telekineticShove] Error:", e); });
-        }
+        addEntry(campaignName, {
+            type: 'save_result',
+            characterName: playerStats.name,
+            rollType: `save-${auto.type}`,
+            targetName,
+            saveDc,
+            saveType,
+            success: false,
+            description: `${targetName} failed ${saveType} save. Pushed ${pushDistance} feet.`,
+        }).catch((e) => { console.error("[telekineticShove] Error:", e); });
+    } else {
+        addEntry(campaignName, {
+            type: 'save_result',
+            characterName: playerStats.name,
+            rollType: `save-${auto.type}`,
+            targetName,
+            saveDc,
+            saveType,
+            success: true,
+            description: `${targetName} succeeded on ${saveType} save. No effect.`,
+        }).catch((e) => { console.error("[telekineticShove] Error:", e); });
+    }
 
-        window.removeEventListener('save-result', handleSaveResult);
-    };
-
-    window.addEventListener('save-result', handleSaveResult);
+    const popupDescription = success
+        ? `${targetName} succeeded on the ${saveType} saving throw (DC ${saveDc}). No effect.`
+        : `${targetName} failed the ${saveType} saving throw (DC ${saveDc}). Pushed ${pushDistance} feet toward or away from you.`;
 
     return {
         type: 'popup',
@@ -77,7 +77,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             type: 'automation_info',
             name: action.name,
             targetName,
-            description: `Target ${targetName} must make a ${auto.saveType || 'STR'} saving throw (DC ${saveDc}) or be pushed ${pushDistance} feet toward or away from you.`,
+            description: popupDescription,
             automation: auto,
         },
     };

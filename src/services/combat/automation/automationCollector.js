@@ -979,6 +979,9 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'apply_poison':
                 result.bonusActions.push(info)
                 break
+            case 'minor_telekinesis_spell':
+                result.specialActions.push(info)
+                break;
             default:
                 result.specialActions.push(info)
                 break;

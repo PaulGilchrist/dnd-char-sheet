@@ -225,5 +225,15 @@ export const spellHandlers = {
             casting_time: auto.casting_time || '1 action',
             hasAutomation: true
         }
+    },
+
+    'minor_telekinesis_spell': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'minor_telekinesis_spell',
+            name: feature.name,
+            spell: auto.spell || '',
+            hasAutomation: true
+        }
     }
 }

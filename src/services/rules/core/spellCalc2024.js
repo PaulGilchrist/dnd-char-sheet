@@ -198,6 +198,15 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                         });
                     }
                 }
+                if (feature.type === 'minor_telekinesis_spell') {
+                    const mageHandEntry = spellAbilities.spells.find(s => s.name === feature.spell);
+                    if (!mageHandEntry) {
+                        spellAbilities.spells.push({
+                            name: feature.spell,
+                            prepared: 'Always',
+                        });
+                    }
+                }
                 if (feature.type === 'elfish_lineage' || feature.type === 'gnomish_lineage' || feature.type === 'fiendish_legacy') {
                     const raceName = playerSummary?.race?.name;
                     const subraceName = playerSummary?.race?.subrace?.name;
