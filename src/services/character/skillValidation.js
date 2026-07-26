@@ -321,7 +321,6 @@ async function computeSkilledToolUsageOnly(formData) {
   const allTools = (formData.toolProficiencies || []);
 
   // Load tool data and class/background limits to categorize
-  const { loadEquipment, fetchClassData, fetchBackgroundData } = await import('../ui/dataLoader.js');
   const equipment = await loadEquipment();
   const ruleset = formData.rules || '5e';
   const className = formData.class?.name || '';
@@ -377,7 +376,6 @@ async function computeSkilledToolUsageOnly(formData) {
 
   // Feats (e.g., Chef grants Cook's Utensils)
   if (formData.feats && formData.feats.length > 0) {
-    const { loadFeatData } = await import('../ui/dataLoader.js');
     const allFeats = await loadFeatData('2024');
     for (const featName of formData.feats) {
       const feat = allFeats.find(f => f.name === featName || f.index === featName.toLowerCase());
@@ -414,7 +412,7 @@ async function computeSkilledToolUsageOnly(formData) {
   return result;
 }
 
-import { fetchClassData, fetchRaceData, fetchBackgroundData, loadFeatData } from '../ui/dataLoader.js';
+import { fetchClassData, fetchRaceData, fetchBackgroundData, loadFeatData, loadEquipment } from '../ui/dataLoader.js';
 import { parseToolChoiceString } from './toolValidation.js';
 
 /**

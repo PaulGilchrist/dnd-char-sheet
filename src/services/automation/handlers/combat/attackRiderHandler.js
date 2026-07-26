@@ -6,7 +6,9 @@ import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
-import { checkOncePerTurn, markOncePerTurn } from '../../common/oncePerTurn.js';
+import { checkOncePerTurn, checkOncePerTurnWithSkip, markOncePerTurn } from '../../common/oncePerTurn.js';
+import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
+import { loadCombatSummary } from '../../../encounters/combatData.js';
 import { resolveMassFear } from './massFearHandler.js';
 
 export async function handle(action, playerStats, campaignName, mapName) {
@@ -35,7 +37,6 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     // Slashing damage hit validation (used by Slasher feat Hamstring)
     if (auto.trigger === 'slashing_damage_hit') {
-        const { loadCombatSummary } = await import('../../../encounters/combatData.js');
         const cs = await loadCombatSummary(campaignName);
         const lastAttack = cs?.lastAttack;
 
@@ -88,7 +89,6 @@ export async function handle(action, playerStats, campaignName, mapName) {
     // Shield Bash with push_or_prone: validate prerequisites and do save first
     if (auto.effect === 'push_or_prone' && auto.oncePerTurn && auto.trigger) {
         // Check shield equipped
-        const { parseMagicItemName } = await import('../../../rules/core/attackCalc.js');
         const equipped = playerStats.inventory?.equipped || [];
         const equipment = playerStats.equipment || [];
         const hasShield = equipped.some(itemName => {
@@ -108,7 +108,6 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
 
         // Check lastAttack is player's melee weapon attack
-        const { loadCombatSummary } = await import('../../../encounters/combatData.js');
         const cs = await loadCombatSummary(campaignName);
         const lastAttack = cs?.lastAttack;
         if (!lastAttack?.hit) {
@@ -155,7 +154,6 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
 
         // Check oncePerTurn with skip
-        const { checkOncePerTurnWithSkip } = await import('../../../automation/common/oncePerTurn.js');
         const skipResult = await checkOncePerTurnWithSkip(action.name, `_${action.name.replace(/\s+/g, '_')}_usedRound`, `_${action.name.replace(/\s+/g, '_')}_skippedRound`, playerStats, campaignName);
         if (skipResult) return skipResult;
 
@@ -165,8 +163,6 @@ export async function handle(action, playerStats, campaignName, mapName) {
             : (auto.saveDc || (8 + (playerStats.abilities?.find(a => a.name === 'Strength')?.bonus || 0) + (playerStats.proficiency || 0)));
 
         // Create save prompt
-        const { createSaveListener } = await import('../../../automation/common/savePrompt.js');
-        const { addEntry } = await import('../../../ui/logService.js');
 
         const { promise } = createSaveListener(campaignName, {
             targetName,
