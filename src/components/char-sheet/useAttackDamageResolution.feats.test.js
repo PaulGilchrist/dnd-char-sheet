@@ -428,10 +428,7 @@ describe('useAttackDamageResolution - feats', () => {
     });
 
     describe('Savage Attacker', () => {
-        it('marks as used and rolls damage when savage attacker passives exist', async () => {
-            const floorSpy = vi.spyOn(Math, 'floor')
-                .mockReturnValueOnce(8); // second die = 8, secondTotal = 8 > firstTotal = 5, reroll
-
+        it('does not auto-apply in pipeline when savage attacker passives exist', async () => {
             const stats = {
                 ...mockPlayerStats,
                 automation: {
@@ -448,9 +445,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Savage_Attacker_usedRound', 1, 'test-campaign');
             expect(mockRollDamage).toHaveBeenCalled();
-            floorSpy.mockRestore();
         });
     });
 

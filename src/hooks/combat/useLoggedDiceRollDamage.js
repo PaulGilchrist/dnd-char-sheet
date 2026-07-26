@@ -1515,6 +1515,18 @@ export function createLogDamageAndShow(deps) {
         const punctureUsed = hasPiercerFeat ? getRuntimeValue(characterName, 'piercerPunctureUsedThisTurn', campaignName) : false;
         popupData.piercerPuncture = isPiercing && hasPiercerFeat && !punctureUsed;
 
+        // Determine weapon type for popup
+        const isUnarmedStrike = context?.isUnarmedStrike || false;
+        const isMelee = context?.isMelee != null ? context.isMelee : (context?.damageType === 'ranged' ? false : true);
+        popupData.weaponType = isUnarmedStrike ? 'unarmed' : (isMelee ? 'melee' : 'ranged');
+
+        // Check for Savage Attacker availability
+        const hasSavageAttacker = context?.playerStats?.automation?.passives?.some(p => p.type === 'passive_rule' && p.effect === 'reroll_damage_once_per_turn') || false;
+        const isMeleeOrUnarmed = (isMelee || isUnarmedStrike);
+        const saUsed = hasSavageAttacker ? getRuntimeValue(characterName, '_Savage_Attacker_usedRound', campaignName) : false;
+        console.log('[useLoggedDiceRollDamage] Savage Attacker check: hasSavageAttacker=%s isMeleeOrUnarmed=%s saUsed=%s weaponType=%s isMelee=%s isUnarmed=%s autoDamageFormula=%s', hasSavageAttacker, isMeleeOrUnarmed, saUsed, popupData.weaponType, isMelee, isUnarmedStrike, context?.autoDamageFormula);
+        popupData.savageAttacker = hasSavageAttacker && isMeleeOrUnarmed && !saUsed;
+
         setPopupHtml(popupData);
 
         // Store damage rolls for later access (e.g., Piercer feat)

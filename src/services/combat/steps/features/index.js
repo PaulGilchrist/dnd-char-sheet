@@ -10,7 +10,6 @@ import { stalkersFlurry } from './stalkersFlurry.js';
 import { crusher } from './crusher.js';
 import { slasher } from './slasher.js';
 import { piercer } from './piercer.js';
-import { savageAttacker } from './savageAttacker.js';
 import { tavernBrawler } from './tavernBrawler.js';
 import { cantripBonuses } from './cantripBonuses.js';
 import { tavernBrawlerPush } from './tavernBrawlerPush.js';
@@ -33,7 +32,6 @@ export const featureModules = [
   crusher,
   slasher,
   piercer,
-  savageAttacker,
   tavernBrawler,
   cantripBonuses,
   tavernBrawlerPush,

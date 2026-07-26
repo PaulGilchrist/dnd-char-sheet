@@ -173,6 +173,14 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         }
     }
 
+    // Clear Savage Attacker at start of each creature's turn
+    if (activeName) {
+        const saUsed = getRuntimeValue(activeName, '_Savage_Attacker_usedRound', campaignName);
+        if (saUsed) {
+            setRuntimeValue(activeName, '_Savage_Attacker_usedRound', null, campaignName);
+        }
+    }
+
     // Cloak of Shadows: end when incapacitated
     if (activeName) {
         const cloakBuffs = getRuntimeValue(activeName, 'activeBuffs', campaignName);

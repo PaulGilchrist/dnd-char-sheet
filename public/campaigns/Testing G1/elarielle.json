@@ -57,7 +57,7 @@
   "expertSkills": [],
   "feats": [
     "Magic Initiate",
-    "Resilient"
+    "Savage Attacker"
   ],
   "fightingStyles": [],
   "race": {
@@ -138,8 +138,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Resilient-0": {
-      "assignment": "Dexterity"
+    "Ritual Master-0": {
+      "assignment": "Intelligence"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

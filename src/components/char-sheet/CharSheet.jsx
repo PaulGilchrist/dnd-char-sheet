@@ -663,6 +663,61 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         };
     }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
 
+    const handleSavageAttacker = React.useCallback(async (savageData) => {
+        if (!playerStats || !campaignName || !savageData) return null;
+        
+        const playerName = playerStats.name;
+        const usedKey = '_Savage_Attacker_usedRound';
+        const stored = getRuntimeValue(playerName, usedKey, campaignName);
+        if (stored) return null;
+        
+        const { rawDamage, targetName, damageTypes, originalRolls, newRolls } = savageData;
+        
+        const combatSummary = await getCombatContext(campaignName);
+        if (!combatSummary || !targetName) return null;
+        
+        const newTotal = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0);
+        const damageDifference = newTotal - rawDamage;
+        
+        if (damageDifference !== 0) {
+            applyDamageToTarget(
+                combatSummary,
+                targetName,
+                damageDifference,
+                damageTypes || [popupHtml?.damageType || 'Slashing'],
+                campaignName,
+                characters,
+                false,
+                playerName
+            );
+        }
+        
+        await setRuntimeValue(playerName, usedKey, true, campaignName);
+        
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: 'Savage Attacker',
+            description: `${playerName} used Savage Attacker: rerolled damage dice ${originalRolls.join(', ')} → ${newRolls.join(', ')} (${newRolls.reduce((s, r) => s + r, 0)} vs ${originalRolls.reduce((s, r) => s + r, 0)}).`,
+            timestamp: Date.now(),
+        });
+        
+        setPopupHtml({
+            ...popupHtml,
+            total: newTotal,
+            adjustedTotal: newTotal,
+            rolls: newRolls,
+        });
+        
+        return {
+            original: originalRolls.join(', '),
+            rerolled: newRolls.join(', '),
+            originalTotal: originalRolls.reduce((s, r) => s + r, 0),
+            newTotal: newRolls.reduce((s, r) => s + r, 0),
+            better: newRolls.reduce((s, r) => s + r, 0) > originalRolls.reduce((s, r) => s + r, 0),
+        };
+    }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
+
     const handleTacticalMind = React.useCallback(async (dieResult) => {
         if (!playerStats) return;
         const playerName = playerStats.name;
@@ -908,6 +963,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                         onBardicInspirationOffense={popupHtml?.bardicInspirationOffense ? handleBardicInspirationOffense : undefined}
                         onEmpoweredSpell={popupHtml?.empoweredSpell ? handleEmpoweredSpell : undefined}
                         onPuncture={popupHtml?.piercerPuncture ? handlePuncture : undefined}
+                        onSavageAttacker={popupHtml?.savageAttacker ? handleSavageAttacker : undefined}
                         onAfterBiDefense={handleBiDefenseCombatSummary}
                         onStrokeOfLuck={handleStrokeOfLuck}
                     />;
