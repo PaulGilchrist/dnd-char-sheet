@@ -129,8 +129,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    if (auto.effect === 'zero_on_success_half_on_fail') {
-        return handleZeroOnSuccessHalfOnFail(action, playerStats, campaignName);
+    if (auto.effect === 'zero_on_success') {
+        return await handleZeroOnSuccess(action, playerStats, campaignName);
     }
 
     const lastAttack = await findLastAttack(campaignName);
@@ -372,20 +372,129 @@ async function executeRedirect(playerName, targetName, campaignName, auto, redir
     }).catch((e) => { console.error(`[${featureName}] Error:`, e); });
 }
 
-async function handleZeroOnSuccessHalfOnFail(action, playerStats, campaignName) {
+async function handleZeroOnSuccess(action, playerStats, campaignName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Intervene Shield';
 
-    setRuntimeValue(playerName, 'interveneShieldActive', true, campaignName);
+    if (!hasShield(playerStats)) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: You must be holding a Shield to use this Reaction.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const lastAttackResult = await findLastAttack(campaignName);
+    const lastAttack = lastAttackResult.attackEvent;
+
+    if (!lastAttack) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: No recent attack or saving throw found.`,
+                automation: auto,
+            },
+        };
+    }
+
+    if (lastAttack.rollType !== 'save') {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: The last roll was not a saving throw.`,
+                automation: auto,
+            },
+        };
+    }
+
+    if (lastAttack.targetName !== playerName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: You were not the target of the last saving throw.`,
+                automation: auto,
+            },
+        };
+    }
+
+    if (lastAttack.saveType !== 'DEX') {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: The last saving throw was not a Dexterity save.`,
+                automation: auto,
+            },
+        };
+    }
+
+    if (lastAttack.saveResult !== 'success') {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: The last saving throw did not succeed.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const rawDamage = lastAttack.rawDamage || lastAttack.primaryDamage || 0;
+    if (rawDamage <= 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName}: No damage was dealt by the last attack.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const healAmount = Math.floor(rawDamage / 2);
+
+    const cs = await getCombatContext(campaignName);
+    let actualHeal = 0;
+    if (cs && healAmount > 0) {
+        const healResult = await applyHealingToTarget(cs, playerName, healAmount, campaignName);
+        actualHeal = healResult?.actualHeal ?? 0;
+    }
 
     await addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: featureName,
-        description: `${playerName} activated ${featureName}. Next Dex save for half damage: no damage on success, half on fail.`,
+        description: `${playerName} used Intervene Shield to heal for ${actualHeal} HP after a successful Dexterity save against ${lastAttack.attackerName}'s attack.`,
         timestamp: Date.now(),
-    }).catch((e) => { console.error("[damageReduction] Error:", e); });
+    }).catch((e) => { console.error("[interveneShield] Error logging:", e); });
+
+    if (actualHeal > 0) {
+        const currentHp = getRuntimeValue(playerName, 'currentHitPoints', campaignName) ?? playerStats.computedStats?.currentHp ?? 0;
+        const maxHp = getRuntimeValue(playerName, 'hitPoints', campaignName) ?? playerStats.computedStats?.maxHp ?? 0;
+        await addEntry(campaignName, {
+            type: 'hp_change',
+            targetName: playerName,
+            delta: actualHeal,
+            currentHp,
+            maxHp,
+            isHealing: true,
+            abilityName: featureName,
+        }).catch((e) => { console.error("[interveneShield] Error logging heal:", e); });
+    }
 
     return {
         type: 'popup',
@@ -393,7 +502,7 @@ async function handleZeroOnSuccessHalfOnFail(action, playerStats, campaignName) 
             type: 'automation_info',
             name: featureName,
             automationType: auto.type,
-            description: `${featureName} activated. The next time you would take damage from an effect that allows a Dexterity saving throw for half damage, you take no damage on a successful save and half damage on a failed save.`,
+            description: `${featureName}: You interpose your shield and heal for ${actualHeal} HP!`,
             automation: auto,
         },
     };

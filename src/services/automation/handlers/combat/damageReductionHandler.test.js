@@ -39,7 +39,6 @@ vi.mock('../../../rules/combat/applyHealing.js', () => ({
 import { handle } from './damageReductionHandler.js';
 import * as automationService from '../../../combat/automation/automationService.js';
 import * as logService from '../../../ui/logService.js';
-import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as damageRollback from '../../common/damageRollback.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as applyHealing from '../../../rules/combat/applyHealing.js';
@@ -254,73 +253,278 @@ describe('damageReductionHandler', () => {
     });
   });
 
-  // ── zero_on_success_half_on_fail effect ─────────────────────
+  // ── zero_on_success effect (Intervene Shield) ─────────────────────
 
-  describe('zero_on_success_half_on_fail effect', () => {
-    it('sets interveneShieldActive runtime value', async () => {
-      const ps = makePlayerStats();
+  describe('zero_on_success effect (Intervene Shield)', () => {
+    it('returns popup when player has no shield equipped', async () => {
+      const ps = makePlayerStats({ inventory: { equipped: [] }, equipment: [] });
       const action = makeAction({
-        effect: 'zero_on_success_half_on_fail',
-        requiresShield: false,
+        effect: 'zero_on_success',
       });
 
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('activated');
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+      expect(result.payload.description).toContain('holding a Shield');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when there is no lastAttack', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({ attackEvent: null });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No recent attack or saving throw found');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when lastAttack is not a save', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: { rollType: 'attack', targetName: 'TestHero' },
+      });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('not a saving throw');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when player was not the target of the save', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'Ally',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 10,
+        },
+      });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('not the target');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when save was not DEX', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'CON',
+          saveResult: 'success',
+          rawDamage: 10,
+        },
+      });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('not a Dexterity save');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when save did not succeed', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'failure',
+          rawDamage: 10,
+        },
+      });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('did not succeed');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('returns popup when no damage was dealt', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 0,
+        },
+      });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No damage was dealt');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('heals for half rawDamage when all conditions are met', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+        computedStats: { currentHp: 20, maxHp: 50 },
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 20,
+          attackerName: 'Goblin',
+        },
+      });
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+      applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 10 });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('heal for 10 HP');
+      expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+        expect.anything(),
         'TestHero',
-        'interveneShieldActive',
-        true,
+        10,
+        campaignName,
+      );
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestHero',
+          abilityName: 'Defensive Reaction',
+        }),
+      );
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'hp_change',
+          targetName: 'TestHero',
+          delta: 10,
+          isHealing: true,
+          abilityName: 'Defensive Reaction',
+        }),
+      );
+    });
+
+    it('uses primaryDamage as fallback when rawDamage is 0', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
+        computedStats: { currentHp: 20, maxHp: 50 },
+      });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 0,
+          primaryDamage: 16,
+          attackerName: 'Orc',
+        },
+      });
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+      applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 8 });
+      const action = makeAction({ effect: 'zero_on_success' });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.description).toContain('heal for 8 HP');
+      expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+        expect.anything(),
+        'TestHero',
+        8,
         campaignName,
       );
     });
 
-    it('returns popup with correct description for zero_on_success_half_on_fail', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        effect: 'zero_on_success_half_on_fail',
-        requiresShield: false,
+    it('does not heal when combat context is null', async () => {
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
       });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 10,
+          attackerName: 'Goblin',
+        },
+      });
+      damageUtils.getCombatContext.mockResolvedValue(null);
+      const action = makeAction({ effect: 'zero_on_success' });
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe('Defensive Reaction');
-      expect(result.payload.automationType).toBe('damage_reduction');
-      expect(result.payload.description).toBe(
-        'Defensive Reaction activated. The next time you would take damage from an effect that allows a Dexterity saving throw for half damage, you take no damage on a successful save and half damage on a failed save.',
-      );
+      expect(result.payload.description).toContain('heal for 0 HP');
+      expect(applyHealing.applyHealingToTarget).not.toHaveBeenCalled();
     });
 
     it('does not throw when addEntry rejects (fire-and-forget logging)', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        effect: 'zero_on_success_half_on_fail',
-        requiresShield: false,
+      const ps = makePlayerStats({
+        inventory: { equipped: ['Shield'] },
+        equipment: [{ name: 'Shield', armor_category: 'Shield' }],
       });
+      damageRollback.findLastAttack.mockResolvedValue({
+        attackEvent: {
+          rollType: 'save',
+          targetName: 'TestHero',
+          saveType: 'DEX',
+          saveResult: 'success',
+          rawDamage: 10,
+          attackerName: 'Goblin',
+        },
+      });
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
       const testError = new Error('log save failed');
       logService.addEntry.mockRejectedValue(testError);
+      const action = makeAction({ effect: 'zero_on_success' });
 
       const result = await handle(action, ps, campaignName, null);
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('does not proceed with zero_on_success_half_on_fail when requiresShield is true and player lacks shield', async () => {
-      const ps = makePlayerStats({ inventory: { equipped: [] } });
-      const action = makeAction({
-        effect: 'zero_on_success_half_on_fail',
-        requiresShield: true,
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('holding a Shield');
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 

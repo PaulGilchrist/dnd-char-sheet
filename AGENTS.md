@@ -106,6 +106,7 @@ await setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 
 ## Core Rules
 - NEVER REMOVE DEBUG LOGGING WITHOUT THE USERS PERMISSION FIRST
+- We only have enough memory for one subagent at a time
 - Never leave dead code.  It just confuses people later.
 - Look for and re-use existing code and avoid duplicating code.
 - If a map is active, use position on map, but if no map is active, assume all creatures are within range.

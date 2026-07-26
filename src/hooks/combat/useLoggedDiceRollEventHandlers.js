@@ -69,13 +69,6 @@ export function setupEventListeners(deps) {
                 });
             }
 
-            const interveneShieldActive = getRuntimeValue(e.detail.targetName, 'interveneShieldActive', pending.campaignName);
-            if (interveneShieldActive && e.detail.saveType === 'DEX' && e.detail.dcSuccess === 'half') {
-                if (e.detail.success) {
-                    finalDamage = 0;
-                }
-                setRuntimeValue(e.detail.targetName, 'interveneShieldActive', null, pending.campaignName);
-            }
             const pendingTargetName = pending.targetName;
             let targetMaxHp = 0;
             const combatSummary = getCombatSummary(campaignName);

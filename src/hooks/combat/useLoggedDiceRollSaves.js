@@ -194,14 +194,6 @@ export function createSaves(deps) {
             finalDamage = 0;
         }
 
-        const interveneShieldActive = getRuntimeValue(pending.targetName, 'interveneShieldActive', campaignName);
-        if (interveneShieldActive && pending.saveType === 'DEX' && pending.dcSuccess === 'half') {
-            if (saveResult.success) {
-                finalDamage = 0;
-            }
-            setRuntimeValue(pending.targetName, 'interveneShieldActive', null, campaignName);
-        }
-
         const isCantripFlag = pending.isCantrip || false;
         const hasBlessedStrikesOptions = pending.context?.playerStats?.automation?.actions?.some(
             a => a.type === 'damage_bonus' && a.options?.length > 0 && a.options.includes('Potent Spellcasting')

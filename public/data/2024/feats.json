@@ -2660,7 +2660,7 @@
         "automation": {
           "type": "damage_reduction",
           "trigger": "dex_save_for_half_damage_with_shield",
-          "effect": "zero_on_success_half_on_fail",
+          "effect": "zero_on_success",
           "reaction": true,
           "saveType": "DEX",
           "requiresShield": true,

@@ -238,7 +238,7 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
             expect(applyDamageToTarget).not.toHaveBeenCalledWith(null, 'ShieldedAlly', 0, expect.any(Array), 'test-campaign', expect.any(Array), false, 'TestWizard', true);
         });
 
-        it('clears intervene shield on successful DEX half save', () => {
+        it('does not consume intervene shield flag on save-result (now a manual reaction)', () => {
             setup();
             getRuntimeValue.mockImplementation((charName, prop, camp) => {
                 if (prop === 'interveneShieldActive' && camp === 'test-campaign') return true;
@@ -249,7 +249,8 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
             const pid = 'p11';
             testPendingSaves = { [pid]: createSavePrompt(pid, { targetName: 'ProtectedAlly' }) };
             window.dispatchEvent(new CustomEvent('save-result', { detail: { promptId: pid, targetName: 'ProtectedAlly', success: true, roll: 18, total: 21, saveBonus: 3, saveType: 'DEX', dcSuccess: 'half' } }));
-            expect(setRuntimeValue).toHaveBeenCalledWith('ProtectedAlly', 'interveneShieldActive', null, 'test-campaign');
+            // interveneShieldActive is no longer consumed in the save-result handler
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('ProtectedAlly', 'interveneShieldActive', null, 'test-campaign');
         });
 
         it('does not clear intervene shield for non-DEX saves', () => {

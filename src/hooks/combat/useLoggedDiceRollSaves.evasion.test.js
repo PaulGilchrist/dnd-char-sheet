@@ -263,7 +263,9 @@ describe('createSaves (useLoggedDiceRollSaves) - Evasion & Shields', () => {
             );
         });
 
-        it('handles intervene shield - sets damage to 0 on success, consumes on any DEX half save', async () => {
+        it('does not auto-apply intervene shield in save pipeline (now a manual reaction)', async () => {
+            // Intervene Shield is now a manual reaction that checks lastAttack at click time.
+            // The old interveneShieldActive runtime flag is no longer consumed here.
             deps.pendingSaves['prompt-1'] = {
                 targetName: 'Ally',
                 rawDamage: 20,
@@ -289,36 +291,19 @@ describe('createSaves (useLoggedDiceRollSaves) - Evasion & Shields', () => {
             rollSaveForCreature.mockReturnValue({ success: true, roll: 18, total: 21, bonus: 3 });
             const { quickRollPlayerSave } = createFn();
             await quickRollPlayerSave('prompt-1', 'Ally', 'DEX', 15);
+            // Damage should be halved (10), not set to 0 by intervene shield
             expect(applyDamageToTarget).toHaveBeenCalledWith(
                 expect.any(Object),
                 'Ally',
-                0,
+                10,
                 ['lightning'],
                 'test-campaign',
                 expect.any(Array),
                 false,
                 'TestWizard'
             );
-            expect(setRuntimeValue).toHaveBeenCalledWith('Ally', 'interveneShieldActive', null, 'test-campaign');
-
-            deps.pendingSaves['prompt-2'] = {
-                targetName: 'Ally',
-                rawDamage: 20,
-                saveDc: 15,
-                saveType: 'DEX',
-                dcSuccess: 'half',
-                damageType: 'lightning',
-                attackerName: 'TestWizard',
-                name: 'Lightning Bolt',
-                formula: '8d6',
-                rolls: [3, 4, 5, 2, 3, 3],
-                modifier: 0,
-                campaignName: 'test-campaign',
-                setPopupHtml: vi.fn(),
-            };
-            rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 8, bonus: 3 });
-            await quickRollPlayerSave('prompt-2', 'Ally', 'DEX', 15);
-            expect(setRuntimeValue).toHaveBeenCalledWith('Ally', 'interveneShieldActive', null, 'test-campaign');
+            // interveneShieldActive should NOT be consumed here anymore
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Ally', 'interveneShieldActive', null, 'test-campaign');
         });
     });
 
