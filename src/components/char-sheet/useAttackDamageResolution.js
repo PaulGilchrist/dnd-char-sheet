@@ -256,6 +256,8 @@ export default function useAttackDamageResolution({
                 setModalState({ secondaryTargetModal: paused._modalProps });
             } else if (paused._modalType === 'tacticalMaster') {
                 setRuntimeObject(campaignName, { tacticalMasterPending: paused._modalProps }, campaignName, true);
+            } else if (paused._modalType === 'shieldBash') {
+                setModalState({ shieldBashModal: paused._modalProps });
             }
         }
     };

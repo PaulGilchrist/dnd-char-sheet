@@ -118,6 +118,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             setRuntimeValue(playerStats.name, 'illusoryRealityUsedRound', null, campaignName);
             setRuntimeValue(playerStats.name, '_BrutalStrike_usedRound', null, campaignName);
             setRuntimeValue(playerStats.name, '_fortifiedHealth_usedRound', null, campaignName);
+            setRuntimeValue(playerStats.name, '_Shield_Bash_usedRound', null, campaignName);
             setRuntimeValue(playerStats.name, 'piercerPunctureUsedThisTurn', null, campaignName);
             setRuntimeValue(playerStats.name, '_Savage_Attacker_usedRound', null, campaignName);
 

@@ -11,7 +11,180 @@ import { resolveMassFear } from './massFearHandler.js';
 
 export async function handle(action, playerStats, campaignName, mapName) {
     const auto = action.automation || action;
-    const options = auto.options || [];
+    let options = auto.options || [];
+
+    // Expand push_or_prone effect into options (used by Shield Master 2024)
+    if (options.length === 0 && auto.effect === 'push_or_prone') {
+        const dist = (auto.distance || '5 ft').replace(/[^0-9]/g, '');
+        options = [
+            {
+                name: 'Push',
+                effect: 'push',
+                value: parseInt(dist, 10) || 5,
+                sizeLimit: auto.sizeLimit || null,
+            },
+            {
+                name: 'Prone',
+                effect: 'prone',
+                saveType: auto.saveType || 'STR',
+                saveDc: auto.saveDc || 'ability',
+                saveAbility: auto.saveAbility || 'STR',
+            },
+        ];
+    }
+
+    // Shield Bash with push_or_prone: validate prerequisites and do save first
+    if (auto.effect === 'push_or_prone' && auto.oncePerTurn && auto.trigger) {
+        // Check shield equipped
+        const { parseMagicItemName } = await import('../../../rules/core/attackCalc.js');
+        const equipped = playerStats.inventory?.equipped || [];
+        const equipment = playerStats.equipment || [];
+        const hasShield = equipped.some(itemName => {
+            const { baseName } = parseMagicItemName(itemName);
+            const match = equipment.find(e => e.name === baseName);
+            return match && (match.armor_category === 'Shield' || match.equipment_category === 'Shield');
+        });
+        if (!hasShield) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Shield Bash requires an equipped shield.',
+                },
+            };
+        }
+
+        // Check lastAttack is player's melee weapon attack
+        const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+        const cs = await loadCombatSummary(campaignName);
+        const lastAttack = cs?.lastAttack;
+        if (!lastAttack?.hit) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Shield Bash requires a hit with a melee weapon attack.',
+                },
+            };
+        }
+        if (lastAttack.attackerName !== playerStats.name) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Shield Bash requires your own melee weapon attack.',
+                },
+            };
+        }
+        if (lastAttack.weaponType !== 'melee') {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Shield Bash requires a melee weapon attack.',
+                },
+            };
+        }
+
+        const targetName = lastAttack.targetName;
+        if (!targetName) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Shield Bash: no target found.',
+                },
+            };
+        }
+
+        // Check oncePerTurn with skip
+        const { checkOncePerTurnWithSkip } = await import('../../../automation/common/oncePerTurn.js');
+        const skipResult = await checkOncePerTurnWithSkip(action.name, `_${action.name.replace(/\s+/g, '_')}_usedRound`, `_${action.name.replace(/\s+/g, '_')}_skippedRound`, playerStats, campaignName);
+        if (skipResult) return skipResult;
+
+        // Build save DC
+        const saveDc = auto.saveDc === 'ability'
+            ? buildSaveDc(auto, playerStats)
+            : (auto.saveDc || (8 + (playerStats.abilities?.find(a => a.name === 'Strength')?.bonus || 0) + (playerStats.proficiency || 0)));
+
+        // Create save prompt
+        const { createSaveListener } = await import('../../../automation/common/savePrompt.js');
+        const { addEntry } = await import('../../../ui/logService.js');
+
+        const { promise } = createSaveListener(campaignName, {
+            targetName,
+            saveType: 'STR',
+            saveDc,
+            dcSuccess: false,
+            sourceName: action.name,
+        });
+
+        addEntry(campaignName, {
+            type: 'roll',
+            name: action.name,
+            characterName: playerStats.name,
+            rollType: 'save-damage',
+            targetName,
+            saveDc,
+            saveType: 'STR',
+            description: `${action.name}: ${targetName} must make a STR saving throw (DC ${saveDc}).`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        const saveResult = await promise;
+        const success = saveResult.success;
+
+        addEntry(campaignName, {
+            type: 'roll',
+            name: action.name,
+            characterName: playerStats.name,
+            rollType: 'save-damage',
+            targetName,
+            saveDc,
+            saveType: 'STR',
+            saveResult: success ? 'success' : 'failure',
+            total: saveResult.total ?? 0,
+            rolls: [saveResult.roll ?? 0],
+            bonus: saveResult.saveBonus ?? 0,
+            formula: `1d20${saveResult.saveBonus !== 0 ? '+' + saveResult.saveBonus : ''}`,
+            description: `${targetName} ${success ? 'succeeded' : 'failed'} the STR save (DC ${saveDc}).${!success ? ' Shield Bash effect applied.' : ''}`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        if (success) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: `${targetName} succeeded on STR save (DC ${saveDc}). Shield Bash has no effect.`,
+                    automation: auto,
+                },
+            };
+        }
+
+        // On failed save — show shieldBash modal
+        return {
+            type: 'modal',
+            modalName: 'shieldBash',
+            payload: {
+                action: {
+                    name: action.name,
+                    options: options,
+                    automation: auto,
+                },
+                playerStats,
+                campaignName,
+                targetName,
+                saveDc,
+            },
+        };
+    }
 
     const cs = await getCombatContext(campaignName);
     const target = cs ? getTargetFromAttacker(cs, playerStats.name) : null;

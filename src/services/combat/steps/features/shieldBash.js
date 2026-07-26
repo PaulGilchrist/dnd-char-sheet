@@ -1,35 +1,204 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
-import { getCurrentCombatRound } from '../../../encounters/combatData.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { loadCombatSummary } from '../../../encounters/combatData.js';
 import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
+import { addEntry } from '../../../ui/logService.js';
+import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
+import { checkOncePerTurnWithSkip } from '../../../automation/common/oncePerTurn.js';
 
 export const shieldBash = {
   name: 'shieldBash',
   condition: (ctx) => !!ctx.playerStats.automation?.passives,
   handler: async (ctx, prevData) => {
-    const a = (ctx.playerStats.automation?.passives || []).find(
+    const passives = ctx.playerStats.automation?.passives || [];
+
+    // Check for old-style (5e) or new-style (2024) Shield Bash
+    const hasOldStyle = passives.some(
       p => p.type === 'attack_rider' && p.trigger === 'melee_hit_with_shield_equipped' && p.options?.length > 0
     );
-    if (!a) return null;
+    const hasNewStyle = passives.some(
+      p => p.type === 'attack_rider' && p.effect === 'push_or_prone' && p.oncePerTurn
+    );
 
+    if (!hasOldStyle && !hasNewStyle) return null;
+
+    // Validate lastAttack: must be player's melee weapon attack that hit
+    const cs = await loadCombatSummary(ctx.campaignName);
+    const lastAttack = cs?.lastAttack;
+
+    if (!lastAttack?.hit) return { data: prevData };
+    if (lastAttack.attackerName !== ctx.playerStats.name) return { data: prevData };
+    if (lastAttack.weaponType !== 'melee') return { data: prevData };
+
+    const targetName = lastAttack.targetName;
+    if (!targetName) return { data: prevData };
+
+    // Check shield equipped
     const hasShield = ctx.playerStats.inventory?.equipped?.some(itemName => {
       const { baseName } = parseMagicItemName(itemName);
-      return ctx.playerStats.equipment?.find(e => e.name === baseName)?.equipment_category === 'Shield';
+      const eq = ctx.playerStats.equipment?.find(e => e.name === baseName);
+      return eq && (eq.armor_category === 'Shield' || eq.equipment_category === 'Shield');
     });
     if (!hasShield) return { data: prevData };
 
-    const key = `_${a.name.replace(/\s+/g, '_')}_usedRound`;
-    const round = getCurrentCombatRound();
-    if (getRuntimeValue(ctx.playerStats.name, key, ctx.campaignName) === round) return { data: prevData };
+    // Check oncePerTurn with skip support
+    const usedKey = '_Shield_Bash_usedRound';
+    const skipKey = '_Shield_Bash_skippedRound';
+    const skipResult = await checkOncePerTurnWithSkip('Shield Bash', usedKey, skipKey, ctx.playerStats, ctx.campaignName);
+    if (skipResult) return { data: prevData };
 
-    const cs = await getCombatContext(ctx.campaignName);
-    const t = cs ? getTargetFromAttacker(cs, ctx.playerStats.name) : null;
-    if (!t?.name) return { data: prevData };
+    // Build save DC: 8 + STR modifier + proficiency bonus
+    const shieldBashPassive = hasNewStyle
+      ? passives.find(p => p.type === 'attack_rider' && p.effect === 'push_or_prone')
+      : passives.find(p => p.type === 'attack_rider' && p.trigger === 'melee_hit_with_shield_equipped');
 
-    const o = a.options[0];
-    const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-    setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: a.name, option: o.name, effect: o.effect, value: o.value || null, sizeLimit: o.sizeLimit || null, noOpportunityAttacks: o.noOpportunityAttacks || false, duration: 'until_start_of_next_turn', saveType: o.saveType || null, saveDc: o.saveDc || null, saveAbility: o.saveAbility || null, condition: o.condition || null, repeatingSave: !!o.repeatingSave }], ctx.campaignName);
-    setRuntimeValue(ctx.playerStats.name, key, round, ctx.campaignName);
-    return { data: prevData };
+    const saveDc = shieldBashPassive?.automation
+      ? buildSaveDc(shieldBashPassive.automation, ctx.playerStats)
+      : 8 + (ctx.playerStats.abilities?.find(a => a.name === 'Strength')?.bonus || 0) + (ctx.playerStats.proficiency || 0);
+
+    // Create STR save prompt
+    const { promise } = createSaveListener(ctx.campaignName, {
+      targetName,
+      saveType: 'STR',
+      saveDc,
+      dcSuccess: false,
+      sourceName: 'Shield Bash',
+    });
+
+    addEntry(ctx.campaignName, {
+      type: 'roll',
+      name: 'Shield Bash',
+      characterName: ctx.playerStats.name,
+      rollType: 'save-damage',
+      targetName,
+      saveDc,
+      saveType: 'STR',
+      description: `Shield Bash: ${targetName} must make a STR saving throw (DC ${saveDc}).`,
+      timestamp: Date.now(),
+    }).catch(() => {});
+
+    const saveResult = await promise;
+    const success = saveResult.success;
+
+    addEntry(ctx.campaignName, {
+      type: 'roll',
+      name: 'Shield Bash',
+      characterName: ctx.playerStats.name,
+      rollType: 'save-damage',
+      targetName,
+      saveDc,
+      saveType: 'STR',
+      saveResult: success ? 'success' : 'failure',
+      total: saveResult.total ?? 0,
+      rolls: [saveResult.roll ?? 0],
+      bonus: saveResult.saveBonus ?? 0,
+      formula: `1d20${saveResult.saveBonus !== 0 ? '+' + saveResult.saveBonus : ''}`,
+      description: `${targetName} ${success ? 'succeeded' : 'failed'} the STR save (DC ${saveDc}).${!success ? ' Shield Bash effect applied.' : ''}`,
+      timestamp: Date.now(),
+    }).catch(() => {});
+
+    if (success) {
+      return { data: prevData };
+    }
+
+    // On failed save — show modal for push/prone/skip choice
+    return {
+      modal: {
+        type: 'shieldBash',
+        props: {
+          action: {
+            name: 'Shield Bash',
+            options: [
+              { name: 'Push', effect: 'push', value: 5 },
+              { name: 'Prone', effect: 'prone' },
+            ],
+          },
+          playerStats: ctx.playerStats,
+          campaignName: ctx.campaignName,
+          targetName,
+          saveDc,
+        },
+      },
+      data: prevData,
+    };
   },
 };
+
+export async function applyShieldBashEffect(action, playerStats, campaignName, targetName, chosenOption, saveDc) {
+  const auto = action.automation || {};
+  const effs = getRuntimeValue(campaignName, 'targetEffects') || [];
+  const storedEffects = [...effs];
+
+  if (chosenOption === 'skip') {
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: playerStats.name,
+      abilityName: 'Shield Bash',
+      description: `Shield Bash: skipped (no effect, use not consumed).`,
+    }).catch(() => {});
+    return null;
+  }
+
+  if (chosenOption === 'Push') {
+    const newEffect = {
+      target: targetName,
+      source: 'Shield Bash',
+      option: 'Push',
+      effect: 'push',
+      value: 5,
+      duration: 'instant',
+    };
+    setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: playerStats.name,
+      abilityName: 'Shield Bash',
+      description: `Shield Bash used against ${targetName}: pushed 5 ft.`,
+    }).catch(() => {});
+  } else if (chosenOption === 'Prone') {
+    const newEffect = {
+      target: targetName,
+      source: 'Shield Bash',
+      option: 'Prone',
+      effect: 'prone_and_push',
+      value: 5,
+      duration: 'until_start_of_next_turn',
+      saveType: 'STR',
+      saveDc,
+      saveAbility: 'STR',
+    };
+    setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+
+    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+    const alreadyProne = conditions.some(c => String(c).toLowerCase() === 'prone');
+    if (!alreadyProne) {
+      setRuntimeValue(targetName, 'activeConditions', [...conditions, 'prone'], campaignName);
+    }
+
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: playerStats.name,
+      abilityName: 'Shield Bash',
+      description: `Shield Bash used against ${targetName}: target has Prone condition.`,
+    }).catch(() => {});
+  }
+
+  // Mark oncePerTurn as used
+  const cs = await getCombatContext(campaignName);
+  const currentRound = cs?.round || 1;
+  const currentCreature = cs?.activeCreatureName || playerStats.name;
+  await setRuntimeValue(playerStats.name, '_Shield_Bash_usedRound', { round: currentRound, activeCreature: currentCreature }, campaignName);
+
+  return {
+    type: 'popup',
+    payload: {
+      type: 'automation_info',
+      name: 'Shield Bash',
+      description: chosenOption === 'skip'
+        ? `Shield Bash: ${targetName} was not affected (skipped).`
+        : `Shield Bash: ${targetName} ${chosenOption === 'Push' ? 'pushed 5 ft' : 'has Prone condition'}.`,
+      automation: auto,
+    },
+  };
+}

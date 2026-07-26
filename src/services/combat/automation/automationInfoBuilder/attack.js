@@ -121,6 +121,7 @@ export const attackHandlers = {
         return {
             type: 'attack_rider',
             name: feature.name,
+            effect: auto.effect || null,
             options,
             cost: auto.cost || null,
             damageExpression: resolvedExpr,

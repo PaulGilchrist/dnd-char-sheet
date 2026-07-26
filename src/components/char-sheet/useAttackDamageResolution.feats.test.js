@@ -25,6 +25,14 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
+vi.mock('../../services/ui/utils.js', () => ({
+    default: {
+        getAbilityLongName: vi.fn(),
+        getName: vi.fn((name) => name),
+        guid: vi.fn(() => 'test-prompt-id-12345'),
+    },
+}));
+
 vi.mock('../../services/automation/common/buffToggle.js', () => ({
     getActiveBuffs: vi.fn(),
 }));
@@ -47,6 +55,10 @@ vi.mock('../../services/ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
+    sendSavePrompt: vi.fn(),
+}));
+
 import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
 import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
@@ -54,6 +66,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntime
 import { getActiveBuffs } from '../../services/automation/common/buffToggle.js';
 import { collectWeaponMastery, hasTwoWeaponFighting } from '../../services/combat/automation/automationService.js';
 import { parseMagicItemName } from '../../services/rules/core/attackCalc.js';
+import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 
 const mockPlayerStats = {
     name: 'TestFighter',
@@ -119,6 +132,7 @@ describe('useAttackDamageResolution - feats', () => {
         mockBuildCtx.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
         mockBuildCtxSync.mockReturnValue(Promise.resolve({ targetName: 'Goblin' }));
         mockPendingDamageRef.current = null;
+        Object.keys(modalState).forEach(key => delete modalState[key]);
     });
 
     async function tick() {
@@ -132,6 +146,19 @@ describe('useAttackDamageResolution - feats', () => {
                 { name: targetName, type: 'npc' },
             ],
         };
+    }
+
+    function dispatchSaveResult(promptId, success, roll = 10, bonus = 0) {
+        window.dispatchEvent(new CustomEvent('save-result', {
+            detail: {
+                promptId,
+                targetName: 'Goblin',
+                success,
+                roll,
+                total: roll + bonus,
+                saveBonus: bonus,
+            },
+        }));
     }
 
     describe('Charger feat', () => {
@@ -203,10 +230,18 @@ describe('useAttackDamageResolution - feats', () => {
         });
     });
 
-    describe('Shield Master', () => {
-        it('applies Shield Bash rider effect when shield is equipped', async () => {
-            getCombatContext.mockResolvedValue(createCombatContext());
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+    describe('Shield Master (2024 ruleset)', () => {
+        it('shows shield bash modal on failed STR save with shield equipped', async () => {
+            const loadCombatSummary = await import('../../services/encounters/combatData.js');
+            loadCombatSummary.loadCombatSummary.mockResolvedValue({
+                lastAttack: {
+                    hit: true,
+                    attackerName: 'TestFighter',
+                    weaponType: 'melee',
+                    targetName: 'Goblin',
+                },
+            });
+
             const stats = {
                 ...mockPlayerStats,
                 automation: {
@@ -225,25 +260,108 @@ describe('useAttackDamageResolution - feats', () => {
                 name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
                 weaponType: 'melee', properties: [],
             };
+
+            // Start the resolve — pipeline will call createSaveListener which registers event listener
+            const resolvePromise = resolveAttackDamage(attack);
+
+            // Give the async pipeline a tick to register the event listener
+            await new Promise(r => setTimeout(r, 10));
+            // Now dispatch save result
+            dispatchSaveResult('test-prompt-id-12345', false, 5, 3); // failed save
+
+            await resolvePromise;
+            await tick();
+
+            // Should have created a save prompt
+            expect(sendSavePrompt).toHaveBeenCalled();
+            // Should have paused for modal
+            expect(modalState.shieldBashModal).toBeDefined();
+        }, 10000);
+
+        it('skips Shield Bash when lastAttack is not from player', async () => {
+            const loadCombatSummary = await import('../../services/encounters/combatData.js');
+            loadCombatSummary.loadCombatSummary.mockResolvedValue({
+                lastAttack: {
+                    hit: true,
+                    attackerName: 'Goblin',
+                    weaponType: 'melee',
+                    targetName: 'TestFighter',
+                },
+            });
+
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    passives: [
+                        {
+                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            name: 'Shield Bash',
+                            options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
+                        },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
+            const attack = {
+                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
+                weaponType: 'melee', properties: [],
+            };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    source: 'Shield Bash',
-                    effect: 'push',
-                }),
-            ]), 'test-campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Shield_Bash_usedRound', 1, 'test-campaign');
+
+            expect(modalState.shieldBashModal).toBeUndefined();
         });
 
-        it('skips Shield Bash when no shield is equipped', async () => {
+        it('skips Shield Bash when lastAttack was not a melee weapon', async () => {
+            const loadCombatSummary = await import('../../services/encounters/combatData.js');
+            loadCombatSummary.loadCombatSummary.mockResolvedValue({
+                lastAttack: {
+                    hit: true,
+                    attackerName: 'TestFighter',
+                    weaponType: 'ranged',
+                    targetName: 'Goblin',
+                },
+            });
+
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    passives: [
+                        {
+                            type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
+                            name: 'Shield Bash',
+                            options: [{ name: 'Push 5 ft', effect: 'push', value: 5 }],
+                        },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
+            const attack = {
+                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
+                weaponType: 'melee', properties: [],
+            };
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(modalState.shieldBashModal).toBeUndefined();
+        });
+
+        it('skips Shield Bash when no shield equipped', async () => {
+            const loadCombatSummary = await import('../../services/encounters/combatData.js');
+            loadCombatSummary.loadCombatSummary.mockResolvedValue({
+                lastAttack: {
+                    hit: true,
+                    attackerName: 'TestFighter',
+                    weaponType: 'melee',
+                    targetName: 'Goblin',
+                },
+            });
+
             const stats = {
                 ...mockPlayerStats,
                 inventory: { equipped: [] },
                 equipment: [],
                 automation: {
-                    actions: [],
                     passives: [
                         {
                             type: 'attack_rider', trigger: 'melee_hit_with_shield_equipped',
@@ -260,9 +378,61 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.anything(), 'test-campaign');
-            expect(mockRollDamage).toHaveBeenCalled();
+
+            expect(modalState.shieldBashModal).toBeUndefined();
         });
+
+        it('handles 2024 Shield Master with push_or_prone effect', async () => {
+            const loadCombatSummary = await import('../../services/encounters/combatData.js');
+            loadCombatSummary.loadCombatSummary.mockResolvedValue({
+                lastAttack: {
+                    hit: true,
+                    attackerName: 'TestFighter',
+                    weaponType: 'melee',
+                    targetName: 'Goblin',
+                },
+            });
+
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    passives: [
+                        {
+                            type: 'attack_rider',
+                            effect: 'push_or_prone',
+                            oncePerTurn: true,
+                            name: 'Shield Bash',
+                            automation: {
+                                saveType: 'STR',
+                                saveDc: 'ability',
+                                saveAbility: 'STR',
+                            },
+                        },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
+            const attack = {
+                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
+                weaponType: 'melee', properties: [],
+            };
+
+            // Start the resolve — pipeline will call createSaveListener which registers event listener
+            const resolvePromise = resolveAttackDamage(attack);
+
+            // Give the async pipeline a tick to register the event listener
+            await new Promise(r => setTimeout(r, 10));
+            // Now dispatch save result
+            dispatchSaveResult('test-prompt-id-12345', false, 5, 3); // failed save
+
+            await resolvePromise;
+            await tick();
+
+            // Should have paused for modal
+            expect(sendSavePrompt).toHaveBeenCalled();
+            expect(modalState.shieldBashModal).toBeDefined();
+            expect(modalState.shieldBashModal.saveDc).toBe(19); // 8 + 5 (STR) + 6 (prof)
+        }, 10000);
     });
 
     describe('Crusher feat', () => {
