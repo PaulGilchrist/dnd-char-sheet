@@ -203,9 +203,38 @@ async function countSkilledUses(formData, allFeats) {
       skilledInstances++;
     }
   });
-
   return skilledInstances * 3;
 }
+
+/**
+ * Counts Skill Expert feat instances and returns total skill proficiency choices.
+ * Each Skill Expert instance grants 1 skill proficiency of your choice.
+ * @param {object} formData - The character form data
+ * @param {Array} allFeats - Array of all feat data objects (may be empty during initial load)
+ * @returns {number} Total Skill Expert skill proficiency choices available
+ */
+async function countSkillExpertProficiencyChoices(formData, allFeats) {
+  if (!formData.feats || formData.feats.length === 0) {
+    return 0;
+  }
+
+  const featData = (allFeats && allFeats.length > 0) ? allFeats : await loadFeatData(formData.rules || '5e');
+  if (!featData || featData.length === 0) {
+    return 0;
+  }
+
+  const SKILL_EXPERT_NAME = 'Skill Expert';
+  let skillExpertInstances = 0;
+
+  formData.feats.forEach(featName => {
+    if (featName === SKILL_EXPERT_NAME) {
+      skillExpertInstances++;
+    }
+  });
+
+  return skillExpertInstances;
+}
+
 
 /**
  * Computes how many total skill proficiency selections are not covered by restrictive sources.
@@ -708,6 +737,17 @@ export async function getSkillLimits(formData, allFeats) {
       });
     });
 
+    // Skill Expert grants 1 skill proficiency of your choice (all 18 skills)
+    const skillExpertCount = await countSkillExpertProficiencyChoices(formData, allFeats);
+    if (skillExpertCount > 0) {
+      skillChoiceSources.push({
+        source: 'feat',
+        count: skillExpertCount,
+        skills: ALL_SKILL_NAMES,
+        featName: 'Skill Expert',
+      });
+    }
+
     // Count Skilled uses
     const skilledUsesAvailable = await countSkilledUses(formData, allFeats);
 
@@ -785,6 +825,17 @@ export async function getSkillLimits(formData, allFeats) {
         featName: sl.featName,
       });
     });
+
+    // Skill Expert grants 1 skill proficiency of your choice (all 18 skills)
+    const skillExpertCount = await countSkillExpertProficiencyChoices(formData, allFeats);
+    if (skillExpertCount > 0) {
+      skillChoiceSources.push({
+        source: 'feat',
+        count: skillExpertCount,
+        skills: ALL_SKILL_NAMES,
+        featName: 'Skill Expert',
+      });
+    }
 
     // Count Skilled uses
     const skilledUsesAvailable = await countSkilledUses(formData, allFeats);

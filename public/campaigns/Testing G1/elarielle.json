@@ -56,8 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "Skilled",
-    "Magic Initiate"
+    "Magic Initiate",
+    "Skill Expert"
   ],
   "fightingStyles": [],
   "race": {
@@ -107,7 +107,8 @@
     "History",
     "Perception",
     "Insight",
-    "Investigation"
+    "Investigation",
+    "Survival"
   ],
   "toolProficiencies": [
     "Calligrapher's Supplies"
@@ -142,7 +143,7 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Sentinel-0": {
+    "Skill Expert-0": {
       "assignment": "Strength"
     }
   },

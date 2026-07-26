@@ -46,6 +46,10 @@
   cursor: not-allowed;
 }
 
+.wizard-step-skills .multi-select-item .expertise-toggle-btn {
+  pointer-events: auto;
+}
+
 /* Expertise Feedback Message */
 .wizard-step-skills .expertise-feedback {
   margin-top: 10px;
