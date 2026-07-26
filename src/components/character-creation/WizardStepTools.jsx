@@ -19,11 +19,12 @@ const areEqual = (prevProps, nextProps) => {
         prevProps.onToolToggle === nextProps.onToolToggle &&
         prevProps.toolLimits === nextProps.toolLimits &&
         prevProps.toolWarnings === nextProps.toolWarnings &&
-        prevProps.preSelectedTools === nextProps.preSelectedTools
+        prevProps.preSelectedTools === nextProps.preSelectedTools &&
+        prevProps.skillLimits === nextProps.skillLimits
     );
 };
 
-function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarnings, preSelectedTools }) {
+function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarnings, preSelectedTools, skillLimits }) {
     const [allTools, setAllTools] = useState([]);
     const [toolCategories, setToolCategories] = useState([]);
 
@@ -32,6 +33,36 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
 
     const isPlaceholder = useCallback((toolName) => /^(\d+) from: (.+)$/.test(toolName), []);
     const realToolCount = useMemo(() => tools.filter(t => !isPlaceholder(t)).length, [tools, isPlaceholder]);
+
+    // Compute Skilled tool usage - use total from skillLimits (includes skills + tools)
+    const skilledToolInfo = useMemo(() => {
+        const skilledUsesAvailable = toolLimits?.skilledUsesAvailable || 0;
+        if (skilledUsesAvailable === 0) return { used: 0, available: 0 };
+
+        // Use the total skilledUsesUsed from skillLimits (computed by service including both skills and tools)
+        const skilledUsesUsed = skillLimits?.skilledUsesUsed || 0;
+
+        // Compute how many of those are from tools specifically (for display)
+        const categoryLimits = toolLimits?.categoryLimits || new Map();
+        const toolsByCategory = {};
+        toolCategories.forEach(cat => {
+            const toolsInCat = allTools.filter(t => t._category === cat);
+            toolsByCategory[cat] = new Set(toolsInCat.map(t => t.name));
+        });
+
+        let categoryCovered = 0;
+        for (const [category, limit] of categoryLimits) {
+            const selectedInCategory = tools.filter(t =>
+                !isPlaceholder(t) && toolsByCategory[category]?.has(t)
+            ).length;
+            categoryCovered += Math.min(selectedInCategory, limit);
+        }
+
+        const userSelectedTools = tools.filter(t => !isPlaceholder(t));
+        const toolsFromSkilled = Math.max(0, userSelectedTools.length - categoryCovered);
+
+        return { used: skilledUsesUsed, toolsFromSkilled, available: skilledUsesAvailable };
+    }, [toolLimits, skillLimits, allTools, toolCategories, tools, isPlaceholder]);
 
     useEffect(() => {
         const loadTools = async () => {
@@ -59,33 +90,6 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
         [preSelected]
     );
 
-    useEffect(() => {
-        const logLimits = async () => {
-            const categoryNames = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
-            const effectiveLimits = {};
-            for (const cat of categoryNames) {
-                const limitsCount = toolLimits?.categoryLimits?.get(cat) || 0;
-                let preSelectedCount = 0;
-                if (toolLimits?.preSelected && preSelectedTools) {
-                    const toolsInCat = await getToolsByCategory(cat);
-                    const toolNamesInCat = new Set(toolsInCat.map(t => t.name));
-                    for (const tool of toolLimits.preSelected) {
-                        if (toolNamesInCat.has(tool)) {
-                            preSelectedCount++;
-                        }
-                    }
-                }
-                effectiveLimits[cat] = {
-                    choiceAllowed: limitsCount,
-                    preSelected: preSelectedCount,
-                    total: limitsCount + preSelectedCount
-                };
-            }
-            console.log('[WizardStepTools] Tool limits by category:', JSON.stringify(effectiveLimits, null, 2));
-        };
-        logLimits();
-    }, [toolLimits, preSelectedTools]);
-
     const handleToolToggle = useCallback(
         (toolName) => {
             if (isToolPreSelected(toolName) && isToolSelected(toolName)) {
@@ -105,6 +109,14 @@ function WizardStepTools({ formData, errors, onToolToggle, toolLimits, toolWarni
                     <p><strong>Rules:</strong> You get tool proficiencies from your class, background, and feats.</p>
                     <p>You may choose {Array.from(toolLimits.categoryLimits || []).filter(([, count]) => count > 0).map(([cat, count]) => `${count} ${cat}`).join(', ')}.</p>
                     <p>You have selected {realToolCount} tool proficiency/ies ({preSelected.length} pre-selected, {realToolCount - preSelected.length} chosen).</p>
+                    {skilledToolInfo.available > 0 && (
+                        <div className="tool-source-breakdown">
+                            <span className="tool-source-line">
+                                <span className="tool-source-tag">Skilled</span>
+                                <span>{skilledToolInfo.used} of {skilledToolInfo.available} uses used for tools</span>
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 

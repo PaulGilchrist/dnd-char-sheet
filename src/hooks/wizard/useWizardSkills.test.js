@@ -96,6 +96,7 @@ describe('useWizardSkills', () => {
         DEFAULT_FORM_DATA.rules,
         DEFAULT_FORM_DATA.level,
         DEFAULT_FORM_DATA.feats,
+        DEFAULT_FORM_DATA.toolProficiencies,
       ]);
     });
 

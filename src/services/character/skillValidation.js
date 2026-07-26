@@ -177,7 +177,216 @@ async function getFeatExpertiseSkillLists(formData, allFeats) {
   return skillLists.length > 0 ? skillLists : null;
 }
 
+/**
+ * Counts Skilled feat instances and returns total skill/tool choice uses
+ * Each Skilled instance grants 3 uses (skills or tools of your choice)
+ * Skilled is repeatable in 2024 ruleset
+ * @param {object} formData - The character form data
+ * @param {Array} allFeats - Array of all feat data objects (may be empty during initial load)
+ * @returns {number} Total Skilled uses available (instances × 3)
+ */
+async function countSkilledUses(formData, allFeats) {
+  if (!formData.feats || formData.feats.length === 0) {
+    return 0;
+  }
+
+  const featData = (allFeats && allFeats.length > 0) ? allFeats : await loadFeatData(formData.rules || '5e');
+  if (!featData || featData.length === 0) {
+    return 0;
+  }
+
+  const SKILLED_NAME = 'Skilled';
+  let skilledInstances = 0;
+
+  formData.feats.forEach(featName => {
+    if (featName === SKILLED_NAME) {
+      skilledInstances++;
+    }
+  });
+
+  return skilledInstances * 3;
+}
+
+/**
+ * Computes how many total skill proficiency selections are not covered by restrictive sources.
+ * These uncovered selections are assumed to come from Skilled.
+ * Used by both skill and tool limits to coordinate shared Skilled pool.
+ * @param {Array} skillChoiceSources - The skillChoiceSources array from getSkillLimits
+ * @param {Array} selectedSkills - Array of selected skill names
+ * @returns {number} Number of selected skills allocated from Skilled
+ */
+function computeSkilledSkillUsage(skillChoiceSources, selectedSkills) {
+  if (!skillChoiceSources || skillChoiceSources.length === 0 || !selectedSkills || selectedSkills.length === 0) {
+    return 0;
+  }
+
+  const assignedSkills = new Set();
+  const sourceAssignments = {};
+  skillChoiceSources.forEach(s => {
+    const key = s.source + '_' + (s.featName || '0');
+    sourceAssignments[key] = 0;
+  });
+
+  const remainingSkills = [...selectedSkills];
+
+  while (remainingSkills.length > 0) {
+    let bestSource = null;
+    let bestSize = Infinity;
+
+    skillChoiceSources.forEach(source => {
+      const key = source.source + '_' + (source.featName || '0');
+      const remainingCapacity = source.count - sourceAssignments[key];
+      if (remainingCapacity <= 0) return;
+      const unassignedInPool = remainingSkills.filter(s =>
+        source.skills.includes(s) && !assignedSkills.has(s)
+      );
+      if (unassignedInPool.length > 0 && source.skills.length < bestSize) {
+        bestSource = source;
+        bestSize = source.skills.length;
+      }
+    });
+
+    if (!bestSource) break;
+
+    const assigned = remainingSkills.find(s =>
+      bestSource.skills.includes(s) && !assignedSkills.has(s)
+    );
+    if (!assigned) break;
+
+    const key = bestSource.source + '_' + (bestSource.featName || '0');
+    sourceAssignments[key]++;
+    assignedSkills.add(assigned);
+    const idx = remainingSkills.indexOf(assigned);
+    remainingSkills.splice(idx, 1);
+  }
+
+  return selectedSkills.length - assignedSkills.size;
+}
+
+/**
+ * Computes total Skilled usage across both skills and tools.
+ * Skills: count of skillProficiencies not covered by restrictive sources
+ * Tools: count of toolProficiencies not covered by category limits
+ * @param {object} formData - The character form data
+ * @param {Array} skillChoiceSources - The skillChoiceSources array from getSkillLimits
+ * @returns {Promise<number>} Total Skilled uses consumed (skills + tools)
+ */
+async function computeTotalSkilledUsage(formData, skillChoiceSources) {
+  const skilledSkillUsage = computeSkilledSkillUsage(
+    skillChoiceSources,
+    formData.skillProficiencies || []
+  );
+
+  const skilledToolUsage = await computeSkilledToolUsageOnly(formData);
+
+  return skilledSkillUsage + skilledToolUsage;
+}
+
+/**
+ * Computes how many tool proficiency selections are not covered by category limits (i.e., from Skilled)
+ * @param {object} formData - The character form data
+ * @returns {Promise<number>} Number of selected tools allocated from Skilled
+ */
+async function computeSkilledToolUsageOnly(formData) {
+  const isPlaceholder = (t) => /^(\d+) from: (.+)$/.test(t);
+  const allTools = (formData.toolProficiencies || []);
+
+  // Load tool data and class/background limits to categorize
+  const { loadEquipment, fetchClassData, fetchBackgroundData } = await import('../ui/dataLoader.js');
+  const equipment = await loadEquipment();
+  const ruleset = formData.rules || '5e';
+  const className = formData.class?.name || '';
+  const backgroundName = formData.background || '';
+
+  if (ruleset !== '2024') {
+    // Tools only exist in 2024 ruleset
+    return 0;
+  }
+
+  const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+  const toolsByCategory = {};
+  toolCategories.forEach(cat => {
+    toolsByCategory[cat] = new Set(
+      equipment.filter(e =>
+        e.equipment_category === 'Tools' &&
+        e.tool_category === cat
+      ).map(e => e.name)
+    );
+  });
+
+  // Build category limits and pre-selected tools from class and background
+  const categoryLimits = new Map();
+  const preSelectedTools = new Set();
+
+  if (backgroundName) {
+    const bgData = await fetchBackgroundData(backgroundName, '2024');
+    if (bgData?.tool_proficiencies) {
+      const parsed = parseToolChoiceString?.(bgData.tool_proficiencies);
+      if (parsed?.isChoice) {
+        for (const cat of parsed.categories) {
+          categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + parsed.count);
+        }
+      } else {
+        preSelectedTools.add(bgData.tool_proficiencies);
+      }
+    }
+  }
+
+  if (className) {
+    const classData = await fetchClassData(className, '2024');
+    if (classData?.tool_proficiencies) {
+      const parsed = parseToolChoiceString?.(classData.tool_proficiencies);
+      if (parsed?.isChoice) {
+        for (const cat of parsed.categories) {
+          categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + parsed.count);
+        }
+      } else {
+        preSelectedTools.add(classData.tool_proficiencies);
+      }
+    }
+  }
+
+  // Feats (e.g., Chef grants Cook's Utensils)
+  if (formData.feats && formData.feats.length > 0) {
+    const { loadFeatData } = await import('../ui/dataLoader.js');
+    const allFeats = await loadFeatData('2024');
+    for (const featName of formData.feats) {
+      const feat = allFeats.find(f => f.name === featName || f.index === featName.toLowerCase());
+      if (feat) {
+        const chefBenefit = feat.benefits.find(b =>
+          b.type === 'proficiency' &&
+          b.description &&
+          /cook['\u2019]?\w*\s*utensil/i.test(b.description)
+        );
+        if (chefBenefit) {
+          preSelectedTools.add("Cook's Utensils");
+        }
+      }
+    }
+  }
+
+  // Filter out pre-selected and placeholder tools
+  const userSelectedTools = allTools.filter(t => !preSelectedTools.has(t) && !isPlaceholder(t));
+
+  if (userSelectedTools.length === 0) {
+    return 0;
+  }
+
+  let categoryCovered = 0;
+  for (const [category, limit] of categoryLimits) {
+    const selectedInCategory = userSelectedTools.filter(t =>
+      toolsByCategory[category]?.has(t)
+    ).length;
+    categoryCovered += Math.min(selectedInCategory, limit);
+  }
+
+  const result = Math.max(0, userSelectedTools.length - categoryCovered);
+
+  return result;
+}
+
 import { fetchClassData, fetchRaceData, fetchBackgroundData, loadFeatData } from '../ui/dataLoader.js';
+import { parseToolChoiceString } from './toolValidation.js';
 
 /**
  * Extracts skill choice lists from race traits with proficiency_choices
@@ -416,13 +625,18 @@ export async function getSkillLimits(formData, allFeats) {
 
   const allSkillProfFeats = await findAllSkillProfFeats(formData, allFeats);
   if (allSkillProfFeats.length > 0) {
+    const skilledUsesAvailable = await countSkilledUses(formData, allFeats);
+    // With Boon of Skill, all skills are covered, so skilled usage only comes from tools
+    const skilledToolUsage = await computeSkilledToolUsageOnly(formData);
     return {
-      allowed: ALL_SKILL_NAMES.length,
+      allowed: ALL_SKILL_NAMES.length + skilledUsesAvailable,
       fromClass: { count: 0, skills: [], isChoice: true },
       fromRace: { count: 0, skills: [], isChoice: false },
       fromBackground: { count: 0, skills: [], isChoice: false },
       details: 'Boon of Skill grants proficiency in all skills',
       allSkillsGranted: true,
+      skilledUsesAvailable,
+      skilledUsesUsed: skilledToolUsage,
     };
   }
 
@@ -494,6 +708,9 @@ export async function getSkillLimits(formData, allFeats) {
       });
     });
 
+    // Count Skilled uses
+    const skilledUsesAvailable = await countSkilledUses(formData, allFeats);
+
     // Build details string
     let details = `You get ${fromClass.count} skill choice(s)${fromClass.skills.length > 0 ? ' from ' + fromClass.skills.join(', ') : ''}, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
     if (raceChoiceSources.length > 0 || raceFeatSources.length > 0 || featChoiceData.skillLists.length > 0) {
@@ -507,12 +724,17 @@ export async function getSkillLimits(formData, allFeats) {
       }
     }
 
+    // Compute total Skilled usage (skills + tools not covered by restrictive sources)
+    const skilledUsesUsed = await computeTotalSkilledUsage(formData, skillChoiceSources);
+
     return {
-      allowed: finalTotal,
+      allowed: finalTotal + skilledUsesAvailable,
       fromClass,
       fromRace,
       fromBackground,
       skillChoiceSources,
+      skilledUsesAvailable,
+      skilledUsesUsed,
       details
      };
    }
@@ -564,6 +786,12 @@ export async function getSkillLimits(formData, allFeats) {
       });
     });
 
+    // Count Skilled uses
+    const skilledUsesAvailable = await countSkilledUses(formData, allFeats);
+
+    // Compute total Skilled usage (skills + tools not covered by restrictive sources)
+    const skilledUsesUsed = await computeTotalSkilledUsage(formData, skillChoiceSources);
+
     let details = `In 5e rules, you get ${fromClass.count} skill choice(s)${fromClass.skills.length > 0 ? ' from ' + fromClass.skills.join(', ') : ''}, ${fromRace.count} from your race, and ${fromBackground.count} from your background (${totalAllowed} total)`;
     if (featChoiceData.skillLists.length > 0) {
       const featDetails = featChoiceData.skillLists.map(sl => `${sl.featName}: choose 1 from ${sl.skills.join(', ')}`).join('. ');
@@ -573,11 +801,13 @@ export async function getSkillLimits(formData, allFeats) {
     }
 
     return {
-      allowed: finalTotal,
+      allowed: finalTotal + skilledUsesAvailable,
       fromClass,
       fromRace,
       fromBackground,
       skillChoiceSources,
+      skilledUsesAvailable,
+      skilledUsesUsed,
       details
      };
    }
@@ -944,16 +1174,19 @@ export async function validateSkills(formData, allFeats) {
     });
 
     // Check each selected skill belongs to at least one allowed pool
-    const skillsOutsidePools = [];
-    selectedSkills.forEach(skill => {
+    // Skills outside pools are OK if Skilled can cover them
+    const skilledUsesForOutsideCheck = limits.skilledUsesAvailable || 0;
+    const skillsOutsidePools = selectedSkills.filter(skill => {
       const sources = skillSourceMap.get(skill);
-      if (!sources || sources.length === 0) {
-        skillsOutsidePools.push(skill);
-      }
+      return !sources || sources.length === 0;
     });
-    if (skillsOutsidePools.length > 0) {
+    if (skillsOutsidePools.length > skilledUsesForOutsideCheck) {
+      const excess = skillsOutsidePools.length - skilledUsesForOutsideCheck;
+      const outsideMsg = skillsOutsidePools.length === excess
+        ? `The following skills are not available from your class/race/feat choices: ${skillsOutsidePools.join(', ')}. Only select from allowed skill pools.`
+        : `The following skills are not available from your class/race/feat choices and exceed Skilled uses: ${skillsOutsidePools.join(', ')}.`;
       warnings.push({
-        message: `The following skills are not available from your class/race/feat choices: ${skillsOutsidePools.join(', ')}. Only select from allowed skill pools.`,
+        message: outsideMsg,
         type: 'warning'
       });
     }
@@ -999,12 +1232,22 @@ export async function validateSkills(formData, allFeats) {
       });
     });
 
-    // Check for over-selection from any source
+    // Calculate how many skills are covered by Skilled
+    const skilledUsesAvailable = limits.skilledUsesAvailable || 0;
+    const unassignedCount = selectedSkills.length - assignedSkills.size;
+    let skilledCanCover = Math.min(unassignedCount, skilledUsesAvailable);
+
+    // Check for over-selection from any source, but allow Skilled to cover overflow
     const overSelectionWarnings = [];
     Object.values(sourceCounts).forEach(({ source, count }) => {
       if (count > source.count) {
-        const label = source.featName || source.source;
-        overSelectionWarnings.push(`Too many from ${label}: ${count} selected, only ${source.count} allowed`);
+        const excess = count - source.count;
+        if (skilledCanCover >= excess) {
+          skilledCanCover -= excess;
+        } else {
+          const label = source.featName || source.source;
+          overSelectionWarnings.push(`Too many from ${label}: ${count} selected, only ${source.count} allowed`);
+        }
       }
     });
     if (overSelectionWarnings.length > 0) {

@@ -9,6 +9,7 @@ vi.mock('../ui/dataLoader.js', () => ({
   fetchBackgroundData: vi.fn(),
   fetchFeatData: vi.fn(),
   loadFeatData: vi.fn(),
+  loadEquipment: vi.fn(async () => []),
 }));
 
 import {

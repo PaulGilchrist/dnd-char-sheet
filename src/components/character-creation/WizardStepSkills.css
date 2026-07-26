@@ -81,37 +81,12 @@
 
 /* Skill Count Summary */
 .wizard-step-skills .skill-count-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: block;
   margin: 0;
 }
 
 .wizard-step-skills .skill-count-text {
   font-size: 1rem;
-}
-
-/* Breakdown Toggle Button */
-.wizard-step-skills .breakdown-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  background-color: var(--background-color-card);
-  color: var(--color-primary);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.wizard-step-skills .breakdown-toggle-btn:hover {
-  background-color: var(--color-primary);
-  color: var(--color-text-inverse);
 }
 
 /* Skill Choice Breakdown */
@@ -142,4 +117,16 @@
   display: inline-block;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+.wizard-step-skills .breakdown-source.skilled-source {
+  background-color: var(--background-color-selected);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.wizard-step-skills .breakdown-source.skilled-source .breakdown-source-label {
+  color: var(--color-primary);
 }

@@ -164,13 +164,14 @@ export const WIZARD_STEPS = [
     step: 11,
     title: 'Tool Proficiencies',
     component: WizardStepTools,
-    getProps: ({ formData, errors, onToolToggle, toolLimits, toolWarnings, preSelectedTools }) => ({
+    getProps: ({ formData, errors, onToolToggle, toolLimits, toolWarnings, preSelectedTools, skillLimits }) => ({
       formData,
       errors,
       onToolToggle,
       toolLimits,
       toolWarnings,
       preSelectedTools,
+      skillLimits,
     }),
   },
   {

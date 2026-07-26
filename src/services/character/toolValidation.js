@@ -20,7 +20,7 @@ export function normalizeCategory(category) {
     return normalized || category.trim();
 }
 
-function parseToolChoiceString(choiceString) {
+export function parseToolChoiceString(choiceString) {
     if (!choiceString || typeof choiceString !== 'string') {
         return { count: 0, categories: [], isChoice: false };
     }
@@ -119,10 +119,42 @@ export async function getToolsByCategory(category) {
 }
 
 /**
+ * Computes how many tool proficiency selections are allocated from Skilled uses
+ * @param {Map} categoryLimits - The categoryLimits map from getToolLimitsByCategory
+ * @param {Array} selectedTools - Array of selected tool names
+ * @param {Array<string>} allTools - Full tool list with _category property
+ * @param {Array<string>} toolCategories - Tool category names
+ * @returns {number} Number of selected tools allocated from Skilled
+ */
+export function computeSkilledToolUsage(categoryLimits, selectedTools, allTools, toolCategories) {
+    if (!categoryLimits || categoryLimits.size === 0 || !selectedTools || selectedTools.length === 0) {
+        return 0;
+    }
+
+    const isPlaceholder = (t) => /^(\d+) from: (.+)$/.test(t);
+    const toolsByCategory = {};
+    toolCategories.forEach(cat => {
+        const toolsInCat = allTools.filter(t => t._category === cat);
+        toolsByCategory[cat] = new Set(toolsInCat.map(t => t.name));
+    });
+
+    let categoryCovered = 0;
+    for (const [category, limit] of categoryLimits) {
+        const selectedInCategory = selectedTools.filter(t =>
+            !isPlaceholder(t) && toolsByCategory[category]?.has(t)
+        ).length;
+        categoryCovered += Math.min(selectedInCategory, limit);
+    }
+
+    const userSelectedTools = selectedTools.filter(t => !isPlaceholder(t));
+    return Math.max(0, userSelectedTools.length - categoryCovered);
+}
+
+/**
  * Aggregates tool proficiency grants by category
  * Returns a map of category -> total count from all sources
  * @param {object} formData - The character form data
- * @returns {Promise<object>} - { categoryLimits: Map<category, count>, preSelected: string[] }
+ * @returns {Promise<object>} - { categoryLimits: Map<category, count>, preSelected: string[], skilledUsesAvailable: number }
  */
 export async function getToolLimitsByCategory(formData) {
     const ruleset = formData.rules || '5e';
@@ -131,11 +163,12 @@ export async function getToolLimitsByCategory(formData) {
     const selectedFeats = formData.feats || [];
 
     if (ruleset !== '2024') {
-        return { categoryLimits: new Map(), preSelected: [] };
+        return { categoryLimits: new Map(), preSelected: [], skilledUsesAvailable: 0 };
     }
 
     const categoryLimits = new Map();
     const preSelected = new Set();
+    let skilledUsesAvailable = 0;
 
     // Background
     if (backgroundName) {
@@ -187,10 +220,16 @@ export async function getToolLimitsByCategory(formData) {
                 const toolProf = parseFeatToolProficiency(feat);
                 if (toolProf) {
                     if (toolProf.isAny) {
-                        // Any-tool grants apply to all tool categories
-                        const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
-                        for (const cat of toolCategories) {
-                            categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + toolProf.count);
+                        // Skilled: tracks as a shared pool, not spread across categories
+                        const isSkilled = featName === 'Skilled';
+                        if (isSkilled) {
+                            skilledUsesAvailable += toolProf.count;
+                        } else {
+                            // Other isAny grants (if any) apply to all tool categories
+                            const toolCategories = ["Artisan's Tools", 'Gaming Sets', 'Musical Instrument', 'Other Tools'];
+                            for (const cat of toolCategories) {
+                                categoryLimits.set(cat, (categoryLimits.get(cat) || 0) + toolProf.count);
+                            }
                         }
                     } else {
                         for (const cat of toolProf.categories) {
@@ -202,7 +241,7 @@ export async function getToolLimitsByCategory(formData) {
         }
     }
 
-    return { categoryLimits, preSelected: Array.from(preSelected) };
+    return { categoryLimits, preSelected: Array.from(preSelected), skilledUsesAvailable };
 }
 
 /**
@@ -219,7 +258,7 @@ export async function validateTools(formData) {
         return warnings;
     }
 
-    const { categoryLimits, preSelected } = await getToolLimitsByCategory(formData);
+    const { categoryLimits, preSelected, skilledUsesAvailable } = await getToolLimitsByCategory(formData);
     const preSelectedSet = new Set(preSelected);
     const isPlaceholder = (t) => /^(\d+) from: (.+)$/.test(t);
     const userSelectedTools = selectedTools.filter(t => !preSelectedSet.has(t) && !isPlaceholder(t));
@@ -233,26 +272,39 @@ export async function validateTools(formData) {
     }
 
     // Count selected tools per category and warn if over limit
+    // Skilled can cover overflow from category limits
+    let skilledCanCover = skilledUsesAvailable;
+
     for (const [category, limit] of categoryLimits) {
         const selectedInCategory = userSelectedTools.filter(t => toolsByCategory[category]?.has(t)).length;
         if (selectedInCategory > limit) {
-            warnings.push({
-                message: `You have selected ${selectedInCategory} from ${category}, but your class/background/feats only grant ${limit} proficiency/ies from ${category}.`,
-                type: 'warning',
-            });
+            const excess = selectedInCategory - limit;
+            if (skilledCanCover >= excess) {
+                skilledCanCover -= excess;
+            } else {
+                warnings.push({
+                    message: `You have selected ${selectedInCategory} from ${category}, but your class/background/feats only grant ${limit} proficiency/ies from ${category}.`,
+                    type: 'warning',
+                });
+            }
         }
     }
 
     // Warn if user selects any tool from a category with 0 allowed
+    // But allow Skilled to cover it
     for (const category of toolCategories) {
         const limit = categoryLimits.get(category) || 0;
         if (limit === 0) {
             const selectedInCategory = userSelectedTools.filter(t => toolsByCategory[category]?.has(t));
             if (selectedInCategory.length > 0) {
-                warnings.push({
-                    message: `You have selected ${selectedInCategory.length} from ${category} (${selectedInCategory.join(', ')}), but your class/background/feats do not grant any proficiencies from ${category}.`,
-                    type: 'warning',
-                });
+                if (skilledCanCover < selectedInCategory.length) {
+                    warnings.push({
+                        message: `You have selected ${selectedInCategory.length} from ${category} (${selectedInCategory.join(', ')}), but your class/background/feats do not grant any proficiencies from ${category}.`,
+                        type: 'warning',
+                    });
+                } else {
+                    skilledCanCover -= selectedInCategory.length;
+                }
             }
         }
     }
