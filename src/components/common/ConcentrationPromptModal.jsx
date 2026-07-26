@@ -54,6 +54,7 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
     const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
     const auraBonus = aura.bonus;
 
+    const advantageSources = [];
     const hasAdvantage = hasSaveModifier(saveModifiers, 'concentration_saving_throws', 'CON') ||
       (saveModifiers && saveModifiers.some(mod =>
         mod.target === 'saving_throw' &&
@@ -61,6 +62,15 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
         mod.effect === 'advantage' &&
         mod.abilities && mod.abilities.includes('Constitution')
       ));
+    if (hasAdvantage && saveModifiers) {
+      saveModifiers.forEach(mod => {
+        if (mod.source && ((mod.target === 'concentration_saving_throws') || (mod.target === 'saving_throw' && mod.condition === 'concentration_spell_damage' && mod.effect === 'advantage' && mod.abilities && mod.abilities.includes('Constitution')))) {
+          if (!advantageSources.includes(mod.source)) {
+            advantageSources.push(mod.source);
+          }
+        }
+      });
+    }
     const hasDisadvantage = (() => {
       if (!current.attackerName) return false;
       const attacker = (characters || []).find(c => {
@@ -111,6 +121,7 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
       dc: current.dc,
       mode,
       rawRolls,
+      advantageSources,
     });
 
     window.dispatchEvent(new CustomEvent('concentration-result', {
@@ -126,12 +137,13 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
         dc: current.dc,
         mode,
         rawRolls,
+        advantageSources,
       },
     }));
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll, total, saveBonus: saveBonus + auraBonus, bonusDetail, mode, rawRolls } }
+        ? { ...p, result: { success, roll, total, saveBonus: saveBonus + auraBonus, bonusDetail, mode, rawRolls, advantageSources } }
         : p
     ));
 

@@ -176,7 +176,7 @@ function RollEntry({ entry }) {
               <span className="log-mode-badge disadvantage">DISADVANTAGE</span>
             )}
             {entry.mode === 'advantage' && (
-              <span className="log-mode-badge advantage">ADVANTAGE</span>
+              <span className="log-mode-badge advantage">ADVANTAGE{entry.advantageSources && entry.advantageSources.length > 0 ? ` (${entry.advantageSources.join(', ')})` : ''}</span>
             )}
           </span>
         )}

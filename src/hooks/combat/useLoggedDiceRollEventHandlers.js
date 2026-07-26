@@ -378,6 +378,7 @@ export function setupEventListeners(deps) {
                 success: e.detail.success,
                 timestamp: Date.now(),
                 id: utils.guid(),
+                advantageSources: e.detail.advantageSources || null,
             });
 
             const combatSummary = getCombatSummary(campaignName);

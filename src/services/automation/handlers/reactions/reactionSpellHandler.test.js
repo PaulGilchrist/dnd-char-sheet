@@ -80,7 +80,7 @@ describe('reactionSpellHandler.handle', () => {
 
             const spellNames = result.payload.eligibleSpells.map(s => s.name);
             expect(spellNames).toContain('Burning Hands');
-            expect(spellNames).toContain('Fireball');
+            expect(spellNames).not.toContain('Fireball');
             expect(spellNames).not.toContain('Shield');
         });
 
@@ -134,24 +134,22 @@ describe('reactionSpellHandler.handle', () => {
             expect(spell.maxTargets).toBe(1);
         });
 
-        it('marks spells with area_of_effect as multi-target', async () => {
+        it('excludes spells with area_of_effect from eligible spells', async () => {
             const ps = makePlayerStats();
             const result = await handle(makeAction(), ps, campaignName);
 
-            const spell = result.payload.eligibleSpells.find(s => s.name === 'Fireball');
-            expect(spell.isSingleTarget).toBe(false);
-            expect(spell.hasAreaOfEffect).toBe(true);
+            expect(result.payload.eligibleSpells.find(s => s.name === 'Fireball')).toBeUndefined();
+            expect(result.payload.hasWarnings).toBe(true);
         });
 
-        it('marks spells with automation.maxTargets > 1 as multi-target', async () => {
+        it('excludes spells with automation.maxTargets > 1 from eligible spells', async () => {
             const ps = makePlayerStats({ spellAbilities: { spells: [
                 { name: 'Acid Splash', casting_time: '1 action', prepared: 'Always', level: 1, automation: { maxTargets: 2 } },
             ] } });
             const result = await handle(makeAction(), ps, campaignName);
 
-            const spell = result.payload.eligibleSpells[0];
-            expect(spell.isSingleTarget).toBe(false);
-            expect(spell.maxTargets).toBe(2);
+            expect(result.payload.eligibleSpells).toHaveLength(0);
+            expect(result.payload.hasWarnings).toBe(true);
         });
 
         it('defaults level to 0 when not specified', async () => {
@@ -171,7 +169,7 @@ describe('reactionSpellHandler.handle', () => {
             const result = await handle(makeAction(), ps, campaignName);
 
             expect(result.payload.hasWarnings).toBe(true);
-            expect(result.payload.description).toContain('Warning');
+            expect(result.payload.description).toContain('Excluded');
             expect(result.payload.description).toContain('Fireball');
         });
 

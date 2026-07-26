@@ -236,7 +236,6 @@ const categories2024 = {
         "Psionic Spells",
         "Second-Storywork",
         "Slippery Mind",
-        "Somatic Components",
         "Student of War"
     ]
 };

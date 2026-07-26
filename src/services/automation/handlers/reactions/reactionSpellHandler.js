@@ -13,22 +13,19 @@ export async function handle(action, playerStats, _campaignName) {
         if (!actionCastingTimes.includes(spell.casting_time)) continue;
 
         const isSingleTarget = !spell.area_of_effect && !(spell.automation?.maxTargets > 1);
-        const spellData = {
-            name: spell.name,
-            level: spell.level || 0,
-            casting_time: spell.casting_time,
-            range: spell.range,
-            isSingleTarget,
-            hasAreaOfEffect: !!spell.area_of_effect,
-            maxTargets: spell.automation?.maxTargets || 1,
-            automation: spell.automation,
-        };
 
         if (!isSingleTarget) {
             warnings.push(spell.name);
+            continue;
         }
 
-        eligibleSpells.push(spellData);
+        eligibleSpells.push({
+            ...spell,
+            level: spell.level || 0,
+            isSingleTarget,
+            hasAreaOfEffect: !!spell.area_of_effect,
+            maxTargets: spell.automation?.maxTargets || 1,
+        });
     }
 
     const descriptionParts = [
@@ -42,7 +39,7 @@ export async function handle(action, playerStats, _campaignName) {
     }
 
     if (warnings.length > 0) {
-        descriptionParts.push(`<i>Warning: ${warnings.join(', ')} target more than one creature and may not be ideal for Reactive Spell.</i>`);
+        descriptionParts.push(`<i>Excluded: ${warnings.join(', ')} target more than one creature and cannot be cast with Reactive Spell.</i>`);
     }
 
     return {

@@ -717,6 +717,19 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
           mod.condition === 'concentration_breaker' && mod.effect === 'disadvantage'
         ) ?? false
 
+        const targetCharacter = characters.find(c => c.name === creatureName || c.name.startsWith(creatureName + ' '))
+        const targetModifiers = targetCharacter?.saveModifiers || targetCharacter?.computedStats?.saveModifiers
+        const advantageSources = []
+        if (targetModifiers) {
+          targetModifiers.forEach(mod => {
+            if (mod.source && ((mod.target === 'concentration_saving_throws') || (mod.target === 'saving_throw' && mod.condition === 'concentration_spell_damage' && mod.effect === 'advantage' && mod.abilities && mod.abilities.includes('Constitution')))) {
+              if (!advantageSources.includes(mod.source)) {
+                advantageSources.push(mod.source)
+              }
+            }
+          })
+        }
+
         const { roll: r1, success, bonus, bonusDetail } = await rollConcentrationSave(
             creature, concentration, characters, campaignNpcs, campaignName, mapName, utils.getName, hasConcentrationBreaker
         )
@@ -730,7 +743,8 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         setConditionPopup(buildConcentrationPopup(r1, bonus, bonusDetail, concentration.spell, concentration.dc, success))
 
-        logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, hasConcentrationBreaker ? 'disadvantage' : 'normal')
+        const mode = hasConcentrationBreaker ? 'disadvantage' : (advantageSources.length > 0 ? 'advantage' : 'normal')
+        logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, mode, advantageSources.length > 0 ? advantageSources : undefined)
     }
 
     const handleBreakConcentration = (creatureName) => {

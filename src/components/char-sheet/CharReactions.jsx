@@ -42,7 +42,6 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         } });
     const [selectedSpell, setSelectedSpell] = React.useState(null);
     const [reactiveSpellEligible, setReactiveSpellEligible] = React.useState(null);
-    const [reactiveSpellWarnings, setReactiveSpellWarnings] = React.useState(false);
     const [isReactiveSpellFlow, setIsReactiveSpellFlow] = React.useState(false);
     const [modalState, setModalState] = React.useState({});
     // modalState and setModalState are now passed as props from CharSheet
@@ -213,10 +212,8 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         }
 
         if (result.type === 'popup') {
-            setPopupHtml(result.payload);
             if (result.payload.eligibleSpells && result.payload.eligibleSpells.length > 0) {
                 setReactiveSpellEligible(result.payload.eligibleSpells);
-                setReactiveSpellWarnings(result.payload.hasWarnings || false);
             }
             return;
         }
@@ -329,7 +326,6 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
 
     const handleReactiveSpellCast = React.useCallback(async (spell, metaCtx) => {
         setReactiveSpellEligible(null);
-        setReactiveSpellWarnings(false);
         setSelectedSpell(null);
 
         const targetName = getTargetFromAttacker(await getCombatContext(campaignName), playerStats.name)?.name || 'unknown target';
@@ -434,14 +430,14 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                 </Popup>
             )}
             {reactiveSpellEligible && (
-                <Popup onClickOrKeyDown={() => { setReactiveSpellEligible(null); setReactiveSpellWarnings(false); }}>
+                <Popup onClickOrKeyDown={() => { setReactiveSpellEligible(null); }}>
                     <div className="dice-roll-result">
                         <div className="dice-roll-header">
                             <i className="fa-solid fa-wand-magic-sparkles"></i>Reactive Spell
                         </div>
-                        <div>Select a spell with casting time of 1 action to cast as a reaction:</div>
-                        <div className="attacks" style={{ marginTop: '8px' }}>
-                            {reactiveSpellEligible.map((spellData) => (
+                        <div>Select a single target spell with casting time of 1 action to cast as a reaction:</div>
+                        <div className="attacks" style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            {[...reactiveSpellEligible].sort((a, b) => a.name.localeCompare(b.name)).map((spellData) => (
                                 <div key={spellData.name} className="clickable" style={{ padding: '4px 0', color: '#4fc3f7' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -453,15 +449,10 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                                         setSelectedSpell(fullSpell);
                                         setIsReactiveSpellFlow(true);
                                     }}>
-                                    <span>{spellData.name}{!spellData.isSingleTarget ? <> <i>(multi-target)</i></> : ''}</span>
+                                    <span>{spellData.name}</span>
                                 </div>
                             ))}
                         </div>
-                        {reactiveSpellWarnings && (
-                            <div className="dice-roll-hint" style={{ color: '#ff9800', marginTop: '8px' }}>
-                                Some selected spells target more than one creature. Reactive Spell works best with single-target spells.
-                            </div>
-                        )}
                         <div className="dice-roll-hint" style={{ marginTop: '8px' }}>click to dismiss</div>
                     </div>
                 </Popup>

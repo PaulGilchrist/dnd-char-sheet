@@ -260,14 +260,14 @@ describe('CharReactions - Spell Cast Flows', () => {
 
   // ===== Automation popup flows =====
 
-  it('shows reactive spell popup with warnings when automation returns eligibleSpells and hasWarnings', async () => {
+  it('shows reactive spell popup with eligible spells', async () => {
     vi.mocked(hasAutomation).mockReturnValue(true);
-    vi.mocked(executeHandler).mockResolvedValue({ type: 'popup', payload: { eligibleSpells: [{ name: 'Fireball', isSingleTarget: false }], hasWarnings: true } });
+    vi.mocked(executeHandler).mockResolvedValue({ type: 'popup', payload: { eligibleSpells: [{ name: 'Burning Hands', isSingleTarget: true }], hasWarnings: false } });
     render(<CharReactions {...baseProps} />);
     await act(async () => { fireEvent.click(screen.getByText('Reaction Test:')); });
     expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+    expect(screen.getByText('Burning Hands')).toBeInTheDocument();
     expect(screen.getByText('click to dismiss')).toBeInTheDocument();
-    expect(screen.getByText(/Some selected spells target more than one creature/)).toBeInTheDocument();
   });
 
   it('dismisses reactive spell popup when overlay is clicked', async () => {
