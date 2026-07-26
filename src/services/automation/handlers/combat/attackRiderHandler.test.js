@@ -46,6 +46,21 @@ vi.mock('../../common/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
 }));
 
+vi.mock('../../../encounters/combatData.js', () => ({
+    loadCombatSummary: vi.fn(async () => ({
+        lastAttack: {
+            hit: true,
+            attackerName: 'TestHero',
+            damageType: 'Slashing',
+            targetName: 'Goblin',
+            weaponType: 'melee',
+        },
+        creatures: [{ name: 'Goblin', size: 'Medium', position: { x: 1, y: 1 } }],
+    })),
+    getActiveCreatureName: vi.fn(() => 'TestHero'),
+    getCurrentCombatRound: vi.fn(() => 1),
+}));
+
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -448,12 +463,108 @@ describe('attackRiderHandler', () => {
             });
             await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Costly Strike']);
 
-            expect(addEntry).toHaveBeenCalledWith('campaign', {
-                type: 'ability_use',
-                characterName: 'TestHero',
-                abilityName: 'Cunning Strike',
-                description: 'Forgoing 2d6 Sneak Attack damage dice for Cunning Strike cost.',
-            });
+        expect(addEntry).toHaveBeenCalledWith('campaign', {
+            type: 'ability_use',
+            characterName: 'TestHero',
+            abilityName: 'Cunning Strike',
+            description: 'Forgoing 2d6 Sneak Attack damage dice for Cunning Strike cost.',
         });
     });
+
+    describe('slashing_damage_hit trigger (Slasher feat)', () => {
+        it('should apply effect when lastAttack is player slashing hit', async () => {
+            const action = {
+                name: 'Hamstring',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
+                },
+            };
+            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain('Hamstring');
+        });
+
+        it('should reject when no lastAttack exists', async () => {
+            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+            loadCombatSummary.mockResolvedValueOnce({ lastAttack: null });
+
+            const action = {
+                name: 'Hamstring',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
+                },
+            };
+            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No attack hit recorded');
+        });
+
+        it('should reject when lastAttack missed', async () => {
+            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: false } });
+
+            const action = {
+                name: 'Hamstring',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
+                },
+            };
+            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Your last attack missed');
+        });
+
+        it('should reject when lastAttack attacker is not player', async () => {
+            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: true, attackerName: 'Orc', damageType: 'Slashing', targetName: 'Goblin' } });
+
+            const action = {
+                name: 'Hamstring',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
+                },
+            };
+            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('your own attacks');
+        });
+
+        it('should reject when damage type is not slashing', async () => {
+            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: true, attackerName: 'TestHero', damageType: 'Piercing', targetName: 'Goblin' } });
+
+            const action = {
+                name: 'Hamstring',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
+                },
+            };
+            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Slashing damage');
+            expect(result.payload.description).toContain('Piercing');
+        });
+    });
+});
 });

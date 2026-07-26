@@ -502,41 +502,6 @@ describe('useAttackDamageResolution - feats', () => {
     });
 
     describe('Slasher feat', () => {
-        it('applies Slasher hamstring speed reduction on slashing hit', async () => {
-            getCombatContext.mockResolvedValue(createCombatContext());
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-            const stats = {
-                ...mockPlayerStats,
-                automation: {
-                    actions: [],
-                    passives: [
-                        {
-                            type: 'attack_rider', trigger: 'slashing_damage_hit',
-                            oncePerTurn: true, name: 'Slasher',
-                            options: [{ name: 'Reduce Speed', effect: 'speed_reduction', value: 10 }],
-                        },
-                        { type: 'conditional_advantage', trigger: 'critical_hit_slashing', name: 'Slasher Enhanced Critical' },
-                    ],
-                },
-            };
-            const { resolveAttackDamage } = useAttackDamageResolutionHook({ playerStats: stats });
-            const attack = {
-                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
-                weaponType: 'melee', properties: [],
-            };
-            await resolveAttackDamage(attack);
-            await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
-                expect.objectContaining({
-                    target: 'Goblin',
-                    source: 'Slasher',
-                    effect: 'speed_reduction',
-                    value: 10,
-                }),
-            ]), 'test-campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Slasher_usedRound', 1, 'test-campaign');
-        });
-
         it('applies Slasher Enhanced Critical on slashing crit', async () => {
             getCombatContext.mockResolvedValue(createCombatContext());
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });

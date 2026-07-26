@@ -808,6 +808,7 @@ export function buildAttackRollDamageSteps() {
             const result = await feat.handler(ctx, data);
             if (!result) continue;
             if (result.modal) return result;
+            if (result.popup) return result;
             if (result.data) data = result.data;
             if (result.sideEffects) await result.sideEffects();
           }

@@ -33,6 +33,58 @@ export async function handle(action, playerStats, campaignName, mapName) {
         ];
     }
 
+    // Slashing damage hit validation (used by Slasher feat Hamstring)
+    if (auto.trigger === 'slashing_damage_hit') {
+        const { loadCombatSummary } = await import('../../../encounters/combatData.js');
+        const cs = await loadCombatSummary(campaignName);
+        const lastAttack = cs?.lastAttack;
+
+        if (!lastAttack) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'No attack hit recorded. Hamstring requires a recent attack hit.',
+                },
+            };
+        }
+
+        if (!lastAttack.hit) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Hamstring requires a hit. Your last attack missed.',
+                },
+            };
+        }
+
+        if (lastAttack.attackerName !== playerStats.name) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'Hamstring only works on your own attacks.',
+                },
+            };
+        }
+
+        const damageType = (lastAttack.damageType || '').toLowerCase();
+        if (damageType !== 'slashing') {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: `Hamstring requires Slashing damage. Your last attack dealt ${lastAttack.damageType || 'unknown'} damage.`,
+                },
+            };
+        }
+    }
+
     // Shield Bash with push_or_prone: validate prerequisites and do save first
     if (auto.effect === 'push_or_prone' && auto.oncePerTurn && auto.trigger) {
         // Check shield equipped
@@ -219,6 +271,11 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     // Single option — apply immediately
     if (options.length === 1) {
+        if (auto.oncePerTurn) {
+            const isCsFeature = ['Cunning Strike', 'Improved Cunning Strike', 'Devious Strikes'].includes(action.name);
+            const usedKey = isCsFeature ? '_CunningStrike_usedRound' : `_${action.name.replace(/\s+/g, '_')}_usedRound`;
+            await markOncePerTurn(action.name, usedKey, playerStats, campaignName);
+        }
         const chosen = options[0];
         const result = await applyRiderEffect(action, playerStats, campaignName, targetName, chosen, mapName);
         return result;
@@ -474,6 +531,18 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
     const updatedEffects = [...storedEffects, newEffect];
     setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
 
+    // Log speed_reduction effect immediately (before save handling)
+    if (option.effect === 'speed_reduction') {
+        const speedValue = option.value || 10;
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: action.name,
+            description: `${playerStats.name} used Hamstring on ${targetName}: target's Speed reduced by ${speedValue} ft until the start of ${playerStats.name}'s next turn`,
+            targetName: targetName,
+        }).catch(() => {});
+    }
+
     if (option.saveType) {
         const saveDc = buildSaveDc(option, playerStats);
         const { promise } = createSaveListener(campaignName, {
@@ -579,6 +648,8 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
         desc += ' — target must make a Dexterity save or be Blinded until end of its next turn';
     } else if (option.effect === 'push') {
         desc += ` — target pushed ${option.value || 10} ft away`;
+    } else if (option.effect === 'speed_reduction') {
+        desc += ` — target's Speed reduced by ${option.value || 10} ft until the start of your next turn`;
     } else if (option.noOpportunityAttacks) {
         desc += ' — target cannot make Opportunity Attacks until the start of your next turn';
     } else if (option.effect === 'disadvantage_on_next_save') {

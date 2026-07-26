@@ -2842,11 +2842,16 @@
         "automation": {
           "type": "attack_rider",
           "trigger": "slashing_damage_hit",
-          "effect": "reduce_speed",
-          "speedReduction": "10 ft",
-          "duration": "until_start_of_next_turn",
           "oncePerTurn": true,
-          "casting_time": "1 action"
+          "casting_time": "1 action",
+          "options": [
+            {
+              "name": "Hamstring",
+              "effect": "speed_reduction",
+              "value": 10,
+              "duration": "until_start_of_next_turn"
+            }
+          ]
         }
       },
       {

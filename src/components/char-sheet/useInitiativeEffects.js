@@ -121,6 +121,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             setRuntimeValue(playerStats.name, '_Shield_Bash_usedRound', null, campaignName);
             setRuntimeValue(playerStats.name, 'piercerPunctureUsedThisTurn', null, campaignName);
             setRuntimeValue(playerStats.name, '_Savage_Attacker_usedRound', null, campaignName);
+            setRuntimeValue(playerStats.name, '_Hamstring_usedRound', null, campaignName);
 
             // Clear Large Form active state on initiative roll (rest-used flag persists)
             setRuntimeValue(playerStats.name, 'largeFormActive', null, campaignName);
