@@ -46,9 +46,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         };
     }
 
-    const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerStats.name)
-        .map(c => c.name);
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
 
     return {
         type: 'popup',
@@ -84,11 +82,9 @@ export async function applyAid(action, playerStats, campaignName, mapName, targe
         setRuntimeValue(targetName, 'aidHpMaxIncrease', newIncrease, campaignName);
 
         const storedCurrentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
-        const baseHp = getRuntimeValue(targetName, 'hitPoints', campaignName);
         if (storedCurrentHp != null) {
             const currentHp = Number(storedCurrentHp);
-            const newCurrentHp = Math.min(baseHp + newIncrease, currentHp + hpIncrease);
-            setRuntimeValue(targetName, 'currentHitPoints', newCurrentHp, campaignName);
+            setRuntimeValue(targetName, 'currentHitPoints', Math.min(currentHp + hpIncrease, currentHp + hpIncrease), campaignName);
         }
 
         addExpiration(playerStats.name, targetName, [

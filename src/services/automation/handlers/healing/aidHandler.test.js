@@ -120,7 +120,7 @@ describe('aidHandler', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('aid_target_selection');
-      expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2']);
+      expect(result.payload.creatureTargets).toEqual(['TestCleric', 'Ally1', 'Ally2']);
     });
 
     it('resolves range from automation, spell, or default 30 feet', async () => {
@@ -272,7 +272,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [];
         return null;
       });
@@ -305,7 +304,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 10;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 30;
         if (key === 'activeBuffs') return [];
         return null;
       });
@@ -324,13 +322,18 @@ describe('aidHandler', () => {
         15,
         campaignName,
       );
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Ally1',
+        'currentHitPoints',
+        15,
+        campaignName,
+      );
     });
 
     it('skips currentHitPoints update when storedCurrentHp is null', async () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return null;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [];
         return null;
       });
@@ -359,7 +362,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [{ name: 'Shield' }];
         return null;
       });
@@ -386,7 +388,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [{ name: 'Aid' }];
         return null;
       });
@@ -409,7 +410,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [];
         return null;
       });
@@ -432,7 +432,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [];
         return null;
       });
@@ -468,7 +467,6 @@ describe('aidHandler', () => {
       getRuntimeValue.mockImplementation((target, key) => {
         if (key === 'aidHpMaxIncrease') return 0;
         if (key === 'currentHitPoints') return 10;
-        if (key === 'hitPoints') return 20;
         if (key === 'activeBuffs') return [];
         return null;
       });

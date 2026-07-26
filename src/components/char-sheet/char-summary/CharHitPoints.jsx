@@ -8,9 +8,9 @@ import DeathSavingThrows from './DeathSavingThrows.jsx'
 
 function CharHitPoints({ playerStats, campaignName, isLocalhost }) {
       const storedHp = useRuntimeValue(playerStats.name, 'currentHitPoints', campaignName);
-      const aidHpMaxIncrease = useRuntimeValue(playerStats.name, 'aidHpMaxIncrease', campaignName) || 0;
+      const aidIncrease = useRuntimeValue(playerStats.name, 'aidHpMaxIncrease', campaignName);
+      const effectiveMaxHp = (playerStats.hitPoints || 0) + (Number(aidIncrease) || 0);
       const tempHp = useRuntimeValue(playerStats.name, 'tempHp', campaignName);
-      const effectiveMaxHp = playerStats.hitPoints + Number(aidHpMaxIncrease);
 
       React.useEffect(() => {
           if (storedHp === null || storedHp === undefined) {

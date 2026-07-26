@@ -307,11 +307,13 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
         await result.current[config.handler](config.args);
       });
 
+      const expectedTargets = ['Goblin A', 'Goblin B'];
+
       expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
         type: 'spell',
         characterName: 'TestSorcerer',
         targetName: 'Goblin A',
-        targets: ['Goblin A', 'Goblin B'],
+        targets: expectedTargets,
         spellName: config.name,
         spellLevel: config.level,
         castingTime: '1 Action',
@@ -354,11 +356,13 @@ describe('useSpellMetamagicFlow — spell skip handlers', () => {
         result.current[config.handler]();
       });
 
+      const expectedTargets = ['Goblin A', 'Goblin B'];
+
       expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
         type: 'spell',
         characterName: 'TestSorcerer',
         targetName: 'Goblin A',
-        targets: ['Goblin A', 'Goblin B'],
+        targets: expectedTargets,
         spellName: config.name,
         spellLevel: config.level,
         castingTime: '1 Action',

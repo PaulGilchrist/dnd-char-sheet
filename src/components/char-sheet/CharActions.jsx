@@ -1439,6 +1439,18 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
 
     return (
         <div className="char-actions">
+            {/*
+             * CHAR ACTIONS — Spells with casting time of "Action" that deal damage or healing.
+             * These are spells that go on the action bar of the character sheet.
+             * Use getActionSpellNames() to determine which spells belong here.
+             *
+             * MODALS/HANDLERS: Action-based spells that need target selection or complex automation
+             * go in CharActionModals.jsx and CharActionSpellPopups.jsx (e.g. Aid, Greater Restoration,
+             * Mass Cure Wounds, Mass Healing Word, Prayer of Healing, Power Word Fortify, etc.).
+             * These are triggered from the action spell cast flow, not from CharSpells.
+             *
+             * DO NOT put reaction or bonus action spell handlers here.
+             */}
             <div>
                 <div className='sectionHeader'>Actions</div>
                 {cannotAct && <span className='disabled-attack-label'>(Incapacitated)</span>}

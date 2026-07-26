@@ -56,8 +56,7 @@
   },
   "expertSkills": [],
   "feats": [
-    "Magic Initiate",
-    "Weapon Master"
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -113,16 +112,12 @@
   ],
   "specialActions": [],
   "spells": [
-    "Misty Step",
-    "Guidance",
-    "Light",
-    "Healing Word",
-    "Detect Evil and Good",
-    "Disguise Self",
+    "Chill Touch",
     "Fire Bolt",
     "Poison Spray",
     "Ray of Frost",
-    "Ice Knife"
+    "Shocking Grasp",
+    "Aid"
   ],
   "magicInitiateInstances": [
     {

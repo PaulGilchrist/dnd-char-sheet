@@ -85,7 +85,7 @@ describe('CharHitPoints', () => {
       expect(screen.getByTestId('hp-display')).toHaveTextContent('10');
     });
 
-    it('displays effective max HP when aidHpMaxIncrease is set', () => {
+    it('displays effective max HP including aidHpMaxIncrease', () => {
       useRuntimeValue.mockImplementation((_key, prop) => {
         if (prop === 'currentHitPoints') return null;
         if (prop === 'aidHpMaxIncrease') return 3;
@@ -97,6 +97,20 @@ describe('CharHitPoints', () => {
 
       const clickable = getClickable();
       expect(clickable.textContent).toContain('13');
+    });
+
+    it('falls back to playerStats.hitPoints when aidHpMaxIncrease is 0', () => {
+      useRuntimeValue.mockImplementation((_key, prop) => {
+        if (prop === 'currentHitPoints') return null;
+        if (prop === 'aidHpMaxIncrease') return 0;
+        if (prop === 'tempHp') return 0;
+        return null;
+      });
+
+      renderCharHitPoints();
+
+      const clickable = getClickable();
+      expect(clickable.textContent).toContain('10');
     });
 
     it('shows stored current HP when available instead of max', () => {

@@ -135,7 +135,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingAid, handleAidConfirm, handleAidSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -340,20 +340,6 @@ return (
                         confirmIcon={wordsOfCreationTarget.confirmIcon}
                       />
                     )}
-                    {pendingAid && (
-                      <MultiTargetCountPopup
-                        spell={{ name: pendingAid.spellName, level: pendingAid.spellLevel || 0 }}
-                        playerStats={playerStats}
-                        campaignName={campaignName}
-                        range={pendingAid.range}
-                        rangeFt={pendingAid.rangeFt}
-                        creatureTargets={pendingAid.creatureTargets}
-                        maxTargets={pendingAid.maxTargets}
-                        attackerPos={pendingAid.attackerPos}
-                        onConfirm={handleAidConfirm}
-                        onSkip={handleAidSkip}
-                      />
-                    )}
                     {pendingHeroesFeast && (
                       <MultiTargetCountPopup
                         spell={{ name: pendingHeroesFeast.spellName, level: pendingHeroesFeast.spellLevel || 0 }}
@@ -555,6 +541,21 @@ return (
                     )}
             <br />
             <div className='spell-abilities'>
+                {/*
+                 * CHAR SPELLS — The remaining spells after Action, Bonus Action, and Reaction spells
+                 * have been placed in their respective sections. These are primarily non-damage,
+                 * non-healing spells (utility, ritual, etc.) that don't fit elsewhere.
+                 *
+                 * A spell exists in EXACTLY ONE section on the character sheet. No duplicates.
+                 * Action spells with damage/healing → CharActions
+                 * Bonus action spells → CharBonusActions
+                 * Reaction spells → CharReactions
+                 * Everything else → CharSpells (including non-damage/non-healing action spells)
+                 *
+                 * HANDLERS: Standard spell slot casting via useSpellCastExecutor / useSpellMetamagicFlow.
+                 * Spells with special target selection (e.g. Aid, Heroes' Feast) are gated in the hook
+                 * and shown via popups.
+                 */}
                 <div className="sectionHeader"><h4>&nbsp;Spells</h4></div>
                 <div>
                     <b className={'clickable' + (cannotAct ? ' disabled-attack' : '') + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? ' stat--penalized' : '')} onClick={() => {

@@ -415,6 +415,17 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
 
     return (
         <div className='char-actions'>
+            {/*
+             * CHAR REACTIONS — Spells with casting time of "Reaction".
+             * These go on the reaction bar of the character sheet.
+             * Use getReactionSpellNames() to determine which spells belong here.
+             *
+             * MODALS/HANDLERS: Reaction spells that need target selection or complex
+             * automation should go in CharReactions modals or CharActionModals when
+             * triggered by action-based events (e.g. Opportunity Attack, War Caster).
+             *
+             * DO NOT put action or bonus action spell handlers here.
+             */}
             <div className='sectionHeader'>Reactions</div>
             {selectedSpell && (
                 <Popup onClickOrKeyDown={() => { setSelectedSpell(null); setIsReactiveSpellFlow(false); }}>

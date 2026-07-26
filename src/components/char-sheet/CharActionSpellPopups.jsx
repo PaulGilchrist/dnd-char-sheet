@@ -1,6 +1,6 @@
 import Popup from '../common/popup.jsx'
 import MetamagicPopup from './popups/MetamagicPopup.jsx'
-import MultiTargetCountPopup from './popups/MultiTargetCountPopup.jsx'
+import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
 import TargetWithCheckboxesPopup from './popups/TargetWithCheckboxesPopup.jsx'
 import MagicMissileTargetPopup from './popups/MagicMissileTargetPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
@@ -58,15 +58,13 @@ export default function CharActionSpellPopups({
                 />
             )}
             {actionPendingAid && (
-                <MultiTargetCountPopup
-                    spell={{ name: actionPendingAid.spellName, level: actionPendingAid.spellLevel || 0 }}
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    range={actionPendingAid.range}
-                    rangeFt={actionPendingAid.rangeFt}
-                    creatureTargets={actionPendingAid.creatureTargets}
+                <CreatureSelectionModal
+                    title="Aid"
+                    icon="fa-hand-holding-heart"
+                    targets={actionPendingAid.creatureTargets}
                     maxTargets={actionPendingAid.maxTargets}
-                    attackerPos={actionPendingAid.attackerPos}
+                    description="Your spell bolsters your allies with toughness and resolve. Choose up to 3 creatures within range."
+                    confirmLabel="Cast Aid"
                     onConfirm={actionHandleAidConfirm}
                     onSkip={actionHandleAidSkip}
                 />

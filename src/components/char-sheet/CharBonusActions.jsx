@@ -174,7 +174,18 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     return (
          <div className='char-actions'>
-             <div className='sectionHeader'>Bonus Actions</div>
+            {/*
+             * CHAR BONUS ACTIONS — Spells with casting time of "Bonus Action".
+             * These go on the bonus action bar of the character sheet.
+             * Use getBonusActionSpellNames() to determine which spells belong here.
+             *
+             * MODALS/HANDLERS: Bonus action spells that need target selection or complex
+             * automation should go in CharBonusActions modals (e.g. Elder Champion converts
+             * action spells to bonus action spells).
+             *
+             * DO NOT put action or reaction spell handlers here.
+             */}
+              <div className='sectionHeader'>Bonus Actions</div>
                 {(bonusActionAttacks.length > 0 || bonusActionSpells.length > 0) ? (
                   <div className={`attacks ${is2024Rules ? 'mastery-enabled' : ''}`}>
                     <div className='left'><b>Name</b></div>

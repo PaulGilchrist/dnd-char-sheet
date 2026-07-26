@@ -26,18 +26,17 @@ vi.mock('./popups/MetamagicPopup.jsx', () => ({
   },
 }));
 
-vi.mock('./popups/MultiTargetCountPopup.jsx', () => ({
-  default: function TestMultiTargetCountPopup({ spell, range, rangeFt, creatureTargets, maxTargets, attackerPos, onConfirm, onSkip }) {
+vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
+  default: function TestCreatureSelectionModal({ title, icon, targets, maxTargets, description, confirmLabel, confirmIcon: _, onConfirm, onSkip }) {
     return (
       <div data-testid="aid-target-popup">
-        <span data-testid="aid-spell-name">{spell?.name}</span>
-        <span data-testid="aid-spell-level">{spell?.level}</span>
-        <span data-testid="aid-range">{range}</span>
-        <span data-testid="aid-range-ft">{rangeFt}</span>
-        <span data-testid="aid-creature-count">{creatureTargets?.length}</span>
+        <span data-testid="aid-title">{title}</span>
+        <span data-testid="aid-icon">{icon}</span>
+        <span data-testid="aid-description">{description}</span>
+        <span data-testid="aid-creature-count">{targets?.length}</span>
         <span data-testid="aid-max-targets">{maxTargets}</span>
-        <span data-testid="aid-attacker-pos">{attackerPos ? `${attackerPos.gridX},${attackerPos.gridY}` : 'none'}</span>
-        {onConfirm && <button data-testid="aid-confirm" onClick={onConfirm}>Confirm</button>}
+        <span data-testid="aid-confirm-label">{confirmLabel}</span>
+        {onConfirm && <button data-testid="aid-confirm" onClick={() => onConfirm(targets?.map(t => t.name || t))}>Confirm</button>}
         {onSkip && <button data-testid="aid-skip" onClick={onSkip}>Skip</button>}
       </div>
     );
@@ -255,7 +254,7 @@ describe('CharActionSpellPopups', () => {
     });
   });
 
-  describe('MultiTargetCountPopup (Aid)', () => {
+  describe('CreatureSelectionModal (Aid)', () => {
     it('calls actionHandleAidConfirm on confirm', () => {
       const actionHandleAidConfirm = vi.fn();
       render(

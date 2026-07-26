@@ -84,7 +84,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         return confirmPrayerOfHealing(action, playerStats, campaignName, eligible.map(c => c.name), healAmount, healExpression, result.rolls, bonusHeal, currentRound, bonusDetails);
     }
 
-    const creatureTargets = eligible.map(c => ({ name: c.name, type: c.type, currentHp: c.currentHp, maxHp: c.maxHp }));
+    const creatureTargets = eligible.map(c => c.name);
 
     return {
         type: 'modal',

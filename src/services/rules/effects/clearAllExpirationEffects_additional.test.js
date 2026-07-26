@@ -450,7 +450,7 @@ describe('clearExpirationEffects — additional effect types', () => {
   });
 
   describe('remove_aid_buff effect type', () => {
-    it('removes the buff and reduces HP max increase', () => {
+    it('removes the buff and reduces currentHitPoints but not hitPoints', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_aid_buff', buffName: 'Aid', hpKey: 'aidHpMaxIncrease' }], appliedRound: 1 },
       ];
@@ -459,7 +459,6 @@ describe('clearExpirationEffects — additional effect types', () => {
           { name: 'Aid', duration: 3 },
           { name: 'OtherBuff', duration: 2 },
         ];
-        if (name === 'Human' && key === 'hitPoints') return 25;
         if (name === 'Human' && key === 'aidHpMaxIncrease') return 3;
         if (name === 'Human' && key === 'currentHitPoints') return 22;
         if (key === KEY && name === 'Goblin') return myList;
@@ -488,6 +487,12 @@ describe('clearExpirationEffects — additional effect types', () => {
         0,
         'MyCampaign',
       );
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'Human',
+        'hitPoints',
+        expect.anything(),
+        'MyCampaign',
+      );
     });
 
     it('handles missing currentHitPoints for aid buff', () => {
@@ -496,7 +501,6 @@ describe('clearExpirationEffects — additional effect types', () => {
       ];
       getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'Human' && key === 'activeBuffs') return [{ name: 'Aid', duration: 3 }];
-        if (name === 'Human' && key === 'hitPoints') return 25;
         if (name === 'Human' && key === 'aidHpMaxIncrease') return 3;
         if (key === KEY && name === 'Goblin') return myList;
         if (key === KEY) return [];
@@ -517,6 +521,12 @@ describe('clearExpirationEffects — additional effect types', () => {
         (c) => c[0] === 'Human' && c[1] === 'currentHitPoints',
       );
       expect(currentHpCalls.length).toBe(0);
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'Human',
+        'hitPoints',
+        expect.anything(),
+        'MyCampaign',
+      );
     });
   });
 
