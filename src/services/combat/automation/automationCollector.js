@@ -1017,13 +1017,13 @@ export function processFeatureAutomation(allActions, allBonusActions, allReactio
 
     automation.actions.forEach(a => {
         if (!allActions.find(f => f.name === a.name)) {
-            allActions.push({ name: a.name, description: '', automation: a, hasAutomation: true })
+            allActions.push({ name: a.name, description: a.description || '', automation: a, hasAutomation: true })
         }
     })
 
     automation.specialActions.forEach(a => {
         if (!allSpecialActions.find(f => f.name === a.name)) {
-            allSpecialActions.push({ name: a.name, description: '', automation: a, hasAutomation: true })
+            allSpecialActions.push({ name: a.name, description: a.description || '', automation: a, hasAutomation: true })
         }
     })
 

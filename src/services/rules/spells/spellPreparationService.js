@@ -407,7 +407,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
   // Resource consumption
   if (isWgbSpell && spell.name === 'Spiritual Weapon') {
     cleanupBuffsByName(playerName, 'Shield of Faith', campaignName);
-  } else if (isUpcast && !result.metaCtx._psionicUsed && effectiveSpellLevel !== spell.level) {
+  } else if (isUpcast && !isFreeCast && !result.metaCtx._psionicUsed && effectiveSpellLevel !== spell.level) {
     const slotKey = `spell_slots_level_${effectiveSpellLevel}`;
     const currentSlots = getRuntimeValue(playerName, slotKey);
     const maxSlots = (playerStats.spellAbilities && playerStats.spellAbilities[slotKey]) || 0;

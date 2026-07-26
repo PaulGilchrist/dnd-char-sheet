@@ -418,8 +418,15 @@ function parse2024Benefit(benefit, feat) {
     }
 
     case 'spell': {
-      const isLevel1Spell = benefit.name && benefit.name.toLowerCase().includes('level 1');
-      if (isLevel1Spell && benefit.automation) {
+      const automationType = benefit.automation?.type;
+      if (automationType === 'free_spell') {
+        buffs.features.push({
+          name: benefit.name,
+          description: benefit.description,
+          type: 'free_spell',
+          automation: benefit.automation,
+        });
+      } else if (benefit.name && benefit.name.toLowerCase().includes('level 1') && benefit.automation) {
         buffs.features.push({
           name: benefit.name,
           description: benefit.description,

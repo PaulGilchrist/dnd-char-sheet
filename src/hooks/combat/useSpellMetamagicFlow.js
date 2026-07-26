@@ -278,7 +278,6 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (!isSorcerer) {
       const isCantrip = spell.level === 0;
-      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
       const cantripAutoLevel = (function() {
         if (!isCantrip || !spell.damage) return null;
         const charDmg = spell.damage?.damage_at_character_level;
@@ -293,7 +292,10 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       if (isCantrip && cantripAutoLevel) {
         const preparedSpell = { ...spell, level: cantripAutoLevel, baseLevel: 0 };
         onExecute(preparedSpell, metaCtx);
+      } else if (metaCtx.oldConcentrationSpell !== undefined) {
+        onExecute(spell, metaCtx);
       } else {
+        const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
         const result = await prepareSpellCast(spell, metaCtx, {
           playerName: playerStats.name,
           playerStats,

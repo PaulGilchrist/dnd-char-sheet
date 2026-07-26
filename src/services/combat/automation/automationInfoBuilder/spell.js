@@ -10,6 +10,7 @@ export const spellHandlers = {
         return {
             type: 'free_spell',
             name: feature.name,
+            description: feature.description || '',
             spell: auto.spell || '',
             uses: auto.uses || 1,
             uses_expression: auto.uses_expression || '',

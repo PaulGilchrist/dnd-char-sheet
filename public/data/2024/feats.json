@@ -3190,7 +3190,7 @@
           "uses": 1,
           "uses_expression": "1",
           "recharge": "long_rest",
-          "casting_time": "1 action",
+          "casting_time": "passive",
           "duration": "Concentration, up to 1 minute",
           "concentration": true
         }
