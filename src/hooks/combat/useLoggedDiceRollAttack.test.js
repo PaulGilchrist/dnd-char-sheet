@@ -12,6 +12,7 @@ vi.mock('../../services/ui/utils.js', () => ({
         getName: vi.fn((n) => n || 'Unknown'),
         guid: vi.fn(() => 'test-guid-1234'),
     },
+    DEBUG_FORCE_CRIT: false,
 }));
 
 vi.mock('../../services/ui/storage.js', () => ({

@@ -82,6 +82,12 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             if (sapEffect) {
                 dis++;
             }
+            const slasherEffect = storedEffects.find(
+                te => te.effect === 'slasher_enhanced_critical' && te.target === playerName
+            );
+            if (slasherEffect) {
+                dis++;
+            }
         }
         if (forcedMode === undefined && targetName) {
             const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];

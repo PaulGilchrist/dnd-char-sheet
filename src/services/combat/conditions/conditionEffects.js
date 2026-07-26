@@ -619,6 +619,9 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'disadvantage_next_attack') {
       effects.attackDisadvantageCount = (effects.attackDisadvantageCount || 0) + 1;
     }
+    if (te.effect === 'slasher_enhanced_critical') {
+      effects.targetAttackDisadvantageCount = (effects.targetAttackDisadvantageCount || 0) + 1;
+    }
     if (te.effect === 'goad') {
       effects.attackDisadvantageCount = (effects.attackDisadvantageCount || 0) + 1;
     }
@@ -840,7 +843,7 @@ function getNetAttackMode(attackAdvantageCount, attackDisadvantageCount, restore
 
 function combineAttackModes(attackerEffects, targetEffects, attackRange, targetName = null) {
   let adv = attackerEffects.attackAdvantageCount + targetEffects.targetAdvantageCount
-  let dis = attackerEffects.attackDisadvantageCount + targetEffects.targetDisadvantageCount
+  let dis = attackerEffects.attackDisadvantageCount + (attackerEffects.targetAttackDisadvantageCount || 0) + targetEffects.targetDisadvantageCount
 
   if (attackerEffects.vexAdvantageTargets && targetName && attackerEffects.vexAdvantageTargets.includes(targetName)) {
     adv++

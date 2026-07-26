@@ -77,6 +77,9 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const disAdvCondition = conditions.find(c => disAdvConditionKeys.includes(c.key))
         badges.push({ label: 'Disadv vs', cls: 'effect-target-disadv', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: disAdvCondition?.key || 'blinded' })
     }
+    if (effects.targetAttackDisadvantageCount > 0) {
+        badges.push({ label: 'Attack Disadv', cls: 'effect-target-disadv', icon: 'fa-arrow-down', removable: true, removeAction: 'target_effect', effectType: 'slasher_enhanced_critical' })
+    }
     if (effects.attackAdvantageCount > 0 || effects.targetAdvantageCount > 0) {
         const reasons = [(effects.attackAdvantageReasons || []), (effects.targetAdvantageReasons || [])].flat()
         const reasonText = reasons.length > 0 ? reasons.join(', ') : 'Advantage on attack rolls'

@@ -5,6 +5,7 @@ import { rollD20, rollExpression, rollExpressionDoubled } from '../../../dice/di
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibilityService.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { DEBUG_FORCE_CRIT } from '../../../ui/utils.js';
 
 export async function handle(action, playerStats, campaignName, mapName) {
     const auto = action.automation;
@@ -107,7 +108,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, mapN
             const d20Roll = rollD20();
             const totalAttack = d20Roll + attackBonus;
             const ac = snapshot.ac;
-            const isCrit = d20Roll === 20;
+            const isCrit = DEBUG_FORCE_CRIT || d20Roll === 20;
             const isAutoMiss = d20Roll === 1;
             const hit = isAutoMiss ? false : (totalAttack >= ac);
 

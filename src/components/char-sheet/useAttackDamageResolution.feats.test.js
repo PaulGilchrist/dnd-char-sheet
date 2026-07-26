@@ -31,6 +31,7 @@ vi.mock('../../services/ui/utils.js', () => ({
         getName: vi.fn((name) => name),
         guid: vi.fn(() => 'test-prompt-id-12345'),
     },
+    DEBUG_FORCE_CRIT: false,
 }));
 
 vi.mock('../../services/automation/common/buffToggle.js', () => ({
@@ -527,8 +528,46 @@ describe('useAttackDamageResolution - feats', () => {
             expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
-                    effect: 'disadvantage_next_attack',
+                    effect: 'slasher_enhanced_critical',
                 }),
+            ]), 'test-campaign');
+        });
+
+        it('sets up expiration for Slasher Enhanced Critical', async () => {
+            getCombatContext.mockResolvedValue(createCombatContext());
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            const stats = {
+                ...mockPlayerStats,
+                automation: {
+                    actions: [],
+                    passives: [
+                        { type: 'conditional_advantage', trigger: 'critical_hit_slashing', name: 'Slasher Enhanced Critical' },
+                    ],
+                },
+            };
+            const { resolveAttackDamage } = useAttackDamageResolutionHook({
+                playerStats: stats,
+                popupHtml: { isCrit: true },
+            });
+            const attack = {
+                name: 'Longsword', damage: '1d8+5', damageType: 'Slashing',
+                weaponType: 'melee', properties: [],
+            };
+            await resolveAttackDamage(attack);
+            await tick();
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', expect.any(String), expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effects: expect.arrayContaining([
+                        expect.objectContaining({
+                            type: 'remove_target_effect',
+                            effectKey: 'slasher_enhanced_critical',
+                            source: 'Slasher Enhanced Critical'
+                        })
+                    ]),
+                    expiryRounds: Infinity,
+                    expireOnCreatureName: 'TestFighter'
+                })
             ]), 'test-campaign');
         });
     });

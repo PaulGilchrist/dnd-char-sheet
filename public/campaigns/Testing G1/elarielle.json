@@ -57,7 +57,7 @@
   "expertSkills": [],
   "feats": [
     "Magic Initiate",
-    "Slasher"
+    "Speedy"
   ],
   "fightingStyles": [],
   "race": {
@@ -143,8 +143,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Slasher-0": {
-      "assignment": "Strength"
+    "Speedy-0": {
+      "assignment": "Dexterity"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

@@ -28,4 +28,6 @@ const utils = {
     // sub-objects (conditions, concentration, log entries, non-NPC map items).
 }
 
+export const DEBUG_FORCE_CRIT = false;
+
 export default utils

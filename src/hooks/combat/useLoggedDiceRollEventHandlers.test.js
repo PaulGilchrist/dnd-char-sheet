@@ -20,7 +20,9 @@ vi.mock('../../services/rules/combat/applyDamage.js', () => ({
 }));
 vi.mock('../../services/combat/automation/automationService.js', () => ({ hasIgnoreResistance: vi.fn(), playerIsImmuneToCondition: vi.fn() }));
 vi.mock('../../services/rules/features/invisibilityService.js', () => ({ endInvisibilityOnHostileAction: vi.fn() }));
-vi.mock('../../services/ui/utils.js', () => ({ default: { getName: vi.fn((n) => n || 'Unknown'), guid: vi.fn(() => 'test-guid-1234') } }));
+vi.mock('../../services/ui/utils.js', () => ({ default: { getName: vi.fn((n) => n || 'Unknown'), guid: vi.fn(() => 'test-guid-1234') },
+        DEBUG_FORCE_CRIT: false,
+    }));
 vi.mock('../../services/ui/storage.js', () => ({ default: { set: vi.fn() } }));
 vi.mock('./loggedDiceRollUtils.js', () => ({ hasSoulstitchProtection: vi.fn() }));
 vi.mock('../../services/ui/logService.js', () => {

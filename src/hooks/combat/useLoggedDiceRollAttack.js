@@ -1,5 +1,6 @@
 import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
 import utils from '../../services/ui/utils.js';
+import { DEBUG_FORCE_CRIT } from '../../services/ui/utils.js';
 import storage from '../../services/ui/storage.js';
 import { getTargetFromAttacker, findCreatureByName, getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import {
@@ -427,7 +428,7 @@ export function createLogAndShow(deps) {
                 rollsInCriticalRange = effectiveD20Roll >= low && effectiveD20Roll <= high;
             }
         }
-        const isCrit = !isAutoMiss && (effectiveD20Roll === 20 || context?.isAutoCrit || rollsInCriticalRange) && (hit || rollsInCriticalRange);
+        const isCrit = !isAutoMiss && (DEBUG_FORCE_CRIT || effectiveD20Roll === 20 || context?.isAutoCrit || rollsInCriticalRange) && (hit || rollsInCriticalRange);
 
         const autoDamage = context?.autoDamageFormula ? {
             name: context.autoDamageName || name,

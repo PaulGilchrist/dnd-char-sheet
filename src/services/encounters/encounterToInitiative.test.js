@@ -11,7 +11,9 @@ vi.mock('../dice/diceRoller.js', () => ({
 
 vi.mock('../ui/storage.js', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
 
-vi.mock('../ui/utils.js', () => ({ default: { getName: vi.fn((n) => n || 'Unknown') } }));
+vi.mock('../ui/utils.js', () => ({ default: { getName: vi.fn((n) => n || 'Unknown') },
+        DEBUG_FORCE_CRIT: false,
+    }));
 
 vi.mock('../ui/logService.js', () => ({ addEntry: vi.fn().mockResolvedValue(undefined) }));
 

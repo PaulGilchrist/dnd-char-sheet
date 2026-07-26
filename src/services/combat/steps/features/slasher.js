@@ -1,6 +1,7 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../../services/ui/logService.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
 
 export const slasher = {
   name: 'slasher',
@@ -12,7 +13,7 @@ export const slasher = {
     const isSlashing = (ctx.attack?.damageType || '').toLowerCase() === 'slashing';
     const ps = ctx.playerStats;
 
-    // Slasher crit effect: disadvantage on next attack
+    // Slasher crit effect: target has Disadvantage on all attack rolls until start of attacker's next turn
     if (isSlashing && ctx.isCrit && ps.automation?.passives) {
       const sc = ps.automation.passives.find(a => a.type === 'conditional_advantage' && a.trigger === 'critical_hit_slashing');
       if (sc) {
@@ -20,13 +21,16 @@ export const slasher = {
         const t = cs ? getTargetFromAttacker(cs, ps.name) : null;
         if (t?.name) {
           const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-          setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: sc.name, effect: 'disadvantage_next_attack', duration: 'until_start_of_next_turn' }], ctx.campaignName);
+          setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: sc.name, effect: 'slasher_enhanced_critical', duration: 'until_start_of_next_turn' }], ctx.campaignName);
+          addExpiration(ps.name, t.name, [
+            { type: 'remove_target_effect', effectKey: 'slasher_enhanced_critical', source: sc.name }
+          ], ctx.campaignName, undefined, ps.name);
 
           await addEntry(ctx.campaignName, {
             type: 'ability_use',
             characterName: ps.name,
             abilityName: sc.name,
-            description: `${ps.name} scored a critical hit with slashing damage on ${t.name}. Attack rolls against ${t.name} have Disadvantage until the start of ${ps.name}'s next turn.`,
+            description: `${ps.name} scored a critical hit with slashing damage on ${t.name}. ${t.name} has Disadvantage on attack rolls until the start of ${ps.name}'s next turn.`,
           }).catch((e) => { console.error('[slasher] Error logging:', e); });
         }
       }
