@@ -1704,6 +1704,9 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                         stealthBonus += parseInt(conditionEffects.passWithoutTraceBonus, 10);
                                     }
                                     let checkContext = {};
+                                    const hasSkulkerFeat = (playerStats?.feats || []).some(f => String(f).toLowerCase().includes('skulker'));
+                                    const is2024Rules = playerStats?.rules === '2024';
+                                    let skulkerFogOfWarApplied = false;
                                     if (conditionEffects?.abilityCheckDisadvantage) checkContext.forcedMode = 'disadvantage';
                                     if (!checkContext.forcedMode && conditionEffects?.hexAbilityCheckDisadvantage && conditionEffects?.hexAbilityCheckDisadvantageAbility === 'DEX') checkContext.forcedMode = 'disadvantage';
                                     if (conditionEffects?.abilityCheckAdvantage && (!conditionEffects?.abilityCheckAdvantageSkill || conditionEffects.abilityCheckAdvantageSkill === 'Stealth')) {
@@ -1711,6 +1714,10 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                     }
                                     if (conditionEffects?.peerlessAthleteAdvantageSkills && conditionEffects.peerlessAthleteAdvantageSkills.includes('Stealth')) {
                                         checkContext.forcedMode = checkContext.forcedMode === 'disadvantage' ? undefined : 'advantage';
+                                    }
+                                    if (!checkContext.forcedMode && is2024Rules && hasSkulkerFeat) {
+                                        checkContext.forcedMode = 'advantage';
+                                        skulkerFogOfWarApplied = true;
                                     }
                                     await rollSkillCheck('Stealth', stealthBonus, checkContext);
                                     await new Promise(resolve => setTimeout(resolve, 50));
@@ -1727,21 +1734,33 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                         const newBuffs = hasAdvantageOnStealth ? activeBuffs : [...activeBuffs, { name: 'Hide', effect: 'advantage_on_stealth' }];
                                         await setRuntimeValue(playerStats.name, 'activeBuffs', newBuffs, campaignName);
                                         const d20Val = lastAttack?.d20 ?? '?';
-                                        setPopupHtml({ type: 'automation_info', name: 'Hide', description: `Hide successful! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.` });
+                                        let successDesc = `Hide successful! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.`;
+                                        let successLog = `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`;
+                                        if (skulkerFogOfWarApplied) {
+                                            successDesc = `Hide successful! (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.`;
+                                            successLog = `Stealth check: ${rollTotal} (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`;
+                                        }
+                                        setPopupHtml({ type: 'automation_info', name: 'Hide', description: successDesc });
                                         await addEntry(campaignName, {
                                             type: 'ability_use',
                                             characterName: playerStats.name,
                                             abilityName: 'Hide',
-                                            description: `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`,
+                                            description: successLog,
                                         }).catch(() => { });
                                     } else {
                                         const d20Val = lastAttack?.d20 ?? '?';
-                                        setPopupHtml({ type: 'automation_info', name: 'Hide', description: `Hide failed! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.` });
+                                        let failDesc = `Hide failed! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
+                                        let failLog = `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`;
+                                        if (skulkerFogOfWarApplied) {
+                                            failDesc = `Hide failed! (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
+                                            failLog = `Stealth check: ${rollTotal} (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`;
+                                        }
+                                        setPopupHtml({ type: 'automation_info', name: 'Hide', description: failDesc });
                                         await addEntry(campaignName, {
                                             type: 'ability_use',
                                             characterName: playerStats.name,
                                             abilityName: 'Hide',
-                                            description: `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`,
+                                            description: failLog,
                                         }).catch(() => { });
                                     }
                                 }}>{actionName}</span>

@@ -270,6 +270,37 @@ describe('rules.getPlayerStats - senses enhancements (5e)', () => {
     const truesightCount = result.senses.filter(s => s.name === 'Truesight').length;
     expect(truesightCount).toBe(1);
   });
+
+  it('should add Blindsight from passive_buff automation', async () => {
+    setupDefaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight', range: '10 ft' }], actions: [], specialActions: [] },
+      senses: [{ name: 'Darkvision', value: '60 ft.' }],
+    });
+    const playerSummary = makePlayerSummary();
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    expect(result.senses).toContainEqual({ name: 'Blindsight', value: '10 ft.' });
+  });
+
+  it('should use default 10 ft for Blindsight when range is missing', async () => {
+    setupDefaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight' }], actions: [], specialActions: [] },
+      senses: [],
+    });
+    const playerSummary = makePlayerSummary();
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    expect(result.senses).toContainEqual({ name: 'Blindsight', value: '10 ft.' });
+  });
+
+  it('should not duplicate Blindsight if already present', async () => {
+    setupDefaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight', range: '30 ft' }], actions: [], specialActions: [] },
+      senses: [{ name: 'Blindsight', value: '30 ft.' }],
+    });
+    const playerSummary = makePlayerSummary();
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    const blindsightCount = result.senses.filter(s => s.name === 'Blindsight').length;
+    expect(blindsightCount).toBe(1);
+  });
 });
 
 describe('rules.getPlayerStats - 2024 senses', () => {
@@ -308,5 +339,37 @@ describe('rules.getPlayerStats - 2024 senses', () => {
     const playerSummary = makePlayerSummary({ rules: '2024' });
     const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
     expect(result.senses).toContainEqual({ name: 'Truesight', value: '120 ft.' });
+  });
+
+  it('should apply Blindsight in 2024 mode', async () => {
+    setup2024Defaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight', range: '10 ft' }], actions: [], specialActions: [] },
+      senses: [{ name: 'Darkvision', value: '60 ft.' }],
+    });
+    const playerSummary = makePlayerSummary({ rules: '2024' });
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    expect(result.senses).toContainEqual({ name: 'Blindsight', value: '10 ft.' });
+  });
+
+  it('should apply Blindsight with default range in 2024 mode', async () => {
+    setup2024Defaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight' }], actions: [], specialActions: [] },
+      senses: [{ name: 'Darkvision', value: '60 ft.' }],
+    });
+    const playerSummary = makePlayerSummary({ rules: '2024' });
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    expect(result.senses).toContainEqual({ name: 'Blindsight', value: '10 ft.' });
+  });
+
+  it('should not duplicate Blindsight if already present in 2024 mode', async () => {
+    setup2024Defaults({
+      automation: { passives: [{ type: 'passive_buff', effect: 'blindsight', range: '30 ft' }], actions: [], specialActions: [] },
+      senses: [{ name: 'Blindsight', value: '30 ft.' }, { name: 'Darkvision', value: '60 ft.' }],
+    });
+    const playerSummary = makePlayerSummary({ rules: '2024' });
+    const result = await rules.getPlayerStats([], [], [], [], [], playerSummary);
+    const blindsightEntries = result.senses.filter(s => s.name === 'Blindsight');
+    expect(blindsightEntries.length).toBe(1);
+    expect(blindsightEntries[0].value).toBe('30 ft.');
   });
 });
