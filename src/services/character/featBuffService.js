@@ -426,6 +426,16 @@ function parse2024Benefit(benefit, feat) {
           type: 'free_spell',
           automation: benefit.automation,
         });
+      } else if (benefit.name && benefit.name.includes('Minor Telekinesis')) {
+        buffs.features.push({
+          name: 'Minor Telekinesis',
+          description: benefit.description,
+          type: 'spell',
+          automation: {
+            type: 'minor_telekinesis_spell',
+            spell: 'Mage Hand',
+          },
+        });
       } else {
         buffs.features.push({
           name: benefit.name,

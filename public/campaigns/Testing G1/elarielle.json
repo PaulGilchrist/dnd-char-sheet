@@ -56,8 +56,9 @@
   },
   "expertSkills": [],
   "feats": [
-    "Tavern Brawler",
-    "Magic Initiate"
+    "Telekinesis",
+    "Magic Initiate",
+    "Telepathy"
   ],
   "fightingStyles": [],
   "race": {
@@ -122,7 +123,6 @@
     "Detect Evil and Good",
     "Disguise Self",
     "Fire Bolt",
-    "Mage Hand",
     "Poison Spray",
     "Ray of Frost",
     "Ice Knife"
@@ -143,10 +143,10 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Spell Sniper-1": {
+    "Telekinesis-0": {
       "assignment": "Intelligence"
     },
-    "Spell Sniper-0": {
+    "Telepathy-1": {
       "assignment": "Intelligence"
     }
   },

@@ -3138,7 +3138,8 @@
           "saveAbility": "INT",
           "range": "30",
           "pushDistance": 5,
-          "action": "bonus_action"
+          "action": "bonus_action",
+          "casting_time": "1 bonus action"
         }
       }
     ],

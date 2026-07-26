@@ -47,6 +47,7 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     'lucky_point',
     'heroic_inspiration_buff',
     'brew_poison',
+    'telekinetic_shove',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

@@ -1475,6 +1475,7 @@ export function createLogDamageAndShow(deps) {
             gwfApplied: gwfDisplayRolls !== gwfBaseRolls,
             gwfOriginalRolls: gwfDisplayRolls !== gwfBaseRolls ? gwfBaseRolls : null,
             gwfDisplayRolls: gwfDisplayRolls,
+            tavernBrawlerRerolls: context?.tavernBrawlerRerolls || null,
         };
 
         if (secondaryResult) {

@@ -181,7 +181,7 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
         const strMod = str?.bonus || 0;
         const tbDice = '1d4';
         attacks.push({
-            name: 'Unarmed Strike (Tavern Brawler)',
+            name: 'Unarmed Strike',
             damage: `${tbDice}+${strMod}`,
             damageType: 'Bludgeoning',
             damageFormula: `Damage Formula = Tavern Brawler Unarmed Strike (${tbDice}) + Strength Modifier (${strMod})`,

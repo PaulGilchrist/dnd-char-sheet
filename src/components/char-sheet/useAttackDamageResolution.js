@@ -153,6 +153,7 @@ export default function useAttackDamageResolution({
                     saveDc: pipelineCtx?.saveDc || pendingCtxOverrides?.saveDc || null,
                     saveType: pipelineCtx?.saveType || pendingCtxOverrides?.saveType || null,
                     dcSuccess: pipelineCtx?.dcSuccess || pendingCtxOverrides?.dcSuccess || null,
+                    tavernBrawlerRerolls: pipelineCtx?.tavernBrawlerRerolls || null,
                 };
                 rollDamage(attack.name, formula, total, rolls, modifier, { ...merged, ...critLabels });
             }).catch((e) => { console.error("[useAttackDamageResolution] Error:", e); });
@@ -169,6 +170,7 @@ export default function useAttackDamageResolution({
                 saveDc: o.saveDc || null,
                 saveType: o.saveType || null,
                 dcSuccess: o.dcSuccess || null,
+                tavernBrawlerRerolls: pipelineCtx?.tavernBrawlerRerolls || null,
             };
             rollDamage(attack.name, formula, total, rolls, modifier, minimalCtx);
         }
