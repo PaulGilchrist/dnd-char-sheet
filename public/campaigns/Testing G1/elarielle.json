@@ -56,9 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "Telekinesis",
-    "Magic Initiate",
-    "Telepathy"
+    "War Caster",
+    "Magic Initiate"
   ],
   "fightingStyles": [],
   "race": {
@@ -143,10 +142,10 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Telekinesis-0": {
+    "War Caster-0": {
       "assignment": "Intelligence"
     },
-    "Telepathy-1": {
+    "Telekinesis-1": {
       "assignment": "Intelligence"
     }
   },

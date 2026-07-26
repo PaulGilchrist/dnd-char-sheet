@@ -766,6 +766,33 @@ describe('computeFeatBuffs', () => {
           { name: 'Cantrip', description: 'Learn a cantrip', type: 'spell' },
         ]);
       });
+
+      it('parses Minor Telekinesis benefit with description and custom automation', () => {
+        const result = computeFeatBuffs(
+          {
+            benefits: [
+              {
+                type: 'spell',
+                name: 'Minor Telekinesis',
+                description: 'You learn the Mage Hand spell. You can cast it without Verbal or Somatic components, you can make the spectral hand invisible, and its range and the distance it can be away from you both increase by 30 feet when you cast it. The spell\'s spellcasting ability is the ability increased by this feat.',
+              },
+            ],
+          },
+          '2024'
+        );
+
+        expect(result.features).toEqual([
+          {
+            name: 'Minor Telekinesis',
+            description: 'You learn the Mage Hand spell. You can cast it without Verbal or Somatic components, you can make the spectral hand invisible, and its range and the distance it can be away from you both increase by 30 feet when you cast it. The spell\'s spellcasting ability is the ability increased by this feat.',
+            type: 'spell',
+            automation: {
+              type: 'minor_telekinesis_spell',
+              spell: 'Mage Hand',
+            },
+          },
+        ]);
+      });
     });
 
     describe('filtering and aggregation', () => {

@@ -1408,9 +1408,12 @@ const rules = {
                       playerStats.bonusActions = [...playerStats.bonusActions, featEntry];
                   } else if (featureCategories.reactions.includes(featFeature.name) && !playerStats.reactions.some(f => f.name === featFeature.name)) {
                       playerStats.reactions = [...playerStats.reactions, featEntry];
-                  } else if (!playerStats.specialActions.some(f => f.name === featFeature.name)) {
-                      playerStats.specialActions = [...playerStats.specialActions, featEntry];
-                  }
+                   } else {
+                       const existingIndex = playerStats.specialActions.findIndex(f => f.name === featFeature.name);
+                       if (existingIndex !== -1 && !playerStats.specialActions[existingIndex].description && featEntry.description) {
+                           playerStats.specialActions = [...playerStats.specialActions.slice(0, existingIndex), featEntry, ...playerStats.specialActions.slice(existingIndex + 1)];
+                       }
+                   }
               }
           }
 
