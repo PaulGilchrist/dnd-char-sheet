@@ -1236,10 +1236,9 @@ const rules = {
           }
           playerStats.evasionEffects = getEvasionEffects(allFeatures);
         playerStats.automationConditionImmunities = getConditionImmunities(allFeatures);
-        playerStats.automationConditionalImmunities = getConditionalImmunities(allFeatures);
-        playerStats.turnStartEffects = collectTurnStartEffects(allFeatures);
-        playerStats.saveProficiencies = getAllSaveProficiencies(allFeatures, playerStats);
-          [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats, playerSummary);
+         playerStats.automationConditionalImmunities = getConditionalImmunities(allFeatures);
+         playerStats.turnStartEffects = collectTurnStartEffects(allFeatures);
+           [playerStats.languagesAllowed, playerStats.languages] = rules.getLanguages(playerStats, playerSummary);
            [playerStats.proficienciesAllowed, playerStats.proficiencies] = rules.getProficiencies(playerStats, false, playerSummary);
            [playerStats.skillProficienciesAllowed, playerStats.skillProficiencies] = rules.getProficiencies(playerStats, true, playerSummary);
 
@@ -1327,6 +1326,7 @@ const rules = {
                     type: featFeature.type || 'passive',
                     source: 'feat',
                     automation: featFeature.automation,
+                    featName: featFeature.featName,
                 });
             });
             // Re-process automation with feat features included
@@ -1390,6 +1390,9 @@ const rules = {
                   }
               }
           }
+
+          // Recompute save proficiencies now that feat features are included in allFeatures
+          playerStats.saveProficiencies = getAllSaveProficiencies(allFeatures, playerStats);
 
           // Add Magic Initiate level 1 spell free_spell features
           const miInstances = playerStats.magicInitiateInstances || [];

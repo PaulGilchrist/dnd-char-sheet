@@ -13,7 +13,7 @@
     {
       "name": "Dexterity",
       "baseScore": 12,
-      "featIncrease": 2,
+      "featIncrease": 1,
       "backgroundIncrease": 1,
       "miscIncrease": 2
     },
@@ -27,7 +27,7 @@
     {
       "name": "Intelligence",
       "baseScore": 15,
-      "featIncrease": 1,
+      "featIncrease": 0,
       "backgroundIncrease": 1,
       "miscIncrease": 0
     },
@@ -56,8 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "Polearm Master",
-    "Magic Initiate"
+    "Magic Initiate",
+    "Resilient"
   ],
   "fightingStyles": [],
   "race": {
@@ -138,10 +138,7 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "Polearm Master-1": {
-      "assignment": "Dexterity"
-    },
-    "Polearm Master-0": {
+    "Resilient-0": {
       "assignment": "Dexterity"
     }
   },

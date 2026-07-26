@@ -534,11 +534,15 @@
             "You gain proficiency in saving throws using the chosen ability."
         ],
         "automation": {
-            "type": "passive_buff",
-            "target": "self",
-            "effect": "save_proficiency",
-            "bonusExpression": "proficiency_bonus",
-            "casting_time": "1 action"
+            "type": "save_proficiency",
+            "saveType": "Strength",
+            "fallbackTypes": [
+                "Dexterity",
+                "Constitution",
+                "Intelligence",
+                "Wisdom",
+                "Charisma"
+            ]
         }
     },
     {

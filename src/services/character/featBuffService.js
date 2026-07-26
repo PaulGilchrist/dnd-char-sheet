@@ -10,8 +10,10 @@ import { mergeDeduplicated } from '../shared/buffApplier.js';
 const ABILITY_PATTERN = /Increase your (\w+) score by (\d+)/i;
 const ABILITY_OR_PATTERN = /Increase your (\w+) or (\w+) score by (\d+)/i;
 const ABILITY_CHOOSE_PATTERN = /Choose one ability score.*?Increase (?:it|the chosen ability score) by (\d+)/i;
+const ABILITY_CHOSEN_PATTERN = /Increase the chosen ability score by (\d+)/i;
 const PROFICIENCY_PATTERN = /You gain proficiency with ([^.]+)/i;
 const PROFICIENCY_CHOICE_PATTERN = /You gain proficiency in any combination of (.+) of your choice/i;
+const SAVE_PROFICIENCY_PATTERN = /You gain proficiency in saving throws using the chosen ability/i;
 const SPEED_PATTERN = /Your speed increases by (\d+) feet/i;
 const INITIATIVE_PATTERN = /You gain a \+(\d+) bonus to initiative/i;
 const HP_PER_LEVEL_PATTERN = /your hit point maximum increases by an additional (\d+) hit point/i;
@@ -62,6 +64,19 @@ function parse5eBenefitText(text) {
     return buffs;
   }
 
+  match = text.match(ABILITY_CHOSEN_PATTERN);
+  if (match) {
+    const maxVal = text.toLowerCase().includes('maximum of 30') || text.toLowerCase().includes('maximum of 30.') ? 30 : 20;
+    buffs.abilityScoreIncreases.push({
+      name: 'any',
+      amount: parseInt(match[1], 10),
+      isChoice: true,
+      description: text,
+      max_value: maxVal,
+    });
+    return buffs;
+  }
+
   match = text.match(PROFICIENCY_PATTERN);
   if (match) {
     const name = match[1].trim();
@@ -75,6 +90,21 @@ function parse5eBenefitText(text) {
     const name = match[1].trim();
     const capitalized = name.replace(/\b\w/g, c => c.toUpperCase());
     buffs.proficiencies.push({ name: capitalized, type: 'proficiency', isChoice: true });
+    return buffs;
+  }
+
+  match = text.match(SAVE_PROFICIENCY_PATTERN);
+  if (match) {
+    buffs.features.push({
+      name: 'Resilient',
+      description: text,
+      type: 'saving_throw',
+      automation: {
+        type: 'save_proficiency',
+        saveType: 'Strength',
+        fallbackTypes: ['Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'],
+      },
+    });
     return buffs;
   }
 
@@ -520,6 +550,20 @@ export function computeFeatBuffs(feat, ruleset = '2024') {
   return result;
 }
 
+function resolveSaveTypeFromChoices(featName, choices) {
+  if (!choices || typeof choices !== 'object') return null;
+  for (const [key, value] of Object.entries(choices)) {
+    if (!key.startsWith(featName)) continue;
+    if (value && typeof value === 'object' && value.assignment) {
+      return value.assignment;
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return null;
+}
+
 export function computeAllFeatBuffs(formData, allFeats) {
   const ruleset = formData.rules || '5e';
   const selectedFeats = formData.feats || [];
@@ -539,10 +583,27 @@ export function computeAllFeatBuffs(formData, allFeats) {
         inc.featName = feat.name;
         inc.featDescription = feat.description;
       });
+      buffs.features.forEach(f => {
+        f.featName = feat.name;
+      });
       aggregated.abilityScoreIncreases.push(...buffs.abilityScoreIncreases);
       aggregated.proficiencies.push(...buffs.proficiencies);
       aggregated.resistances.push(...buffs.resistances);
       aggregated.features.push(...buffs.features);
+    }
+  });
+
+  // Resolve save_proficiency saveType from featAbilityChoices for feats like Resilient
+  aggregated.features.forEach(feature => {
+    if (feature.automation?.type === 'save_proficiency' &&
+        feature.automation.saveType &&
+        feature.automation.fallbackTypes &&
+        feature.automation.fallbackTypes.length > 0) {
+      const resolved = resolveSaveTypeFromChoices(feature.featName, formData.featAbilityChoices);
+      if (resolved) {
+        feature.automation.saveType = resolved;
+        delete feature.automation.fallbackTypes;
+      }
     }
   });
 
