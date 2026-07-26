@@ -31,6 +31,7 @@ export const passiveHandlers = {
             name: feature.name,
             target: auto.target || 'allies_in_range',
             range_expression: auto.range_expression || '10_ft',
+            range: auto.range || '',
             effect: auto.effect || '',
             bonusExpression: auto.bonusExpression || auto.bonus || '',
             bonus: auto.bonus ?? undefined,

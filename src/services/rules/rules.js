@@ -150,6 +150,29 @@ function applyUmbralSightDarkvision(playerStats, senses) {
 }
 
 /**
+ * Apply Blindsight from passive_buff automation (e.g., Skulker feat in 2024).
+ * Adds Blindsight with the specified range to player senses.
+ */
+function applyBlindsightSenses(playerStats, senses) {
+    const passives = playerStats.automation?.passives;
+    if (!Array.isArray(passives)) {
+        console.error('rules: expected passives to be an array for', playerStats.name);
+        throw new Error('Missing array: passives for ' + playerStats.name);
+    }
+    const blindsightPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'blindsight');
+    if (!blindsightPassive) return senses;
+
+    const rangeMatch = String(blindsightPassive.range || '').match(/(\d+)\s*ft/i);
+    const range = rangeMatch ? `${rangeMatch[1]} ft.` : '10 ft.';
+
+    if (!senses.some(s => s.name === 'Blindsight')) {
+        senses.push({ name: 'Blindsight', value: range });
+    }
+
+    return senses;
+}
+
+/**
  * Apply Truesight from passive_buff automation (e.g., Boon of Truesight feat).
  * Adds Truesense with the specified range to player senses.
  */
@@ -1749,18 +1772,22 @@ const rules = {
                playerStats.senses = rr.getSenses(playerStats);
                // Apply Umbral Sight darkvision enhancement for Gloom Stalkers
                playerStats.senses = applyUmbralSightDarkvision(playerStats, playerStats.senses);
-               // Apply The Third Eye darkvision enhancement from active buffs
-               playerStats.senses = applyThirdEyeDarkvision(playerStats, playerStats.senses, playerSummary.campaignName);
-               // Apply Truesight from passive_buff automation (e.g., Boon of Truesight)
-               playerStats.senses = applyTruesightSenses(playerStats, playerStats.senses);
-            } else {
-               playerStats.immunities = rr.getImmunities(playerSummary);
-               playerStats.resistances = rr.getResistances(playerSummary);
-               playerStats.senses = rr.getSenses(playerStats);
-               // Apply The Third Eye darkvision enhancement from active buffs (5e)
+                // Apply The Third Eye darkvision enhancement from active buffs
                 playerStats.senses = applyThirdEyeDarkvision(playerStats, playerStats.senses, playerSummary.campaignName);
                 // Apply Truesight from passive_buff automation (e.g., Boon of Truesight)
                 playerStats.senses = applyTruesightSenses(playerStats, playerStats.senses);
+                // Apply Blindsight from passive_buff automation (e.g., Skulker feat in 2024)
+                playerStats.senses = applyBlindsightSenses(playerStats, playerStats.senses);
+             } else {
+                playerStats.immunities = rr.getImmunities(playerSummary);
+                playerStats.resistances = rr.getResistances(playerSummary);
+                playerStats.senses = rr.getSenses(playerStats);
+                // Apply The Third Eye darkvision enhancement from active buffs (5e)
+                 playerStats.senses = applyThirdEyeDarkvision(playerStats, playerStats.senses, playerSummary.campaignName);
+                 // Apply Truesight from passive_buff automation (e.g., Boon of Truesight)
+                 playerStats.senses = applyTruesightSenses(playerStats, playerStats.senses);
+                 // Apply Blindsight from passive_buff automation (e.g., Skulker feat in 2024)
+                 playerStats.senses = applyBlindsightSenses(playerStats, playerStats.senses);
             }
 
         return playerStats;

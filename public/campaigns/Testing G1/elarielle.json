@@ -13,7 +13,7 @@
     {
       "name": "Dexterity",
       "baseScore": 12,
-      "featIncrease": 2,
+      "featIncrease": 3,
       "backgroundIncrease": 1,
       "miscIncrease": 2
     },
@@ -57,7 +57,7 @@
   "expertSkills": [],
   "feats": [
     "Magic Initiate",
-    "Skill Expert"
+    "Skulker"
   ],
   "fightingStyles": [],
   "race": {
