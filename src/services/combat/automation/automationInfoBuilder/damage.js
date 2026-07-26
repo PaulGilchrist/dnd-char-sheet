@@ -87,6 +87,7 @@ export const damageHandlers = {
         return {
             type: 'weapon_mastery_choice',
             name: feature.name,
+            description: feature.description || '',
             masteryProperties: auto.masteryProperties || [],
             effect: auto.effect || 'extra_mastery',
             casting_time: auto.casting_time || 'passive',

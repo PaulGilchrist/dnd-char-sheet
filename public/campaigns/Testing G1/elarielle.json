@@ -56,8 +56,8 @@
   },
   "expertSkills": [],
   "feats": [
-    "War Caster",
-    "Magic Initiate"
+    "Magic Initiate",
+    "Weapon Master"
   ],
   "fightingStyles": [],
   "race": {
@@ -85,10 +85,8 @@
       "Poisoner's Kit"
     ],
     "equipped": [
-      "Hand Crossbow",
-      "Hand Crossbow",
-      "Glaive",
-      "Shield"
+      "Quarterstaff",
+      "Dagger"
     ],
     "gold": 10,
     "magicItems": []
@@ -142,11 +140,8 @@
   "background": "Sage",
   "imagePath": "images/Elarielle.png",
   "featAbilityChoices": {
-    "War Caster-0": {
-      "assignment": "Intelligence"
-    },
-    "Telekinesis-1": {
-      "assignment": "Intelligence"
+    "Weapon Master-0": {
+      "assignment": "Strength"
     }
   },
   "feyTouchedSpell": "Detect Evil and Good",

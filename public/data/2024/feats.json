@@ -3356,18 +3356,9 @@
         "description": "Your training with weapons allows you to use the mastery property of one kind of Simple or Martial weapon of your choice, provided you have proficiency with it. Whenever you finish a Long Rest, you can change the kind of weapon to another eligible kind.",
         "type": "passive",
         "automation": {
-          "type": "weapon_mastery_choice",
-          "masteryProperties": [
-            "Push",
-            "Topple",
-            "Sap",
-            "Slow",
-            "Vex",
-            "Cleave",
-            "Nick",
-            "Graze"
-          ],
-          "effect": "extra_mastery",
+          "type": "weapon_kind_mastery",
+          "meleeOnly": false,
+          "maxKinds": 1,
           "casting_time": "passive"
         }
       }

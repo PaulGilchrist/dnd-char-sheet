@@ -493,6 +493,7 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'damage_type_modifier':
             case 'weapon_mastery_choice':
                 result.passives.push(info)
+                result.specialActions.push(info)
                 if (info.type === 'passive_rule' && info.effect === 'primal_knowledge' && info.primalKnowledge.length > 0) {
                     result.primalKnowledge.push(...info.primalKnowledge)
                 }

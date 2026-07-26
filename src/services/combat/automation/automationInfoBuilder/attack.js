@@ -189,6 +189,7 @@ export const attackHandlers = {
         return {
             type: 'weapon_kind_mastery',
             name: feature.name,
+            description: feature.description || '',
             meleeOnly: auto.meleeOnly || false,
             maxKinds,
             hasAutomation: true

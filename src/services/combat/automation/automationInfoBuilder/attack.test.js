@@ -344,6 +344,7 @@ describe('attackHandlers – weapon_kind_mastery', () => {
         expect(result).toEqual({
             type: 'weapon_kind_mastery',
             name: 'Test Feature',
+            description: '',
             meleeOnly: false,
             maxKinds: 2,
             hasAutomation: true,
