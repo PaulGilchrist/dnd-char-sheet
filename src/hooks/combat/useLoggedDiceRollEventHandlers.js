@@ -335,7 +335,7 @@ export function setupEventListeners(deps) {
                 saveDc: e.detail.saveDc,
                 saveResult: e.detail.success ? 'success' : 'failure',
                 damageFormula: pending.formula || null,
-                damageName: pending.name || null,
+                attackName: pending.name || pending.sourceName || null,
                 damageType: pending.damageType || null,
                 rawDamage: pending.rawDamage || 0,
                 primaryDamage: pending.rawDamage || 0,

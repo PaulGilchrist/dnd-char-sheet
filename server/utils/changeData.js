@@ -17,7 +17,7 @@ export const spellOverlayData = new Map();
 // Debounce timer for saveFile()
 let saveTimer = null;
 
-const persistDataDebounceMilliseconds = 10000; // 10 seconds in milliseconds
+const persistDataDebounceMilliseconds = 2000; // 2 seconds in milliseconds
 
 /**
  * Keys that are campaign-level and should be at the top level,

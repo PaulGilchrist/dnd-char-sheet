@@ -37,7 +37,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const hasSpellIndicator = lastAttack.attackEvent.damageFormula ||
                               lastAttack.attackEvent.attackName ||
-                              lastAttack.attackEvent.spellName ||
                               lastAttack.attackEvent.saveType;
     if (!hasSpellIndicator) {
         return {
@@ -86,7 +85,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         disadvantage: !!action.metaCtx?.metamagicHeighten,
     });
 
-    const spellName = lastAttack.attackEvent.damageName || lastAttack.attackEvent.spellName || 'unknown spell';
+    const spellName = lastAttack.attackEvent.attackName || 'unknown spell';
     addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
@@ -97,6 +96,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const handleSaveResult = async (event) => {
         if (event.detail.promptId !== promptId) return;
+
+        const spellResult = event.detail.success ? 'succeeded' : 'failed';
+        const counterspellResult = event.detail.success ? 'fails to counter' : 'counters';
+
+        window.dispatchEvent(new CustomEvent('counterspell-save-result', {
+            detail: {
+                promptId,
+                attackerName,
+                spellName,
+                saveDc,
+                success: event.detail.success,
+                spellResult,
+                counterspellResult,
+            },
+        }));
 
         if (!event.detail.success) {
             const rolledBack = await rollbackSpellEffects(lastAttack.attackEvent, campaignName, featureName);

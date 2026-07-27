@@ -266,7 +266,7 @@ describe('counterSpellHandler.handle', () => {
         attackEvent: {
           attackerName: 'Goblin',
           targetName: 'TestCaster',
-          spellName: 'Ray of Frost',
+          attackName: 'Ray of Frost',
         },
       }));
       buildSaveDc.mockReturnValue(15);

@@ -683,7 +683,6 @@ export function createLogAndShow(deps) {
                     damageType: context?.damageType || null,
                     damageFormula: context?.autoDamageFormula || null,
                     damageName: context?.autoDamageName || null,
-                    spellName: context?.spellName || null,
                     damageSchool: context?.autoDamageSchool || null,
                     saveDc: context?.saveDc || null,
                     saveType: context?.saveType || null,
@@ -1052,11 +1051,12 @@ export function createLogAndShow(deps) {
 
             if (targetIsPlayer && saveDc != null) {
                 const { promise } = createSaveListener(campaignName, {
-                    targetName,
-                    saveType: saveType || 'CON',
-                    saveDc,
-                    dcSuccess: context?.dcSuccess || 'half',
-                });
+                     targetName,
+                     saveType: saveType || 'CON',
+                     saveDc,
+                     dcSuccess: context?.dcSuccess || 'half',
+                     attackerName: attackerName,
+                 });
 
                 const saveResult = await promise;
                 saveSuccess = saveResult.success;
@@ -1096,6 +1096,7 @@ export function createLogAndShow(deps) {
                         saveResult: saveSuccess ? 'success' : 'failure',
                         isNatural20: saveResult.roll === 20,
                         isNatural1: saveResult.roll === 1,
+                        attackName: context?.actionName || context?.autoDamageName || name,
                         actionName,
                         rollType: 'save',
                         saveConditions: context?.saveConditions || [],
@@ -1202,6 +1203,7 @@ export function createLogAndShow(deps) {
                         saveResult: saveSuccess ? 'success' : 'failure',
                         isNatural20: r1 === 20,
                         isNatural1: r1 === 1,
+                        attackName: context?.actionName || context?.autoDamageName || name,
                         actionName,
                         rollType: 'save',
                         saveConditions: context?.saveConditions || [],

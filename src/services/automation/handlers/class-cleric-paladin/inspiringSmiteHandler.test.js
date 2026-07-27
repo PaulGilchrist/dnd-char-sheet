@@ -86,14 +86,14 @@ function makeAction(overrides = {}) {
 
 function makeDivineSmiteAttack(attackerName = 'TestPaladin') {
   return {
-    spellName: 'Divine Smite',
+    attackName: 'Divine Smite',
     attackerName,
   };
 }
 
 function makeNonSmiteAttack() {
   return {
-    spellName: 'Weapon Attack',
+    attackName: 'Weapon Attack',
     attackerName: 'TestPaladin',
   };
 }
@@ -134,7 +134,7 @@ describe('inspiringSmiteHandler.handle', () => {
       expect(getPendingEvent()).toBeUndefined();
     });
 
-    it('returns popup when lastAttack spellName is not Divine Smite', async () => {
+    it('returns popup when lastAttack attackName is not Divine Smite', async () => {
       useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
         if (name === 'campaign' && key === 'lastAttack') return makeNonSmiteAttack();
         return undefined;

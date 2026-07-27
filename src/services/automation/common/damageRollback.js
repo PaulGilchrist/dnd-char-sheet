@@ -172,7 +172,7 @@ export async function storeDamageRolls(campaignName, lastAttack) {
 export async function rollbackSpellEffects(lastAttack, campaignName, featureName) {
     const targets = lastAttack.affectedTargets || [lastAttack.targetName];
     const attackerName = lastAttack.attackerName || 'Unknown';
-    const spellName = lastAttack.damageName || lastAttack.spellName || 'unknown spell';
+    const spellName = lastAttack.attackEvent.attackName || 'unknown spell';
 
     const cs = await getCombatContext(campaignName);
     if (!cs) {

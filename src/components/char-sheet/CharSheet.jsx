@@ -668,6 +668,21 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         };
     }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
 
+    // Update Counterspell popup when save result is received
+    React.useEffect(() => {
+        const handler = (event) => {
+            const { attackerName, spellName, saveDc, spellResult, counterspellResult } = event.detail;
+            if (!attackerName || !spellName) return;
+            setPopupHtml({
+                type: 'automation_info',
+                name: 'Counterspell',
+                description: `${attackerName}'s '${spellName}' ${counterspellResult} — ${attackerName} ${spellResult} their CON save (DC ${saveDc}).`,
+            });
+        };
+        window.addEventListener('counterspell-save-result', handler);
+        return () => window.removeEventListener('counterspell-save-result', handler);
+    }, [setPopupHtml]);
+
     const handleSavageAttacker = React.useCallback(async (savageData) => {
         if (!playerStats || !campaignName || !savageData) return null;
         

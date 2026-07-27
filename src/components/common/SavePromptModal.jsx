@@ -301,7 +301,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         saveResult: success ? 'success' : 'failure',
         saveConditions: current.condition ? [current.condition] : [],
         damageFormula: current.damageFormula || null,
-        damageName: current.sourceName || null,
+        attackName: current.sourceName || current.name || null,
         damageType: current.damageType || null,
         rawDamage: current.rawDamage || 0,
         primaryDamage: current.rawDamage || 0,

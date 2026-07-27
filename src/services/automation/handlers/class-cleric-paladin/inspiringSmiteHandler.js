@@ -30,7 +30,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     // Check lastAttack for Divine Smite
     const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-    const isDivineSmiteCast = lastAttack?.spellName?.toLowerCase() === 'divine smite';
+    const isDivineSmiteCast = lastAttack?.attackName?.toLowerCase() === 'divine smite';
     const isPlayerAttack = lastAttack?.attackerName === playerName;
 
     if (!isDivineSmiteCast || !isPlayerAttack) {
