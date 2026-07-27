@@ -3,9 +3,8 @@
 process.on('unhandledRejection', () => {});
 
 import { handle, applyBoonFateChoice } from './boonOfFateHandler.js';
-import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
-import * as diceRoller from '../../../dice/diceRoller.js';
+ import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
+ import * as diceRoller from '../../../dice/diceRoller.js';
 import * as rangeCheck from '../../../rules/combat/rangeCheck.js';
 import * as logService from '../../../ui/logService.js';
 
@@ -40,12 +39,21 @@ describe('boonOfFateHandler.handle', () => {
         vi.clearAllMocks();
         diceRoller.rollExpression.mockReturnValue({ total: 6 });
         rangeCheck.isWithinRange.mockResolvedValue(true);
-        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return mockLastAttack; return undefined; });;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return mockLastAttack;
+            if (propertyName === 'boonOfFateUsed') return false;
+            return undefined;
+        });
     });
 
     it('should return error popup when boon has already been used', async () => {
         runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
             if (key === 'boonOfFateUsed') return true;
+            return undefined;
+        });
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return mockLastAttack;
+            if (propertyName === 'boonOfFateUsed') return true;
             return undefined;
         });
 
@@ -58,11 +66,11 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should return error popup when no recent D20 test exists', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return null;
+            if (propertyName === 'boonOfFateUsed') return false;
             return undefined;
         });
-        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null; return undefined; });;
 
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
@@ -72,11 +80,11 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should return error popup when no attacker found in last attack', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return { d20: 8, bonus: 5, attackerName: null };
+            if (propertyName === 'boonOfFateUsed') return false;
             return undefined;
         });
-        damageUtils.getCombatContext.mockResolvedValue({ lastAttack: { d20: 8, bonus: 5, attackerName: null } });
 
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
@@ -86,8 +94,9 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should return error popup when attacker is out of range', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return mockLastAttack;
+            if (propertyName === 'boonOfFateUsed') return false;
             return undefined;
         });
         rangeCheck.isWithinRange.mockResolvedValue(false);
@@ -100,8 +109,9 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should return error popup when rollExpression fails', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return mockLastAttack;
+            if (propertyName === 'boonOfFateUsed') return false;
             return undefined;
         });
         diceRoller.rollExpression.mockReturnValue(null);
@@ -114,11 +124,6 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should return modal with boonFateChoice for successful invocation', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
-            return undefined;
-        });
-
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
         expect(result.type).toBe('modal');
@@ -133,10 +138,6 @@ describe('boonOfFateHandler.handle', () => {
     });
 
     it('should detect save type from lastAttack fields', async () => {
-        runtimeState.getRuntimeValue.mockImplementation((_charName, key) => {
-            if (key === 'boonOfFateUsed') return false;
-            return undefined;
-        });
         const saveAttack = {
             d20: 10,
             bonus: 3,
@@ -147,7 +148,11 @@ describe('boonOfFateHandler.handle', () => {
             targetName: 'Player',
             rollType: 'save',
         };
-        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return saveAttack; return undefined; });;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+            if (propertyName === 'lastAttack') return saveAttack;
+            if (propertyName === 'boonOfFateUsed') return false;
+            return undefined;
+        });
 
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
@@ -177,7 +182,7 @@ describe('boonOfFateHandler.applyBoonFateChoice', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         logService.addEntry.mockResolvedValue(undefined);
-        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return mockLastAttack; return undefined; });;
+        runtimeState.getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => { if (propertyName === 'lastAttack') return mockLastAttack; return undefined; });;
     });
 
     it('should set boonOfFateUsed runtime flag before applying modifier', async () => {

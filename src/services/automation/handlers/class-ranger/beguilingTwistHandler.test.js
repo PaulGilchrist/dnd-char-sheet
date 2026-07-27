@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './beguilingTwistHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
@@ -11,6 +12,10 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
 
 vi.mock('../../../shared/abilityLookup.js', () => ({
   getAbilityModifier: vi.fn(),
+}));
+
+vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
 }));
 
 const campaignName = 'TestCampaign';
@@ -46,15 +51,18 @@ describe('beguilingTwistHandler.handle', () => {
     vi.clearAllMocks();
     getCombatContext.mockResolvedValue({
       creatures: defaultCreatures(),
-      lastAttack: null,
+    });
+    getRuntimeValue.mockImplementation((name, key, _campaign) => {
+      if (name === 'campaign' && key === 'lastAttack') return null;
+      return undefined;
     });
   });
 
   describe('no triggering save or condition', () => {
     it('should return popup when no lastAttack exists', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: null,
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return null;
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -65,14 +73,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return popup when lastAttack is an attack roll', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'attack',
           attackerName: 'Goblin',
           targetName: playerName,
           hit: true,
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -82,14 +90,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return popup when lastAttack is a failed save', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'failure',
           saveConditions: ['charmed'],
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -99,14 +107,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return popup when lastAttack save has no charmed/frightened condition', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'success',
           saveConditions: ['prone'],
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -118,14 +126,14 @@ describe('beguilingTwistHandler.handle', () => {
 
   describe('condition event trigger (GM manual add)', () => {
     it('should return modal when lastAttack has condition charmed', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
       getAbilityModifier.mockReturnValue(3);
 
@@ -139,14 +147,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return modal when lastAttack has condition frightened', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'frightened',
           targetName: 'Ally1',
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -159,9 +167,8 @@ describe('beguilingTwistHandler.handle', () => {
 
   describe('save event trigger', () => {
     it('should return modal when lastAttack is a successful save with charmed condition', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveType: 'WIS',
@@ -169,7 +176,8 @@ describe('beguilingTwistHandler.handle', () => {
           saveResult: 'success',
           saveConditions: ['charmed'],
           actionName: 'Charm Person',
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -180,9 +188,8 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return modal when lastAttack is a successful save with frightened condition', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: 'Ally1',
           saveType: 'WIS',
@@ -190,7 +197,8 @@ describe('beguilingTwistHandler.handle', () => {
           saveResult: 'success',
           saveConditions: ['frightened'],
           actionName: 'Frightful Presence',
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -201,14 +209,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should return popup when lastAttack save is a failure', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'failure',
           saveConditions: ['charmed'],
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -218,14 +226,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should handle saveConditions as empty array', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'success',
           saveConditions: [],
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -235,16 +243,16 @@ describe('beguilingTwistHandler.handle', () => {
 
     it('should return modal when lastAttack saveType is charmed', async () => {
       getAbilityModifier.mockReturnValue(3);
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'success',
           saveType: 'charmed',
           saveConditions: [],
           saveDc: 13,
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -257,16 +265,16 @@ describe('beguilingTwistHandler.handle', () => {
 
     it('should return modal when lastAttack saveType is frightened', async () => {
       getAbilityModifier.mockReturnValue(3);
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'save',
           targetName: playerName,
           saveResult: 'success',
           saveType: 'frightened',
           saveConditions: [],
           saveDc: 13,
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -282,12 +290,15 @@ describe('beguilingTwistHandler.handle', () => {
     it('should return popup when combat context has no creatures', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [],
-        lastAttack: {
+      });
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
@@ -298,6 +309,15 @@ describe('beguilingTwistHandler.handle', () => {
 
     it('should return popup when combat context is null', async () => {
       getCombatContext.mockResolvedValue(null);
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
+          rollType: 'condition',
+          conditionKey: 'charmed',
+          targetName: playerName,
+          timestamp: Date.now(),
+        };
+        return undefined;
+      });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
@@ -308,14 +328,14 @@ describe('beguilingTwistHandler.handle', () => {
 
   describe('save DC calculation', () => {
     it('should calculate DC as 8 + CHA bonus + proficiency', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
       getAbilityModifier.mockReturnValue(3);
 
@@ -325,14 +345,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should use custom proficiency and CHA modifier from stats', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
       getAbilityModifier.mockReturnValue(5);
 
@@ -346,14 +366,14 @@ describe('beguilingTwistHandler.handle', () => {
     });
 
     it('should default proficiency to 0 if missing', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
       getAbilityModifier.mockReturnValue(3);
 
@@ -369,14 +389,14 @@ describe('beguilingTwistHandler.handle', () => {
 
   describe('feature name', () => {
     it('should use custom feature name from action', async () => {
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'charmed',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
 
       const customResult = await handle(
@@ -387,14 +407,14 @@ describe('beguilingTwistHandler.handle', () => {
       expect(customResult.payload.featureName).toBe('My Feature');
 
       vi.clearAllMocks();
-      getCombatContext.mockResolvedValue({
-        creatures: defaultCreatures(),
-        lastAttack: {
+      getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return {
           rollType: 'condition',
           conditionKey: 'frightened',
           targetName: playerName,
           timestamp: Date.now(),
-        },
+        };
+        return undefined;
       });
 
       const defaultResult = await handle(

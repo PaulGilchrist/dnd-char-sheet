@@ -162,6 +162,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(loadCombatSummary).mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+    getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+      if (propertyName === 'lastAttack') return { hit: true };
+      return null;
+    });
     steps = buildAttackRollDamageSteps();
   });
 
@@ -217,7 +221,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
 
     describe('handler', () => {
       it('returns early when lastAttack did not hit', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: false } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: false };
+          return null;
+        });
 
         const ctx = makeCtx({
           setSecondaryTargetModal: vi.fn(),
@@ -230,7 +237,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when collectWeaponMastery returns null', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue(null);
 
         const ctx = makeCtx({
@@ -244,7 +254,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when mastery is not Cleave', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Push', extraMasteries: [] });
 
         const ctx = makeCtx({
@@ -258,8 +271,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when no second targets available', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc' },
           creatures: [{ name: 'Orc' }],
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Cleave', extraMasteries: [] });
@@ -275,8 +291,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('prompts for second target selection when targets available (no map)', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc', currentHp: 10, maxHp: 20 },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -306,8 +325,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('cleave damage formula strips numeric additions from original', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc', currentHp: 10, maxHp: 20 },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -330,8 +352,13 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('calculates second targets with map positions', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc' };
+          if (propertyName === 'currentHitPoints') return 10;
+          if (propertyName === 'hitPoints') return 20;
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc' },
           creatures: [
             { name: 'TestChar', position: { x: 0, y: 0 } },
             { name: 'Orc', position: { x: 0, y: 0 } },
@@ -339,12 +366,6 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
           ],
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Cleave', extraMasteries: [] });
-
-        getRuntimeValue.mockImplementation((_key, prop, _campaign) => {
-          if (prop === 'currentHitPoints') return 10;
-          if (prop === 'hitPoints') return 20;
-          return null;
-        });
 
         const setSecondaryTargetModal = vi.fn();
         const ctx = makeCtx({
@@ -362,20 +383,19 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('resolves HP for player creatures using runtime values', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc' };
+          if (propertyName === 'currentHitPoints') return 15;
+          if (propertyName === 'hitPoints') return 30;
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc' },
           creatures: [
             { name: 'Orc', type: 'player' },
             { name: 'Ally', type: 'player' },
           ],
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Cleave', extraMasteries: [] });
-
-        getRuntimeValue.mockImplementation((_key, prop, _campaign) => {
-          if (prop === 'currentHitPoints') return 15;
-          if (prop === 'hitPoints') return 30;
-          return null;
-        });
 
         const setSecondaryTargetModal = vi.fn();
         const ctx = makeCtx({
@@ -393,8 +413,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('resolves HP for non-player creatures using creature properties', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc' },
           creatures: [
             { name: 'Orc' },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -417,8 +440,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('stores attack info for cleave secondary attack', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc', currentHp: 10, maxHp: 20 },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -442,8 +468,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('handles onTargetSelected callback hitting', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc' },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -475,8 +504,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('handles onTargetSelected callback missing', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc' },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -504,8 +536,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('logs ability_use for cleave hit', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc' },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -543,8 +578,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('handles onSkip callback (no-op)', async () => {
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' };
+          return null;
+        });
         loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe', damageFormula: '1d12+4', damageType: 'slashing' },
           creatures: [
             { name: 'Orc' },
             { name: 'Goblin', currentHp: 5, maxHp: 7 },
@@ -610,7 +648,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
 
     describe('handler', () => {
       it('returns early when lastAttack did not hit', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: false } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: false };
+          return null;
+        });
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -622,7 +663,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when collectWeaponMastery returns null', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue(null);
 
         const ctx = makeCtx({
@@ -635,15 +679,15 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('auto-applies mastery effects when no replace options', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({
           baseMastery: 'Push',
           extraMasteries: ['Sap'],
           replaceMasteryOptions: [],
         });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -657,15 +701,15 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('skips Graze, Topple, Nick in auto-apply', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({
           baseMastery: 'Graze',
           extraMasteries: ['Topple', 'Nick'],
           replaceMasteryOptions: [],
         });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -677,15 +721,16 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('skips mastery when already applied to target', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          if (propertyName === '_Push_appliedTarget') return 'Orc';
+          return null;
         });
         collectWeaponMastery.mockReturnValue({
           baseMastery: 'Push',
           extraMasteries: [],
           replaceMasteryOptions: [],
         });
-        getRuntimeValue.mockReturnValue('Orc');
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -697,15 +742,15 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('does not set _Slow_appliedTarget for Slow mastery', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({
           baseMastery: 'Slow',
           extraMasteries: [],
           replaceMasteryOptions: [],
         });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -722,8 +767,9 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('prompts for tactical master replacement when options exist', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({
           baseMastery: 'Push',
@@ -793,7 +839,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
 
     describe('handler', () => {
       it('returns early when lastAttack did not hit', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: false } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: false };
+          return null;
+        });
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -805,7 +854,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when collectWeaponMastery returns null', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue(null);
 
         const ctx = makeCtx({
@@ -818,7 +870,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when Topple mastery not present', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Push', extraMasteries: [] });
 
         const ctx = makeCtx({
@@ -831,7 +886,10 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('returns early when no target name', async () => {
-        loadCombatSummary.mockImplementation(() => Promise.resolve({ lastAttack: { hit: true } }));
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true };
+          return null;
+        });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
 
         const ctx = makeCtx({
@@ -844,11 +902,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('creates a CON save prompt', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -869,11 +927,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('logs a save_result entry', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -898,11 +956,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('applies prone condition on failed save', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
         createSaveListener.mockReturnValue({
           promptId: 'test-prompt-id',
           promise: Promise.resolve({ success: false }),
@@ -928,18 +986,16 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('does not apply prone if already prone', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
-        });
-        collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockImplementation((_key, prop, _campaign) => {
-          if (prop === 'activeConditions') return ['prone'];
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          if (propertyName === 'activeConditions') return ['prone'];
           return null;
         });
         createSaveListener.mockReturnValue({
           promptId: 'test-prompt-id',
           promise: Promise.resolve({ success: false }),
         });
+        collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },
@@ -960,11 +1016,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('logs save_result and ability_use entries on failed save', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
         createSaveListener.mockReturnValue({
           promptId: 'test-prompt-id',
           promise: Promise.resolve({ success: false }),
@@ -1000,11 +1056,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('does nothing on successful save', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
         createSaveListener.mockReturnValue({
           promptId: 'test-prompt-id',
           promise: Promise.resolve({ success: true }),
@@ -1030,11 +1086,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('uses weapon abilityName for save DC calculation', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Longbow' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Longbow' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Longbow' },
@@ -1053,11 +1109,11 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('defaults to Strength when weapon attack has no abilityName', async () => {
-        loadCombatSummary.mockResolvedValue({
-          lastAttack: { hit: true, targetName: 'Orc', attackName: 'Greataxe' },
+        getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
+          if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
+          return null;
         });
         collectWeaponMastery.mockReturnValue({ baseMastery: 'Topple', extraMasteries: [] });
-        getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
           attack: { name: 'Greataxe' },

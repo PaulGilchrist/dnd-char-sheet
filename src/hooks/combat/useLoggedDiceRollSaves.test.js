@@ -329,16 +329,17 @@ describe('createSaves (useLoggedDiceRollSaves) - Core', () => {
         });
 
         it('returns popup when attack still hits with CHA bonus', async () => {
-            getRuntimeValue.mockReturnValue(2);
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return {
                     targetName: 'TestFighter',
                     d20: 15,
                     bonus: 7,
                     targetAc: 16,
                     hit: true,
                     attackerName: 'Goblin',
-                },
+                };
+                if (key === 'gloriousDefenseUses') return 2;
+                return null;
             });
             loadCombatSummary.mockResolvedValue({
                 creatures: [
@@ -353,16 +354,17 @@ describe('createSaves (useLoggedDiceRollSaves) - Core', () => {
         });
 
         it('calls logAndShow when attack becomes miss', async () => {
-            getRuntimeValue.mockReturnValue(2);
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return {
                     targetName: 'TestFighter',
                     d20: 9,
                     bonus: 7,
                     targetAc: 16,
                     hit: true,
                     attackerName: 'Goblin',
-                },
+                };
+                if (key === 'gloriousDefenseUses') return 2;
+                return null;
             });
             loadCombatSummary.mockResolvedValue({
                 creatures: [
@@ -395,16 +397,17 @@ describe('createSaves (useLoggedDiceRollSaves) - Core', () => {
         });
 
         it('targets attacker from lastAttack instead of current target', async () => {
-            getRuntimeValue.mockReturnValue(2);
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return {
                     targetName: 'TestFighter',
                     d20: 9,
                     bonus: 7,
                     targetAc: 16,
                     hit: true,
                     attackerName: 'Red Dragon',
-                },
+                };
+                if (key === 'gloriousDefenseUses') return 2;
+                return null;
             });
             loadCombatSummary.mockResolvedValue({
                 creatures: [

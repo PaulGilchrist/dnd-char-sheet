@@ -16,6 +16,7 @@ vi.mock('../../../ui/logService.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    loadCombatSummary: vi.fn(),
 }));
 
 vi.mock('../../common/damageRollback.js', () => ({
@@ -57,7 +58,6 @@ vi.mock('../../../../services/encounters/combatData.js', () => ({
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getDistanceFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
@@ -103,7 +103,10 @@ function makePlayerStatsForLevel(level, classOverrides = {}) {
 describe('autoRerollHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue(null);
+        getRuntimeValue.mockImplementation((name, key, _campaign) => {
+            if (name === 'campaign' && key === 'lastAttack') return null;
+            return null;
+        });
         getCurrentCombatRound.mockReturnValue(1);
         isWithinRange.mockResolvedValue(true);
     });
@@ -112,7 +115,10 @@ describe('autoRerollHandler', () => {
 
     describe('no recent roll', () => {
         it('should return info popup when combat context has no lastAttack', async () => {
-            getCombatContext.mockResolvedValue({ lastAttack: null });
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return null;
+                return null;
+            });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
 
@@ -122,7 +128,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return automationInfoPopup when no automation type matches', async () => {
-            getCombatContext.mockResolvedValue({ lastAttack: null });
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return null;
+                return null;
+            });
 
             const action = makeAction({
                 automation: { type: 'auto_reroll' },
@@ -134,8 +143,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should fall through to automationInfoPopup when bonusExpression is unrecognized', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const action = makeAction({
@@ -152,8 +162,9 @@ describe('autoRerollHandler', () => {
 
     describe('basic bonus, own failed attack', () => {
         it('should apply bonus to own failed attack roll', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 8, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 8, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
@@ -172,8 +183,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should apply bonus to own failed ability check', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'check', attackerName: 'TestHero', d20: 12, bonus: 3, checkName: 'Stealth' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'check', attackerName: 'TestHero', d20: 12, bonus: 3, checkName: 'Stealth' };
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
@@ -184,8 +196,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return info when last roll is a saving throw (not attack/check)', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
@@ -195,8 +208,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return info when last roll is not a failed attack or check for player', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true };
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
@@ -211,8 +225,9 @@ describe('autoRerollHandler', () => {
 
     describe('ally missed attack with range', () => {
         it('should apply bonus to ally missed attack within range', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
             getDistanceFeet.mockReturnValue(10);
 
@@ -232,8 +247,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should skip ally attack that is out of range', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
             getDistanceFeet.mockReturnValue(50);
             isWithinRange.mockResolvedValue(false);
@@ -248,8 +264,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should skip ally attack that already hit', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'Ally', d20: 18, bonus: 5, targetAc: 15, hit: true }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 18, bonus: 5, targetAc: 15, hit: true };
+                return null;
             });
 
             const action = makeAction({
@@ -262,8 +279,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should apply bonus to ally attack when map positions unavailable (range check skipped)', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
             const { resolveMapPositions } = await import('../../common/targetResolver.js');
             resolveMapPositions.mockResolvedValue({ attackerPos: null, targetPos: null });
@@ -287,8 +305,9 @@ describe('autoRerollHandler', () => {
 
     describe('ally missed attack without range', () => {
         it('should not apply bonus to ally attack when no range specified', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'Ally', d20: 3, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
@@ -302,9 +321,10 @@ describe('autoRerollHandler', () => {
 
     describe('saving_throw with override_fail_to_success', () => {
         it('should override a failed save to SUCCESS', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                if (name === 'TestHero' && key === '_guardedMind_usedRest') return null;
+                return null;
             });
 
             const action = makeAction({
@@ -328,9 +348,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should accept abbreviated save type (INT)', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'INT' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'INT' };
+                return null;
             });
 
             const action = makeAction({
@@ -347,9 +367,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject if already used this rest', async () => {
-            getRuntimeValue.mockReturnValue('rest');
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                if (name === 'TestHero' && key === '_guardedMind_usedRest') return 'rest';
+                return null;
             });
 
             const action = makeAction({
@@ -366,9 +387,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject if save is not for the player', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'OtherPlayer', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'OtherPlayer', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                return null;
             });
 
             const action = makeAction({
@@ -384,9 +405,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject invalid save type (Strength)', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Strength' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Strength' };
+                return null;
             });
 
             const action = makeAction({
@@ -402,9 +423,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject if lastAttack is not a save', async () => {
-            getRuntimeValue.mockReturnValue(null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 8, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 8, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const action = makeAction({
@@ -424,9 +445,10 @@ describe('autoRerollHandler', () => {
 
     describe('saving_throw with resource cost', () => {
         it('should consume channel divinity charges on success', async () => {
-            getRuntimeValue.mockReturnValue(2);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                if (name === 'TestHero' && key === 'channelDivinityCharges') return 2;
+                return null;
             });
 
             const action = makeAction({
@@ -449,9 +471,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject when no channel divinity charges', async () => {
-            getRuntimeValue.mockReturnValue(0);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Wisdom' };
+                if (name === 'TestHero' && key === 'channelDivinityCharges') return 0;
+                return null;
             });
 
             const action = makeAction({
@@ -468,9 +491,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should consume focus points on success', async () => {
-            getRuntimeValue.mockReturnValue(3);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' };
+                if (name === 'TestHero' && key === 'focusPoints') return 3;
+                return null;
             });
 
             const action = makeAction({
@@ -487,9 +511,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should reject when no focus points', async () => {
-            getRuntimeValue.mockReturnValue(0);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'save', targetName: 'TestHero', d20: 3, bonus: 2, saveType: 'Intelligence' };
+                if (name === 'TestHero' && key === 'focusPoints') return 0;
+                return null;
             });
 
             const action = makeAction({
@@ -510,8 +535,9 @@ describe('autoRerollHandler', () => {
 
     describe('bardic_inspiration_die', () => {
         it('should roll bardic die and apply to own failed attack', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const stats = makePlayerStatsForLevel(1, { bardic_inspiration_uses: 3, bardic_die: 6 });
@@ -532,8 +558,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should roll bardic die and apply to own failed ability check', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'check', attackerName: 'TestHero', d20: 8, bonus: 3, checkName: 'Athletics' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'check', attackerName: 'TestHero', d20: 8, bonus: 3, checkName: 'Athletics' };
+                return null;
             });
 
             const stats = makePlayerStatsForLevel(3, { bardic_inspiration_uses: 4, bardic_die: 6 });
@@ -547,10 +574,11 @@ describe('autoRerollHandler', () => {
         });
 
         it('should decrement bardic inspiration uses after applying', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                if (name === 'TestHero' && key === 'bardicInspirationUses') return 3;
+                return null;
             });
-            getRuntimeValue.mockReturnValue(3);
 
             const stats = makePlayerStatsForLevel(1, { bardic_inspiration_uses: 3, bardic_die: 6 });
             const action = makeAction({
@@ -562,10 +590,11 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return info when bardic inspiration has no uses remaining', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                if (name === 'TestHero' && key === 'bardicInspirationUses') return 0;
+                return null;
             });
-            getRuntimeValue.mockReturnValue(0);
 
             const stats = makePlayerStatsForLevel(1, { bardic_inspiration_uses: 3, bardic_die: 6 });
             const action = makeAction({
@@ -578,8 +607,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should skip bardic die if player has no bardic class levels', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
 
             const stats = makePlayerStats({ class: { class_levels: [{ level: 1 }] } });
@@ -597,8 +627,9 @@ describe('autoRerollHandler', () => {
 
     describe('psionic_energy_die', () => {
         it('should use psionic energy die on own failed attack', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                return null;
             });
             vi.mocked(evaluateAutoExpression).mockReturnValue(6);
 
@@ -619,8 +650,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should use psionic energy die on own failed ability check', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'check', attackerName: 'TestHero', d20: 8, bonus: 3, checkName: 'Perception' }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'check', attackerName: 'TestHero', d20: 8, bonus: 3, checkName: 'Perception' };
+                return null;
             });
             vi.mocked(evaluateAutoExpression).mockReturnValue(6);
 
@@ -635,11 +667,12 @@ describe('autoRerollHandler', () => {
         });
 
         it('should decrement psionic energy after applying', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                if (name === 'TestHero' && key === 'psionicEnergy') return 4;
+                return null;
             });
             vi.mocked(evaluateAutoExpression).mockReturnValue(6);
-            getRuntimeValue.mockReturnValue(4);
 
             const action = makeAction({
                 automation: { bonusExpression: 'psionic_energy_die' },
@@ -651,9 +684,10 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return info when no psionic energy remaining', async () => {
-            getRuntimeValue.mockReturnValue(0);
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 5, bonus: 5, targetAc: 15, hit: false };
+                if (name === 'TestHero' && key === 'psionicEnergy') return 0;
+                return null;
             });
 
             const action = makeAction({
@@ -666,8 +700,9 @@ describe('autoRerollHandler', () => {
         });
 
         it('should return info when last roll is not a failed attack or check for player', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true }
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestHero', d20: 18, bonus: 5, targetAc: 15, hit: true };
+                return null;
             });
             vi.mocked(evaluateAutoExpression).mockReturnValue(6);
 

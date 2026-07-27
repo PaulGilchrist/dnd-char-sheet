@@ -94,15 +94,16 @@ describe('quiveringPalmHandler.handle', () => {
       const action = makeAction();
 
       getCombatContext.mockResolvedValue({
-        lastAttack: {
-          attackerName: 'TestMonk',
-          attackName: 'Unarmed Strike',
-          saveResult: 'success',
-        },
+        creatures: [{ name: 'Goblin', type: 'monster' }],
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'lastAttack') return {
+          attackerName: 'TestMonk',
+          attackName: 'Unarmed Strike',
+          saveResult: 'success',
+        };
         if (b === 'kiPoints') return 5;
         return undefined;
       });
@@ -123,7 +124,9 @@ describe('quiveringPalmHandler.handle', () => {
       const ps = makePlayerStats();
       const action = makeAction();
 
-      getCombatContext.mockResolvedValue({});
+      getCombatContext.mockResolvedValue({
+        creatures: [{ name: 'Goblin', type: 'monster' }],
+      });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return 'Ogre';
@@ -143,11 +146,12 @@ describe('quiveringPalmHandler.handle', () => {
       const action = makeAction();
 
       getCombatContext.mockResolvedValue({
-        lastAttack: { attackerName: 'Goblin', attackName: 'Longsword' },
+        creatures: [{ name: 'Goblin', type: 'monster' }],
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'lastAttack') return { attackerName: 'Goblin', attackName: 'Longsword' };
         return undefined;
       });
 
@@ -162,16 +166,17 @@ describe('quiveringPalmHandler.handle', () => {
       const action = makeAction();
 
       getCombatContext.mockResolvedValue({
-        lastAttack: {
-          attackerName: 'TestMonk',
-          attackName: 'Longsword',
-          total: 15,
-          targetAc: 12,
-        },
+        creatures: [{ name: 'Goblin', type: 'monster' }],
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'lastAttack') return {
+          attackerName: 'TestMonk',
+          attackName: 'Longsword',
+          total: 15,
+          targetAc: 12,
+        };
         return undefined;
       });
 
@@ -186,16 +191,17 @@ describe('quiveringPalmHandler.handle', () => {
       const action = makeAction();
 
       getCombatContext.mockResolvedValue({
-        lastAttack: {
-          attackerName: 'TestMonk',
-          attackName: 'Unarmed Strike',
-          total: 8,
-          targetAc: 15,
-        },
+        creatures: [{ name: 'Goblin', type: 'monster' }],
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'lastAttack') return {
+          attackerName: 'TestMonk',
+          attackName: 'Unarmed Strike',
+          total: 8,
+          targetAc: 15,
+        };
         return undefined;
       });
 
@@ -210,15 +216,16 @@ describe('quiveringPalmHandler.handle', () => {
       const action = makeAction();
 
       getCombatContext.mockResolvedValue({
-        lastAttack: {
-          attackerName: 'TestMonk',
-          attackName: 'Unarmed Strike',
-          saveResult: 'success',
-        },
+        creatures: [{ name: 'Goblin', type: 'monster' }],
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'lastAttack') return {
+          attackerName: 'TestMonk',
+          attackName: 'Unarmed Strike',
+          saveResult: 'success',
+        };
         if (b === 'kiPoints') return 1;
         return undefined;
       });
@@ -235,7 +242,9 @@ describe('quiveringPalmHandler.handle', () => {
       const ps = makePlayerStats();
       const action = makeAction();
 
-      getCombatContext.mockResolvedValue({});
+      getCombatContext.mockResolvedValue({
+        creatures: [{ name: 'Goblin', type: 'monster' }],
+      });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
         if (_a === 'campaign' && b === 'quivering_palm') return 'Goblin';

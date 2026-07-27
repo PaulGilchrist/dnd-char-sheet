@@ -31,6 +31,7 @@ vi.mock('../../../../services/ui/utils.js', () => ({
 vi.mock('../../../../services/ui/storage.js', () => ({
   default: {
     set: vi.fn(),
+    get: vi.fn(() => null),
   },
 }));
 

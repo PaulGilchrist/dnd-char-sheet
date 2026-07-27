@@ -31,6 +31,7 @@ vi.mock('../../../../services/ui/utils.js', () => ({
 vi.mock('../../../../services/ui/storage.js', () => ({
   default: {
     set: vi.fn(),
+    get: vi.fn(() => null),
   },
 }));
 
@@ -98,6 +99,7 @@ describe('SaveAttackHealModal — heal flows', () => {
     diceRoller.rollExpression.mockReturnValue({ total: 10, rolls: [10], modifier: 0, formula: '1d20' });
     utils.guid.mockReturnValue('test-guid-123');
     localStorage.clear();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn() });
   });
 
   afterEach(() => {

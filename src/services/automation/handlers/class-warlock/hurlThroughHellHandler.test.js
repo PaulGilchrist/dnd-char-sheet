@@ -6,7 +6,15 @@ import { handle } from './hurlThroughHellHandler.js';
 // ── Mocks ──────────────────────────────────────────────────────
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn(() => null),
+    getRuntimeValue: vi.fn((_name, key, _campaign) => {
+        if (key === 'lastAttack') return {
+            attackerName: 'TestHero',
+            rollType: 'attack',
+            hit: true,
+            targetName: 'Goblin',
+        };
+        return null;
+    }),
     setRuntimeValue: vi.fn(async () => {}),
 }));
 
@@ -26,12 +34,6 @@ vi.mock('../../common/savePrompt.js', () => ({
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(async () => ({
         creatures: [{ name: 'Goblin', type: 'fiend' }],
-        lastAttack: {
-            attackerName: 'TestHero',
-            rollType: 'attack',
-            hit: true,
-            targetName: 'Goblin',
-        },
     })),
     getTargetFromAttacker: vi.fn(() => ({ name: 'Goblin' })),
 }));
@@ -49,7 +51,7 @@ vi.mock('../../../rules/combat/applyDamage.js', () => ({
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
+import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc } from '../../common/savePrompt.js';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -100,14 +102,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when no target selected', async () => {
-            getRuntimeValue.mockImplementation(() => null);
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'hurlThroughHellUses') return 0;
+                if (key === 'lastAttack') return {
                     attackerName: 'TestHero',
                     rollType: 'attack',
                     hit: true,
                     targetName: 'Goblin',
-                },
+                };
+                return null;
             });
             getTargetFromAttacker.mockReturnValue(null);
 
@@ -120,10 +124,11 @@ describe('hurlThroughHellHandler', () => {
         // ── lastAttack validation ──
 
         it('should return popup when no lastAttack exists', async () => {
-            getRuntimeValue.mockImplementation(() => null);
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Goblin' }],
-                lastAttack: null,
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return null;
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'hurlThroughHellUses') return 0;
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
@@ -133,15 +138,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when lastAttack was not from this player', async () => {
-            getRuntimeValue.mockImplementation(() => null);
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Goblin' }],
-                lastAttack: {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return {
                     attackerName: 'Goblin',
                     rollType: 'attack',
                     hit: true,
                     targetName: 'TestHero',
-                },
+                };
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'hurlThroughHellUses') return 0;
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
@@ -151,15 +157,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when lastAttack was not an attack roll', async () => {
-            getRuntimeValue.mockImplementation(() => null);
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Goblin' }],
-                lastAttack: {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return {
                     attackerName: 'TestHero',
                     rollType: 'save',
                     hit: true,
                     targetName: 'Goblin',
-                },
+                };
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'hurlThroughHellUses') return 0;
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
@@ -169,15 +176,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when lastAttack missed', async () => {
-            getRuntimeValue.mockImplementation(() => null);
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Goblin' }],
-                lastAttack: {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return {
                     attackerName: 'TestHero',
                     rollType: 'attack',
                     hit: false,
                     targetName: 'Goblin',
-                },
+                };
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'hurlThroughHellUses') return 0;
+                return null;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
@@ -189,9 +197,15 @@ describe('hurlThroughHellHandler', () => {
         // ── Modal return for normal flow ──
 
         it('should return modal when use is available', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 0;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -209,10 +223,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return modal when pact magic slots are available', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
                 if (key === 'spell_slots_level_2') return 2;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -232,8 +252,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when no uses and no pact magic available', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -248,8 +275,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when pact magic recharge is disabled and no uses', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -263,9 +297,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should return popup when pact magic slots are exhausted', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
+                if (key === 'hurlThroughHellTurnUsed') return null;
                 if (key === 'spell_slots_level_2') return 0;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -284,9 +325,15 @@ describe('hurlThroughHellHandler', () => {
         // ── Custom config ──
 
         it('should use custom saveType from automation config', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 0;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -302,9 +349,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should use custom damageExpression from automation config', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 0;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -319,9 +372,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should pass automation config through to modal payload', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 0;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -338,9 +397,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should use custom feature name when provided in action', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 0;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -352,8 +417,15 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should block when uses exhausted with multiple maxUses', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 2;
+                if (key === 'hurlThroughHellTurnUsed') return null;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 
@@ -368,10 +440,16 @@ describe('hurlThroughHellHandler', () => {
         });
 
         it('should include pactMagicRecharge flag in payload when available', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key) => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaign) => {
                 if (key === 'hurlThroughHellUses') return 1;
-                if (key === 'currentTurn') return 'turn1';
+                if (key === 'hurlThroughHellTurnUsed') return null;
                 if (key === 'spell_slots_level_2') return 2;
+                if (key === 'lastAttack') return {
+                    attackerName: 'TestHero',
+                    rollType: 'attack',
+                    hit: true,
+                    targetName: 'Goblin',
+                };
                 return null;
             });
 

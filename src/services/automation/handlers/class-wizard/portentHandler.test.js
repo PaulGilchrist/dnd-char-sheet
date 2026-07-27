@@ -101,7 +101,8 @@ function mockCombatContext(creatureName, rollType, eventData, extraContext) {
         });
     }
 
-    getRuntimeValue.mockImplementation((name, key) => {
+    getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return lastAttack;
         if (key === 'portentDice') return '[15, 8]';
         if (key === 'portentUsedThisTurn') return false;
         if (key === 'currentHitPoints') return 10;
@@ -110,7 +111,6 @@ function mockCombatContext(creatureName, rollType, eventData, extraContext) {
     });
 
     getCombatContext.mockResolvedValue({
-        lastAttack,
         creatures: [{ name: creatureName }],
     });
 }
@@ -265,22 +265,20 @@ describe('Portent Handler', () => {
         });
 
         it('picks the most recent event for any creature in combat', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            const lastAttack = {
+                rollType: 'check',
+                attackerName: 'RogueGal',
+                d20: 4,
+                bonus: 5,
+                checkName: 'Stealth',
+                timestamp: makeTimestamp(),
+            };
+
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return lastAttack;
                 if (key === 'portentDice') return '[15, 8]';
                 if (key === 'portentUsedThisTurn') return false;
                 return null;
-            });
-
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
-                    rollType: 'check',
-                    attackerName: 'RogueGal',
-                    d20: 4,
-                    bonus: 5,
-                    checkName: 'Stealth',
-                    timestamp: makeTimestamp(),
-                },
-                creatures: [{ name: 'Goblin' }, { name: 'RogueGal' }, { name: 'TestWizard' }],
             });
 
             const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
@@ -312,23 +310,21 @@ describe('Portent Handler', () => {
         });
 
         it('sorts dice options in descending order', async () => {
-            getRuntimeValue.mockImplementation((_name, key) => {
+            const lastAttack = {
+                rollType: 'attack',
+                attackerName: 'TestWizard',
+                d20: 1,
+                bonus: 0,
+                targetAc: 15,
+                hit: false,
+                timestamp: makeTimestamp(),
+            };
+
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return lastAttack;
                 if (key === 'portentDice') return '[8, 15, 3]';
                 if (key === 'portentUsedThisTurn') return false;
                 return null;
-            });
-
-            getCombatContext.mockResolvedValue({
-                lastAttack: {
-                    rollType: 'attack',
-                    attackerName: 'TestWizard',
-                    d20: 1,
-                    bonus: 0,
-                    targetAc: 15,
-                    hit: false,
-                    timestamp: makeTimestamp(),
-                },
-                creatures: [{ name: 'TestWizard' }],
             });
 
             const result = await handle(mockAction, mockPlayerStats, mockCampaignName);

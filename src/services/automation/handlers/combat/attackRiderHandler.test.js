@@ -490,8 +490,7 @@ describe('attackRiderHandler', () => {
         });
 
         it('should reject when no lastAttack exists', async () => {
-            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
-            loadCombatSummary.mockResolvedValueOnce({ lastAttack: null });
+            getRuntimeValue.mockReturnValue(null);
 
             const action = {
                 name: 'Hamstring',
@@ -509,8 +508,7 @@ describe('attackRiderHandler', () => {
         });
 
         it('should reject when lastAttack missed', async () => {
-            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
-            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: false } });
+            getRuntimeValue.mockReturnValue({ hit: false });
 
             const action = {
                 name: 'Hamstring',
@@ -528,8 +526,7 @@ describe('attackRiderHandler', () => {
         });
 
         it('should reject when lastAttack attacker is not player', async () => {
-            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
-            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: true, attackerName: 'Orc', damageType: 'Slashing', targetName: 'Goblin' } });
+            getRuntimeValue.mockReturnValue({ hit: true, attackerName: 'Orc', damageType: 'Slashing', targetName: 'Goblin' });
 
             const action = {
                 name: 'Hamstring',
@@ -547,8 +544,7 @@ describe('attackRiderHandler', () => {
         });
 
         it('should reject when damage type is not slashing', async () => {
-            const { loadCombatSummary } = await import('../../../encounters/combatData.js');
-            loadCombatSummary.mockResolvedValueOnce({ lastAttack: { hit: true, attackerName: 'TestHero', damageType: 'Piercing', targetName: 'Goblin' } });
+            getRuntimeValue.mockReturnValue({ hit: true, attackerName: 'TestHero', damageType: 'Piercing', targetName: 'Goblin' });
 
             const action = {
                 name: 'Hamstring',

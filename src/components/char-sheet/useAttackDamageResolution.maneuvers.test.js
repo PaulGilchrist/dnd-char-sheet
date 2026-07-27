@@ -369,13 +369,11 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
 
     describe('Cunning Strike', () => {
         it('prompts for Cunning Strike when hit, sneak attack > 0, and not used this round', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: true, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
-            });
-            loadCombatSummary.mockResolvedValue({
-                lastAttack: { hit: true, targetName: 'Goblin' },
             });
             getCombatContext.mockResolvedValue({
                 creatures: [
@@ -430,13 +428,11 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('skips when already used this round', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: true, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return 1;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
-            });
-            loadCombatSummary.mockResolvedValue({
-                lastAttack: { hit: true, targetName: 'Goblin' },
             });
 
             const stats = {
@@ -470,13 +466,11 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('prefers Devious Strikes over Improved Cunning Strike over Cunning Strike', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: true, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
-            });
-            loadCombatSummary.mockResolvedValue({
-                lastAttack: { hit: true, targetName: 'Goblin' },
             });
             getCombatContext.mockResolvedValue({
                 creatures: [
@@ -525,12 +519,12 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('does not prompt when sneak attack dice are 0', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: true, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
             });
-            loadCombatSummary.mockResolvedValue({ lastAttack: { hit: true, targetName: 'Goblin' } });
 
             const stats = {
                 ...mockPlayerStats,
@@ -558,12 +552,12 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('does not prompt when attack missed', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: false, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
             });
-            loadCombatSummary.mockResolvedValue({ lastAttack: { hit: false, targetName: 'Goblin' } });
 
             const stats = {
                 ...mockPlayerStats,
@@ -591,12 +585,12 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('does not prompt when no cunning strike passive is present', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { hit: true, targetName: 'Goblin' };
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
             });
-            loadCombatSummary.mockResolvedValue({ lastAttack: { hit: true, targetName: 'Goblin' } });
 
             const { resolveAttackDamage } = UseAttackDamageResolution({
                 playerStats: mockPlayerStats,
@@ -610,12 +604,12 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         });
 
         it('does not prompt when no lastAttack in combat summary', async () => {
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return null;
                 if (key === '_CunningStrike_usedRound') return null;
                 if (key === '_cunningStrikeSkippedRound') return null;
                 return null;
             });
-            loadCombatSummary.mockResolvedValue({});
 
             const stats = {
                 ...mockPlayerStats,

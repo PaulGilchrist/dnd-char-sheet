@@ -25,6 +25,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../ui/storage.js', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
@@ -52,6 +53,7 @@ vi.mock('../../ui/logService.js', () => ({
 const { getCombatContext } = await import('./damageUtils.js');
 const { addEntry } = await import('../../ui/logService.js');
 const { buildSaveDc } = await import('../../automation/common/savePrompt.js');
+const { getRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js');
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -83,6 +85,7 @@ describe('Thought Shield — manual reaction handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     buildSaveDc.mockReturnValue(15);
+    getRuntimeValue.mockResolvedValue(null);
   });
 
   describe('no Thought Shield feature', () => {
@@ -123,8 +126,10 @@ describe('Thought Shield — manual reaction handler', () => {
   describe('warlock was not the target', () => {
     it('returns popup when another creature was targeted', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10 };
-      const cs = makeCombatSummary([goblin], { targetName: 'Goblin', damageTypes: ['Psychic'] });
+      const lastAttackData = { targetName: 'Goblin', damageTypes: ['Psychic'] };
+      const cs = makeCombatSummary([goblin], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -137,11 +142,13 @@ describe('Thought Shield — manual reaction handler', () => {
   describe('damage was not psychic', () => {
     it('returns popup when damage type is not psychic', async () => {
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Fire'],
-      });
+      };
+      const cs = makeCombatSummary([warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -155,14 +162,16 @@ describe('Thought Shield — manual reaction handler', () => {
     it('returns popup when actualDamage is 0', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10 };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 0,
         rawDamage: 10,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -175,13 +184,15 @@ describe('Thought Shield — manual reaction handler', () => {
   describe('no attacker found', () => {
     it('returns popup when attackerName is missing', async () => {
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 5,
         attackerName: null,
-      });
+      };
+      const cs = makeCombatSummary([warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -194,13 +205,15 @@ describe('Thought Shield — manual reaction handler', () => {
   describe('attacker not in combat', () => {
     it('returns popup when attacker is not in creatures list', async () => {
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 5,
         attackerName: 'MissingCreature',
-      });
+      };
+      const cs = makeCombatSummary([warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -214,13 +227,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('returns popup when attacker has 0 HP', async () => {
       const deadGoblin = { name: 'Goblin', type: 'monster', currentHp: 0 };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([deadGoblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 5,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([deadGoblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -234,13 +249,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('reflects damage back to attacker and logs it', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10, concentration: null };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 5,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -264,13 +281,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('uses rawDamage as fallback when actualDamage is missing', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10, concentration: null };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         rawDamage: 8,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -282,13 +301,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('updates attacker concentration DC when reflected', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10, concentration: { spell: 'Burning Hands', dc: 5 } };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 10,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -299,13 +320,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('does not update concentration when attacker has none', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10, concentration: null };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 5,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');
@@ -316,13 +339,15 @@ describe('Thought Shield — manual reaction handler', () => {
     it('clamps reflected damage to 0 minimum HP', async () => {
       const goblin = { name: 'Goblin', type: 'monster', currentHp: 3, maxHp: 10, concentration: null };
       const warlockCreature = { name: 'Warlock', type: 'player', currentHp: 20 };
-      const cs = makeCombatSummary([goblin, warlockCreature], {
+      const lastAttackData = {
         targetName: 'Warlock',
         damageTypes: ['Psychic'],
         actualDamage: 10,
         attackerName: 'Goblin',
-      });
+      };
+      const cs = makeCombatSummary([goblin, warlockCreature], lastAttackData);
       getCombatContext.mockResolvedValue(cs);
+      getRuntimeValue.mockResolvedValue(lastAttackData);
       const warlock = makeWarlock();
 
       const result = await handle({ name: 'Thought Shield', automation: { trigger: 'psychic_damage_received' } }, warlock, 'TestCampaign');

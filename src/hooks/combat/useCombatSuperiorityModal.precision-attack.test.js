@@ -19,10 +19,7 @@ vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('../../services/encounters/combatData.js', () => ({
-  loadCombatSummary: vi.fn(),
-  setCombatSummaryCache: vi.fn(),
-}));
+vi.mock('../../services/encounters/combatData.js', () => ({}));
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(),
@@ -36,7 +33,6 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
 import { executeManeuver } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { setRuntimeValue, getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../services/ui/logService.js';
-import { loadCombatSummary, setCombatSummaryCache } from '../../services/encounters/combatData.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
 
 const createLastAttackRoll = (overrides = {}) => ({
@@ -438,14 +434,15 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
         await result.current.handleCombatSuperiorityConfirm([], 'Precision Attack');
       });
 
-      expect(setCombatSummaryCache).toHaveBeenCalled();
-      const cachedCs = setCombatSummaryCache.mock.calls[0][0];
-      expect(cachedCs.lastAttack).toEqual(
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'lastAttack',
         expect.objectContaining({
           total: 24,
           hit: true,
           isCrit: false,
-        })
+        }),
+        mockCampaignName
       );
     });
 

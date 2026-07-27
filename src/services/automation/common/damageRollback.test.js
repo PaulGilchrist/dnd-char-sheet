@@ -61,13 +61,6 @@ function makeLastAttack(overrides = {}) {
     };
 }
 
-function makeCombatContext(overrides = {}) {
-    return {
-        creatures: [{ name: 'Hero', hitPoints: 30 }, { name: 'Goblin', hitPoints: 7 }],
-        lastAttack: makeLastAttack(),
-        ...overrides,
-    };
-}
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -140,13 +133,12 @@ describe('damageRollback', () => {
 
     describe('findAttackRollAgainstTarget', () => {
         it('returns null when no lastAttack exists or targetName does not match', async () => {
-            getCombatContext.mockResolvedValue({ creatures: [] });
+            getRuntimeValue.mockReturnValue(null);
             let result = await findAttackRollAgainstTarget('Hero', campaignName);
             expect(result).toEqual({ attackEvent: null, attackerName: null });
 
             const attack = makeLastAttack({ targetName: 'Wizard' });
-            const cs = makeCombatContext({ lastAttack: attack });
-            getCombatContext.mockResolvedValue(cs);
+            getRuntimeValue.mockReturnValue(attack);
             result = await findAttackRollAgainstTarget('Hero', campaignName);
             expect(result.attackEvent).toBeNull();
             expect(result.attackerName).toBeNull();
@@ -154,8 +146,7 @@ describe('damageRollback', () => {
 
         it('returns attack event and attackerName when targetName matches', async () => {
             const attack = makeLastAttack({ targetName: 'Hero', attackerName: 'Goblin' });
-            const cs = makeCombatContext({ lastAttack: attack });
-            getCombatContext.mockResolvedValue(cs);
+            getRuntimeValue.mockReturnValue(attack);
 
             const result = await findAttackRollAgainstTarget('Hero', campaignName);
             expect(result.attackEvent).toBe(attack);
@@ -168,39 +159,37 @@ describe('damageRollback', () => {
     describe('rollbackDamage', () => {
         it('returns 0 and skips healing when conditions are not met', async () => {
             // no lastAttack
+            getRuntimeValue.mockReturnValue(null);
             getCombatContext.mockResolvedValue({ creatures: [] });
             let result = await rollbackDamage('Goblin', 'Hero', campaignName, 'Mirror Image');
             expect(result).toBe(0);
             expect(applyHealingToTarget).not.toHaveBeenCalled();
 
             // attackerName mismatch
-            const cs1 = makeCombatContext({ lastAttack: makeLastAttack({ attackerName: 'Orc' }) });
-            getCombatContext.mockResolvedValue(cs1);
+            getRuntimeValue.mockReturnValue(makeLastAttack({ attackerName: 'Orc' }));
             result = await rollbackDamage('Goblin', 'Hero', campaignName, 'Mirror Image');
             expect(result).toBe(0);
 
             // targetName mismatch
-            const cs2 = makeCombatContext({ lastAttack: makeLastAttack({ targetName: 'Wizard' }) });
-            getCombatContext.mockResolvedValue(cs2);
+            getRuntimeValue.mockReturnValue(makeLastAttack({ targetName: 'Wizard' }));
             result = await rollbackDamage('Goblin', 'Hero', campaignName, 'Mirror Image');
             expect(result).toBe(0);
 
             // zero damage
-            const cs3 = makeCombatContext({ lastAttack: makeLastAttack({ primaryDamage: 0, secondaryDamage: 0, actualDamage: 0 }) });
-            getCombatContext.mockResolvedValue(cs3);
+            getRuntimeValue.mockReturnValue(makeLastAttack({ primaryDamage: 0, secondaryDamage: 0, actualDamage: 0 }));
             result = await rollbackDamage('Goblin', 'Hero', campaignName, 'Mirror Image');
             expect(result).toBe(0);
 
             // negative damage
-            const cs4 = makeCombatContext({ lastAttack: makeLastAttack({ actualDamage: -5 }) });
-            getCombatContext.mockResolvedValue(cs4);
+            getRuntimeValue.mockReturnValue(makeLastAttack({ actualDamage: -5 }));
             result = await rollbackDamage('Goblin', 'Hero', campaignName, 'Mirror Image');
             expect(result).toBe(0);
         });
 
         it('heals target and returns totalDamage when all conditions match', async () => {
-            const attack = makeLastAttack({ primaryDamage: 10, secondaryDamage: 2 });
-            const cs = makeCombatContext({ lastAttack: attack });
+            const attack = makeLastAttack({ primaryDamage: 10, secondaryDamage: 2, attackerName: 'Goblin', targetName: 'Hero' });
+            getRuntimeValue.mockReturnValue(attack);
+            const cs = { creatures: [{ name: 'Hero' }] };
             getCombatContext.mockResolvedValue(cs);
             applyHealingToTarget.mockReturnValue({ newHp: 25, actualHeal: 12, oldHp: 13 });
 
@@ -211,8 +200,9 @@ describe('damageRollback', () => {
         });
 
         it('returns 0 when applyHealingToTarget returns no newHp', async () => {
-            const attack = makeLastAttack();
-            const cs = makeCombatContext({ lastAttack: attack });
+            const attack = makeLastAttack({ attackerName: 'Goblin', targetName: 'Hero' });
+            getRuntimeValue.mockReturnValue(attack);
+            const cs = { creatures: [{ name: 'Hero' }] };
             getCombatContext.mockResolvedValue(cs);
             applyHealingToTarget.mockReturnValue(null);
 
@@ -229,7 +219,8 @@ describe('damageRollback', () => {
                 primaryDamage: 5,
                 secondaryDamage: 0,
             });
-            const cs = makeCombatContext({ lastAttack: attack });
+            getRuntimeValue.mockReturnValue(attack);
+            const cs = { creatures: [{ name: 'Cleric' }] };
             getCombatContext.mockResolvedValue(cs);
             applyHealingToTarget.mockReturnValue({ newHp: 20, actualHeal: 5, oldHp: 15 });
 
@@ -250,8 +241,9 @@ describe('damageRollback', () => {
         });
 
         it('re-throws addEntry errors after logging them', async () => {
-            const attack = makeLastAttack();
-            const cs = makeCombatContext({ lastAttack: attack });
+            const attack = makeLastAttack({ attackerName: 'Goblin', targetName: 'Hero' });
+            getRuntimeValue.mockReturnValue(attack);
+            const cs = { creatures: [{ name: 'Hero' }] };
             getCombatContext.mockResolvedValue(cs);
             applyHealingToTarget.mockReturnValue({ newHp: 20, actualHeal: 8, oldHp: 12 });
             addEntry.mockRejectedValue(new Error('DB error'));

@@ -15,7 +15,7 @@ vi.mock('../../services/ui/utils.js', () => ({
 
 vi.mock('../runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../services/encounters/combatData.js', () => ({

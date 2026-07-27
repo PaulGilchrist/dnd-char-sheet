@@ -114,7 +114,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[SaveAttackHealModal] Error logging feature use:', e); });
 
-        const { results, prompts } = resolveAllSavesAndDamage(Array.from(ctx.selected));
+        const { results, prompts } = await resolveAllSavesAndDamage(Array.from(ctx.selected));
         persistAndNotify(ctx.combatSummary, campaignName);
         ctx.setResults(results);
         ctx.setPendingPrompts(prompts);

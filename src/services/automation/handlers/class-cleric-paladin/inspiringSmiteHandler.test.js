@@ -35,6 +35,7 @@ vi.mock('../../../ui/logService.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
+  getTargetFromAttacker: vi.fn(),
 }));
 
 // Track CustomEvent dispatch
@@ -51,8 +52,8 @@ import * as automationService from '../../../combat/automation/automationService
 import * as diceRoller from '../../../dice/diceRoller.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import * as rangeValidation from '../../../rules/combat/rangeValidation.js';
-import * as rangeCheck from '../../../rules/combat/rangeCheck.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
+ import * as rangeCheck from '../../../rules/combat/rangeCheck.js';
+ import * as runtimeStore from '../../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'TestCampaign';
 const mapName = 'TestMap';
@@ -108,7 +109,7 @@ describe('inspiringSmiteHandler.handle', () => {
     vi.resetAllMocks();
     Object.keys(customEvents).forEach(key => delete customEvents[key]);
     useRuntimeState.getRuntimeValue.mockReset();
-    damageUtils.getCombatContext.mockReset();
+    runtimeStore.getRuntimeValue.mockReset();
     diceRoller.rollExpression.mockReset();
     mapsService.loadMapData.mockReset();
     rangeValidation.rangeToFeet.mockReset();
@@ -121,7 +122,10 @@ describe('inspiringSmiteHandler.handle', () => {
 
   describe('divine smite check', () => {
     it('returns popup when no lastAttack exists', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return null;
+        return undefined;
+      });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -131,9 +135,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('returns popup when lastAttack spellName is not Divine Smite', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeNonSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeNonSmiteAttack();
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
@@ -144,9 +148,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('returns popup when lastAttack attackerName does not match player', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack('OtherPlayer'),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack('OtherPlayer');
+        return undefined;
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
@@ -157,9 +161,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('proceeds when lastAttack is Divine Smite cast by the player', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack('TestPaladin'),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack('TestPaladin');
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
 
@@ -174,9 +178,9 @@ describe('inspiringSmiteHandler.handle', () => {
 
   describe('temp HP calculation', () => {
     it('returns popup when temp HP is zero', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 0 });
 
@@ -188,9 +192,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('returns popup when rollExpression returns null', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue(null);
 
@@ -202,9 +206,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('uses resolved dice expression from automationService', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
       diceRoller.rollExpression.mockReturnValue({ total: 12 });
@@ -222,9 +226,9 @@ describe('inspiringSmiteHandler.handle', () => {
 
   describe('target finding', () => {
     it('dispatches event with targets within range on map', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 15 });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
@@ -253,9 +257,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('caps targets at 10', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
@@ -275,9 +279,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('returns empty targets when attacker not found or map data is missing', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       rangeValidation.rangeToFeet.mockReturnValue(30);
@@ -296,9 +300,9 @@ describe('inspiringSmiteHandler.handle', () => {
       ]);
 
       // Map data is null - only self included
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       rangeValidation.rangeToFeet.mockReturnValue(30);
@@ -310,9 +314,9 @@ describe('inspiringSmiteHandler.handle', () => {
       ]);
 
       // Map data has no players - only self included
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       rangeValidation.rangeToFeet.mockReturnValue(30);
@@ -325,9 +329,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('excludes targets beyond range', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
@@ -348,9 +352,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('includes targets when getDistanceFeet returns null (assumes in range)', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
@@ -373,9 +377,9 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('uses automation.range when provided', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       mapsService.loadMapData.mockResolvedValue({
@@ -393,12 +397,12 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('uses selectedAllies from runtime store when available', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        if (name === 'TestPaladin' && key === 'selectedAllies') return ['Ally1', 'Ally2'];
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
-      useRuntimeState.getRuntimeValue.mockReturnValue(['Ally1', 'Ally2']);
       mapsService.loadMapData.mockResolvedValue({
         players: [
           { name: 'TestPaladin', gridX: 1, gridY: 1 },
@@ -422,9 +426,9 @@ describe('inspiringSmiteHandler.handle', () => {
 
   describe('execution', () => {
     it('dispatches CustomEvent with correct detail', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 12 });
       automationService.resolveDiceExpression.mockReturnValue('2d8 + 8');
@@ -437,7 +441,6 @@ describe('inspiringSmiteHandler.handle', () => {
           { name: 'Ally2', gridX: 3, gridY: 3 },
         ],
       });
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
 
       await handle(makeAction(), makePlayerStats(), campaignName, mapName);
 
@@ -452,15 +455,14 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('returns null on success (modal handles the rest)', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
       mapsService.loadMapData.mockResolvedValue({
         players: [{ name: 'TestPaladin', gridX: 1, gridY: 1 }],
       });
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
 
@@ -468,12 +470,11 @@ describe('inspiringSmiteHandler.handle', () => {
     });
 
     it('dispatches event without map when mapName is null', async () => {
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [],
-        lastAttack: makeDivineSmiteAttack(),
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') return makeDivineSmiteAttack();
+        return undefined;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10 });
-      useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 

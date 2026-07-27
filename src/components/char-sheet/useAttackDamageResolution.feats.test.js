@@ -14,7 +14,6 @@ vi.mock('../../services/rules/combat/damageUtils.js', () => ({
 
 vi.mock('../../services/encounters/combatData.js', () => ({
     getCurrentCombatRound: vi.fn(() => 1),
-    loadCombatSummary: vi.fn(),
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -233,14 +232,16 @@ describe('useAttackDamageResolution - feats', () => {
 
     describe('Shield Master (2024 ruleset)', () => {
         it('shows shield bash modal on failed STR save with shield equipped', async () => {
-            const loadCombatSummary = await import('../../services/encounters/combatData.js');
-            loadCombatSummary.loadCombatSummary.mockResolvedValue({
-                lastAttack: {
-                    hit: true,
-                    attackerName: 'TestFighter',
-                    weaponType: 'melee',
-                    targetName: 'Goblin',
-                },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return {
+                        hit: true,
+                        attackerName: 'TestFighter',
+                        weaponType: 'melee',
+                        targetName: 'Goblin',
+                    };
+                }
+                return null;
             });
 
             const stats = {
@@ -280,14 +281,16 @@ describe('useAttackDamageResolution - feats', () => {
         }, 10000);
 
         it('skips Shield Bash when lastAttack is not from player', async () => {
-            const loadCombatSummary = await import('../../services/encounters/combatData.js');
-            loadCombatSummary.loadCombatSummary.mockResolvedValue({
-                lastAttack: {
-                    hit: true,
-                    attackerName: 'Goblin',
-                    weaponType: 'melee',
-                    targetName: 'TestFighter',
-                },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return {
+                        hit: true,
+                        attackerName: 'Goblin',
+                        weaponType: 'melee',
+                        targetName: 'TestFighter',
+                    };
+                }
+                return null;
             });
 
             const stats = {
@@ -314,14 +317,16 @@ describe('useAttackDamageResolution - feats', () => {
         });
 
         it('skips Shield Bash when lastAttack was not a melee weapon', async () => {
-            const loadCombatSummary = await import('../../services/encounters/combatData.js');
-            loadCombatSummary.loadCombatSummary.mockResolvedValue({
-                lastAttack: {
-                    hit: true,
-                    attackerName: 'TestFighter',
-                    weaponType: 'ranged',
-                    targetName: 'Goblin',
-                },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return {
+                        hit: true,
+                        attackerName: 'TestFighter',
+                        weaponType: 'ranged',
+                        targetName: 'Goblin',
+                    };
+                }
+                return null;
             });
 
             const stats = {
@@ -348,14 +353,16 @@ describe('useAttackDamageResolution - feats', () => {
         });
 
         it('skips Shield Bash when no shield equipped', async () => {
-            const loadCombatSummary = await import('../../services/encounters/combatData.js');
-            loadCombatSummary.loadCombatSummary.mockResolvedValue({
-                lastAttack: {
-                    hit: true,
-                    attackerName: 'TestFighter',
-                    weaponType: 'melee',
-                    targetName: 'Goblin',
-                },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return {
+                        hit: true,
+                        attackerName: 'TestFighter',
+                        weaponType: 'melee',
+                        targetName: 'Goblin',
+                    };
+                }
+                return null;
             });
 
             const stats = {
@@ -384,14 +391,16 @@ describe('useAttackDamageResolution - feats', () => {
         });
 
         it('handles 2024 Shield Master with push_or_prone effect', async () => {
-            const loadCombatSummary = await import('../../services/encounters/combatData.js');
-            loadCombatSummary.loadCombatSummary.mockResolvedValue({
-                lastAttack: {
-                    hit: true,
-                    attackerName: 'TestFighter',
-                    weaponType: 'melee',
-                    targetName: 'Goblin',
-                },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return {
+                        hit: true,
+                        attackerName: 'TestFighter',
+                        weaponType: 'melee',
+                        targetName: 'Goblin',
+                    };
+                }
+                return null;
             });
 
             const stats = {

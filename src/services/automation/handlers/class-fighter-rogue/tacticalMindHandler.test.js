@@ -1,7 +1,6 @@
 // @cleaned-by-ai
 import { handle } from './tacticalMindHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -11,10 +10,6 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
 }));
 
 const makeAction = (overrides = {}) => ({
@@ -49,15 +44,11 @@ const mockCheck = (overrides = {}) => ({
 });
 
 describe('tacticalMindHandler.handle', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        damageUtils.getCombatContext.mockResolvedValue(null);
-    });
-
     describe('early exit — no valid ability check', () => {
         it('returns popup when no recent ability check found for the player', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'attack', attackerName: 'TestFighter', d20: 15, bonus: 3, targetAc: 15, hit: true },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'attack', attackerName: 'TestFighter', d20: 15, bonus: 3, targetAc: 15, hit: true };
+                return undefined;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
@@ -72,8 +63,9 @@ describe('tacticalMindHandler.handle', () => {
         });
 
         it('returns popup when ability check was made by a different character', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'check', attackerName: 'Goblin', d20: 15, bonus: 2, checkName: 'Stealth' },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'check', attackerName: 'Goblin', d20: 15, bonus: 2, checkName: 'Stealth' };
+                return undefined;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
@@ -86,8 +78,9 @@ describe('tacticalMindHandler.handle', () => {
 
     describe('early exit — natural 20', () => {
         it('returns popup indicating natural 20 needs no bonus', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: { rollType: 'check', attackerName: 'TestFighter', d20: 20, bonus: 3, checkName: 'Insight' },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'check', attackerName: 'TestFighter', d20: 20, bonus: 3, checkName: 'Insight' };
+                return undefined;
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
@@ -102,10 +95,11 @@ describe('tacticalMindHandler.handle', () => {
 
     describe('early exit — no Second Wind uses', () => {
         it('returns popup when no Second Wind uses remain and resets to max', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: mockCheck({ d20: 8 }),
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 8 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 0;
+                return undefined;
             });
-            getRuntimeValue.mockReturnValueOnce(0);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -118,10 +112,11 @@ describe('tacticalMindHandler.handle', () => {
 
     describe('successful application', () => {
         it('returns popup with original and modified totals for a failed check', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: mockCheck({ d20: 8 }),
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 8 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 2;
+                return undefined;
             });
-            getRuntimeValue.mockReturnValue(2);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -135,10 +130,11 @@ describe('tacticalMindHandler.handle', () => {
         });
 
         it('expend one Second Wind use on successful application', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: mockCheck({ d20: 5 }),
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 5 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 2;
+                return undefined;
             });
-            getRuntimeValue.mockReturnValue(2);
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
@@ -146,10 +142,11 @@ describe('tacticalMindHandler.handle', () => {
         });
 
         it('logs an ability_use entry to the campaign log', async () => {
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: mockCheck({ d20: 5 }),
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 5 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 2;
+                return undefined;
             });
-            getRuntimeValue.mockReturnValue(2);
             addEntry.mockResolvedValue(undefined);
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);

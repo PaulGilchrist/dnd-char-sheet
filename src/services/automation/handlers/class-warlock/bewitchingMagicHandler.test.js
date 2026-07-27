@@ -7,7 +7,12 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
+    getCombatContext: vi.fn(async () => ({
+        creatures: [
+            { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
+            { name: 'TestWarlock', type: 'player', currentHp: 20, maxHp: 20 },
+        ],
+    })),
 }));
 
 vi.mock('../../../combat/automation/automationExpressions.js', () => ({
@@ -15,7 +20,6 @@ vi.mock('../../../combat/automation/automationExpressions.js', () => ({
 }));
 
 const { getRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
-const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
 const { evaluateAutoExpression } = await import('../../../combat/automation/automationExpressions.js');
 
 const campaignName = 'test-campaign';
@@ -41,21 +45,14 @@ function makePlayerStats(overrides = {}) {
     };
 }
 
-function makeCombatContext(overrides = {}) {
-    return {
-        creatures: [
-            { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
-            { name: playerName, type: 'player', currentHp: 20, maxHp: 20 },
-        ],
-        ...overrides,
-    };
-}
-
 describe('bewitchingMagicHandler', () => {
     describe('guard: lastAttack checks', () => {
         it('returns popup when no lastAttack exists', async () => {
-            getCombatContext.mockResolvedValue(makeCombatContext({ lastAttack: null }));
-            getRuntimeValue.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return null;
+                if (key === '_Steps_of_the_Fey_freeCastCount') return 1;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');
@@ -66,13 +63,11 @@ describe('bewitchingMagicHandler', () => {
         });
 
         it('returns popup when attacker is not the warlock', async () => {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: 'Goblin',
-                    damageSchool: 'enchantment',
-                },
-            }));
-            getRuntimeValue.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: 'Goblin', damageSchool: 'enchantment' };
+                if (key === '_Steps_of_the_Fey_freeCastCount') return 1;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');
@@ -83,13 +78,11 @@ describe('bewitchingMagicHandler', () => {
         });
 
         it('returns popup when school is not enchantment or illusion', async () => {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: playerName,
-                    damageSchool: 'evocation',
-                },
-            }));
-            getRuntimeValue.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: playerName, damageSchool: 'evocation' };
+                if (key === '_Steps_of_the_Fey_freeCastCount') return 1;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');
@@ -100,13 +93,11 @@ describe('bewitchingMagicHandler', () => {
         });
 
         it('returns popup when damageSchool is missing', async () => {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: playerName,
-                    damageSchool: null,
-                },
-            }));
-            getRuntimeValue.mockReturnValue(1);
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: playerName, damageSchool: null };
+                if (key === '_Steps_of_the_Fey_freeCastCount') return 1;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');
@@ -118,25 +109,21 @@ describe('bewitchingMagicHandler', () => {
     });
 
     describe('modal return for qualifying spells', () => {
-        function setupEnchantmentAttack() {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: playerName,
-                    damageSchool: 'enchantment',
-                },
-            }));
-            getRuntimeValue.mockReturnValue(1);
+        function setupEnchantmentAttack(freeCastCount = 1) {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: playerName, damageSchool: 'enchantment' };
+                if (key === '_Steps_of_the_Fey_freeCastCount') return freeCastCount;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
         }
 
-        function setupIllusionAttack() {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: playerName,
-                    damageSchool: 'illusion',
-                },
-            }));
-            getRuntimeValue.mockReturnValue(1);
+        function setupIllusionAttack(freeCastCount = 1) {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: playerName, damageSchool: 'illusion' };
+                if (key === '_Steps_of_the_Fey_freeCastCount') return freeCastCount;
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
         }
 
@@ -175,8 +162,7 @@ describe('bewitchingMagicHandler', () => {
         });
 
         it('returns modal with zero count when no uses remaining', async () => {
-            setupEnchantmentAttack();
-            getRuntimeValue.mockReturnValue(0);
+            setupEnchantmentAttack(0);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');
 
@@ -187,13 +173,10 @@ describe('bewitchingMagicHandler', () => {
         });
 
         it('uses fallback count when runtime value is null', async () => {
-            getCombatContext.mockResolvedValue(makeCombatContext({
-                lastAttack: {
-                    attackerName: playerName,
-                    damageSchool: 'enchantment',
-                },
-            }));
-            getRuntimeValue.mockReturnValue(null);
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'lastAttack') return { attackerName: playerName, damageSchool: 'enchantment' };
+                return null;
+            });
             evaluateAutoExpression.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'map');

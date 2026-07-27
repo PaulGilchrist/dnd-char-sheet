@@ -66,7 +66,24 @@ function setupDefaultMocks() {
             { name: targetName, type: 'npc', currentHp: 30, maxHp: 30 },
         ],
     });
-    getRuntimeValue.mockReturnValue(5);
+    getRuntimeValue.mockImplementation((name, key, _campaign) => {
+        if (name === 'campaign' && key === 'lastAttack') {
+            return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+        }
+        if (name === playerName && key === 'bastionOfLawActive') {
+            return true;
+        }
+        if (name === playerName && key === 'bastionOfLawWardDice') {
+            return [1, 1, 1];
+        }
+        if (name === playerName && key === 'bastionOfLawLastAttackDamage') {
+            return 10;
+        }
+        if (name === playerName && key === 'bastionOfLawWardUsed') {
+            return 0;
+        }
+        return 5;
+    });
     rollExpression.mockReturnValue({ total: 5 });
 }
 
@@ -216,8 +233,13 @@ describe('bastionOfLawHandler', () => {
 
     describe('handleSpendDice', () => {
         it('returns popup when not target of last attack', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: 'OtherCreature' },
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: 'OtherCreature', primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
+                if (key === 'bastionOfLawActive') return true;
+                if (key === 'bastionOfLawWardDice') return ['1d8', '1d8', '1d8'];
+                return null;
             });
 
             const result = await handleSpendDice(makeAction({ numDice: 1 }), makePlayerStats(), campaignName);
@@ -228,10 +250,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('returns popup when no ward active', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return false;
                 return [];
             });
@@ -244,10 +266,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('returns modal when no dice count specified', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8', '1d8'];
                 return null;
@@ -261,10 +283,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('rolls dice and returns reduction with remaining count', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName, actualDamage: 50 },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 50 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -281,10 +303,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('updates remaining dice after spending', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -304,10 +326,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('deactivates ward when no dice remain after spending', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -323,10 +345,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('handles pre-rolled result', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -344,10 +366,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('handles numDice edge cases: defaults to 1 and clamps to available', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -374,10 +396,10 @@ describe('bastionOfLawHandler', () => {
             vi.clearAllMocks();
 
             // clamps when numDice exceeds available dice
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -399,10 +421,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('returns popup with roll result description', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;
@@ -418,10 +440,10 @@ describe('bastionOfLawHandler', () => {
         });
 
         it('logs ability use on spend', async () => {
-            getCombatContext.mockResolvedValue({
-                lastAttack: { targetName: playerName },
-            });
-            getRuntimeValue.mockImplementation((name, key) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') {
+                    return { targetName: playerName, primaryDamage: 10, secondaryDamage: 0, actualDamage: 10 };
+                }
                 if (key === 'bastionOfLawActive') return true;
                 if (key === 'bastionOfLawWardDice') return ['1d8', '1d8'];
                 if (key === 'bastionOfLawLastAttackDamage') return 50;

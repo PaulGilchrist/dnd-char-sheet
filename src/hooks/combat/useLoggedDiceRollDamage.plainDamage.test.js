@@ -34,7 +34,7 @@ vi.mock('../../services/ui/utils.js', () => ({
 
 vi.mock('../runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../services/encounters/combatData.js', () => ({
@@ -149,9 +149,9 @@ describe('Plain damage edge cases', () => {
             });
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-            'campaign',
-            'targetEffects',
-                expect.any(Array),
+                'campaign',
+                'lastAttack',
+                expect.any(Object),
                 'test-campaign'
             );
         });

@@ -1,15 +1,16 @@
 // @improved-by-ai
 import { handle } from './darkOnesLuckHandler.js';
-import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
-import * as logService from '../../../ui/logService.js';
+ import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
+ import * as logService from '../../../ui/logService.js';
 import * as automationService from '../../../combat/automation/automationService.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js');
 vi.mock('../../../../hooks/combat/useMetamagic.js', () => ({}));
 vi.mock('../../../ui/logService.js');
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
+    getCombatContext: vi.fn(async () => ({
+        creatures: [],
+    })),
 }));
 vi.mock('../../../combat/automation/automationService.js', () => ({
     evaluateAutoExpression: vi.fn(),
@@ -66,7 +67,10 @@ describe('darkOnesLuckHandler.handle', () => {
 
     describe('uses validation', () => {
         it('should return error popup when no uses remaining', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(0);
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 0;
+                return null;
+            });
             automationService.evaluateAutoExpression.mockReturnValue(3);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -81,11 +85,12 @@ describe('darkOnesLuckHandler.handle', () => {
         });
 
         it('should use minimum 1 max uses when CHA modifier is negative', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(-4);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createCheck(),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createCheck();
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(-4);
             mockRandom(5);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -100,11 +105,12 @@ describe('darkOnesLuckHandler.handle', () => {
 
     describe('ability check handling', () => {
         it('should enhance ability check result with d10 roll', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createCheck({ d20: 8, bonus: 5, checkName: 'Stealth check' }),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createCheck({ d20: 8, bonus: 5, checkName: 'Stealth check' });
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
             mockRandom(10);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -117,11 +123,12 @@ describe('darkOnesLuckHandler.handle', () => {
         });
 
         it('should log the ability use', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createCheck(),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createCheck();
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
             mockRandom(7);
             logService.addEntry.mockResolvedValue(undefined);
 
@@ -139,11 +146,12 @@ describe('darkOnesLuckHandler.handle', () => {
 
     describe('saving throw handling', () => {
         it('should enhance saving throw result with d10 roll', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createSave(),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createSave();
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
             mockRandom(3);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -156,11 +164,12 @@ describe('darkOnesLuckHandler.handle', () => {
         });
 
         it('should consume one use after processing saving throw', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(5);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createSave(),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 5;
+                if (key === 'lastAttack') return createSave();
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
             mockRandom(5);
 
             await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -173,11 +182,12 @@ describe('darkOnesLuckHandler.handle', () => {
 
     describe('priority and rejection', () => {
         it('should prefer ability check over saving throw when both exist', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createCheck({ d20: 5, bonus: 2, checkName: 'Arcana check' }),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createCheck({ d20: 5, bonus: 2, checkName: 'Arcana check' });
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
             mockRandom(1);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
@@ -188,11 +198,12 @@ describe('darkOnesLuckHandler.handle', () => {
         });
 
         it('should reject when last attack is by a different character', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
-            automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({
-                lastAttack: createCheck({ attackerName: 'Goblin', checkName: 'Stealth' }),
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return createCheck({ attackerName: 'Goblin', checkName: 'Stealth' });
+                return null;
             });
+            automationService.evaluateAutoExpression.mockReturnValue(3);
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
 
@@ -203,9 +214,12 @@ describe('darkOnesLuckHandler.handle', () => {
         });
 
         it('should reject when last attack is null or missing', async () => {
-            runtimeState.getRuntimeValue.mockReturnValue(1);
+            runtimeState.getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'darkOnesLuckUses') return 1;
+                if (key === 'lastAttack') return null;
+                return null;
+            });
             automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null; return undefined; });;
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
 
