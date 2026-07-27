@@ -134,7 +134,7 @@ export function applyDamageToTarget(combatSummary, targetName, rawDamage, damage
     damageApplied: true,
     timestamp: Date.now(),
   };
-  storage.set('lastAttack', newLastAttack, campaignName);
+  setRuntimeValue('campaign', 'lastAttack', newLastAttack, campaignName);
 
   const isPlayer = creature.type === 'player';
   if (!Array.isArray(characters)) { throw new Error('characters must be an array'); }
@@ -260,13 +260,13 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         const existing = storage.get('lastAttack', campaignName) || null;
         if (existing) {
             existing.actualDamage = (existing.actualDamage || 0) + wardDamage;
-            storage.set('lastAttack', existing, campaignName);
+            setRuntimeValue('campaign', 'lastAttack', existing, campaignName);
         }
     } else {
         const existing = storage.get('lastAttack', campaignName) || null;
         if (existing) {
             existing.actualDamage = wardDamage;
-            storage.set('lastAttack', existing, campaignName);
+            setRuntimeValue('campaign', 'lastAttack', existing, campaignName);
         }
     }
 

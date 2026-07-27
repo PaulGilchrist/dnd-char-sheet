@@ -8,7 +8,6 @@ import { getClassFeatures } from '../../../../services/character/classFeatures.j
 import { executeHandler } from '../../index.js';
 import { parseDurationRounds } from '../../../rules/effects/durationParser.js';
 import { infoPopup } from '../../common/infoPopup.js';
-import storage from '../../../ui/storage.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { toggleBuff } from '../../common/buffToggle.js';
@@ -223,8 +222,8 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
             outcomeNote = ' → The save still fails.';
         }
     } else if (isCheck) {
-        cs.lastAttack = {
-            ...cs.lastAttack,
+        const updatedLastAttack = {
+            ...lastAttack,
             total: newTotal,
             bendFateApplied: true,
             bendFateModifier: modifier,
@@ -232,7 +231,7 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
             bendFateMode: mode,
             timestamp: Date.now(),
         };
-        storage.set('combatSummary', cs, campaignName);
+        await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
         outcomeNote = ` New total: ${newTotal}.`;
     }
 

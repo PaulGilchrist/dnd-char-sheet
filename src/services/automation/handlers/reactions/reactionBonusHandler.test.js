@@ -293,7 +293,7 @@ describe('reactionBonusHandler', () => {
 
         it('should update lastAttack with bendFateApplied flag for attack', async () => {
             const lastAttack = { ...baseLastAttack, targetAc: 16, hit: false };
-            getCombatContext.mockResolvedValue({ lastAttack: lastAttack });
+            getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
                 { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
@@ -317,7 +317,7 @@ describe('reactionBonusHandler', () => {
                 damageFormula: '2d6+3',
                 damageType: 'slashing',
             };
-            getCombatContext.mockResolvedValue({ lastAttack: lastAttack });
+            getCombatContext.mockReturnValue({ lastAttack });
             rollExpression.mockReturnValueOnce({ total: 10 }).mockReturnValueOnce({ total: 10 });
             applyDamageToTarget.mockReturnValue({ finalDamage: 10 });
 
@@ -342,7 +342,7 @@ describe('reactionBonusHandler', () => {
                 primaryDamage: 8,
                 rawDamage: 8,
             };
-            getCombatContext.mockResolvedValue({ lastAttack: { ...lastAttack }, creatures: [{ name: 'Goblin' }] });
+            getCombatContext.mockReturnValue({ lastAttack, creatures: [{ name: 'Goblin' }] });
             applyHealingToTarget.mockReturnValue({ actualHeal: 8, oldHp: 15, newHp: 23 });
 
             const result = await applyBendFateChoice(
@@ -368,11 +368,11 @@ describe('reactionBonusHandler', () => {
                 saveDc: 13,
                 saveConditions: ['charmed', 'incapacitated'],
             };
+            getCombatContext.mockReturnValue({ lastAttack });
             getRuntimeValue.mockImplementation((targetName, key) => {
                 if (key === 'activeConditions' && targetName === 'Goblin') return ['charmed', 'incapacitated'];
                 return null;
             });
-            getCombatContext.mockResolvedValue({ lastAttack: { ...lastAttack } });
 
             const result = await applyBendFateChoice(
                 { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
@@ -398,11 +398,11 @@ describe('reactionBonusHandler', () => {
                 saveDc: 13,
                 saveConditions: ['charmed'],
             };
+            getCombatContext.mockReturnValue({ lastAttack });
             getRuntimeValue.mockImplementation((targetName, key) => {
                 if (key === 'activeConditions' && targetName === 'Goblin') return ['frightened'];
                 return null;
             });
-            getCombatContext.mockResolvedValue({ lastAttack: { ...lastAttack } });
 
             const result = await applyBendFateChoice(
                 { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
@@ -419,7 +419,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should spend sorcery points on success', async () => {
-            getCombatContext.mockResolvedValue({ lastAttack: { ...baseLastAttack } });
+            getCombatContext.mockReturnValue({ lastAttack: { ...baseLastAttack } });
 
             await applyBendFateChoice(
                 { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
@@ -435,7 +435,7 @@ describe('reactionBonusHandler', () => {
 
         it('should log to campaign log', async () => {
             const { addEntry } = await import('../../../ui/logService.js');
-            getCombatContext.mockResolvedValue({ lastAttack: { ...baseLastAttack } });
+            getCombatContext.mockReturnValue({ lastAttack: { ...baseLastAttack } });
 
             await applyBendFateChoice(
                 { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
