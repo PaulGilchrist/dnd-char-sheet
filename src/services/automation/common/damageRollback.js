@@ -167,14 +167,15 @@ export async function storeDamageRolls(campaignName, lastAttack) {
  * @param {Object} lastAttack - The lastAttack object from the spell being countered
  * @param {string} campaignName - Campaign name
  * @param {string} featureName - Name of the feature (e.g. 'Counterspell')
+ * @param {Object} [existingCombatContext] - Pre-fetched combat context (avoids redundant re-fetch)
  * @returns {Promise<{targetsHealed: number, conditionsRemoved: Array, effectsRemoved: number, damageHealed: number, logDescription: string}>}
  */
-export async function rollbackSpellEffects(lastAttack, campaignName, featureName) {
+export async function rollbackSpellEffects(lastAttack, campaignName, featureName, existingCombatContext) {
     const targets = lastAttack.affectedTargets || [lastAttack.targetName];
     const attackerName = lastAttack.attackerName || 'Unknown';
-    const spellName = lastAttack.attackEvent.attackName || 'unknown spell';
+    const spellName = lastAttack.attackName || lastAttack.damageName || 'unknown spell';
 
-    const cs = await getCombatContext(campaignName);
+    const cs = existingCombatContext || await getCombatContext(campaignName);
     if (!cs) {
         console.error(`[${featureName}] No combat context for rollback`);
         return { targetsHealed: 0, conditionsRemoved: [], effectsRemoved: 0, damageHealed: 0, logDescription: '' };
@@ -188,7 +189,7 @@ export async function rollbackSpellEffects(lastAttack, campaignName, featureName
         logDescription: '',
     };
 
-    const totalDamage = (lastAttack.primaryDamage || 0) + (lastAttack.secondaryDamage || 0);
+    const totalDamage = lastAttack.actualDamage ?? ((lastAttack.primaryDamage || 0) + (lastAttack.secondaryDamage || 0));
     const conditionKeys = lastAttack.statusEffects || [];
 
     for (const targetName of targets) {

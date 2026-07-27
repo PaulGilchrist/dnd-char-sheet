@@ -418,6 +418,7 @@ describe('counterSpellHandler.handle', () => {
         }),
         campaignName,
         'Counterspell',
+        expect.objectContaining({ creatures: expect.any(Array) }),
       );
 
       // First call was ability_use for the counter triggered, second is save_result
@@ -634,6 +635,7 @@ describe('counterSpellHandler.handle', () => {
         }),
         campaignName,
         'Counterspell',
+        expect.objectContaining({ creatures: expect.any(Array) }),
       );
 
       addEventListenerSpy.mockRestore();

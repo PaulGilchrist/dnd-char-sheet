@@ -113,7 +113,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }));
 
         if (!event.detail.success) {
-            const rolledBack = await rollbackSpellEffects(lastAttack.attackEvent, campaignName, featureName);
+            const rolledBack = await rollbackSpellEffects(lastAttack.attackEvent, campaignName, featureName, cs);
 
             addEntry(campaignName, {
                 type: 'save_result',

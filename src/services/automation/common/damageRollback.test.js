@@ -6,6 +6,7 @@ import {
     rollbackDamage,
     findRollsByCreature,
     findMostRecentRollAcrossCreatures,
+    rollbackSpellEffects,
 } from './damageRollback.js';
 
 // ── Mocks BEFORE imports ─────────────────────────────────────────
@@ -22,6 +23,10 @@ vi.mock('../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../combat/conditions/conditionSaveService.js', () => ({
+    removeCondition: vi.fn(),
+}));
+
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
@@ -32,7 +37,8 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 import { getCombatContext } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
 import { addEntry } from '../../ui/logService.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { removeCondition } from '../../combat/conditions/conditionSaveService.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -42,7 +48,9 @@ function resetMocks() {
     vi.clearAllMocks();
     getCombatContext.mockResolvedValue(null);
     getRuntimeValue.mockReturnValue(null);
+    setRuntimeValue.mockResolvedValue(undefined);
     applyHealingToTarget.mockReturnValue(null);
+    removeCondition.mockReturnValue(undefined);
     addEntry.mockResolvedValue(undefined);
 }
 
@@ -355,8 +363,149 @@ describe('damageRollback', () => {
                 expect(result.eventData).toBe(attack);
                 expect(result.isStale).toBe(false);
             }
+    });
+
+    // ─── rollbackSpellEffects ─────────────────────────────────
+
+    describe('rollbackSpellEffects', () => {
+        function makeSpellLastAttack(overrides = {}) {
+            return {
+                attackerName: 'Goblin',
+                targetName: 'Hero',
+                attackName: 'Fire Bolt',
+                damageName: 'Fire Bolt',
+                primaryDamage: 8,
+                secondaryDamage: 0,
+                actualDamage: 8,
+                affectedTargets: ['Hero'],
+                statusEffects: null,
+                ...overrides,
+            };
+        }
+
+        const cs = { creatures: [{ name: 'Hero', currentHp: 10, maxHp: 20 }] };
+
+        it('returns early when no combat context is provided and fetch returns null', async () => {
+            getCombatContext.mockResolvedValue(null);
+            const result = await rollbackSpellEffects(makeSpellLastAttack(), campaignName, 'Counterspell');
+            expect(result).toEqual({ targetsHealed: 0, conditionsRemoved: [], effectsRemoved: 0, damageHealed: 0, logDescription: '' });
+            expect(applyHealingToTarget).not.toHaveBeenCalled();
         });
 
+        it('uses provided combat context instead of re-fetching', async () => {
+            const attack = makeSpellLastAttack();
+            applyHealingToTarget.mockReturnValue({ newHp: 18, actualHeal: 8, oldHp: 10 });
 
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(getCombatContext).not.toHaveBeenCalled();
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Hero', 8, campaignName);
+            expect(result.damageHealed).toBe(8);
+            expect(result.targetsHealed).toBe(1);
+        });
+
+        it('falls back to re-fetching combat context when not provided', async () => {
+            getCombatContext.mockResolvedValue(cs);
+            applyHealingToTarget.mockReturnValue({ newHp: 18, actualHeal: 8, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(makeSpellLastAttack(), campaignName, 'Counterspell');
+
+            expect(getCombatContext).toHaveBeenCalledWith(campaignName);
+            expect(result.damageHealed).toBe(8);
+        });
+
+        it('uses actualDamage over primaryDamage when available', async () => {
+            const attack = makeSpellLastAttack({ primaryDamage: 15, secondaryDamage: 3, actualDamage: 9 });
+            applyHealingToTarget.mockReturnValue({ newHp: 19, actualHeal: 9, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Hero', 9, campaignName);
+            expect(result.damageHealed).toBe(9);
+        });
+
+        it('falls back to primaryDamage + secondaryDamage when actualDamage is absent', async () => {
+            const attack = makeSpellLastAttack({ primaryDamage: 8, secondaryDamage: 5, actualDamage: undefined });
+            applyHealingToTarget.mockReturnValue({ newHp: 23, actualHeal: 13, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Hero', 13, campaignName);
+            expect(result.damageHealed).toBe(13);
+        });
+
+        it('removes conditions from lastAttack.statusEffects', async () => {
+            const attack = makeSpellLastAttack({ statusEffects: ['burning', 'frightened'] });
+
+            await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(removeCondition).toHaveBeenCalledTimes(2);
+            expect(removeCondition).toHaveBeenCalledWith(cs, 'Hero', 'burning', getRuntimeValue, setRuntimeValue, campaignName);
+            expect(removeCondition).toHaveBeenCalledWith(cs, 'Hero', 'frightened', getRuntimeValue, setRuntimeValue, campaignName);
+        });
+
+        it('removes targetEffects for the attacker', async () => {
+            const storedEffects = [
+                { target: 'Hero', source: 'Goblin', effect: 'fire' },
+                { target: 'Hero', source: 'Orc', effect: 'poison' },
+            ];
+            getRuntimeValue.mockReturnValue(storedEffects);
+
+            const result = await rollbackSpellEffects(makeSpellLastAttack(), campaignName, 'Counterspell', cs);
+
+            expect(result.effectsRemoved).toBe(1);
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [{ target: 'Hero', source: 'Orc', effect: 'poison' }], campaignName);
+        });
+
+        it('handles AoE with multiple targets', async () => {
+            const attack = makeSpellLastAttack({
+                affectedTargets: ['Hero', 'Wizard'],
+                primaryDamage: 10,
+                actualDamage: 10,
+            });
+            applyHealingToTarget.mockReturnValue({ newHp: 20, actualHeal: 10, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(applyHealingToTarget).toHaveBeenCalledTimes(2);
+            expect(result.targetsHealed).toBe(2);
+            expect(result.damageHealed).toBe(20);
+        });
+
+        it('builds logDescription with spell name and summary', async () => {
+            const attack = makeSpellLastAttack({ attackName: 'Fireball', statusEffects: ['burning'] });
+            applyHealingToTarget.mockReturnValue({ newHp: 20, actualHeal: 8, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(result.logDescription).toContain("Goblin's spell 'Fireball'");
+            expect(result.logDescription).toContain('8 HP healed');
+            expect(result.logDescription).toContain('1 condition(s) removed');
+            expect(result.logDescription).toContain('Hero');
+        });
+
+        it('falls back to damageName when attackName is absent', async () => {
+            const attack = makeSpellLastAttack({ attackName: undefined, damageName: 'Lightning Bolt' });
+
+            await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            // Should not throw — spellName resolves to 'Lightning Bolt'
+        });
+
+        it('uses affectedTargets from lastAttack instead of targetName', async () => {
+            const attack = makeSpellLastAttack({
+                targetName: 'Hero',
+                affectedTargets: ['Hero', 'Wizard'],
+                primaryDamage: 6,
+                actualDamage: 6,
+            });
+            applyHealingToTarget.mockReturnValue({ newHp: 16, actualHeal: 6, oldHp: 10 });
+
+            const result = await rollbackSpellEffects(attack, campaignName, 'Counterspell', cs);
+
+            expect(applyHealingToTarget).toHaveBeenCalledTimes(2);
+            expect(result.targetsHealed).toBe(2);
+        });
     });
+});
 });
