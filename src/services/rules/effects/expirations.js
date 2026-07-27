@@ -883,18 +883,17 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
                 const advKey = `_advantageOn_${targetName}`;
                 const storedAdv = getRuntimeValue(attackerName, advKey);
                 if (!Array.isArray(storedAdv)) {
-                    console.error('expirations: expected advantage array to be an array, got', typeof storedAdv, 'for', advKey);
-                    throw new Error('Missing array: advantage array for ' + advKey);
+                    break;
                 }
                 if (storedAdv.includes(targetName)) {
                      setRuntimeValue(
-                         attackerName,
-                         advKey,
-                          storedAdv.filter(tn => tn !== targetName),
-                          campaignName
-                        );
-                    }
-               break;
+                          attackerName,
+                          advKey,
+                           storedAdv.filter(tn => tn !== targetName),
+                           campaignName
+                         );
+                     }
+                break;
                 }
 
             case 'fly_speed_equals_walk_speed': {
