@@ -322,6 +322,32 @@ export function setupEventListeners(deps) {
                 }
             }
 
+            // Always write lastAttack for save-based damage (player targets) — counterspell needs this
+            const saveLastAttackData = {
+                attackerName: pending.attackerName || pending.sourceAttackerName || characterName,
+                targetName: e.detail.targetName,
+                d20: e.detail.roll,
+                d20Rolls: e.detail.rawRolls || [e.detail.roll],
+                bonus: e.detail.saveBonus,
+                total: e.detail.total,
+                rollType: 'attack',
+                saveType: e.detail.saveType,
+                saveDc: e.detail.saveDc,
+                saveResult: e.detail.success ? 'success' : 'failure',
+                damageFormula: pending.formula || null,
+                damageName: pending.name || null,
+                damageType: pending.damageType || null,
+                rawDamage: pending.rawDamage || 0,
+                primaryDamage: pending.rawDamage || 0,
+                primaryDamageType: pending.damageType || null,
+                actualDamage: appliedDamage || finalDamage,
+                damageApplied: (appliedDamage || finalDamage) > 0,
+                statusEffects: pending.statusEffects || null,
+                affectedTargets: pending.statusEffects ? [e.detail.targetName] : undefined,
+                timestamp: Date.now(),
+            };
+            setRuntimeValue('campaign', 'lastAttack', saveLastAttackData, pending.campaignName);
+
             const popupData = {
                 type: 'save-damage',
                 name: pending.name,

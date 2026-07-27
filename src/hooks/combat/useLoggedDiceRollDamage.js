@@ -192,6 +192,25 @@ export function createLogDamageAndShow(deps) {
             targetName: context?.targetName,
             rangeReason: context?.rangeReason,
         });
+
+        // Write lastAttack for auto-miss — counterspell needs to know about it
+        setRuntimeValue('campaign', 'lastAttack', {
+            attackerName: characterName,
+            targetName: context?.targetName || null,
+            rollType: 'auto-miss',
+            damageFormula: formula || null,
+            damageName: name || null,
+            damageType: context?.damageType || null,
+            rawDamage: 0,
+            primaryDamage: 0,
+            primaryDamageType: context?.damageType || null,
+            actualDamage: 0,
+            damageApplied: false,
+            statusEffects: context?.statusEffects || null,
+            affectedTargets: context?.affectedTargets || [context?.targetName].filter(Boolean),
+            rangeReason: context?.rangeReason,
+            timestamp: Date.now(),
+        }, campaignName);
     }
 
     async function handleAoeDamage(name, formula, total, rolls, modifier, context, adjustedTotal, displayRolls, gwfBaseRolls, gwfDisplayRolls) {
@@ -346,6 +365,28 @@ export function createLogDamageAndShow(deps) {
             gwfDisplayRolls: gwfDisplayRolls,
         });
         setPopupHtml(html);
+
+        // Write lastAttack for AoE — coverspell needs this for rollback
+        const aoeAffectedNames = affected.map(a => a.creature.name);
+        const aoeLastAttackData = {
+            attackerName: casterName,
+            targetName: overlayLabel,
+            rollType: 'aoe-damage',
+            saveType: saveType || null,
+            saveDc: saveDc || null,
+            damageFormula: formula || null,
+            damageName: name || null,
+            damageType: damageType || null,
+            rawDamage: adjustedTotal,
+            primaryDamage: adjustedTotal,
+            primaryDamageType: damageType || null,
+            actualDamage: adjustedTotal,
+            damageApplied: adjustedTotal > 0,
+            statusEffects: context?.statusEffects || null,
+            affectedTargets: aoeAffectedNames,
+            timestamp: Date.now(),
+        };
+        setRuntimeValue('campaign', 'lastAttack', aoeLastAttackData, campaignName);
 
         handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters);
     }
@@ -1530,9 +1571,11 @@ export function createLogDamageAndShow(deps) {
 
         setPopupHtml(popupData);
 
-        // Store damage rolls for later access (e.g., Piercer feat)
+        // Store damage rolls for later access (e.g., Piercer feat) — merge into existing lastAttack
         if (popupData.rolls && popupData.damageType) {
+            const existingLastAttack = getRuntimeValue('campaign', 'lastAttack', campaignName) || {};
             const lastAttackData = {
+                ...existingLastAttack,
                 rolls: displayRolls,
                 rawDamage: adjustedTotal,
                 primaryDamage: adjustedTotal,

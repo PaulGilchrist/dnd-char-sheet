@@ -109,20 +109,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return;
     }
 
-    const lastAttackSchool = (spell.school || '').toLowerCase();
-    if (lastAttackSchool) {
-        try {
-            setRuntimeValue('campaign', 'lastAttack', {
-                attackerName: playerStats.name,
-                targetName: playerStats.name,
-                spellSchool: lastAttackSchool,
-                timestamp: Date.now(),
-            }, campaignName);
-        } catch (err) {
-            console.error('[spellCast] Failed to set lastAttack with spellSchool:', err);
-        }
-    }
-
     // Compute hasInvisible early so it's available for all spell paths
     const magicalAmbush = (function () {
         const passives = playerStats.automation?.passives;

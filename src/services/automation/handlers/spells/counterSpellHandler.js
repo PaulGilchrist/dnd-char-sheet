@@ -39,7 +39,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                               lastAttack.attackEvent.attackName ||
                               lastAttack.attackEvent.spellName ||
                               lastAttack.attackEvent.saveType;
-
     if (!hasSpellIndicator) {
         return {
             type: 'popup',

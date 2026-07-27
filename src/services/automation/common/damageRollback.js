@@ -251,5 +251,5 @@ export async function updateLastAttackWithEffects(campaignName, statusEffects, t
         affectedTargets: existingLastAttack.affectedTargets || [targetName || existingLastAttack.targetName],
     };
 
-    await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
+    setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
 }
