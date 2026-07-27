@@ -311,7 +311,7 @@ export function setupEventListeners(deps) {
                 }
 
                 // Update lastAttack with statusEffects for counterspell rollback
-                const existingLastAttack = getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
+                const existingLastAttack = await getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
                 if (existingLastAttack) {
                     const updatedLastAttack = {
                         ...existingLastAttack,

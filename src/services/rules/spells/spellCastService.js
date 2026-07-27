@@ -941,10 +941,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             await executeMagicMissile(spell, metaCtx, { rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters });
         } else if (spell.attack_type || spell.damage) {
             const target = await getTargetInfo();
-            console.log('[spellCastService] attack-based spell context:', { spellName: spell.name, targetName: target?.name, attackerName: playerStats.name, targetObj: JSON.stringify(target) });
             const rollCtx = innateSorceryActive && !rollContext.forcedMode ? { ...rollContext, forcedMode: 'advantage' } : rollContext;
             const damageRollResult = rollExpression(overchannelFormula);
             const attackCtx = {
+                attackName: spell.name,
                 targetName: target?.name,
                 attackerName: playerStats.name,
                 autoDamageFormula: finalFormula,
@@ -962,7 +962,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             if (hasInvisible) {
                 attackCtx.metamagicHeighten = true;
             }
-            console.log('[spellCastService] calling rollAttack with attackCtx:', { attackName: spell.name, targetName: attackCtx.targetName, attackerName: attackCtx.attackerName, autoDamageName: attackCtx.autoDamageName });
             rollAttack(spell.name, spellToHit, attackCtx);
         }
     }

@@ -115,7 +115,7 @@ export async function applyDamageToTarget(combatSummary, targetName, rawDamage, 
   if (!creature) return null;
   if (isNaN(rawDamage) || rawDamage === null || rawDamage === undefined) return null;
 
-  const existingAttack = await storage.get('lastAttack', campaignName) || null;
+  const existingAttack = getRuntimeValue('campaign', 'lastAttack') || null;
   const isSecondary = existingAttack?.primaryDamage != null;
   const newLastAttack = {
     ...existingAttack,
@@ -257,13 +257,13 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
 
     // Update lastAttack with actual HP damage dealt (after resistances, feature reduction, ward absorption)
     if (isSecondary) {
-        const existing = storage.get('lastAttack', campaignName) || null;
+        const existing = getRuntimeValue('campaign', 'lastAttack') || null;
         if (existing) {
             existing.actualDamage = (existing.actualDamage || 0) + wardDamage;
             setRuntimeValue('campaign', 'lastAttack', existing, campaignName);
         }
     } else {
-        const existing = storage.get('lastAttack', campaignName) || null;
+        const existing = getRuntimeValue('campaign', 'lastAttack') || null;
         if (existing) {
             existing.actualDamage = wardDamage;
             setRuntimeValue('campaign', 'lastAttack', existing, campaignName);

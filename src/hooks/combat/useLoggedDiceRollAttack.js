@@ -648,6 +648,8 @@ export function createLogAndShow(deps) {
 
         if (rollType === 'attack') {
             setRuntimeValue(characterName, 'lastAttackRoll', {
+                attackName: context?.attackName || context?.autoDamageName || name,
+                attackerName: attackerName,
                 d20: effectiveD20,
                 bonus: homingStrikesUsed ? (bonus + homingStrikesBonus) : bonus,
                 targetName,

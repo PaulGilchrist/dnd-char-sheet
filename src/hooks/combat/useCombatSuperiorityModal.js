@@ -40,7 +40,7 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
                 return;
             }
             if (result?.effect === 'attack_roll_bonus' && result?.dieValue && rollAttack) {
-                const lastAttackRoll = getRuntimeValue(playerStats.name, 'lastAttackRoll', campaignName);
+                const lastAttackRoll = await getRuntimeValue(playerStats.name, 'lastAttackRoll', campaignName);
                 const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
                 if (lastAttackRoll?.d20 != null && lastAttackRoll?.targetAc != null && lastAttack?.damageFormula) {
                     const dieValue = result.dieValue;

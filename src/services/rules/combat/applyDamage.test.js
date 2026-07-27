@@ -777,6 +777,7 @@ describe('computeDamageAfterEvasion', () => {
 describe('applyDamageToTarget — buff resistance merging', () => {
   it('merges resistanceTypes from activeBuffs for player', async () => {
     getRuntimeValue
+      .mockReturnValueOnce(null) // lastAttack read
       .mockReturnValueOnce([{ resistanceTypes: ['fire'], resistanceTypes2: ['cold'] }])
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(30)
@@ -790,6 +791,7 @@ describe('applyDamageToTarget — buff resistance merging', () => {
 
   it('deduplicates resistanceTypes from multiple buffs', async () => {
     getRuntimeValue
+      .mockReturnValueOnce(null) // lastAttack read
       .mockReturnValueOnce([
         { resistanceTypes: ['fire'] },
         { resistanceTypes: ['fire', 'cold'] },
@@ -806,6 +808,7 @@ describe('applyDamageToTarget — buff resistance merging', () => {
 
   it('handles non-array and null activeBuffs gracefully, combines base resistances with buffs', async () => {
     getRuntimeValue
+      .mockReturnValueOnce(null) // lastAttack read
       .mockReturnValueOnce('not-an-array')
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(30)
@@ -817,6 +820,7 @@ describe('applyDamageToTarget — buff resistance merging', () => {
     expect(result1.finalDamage).toBe(10);
 
     getRuntimeValue
+      .mockReturnValueOnce(null) // lastAttack read
       .mockReturnValueOnce(null)
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(30)
@@ -828,6 +832,7 @@ describe('applyDamageToTarget — buff resistance merging', () => {
     expect(result2.finalDamage).toBe(10);
 
     getRuntimeValue
+      .mockReturnValueOnce(null) // lastAttack read
       .mockReturnValueOnce([{ resistanceTypes: ['cold'] }])
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(30)

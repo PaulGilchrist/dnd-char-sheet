@@ -1573,10 +1573,15 @@ export function createLogDamageAndShow(deps) {
 
         // Store damage rolls for later access (e.g., Piercer feat) — merge into existing lastAttack
         if (popupData.rolls && popupData.damageType) {
-            const existingLastAttack = getRuntimeValue('campaign', 'lastAttack', campaignName) || {};
-            console.log('[useLoggedDiceRollDamage] existing lastAttack before merge:', JSON.stringify(existingLastAttack, null, 2));
+            const existingLastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName) || {};
+            console.log('[merge lastAttack] entry:', { attackNameFromCtx: context?.attackName, spellNameFromCtx: context?.spellName, attackerNameFromCtx: context?.attackerName, targetNameFromCtx: context?.targetName, existingAttackName: existingLastAttack.attackName, existingAttackerName: existingLastAttack.attackerName, existingTargetName: existingLastAttack.targetName, existingLastAttack: JSON.stringify(existingLastAttack, null, 2) });
             const lastAttackData = {
                 ...existingLastAttack,
+                // Always populate from context to ensure attack-based spells have these fields
+                // even if the attack roll SSE hasn't arrived yet
+                attackerName: context?.attackerName || existingLastAttack.attackerName,
+                targetName: context?.targetName || existingLastAttack.targetName,
+                attackName: context?.attackName || context?.spellName || existingLastAttack.attackName,
                 rolls: displayRolls,
                 rawDamage: adjustedTotal,
                 primaryDamage: adjustedTotal,
@@ -1587,7 +1592,7 @@ export function createLogDamageAndShow(deps) {
                 statusEffects: context?.statusEffects || null,
                 affectedTargets: context?.affectedTargets || [target?.name].filter(Boolean),
             };
-            console.log('[useLoggedDiceRollDamage] writing merged lastAttack:', JSON.stringify(lastAttackData, null, 2));
+            console.log('[merge lastAttack] result:', JSON.stringify(lastAttackData, null, 2));
             setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }
 
@@ -1667,6 +1672,7 @@ export function createLogDamageAndShow(deps) {
     }
 
     return async function logDamageAndShow(name, formula, total, rolls, modifier, context) {
+        console.log('[logDamageAndShow] entry:', { name: typeof name === 'string' ? name : JSON.stringify(name), formula, total, rolls, modifier, contextAttackName: context?.attackName, contextAttackerName: context?.attackerName, contextTargetName: context?.targetName, contextDamageType: context?.damageType });
         // Apply Feinting Attack superiority die damage bonus
         const feintDieValue = getRuntimeValue(characterName, 'feintingAttackDieValue');
         if (feintDieValue && Number(feintDieValue) > 0) {

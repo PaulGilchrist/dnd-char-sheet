@@ -15,6 +15,7 @@ export async function resolveAttackDamageStandalone(attack, ctxOverrides, { play
     const proceedWithDamage = (a, formula, total, rolls, modifier) => {
         const o = ctxOverrides;
         const minimalCtx = {
+            attackName: a.name,
             damageType: a.damageType,
             targetName: o.targetName || null,
             attackerName: o.attackerName || a.name,
@@ -30,6 +31,7 @@ export async function resolveAttackDamageStandalone(attack, ctxOverrides, { play
             metamagicTwinTarget: o.metamagicTwinTarget || null,
             metamagicHeighten: o.metamagicHeighten || false,
         };
+        console.log('[proceedWithDamage] calling rollDamage:', { attackName: minimalCtx.attackName, damageType: minimalCtx.damageType, targetName: minimalCtx.targetName, attackerName: minimalCtx.attackerName, name: a.name, formula, total, rolls, modifier });
         rollDamage(a.name, formula, total, rolls, modifier, minimalCtx);
     };
 
@@ -86,6 +88,7 @@ export async function resolveAttackDamageStandalone(attack, ctxOverrides, { play
  * @returns {{ attack: object, ctx: object }}
  */
 export function normalizeAutoDamage(autoDamage, isCrit, playerStats) {
+  console.log('[normalizeAutoDamage] input:', { autoDamageName: autoDamage.name, autoDamageFormula: autoDamage.formula, autoDamageDamageType: autoDamage.damageType, autoDamageAttackerName: autoDamage.attackerName, autoDamageTargetName: autoDamage.targetName, autoDamageSchool: autoDamage.autoDamageSchool, isCrit });
   const isUnarmed = autoDamage.name?.includes('Unarmed Strike');
   const weaponAttack = playerStats?.attacks?.find(a => a.name === autoDamage.name);
   const attack = {
@@ -103,6 +106,7 @@ export function normalizeAutoDamage(autoDamage, isCrit, playerStats) {
   const shouldApplyEmpoweredEvoc = hasEmpoweredEvoc && spellSchool === 'evocation' && empEvocIntMod > 0;
 
   const ctx = {
+    attackName: autoDamage.name,
     hit: true,
     isCrit: isCrit || autoDamage.isAutoCrit || false,
     isAutoCrit: isCrit || autoDamage.isAutoCrit || false,
@@ -129,7 +133,7 @@ export function normalizeAutoDamage(autoDamage, isCrit, playerStats) {
     d20Roll: autoDamage.d20Roll,
   };
 
-  return { attack, ctx };
+    return { attack, ctx };
 }
 
 export default function useAttackDamageResolution({
