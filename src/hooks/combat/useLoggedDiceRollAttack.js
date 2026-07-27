@@ -709,7 +709,7 @@ export function createLogAndShow(deps) {
 
                     baitAndSwitchBonus: context?.baitAndSwitchBonus || 0,
                 };
-                storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName);
+                setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
             }
 
             setRuntimeValue(characterName, '_lastRollContext', {
@@ -1017,7 +1017,7 @@ export function createLogAndShow(deps) {
 
             // Save unified last attack to combat summary for all reaction features
             if (combatSummary) {
-                storage.setProperty('combatSummary', 'lastAttack', {
+                setRuntimeValue('campaign', 'lastAttack', {
                     attackerName: characterName,
                     targetName,
                     d20: reliableD20,
@@ -1083,7 +1083,7 @@ export function createLogAndShow(deps) {
                 }, campaignName);
 
                 if (combatSummary) {
-                    storage.setProperty('combatSummary', 'lastAttack', {
+                    setRuntimeValue('campaign', 'lastAttack', {
                         attackerName,
                         targetName: target?.name || context?.targetName,
                         d20: effectiveD20ForSave,
@@ -1189,7 +1189,7 @@ export function createLogAndShow(deps) {
                 }, campaignName);
 
                 if (saveDc != null && combatSummary) {
-                    storage.setProperty('combatSummary', 'lastAttack', {
+                    setRuntimeValue('campaign', 'lastAttack', {
                         attackerName,
                         targetName: target?.name || context?.targetName,
                         d20: effectiveD20ForSave,

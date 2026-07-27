@@ -1,6 +1,6 @@
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -10,11 +10,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const usesMax = evaluateAutoExpression('CHA modifier_min_1', playerStats) || 1;
     const currentCount = Number(getRuntimeValue(playerName, freeCastCountKey, campaignName) ?? usesMax);
 
-    // Get combat context
-    const cs = await getCombatContext(campaignName);
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
     // Check lastAttack exists
-    if (!cs?.lastAttack) {
+    if (!lastAttack) {
         return {
             type: 'popup',
             payload: {
@@ -27,7 +26,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     // Check attacker is the warlock
-    if (cs.lastAttack.attackerName !== playerName) {
+    if (lastAttack.attackerName !== playerName) {
         return {
             type: 'popup',
             payload: {
@@ -40,7 +39,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     // Check spell school is enchantment or illusion
-    const school = (cs.lastAttack.spellSchool || action.school || cs.lastAttack.damageSchool || '').toLowerCase();
+    const school = (lastAttack.spellSchool || action.school || lastAttack.damageSchool || '').toLowerCase();
     if (school !== 'enchantment' && school !== 'illusion') {
         return {
             type: 'popup',
@@ -53,8 +52,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
+    const cs = await getCombatContext(campaignName);
+
     // All checks passed — open the Steps of the Fey modal
-    const eligibleTargets = cs.creatures?.filter(c => c.name !== playerName) || [];
+    const eligibleTargets = cs?.creatures?.filter(c => c.name !== playerName) || [];
     const saveDc = 8 + (playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0) + (playerStats.proficiency || 0);
 
     return {

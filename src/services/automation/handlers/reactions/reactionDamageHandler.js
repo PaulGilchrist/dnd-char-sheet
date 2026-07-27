@@ -247,7 +247,7 @@ async function handleThoughtShield(action, playerStats, campaignName) {
         };
     }
 
-    const lastAttack = cs?.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     if (!lastAttack) {
         return {
             type: 'popup',
@@ -393,7 +393,7 @@ async function handleEnergyRedirection(action, playerStats, campaignName) {
         };
     }
 
-    const lastAttack = cs?.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     if (!lastAttack) {
         return {
             type: 'popup',

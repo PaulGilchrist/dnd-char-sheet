@@ -133,10 +133,8 @@ async function consumeResourceCost(auto, playerStats, campaignName) {
 }
 
 async function findAllyMissedAttack(playerStats, campaignName, mapName, rangeFt) {
-    const combatSummary = await getCombatContext(campaignName);
-    if (!combatSummary?.lastAttack) return null;
-
-    const lastAttack = combatSummary.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!lastAttack) return null;
     if (lastAttack.rollType !== 'attack' || lastAttack.hit !== false) return null;
     if (lastAttack.attackerName === playerStats.name) return null;
 
@@ -158,8 +156,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName) || null;
 
     if (auto.target === 'saving_throw') {
         if (auto.effect === 'override_fail_to_success' && auto.oncePer) {

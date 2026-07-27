@@ -180,7 +180,7 @@ function SaveAttackAoeModal({
         }
 
         if (lastNpcResult) {
-            combatSummary.lastAttack = {
+            await setRuntimeValue('campaign', 'lastAttack', {
                 attackerName: playerStats.name,
                 targetName: lastNpcResult.targetName,
                 d20: lastNpcResult.roll,
@@ -200,14 +200,14 @@ function SaveAttackAoeModal({
                 actualDamage: lastNpcResult.finalDamage || 0,
                 damageApplied: lastNpcResult.finalDamage > 0,
                 timestamp: Date.now(),
-            };
+            }, campaignName);
         }
 
         persistAndNotify(combatSummary, campaignName);
         return { results, prompts };
     }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
 
-    const handleSaveResult = useCallback((event, ctx) => {
+    const handleSaveResult = useCallback(async (event, ctx) => {
         const detail = event.detail;
         if (!detail || !detail.promptId) return;
 
@@ -272,32 +272,29 @@ function SaveAttackAoeModal({
             }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging player damage:', e); });
         }
 
-        const cs = getCombatSummary(campaignName);
-        if (cs) {
-            cs.lastAttack = {
-                attackerName: playerStats.name,
-                targetName,
-                d20: detail.roll ?? 0,
-                d20Rolls: [detail.roll ?? 0],
-                bonus: saveBonus,
-                total: detail.total ?? 0,
-                rollType: 'attack',
-                saveType: saveType || null,
-                saveDc: saveDc,
-                saveResult: success ? 'success' : 'failure',
-                damageFormula: resolvedDamage || null,
-                damageName: action.name || null,
-                damageType: damageType || null,
-                rawDamage: rawDamage || 0,
-                primaryDamage: rawDamage || 0,
-                primaryDamageType: damageType || null,
-                actualDamage: finalDamage || 0,
-                damageApplied: finalDamage > 0,
-                timestamp: Date.now(),
-            };
-        }
+        await setRuntimeValue('campaign', 'lastAttack', {
+            attackerName: playerStats.name,
+            targetName,
+            d20: detail.roll ?? 0,
+            d20Rolls: [detail.roll ?? 0],
+            bonus: saveBonus,
+            total: detail.total ?? 0,
+            rollType: 'attack',
+            saveType: saveType || null,
+            saveDc: saveDc,
+            saveResult: success ? 'success' : 'failure',
+            damageFormula: resolvedDamage || null,
+            damageName: action.name || null,
+            damageType: damageType || null,
+            rawDamage: rawDamage || 0,
+            primaryDamage: rawDamage || 0,
+            primaryDamageType: damageType || null,
+            actualDamage: finalDamage || 0,
+            damageApplied: finalDamage > 0,
+            timestamp: Date.now(),
+        }, campaignName);
 
-        persistAndNotify(cs, campaignName);
+        persistAndNotify(combatSummary, campaignName);
         const targetResult = {
             targetName,
             success,
@@ -320,7 +317,7 @@ function SaveAttackAoeModal({
             });
             setPendingPrompts(prev => prev.filter(p => p.promptId !== detail.promptId));
         }
-    }, [campaignName, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts]);
+    }, [campaignName, combatSummary, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;

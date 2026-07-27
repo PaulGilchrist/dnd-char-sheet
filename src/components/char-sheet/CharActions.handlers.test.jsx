@@ -509,6 +509,7 @@ describe('CharActions handlers', () => {
         if (key === 'activeBuffs') return [];
         if (key === 'hasteExtraActionUsed') return false;
         if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: stealthSkillBonus, total: 12 + stealthSkillBonus };
         return null;
       });
 
@@ -526,7 +527,6 @@ describe('CharActions handlers', () => {
       useLoggedDiceRoll.mockReturnValue({
         popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(), rollSkillCheck: mockRollSkillCheck, quickRollPlayerSave: vi.fn(),
       });
-      loadCombatSummary.mockResolvedValue({ lastAttack: { d20: 12, bonus: stealthSkillBonus, total: 12 + stealthSkillBonus } });
 
       await act(async () => {
         render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
@@ -561,6 +561,7 @@ describe('CharActions handlers', () => {
         if (key === 'activeBuffs') return [];
         if (key === 'hasteExtraActionUsed') return false;
         if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 3, bonus: stealthSkillBonus, total: 3 + stealthSkillBonus };
         return null;
       });
 
@@ -578,7 +579,6 @@ describe('CharActions handlers', () => {
       useLoggedDiceRoll.mockReturnValue({
         popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(), rollSkillCheck: mockRollSkillCheck, quickRollPlayerSave: vi.fn(),
       });
-      loadCombatSummary.mockResolvedValue({ lastAttack: { d20: 3, bonus: stealthSkillBonus, total: 3 + stealthSkillBonus } });
 
       await act(async () => {
         render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
@@ -614,6 +614,7 @@ describe('CharActions handlers', () => {
         if (key === 'activeBuffs') return [{ effect: 'advantage_on_stealth' }];
         if (key === 'hasteExtraActionUsed') return false;
         if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: stealthSkillBonus, total: 12 + stealthSkillBonus };
         return null;
       });
 
@@ -631,7 +632,6 @@ describe('CharActions handlers', () => {
       useLoggedDiceRoll.mockReturnValue({
         popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(), rollSkillCheck: mockRollSkillCheck, quickRollPlayerSave: vi.fn(),
       });
-      loadCombatSummary.mockResolvedValue({ lastAttack: { d20: 12, bonus: stealthSkillBonus, total: 12 + stealthSkillBonus } });
 
       await act(async () => {
         render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
@@ -742,6 +742,7 @@ describe('CharActions handlers', () => {
         if (key === 'activeBuffs') return [];
         if (key === 'hasteExtraActionUsed') return false;
         if (key === 'activeConditions') return [];
+        if (_name === 'campaign' && key === 'lastAttack') return { d20: 12, bonus: strCheckBonus, total: 12 + strCheckBonus };
         return null;
       });
 

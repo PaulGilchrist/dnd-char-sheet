@@ -53,8 +53,7 @@ async function handleBendFate(action, playerStats, campaignName, _mapName) {
         return infoPopup(featureName, `${featureName}: No Sorcery Points available. Requires 1 Sorcery Point.`, auto);
     }
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
 
     if (!lastAttack) {
@@ -142,8 +141,8 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
         const oldHit = lastAttack.hit ?? (targetAc != null ? originalTotal >= targetAc : null);
         const newHit = targetAc != null ? newTotal >= targetAc : null;
 
-        cs.lastAttack = {
-            ...cs.lastAttack,
+        const updatedLastAttack = {
+            ...lastAttack,
             total: newTotal,
             hit: newHit,
             bendFateApplied: true,
@@ -152,7 +151,7 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
             bendFateMode: mode,
             timestamp: Date.now(),
         };
-        storage.set('combatSummary', cs, campaignName);
+        await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
 
         if (oldHit && !newHit) {
             outcomeNote = ' → The attack now misses!';
@@ -188,8 +187,8 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
         const oldSuccess = (originalTotal >= saveDc);
         const newSuccess = (newTotal >= saveDc);
 
-        cs.lastAttack = {
-            ...cs.lastAttack,
+        const updatedLastAttack = {
+            ...lastAttack,
             total: newTotal,
             saveResult: newSuccess ? 'success' : 'failure',
             bendFateApplied: true,
@@ -198,7 +197,7 @@ export async function applyD20Modifier(action, playerName, campaignName, diceVal
             bendFateMode: mode,
             timestamp: Date.now(),
         };
-        storage.set('combatSummary', cs, campaignName);
+        await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
 
         if (oldSuccess && !newSuccess) {
             outcomeNote = ' → The save now fails!';

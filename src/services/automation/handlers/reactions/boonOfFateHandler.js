@@ -1,5 +1,4 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { applyD20Modifier } from './reactionBonusHandler.js';
@@ -17,8 +16,7 @@ export async function handle(action, playerStats, campaignName) {
         return infoPopup(action.name, `${action.name} has no uses remaining. Recharges on Initiative or Short or Long Rest.`, auto);
     }
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
     if (!lastAttack) {
         return infoPopup(action.name, `${action.name}: No recent D20 test found. This feature can only be used shortly after a creature rolls a d20.`, auto);

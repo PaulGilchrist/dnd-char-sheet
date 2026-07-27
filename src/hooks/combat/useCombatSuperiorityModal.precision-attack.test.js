@@ -73,8 +73,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const rollDamage = vi.fn();
@@ -124,8 +123,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 3;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const { result } = renderHook(
@@ -156,8 +154,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const rollDamage = vi.fn();
@@ -181,8 +178,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttackRoll = createLastAttackRoll({ d20: 15, bonus: 2, targetAc: 16, isCrit: false });
       const lastAttack = createLastAttack();
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue: 4 });
 
       const { result } = renderHook(
@@ -212,8 +208,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 3;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const showPopup = vi.fn();
@@ -242,8 +237,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 3;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const { result } = renderHook(
@@ -276,8 +270,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const rollDamage = vi.fn();
@@ -312,8 +305,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const { result } = renderHook(
@@ -343,8 +335,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttackRoll = { d20: null, bonus: 5, targetAc: 16 };
       const lastAttack = { damageFormula: '2d6+3' };
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
 
       executeManeuver.mockResolvedValue({
         effect: 'attack_roll_bonus',
@@ -371,8 +362,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttackRoll = { d20: 15, bonus: 5, targetAc: null };
       const lastAttack = { damageFormula: '2d6+3' };
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
 
       executeManeuver.mockResolvedValue({
         effect: 'attack_roll_bonus',
@@ -401,8 +391,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttackRoll = { d20: 15, bonus: 5, targetAc: 16 };
       const lastAttack = { damageFormula: null };
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
 
       executeManeuver.mockResolvedValue({
         effect: 'attack_roll_bonus',
@@ -434,8 +423,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const { result } = renderHook(
@@ -466,8 +454,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 3;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const { result } = renderHook(
@@ -498,8 +485,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttackRoll = createLastAttackRoll({ d20: 15, bonus: 5, targetAc: 16, isCrit: false });
       const lastAttack = createLastAttack();
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue: 4 });
 
       const { result } = renderHook(
@@ -530,8 +516,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 4;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const showPopup = vi.fn();
@@ -562,8 +547,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperityConfirm (attack_roll_b
       const lastAttack = createLastAttack();
       const dieValue = 3;
 
-      getRuntimeValue.mockReturnValue(lastAttackRoll);
-      loadCombatSummary.mockResolvedValue({ lastAttack });
+      getRuntimeValue.mockImplementation((name, key) => name === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll);
       executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const showPopup = vi.fn();

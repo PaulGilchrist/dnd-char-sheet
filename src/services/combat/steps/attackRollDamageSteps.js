@@ -111,8 +111,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'cunning:checked',
       condition: (ctx) => ctx.hit,
       handler: async (ctx) => {
-        const summary = await loadCombatSummary(ctx.campaignName);
-        const lastResult = summary?.lastAttack;
+        const lastResult = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
         const attackHit = lastResult?.hit === true || lastResult?.isCrit === true;
         if (!attackHit) return { data: { sneakDice: 0 } };
 
@@ -940,8 +939,7 @@ export function buildAttackRollDamageSteps() {
         let saveDc = 0;
         const poisonedActive = getRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', ctx.campaignName);
         if (poisonedActive) {
-          const cs = await loadCombatSummary(ctx.campaignName);
-          const lastAttack = cs?.lastAttack;
+          const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
           if (lastAttack?.hit) {
             const targetName = lastAttack.targetName;
             const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
@@ -986,14 +984,14 @@ export function buildAttackRollDamageSteps() {
         ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier, ctx.critLabels, ctx);
 
         if (saveResult && !saveResult.success) {
-          const cs = await loadCombatSummary(ctx.campaignName);
-          const lastAttack = cs?.lastAttack;
+          const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
           const targetName = lastAttack?.targetName;
           if (targetName) {
+            const cs = await loadCombatSummary(ctx.campaignName);
             const rollResult = rollExpression('2d8');
             const poisonDamage = rollResult?.total || 7;
             const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
-            const creature = cs.creatures?.find(c => c.name === targetName);
+            const creature = cs?.creatures?.find(c => c.name === targetName);
             const isPlayer = creature?.type === 'player';
             const playerComputed = isPlayer ? (characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)?.computedStats || characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)) : null;
             let resistances = isPlayer ? (playerComputed?.resistances || []) : (creature?.resistances || []);
@@ -1018,9 +1016,13 @@ export function buildAttackRollDamageSteps() {
                 creature.currentHp = Math.max(0, oldHp - actualPoisonDamage);
               }
 
-              cs.lastAttack.secondaryDamage = actualPoisonDamage;
-              cs.lastAttack.secondaryDamageType = 'Poison';
-              cs.lastAttack.actualDamage = (cs.lastAttack.actualDamage || 0) + actualPoisonDamage;
+              const existing = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+              if (existing) {
+                existing.secondaryDamage = actualPoisonDamage;
+                existing.secondaryDamageType = 'Poison';
+                existing.actualDamage = (existing.actualDamage || 0) + actualPoisonDamage;
+                await setRuntimeValue('campaign', 'lastAttack', existing, ctx.campaignName);
+              }
             }
 
             const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
@@ -1098,8 +1100,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'cleave:done',
       condition: (ctx) => !!ctx.setSecondaryTargetModal && ctx.attack?.name && ctx.playerStats?.automation,
       handler: async (ctx) => {
-        const cs = await loadCombatSummary(ctx.campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
         if (!lastAttack?.hit) return { data: {} };
 
         const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);
@@ -1107,6 +1108,7 @@ export function buildAttackRollDamageSteps() {
         const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
         if (!allMasteries.includes('Cleave')) return { data: {} };
 
+        const cs = await loadCombatSummary(ctx.campaignName);
         const firstTarget = cs?.creatures?.find(c => c.name === lastAttack.targetName);
         const mapName = ctx.playerStats?.mapName;
         const hasMapPositions = mapName && firstTarget?.position;
@@ -1229,8 +1231,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'tactical:done',
       condition: (ctx) => ctx.attack?.name && ctx.playerStats?.automation,
       handler: async (ctx) => {
-        const cs = await loadCombatSummary(ctx.campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
         if (!lastAttack?.hit) return { data: {} };
 
         const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);
@@ -1282,8 +1283,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'mastery:done',
       condition: (ctx) => ctx.attack?.name && ctx.playerStats,
       handler: async (ctx) => {
-        const cs = await loadCombatSummary(ctx.campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
         if (!lastAttack?.hit) return { data: {} };
 
         const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);

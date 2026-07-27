@@ -115,9 +115,9 @@ export function applyDamageToTarget(combatSummary, targetName, rawDamage, damage
   if (!creature) return null;
   if (isNaN(rawDamage) || rawDamage === null || rawDamage === undefined) return null;
 
-  const existingAttack = combatSummary.lastAttack;
+  const existingAttack = storage.get('lastAttack', campaignName) || null;
   const isSecondary = existingAttack?.primaryDamage != null;
-  combatSummary.lastAttack = {
+  const newLastAttack = {
     ...existingAttack,
     attackerName: attackerName || existingAttack?.attackerName || null,
     targetName,
@@ -134,6 +134,7 @@ export function applyDamageToTarget(combatSummary, targetName, rawDamage, damage
     damageApplied: true,
     timestamp: Date.now(),
   };
+  storage.set('lastAttack', newLastAttack, campaignName);
 
   const isPlayer = creature.type === 'player';
   if (!Array.isArray(characters)) { throw new Error('characters must be an array'); }
@@ -256,9 +257,17 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
 
     // Update lastAttack with actual HP damage dealt (after resistances, feature reduction, ward absorption)
     if (isSecondary) {
-        combatSummary.lastAttack.actualDamage = (combatSummary.lastAttack.actualDamage || 0) + wardDamage;
+        const existing = storage.get('lastAttack', campaignName) || null;
+        if (existing) {
+            existing.actualDamage = (existing.actualDamage || 0) + wardDamage;
+            storage.set('lastAttack', existing, campaignName);
+        }
     } else {
-        combatSummary.lastAttack.actualDamage = wardDamage;
+        const existing = storage.get('lastAttack', campaignName) || null;
+        if (existing) {
+            existing.actualDamage = wardDamage;
+            storage.set('lastAttack', existing, campaignName);
+        }
     }
 
     // Tasha's Hideous Laughter: damage-triggered repeat WIS save with Advantage

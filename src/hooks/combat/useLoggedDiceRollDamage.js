@@ -1,7 +1,6 @@
 import { rollExpression, rollExpressionDoubled, formatDamageFormula } from '../../services/dice/diceRoller.js';
 import { addEntry } from '../../services/ui/logService.js';
 import utils from '../../services/ui/utils.js';
-import storage from '../../services/ui/storage.js';
 import {
     computeDamageAfterSave,
     computeDamageAfterEvasion,
@@ -739,7 +738,7 @@ export function createLogDamageAndShow(deps) {
             damageApplied: (primaryApplyResult?.finalDamage ?? finalDamage) > 0,
             timestamp: Date.now(),
         };
-        storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName);
+        setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
 
         setPopupHtml(popupData);
 
@@ -1191,7 +1190,7 @@ export function createLogDamageAndShow(deps) {
         let reducedTotal = 0;
 
         if (target) {
-            const lastAttack = combatSummary?.lastAttack || null;
+            const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName) || null;
             const attackHit = context?.isOpportunityAttack && lastAttack?.hit === true && lastAttack?.attackerName === characterName;
             if (attackHit) {
                 const playerCharacter = (characters || []).find(c => c.name === characterName || c.name.startsWith(characterName + ' '));
@@ -1540,7 +1539,7 @@ export function createLogDamageAndShow(deps) {
                 actualDamage: applyResult?.finalDamage ?? adjustedTotal,
                 damageApplied: true,
             };
-            storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName).catch(e => {
+            setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName).catch(e => {
                 console.error('[useLoggedDiceRollDamage] Error storing damage rolls:', e);
             });
         }

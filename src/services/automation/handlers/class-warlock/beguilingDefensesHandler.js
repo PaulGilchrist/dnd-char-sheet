@@ -5,7 +5,6 @@ import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
-import storage from '../../../ui/storage.js';
 
 const USES_KEY = 'beguilingDefensesUses';
 
@@ -144,11 +143,10 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
 
         const { success, total, roll, bonus } = event.detail;
 
-        // Update combat summary lastAttack with save result for display
-        const csUpdate = await getCombatContext(campaignName);
-        if (csUpdate) {
-            csUpdate.lastAttack = {
-                ...csUpdate.lastAttack,
+        const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+        if (existing) {
+            await setRuntimeValue('campaign', 'lastAttack', {
+                ...existing,
                 saveResult: success ? 'success' : 'failure',
                 saveDc,
                 saveType,
@@ -156,15 +154,14 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
                 saveBonus: bonus,
                 saveTotal: total,
                 timestamp: Date.now(),
-            };
-            storage.set('combatSummary', csUpdate, campaignName);
+            }, campaignName);
         }
 
         if (!success) {
             // Apply psychic damage to attacker equal to halved damage
             let psychicDamage = 0;
-            if (csUpdate && halfDamage > 0) {
-                await applyDamageToTarget(csUpdate, targetName, halfDamage, ['Psychic'], campaignName, characters || [], false, playerName);
+            if (cs && halfDamage > 0) {
+                await applyDamageToTarget(cs, targetName, halfDamage, ['Psychic'], campaignName, characters || [], false, playerName);
                 psychicDamage = halfDamage;
             }
             addEntry(campaignName, {

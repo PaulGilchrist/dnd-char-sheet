@@ -205,7 +205,7 @@ describe('darkOnesLuckHandler.handle', () => {
         it('should reject when last attack is null or missing', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
             automationService.evaluateAutoExpression.mockReturnValue(3);
-            damageUtils.getCombatContext.mockResolvedValue({ lastAttack: null });
+            damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null; return undefined; });;
 
             const result = await handle(createAction(), createPlayerStats(), mockCampaignName);
 

@@ -99,6 +99,14 @@ router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
 
     const value = req.body.value || req.body;
 
+    if (key === 'combatSummary' && value && typeof value === 'object' && 'lastAttack' in value) {
+        console.error(
+            '[campaigns-changedata] Client wrote lastAttack to deprecated combatSummary.lastAttack. ' +
+            `Campaign: "${campaign}". Use POST to /api/campaigns/:campaign/lastAttack directly. ` +
+            'Check storage.setProperty(\'combatSummary\', \'lastAttack\', ...) or storage.set(\'combatSummary\', { ...lastAttack }).'
+        );
+    }
+
     if (!characterChangeData.has(campaign)) {
         characterChangeData.set(campaign, {});
     }

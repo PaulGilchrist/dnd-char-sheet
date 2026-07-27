@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { executeHandler } from '../../services/automation/index.js';
 import { setRuntimeValue, getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../services/ui/logService.js';
-import { loadCombatSummary, setCombatSummaryCache } from '../../services/encounters/combatData.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { executeManeuver, onCombatSuperioritySelected } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 
@@ -42,9 +41,8 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
             }
             if (result?.effect === 'attack_roll_bonus' && result?.dieValue && rollAttack) {
                 const lastAttackRoll = getRuntimeValue(playerStats.name, 'lastAttackRoll', campaignName);
-                const cs = await loadCombatSummary(campaignName);
-                const la = cs?.lastAttack;
-                if (lastAttackRoll?.d20 != null && lastAttackRoll?.targetAc != null && la?.damageFormula) {
+                const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+                if (lastAttackRoll?.d20 != null && lastAttackRoll?.targetAc != null && lastAttack?.damageFormula) {
                     const dieValue = result.dieValue;
                     const origTotal = lastAttackRoll.d20 + (lastAttackRoll.bonus || 0);
                     const newTotal = origTotal + dieValue;
@@ -61,10 +59,8 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
                     };
                     await setRuntimeValue(playerStats.name, 'lastAttackRoll', updatedRoll, campaignName);
 
-                    if (cs?.lastAttack) {
-                        cs.lastAttack = { ...cs.lastAttack, total: newTotal, hit: newHit, isCrit: wasCrit };
-                        setCombatSummaryCache(cs, campaignName);
-                    }
+                    const updatedLastAttack = { ...lastAttack, total: newTotal, hit: newHit, isCrit: wasCrit };
+                    await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
 
                     const desc = `Precision Attack: Added ${dieValue} to the attack roll (${lastAttackRoll.d20} + ${lastAttackRoll.bonus || 0} + ${dieValue} = ${newTotal}). ${newHit ? 'The attack now hits!' : 'The attack still misses.'}`;
 
@@ -76,7 +72,7 @@ export function useCombatSuperiorityModal(playerStats, campaignName, rollAttack,
                     }).catch(() => {});
 
                     if (newHit && rollDamage) {
-                        const la = cs?.lastAttack;
+                        const la = await getRuntimeValue('campaign', 'lastAttack', campaignName);
                         if (la?.damageFormula) {
                             const damageType = la.damageType || 'Slashing';
                             const damageName = la.damageName || la.attackName;

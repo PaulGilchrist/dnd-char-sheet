@@ -87,10 +87,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     };
 }
 
-export async function applyPostDamageMasteryEffects(attackName, playerStats, campaignName, combatSummary) {
+export async function applyPostDamageMasteryEffects(attackName, playerStats, campaignName, _combatSummary) {
     const available = collectWeaponMastery(attackName, playerStats);
     const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
-    const targetName = combatSummary?.lastAttack?.targetName;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    const targetName = lastAttack?.targetName;
     if (!targetName) return;
 
     for (const masteryName of allMasteries) {

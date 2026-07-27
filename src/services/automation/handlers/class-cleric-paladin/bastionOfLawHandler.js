@@ -133,8 +133,7 @@ export async function handleSpendDice(action, playerStats, campaignName, _mapNam
     const numDice = action.numDice;
 
     // Check that this character is the target of the last attack
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     if (!lastAttack || lastAttack.targetName !== playerName) {
         return {
             type: 'popup',

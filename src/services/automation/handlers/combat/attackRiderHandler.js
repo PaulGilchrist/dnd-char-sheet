@@ -8,7 +8,6 @@ import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { checkOncePerTurn, checkOncePerTurnWithSkip, markOncePerTurn } from '../../common/oncePerTurn.js';
 import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
-import { loadCombatSummary } from '../../../encounters/combatData.js';
 import { resolveMassFear } from './massFearHandler.js';
 
 export async function handle(action, playerStats, campaignName, mapName) {
@@ -37,8 +36,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     // Slashing damage hit validation (used by Slasher feat Hamstring)
     if (auto.trigger === 'slashing_damage_hit') {
-        const cs = await loadCombatSummary(campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
         if (!lastAttack) {
             return {
@@ -108,8 +106,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
 
         // Check lastAttack is player's melee weapon attack
-        const cs = await loadCombatSummary(campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
         if (!lastAttack?.hit) {
             return {
                 type: 'popup',

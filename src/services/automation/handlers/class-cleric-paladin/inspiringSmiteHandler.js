@@ -4,7 +4,6 @@ import { resolveDiceExpression } from '../../../combat/automation/automationServ
 import { loadMapData } from '../../../maps/mapsService.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 
 export async function handle(action, playerStats, campaignName, mapName) {
@@ -30,8 +29,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     }
 
     // Check lastAttack for Divine Smite
-    const combatSummary = await getCombatContext(campaignName);
-    const lastAttack = combatSummary?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     const isDivineSmiteCast = lastAttack?.spellName?.toLowerCase() === 'divine smite';
     const isPlayerAttack = lastAttack?.attackerName === playerName;
 

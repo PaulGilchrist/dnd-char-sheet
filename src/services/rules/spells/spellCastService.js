@@ -12,7 +12,6 @@ import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { addEntry } from '../../ui/logService.js';
 import { executeHandler } from '../../automation/index.js';
-import storage from '../../ui/storage.js';
 import { resolveSpellDamageWithTypes } from '../core/spellDamageUtils.js';
 import { addExpiration } from '../effects/expirations.js';
 import { triggerFalseLife } from '../features/falseLifeService.js';
@@ -113,7 +112,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     const lastAttackSchool = (spell.school || '').toLowerCase();
     if (lastAttackSchool) {
         try {
-            storage.setProperty('combatSummary', 'lastAttack', {
+            setRuntimeValue('campaign', 'lastAttack', {
                 attackerName: playerStats.name,
                 targetName: playerStats.name,
                 spellSchool: lastAttackSchool,

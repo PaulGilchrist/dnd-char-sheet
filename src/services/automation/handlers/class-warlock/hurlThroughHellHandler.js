@@ -24,11 +24,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    // Get the target from combat context
-    const cs = await getCombatContext(campaignName);
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
     // Check lastAttack — triggers "when you hit with an attack roll"
-    if (!cs?.lastAttack) {
+    if (!lastAttack) {
         return {
             type: 'popup',
             payload: {
@@ -39,7 +38,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    if (cs.lastAttack.attackerName !== playerName) {
+    if (lastAttack.attackerName !== playerName) {
         return {
             type: 'popup',
             payload: {
@@ -50,7 +49,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    if (cs.lastAttack.rollType !== 'attack') {
+    if (lastAttack.rollType !== 'attack') {
         return {
             type: 'popup',
             payload: {
@@ -61,7 +60,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    if (cs.lastAttack.hit !== true) {
+    if (lastAttack.hit !== true) {
         return {
             type: 'popup',
             payload: {
@@ -72,6 +71,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
+    const cs = await getCombatContext(campaignName);
     const target = cs ? getTargetFromAttacker(cs, playerName) : null;
     const targetName = target?.name || null;
 

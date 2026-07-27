@@ -1,6 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { infoPopup } from '../../common/infoPopup.js';
 
@@ -29,8 +28,7 @@ export async function handle(action, playerStats, campaignName) {
     }
 
     // Find the most recent ability check or saving throw by this player
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     const isPlayerRoll = lastAttack?.attackerName === playerName;
     const abilityFresh = isPlayerRoll && (lastAttack?.rollType === 'check' || lastAttack?.rollType === 'skill');
     const saveFresh = isPlayerRoll && lastAttack?.rollType === 'save';

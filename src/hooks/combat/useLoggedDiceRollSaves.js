@@ -6,7 +6,6 @@ import {
     normalizeSaveType,
 } from '../../services/rules/combat/applyDamage.js';
 import { sendSaveResult } from '../../services/combat/conditions/savePromptService.js';
-import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import storage from '../../services/ui/storage.js';
@@ -45,8 +44,7 @@ export function createSaves(deps) {
             return;
         }
 
-        const cs = await getCombatContext(campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
         if (!lastAttack || lastAttack.targetName !== playerName) {
             setPopupHtml({

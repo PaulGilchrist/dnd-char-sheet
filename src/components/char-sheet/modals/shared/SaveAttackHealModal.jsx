@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { sendSavePrompt, sendSaveResult } from '../../../../services/combat/conditions/savePromptService.js';
 import { rollExpression } from '../../../../services/dice/diceRoller.js';
 import { addEntry } from '../../../../services/ui/logService.js';
@@ -12,7 +13,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
     const [healedTarget, setHealedTarget] = useState(null);
     const [healResult, setHealResult] = useState(null);
 
-    const resolveAllSavesAndDamage = useCallback((targets) => {
+    const resolveAllSavesAndDamage = useCallback(async (targets) => {
         const results = [];
         const prompts = [];
         const characters = combatSummary?.creatures?.filter(c => c.type === 'player') || [];
@@ -77,7 +78,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
         }
 
         if (lastNpcResult) {
-            combatSummary.lastAttack = {
+            await setRuntimeValue('campaign', 'lastAttack', {
                 attackerName,
                 targetName: lastNpcResult.targetName,
                 d20: lastNpcResult.roll,
@@ -97,13 +98,13 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
                 actualDamage: lastNpcResult.finalDamage || 0,
                 damageApplied: lastNpcResult.finalDamage > 0,
                 timestamp: Date.now(),
-            };
+            }, campaignName);
         }
 
         return { results, prompts };
     }, [combatSummary, campaignName, damageExpression, damageType, featureName, attackerName, saveDc, saveType]);
 
-    const handleApplyOverride = useCallback((ctx) => {
+    const handleApplyOverride = useCallback(async (ctx) => {
         if (ctx.selected.size === 0) return;
         ctx.setProcessing(true);
 
@@ -119,7 +120,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
         ctx.setPendingPrompts(prompts);
     }, [campaignName, attackerName, saveDc, saveType, featureName, resolveAllSavesAndDamage]);
 
-    const handleSaveResultOverride = useCallback((event, ctx) => {
+    const handleSaveResultOverride = useCallback(async (event, ctx) => {
         const detail = event.detail;
         if (!detail || !detail.promptId) return;
 
@@ -163,7 +164,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
             finalDamage = computeDamageAfterSave(rawDamage, success, 'half');
         }
 
-        combatSummary.lastAttack = {
+        await setRuntimeValue('campaign', 'lastAttack', {
             attackerName,
             targetName,
             d20: detail.roll ?? 0,
@@ -183,7 +184,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
             actualDamage: finalDamage || 0,
             damageApplied: finalDamage > 0,
             timestamp: Date.now(),
-        };
+        }, campaignName);
 
         persistAndNotify(ctx.combatSummary, campaignName);
         ctx.setResults(prev => [...prev, {

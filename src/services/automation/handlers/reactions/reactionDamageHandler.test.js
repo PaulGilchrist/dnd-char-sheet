@@ -173,19 +173,24 @@ describe('reactionDamageHandler', () => {
         });
 
         it('returns popup when no combat context', async () => {
-            getRuntimeValue.mockReturnValue(['Fire']);
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
+                if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null;
+                return undefined;
+            });
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
-            getCombatContext.mockResolvedValue(null);
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('No combat context available.');
+            expect(result.payload.description).toContain('No recent attack found');
         });
 
         it('returns popup when no recent attack', async () => {
-            getRuntimeValue.mockReturnValue(['Fire']);
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
+                if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                return undefined;
+            });
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
-            getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
             expect(result.type).toBe('popup');
@@ -193,12 +198,12 @@ describe('reactionDamageHandler', () => {
         });
 
         it('returns popup when player was not the target', async () => {
-            getRuntimeValue.mockReturnValue(['Fire']);
-            const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'TestHero', type: 'player', currentHp: 20 }],
-                lastAttack: { targetName: 'OtherPC', damageTypes: ['Fire'] },
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
+                if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'OtherPC', damageTypes: ['Fire'] };
+                return undefined;
             });
+            const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
             expect(result.type).toBe('popup');
@@ -206,12 +211,12 @@ describe('reactionDamageHandler', () => {
         });
 
         it('returns popup when damage type does not match chosen types', async () => {
-            getRuntimeValue.mockReturnValue(['Fire']);
-            const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'TestHero', type: 'player', currentHp: 20 }],
-                lastAttack: { targetName: 'TestHero', damageTypes: ['Psychic'] },
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
+                if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Psychic'] };
+                return undefined;
             });
+            const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
             expect(result.type).toBe('popup');
@@ -219,11 +224,14 @@ describe('reactionDamageHandler', () => {
         });
 
         it('returns popup when no other creatures to redirect to', async () => {
-            getRuntimeValue.mockReturnValue(['Fire']);
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => {
+                if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Fire'] };
+                return undefined;
+            });
             const action = makeAction({ automation: { trigger: 'damage_taken_of_chosen_resistance_type' } });
             getCombatContext.mockResolvedValue({
                 creatures: [{ name: 'TestHero', type: 'player', currentHp: 20 }],
-                lastAttack: { targetName: 'TestHero', damageTypes: ['Fire'] },
             });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');
@@ -235,6 +243,7 @@ describe('reactionDamageHandler', () => {
             getRuntimeValue
                 .mockImplementation((_characterKey, propertyName, campaignName) => {
                     if (campaignName === 'test-campaign' && propertyName === '_Energy_Resistances_chosenTypes') return ['Fire'];
+                    if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return { targetName: 'TestHero', damageTypes: ['Fire'] };
                     if (campaignName === 'test-campaign' && propertyName === 'characters') return [];
                     return undefined;
                 });
@@ -249,7 +258,6 @@ describe('reactionDamageHandler', () => {
                     { name: 'TestHero', type: 'player', currentHp: 20 },
                     { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10 },
                 ],
-                lastAttack: { targetName: 'TestHero', damageTypes: ['Fire'] },
             });
 
             const result = await handle(action, makePlayerStats(), 'test-campaign');

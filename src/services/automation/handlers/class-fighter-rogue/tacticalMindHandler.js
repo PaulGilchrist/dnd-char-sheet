@@ -1,14 +1,12 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { infoPopup } from '../../common/infoPopup.js';
 
 async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     const isAbilityCheck = lastAttack?.rollType === 'check' || lastAttack?.rollType === 'skill';
     const isPlayerRoll = lastAttack?.attackerName === playerName;
 

@@ -316,7 +316,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         } : {}),
         timestamp: Date.now(),
       };
-      storage.setProperty('combatSummary', 'lastAttack', lastAttackData, campaignName);
+      storage.set('lastAttack', lastAttackData, campaignName);
     }
 
     setPrompts(prev => prev.map((p, i) =>
@@ -483,7 +483,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
 
     if (success && rawDamage > 0) {
-      const actualDamageApplied = cs?.lastAttack?.finalDamage ?? cs?.lastAttack?.primaryDamage ?? rawDamage;
+      const lastAttack = getRuntimeValue('campaign', 'lastAttack', campaignName);
+      const actualDamageApplied = lastAttack?.finalDamage ?? lastAttack?.primaryDamage ?? rawDamage;
       let damageToRestore;
       if (dcSuccess === 'half') {
         damageToRestore = Math.ceil(actualDamageApplied / 2);

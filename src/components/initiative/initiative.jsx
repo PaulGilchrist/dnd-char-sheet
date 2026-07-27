@@ -221,6 +221,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             if (merged.round !== (combatSummaryRef.current?.round ?? 1)) {
                 expireStaleEffects(campaignName, merged.activeCreatureName || null)
             }
+        } else if (dataKey === 'lastAttack') {
+            // lastAttack is now a root-level key — no in-memory cache needed
+            // The runtime store handles sync via getRuntimeValue/setRuntimeValue
         } else if (dataKey === 'activeCreatureName') {
                const prevActive = activeCreatureNameRef.current
                const newActive = event.data
@@ -710,7 +713,8 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         const concentration = creature.concentration
 
-        const attackerName = combatSummary.lastAttack?.attackerName
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName)
+        const attackerName = lastAttack?.attackerName
         const attacker = attackerName ? characters.find(c => c.name === attackerName || c.name.startsWith(attackerName + ' ')) : null
         const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers
         const hasConcentrationBreaker = attackerModifiers?.some(mod =>

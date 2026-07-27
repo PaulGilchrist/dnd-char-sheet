@@ -40,7 +40,7 @@ describe('boonOfFateHandler.handle', () => {
         vi.clearAllMocks();
         diceRoller.rollExpression.mockReturnValue({ total: 6 });
         rangeCheck.isWithinRange.mockResolvedValue(true);
-        damageUtils.getCombatContext.mockResolvedValue({ lastAttack: mockLastAttack });
+        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return mockLastAttack; return undefined; });;
     });
 
     it('should return error popup when boon has already been used', async () => {
@@ -62,7 +62,7 @@ describe('boonOfFateHandler.handle', () => {
             if (key === 'boonOfFateUsed') return false;
             return undefined;
         });
-        damageUtils.getCombatContext.mockResolvedValue({ lastAttack: null });
+        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return null; return undefined; });;
 
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
@@ -147,7 +147,7 @@ describe('boonOfFateHandler.handle', () => {
             targetName: 'Player',
             rollType: 'save',
         };
-        damageUtils.getCombatContext.mockResolvedValue({ lastAttack: saveAttack });
+        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return saveAttack; return undefined; });;
 
         const result = await handle(mockAction, mockPlayerStats, mockCampaignName);
 
@@ -177,7 +177,7 @@ describe('boonOfFateHandler.applyBoonFateChoice', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         logService.addEntry.mockResolvedValue(undefined);
-        damageUtils.getCombatContext.mockResolvedValue({ lastAttack: mockLastAttack });
+        damageUtils.getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === 'test-campaign' && propertyName === 'lastAttack') return mockLastAttack; return undefined; });;
     });
 
     it('should set boonOfFateUsed runtime flag before applying modifier', async () => {

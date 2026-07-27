@@ -1,7 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { createSaveListener, buildSaveDc } from '../../common/savePrompt.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 const SPELL_THIEF_BLOCK_KEY = 'spellThiefBlocked';
 const SPELL_THIEF_STOLEN_KEY = 'spellThiefStolen';
 const SPELL_THIEF_BLOCKED_LIST_KEY = '_spellThiefBlockedList';
@@ -70,8 +69,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
     const casterName = action.casterName || (lastAttack?.attackerName) || action.targetName || 'unknown creature';
     const spellName = action.spellName || (lastAttack?.attackName) || 'unknown spell';

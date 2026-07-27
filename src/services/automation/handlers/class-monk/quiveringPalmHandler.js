@@ -39,7 +39,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const lastAttack = cs?.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     const isMonkAttacker = lastAttack?.attackerName === playerName;
     const isUnarmedStrike = lastAttack?.attackName === 'Unarmed Strike';
     const attackHit = lastAttack?.saveResult === 'success' || lastAttack?.hit === true || lastAttack?.total >= (lastAttack?.targetAc || 10);

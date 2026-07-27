@@ -3,7 +3,7 @@ import { resolveTarget } from '../../common/targetResolver.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
-import { getCurrentCombatRound, loadCombatSummary } from '../../../../services/encounters/combatData.js';
+import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 import { loadManeuvers } from '../../../ui/dataLoader.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
@@ -335,8 +335,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const nonAttackRiderKnown = known.filter(m => m.actionType !== 'attack_rider' && m.actionType !== 'skill_check');
     const hasNonAttackRiderManeuvers = nonAttackRiderKnown.length > 0;
 
-    const cs = await getCombatContext(campaignName);
-    const lastAttack = cs?.lastAttack || null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
 
     const modalPayload = {
         action,
@@ -1984,8 +1983,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
     if (maneuver.effect === 'melee_attack_reaction') {
         await setRuntimeValue(playerStats.name, 'pendingRiposteDieValue', dieValue, campaignName);
 
-        const cs = await loadCombatSummary(campaignName);
-        const lastAttack = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
         const riposteTarget = lastAttack?.attackerName || targetName;
 
         if (riposteTarget && riposteTarget !== targetName && maneuver.effect !== 'ac_bonus_disengage' && maneuver.effect !== 'ac_bonus_and_swap' && maneuver.effect !== 'damage_reduction') {

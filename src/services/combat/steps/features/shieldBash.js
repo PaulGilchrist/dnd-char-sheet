@@ -1,6 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { loadCombatSummary } from '../../../encounters/combatData.js';
 import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
 import { addEntry } from '../../../ui/logService.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
@@ -23,8 +22,7 @@ export const shieldBash = {
     if (!hasOldStyle && !hasNewStyle) return null;
 
     // Validate lastAttack: must be player's melee weapon attack that hit
-    const cs = await loadCombatSummary(ctx.campaignName);
-    const lastAttack = cs?.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
 
     if (!lastAttack?.hit) return { data: prevData };
     if (lastAttack.attackerName !== ctx.playerStats.name) return { data: prevData };

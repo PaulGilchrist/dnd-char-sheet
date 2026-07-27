@@ -1,5 +1,4 @@
 import utils from './utils.js'
-import { getCombatContext } from '../rules/combat/damageUtils.js'
 
 // Sequential write queue for combatSummary to prevent race conditions
 // when multiple applyDamageToTarget calls fire storage.set in quick succession.
@@ -79,14 +78,16 @@ const storage = {
             await storage.set(propertyName, value, campaignName);
             return;
         }
-        const firstName = utils.getName(name);
-        // For combatSummary.lastAttack, merge with the full combatSummary from server
         if (name === 'combatSummary' && propertyName === 'lastAttack') {
-            const cs = await getCombatContext(campaignName);
-            const merged = { ...(cs || {}), lastAttack: { ...(cs?.lastAttack || {}), ...value } };
-            await storage.set(name, merged, campaignName);
+            console.error(
+                "[storage] Deprecated: storage.setProperty('combatSummary', 'lastAttack', ...) is no longer supported. " +
+                `Campaign: "${campaignName}". Use storage.set('lastAttack', value, campaignName) instead. ` +
+                "lastAttack is now a root-level key."
+            );
+            await storage.set('lastAttack', value, campaignName);
             return;
         }
+        const firstName = utils.getName(name);
         let obj = await storage.get(firstName, campaignName);
         if(!obj) {
             obj = {};

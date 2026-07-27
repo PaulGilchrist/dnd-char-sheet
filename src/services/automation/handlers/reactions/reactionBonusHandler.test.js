@@ -148,7 +148,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should route bonus_or_penalty_choice to handleBendFate', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -203,7 +203,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should reject when no recent d20 test found', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: null });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return null; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -211,7 +211,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should reject when target is self', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: HERO_NAME } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: HERO_NAME }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -219,7 +219,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should succeed with attack roll type', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc', targetAc: 16 } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc', targetAc: 16 }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -231,7 +231,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should succeed with save roll type', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'save', attackerName: 'Goblin', d20: 10, bonus: 3, saveType: 'dexterity', saveDc: 13 } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'save', attackerName: 'Goblin', d20: 10, bonus: 3, saveType: 'dexterity', saveDc: 13 }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -241,7 +241,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should detect save from attack event with saveDc and saveResult', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 10, bonus: 3, saveType: 'dexterity', saveDc: 13, saveResult: 'failure' } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 10, bonus: 3, saveType: 'dexterity', saveDc: 13, saveResult: 'failure' }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -251,7 +251,7 @@ describe('reactionBonusHandler', () => {
         });
 
         it('should succeed with check roll type', async () => {
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'check', attackerName: 'Goblin', d20: 18, bonus: 4, checkName: 'Stealth' } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'check', attackerName: 'Goblin', d20: 18, bonus: 4, checkName: 'Stealth' }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -262,7 +262,7 @@ describe('reactionBonusHandler', () => {
 
         it('should fail gracefully when rollExpression returns null', async () => {
             rollExpression.mockReturnValue(null);
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 
@@ -273,7 +273,7 @@ describe('reactionBonusHandler', () => {
         it('should use max sorcery points from class features', async () => {
             getClassFeatures.mockReturnValue({ maxSorceryPoints: 5 });
             getCurrentSorceryPoints.mockReturnValue(5);
-            getCombatContext.mockReturnValue({ lastAttack: { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' } });
+            getRuntimeValue.mockImplementation((_characterKey, propertyName, campaignName) => { if (campaignName === CAMPAIGN && propertyName === 'lastAttack') return { rollType: 'attack', attackerName: 'Goblin', d20: 15, bonus: 5, targetName: 'Orc' }; return undefined; });
             const action = makeAction({ automation: { effect: 'bonus_or_penalty_choice' } });
             const result = await handle(action, makePlayerStats(), CAMPAIGN, MAP);
 

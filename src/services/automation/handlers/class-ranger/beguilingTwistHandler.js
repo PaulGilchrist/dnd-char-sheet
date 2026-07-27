@@ -1,3 +1,4 @@
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 
@@ -57,7 +58,8 @@ export async function handle(action, playerStats, campaignName) {
         };
     }
 
-    const trigger = findTriggeringSaveOrCondition(combatSummary.lastAttack);
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    const trigger = findTriggeringSaveOrCondition(lastAttack);
     if (!trigger) {
         return {
             type: 'popup',

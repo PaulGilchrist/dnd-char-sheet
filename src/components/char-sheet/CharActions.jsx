@@ -239,7 +239,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
         setShowCleaveTargetSelection(false);
 
         const combatSummary = await getCombatContext(campaignName);
-        const lastAttack = combatSummary?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
         if (!lastAttack) return;
 
         const abilityName = playerStats?.abilities?.[0]?.name || 'STR';
@@ -314,8 +314,8 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                 targetName: targetName,
             }).catch(() => { });
         }
-        const combatSummary = await getCombatContext(campaignName);
-        const actualTargetName = combatSummary?.lastAttack?.targetName;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+        const actualTargetName = lastAttack?.targetName;
         if (!actualTargetName) return;
         if (chosenMastery === 'Topple') {
             const weaponAttack = playerStats.attacks?.find(a => a.name === attackName);
@@ -1739,9 +1739,8 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                     }
                                     await rollSkillCheck('Stealth', stealthBonus, checkContext);
                                     await new Promise(resolve => setTimeout(resolve, 50));
-                                    const cs = await loadCombatSummary(campaignName);
-                                    const lastAttack = cs?.lastAttack;
-                                    const rollTotal = lastAttack?.total;
+                                    const lastAttackData = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+                                    const rollTotal = lastAttackData?.total;
                                     const dc = 15;
                                     const success = rollTotal >= dc;
                                     if (success) {
@@ -1751,7 +1750,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                         const hasAdvantageOnStealth = activeBuffs.some(b => b.effect === 'advantage_on_stealth');
                                         const newBuffs = hasAdvantageOnStealth ? activeBuffs : [...activeBuffs, { name: 'Hide', effect: 'advantage_on_stealth' }];
                                         await setRuntimeValue(playerStats.name, 'activeBuffs', newBuffs, campaignName);
-                                        const d20Val = lastAttack?.d20 ?? '?';
+                                        const d20Val = lastAttackData?.d20 ?? '?';
                                         let successDesc = `Hide successful! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.`;
                                         let successLog = `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`;
                                         if (skulkerFogOfWarApplied) {
@@ -1766,7 +1765,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                             description: successLog,
                                         }).catch(() => { });
                                     } else {
-                                        const d20Val = lastAttack?.d20 ?? '?';
+                                        const d20Val = lastAttackData?.d20 ?? '?';
                                         let failDesc = `Hide failed! (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
                                         let failLog = `Stealth check: ${rollTotal} (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`;
                                         if (skulkerFogOfWarApplied) {
@@ -1863,8 +1862,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                     }
                                     await rollAbilityCheck(useAbility, checkBonus, checkContext);
                                     await new Promise(resolve => setTimeout(resolve, 50));
-                                    const updatedCs = await loadCombatSummary(campaignName);
-                                    const lastAttack = updatedCs?.lastAttack;
+                                    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
                                     const rollTotal = lastAttack?.total;
                                     const d20Val = lastAttack?.d20 ?? '?';
                                     let targetStrBonus = 0;
@@ -1888,7 +1886,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
                                     }
                                     const success = rollTotal > targetStrBonus;
                                     if (success) {
-                                        const combatSummary = updatedCs;
+                                        const combatSummary = cs;
                                         if (combatSummary?.creatures) {
                                             const targetCreature = combatSummary.creatures.find(c => c.name === target.name);
                                             if (targetCreature) {

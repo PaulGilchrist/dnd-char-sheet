@@ -546,7 +546,8 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     const handleBiDefenseCombatSummary = React.useCallback(async ({ dieValue, newAc, willMiss }) => {
         if (!playerStats) return;
         const cs = await loadCombatSummary(campaignName);
-        const la = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+        const la = lastAttack;
         if (la) {
             la.effectiveAc = newAc;
             la.bardicInspirationDefense = { used: true, biRoll: dieValue, newEffectiveAc: newAc };
@@ -567,7 +568,8 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             await setRuntimeValue(playerName, 'bardicInspirationUses', biUsesNum - 1, campaignName);
         }
         const cs = await loadCombatSummary(campaignName);
-        const la = cs?.lastAttack;
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+        const la = lastAttack;
         const targetName = la?.targetName;
         const damageType = la?.damageType || 'Bludgeoning';
         const damageTypes = Array.isArray(damageType) ? damageType : [damageType];

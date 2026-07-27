@@ -22,11 +22,17 @@ vi.mock('../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+}));
+
 // ── Imports ──────────────────────────────────────────────────────
 
 import { getCombatContext } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
 import { addEntry } from '../../ui/logService.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -35,6 +41,7 @@ const campaignName = 'TestCampaign';
 function resetMocks() {
     vi.clearAllMocks();
     getCombatContext.mockResolvedValue(null);
+    getRuntimeValue.mockReturnValue(null);
     applyHealingToTarget.mockReturnValue(null);
     addEntry.mockResolvedValue(undefined);
 }
@@ -72,24 +79,17 @@ describe('damageRollback', () => {
 
     describe('findLastAttack', () => {
         it('returns default values when combat context or lastAttack is absent', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getRuntimeValue.mockReturnValue(null);
             let result = await findLastAttack(campaignName);
             expect(result).toEqual({
                 attackEvent: null, attackerName: null, targetName: null,
                 primaryDamage: 0, secondaryDamage: 0, totalDamage: 0, damageTypes: [],
             });
-
-            getCombatContext.mockResolvedValue({ creatures: [] });
-            result = await findLastAttack(campaignName);
-            expect(result.attackEvent).toBeNull();
-            expect(result.totalDamage).toBe(0);
         });
 
         it('prefers actualDamage over primary + secondary sum', async () => {
-            const cs = makeCombatContext({
-                lastAttack: makeLastAttack({ primaryDamage: 8, secondaryDamage: 3, actualDamage: 5 }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            const attack = makeLastAttack({ primaryDamage: 8, secondaryDamage: 3, actualDamage: 5 });
+            getRuntimeValue.mockReturnValue(attack);
 
             const result = await findLastAttack(campaignName);
             expect(result.totalDamage).toBe(5);
@@ -98,49 +98,39 @@ describe('damageRollback', () => {
         });
 
         it('sums primary and secondary when actualDamage is absent', async () => {
-            const cs = makeCombatContext({
-                lastAttack: makeLastAttack({ primaryDamage: 8, secondaryDamage: 3 }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            const attack = makeLastAttack({ primaryDamage: 8, secondaryDamage: 3 });
+            getRuntimeValue.mockReturnValue(attack);
 
             const result = await findLastAttack(campaignName);
             expect(result.totalDamage).toBe(11);
         });
 
         it('falls back to rawDamage when primaryDamage is falsy', async () => {
-            const cs = makeCombatContext({
-                lastAttack: makeLastAttack({ primaryDamage: 0, rawDamage: 7 }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            const attack = makeLastAttack({ primaryDamage: 0, rawDamage: 7 });
+            getRuntimeValue.mockReturnValue(attack);
             const result = await findLastAttack(campaignName);
             expect(result.primaryDamage).toBe(7);
             expect(result.totalDamage).toBe(7);
         });
 
         it('returns damageTypes from attack event or empty array when absent', async () => {
-            let cs = makeCombatContext({
-                lastAttack: makeLastAttack({ damageTypes: ['Fire', 'Cold'] }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            let attack = makeLastAttack({ damageTypes: ['Fire', 'Cold'] });
+            getRuntimeValue.mockReturnValue(attack);
             let result = await findLastAttack(campaignName);
             expect(result.damageTypes).toEqual(['Fire', 'Cold']);
 
-            cs = makeCombatContext({
-                lastAttack: makeLastAttack({ damageTypes: undefined }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            attack = makeLastAttack({ damageTypes: undefined });
+            getRuntimeValue.mockReturnValue(attack);
             result = await findLastAttack(campaignName);
             expect(result.damageTypes).toEqual([]);
         });
 
         it('returns attackerName, targetName, and attackEvent from the attack event', async () => {
-            const cs = makeCombatContext({
-                lastAttack: makeLastAttack({ attackerName: 'Orc', targetName: 'Wizard', d20: 17, hit: true }),
-            });
-            getCombatContext.mockResolvedValue(cs);
+            const attack = makeLastAttack({ attackerName: 'Orc', targetName: 'Wizard', d20: 17, hit: true });
+            getRuntimeValue.mockReturnValue(attack);
 
             const result = await findLastAttack(campaignName);
-            expect(result.attackEvent).toBe(cs.lastAttack);
+            expect(result.attackEvent).toBe(attack);
             expect(result.attackerName).toBe('Orc');
             expect(result.targetName).toBe('Wizard');
         });
@@ -277,15 +267,18 @@ describe('damageRollback', () => {
     describe('findRollsByCreature', () => {
         it('returns null when combat context is null or creatures array is absent', async () => {
             getCombatContext.mockResolvedValue(null);
+            getRuntimeValue.mockReturnValue(null);
             let result = await findRollsByCreature(campaignName);
             expect(result).toBeNull();
 
-            getCombatContext.mockResolvedValue({ lastAttack: makeLastAttack() });
+            getRuntimeValue.mockReturnValue(makeLastAttack());
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Hero' }] });
             result = await findRollsByCreature(campaignName);
-            expect(result).toBeNull();
+            expect(result.Hero.attackEvent).toEqual(makeLastAttack());
         });
 
         it('returns empty map when creatures array is empty', async () => {
+            getRuntimeValue.mockReturnValue(makeLastAttack());
             getCombatContext.mockResolvedValue({ creatures: [] });
             const result = await findRollsByCreature(campaignName);
             expect(result).toEqual({});
@@ -310,7 +303,8 @@ describe('damageRollback', () => {
 
             for (const { rollType, eventKey, expectedType } of rollTypeTests) {
                 const attack = makeLastAttack({ rollType });
-                getCombatContext.mockResolvedValue({ creatures: [{ name: 'Hero' }], lastAttack: attack });
+                getRuntimeValue.mockReturnValue(attack);
+                getCombatContext.mockResolvedValue({ creatures: [{ name: 'Hero' }] });
 
                 const result = await findRollsByCreature(campaignName);
 
@@ -321,10 +315,8 @@ describe('damageRollback', () => {
 
         it('returns the same lastAttack reference for every creature', async () => {
             const attack = makeLastAttack();
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Hero' }, { name: 'Goblin' }, { name: 'Wizard' }],
-                lastAttack: attack,
-            });
+            getRuntimeValue.mockReturnValue(attack);
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Hero' }, { name: 'Goblin' }, { name: 'Wizard' }] });
 
             const result = await findRollsByCreature(campaignName);
             expect(result.Hero.attackEvent).toBe(attack);
@@ -337,12 +329,8 @@ describe('damageRollback', () => {
 
     describe('findMostRecentRollAcrossCreatures', () => {
         it('returns null when combat context is null or no lastAttack exists', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getRuntimeValue.mockReturnValue(null);
             let result = await findMostRecentRollAcrossCreatures(campaignName);
-            expect(result).toBeNull();
-
-            getCombatContext.mockResolvedValue({ creatures: [] });
-            result = await findMostRecentRollAcrossCreatures(campaignName);
             expect(result).toBeNull();
         });
 
@@ -356,7 +344,7 @@ describe('damageRollback', () => {
 
             for (const { rollType, attackerName, targetName, eventType, creatureName } of rollTypeTests) {
                 const attack = makeLastAttack({ rollType, attackerName, targetName });
-                getCombatContext.mockResolvedValue({ lastAttack: attack });
+                getRuntimeValue.mockReturnValue(attack);
 
                 const result = await findMostRecentRollAcrossCreatures(campaignName);
 

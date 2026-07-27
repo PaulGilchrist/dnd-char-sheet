@@ -1,89 +1,35 @@
 import { getCombatContext } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
 import { addEntry } from '../../ui/logService.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import storage from '../../../services/ui/storage.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 /**
- * Get the last attack from combatSummary.lastAttack, falling back to
- * each character's runtime-state lastAttackRoll when the combatSummary
- * copy on the server no longer has it (common after SSE broadcasts
- * overwrite the in-memory object).
+ * Get the last attack from the root-level lastAttack key.
  *
  * @param {string} [campaignName] - Campaign name for fetching combat context
  * @returns {{ attackEvent: Object|null, attackerName: string|null, targetName: string|null, primaryDamage: number, secondaryDamage: number, totalDamage: number, damageTypes: string[] }}
  */
 export async function findLastAttack(campaignName) {
-    const cs = await getCombatContext(campaignName);
-    if (cs?.lastAttack) {
-        const a = cs.lastAttack;
-        const primary = a.primaryDamage || a.rawDamage || 0;
-        const secondary = a.secondaryDamage || 0;
-        const actualDamage = a.actualDamage ?? (primary + secondary);
-        return {
-            attackEvent: a,
-            attackerName: a.attackerName,
-            targetName: a.targetName,
-            primaryDamage: primary,
-            secondaryDamage: secondary,
-            totalDamage: actualDamage,
-            damageTypes: a.damageTypes || [],
-            primaryDamageType: a.primaryDamageType || a.damageType || null,
-            secondaryDamageType: a.secondaryDamageType || null,
-        };
-    }
-
-    // Fallback: scan runtime state for the most recent lastAttackRoll across all characters
-    if (!cs?.creatures) {
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!lastAttack) {
         return { attackEvent: null, attackerName: null, targetName: null, primaryDamage: 0, secondaryDamage: 0, totalDamage: 0, damageTypes: [] };
     }
 
-    let latestAttack = null;
-    let latestAttackerName = null;
-    let latestTimestamp = 0;
-
-    for (const creature of cs.creatures) {
-        const lastAttackRoll = getRuntimeValue(creature.name, 'lastAttackRoll', campaignName);
-        if (!lastAttackRoll || lastAttackRoll.timestamp == null) continue;
-        if (lastAttackRoll.timestamp > latestTimestamp) {
-            latestTimestamp = lastAttackRoll.timestamp;
-            latestAttack = lastAttackRoll;
-            latestAttackerName = creature.name;
-        }
-    }
-
-    if (!latestAttack) {
-        return { attackEvent: null, attackerName: null, targetName: null, primaryDamage: 0, secondaryDamage: 0, totalDamage: 0, damageTypes: [] };
-    }
-
-    // Normalize lastAttackRoll shape to match combatSummary.lastAttack shape
-    const normalized = {
-        attackerName: latestAttackerName,
-        targetName: latestAttack.targetName,
-        d20: latestAttack.d20,
-        bonus: latestAttack.bonus,
-        total: (latestAttack.d20 || 0) + (latestAttack.bonus || 0),
-        targetAc: latestAttack.targetAc,
-        effectiveAc: latestAttack.effectiveAc,
-        hit: latestAttack.hit,
-        isCrit: latestAttack.isCrit,
-        isNatural20: latestAttack.d20 === 20,
-        isNatural1: latestAttack.d20 === 1,
-        rollType: 'attack',
-        damageType: latestAttack.damageType || null,
-        timestamp: latestAttack.timestamp,
-    };
+    const a = lastAttack;
+    const primary = a.primaryDamage || a.rawDamage || 0;
+    const secondary = a.secondaryDamage || 0;
+    const actualDamage = a.actualDamage ?? (primary + secondary);
 
     return {
-        attackEvent: normalized,
-        attackerName: normalized.attackerName,
-        targetName: normalized.targetName,
-        primaryDamage: 0,
-        secondaryDamage: 0,
-        totalDamage: 0,
-        damageTypes: [],
-        primaryDamageType: normalized.damageType,
-        secondaryDamageType: null,
+        attackEvent: a,
+        attackerName: a.attackerName,
+        targetName: a.targetName,
+        primaryDamage: primary,
+        secondaryDamage: secondary,
+        totalDamage: actualDamage,
+        damageTypes: a.damageTypes || [],
+        primaryDamageType: a.primaryDamageType || a.damageType || null,
+        secondaryDamageType: a.secondaryDamageType || null,
     };
 }
 
@@ -139,7 +85,7 @@ export async function rollbackDamage(attackerName, targetName, campaignName, fea
 
 /**
  * Find the most recent roll (attack, ability check, or save) for each creature.
- * Reads from combatSummary.lastAttack — the single source of truth for the most recent roll.
+ * Reads from the root-level lastAttack — the single source of truth for the most recent roll.
  * Since reactions can only target the most recent roll, this returns the same lastAttack
  * data for all creatures. Handlers should check attackerName/targetName to determine relevance.
  *
@@ -149,7 +95,7 @@ export async function findRollsByCreature(campaignName) {
     const cs = await getCombatContext(campaignName);
     if (!cs?.creatures) return null;
 
-    const lastAttack = cs.lastAttack;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     const result = {};
     for (const creature of cs.creatures) {
         const name = creature.name;
@@ -170,10 +116,9 @@ export async function findRollsByCreature(campaignName) {
  * @returns {Promise<{ creatureName: string, eventType: string, eventData: Object, isStale: boolean }|null>}
  */
 export async function findMostRecentRollAcrossCreatures(campaignName) {
-    const cs = await getCombatContext(campaignName);
-    if (!cs?.lastAttack) return null;
+    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!lastAttack) return null;
 
-    const lastAttack = cs.lastAttack;
     let eventType = 'attack';
     if (lastAttack.rollType === 'check' || lastAttack.rollType === 'skill') {
         eventType = 'ability';
@@ -190,7 +135,7 @@ export async function findMostRecentRollAcrossCreatures(campaignName) {
 }
 
 /**
- * Store damage rolls in combatSummary.lastAttack for later access by features like Piercer.
+ * Store damage rolls in the root-level lastAttack for later access by features like Piercer.
  * Called after damage resolves for plain weapon attacks.
  *
  * @param {string} campaignName - Campaign name
@@ -198,13 +143,13 @@ export async function findMostRecentRollAcrossCreatures(campaignName) {
  */
 export async function storeDamageRolls(campaignName, lastAttack) {
     if (!lastAttack) return;
-    const cs = await getCombatContext(campaignName);
-    if (!cs?.lastAttack) return;
+    const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!existing) return;
 
     const updatedLastAttack = {
-        ...cs.lastAttack,
+        ...existing,
         ...lastAttack,
     };
 
-    await storage.setProperty('combatSummary', 'lastAttack', updatedLastAttack, campaignName);
+    await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
 }

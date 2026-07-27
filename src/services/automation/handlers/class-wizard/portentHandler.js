@@ -5,7 +5,6 @@ import { infoPopup } from '../../common/infoPopup.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { findMostRecentRollAcrossCreatures } from '../../common/damageRollback.js';
-import storage from '../../../ui/storage.js';
 
 function getPortentDice(playerName, campaignName) {
     const stored = getRuntimeValue(playerName, 'portentDice', campaignName);
@@ -139,18 +138,17 @@ async function applyPortentChoice(action, playerStats, campaignName, targetName,
         const newHit = targetAc != null ? (chosenDie + bonus >= targetAc) : eventData.hit;
         outcomeNote = computeHitOutcome(eventData, chosenDie, bonus);
 
-        // Update combatSummary.lastAttack with the replaced d20
-        const cs = await getCombatContext(campaignName);
-        if (cs?.lastAttack) {
-            cs.lastAttack = {
-                ...cs.lastAttack,
+        // Update lastAttack with the replaced d20
+        const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+        if (existing) {
+            await setRuntimeValue('campaign', 'lastAttack', {
+                ...existing,
                 d20: chosenDie,
                 hit: newHit,
                 portentUsed: true,
                 portentOriginalD20: originalD20,
                 timestamp: Date.now(),
-            };
-            storage.set('combatSummary', cs, campaignName);
+            }, campaignName);
         }
 
         // Miss→hit: trigger damage
