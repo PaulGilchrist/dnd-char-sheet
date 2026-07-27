@@ -138,13 +138,13 @@ vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalho
         ) : isLocalhost ? (
             <button data-testid={`concentration-add-${creature.name}`} onClick={() => onOpenConcentrationPicker(creature)} type="button" title="Add concentration">+</button>
         ) : null}
-        {creature.type === 'npc' && isLocalhost && (
+        {creature.type !== 'player' && isLocalhost && (
             <button data-testid={`npc-remove-${creature.name}`} onClick={() => onRemoveNpc(creature.name)} type="button" title="Remove NPC">X</button>
         )}
-        {creature.type === 'npc' && (
+        {creature.type !== 'player' && (
             <span data-testid={`npc-click-${creature.name}`} onClick={() => onNpcClick(creature)}>Avatar</span>
         )}
-        {creature.type === 'npc' && (
+        {creature.type !== 'player' && (
             <input data-testid={`name-change-${creature.name}`} value={creature.name} onChange={(e) => onNameChange(creature.name, e.target.value)} />
         )}
     </div>

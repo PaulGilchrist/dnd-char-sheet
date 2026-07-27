@@ -281,7 +281,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     const handleRemoveNpc = React.useCallback((creatureName) => {
         if (!combatSummary) return
         const creature = combatSummary.creatures.find(c => c.name === creatureName)
-        if (!creature || creature.type !== 'npc') return
+        if (!creature || creature.type === 'player') return
 
         const needsConfirmation = creature.currentHp > 0 || creature.initiative !== ''
         if (needsConfirmation) {

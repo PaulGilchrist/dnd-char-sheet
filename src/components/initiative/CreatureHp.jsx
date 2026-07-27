@@ -9,7 +9,7 @@ function CreatureHp({ creature, isLocalhost, onChange }) {
     const isDead = currentHp <= 0
     const isBloodied = currentHp > 0 && currentHp <= Math.floor(maxHp / 2)
 
-    if (type === 'npc' && !isLocalhost) {
+    if (type !== 'player' && !isLocalhost) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">
@@ -26,7 +26,7 @@ function CreatureHp({ creature, isLocalhost, onChange }) {
         )
     }
 
-    if (type === 'npc' && isLocalhost) {
+    if (type !== 'player' && isLocalhost) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">

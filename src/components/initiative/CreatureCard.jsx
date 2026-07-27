@@ -46,7 +46,7 @@ function CreatureCard({
     coronaDisadvantage,
 }) {
     const isUnconscious = creature.currentHp <= 0
-    const allTargetEffects = useRuntimeValue(campaignName, 'targetEffects') ?? [];
+    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
     const myTargetEffects = allTargetEffects.filter(te => te.target === creature.name);
     const isMajestyActive = creature.type === 'player' && isUnbreakableMajestyActive(creature.name, campaignName);
     const majestyDc = isMajestyActive ? getUnbreakableMajestySaveDc(creature.name, campaignName) : 0;
@@ -70,7 +70,7 @@ function CreatureCard({
 
     return (
         <div className={`creature-card ${creature.type} ${isActive ? 'active' : ''} ${isUnconscious ? 'creature-unconscious' : ''}`}>
-            {creature.type === 'npc' && isLocalhost && (
+            {creature.type !== 'player' && isLocalhost && (
                 <button
                     className="npc-remove-btn"
                     onClick={() => onRemoveNpc(creature.name)}
@@ -128,7 +128,7 @@ function CreatureCard({
                 <select
                     value={creature.targetName || ''}
                     onChange={(e) => onTargetChange(creature.name, e.target.value)}
-                    disabled={creature.type === 'npc' && !isLocalhost}
+                    disabled={creature.type !== 'player' && !isLocalhost}
                 >
                     <option value="">— No Target —</option>
                     {allCreatures

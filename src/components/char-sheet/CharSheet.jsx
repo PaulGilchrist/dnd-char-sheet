@@ -330,7 +330,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         }
     }
     const allSaveModifiers = [...(playerStats?.saveModifiers || []), ...stanceSaveModifiers, ...pfeagSaveAdvantage];
-    const allTargetEffects = useRuntimeValue(campaignName, 'targetEffects') ?? [];
+    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
     const myTargetEffects = allTargetEffects.filter(te => te.target === (playerSummary?.name));
     const isRaging = Array.isArray(activeBuffs) && activeBuffs.some(b => b.damageBonusExpression);
     const shapeShiftActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shape_shift');

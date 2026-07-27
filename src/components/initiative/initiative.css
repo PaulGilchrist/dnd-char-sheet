@@ -100,6 +100,7 @@
     border-radius: 10px;
     transform: scale(1.0);
     opacity: 0.9;
+    border: 2px solid #e74c3c;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
     cursor: pointer;
 }
@@ -120,10 +121,6 @@
 
 .initiative .creature-card.player {
     border: 2px solid #2ecc71;
-}
-
-.initiative .creature-card.npc {
-    border: 2px solid #e74c3c;
 }
 
 /* Avatars */
