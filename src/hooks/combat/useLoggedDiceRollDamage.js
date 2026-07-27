@@ -1539,9 +1539,7 @@ export function createLogDamageAndShow(deps) {
                 actualDamage: applyResult?.finalDamage ?? adjustedTotal,
                 damageApplied: true,
             };
-            setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName).catch(e => {
-                console.error('[useLoggedDiceRollDamage] Error storing damage rolls:', e);
-            });
+            setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }
 
         if (context?.metamagicTwinTarget && target) {
