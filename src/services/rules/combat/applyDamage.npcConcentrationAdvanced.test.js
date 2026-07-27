@@ -277,9 +277,9 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
       stubNpcRuntime(30);
 
-      expect(() => applyDamageToTarget(
+      await expect(applyDamageToTarget(
         cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter],
-      )).toThrow('player level is required for relentless hunter check');
+      )).rejects.toThrow('player level is required for relentless hunter check');
     });
   });
 

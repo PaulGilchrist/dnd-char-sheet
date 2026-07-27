@@ -145,7 +145,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
   }
 
   describe('trigger conditions', () => {
-    it('heals to 1 + (3 x paladin level) when dropping to 0 HP', () => {
+    it('heals to 1 + (3 x paladin level) when dropping to 0 HP', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15, maxHp: 150 });
       const cs = makeCombatSummary([paladin]);
 
@@ -154,7 +154,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 150,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, maxHp: 150, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -164,7 +164,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       expect(result.newHp).toBe(46); // 1 + (3 * 15)
     });
 
-    it('caps healing at max HP', () => {
+    it('caps healing at max HP', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 20, maxHp: 50 });
       const cs = makeCombatSummary([paladin]);
 
@@ -173,7 +173,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 50,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 5, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 20, maxHp: 50, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -182,7 +182,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       expect(result.newHp).toBe(50); // capped at maxHp, not 61
     });
 
-    it('does not trigger when HP is still above 0', () => {
+    it('does not trigger when HP is still above 0', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -191,7 +191,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 150,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 3, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -200,7 +200,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       expect(result.newHp).toBe(2);
     });
 
-    it('does not trigger when damage is absorbed by Arcane Ward', () => {
+    it('does not trigger when damage is absorbed by Arcane Ward', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -211,7 +211,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         arcaneWardHp: 20,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -220,7 +220,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       expect(result.newHp).toBe(10); // HP unchanged, ward absorbed the damage
     });
 
-    it('does not trigger if feature is not present on the character', () => {
+    it('does not trigger if feature is not present on the character', async () => {
       const fighter = makeCreature('Fighter', {
         level: 15,
         computedStats: {
@@ -239,7 +239,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 120,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'Fighter', 5, ['Slashing'], campaignName,
         [makeCharacter('Fighter', { level: 15, maxHp: 120, features: [{ name: 'Extra Attack' }], className: 'Fighter', classLevel: 15 })],
       );
@@ -250,7 +250,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
   });
 
   describe('per-long-rest tracking', () => {
-    it('does not trigger if already used this long rest', () => {
+    it('does not trigger if already used this long rest', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -260,7 +260,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         undyingSentinelUsed: true,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -269,7 +269,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       expect(result.newHp).toBe(0);
     });
 
-    it('marks feature as used when triggering', () => {
+    it('marks feature as used when triggering', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -278,7 +278,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 150,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -290,7 +290,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
   });
 
   describe('side effects', () => {
-    it('resets death saves and death failures when triggering', () => {
+    it('resets death saves and death failures when triggering', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -299,7 +299,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 150,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -312,7 +312,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       );
     });
 
-    it('removes unconscious condition when triggering', () => {
+    it('removes unconscious condition when triggering', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -322,7 +322,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         activeConditions: ['unconscious', 'blinded'],
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -332,7 +332,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
       );
     });
 
-    it('logs a heal entry when triggering', () => {
+    it('logs a heal entry when triggering', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -341,7 +341,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 150,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -356,7 +356,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
   });
 
   describe('scaling', () => {
-    it('scales healing with paladin level', () => {
+    it('scales healing with paladin level', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 20, maxHp: 200 });
       const cs = makeCombatSummary([paladin]);
 
@@ -365,7 +365,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: 200,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'GloryPaladin', 5, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 20, maxHp: 200, features: [{ name: 'Undying Sentinel' }] })],
       );
@@ -377,7 +377,7 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
   });
 
   describe('edge cases', () => {
-    it('throws when hitPoints is null from runtime', () => {
+    it('throws when hitPoints is null from runtime', async () => {
       const paladin = createPaladin('GloryPaladin', { level: 15 });
       const cs = makeCombatSummary([paladin]);
 
@@ -386,10 +386,10 @@ describe('applyDamageToTarget — Undying Sentinel', () => {
         hitPoints: null,
       }));
 
-      expect(() => applyDamageToTarget(
+      await expect(applyDamageToTarget(
         cs, 'GloryPaladin', 10, ['Slashing'], campaignName,
         [makeCharacter('GloryPaladin', { level: 15, features: [{ name: 'Undying Sentinel' }] })],
-      )).toThrow('Undying Sentinel: hitPoints not found for GloryPaladin');
+      )).rejects.toThrow('Undying Sentinel: hitPoints not found for GloryPaladin');
     });
   });
 });
@@ -416,7 +416,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
   }
 
   describe('trigger conditions', () => {
-    it('heals to 1 + half max HP when dropping to 0 HP', () => {
+    it('heals to 1 + half max HP when dropping to 0 HP', async () => {
       const char = createCharacterWithBoon('BoonChar', { level: 20, maxHp: 180 });
       const cs = makeCombatSummary([char]);
 
@@ -425,7 +425,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         hitPoints: 180,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'BoonChar', 10, ['Slashing'], campaignName,
         [makeCharacter('BoonChar', {
           level: 20, maxHp: 180,
@@ -439,7 +439,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
       expect(result.newHp).toBe(91); // 1 + floor(180/2)
     });
 
-    it('does not trigger if already used this long rest', () => {
+    it('does not trigger if already used this long rest', async () => {
       const char = createCharacterWithBoon('BoonChar', { level: 20 });
       const cs = makeCombatSummary([char]);
 
@@ -449,7 +449,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         boonOfRecoveryLastStandUsed: true,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'BoonChar', 10, ['Slashing'], campaignName,
         [makeCharacter('BoonChar', {
           level: 20, maxHp: 180,
@@ -462,7 +462,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
       expect(result.newHp).toBe(0);
     });
 
-    it('does not trigger if feature is not present', () => {
+    it('does not trigger if feature is not present', async () => {
       const fighter = makeCreature('Fighter', {
         level: 20,
         computedStats: {
@@ -481,7 +481,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         hitPoints: 200,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'Fighter', 10, ['Slashing'], campaignName,
         [makeCharacter('Fighter', {
           level: 20, maxHp: 200,
@@ -496,7 +496,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
   });
 
   describe('side effects', () => {
-    it('resets death saves and removes unconscious condition when triggering', () => {
+    it('resets death saves and removes unconscious condition when triggering', async () => {
       const char = createCharacterWithBoon('BoonChar', { level: 20 });
       const cs = makeCombatSummary([char]);
 
@@ -506,7 +506,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         activeConditions: ['unconscious'],
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'BoonChar', 10, ['Slashing'], campaignName,
         [makeCharacter('BoonChar', {
           level: 20, maxHp: 180,
@@ -526,7 +526,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
       );
     });
 
-    it('marks feature as used when triggering', () => {
+    it('marks feature as used when triggering', async () => {
       const char = createCharacterWithBoon('BoonChar', { level: 20 });
       const cs = makeCombatSummary([char]);
 
@@ -535,7 +535,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         hitPoints: 180,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'BoonChar', 10, ['Slashing'], campaignName,
         [makeCharacter('BoonChar', {
           level: 20, maxHp: 180,
@@ -551,7 +551,7 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
   });
 
   describe('edge cases', () => {
-    it('throws when hitPoints is null from runtime', () => {
+    it('throws when hitPoints is null from runtime', async () => {
       const char = createCharacterWithBoon('BoonChar', { level: 20 });
       const cs = makeCombatSummary([char]);
 
@@ -560,14 +560,14 @@ describe('applyDamageToTarget — Boon of Recovery (Last Stand)', () => {
         hitPoints: null,
       }));
 
-      expect(() => applyDamageToTarget(
+      await expect(applyDamageToTarget(
         cs, 'BoonChar', 10, ['Slashing'], campaignName,
         [makeCharacter('BoonChar', {
           level: 20, maxHp: 180,
           features: [{ name: 'Last Stand' }],
           className: 'Paladin', classLevel: 20,
         })],
-      )).toThrow('Last Stand: hitPoints not found for BoonChar');
+      )).rejects.toThrow('Last Stand: hitPoints not found for BoonChar');
     });
   });
 });
@@ -594,7 +594,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
   }
 
   describe('trigger conditions', () => {
-    it('sets HP to 1 when dropping to 0 HP', () => {
+    it('sets HP to 1 when dropping to 0 HP', async () => {
       const orc = createOrc('OrcPlayer', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -603,7 +603,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'OrcPlayer', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer', {
           level: 1, maxHp: 100,
@@ -617,7 +617,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       expect(result.newHp).toBe(1);
     });
 
-    it('does not trigger if already used this long rest', () => {
+    it('does not trigger if already used this long rest', async () => {
       const orc = createOrc('OrcPlayer2', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -627,7 +627,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         relentlessEnduranceUsed: true,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'OrcPlayer2', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer2', {
           level: 1, maxHp: 100,
@@ -640,7 +640,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       expect(result.newHp).toBe(0);
     });
 
-    it('does not trigger if character does not have the trait', () => {
+    it('does not trigger if character does not have the trait', async () => {
       const elf = makeCreature('ElfPlayer', {
         level: 1,
         computedStats: {
@@ -659,7 +659,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 80,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'ElfPlayer', 10, ['Slashing'], campaignName,
         [makeCharacter('ElfPlayer', {
           level: 1, maxHp: 80,
@@ -674,7 +674,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
   });
 
   describe('side effects', () => {
-    it('resets death saves and death failures when triggering', () => {
+    it('resets death saves and death failures when triggering', async () => {
       const orc = createOrc('OrcPlayer3', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -683,7 +683,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'OrcPlayer3', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer3', {
           level: 1, maxHp: 100,
@@ -700,7 +700,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       );
     });
 
-    it('removes unconscious condition when triggering', () => {
+    it('removes unconscious condition when triggering', async () => {
       const orc = createOrc('OrcPlayer5', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -710,7 +710,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         activeConditions: ['unconscious', 'blinded'],
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'OrcPlayer5', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer5', {
           level: 1, maxHp: 100,
@@ -724,7 +724,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       );
     });
 
-    it('marks feature as used when triggering', () => {
+    it('marks feature as used when triggering', async () => {
       const orc = createOrc('OrcPlayer4', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -733,7 +733,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'OrcPlayer4', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer4', {
           level: 1, maxHp: 100,
@@ -747,7 +747,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       );
     });
 
-    it('logs a heal entry when triggering', () => {
+    it('logs a heal entry when triggering', async () => {
       const orc = createOrc('OrcPlayer6', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -756,7 +756,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      applyDamageToTarget(
+      await applyDamageToTarget(
         cs, 'OrcPlayer6', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcPlayer6', {
           level: 1, maxHp: 100,
@@ -774,7 +774,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
   });
 
   describe('edge cases', () => {
-    it('returns intercepted false when allFeatures is null', () => {
+    it('returns intercepted false when allFeatures is null', async () => {
       const orc = makeCreature('OrcNullFeatures', {
         level: 1,
         computedStats: {
@@ -793,7 +793,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'OrcNullFeatures', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcNullFeatures', {
           level: 1, maxHp: 100,
@@ -806,7 +806,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
       expect(result.newHp).toBe(0);
     });
 
-    it('throws when hitPoints is null from runtime', () => {
+    it('throws when hitPoints is null from runtime', async () => {
       const orc = createOrc('OrcNoHitPoints', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -815,17 +815,17 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: null,
       }));
 
-      expect(() => applyDamageToTarget(
+      await expect(applyDamageToTarget(
         cs, 'OrcNoHitPoints', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcNoHitPoints', {
           level: 1, maxHp: 100,
           features: [{ name: 'Relentless Endurance' }],
           className: 'Rogue', classLevel: 1,
         })],
-      )).toThrow('Relentless Endurance: hitPoints not found for OrcNoHitPoints');
+      )).rejects.toThrow('Relentless Endurance: hitPoints not found for OrcNoHitPoints');
     });
 
-    it('adds damageSequenceId to reTriggeredSequenceIds when Relentless Endurance intercepts', () => {
+    it('adds damageSequenceId to reTriggeredSequenceIds when Relentless Endurance intercepts', async () => {
       const orc = createOrc('OrcSeqId', { maxHp: 100 });
       const cs = makeCombatSummary([orc]);
 
@@ -834,7 +834,7 @@ describe('applyDamageToTarget — Relentless Endurance (Orc race trait)', () => 
         hitPoints: 100,
       }));
 
-      const result = applyDamageToTarget(
+      const result = await applyDamageToTarget(
         cs, 'OrcSeqId', 10, ['Slashing'], campaignName,
         [makeCharacter('OrcSeqId', {
           level: 1, maxHp: 100,

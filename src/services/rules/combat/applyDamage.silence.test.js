@@ -110,7 +110,7 @@ function stubPlayerRuntime(currentHp, conditions = [], activeBuffs = [], arcaneW
 // ── Tests ───────────────────────────────────────────────────────
 
 describe('Silence zone — Thunder immunity for players', () => {
-  it('adds Thunder immunity when player is in silence zone and taking thunder damage', () => {
+  it('adds Thunder immunity when player is in silence zone and taking thunder damage', async () => {
     silenceService.isCreatureInSilenceZone.mockImplementation(() => true);
     global.fetch.mockReset();
 
@@ -120,7 +120,7 @@ describe('Silence zone — Thunder immunity for players', () => {
     // Provide a silence buff with sourceCharacter so the silence zone code path is triggered
     stubPlayerRuntime(20, [], [{ effect: 'silence', sourceCharacter: 'Bard' }]);
 
-    const result = applyDamageToTarget(cs, 'Wizard', 10, ['Thunder'], 'TestCampaign', [
+    const result = await applyDamageToTarget(cs, 'Wizard', 10, ['Thunder'], 'TestCampaign', [
       createMinimalCharacter('Wizard'),
     ]);
 
@@ -128,14 +128,14 @@ describe('Silence zone — Thunder immunity for players', () => {
     expect(silenceService.isCreatureInSilenceZone).toHaveBeenCalledWith('Wizard', 'Bard', 'TestCampaign');
   });
 
-  it('does not add Thunder immunity when not in silence zone, no silence buff, or silence buff lacks sourceCharacter', () => {
+  it('does not add Thunder immunity when not in silence zone, no silence buff, or silence buff lacks sourceCharacter', async () => {
     // Not in silence zone
     silenceService.isCreatureInSilenceZone.mockImplementation(() => false);
     global.fetch.mockReset();
     const player1 = createPlayerCreature('Wizard');
     const cs1 = makeCombatSummary([player1]);
     stubPlayerRuntime(20, [], [{ effect: 'silence', sourceCharacter: 'Bard' }]);
-    let result = applyDamageToTarget(cs1, 'Wizard', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard')]);
+    let result = await applyDamageToTarget(cs1, 'Wizard', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard')]);
     expect(result.finalDamage).toBe(10);
     expect(silenceService.isCreatureInSilenceZone).toHaveBeenCalledWith('Wizard', 'Bard', 'TestCampaign');
 
@@ -146,7 +146,7 @@ describe('Silence zone — Thunder immunity for players', () => {
     const player2 = createPlayerCreature('Wizard2');
     const cs2 = makeCombatSummary([player2]);
     stubPlayerRuntime(20, [], []);
-    result = applyDamageToTarget(cs2, 'Wizard2', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard2')]);
+    result = await applyDamageToTarget(cs2, 'Wizard2', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard2')]);
     expect(result.finalDamage).toBe(10);
     expect(silenceService.isCreatureInSilenceZone).not.toHaveBeenCalled();
 
@@ -157,12 +157,12 @@ describe('Silence zone — Thunder immunity for players', () => {
     const player3 = createPlayerCreature('Wizard3');
     const cs3 = makeCombatSummary([player3]);
     stubPlayerRuntime(20, [], [{ effect: 'silence' }]);
-    result = applyDamageToTarget(cs3, 'Wizard3', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard3')]);
+    result = await applyDamageToTarget(cs3, 'Wizard3', 10, ['Thunder'], 'TestCampaign', [createMinimalCharacter('Wizard3')]);
     expect(result.finalDamage).toBe(10);
     expect(silenceService.isCreatureInSilenceZone).not.toHaveBeenCalled();
   });
 
-  it('Thunder immunity does not affect other damage types', () => {
+  it('Thunder immunity does not affect other damage types', async () => {
     silenceService.isCreatureInSilenceZone.mockImplementation(() => true);
     global.fetch.mockReset();
 
@@ -171,7 +171,7 @@ describe('Silence zone — Thunder immunity for players', () => {
 
     stubPlayerRuntime(20, [], [{ effect: 'silence', sourceCharacter: 'Bard' }]);
 
-    const result = applyDamageToTarget(cs, 'Wizard', 10, ['Fire'], 'TestCampaign', [
+    const result = await applyDamageToTarget(cs, 'Wizard', 10, ['Fire'], 'TestCampaign', [
       createMinimalCharacter('Wizard'),
     ]);
 
@@ -180,7 +180,7 @@ describe('Silence zone — Thunder immunity for players', () => {
 });
 
 describe('Silence zone — does not apply to NPCs', () => {
-  it('does not add Thunder immunity for NPC creatures', () => {
+  it('does not add Thunder immunity for NPC creatures', async () => {
     silenceService.isCreatureInSilenceZone.mockClear();
     silenceService.isCreatureInSilenceZone.mockImplementation(() => true);
     global.fetch.mockReset();
@@ -214,7 +214,7 @@ describe('Silence zone — does not apply to NPCs', () => {
       return undefined;
     });
 
-    const result = applyDamageToTarget(cs, 'Goblin', 10, ['Thunder'], 'TestCampaign', [
+    const result = await applyDamageToTarget(cs, 'Goblin', 10, ['Thunder'], 'TestCampaign', [
       createMinimalCharacter('Goblin'),
     ]);
 

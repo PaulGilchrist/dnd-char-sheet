@@ -313,7 +313,7 @@ describe('Dark One\'s Blessing', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('FiendWarlock2', 'tempHp', 8, 'TestCampaign');
   });
 
-  it('does not grant temp HP when target is in the warlock\'s ally list', () => {
+  it('does not grant temp HP when target is in the warlock\'s ally list', async () => {
     getAllyList.mockReturnValue(['Goblin']);
     const goblin = createCreature('Goblin', 5, 5);
     const cs = makeCombatSummary([goblin]);
