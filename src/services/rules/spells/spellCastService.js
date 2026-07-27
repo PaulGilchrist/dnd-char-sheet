@@ -105,7 +105,6 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 }
 
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
-    console.log('[spellCast] executeSpellCast ENTER:', spell.name, 'keys:', Object.keys(spell).join(','));
     if (getActiveBuffs(playerStats.name, campaignName).some(b => b.blocksSpellcasting)) {
         return;
     }
@@ -861,6 +860,34 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             if (!damageExpression) {
                 const firstKey = Object.keys(damageAtSlotLevel)[0];
                 damageExpression = damageAtSlotLevel[firstKey];
+            }
+
+            const hasDamage = !!damageExpression && damageExpression !== '0' && damageExpression !== '';
+            const automationEffects = fullSpell.automation?.effects;
+            const isConditionOnlyAoe = !hasDamage && automationEffects?.fail?.length > 0;
+
+            if (isConditionOnlyAoe) {
+                const conditionNames = automationEffects.fail.map(e => e.condition || e.type).filter(Boolean);
+                return {
+                    automationPopup: {
+                        type: 'modal',
+                        modalName: 'aoeCondition',
+                        payload: {
+                            action: { name: fullSpell.name, automation: fullSpell.automation },
+                            playerStats,
+                            campaignName,
+                            shape: aoeShape,
+                            range: rangeFeet,
+                            saveType: fullSpell.dc?.dc_type || spell.dc.dc_type || 'CON',
+                            saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),
+                            effects: automationEffects.fail,
+                            conditionLabel: conditionNames.join(', '),
+                            activeOverlay,
+                            metamagicCareful: metaCtx?.metamagicCareful || false,
+                            metamagicHeighten: hasInvisible || metaCtx?.metamagicHeighten,
+                        },
+                    },
+                };
             }
 
             return {

@@ -82,6 +82,9 @@ function handleModalResult(popup, setModalState) {
         case 'saveAttackAoe':
             setModalState({ saveAttackAoeModal: payload });
             break;
+        case 'aoeCondition':
+            setModalState({ aoeConditionModal: payload });
+            break;
         case 'wildMagicSurge':
             setModalState({ wildMagicSurgeModal: payload });
             break;

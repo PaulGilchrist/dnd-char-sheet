@@ -22,6 +22,7 @@ import CombatStanceModal from './modals/shared/CombatStanceModal.jsx'
 import TeleportModal from './modals/TeleportModal.jsx'
 import SaveAttackHealModal from './modals/shared/SaveAttackHealModal.jsx'
 import SaveAttackAoeModal from './modals/shared/SaveAttackAoeModal.jsx'
+import AOEConditionModal from './modals/shared/AOEConditionModal.jsx'
 import ElementalAttunementModal from './modals/ElementalAttunementModal.jsx'
 import ElementalBurstModal from './modals/ElementalBurstModal.jsx'
 import DivineSparkModal from './modals/divine/DivineSparkModal.jsx'
@@ -560,6 +561,12 @@ export default function CharActionModals({
                 <SaveAttackAoeModal
                     {...mergedModalState.saveAttackAoeModal}
                     onClose={() => setModalState({ saveAttackAoeModal: null })}
+                />
+            )}
+            {mergedModalState.aoeConditionModal && (
+                <AOEConditionModal
+                    {...mergedModalState.aoeConditionModal}
+                    onClose={() => setModalState({ aoeConditionModal: null })}
                 />
             )}
             {mergedModalState.elementalAttunementModal && (

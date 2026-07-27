@@ -109,6 +109,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 }
 
 function applySuccessEffects(effects, targetName, attackerName, campaignName) {
+    if (!effects || !Array.isArray(effects)) return;
     for (const effect of effects) {
         switch (effect.type) {
             case 'speed_halved':
