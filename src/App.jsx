@@ -174,6 +174,17 @@ function App() {
             stStore.set('shadowTouchedSpell', char.shadowTouchedSpell);
           }
         }
+
+        // Seed campaign-level runtime data (targetEffects, etc.)
+        const campaignServerData = serverData ? serverData[campaignName] : null;
+        if (campaignServerData && typeof campaignServerData === 'object') {
+          const campaignStore = getStore(campaignName);
+          for (const [key, value] of Object.entries(campaignServerData)) {
+            if (!campaignStore.has(key) && value != null) {
+              campaignStore.set(key, value);
+            }
+          }
+        }
       })();
     }, [computedCharacters, campaignName]);
 
