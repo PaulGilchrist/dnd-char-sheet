@@ -75,7 +75,7 @@ function HurlThroughHellModal({ action, playerStats, campaignName, targetName, s
                 const newConds = Array.isArray(storedConds) ? [...storedConds, 'incapacitated'] : ['incapacitated'];
                 setRuntimeValue(targetName, 'activeConditions', newConds, campaignName);
 
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 storedEffects.push({
                     target: targetName,
                     source: featureName,
@@ -87,7 +87,7 @@ function HurlThroughHellModal({ action, playerStats, campaignName, targetName, s
                     teleport: true,
                     returnToSpace: true,
                 });
-                setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
 
                 const combatSummary = getCombatSummary(campaignName);
                 const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);

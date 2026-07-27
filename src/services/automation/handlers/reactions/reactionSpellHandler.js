@@ -57,7 +57,7 @@ export async function handle(action, playerStats, _campaignName) {
 }
 
 export function applyWarCasterReaction(targetName, spellName, spellData, playerStats, campaignName) {
-    const stored = getRuntimeValue(campaignName, 'warCasterReactions') || [];
+    const stored = getRuntimeValue('campaign', 'warCasterReactions') || [];
     stored.push({
         targetName,
         spellName,
@@ -65,7 +65,7 @@ export function applyWarCasterReaction(targetName, spellName, spellData, playerS
         characterName: playerStats.name,
         timestamp: Date.now(),
     });
-    setRuntimeValue(campaignName, 'warCasterReactions', stored, campaignName);
+    setRuntimeValue('campaign', 'warCasterReactions', stored, campaignName);
 
     addEntry(campaignName, {
         type: 'ability_use',

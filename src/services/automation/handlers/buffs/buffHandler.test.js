@@ -500,7 +500,7 @@ describe('buffHandler.handle', () => {
         campaignName
       );
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         `_activeInvisibility_${ps.name}`,
         ps.name,
         campaignName

@@ -126,7 +126,7 @@ export const shieldBash = {
 
 export async function applyShieldBashEffect(action, playerStats, campaignName, targetName, chosenOption, saveDc) {
   const auto = action.automation || {};
-  const effs = getRuntimeValue(campaignName, 'targetEffects') || [];
+  const effs = getRuntimeValue('campaign', 'targetEffects') || [];
   const storedEffects = [...effs];
 
   if (chosenOption === 'skip') {
@@ -148,7 +148,7 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
       value: 5,
       duration: 'instant',
     };
-    setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+    setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
 
     addEntry(campaignName, {
       type: 'ability_use',
@@ -168,7 +168,7 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
       saveDc,
       saveAbility: 'STR',
     };
-    setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+    setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
 
     const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
     const alreadyProne = conditions.some(c => String(c).toLowerCase() === 'prone');

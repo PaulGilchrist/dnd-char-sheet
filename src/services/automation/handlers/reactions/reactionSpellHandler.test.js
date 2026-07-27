@@ -224,8 +224,8 @@ describe('reactionSpellHandler.handle', () => {
             applyWarCasterReaction('Goblin', 'Burning Hands', spellData, ps, campaignName);
 
             expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
-                'warCasterReactions',
+        'campaign',
+        'warCasterReactions',
                 expect.arrayContaining([
                     expect.objectContaining({
                         targetName: 'Goblin',

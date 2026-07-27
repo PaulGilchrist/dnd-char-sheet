@@ -66,7 +66,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     // Apply next_attack_advantage to self via targetEffects
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: playerName,
         source: action.name,
@@ -74,7 +74,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         value: null,
         duration: auto.duration || 'until_end_of_turn',
     };
-    await setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
 
     // Log the ability use
     await addEntry(campaignName, {

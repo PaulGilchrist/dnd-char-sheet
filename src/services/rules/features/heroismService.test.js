@@ -311,15 +311,15 @@ describe('heroismService', () => {
             ];
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return [];
-                if (key === campaignName && prop === 'targetEffects') return effects;
+                if (key === 'campaign' && prop === 'targetEffects') return effects;
                 return null;
             });
 
             removeHeroismBuff('Target', campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
-                'targetEffects',
+        'campaign',
+        'targetEffects',
                 [{ effect: 'other', source: 'Other', target: 'Target' }],
                 campaignName,
             );
@@ -333,15 +333,15 @@ describe('heroismService', () => {
             ];
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return [];
-                if (key === campaignName && prop === 'targetEffects') return effects;
+                if (key === 'campaign' && prop === 'targetEffects') return effects;
                 return null;
             });
 
             removeHeroismBuff('Target', campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
-                'targetEffects',
+        'campaign',
+        'targetEffects',
                 [{ effect: 'other', source: 'Other', target: 'Target' }],
                 campaignName,
             );
@@ -351,7 +351,7 @@ describe('heroismService', () => {
             const effects = [{ effect: 'other', source: 'Other', target: 'Target' }];
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return [];
-                if (key === campaignName && prop === 'targetEffects') return effects;
+                if (key === 'campaign' && prop === 'targetEffects') return effects;
                 return null;
             });
 
@@ -367,7 +367,7 @@ describe('heroismService', () => {
 
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return buffs;
-                if (key === campaignName && prop === 'targetEffects') return effects;
+                if (key === 'campaign' && prop === 'targetEffects') return effects;
                 return null;
             });
 
@@ -382,7 +382,7 @@ describe('heroismService', () => {
         it('throws when targetEffects is null', () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return [];
-                if (key === campaignName && prop === 'targetEffects') return null;
+                if (key === 'campaign' && prop === 'targetEffects') return null;
                 return null;
             });
 
@@ -392,7 +392,7 @@ describe('heroismService', () => {
         it('skips setRuntimeValue when both activeBuffs and targetEffects are empty', () => {
             getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'Target' && prop === 'activeBuffs') return [];
-                if (key === campaignName && prop === 'targetEffects') return [];
+                if (key === 'campaign' && prop === 'targetEffects') return [];
                 return null;
             });
 

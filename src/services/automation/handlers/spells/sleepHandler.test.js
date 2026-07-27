@@ -69,6 +69,13 @@ function getSetRuntimeCall(target, prop) {
   );
 }
 
+// Helper to get campaign-level setRuntimeValue calls (characterKey = 'campaign')
+function getCampaignSetRuntimeCall(prop) {
+  return setRuntimeValue.mock.calls.find(
+    call => call[0] === 'campaign' && call[1] === prop,
+  );
+}
+
 function clearAllMocks() {
   vi.clearAllMocks();
   getRuntimeValue.mockReturnValue(null);
@@ -394,7 +401,7 @@ describe('sleepHandler.handle', () => {
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      const effectCall = getSetRuntimeCall(campaignName, 'targetEffects');
+      const effectCall = getCampaignSetRuntimeCall('targetEffects');
       expect(effectCall).toBeDefined();
       expect(effectCall[2]).toEqual(
         expect.arrayContaining([
@@ -459,7 +466,7 @@ describe('sleepHandler.handle', () => {
 
       await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
 
-      const effectCall = getSetRuntimeCall(campaignName, 'targetEffects');
+      const effectCall = getCampaignSetRuntimeCall('targetEffects');
       const effect = effectCall[2][0];
       expect(effect.target).toBe('Goblin');
       expect(effect.effect).toBe('sleep_repeat_save');
@@ -484,7 +491,7 @@ describe('sleepHandler.handle', () => {
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      const effectCall = getSetRuntimeCall(campaignName, 'targetEffects');
+      const effectCall = getCampaignSetRuntimeCall('targetEffects');
       expect(effectCall[2]).toHaveLength(1);
       expect(effectCall[2][0].dc).toBe(15);
     });
@@ -673,7 +680,7 @@ describe('sleepHandler.processSleepRepeatSave', () => {
       const trackCall = getSetRuntimeCall('TestCaster', '_sleep_Goblin');
       expect(trackCall[2]).toBe(null);
 
-      const effectCall = getSetRuntimeCall(campaignName, 'targetEffects');
+      const effectCall = getCampaignSetRuntimeCall('targetEffects');
       expect(effectCall[2]).toEqual([]);
 
       expect(addEntry).toHaveBeenCalledWith(
@@ -716,7 +723,7 @@ describe('sleepHandler.processSleepRepeatSave', () => {
       const trackCall = getSetRuntimeCall('TestCaster', '_sleep_Goblin');
       expect(trackCall[2]).toBe(null);
 
-      const effectCall = getSetRuntimeCall(campaignName, 'targetEffects');
+      const effectCall = getCampaignSetRuntimeCall('targetEffects');
       expect(effectCall[2]).toEqual([]);
 
       expect(addEntry).toHaveBeenCalledWith(

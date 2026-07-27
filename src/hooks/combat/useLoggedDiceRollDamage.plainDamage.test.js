@@ -133,7 +133,7 @@ describe('Plain damage edge cases', () => {
     describe('sentinel reaction', () => {
         it('applies sentinel halt effect on opportunity attack when attacker has sentinel', async () => {
             getRuntimeValue.mockImplementation((key) => {
-                if (key === 'test-campaign') return [];
+                if (key === 'campaign') return [];
                 return null;
             });
             loadCombatSummary.mockResolvedValue({
@@ -149,8 +149,8 @@ describe('Plain damage edge cases', () => {
             });
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'test-campaign',
-                'targetEffects',
+            'campaign',
+            'targetEffects',
                 expect.any(Array),
                 'test-campaign'
             );
@@ -160,7 +160,7 @@ describe('Plain damage edge cases', () => {
     describe('ray of enfeeble debuff', () => {
         it('reduces damage when ray of enfeeble debuff is active from the attacker', async () => {
             getRuntimeValue.mockImplementation((key) => {
-                if (key === 'test-campaign') return [
+                if (key === 'campaign') return [
                     { effect: 'ray_of_enfeeble_debuff', source: 'TestFighter' },
                 ];
                 return null;

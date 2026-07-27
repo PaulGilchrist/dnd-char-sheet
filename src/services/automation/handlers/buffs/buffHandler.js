@@ -156,10 +156,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }
         if (!wasActive) {
             const invisKey = `_activeInvisibility_${targetName}`;
-            setRuntimeValue(campaignName, invisKey, playerStats.name, campaignName);
+            setRuntimeValue('campaign', invisKey, playerStats.name, campaignName);
         } else {
             const invisKey = `_activeInvisibility_${targetName}`;
-            setRuntimeValue(campaignName, invisKey, null, campaignName);
+            setRuntimeValue('campaign', invisKey, null, campaignName);
         }
     }
 

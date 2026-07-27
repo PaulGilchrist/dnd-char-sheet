@@ -1131,7 +1131,7 @@ describe('buildAttackRollDamageSteps - twoWeaponFighting, targetEffects, superio
         const result = await steps[10].handler(ctx);
 
         expect(result.data.formula).toContain('+ 1d6 [slashing]');
-        expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.any(Array), 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
           abilityName: "Brutal Strike (Level 13)",
         }));
@@ -1175,7 +1175,7 @@ describe('buildAttackRollDamageSteps - twoWeaponFighting, targetEffects, superio
         const result = await steps[10].handler(ctx);
 
         expect(result.data.formula).toContain('+ 1d6 [slashing]');
-        expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.any(Array), 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
           abilityName: "Brutal Strike (Level 17)",
         }));

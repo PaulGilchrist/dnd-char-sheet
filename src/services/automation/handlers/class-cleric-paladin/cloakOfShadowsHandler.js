@@ -24,7 +24,7 @@ export async function handle(action, playerStats, campaignName) {
         }
 
         // Clear invisibility tracking key
-        await setRuntimeValue(campaignName, `_activeInvisibility_${playerName}`, null, campaignName);
+        await setRuntimeValue('campaign', `_activeInvisibility_${playerName}`, null, campaignName);
 
         addEntry(campaignName, {
             type: 'ability_use',
@@ -72,7 +72,7 @@ export async function handle(action, playerStats, campaignName) {
     }
 
     // Set invisibility tracking key (for endInvisibilityOnHostileAction)
-    await setRuntimeValue(campaignName, `_activeInvisibility_${playerName}`, playerStats.name, campaignName);
+    await setRuntimeValue('campaign', `_activeInvisibility_${playerName}`, playerStats.name, campaignName);
 
     // Register initiative expiration (expires at start of player's next turn)
     addExpiration(playerName, playerName, [

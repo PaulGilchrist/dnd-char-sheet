@@ -272,7 +272,7 @@ describe('ottosDanceHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({
@@ -483,7 +483,7 @@ describe('ottosDanceHandler.processOttoDanceRepeatSave', () => {
       );
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.not.arrayContaining([
           expect.objectContaining({

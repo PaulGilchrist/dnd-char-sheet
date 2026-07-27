@@ -499,7 +499,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
     }
 
     // Default: apply standard rider effect
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,
         source: playerStats.name,
@@ -525,7 +525,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
         label: auto.name || action.name,
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     // Log speed_reduction effect immediately (before save handling)
     if (option.effect === 'speed_reduction') {

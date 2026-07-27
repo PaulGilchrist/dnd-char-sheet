@@ -361,12 +361,12 @@ export function createLogDamageAndShow(deps) {
 
         let disadvantage = context?.metamagicHeighten || false;
         if (!disadvantage) {
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const riderEffectIdx = targetEffects.findIndex(te => te.target === target.name && te.effect === 'disadvantage_on_next_save');
             if (riderEffectIdx !== -1) {
                 disadvantage = true;
                 targetEffects.splice(riderEffectIdx, 1);
-                setRuntimeValue(campaignName, 'targetEffects', targetEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
             }
         }
         if (!disadvantage) {
@@ -751,12 +751,12 @@ export function createLogDamageAndShow(deps) {
             if (twinTarget && twinTarget.name !== target.name) {
                 let twinDisadvantage = context?.metamagicHeighten || false;
                 if (!twinDisadvantage) {
-                    const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+                    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
                     const riderEffectIdx = targetEffects.findIndex(te => te.target === twinTarget.name && te.effect === 'disadvantage_on_next_save');
                     if (riderEffectIdx !== -1) {
                         twinDisadvantage = true;
                         targetEffects.splice(riderEffectIdx, 1);
-                        setRuntimeValue(campaignName, 'targetEffects', targetEffects, campaignName);
+                        setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
                     }
                 }
                 if (!twinDisadvantage) {
@@ -926,7 +926,7 @@ export function createLogDamageAndShow(deps) {
         const targetChar = (charactersRef.current || []).find(c => c.name === target.name);
         const targetConditions = getRuntimeValue(target.name, 'activeConditions', campaignName) || [];
         const targetSaveModifiers = targetChar?.computedStats?.saveModifiers || [];
-        const targetEffects = (getRuntimeValue(campaignName, 'targetEffects') || []).filter(te => te.target === target.name);
+        const targetEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(te => te.target === target.name);
         const targetBuffs = getRuntimeValue(target.name, 'activeBuffs', campaignName) || [];
         const isRaging = Array.isArray(targetBuffs) && targetBuffs.some(b => b.damageBonusExpression);
         const shapeShiftActive = Array.isArray(targetBuffs) && targetBuffs.some(b => b.effect === 'shape_shift');
@@ -1199,7 +1199,7 @@ export function createLogDamageAndShow(deps) {
                 const allFeatures = computed?.characterAdvancement || [];
                 const hasSentinel = allFeatures.some(f => f.name === 'Sentinel');
                 if (hasSentinel) {
-                    const sentinelStoredEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const sentinelStoredEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const newEffect = {
                         target: target.name,
                         source: 'Sentinel',
@@ -1209,11 +1209,11 @@ export function createLogDamageAndShow(deps) {
                         duration: 'end_of_turn',
                     };
                     const updatedEffects = [...sentinelStoredEffects, newEffect];
-                    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
                 }
             }
             let rayReduction = 0;
-            const rayTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const rayTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const rayDebuffActive = rayTargetEffects.some(te => te.effect === 'ray_of_enfeeble_debuff' && te.source === (attackerName || characterName));
             if (rayDebuffActive) {
                 const rayRoll = rollExpression('1d8');
@@ -1359,7 +1359,7 @@ export function createLogDamageAndShow(deps) {
             }
         }
 
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const deathStrikeEffect = storedEffects.find(te => te.effect === 'death_strike' && te.target === target?.name);
         if (deathStrikeEffect && target) {
             const dsSaveDc = deathStrikeEffect.saveDc;
@@ -1425,7 +1425,7 @@ export function createLogDamageAndShow(deps) {
                 }
             }
             const cleanedEffects = storedEffects.filter(te => te.effect !== 'death_strike' || te.target !== target.name);
-            setRuntimeValue(campaignName, 'targetEffects', cleanedEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
         }
 
         if (context?.ramActive && context?.isMelee && target && applyResult) {

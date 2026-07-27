@@ -250,7 +250,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     // Bane: apply -1d4 penalty to saving throws
     let baneSavePenalty = 0;
     let baneSaveRoll = null;
-    const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const baneEffects = allTargetEffects.filter(te => te.target === current.targetName && te.effect === 'bane_penalty');
     if (baneEffects.length > 0) {
       const r = rollExpression('1d4');

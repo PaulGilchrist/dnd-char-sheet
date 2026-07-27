@@ -537,11 +537,11 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
         addExpiration(playerStats.name, playerStats.name, [
             { type: 'remove_active_buff', buffName: 'Reckless Attack' }
         ], campaignName, undefined, playerStats.name);
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const hasRecklessEffect = storedEffects.some(te => te.effect === 'reckless_attack' && te.target === playerStats.name);
         if (!hasRecklessEffect) {
             const newEffects = [...storedEffects, { target: playerStats.name, source: playerStats.name, effect: 'reckless_attack', duration: 'until_start_of_next_turn' }];
-            setRuntimeValue(campaignName, 'targetEffects', newEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
         }
         const currentCreature = getActiveCreatureName(campaignName);
         setRuntimeValue(playerStats.name, '_recklessAttack_offeredThisTurn', { round: 1, activeCreature: currentCreature }, campaignName);

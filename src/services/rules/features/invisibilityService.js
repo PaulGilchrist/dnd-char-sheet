@@ -9,7 +9,7 @@ import { addEntry } from '../../ui/logService.js';
  */
 export function endInvisibilityOnHostileAction(invisibleName, campaignName) {
     const key = `_activeInvisibility_${invisibleName}`;
-    const casterName = getRuntimeValue(campaignName, key, campaignName);
+    const casterName = getRuntimeValue('campaign', key, campaignName);
     if (!casterName) return;
 
     // Remove the Invisibility buff from the target
@@ -30,7 +30,7 @@ export function endInvisibilityOnHostileAction(invisibleName, campaignName) {
         setRuntimeValue(invisibleName, 'activeConditions', condFiltered, campaignName);
     }
 
-    setRuntimeValue(campaignName, key, null, campaignName);
+    setRuntimeValue('campaign', key, null, campaignName);
 
     addEntry(campaignName, {
         type: 'ability_use',

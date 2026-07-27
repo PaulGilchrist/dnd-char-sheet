@@ -11,7 +11,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     // Track active Friends for early-end conditions
     const activeKey = `_activeFriends_${playerStats.name}`;
-    setRuntimeValue(campaignName, activeKey, targetName, campaignName);
+    setRuntimeValue('campaign', activeKey, targetName, campaignName);
 
     const { promptId, promise } = createSaveListener(campaignName, {
         targetName,
@@ -46,7 +46,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }).catch((e) => { console.error("[friends] Error:", e); });
 
         // Clear active Friends tracking since spell had no effect
-        setRuntimeValue(campaignName, activeKey, null, campaignName);
+        setRuntimeValue('campaign', activeKey, null, campaignName);
 
         return {
             type: 'popup',

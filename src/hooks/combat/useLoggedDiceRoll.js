@@ -22,7 +22,7 @@ export default function useLoggedDiceRoll(characterName, campaignName, options =
   const charactersRef = useRef(characters);
   charactersRef.current = characters || [];
 
-  const pendingSaves = getRuntimeValue(campaignName, 'pendingSavePrompts') || {};
+  const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
 
   function logEntry(entry) {
     addEntry(campaignName, entry).catch((e) => { console.error("[useLoggedDiceRoll] Error:", e); });

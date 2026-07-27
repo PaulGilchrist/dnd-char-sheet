@@ -297,7 +297,7 @@ describe('processPowerWordStunRepeatSave', () => {
       );
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({

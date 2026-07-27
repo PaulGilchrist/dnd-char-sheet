@@ -38,7 +38,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     // Set _activeInvisibility_ key so endInvisibilityOnHostileAction works
-    await setRuntimeValue(campaignName, `_activeInvisibility_${playerName}`, playerStats.name, campaignName);
+    await setRuntimeValue('campaign', `_activeInvisibility_${playerName}`, playerStats.name, campaignName);
 
     // Set expiration: Invisible lasts until end of the player's next turn (creature after player in init order becomes active)
     const combatSummary = getCombatSummary(campaignName);

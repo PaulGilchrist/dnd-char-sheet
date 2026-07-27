@@ -194,7 +194,7 @@ describe('processSlowRepeatSave', () => {
       await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({ effect: 'other_effect', source: 'OtherCaster' }),

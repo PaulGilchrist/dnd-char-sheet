@@ -539,7 +539,7 @@ describe('reactionDamageHandler', () => {
 
             await new Promise(r => setTimeout(r, 10));
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.any(Array), 'test-campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         });
 
         it('does not apply targetEffects when save succeeds', async () => {
@@ -555,7 +555,7 @@ describe('reactionDamageHandler', () => {
 
             await new Promise(r => setTimeout(r, 10));
 
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.any(Array), 'test-campaign');
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
         });
 
         it('applies poisoned condition when target has Physicians Touch and save fails, not when already poisoned or lacking feature', async () => {

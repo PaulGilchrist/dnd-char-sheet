@@ -21,8 +21,8 @@ export const crusher = {
         const cs = await getCombatContext(ctx.campaignName);
         const t = cs ? getTargetFromAttacker(cs, ps.name) : null;
         if (t?.name && crusherFeat.options?.length > 0) {
-          const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-          setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: crusherFeat.name, option: crusherFeat.options[0].name, effect: crusherFeat.options[0].effect, value: crusherFeat.options[0].value || null, sizeLimit: crusherFeat.options[0].sizeLimit || null, noOpportunityAttacks: crusherFeat.options[0].noOpportunityAttacks || false, duration: 'until_start_of_next_turn' }], ctx.campaignName);
+          const effs = getRuntimeValue('campaign', 'targetEffects') || [];
+          setRuntimeValue('campaign', 'targetEffects', [...effs, { target: t.name, source: crusherFeat.name, option: crusherFeat.options[0].name, effect: crusherFeat.options[0].effect, value: crusherFeat.options[0].value || null, sizeLimit: crusherFeat.options[0].sizeLimit || null, noOpportunityAttacks: crusherFeat.options[0].noOpportunityAttacks || false, duration: 'until_start_of_next_turn' }], ctx.campaignName);
           setRuntimeValue(ps.name, key, round, ctx.campaignName);
         }
       }
@@ -35,8 +35,8 @@ export const crusher = {
         const cs = await getCombatContext(ctx.campaignName);
         const t = cs ? getTargetFromAttacker(cs, ps.name) : null;
         if (t?.name) {
-          const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-          setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: cc.name, effect: 'crusher_enhanced_critical', duration: 'until_start_of_next_turn' }], ctx.campaignName);
+          const effs = getRuntimeValue('campaign', 'targetEffects') || [];
+          setRuntimeValue('campaign', 'targetEffects', [...effs, { target: t.name, source: cc.name, effect: 'crusher_enhanced_critical', duration: 'until_start_of_next_turn' }], ctx.campaignName);
           addExpiration(ps.name, t.name, [
             { type: 'remove_target_effect', effectKey: 'crusher_enhanced_critical', source: cc.name }
           ], ctx.campaignName, undefined, ps.name);

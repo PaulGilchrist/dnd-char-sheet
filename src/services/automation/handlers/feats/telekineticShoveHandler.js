@@ -30,7 +30,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveResult = await promise;
     const success = saveResult.success;
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
 
     if (!success) {
         const newEffect = {
@@ -42,7 +42,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             duration: 'immediate',
         };
         const updatedEffects = [...storedEffects, newEffect];
-        setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
         addEntry(campaignName, {
             type: 'save_result',

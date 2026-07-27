@@ -20,8 +20,8 @@ export const slasher = {
         const cs = await getCombatContext(ctx.campaignName);
         const t = cs ? getTargetFromAttacker(cs, ps.name) : null;
         if (t?.name) {
-          const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-          setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: sc.name, effect: 'slasher_enhanced_critical', duration: 'until_start_of_next_turn' }], ctx.campaignName);
+          const effs = getRuntimeValue('campaign', 'targetEffects') || [];
+          setRuntimeValue('campaign', 'targetEffects', [...effs, { target: t.name, source: sc.name, effect: 'slasher_enhanced_critical', duration: 'until_start_of_next_turn' }], ctx.campaignName);
           addExpiration(ps.name, t.name, [
             { type: 'remove_target_effect', effectKey: 'slasher_enhanced_critical', source: sc.name }
           ], ctx.campaignName, undefined, ps.name);

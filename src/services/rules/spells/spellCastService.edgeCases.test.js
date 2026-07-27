@@ -411,7 +411,7 @@ describe('executeSpellCast - utility functions & edge cases', () => {
       await executeSpellCast(spell, makeMetaCtx({ hexAbility: 'STR' }), services)
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'testCampaign',
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({ effect: 'hex_ability_check_disadvantage', target: 'Target', source: 'TestWizard', ability: 'STR' }),
@@ -444,7 +444,7 @@ describe('executeSpellCast - utility functions & edge cases', () => {
       await executeSpellCast(spell, makeMetaCtx({ hexAbility: 'DEX' }), services)
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'testCampaign',
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({ effect: 'hex_ability_check_disadvantage', target: 'Target', source: 'TestWizard', ability: 'DEX' }),

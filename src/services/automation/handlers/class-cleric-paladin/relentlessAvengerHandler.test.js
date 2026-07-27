@@ -90,7 +90,7 @@ describe('relentlessAvengerHandler', () => {
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                CAMPAIGN_NAME,
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({
@@ -152,7 +152,7 @@ describe('relentlessAvengerHandler', () => {
             );
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                CAMPAIGN_NAME,
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({ duration: '1_round' }),
@@ -171,7 +171,7 @@ describe('relentlessAvengerHandler', () => {
             await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                CAMPAIGN_NAME,
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({ target: 'PreviousTarget', effect: 'blinded' }),

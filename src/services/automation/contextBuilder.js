@@ -66,7 +66,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
         let forcedMode = conditionAttackMode !== 'normal' ? conditionAttackMode : undefined;
         let sunderingBonus = 0;
         if (forcedMode === undefined) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const goadEffect = storedEffects.find(
                 te => te.effect === 'goad' && te.target === playerName
             );
@@ -75,7 +75,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
         if (forcedMode === undefined) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const sapEffect = storedEffects.find(
                 te => te.effect === 'disadvantage_next_attack' && te.target === playerName
             );
@@ -90,7 +90,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
         if (forcedMode === undefined && targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const recklessEffect = storedEffects.find(
                 te => te.effect === 'reckless_attack' && te.target === targetName
             );
@@ -99,7 +99,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
         if (forcedMode === undefined && targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const crusherEffect = storedEffects.find(
                 te => te.effect === 'crusher_enhanced_critical' && te.target === targetName
             );
@@ -275,7 +275,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                 }
 
                 // Read pre-existing next_attack_bonus effects before adding new ones
-                const preExistingEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const preExistingEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const preExistingBonusKeys = preExistingEffects.filter(
                     te => te.effect === 'next_attack_bonus' && te.target === targetName
                 ).map(te => JSON.stringify(te));
@@ -283,7 +283,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                 // Apply chosen effects to targetEffects
                 const effectChoices = getRuntimeValue(playerName, '_brutalStrikeEffects', campaignName) || [];
                 if (effectChoices.length > 0) {
-                    let storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    let storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const riderOptions = brutalStrikeRider.options || [];
                     for (const choiceName of effectChoices) {
                         const option = riderOptions.find(o => o.name === choiceName);
@@ -301,17 +301,17 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                             storedEffects = [...storedEffects, newEffect];
                         }
                     }
-                    setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
                 }
 
                 // Consume pre-existing next_attack_bonus effects (Sundering Blow consumed on this attack)
                 if (preExistingBonusKeys.length > 0) {
-                    const currentEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const currentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const cleanedEffects = currentEffects.filter(
                         te => !(te.effect === 'next_attack_bonus' && te.target === targetName && preExistingBonusKeys.includes(JSON.stringify(te)))
                     );
                     if (cleanedEffects.length !== currentEffects.length) {
-                        setRuntimeValue(campaignName, 'targetEffects', cleanedEffects, campaignName);
+                        setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     }
                 }
                 setRuntimeValue(playerName, '_brutalStrikeActive', null, campaignName);
@@ -409,7 +409,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
         if (forcedMode === undefined && targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const distractingEffect = storedEffects.find(
                 te => te.effect === 'distracting_strike_advantage' && te.target === targetName && te.source !== playerName
             );
@@ -419,12 +419,12 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                     te => !(te.effect === 'distracting_strike_advantage' && te.target === targetName && te.source !== playerName)
                 );
                 if (cleanedEffects.length !== storedEffects.length) {
-                    setRuntimeValue(campaignName, 'targetEffects', cleanedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                 }
             }
         }
         if (forcedMode === undefined && targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const vexEffect = storedEffects.find(
                 te => te.effect === 'next_attack_advantage' && te.target === playerName && te.vexTarget === targetName
             );
@@ -434,12 +434,12 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                     te => !(te.effect === 'next_attack_advantage' && te.target === playerName && te.vexTarget === targetName)
                 );
                 if (cleanedEffects.length !== storedEffects.length) {
-                    setRuntimeValue(campaignName, 'targetEffects', cleanedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                 }
             }
         }
         if (targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const bonusEffects = storedEffects.filter(
                 te => te.effect === 'next_attack_bonus' && te.target === targetName
             );
@@ -450,7 +450,7 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
         if (forcedMode === undefined && targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const protectionEffect = storedEffects.find(
                 te => te.effect === 'protection' && te.target === targetName
             );
@@ -677,7 +677,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                     mapDis++;
                 }
                 if (base.targetName) {
-                    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const protectionEffect = storedEffects.find(
                         te => te.effect === 'protection' && te.target === base.targetName
                     );
@@ -730,7 +730,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                     mapDis++;
                 }
                 if (base.targetName) {
-                    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const protectionEffect = storedEffects.find(
                         te => te.effect === 'protection' && te.target === base.targetName
                     );

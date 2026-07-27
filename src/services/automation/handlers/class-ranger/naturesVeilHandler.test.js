@@ -137,7 +137,7 @@ describe('naturesVeilHandler', () => {
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'test-campaign',
+                'campaign',
                 '_activeInvisibility_RangerGirl',
                 'RangerGirl',
                 'test-campaign'

@@ -103,7 +103,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
             timestamp: Date.now(),
         }).catch((e) => { console.error("[tempTeleport] Error logging:", e); });
 
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const newEffect = {
             target: playerName,
             source: action.name,
@@ -111,7 +111,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
             value: null,
             duration: 'until_end_of_turn',
         };
-        setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+        setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
 
         if (auto.effect === 'moonlight_step_teleport') {
             const usesKey = 'moonlightStepUses';
@@ -128,7 +128,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                 const targetInfo = await resolveTarget(campaignName, playerStats.name);
                 const targetName = targetInfo?.target?.name || 'Unknown';
 
-                const currentEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const currentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const perceptionEffect = {
                     target: targetName,
                     source: 'Improved Shadow Step',
@@ -136,7 +136,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                     value: null,
                     duration: 'until_start_of_next_turn',
                 };
-                setRuntimeValue(campaignName, 'targetEffects', [...currentEffects, perceptionEffect], campaignName);
+                setRuntimeValue('campaign', 'targetEffects', [...currentEffects, perceptionEffect], campaignName);
 
                 const saveDc = buildSaveDc({ saveDc: 'ability', saveAbility: 'WIS' }, playerStats);
                 const { promptId } = createSaveListener(campaignName, {
@@ -167,7 +167,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                 const targetName = targetInfo?.target?.name || null;
 
                 if (targetName) {
-                    const currentEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const currentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const allyEffect = {
                         target: targetName,
                         source: 'Shared Moonlight',
@@ -175,7 +175,7 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                         value: null,
                         duration: 'until_end_of_turn',
                     };
-                    setRuntimeValue(campaignName, 'targetEffects', [...currentEffects, allyEffect], campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', [...currentEffects, allyEffect], campaignName);
                     description += ` Shared Moonlight: ${targetName} also gains Advantage on their next attack roll.`;
                 }
             }

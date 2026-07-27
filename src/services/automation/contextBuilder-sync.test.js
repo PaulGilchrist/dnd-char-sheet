@@ -377,7 +377,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('combines target stunned condition with other advantage sources', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'reckless_attack', target: 'Orc' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'reckless_attack', target: 'Orc' }];
         if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
         if (name === 'Orc' && key === 'activeConditions') return ['stunned'];
         return undefined;
@@ -387,13 +387,12 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
       expect(result.forcedMode).toBe('advantage');
     });
-
   });
 
   describe('goad and sap effects', () => {
     it('sets forcedMode to disadvantage when goad or sap effect targets attacker', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'goad', target: 'Fighter1' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'goad', target: 'Fighter1' }];
         if (key === 'activeBuffs') return [];
         return undefined;
       });
@@ -402,7 +401,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
       expect(result.forcedMode).toBe('disadvantage');
 
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'disadvantage_next_attack', target: 'Fighter1' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'disadvantage_next_attack', target: 'Fighter1' }];
         if (key === 'activeBuffs') return [];
         return undefined;
       });
@@ -413,7 +412,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('does not set disadvantage when goad/sap targets another creature', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'goad', target: 'Other' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'goad', target: 'Other' }];
         if (key === 'activeBuffs') return [];
         return undefined;
       });
@@ -592,7 +591,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('cancels dodge disadvantage with reckless attack advantage', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'reckless_attack', target: 'Orc' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'reckless_attack', target: 'Orc' }];
         if (key === 'activeBuffs' && name === 'Orc') return [{ name: 'Dodge', effect: 'dodge' }];
         if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
         return undefined;
@@ -783,7 +782,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('sets disadvantage when protection buff is on target', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [{ effect: 'protection', target: 'Orc', source: 'Paladin' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'protection', target: 'Orc', source: 'Paladin' }];
         return undefined;
       });
 
@@ -802,14 +801,12 @@ describe('contextBuilder: buildAttackContextSync', () => {
     });
 
 
-
-
   });
 
   describe('distracting strike advantage', () => {
     it('sets advantage and consumes effect when distracting strike exists from another source', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Ally' },
         ];
         if (key === 'activeBuffs') return [];
@@ -820,7 +817,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
       expect(result.forcedMode).toBe('advantage');
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'camp',
+        'campaign',
         'targetEffects',
         [],
         'camp',
@@ -829,7 +826,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('does not set advantage or consume when distracting strike is from the attacker or targets a different creature', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Fighter1' },
         ];
         if (key === 'activeBuffs') return [];
@@ -841,7 +838,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
 
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'Ally' },
         ];
         if (key === 'activeBuffs') return [];
@@ -855,7 +852,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('preserves other effects when consuming distracting strike', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'distracting_strike_advantage', target: 'Orc', source: 'Ally' },
           { effect: 'graze', target: 'Orc' },
         ];
@@ -866,7 +863,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
       await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'camp',
+        'campaign',
         'targetEffects',
         [{ effect: 'graze', target: 'Orc' }],
         'camp',
@@ -1132,7 +1129,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
     it('all advantage sources are checked before any disadvantage sources', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === 'activeBuffs') return [{ effect: 'advantage_attacks_advantage_against' }];
-        if (key === 'targetEffects') return [{ effect: 'protection', target: 'Orc', source: 'Paladin' }];
+        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'protection', target: 'Orc', source: 'Paladin' }];
         return undefined;
       });
       getLionDisadvantageAgainst.mockReturnValue({ disadvantage: true });
@@ -1147,7 +1144,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
   describe('next_attack_advantage (vex effect)', () => {
     it('sets advantage and consumes effect when vex effect matches attacker and target', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Orc', source: 'Thorn' },
         ];
         if (key === 'activeBuffs') return [];
@@ -1158,7 +1155,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
       expect(result.forcedMode).toBe('advantage');
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'camp',
+        'campaign',
         'targetEffects',
         [],
         'camp',
@@ -1167,7 +1164,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('does not set advantage or consume when vex effect does not match', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'next_attack_advantage', target: 'Other', vexTarget: 'Orc', source: 'Thorn' },
         ];
         if (key === 'activeBuffs') return [];
@@ -1179,7 +1176,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
 
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Goblin', source: 'Thorn' },
         ];
         if (key === 'activeBuffs') return [];
@@ -1193,7 +1190,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
 
     it('preserves other effects when consuming vex effect', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'next_attack_advantage', target: 'Fighter1', vexTarget: 'Orc', source: 'Thorn' },
           { effect: 'graze', target: 'Orc' },
         ];
@@ -1204,7 +1201,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
       await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'camp',
+        'campaign', 
         'targetEffects',
         [{ effect: 'graze', target: 'Orc' }],
         'camp',

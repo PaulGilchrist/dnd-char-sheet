@@ -351,7 +351,7 @@ export async function handleFrostsChillDirect(action, playerStats, campaignName)
     const actualDamage = applyResult?.finalDamage ?? damageResult?.total ?? 0;
     const newHp = applyResult?.newHp;
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredEffects = storedEffects.filter(te => !(te.target === targetName && te.effect === 'speed_reduction'));
     const speedEffect = {
         target: targetName,
@@ -360,7 +360,7 @@ export async function handleFrostsChillDirect(action, playerStats, campaignName)
         value: speedReduction,
         duration: 'until_end_of_next_turn',
     };
-    await setRuntimeValue(campaignName, 'targetEffects', [...filteredEffects, speedEffect], campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', [...filteredEffects, speedEffect], campaignName);
 
     await addEntry(campaignName, {
         type: 'roll',
@@ -1020,7 +1020,7 @@ export async function handleFrostsChill(action, playerStats, campaignName, optio
     const actualDamage = applyResult?.finalDamage ?? damageResult?.total ?? 0;
     const newHp = applyResult?.newHp;
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredEffects = storedEffects.filter(te => !(te.target === targetName && te.effect === 'speed_reduction'));
     const speedEffect = {
         target: targetName,
@@ -1029,7 +1029,7 @@ export async function handleFrostsChill(action, playerStats, campaignName, optio
         value: speedReduction,
         duration: 'until_end_of_next_turn',
     };
-    await setRuntimeValue(campaignName, 'targetEffects', [...filteredEffects, speedEffect], campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', [...filteredEffects, speedEffect], campaignName);
 
     await addEntry(campaignName, {
         type: 'roll',

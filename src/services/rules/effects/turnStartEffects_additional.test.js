@@ -441,25 +441,25 @@ describe('applyTurnStartEffects — additional effect types', () => {
     it('clears multiattack_defense via expireStaleEffects', () => {
       getCurrentCombatRound.mockReturnValue(2);
       getCombatSummary.mockReturnValue({ creatures: [{ name: 'TestCharacter' }] });
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (key === KEY && name === 'TestCharacter') return [
-          { target: 'Orc', effects: [{ type: 'remove_target_effect', effectKey: 'multiattack_defense', source: 'Defensive Tactics', target: 'Orc' }], appliedRound: 1, expiryRounds: 1 },
-        ];
-        if (key === KEY) return [];
-        if (key === 'targetEffects') return [
-          { effect: 'multiattack_defense', target: 'Orc', source: 'Defensive Tactics' },
-          { effect: 'slow', target: 'Human' },
-        ];
-        return null;
-      });
+       getRuntimeValue.mockImplementation((name, key) => {
+         if (key === KEY && name === 'TestCharacter') return [
+           { target: 'Orc', effects: [{ type: 'remove_target_effect', effectKey: 'multiattack_defense', source: 'Defensive Tactics', target: 'Orc' }], appliedRound: 1, expiryRounds: 1 },
+         ];
+         if (key === KEY) return [];
+         if (name === 'campaign' && key === 'targetEffects') return [
+           { effect: 'multiattack_defense', target: 'Orc', source: 'Defensive Tactics' },
+           { effect: 'slow', target: 'Human' },
+         ];
+         return null;
+       });
 
-      expireStaleEffects('TestCampaign', 'TestCharacter');
+       expireStaleEffects('TestCampaign', 'TestCharacter');
 
-      const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'TestCampaign' && c[1] === 'targetEffects',
-      );
-      expect(effectCalls.length).toBeGreaterThan(0);
-      expect(effectCalls[0][2]).toEqual([
+       const effectCalls = setRuntimeValue.mock.calls.filter(
+         (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
+       );
+       expect(effectCalls.length).toBeGreaterThan(0);
+       expect(effectCalls[0][2]).toEqual([
         { effect: 'slow', target: 'Human' },
       ]);
     });
@@ -471,18 +471,18 @@ describe('applyTurnStartEffects — additional effect types', () => {
         if (key === KEY && name === 'TestCharacter') return [
           { target: 'TestCharacter', effects: [{ type: 'remove_target_effect', effectKey: 'disadvantage_next_attack', source: 'Sap', target: 'TestCharacter' }], appliedRound: 1, expiryRounds: undefined, expireOnCreatureName: 'TestCharacter' },
         ];
-        if (key === KEY) return [];
-        if (key === 'targetEffects') return [
-          { effect: 'disadvantage_next_attack', target: 'TestCharacter', source: 'Sap' },
-          { effect: 'disadvantage_next_attack', target: 'Orc', source: 'Sap' },
-        ];
+         if (key === KEY) return [];
+         if (name === 'campaign' && key === 'targetEffects') return [
+           { effect: 'disadvantage_next_attack', target: 'TestCharacter', source: 'Sap' },
+           { effect: 'disadvantage_next_attack', target: 'Orc', source: 'Sap' },
+         ];
         return null;
       });
 
       expireStaleEffects('TestCampaign', 'TestCharacter');
 
       const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'TestCampaign' && c[1] === 'targetEffects',
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
       );
       expect(effectCalls.length).toBeGreaterThan(0);
       expect(effectCalls[0][2]).toEqual([
@@ -496,18 +496,18 @@ describe('applyTurnStartEffects — additional effect types', () => {
         if (key === KEY && name === 'TestCharacter') return [
           { target: 'Orc', effects: [{ type: 'remove_target_effect', effectKey: 'speed_reduction', source: 'Slow', target: 'Orc' }], appliedRound: 1, expiryRounds: 1 },
         ];
-        if (key === KEY) return [];
-        if (key === 'targetEffects') return [
-          { effect: 'speed_reduction', source: 'Slow', target: 'Orc' },
-          { effect: 'slow', source: 'Slow' },
-        ];
+         if (key === KEY) return [];
+         if (name === 'campaign' && key === 'targetEffects') return [
+           { effect: 'speed_reduction', source: 'Slow', target: 'Orc' },
+           { effect: 'slow', source: 'Slow' },
+         ];
         return null;
       });
 
       expireStaleEffects('TestCampaign', 'TestCharacter');
 
       const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'TestCampaign' && c[1] === 'targetEffects',
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
       );
       expect(effectCalls.length).toBeGreaterThan(0);
       expect(effectCalls[0][2]).toEqual([
@@ -522,18 +522,18 @@ describe('applyTurnStartEffects — additional effect types', () => {
         if (key === KEY && name === 'TestCharacter') return [
           { target: 'TestCharacter', effects: [{ type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Vex', target: 'TestCharacter' }], appliedRound: 1, expiryRounds: 2 },
         ];
-        if (key === KEY) return [];
-        if (key === 'targetEffects') return [
-          { effect: 'next_attack_advantage', target: 'TestCharacter', source: 'Vex', vexTarget: 'Orc' },
-          { effect: 'next_attack_advantage', target: 'Orc', source: 'Vex', vexTarget: 'Human' },
-        ];
+         if (key === KEY) return [];
+         if (name === 'campaign' && key === 'targetEffects') return [
+           { effect: 'next_attack_advantage', target: 'TestCharacter', source: 'Vex', vexTarget: 'Orc' },
+           { effect: 'next_attack_advantage', target: 'Orc', source: 'Vex', vexTarget: 'Human' },
+         ];
         return null;
       });
 
       expireStaleEffects('TestCampaign', 'TestCharacter');
 
       const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'TestCampaign' && c[1] === 'targetEffects',
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
       );
       expect(effectCalls.length).toBeGreaterThan(0);
       expect(effectCalls[0][2]).toEqual([

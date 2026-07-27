@@ -8,7 +8,7 @@ export const activeMaps = new Map();
 // List of active SSE client connections
 export let subscribers = [];
 
-// In-memory store for debounced character changes (HP, spell slots, etc.) keyed by campaign
+// In-memory store for debounced character changes keyed by campaign
 export const characterChangeData = new Map();
 
 // In-memory store for spell overlays keyed by campaign (array of overlay objects)
@@ -18,6 +18,30 @@ export const spellOverlayData = new Map();
 let saveTimer = null;
 
 const persistDataDebounceMilliseconds = 10000; // 10 seconds in milliseconds
+
+/**
+ * Keys that are campaign-level and should be at the top level,
+ * not nested under the campaign name.
+ */
+const CAMPAIGN_DATA_KEYS = new Set([
+    'targetEffects',
+    'pendingSavePrompts',
+    'coverRefresh',
+    'warCasterReactions',
+    'quivering_palm',
+    'pendingSaveListenerPrompts',
+]);
+
+function isDynamicCampaignKey(key) {
+    if (key.startsWith('_activeInvisibility_')) return true;
+    if (key.startsWith('_activeFriends_')) return true;
+    if (/^_.*_appliedTarget$/.test(key)) return true;
+    return false;
+}
+
+function isCampaignDataKey(key) {
+    return CAMPAIGN_DATA_KEYS.has(key) || isDynamicCampaignKey(key);
+}
 
 /**
  * Loads all campaign change data from disk into characterChangeData Map at startup
@@ -34,6 +58,18 @@ export const readFile = () => {
             try {
                 if (fs.existsSync(filePath)) {
                     const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                    // Migrate: flatten campaign-named keys to top level
+                    if (data[campaign] && typeof data[campaign] === 'object') {
+                        const nested = data[campaign];
+                        for (const [key, value] of Object.entries(nested)) {
+                            if (isCampaignDataKey(key)) {
+                                if (!(key in data)) {
+                                    data[key] = value;
+                                }
+                            }
+                        }
+                        delete data[campaign];
+                    }
                     characterChangeData.set(campaign, data);
                 } else {
                     characterChangeData.set(campaign, {});

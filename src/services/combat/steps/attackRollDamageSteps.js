@@ -392,7 +392,7 @@ export function buildAttackRollDamageSteps() {
       emit: 'effects:applied',
       condition: () => true,
       handler: async (ctx) => {
-        const raw = getRuntimeValue(ctx.campaignName, 'targetEffects');
+        const raw = getRuntimeValue('campaign', 'targetEffects');
         const stored = Array.isArray(raw) ? raw : [];
         const riders = stored.filter(te => te.effect === 'damage_bonus' && te.damageExpression);
         if (riders.length === 0) return { data: {} };
@@ -413,7 +413,7 @@ export function buildAttackRollDamageSteps() {
 
         // Consume ALL damage_bonus entries so they only apply once
         const remaining = stored.filter(te => te.effect !== 'damage_bonus');
-        setRuntimeValue(ctx.campaignName, 'targetEffects', remaining, ctx.campaignName);
+        setRuntimeValue('campaign', 'targetEffects', remaining, ctx.campaignName);
 
         return { data: { formula, total, rolls } };
       },
@@ -602,7 +602,7 @@ export function buildAttackRollDamageSteps() {
             const effectChoices = getRuntimeValue(ctx.playerStats.name, '_brutalStrikeEffects', ctx.campaignName) || [];
             const targetName = ctx.targetName;
             if (effectChoices.length > 0 && targetName) {
-              let storedEffects = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
+              let storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
               const riderOptions = rider.options || [];
 
               for (const choiceName of effectChoices) {
@@ -624,7 +624,7 @@ export function buildAttackRollDamageSteps() {
                   storedEffects = [...storedEffects, newEffect];
                 }
               }
-              setRuntimeValue(ctx.campaignName, 'targetEffects', storedEffects, ctx.campaignName);
+              setRuntimeValue('campaign', 'targetEffects', storedEffects, ctx.campaignName);
             }
 
             // Log the brutal strike ability use

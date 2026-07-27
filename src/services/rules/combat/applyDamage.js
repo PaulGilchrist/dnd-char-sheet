@@ -270,7 +270,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             return String(condKey).toLowerCase() === 'incapacitated';
         });
         if (hasIncapacitated) {
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const tashasEffect = Array.isArray(targetEffects) ? targetEffects.find(
                 te => te.target === creature.name && te.effect === 'tashas_laughter_repeat_save'
             ) : null;

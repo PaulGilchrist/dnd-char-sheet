@@ -162,7 +162,7 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
             } else {
                 failedCount++;
 
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const tauntingEffect = {
                     effect: 'taunting_step',
                     target: targetName,
@@ -178,7 +178,7 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
                 } else {
                     storedEffects.push(tauntingEffect);
                 }
-                await setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+                await setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
 
                 addExpiration(playerName, targetName, [
                     { type: 'targetEffect', effect: 'taunting_step', target: targetName }

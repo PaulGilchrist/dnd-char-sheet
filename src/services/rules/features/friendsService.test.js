@@ -379,7 +379,7 @@ describe('friendsService', () => {
 
             endFriendsOnHostileAction(casterName, campaignName);
 
-            expect(getRuntimeValue).toHaveBeenCalledWith(campaignName, `_activeFriends_Wizard`, campaignName);
+            expect(getRuntimeValue).toHaveBeenCalledWith('campaign', `_activeFriends_Wizard`, campaignName);
             expect(setRuntimeValue).not.toHaveBeenCalled();
             expect(addEntry).not.toHaveBeenCalled();
         });
@@ -387,7 +387,7 @@ describe('friendsService', () => {
         it('removes Charmed condition from active target when present', () => {
             const activeTarget = 'Shopkeeper';
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === campaignName && prop === `_activeFriends_Wizard`) return activeTarget;
+                if (key === 'campaign' && prop === `_activeFriends_Wizard`) return activeTarget;
                 if (key === activeTarget && prop === 'activeConditions') return ['Charmed', 'Invisible'];
                 return null;
             });
@@ -401,7 +401,7 @@ describe('friendsService', () => {
                 campaignName,
             );
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 `_activeFriends_Wizard`,
                 null,
                 campaignName,
@@ -417,7 +417,7 @@ describe('friendsService', () => {
         it('clears active target pointer when no Charmed condition exists', () => {
             const activeTarget = 'Shopkeeper';
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === campaignName && prop === `_activeFriends_Wizard`) return activeTarget;
+                if (key === 'campaign' && prop === `_activeFriends_Wizard`) return activeTarget;
                 if (key === activeTarget && prop === 'activeConditions') return ['Invisible', 'Poisoned'];
                 return null;
             });
@@ -425,7 +425,7 @@ describe('friendsService', () => {
             endFriendsOnHostileAction(casterName, campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 `_activeFriends_Wizard`,
                 null,
                 campaignName,
@@ -442,7 +442,7 @@ describe('friendsService', () => {
             const activeTarget = 'Shopkeeper';
             addEntry.mockRejectedValue(new Error('Log error'));
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === campaignName && prop === `_activeFriends_Wizard`) return activeTarget;
+                if (key === 'campaign' && prop === `_activeFriends_Wizard`) return activeTarget;
                 if (key === activeTarget && prop === 'activeConditions') return ['Charmed'];
                 return null;
             });

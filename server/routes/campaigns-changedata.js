@@ -50,6 +50,13 @@ router.post('/api/campaigns/:campaign/positioning', asyncHandler((req, res) => {
 router.get('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
     const { campaign, key } = req.params;
     if (key === 'log') return next();
+    if (key === campaign) {
+        console.error(
+            '[campaigns-changedata] GET to :campaign/:campaign with key === campaign. ' +
+            `Campaign: "${campaign}", key: "${key}". Campaign-level data should GET from :campaign/:key directly.`,
+            { campaign, key, stack: new Error().stack }
+        );
+    }
     const data = characterChangeData.get(campaign);
 
     if (!data || !(key in data)) {
@@ -64,6 +71,14 @@ router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
     const { campaign, key } = req.params;
     if (key === 'log') return next();
     const value = req.body.value || req.body;
+
+    if (key === campaign) {
+        console.error(
+            '[campaigns-changedata] POST to :campaign/:campaign with key === campaign. ' +
+            `Campaign: "${campaign}", key: "${key}". Campaign-level data should POST to :campaign/:key directly.`,
+            { campaign, key, stack: new Error().stack }
+        );
+    }
 
     if (!characterChangeData.has(campaign)) {
         characterChangeData.set(campaign, {});

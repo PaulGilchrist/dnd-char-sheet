@@ -269,8 +269,8 @@ describe('stinkingCloudHandler', () => {
         await handle(makeAction(), makePlayerStats(), campaignName, null);
 
         expect(setRuntimeValue).toHaveBeenCalledWith(
-          campaignName,
-          'targetEffects',
+        'campaign',
+        'targetEffects',
           expect.arrayContaining([
             expect.objectContaining({
               target: 'EnemyGoblin',
@@ -307,8 +307,8 @@ describe('stinkingCloudHandler', () => {
         await handle(makeAction(), makePlayerStats(), campaignName, null);
 
         expect(setRuntimeValue).toHaveBeenCalledWith(
-          campaignName,
-          'targetEffects',
+        'campaign',
+        'targetEffects',
           expect.arrayContaining([
             expect.objectContaining({
               dc: 13,
@@ -732,8 +732,8 @@ describe('stinkingCloudHandler', () => {
         );
 
         expect(setRuntimeValue).toHaveBeenCalledWith(
-          campaignName,
-          'targetEffects',
+        'campaign',
+        'targetEffects',
           expect.not.arrayContaining([
             expect.objectContaining({
               target: 'EnemyGoblin',

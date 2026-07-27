@@ -178,7 +178,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _allEq
         }
 
         if (!event.detail.success && auto.alsoInflicts) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             storedEffects.push({
                 target: targetName,
                 source: action.name,
@@ -186,7 +186,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _allEq
                 effect: auto.alsoInflicts,
                 duration: 'until_used',
             });
-            setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
         }
 
         if (!event.detail.success) {

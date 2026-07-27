@@ -13,7 +13,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     // we apply the effect and let the expiration system clean it up.
     // The frontend's save-damage roll entry will show the save result to the user.
 
-    const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const existingIndex = allTargetEffects.findIndex(
         te => te.target === targetName && te.effect === 'disadvantage_next_attack' && te.source === playerStats.name
     );
@@ -30,7 +30,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         allTargetEffects.push(mockeryEffect);
     }
 
-    setRuntimeValue(campaignName, 'targetEffects', allTargetEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
     addExpiration(playerStats.name, targetName, [
         { type: 'remove_target_effect', effectKey: 'disadvantage_next_attack', source: playerStats.name },

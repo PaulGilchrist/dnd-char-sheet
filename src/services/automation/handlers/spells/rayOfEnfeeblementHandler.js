@@ -40,7 +40,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }).catch((e) => { console.error("[rayOfEnfeeblement] Error:", e); });
 
         // Successful save: target has Disadvantage on next attack roll until start of caster's next turn
-        const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const existingIndex = allTargetEffects.findIndex(
             te => te.target === targetName && te.effect === 'disadvantage_next_attack' && te.source === playerStats.name
         );
@@ -57,7 +57,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             allTargetEffects.push(nextAttackEffect);
         }
 
-        setRuntimeValue(campaignName, 'targetEffects', allTargetEffects, campaignName);
+        setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
         addExpiration(playerStats.name, targetName, [
             { type: 'remove_target_effect', effectKey: 'disadvantage_next_attack', source: playerStats.name },
@@ -85,7 +85,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     // ── Failed save: apply debuffs via targetEffects ──
 
-    const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const existingIndex = allTargetEffects.findIndex(
         te => te.target === targetName && te.effect === 'ray_of_enfeeble_debuff' && te.source === playerStats.name
     );
@@ -104,7 +104,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         allTargetEffects.push(rayEffect);
     }
 
-    setRuntimeValue(campaignName, 'targetEffects', allTargetEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
     // Apply expiration (concentration handles duration; 1 minute = 10 rounds default)
     addExpiration(playerStats.name, targetName, [
@@ -133,8 +133,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     };
 }
 
-export function isRayOfEnfeeblementActive(targetName, casterName, campaignName) {
-    const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+export function isRayOfEnfeeblementActive(targetName, casterName, _campaignName) {
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     return allTargetEffects.some(
         te => te.target === targetName && te.effect === 'ray_of_enfeeble_debuff' && te.source === casterName
     );

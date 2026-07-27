@@ -118,7 +118,7 @@ describe('cloakOfShadowsHandler', () => {
             await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 '_activeInvisibility_TestMonk',
                 null,
                 campaignName,
@@ -324,7 +324,7 @@ describe('cloakOfShadowsHandler', () => {
             await handle(makeAction(), makePlayerStats(), campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 '_activeInvisibility_TestMonk',
                 'TestMonk',
                 campaignName,

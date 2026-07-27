@@ -313,7 +313,7 @@ describe('clearAllExpirationEffects — comprehensive coverage', () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (key === KEY && name === 'Goblin') return myList;
         if (key === KEY) return [];
-        if (key === 'targetEffects') return [
+        if (name === 'campaign' && key === 'targetEffects') return [
           { effect: 'heroism', source: 'Heroism', target: 'Human' },
           { effect: 'slow', source: 'Slow', target: 'Orc' },
         ];
@@ -324,7 +324,7 @@ describe('clearAllExpirationEffects — comprehensive coverage', () => {
       clearAllExpirationEffects('Goblin', 'MyCampaign');
 
       const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'MyCampaign' && c[1] === 'targetEffects',
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
       );
       expect(effectCalls.length).toBeGreaterThan(0);
       expect(effectCalls[0][2]).toEqual([
@@ -549,7 +549,7 @@ describe('clearExpirationEffects — additional effect types', () => {
       clearAllExpirationEffects('Goblin', 'MyCampaign');
 
       const effectCalls = setRuntimeValue.mock.calls.filter(
-        (c) => c[0] === 'MyCampaign' && c[1] === 'targetEffects',
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
       );
       expect(effectCalls.length).toBeGreaterThan(0);
       expect(effectCalls[0][2]).toEqual([

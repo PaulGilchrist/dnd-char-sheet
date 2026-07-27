@@ -220,7 +220,7 @@ async function handleTeleportAndSlow(action, playerStats, campaignName, mapName)
         const isSuccessful = event.detail.success;
 
         if (!isSuccessful) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const effects = Array.isArray(storedEffects) ? storedEffects : [];
             effects.push({
                 effect: 'speed_reduction',
@@ -228,7 +228,7 @@ async function handleTeleportAndSlow(action, playerStats, campaignName, mapName)
                 source: featureName,
                 value: 1000,
             });
-            await setRuntimeValue(campaignName, 'targetEffects', effects, campaignName);
+            await setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
             addExpiration(playerName, activeCreatureName, [
                 { type: 'remove_target_effect', effectKey: 'speed_reduction', source: featureName, target: activeCreatureName }
@@ -408,7 +408,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
         const duration = auto.duration || 'until_start_of_next_turn';
 
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const protectionEffect = {
             effect: 'protection',
             target: defenderName,
@@ -424,7 +424,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         } else {
             storedEffects[existingIndex] = protectionEffect;
         }
-        await setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+        await setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
 
         result = await handleDisadvantageDebuff(action, playerStats, campaignName, mapName, lastAttackerName, combatSummary);
     } else if (effect === 'disadvantage_on_attack_roll') {

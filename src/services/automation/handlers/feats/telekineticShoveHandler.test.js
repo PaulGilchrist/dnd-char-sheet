@@ -226,7 +226,7 @@ describe('telekineticShoveHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({
@@ -250,7 +250,7 @@ describe('telekineticShoveHandler.handle', () => {
       await handle(makeAction({ pushDistance: 15 }), makePlayerStats(), campaignName, null);
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({

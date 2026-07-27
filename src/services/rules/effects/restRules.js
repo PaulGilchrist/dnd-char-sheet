@@ -533,10 +533,10 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     setRuntimeBatch(name, updates, campaignName)
 
     // Clear Clairvoyant Combatant effects from campaign targetEffects on short rest
-    const clairvoyantEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const clairvoyantEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredClairvoyantEffects = clairvoyantEffects.filter(e => e.effect !== 'clairvoyant_combatant');
     if (filteredClairvoyantEffects.length !== clairvoyantEffects.length) {
-      setRuntimeValue(campaignName, 'targetEffects', filteredClairvoyantEffects, campaignName, true)
+      setRuntimeValue('campaign', 'targetEffects', filteredClairvoyantEffects, campaignName, true)
     }
 
   clearAllExpirationEffects(name, campaignName)
@@ -695,10 +695,10 @@ export async function applyLongRest(playerStats, campaignName) {
     setRuntimeBatch(name, charData, campaignName)
 
     // Clear Clairvoyant Combatant effects from campaign targetEffects on long rest
-    const clairvoyantEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const clairvoyantEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredClairvoyantEffects = clairvoyantEffects.filter(e => e.effect !== 'clairvoyant_combatant');
     if (filteredClairvoyantEffects.length !== clairvoyantEffects.length) {
-      setRuntimeValue(campaignName, 'targetEffects', filteredClairvoyantEffects, campaignName, true)
+      setRuntimeValue('campaign', 'targetEffects', filteredClairvoyantEffects, campaignName, true)
     }
 
     // Clear Wrath of the Sea badge on long rest

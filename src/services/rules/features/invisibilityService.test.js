@@ -70,7 +70,7 @@ describe('invisibilityService', () => {
                 campaignName,
             );
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 `_activeInvisibility_${invisibleName}`,
                 null,
                 campaignName,
@@ -175,7 +175,7 @@ describe('invisibilityService', () => {
             endInvisibilityOnHostileAction(invisibleName, campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 `_activeInvisibility_${invisibleName}`,
                 null,
                 campaignName,
@@ -206,7 +206,7 @@ describe('invisibilityService', () => {
             endInvisibilityOnHostileAction(characterName, campaignName);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 '_activeInvisibility_Elf-Ranger "Swiftarrow"',
                 null,
                 campaignName,

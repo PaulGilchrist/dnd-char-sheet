@@ -193,7 +193,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
                 if (filteredConds.length !== conds.length) {
                     setRuntimeValue(activeName, 'activeConditions', filteredConds, campaignName);
                 }
-                setRuntimeValue(campaignName, `_activeInvisibility_${activeName}`, null, campaignName);
+                setRuntimeValue('campaign', `_activeInvisibility_${activeName}`, null, campaignName);
                 addEntry(campaignName, {
                     type: 'ability_use',
                     characterName: activeName,
@@ -205,7 +205,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
     }
 
     // Clean up Topple weapon mastery Prone condition at start of target's next turn
-    const allTargetEffectsTopple = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const allTargetEffectsTopple = getRuntimeValue('campaign', 'targetEffects') || [];
     if (allTargetEffectsTopple.length > 0) {
         const currentRound = getCurrentCombatRound(campaignName);
         const toppleTargets = new Set();
@@ -240,7 +240,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
                 // Reckless Attack cleared by topple logic
             }
             if (cleanedTopple.length !== allTargetEffectsTopple.length) {
-                setRuntimeValue(campaignName, 'targetEffects', cleanedTopple, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', cleanedTopple, campaignName);
             }
         }
     }
@@ -249,7 +249,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
     if (activeName && playerStats) {
         const slowTracking = getRuntimeValue(activeName, `_slow_${activeName.replace(/\s+/g, '_')}`, campaignName);
         if (slowTracking) {
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName);
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName);
             if (!Array.isArray(targetEffects)) {
                 console.error('expirations: expected targetEffects to be an array in slow handler for', campaignName);
                 throw new Error('Missing array: targetEffects in slow handler for ' + campaignName);
@@ -267,7 +267,7 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         // Process Tasha's Hideous Laughter repeat saves for affected creatures at start of their turn
         const tashasTracking = getRuntimeValue(activeName, `_tashas_laughter_${activeName.replace(/\s+/g, '_')}`, campaignName);
         if (tashasTracking) {
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName);
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName);
             if (!Array.isArray(targetEffects)) {
                 console.error('expirations: expected targetEffects to be an array in tashas handler for', campaignName);
                 throw new Error('Missing array: targetEffects in tashas handler for ' + campaignName);
@@ -739,8 +739,8 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
         setRuntimeValue(key, KEY, kept, campaignName);
       }
       // Force cover badge refresh on all clients
-      const refreshCount = getRuntimeValue(campaignName, 'coverRefresh') || 0;
-      setRuntimeValue(campaignName, 'coverRefresh', refreshCount + 1, campaignName);
+      const refreshCount = getRuntimeValue('campaign', 'coverRefresh') || 0;
+      setRuntimeValue('campaign', 'coverRefresh', refreshCount + 1, campaignName);
 }
 
     export function expireStaleEffects(campaignName, overrideActiveName) {
@@ -973,10 +973,10 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
                     campaignName
                 );
                 if (effect.buffName === 'Reckless Attack') {
-                    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const cleanedEffects = storedEffects.filter(te => !(te.effect === 'reckless_attack' && te.target === targetName));
                     if (cleanedEffects.length !== storedEffects.length) {
-                        setRuntimeValue(campaignName, 'targetEffects', cleanedEffects, campaignName);
+                        setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     }
                 }
                 if (wasHaste) {
@@ -1162,9 +1162,9 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
                     allBuffs.filter(b => b.name !== effect.buffName),
                     campaignName
                 );
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 setRuntimeValue(
-                    campaignName,
+                    'campaign',
                     'targetEffects',
                     storedEffects.filter(te => !(te.effect === 'heroism' && te.source === effect.buffName)),
                     campaignName
@@ -1173,9 +1173,9 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
             }
 
             case 'remove_target_effect': {
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 setRuntimeValue(
-                    campaignName,
+                    'campaign',
                     'targetEffects',
                     storedEffects.filter(te => {
                         if (te.effect !== effect.effectKey) return true;
@@ -1211,8 +1211,8 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
 
             case 'remove_smite_of_protection': {
                 setRuntimeValue(targetName, 'smiteOfProtectionActive', null, campaignName);
-                const refreshCount = getRuntimeValue(campaignName, 'coverRefresh') || 0;
-                setRuntimeValue(campaignName, 'coverRefresh', refreshCount + 1, campaignName);
+                const refreshCount = getRuntimeValue('campaign', 'coverRefresh') || 0;
+                setRuntimeValue('campaign', 'coverRefresh', refreshCount + 1, campaignName);
                 break;
             }
 

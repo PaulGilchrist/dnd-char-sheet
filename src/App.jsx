@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cloneDeep } from 'lodash';
+import { isCampaignKey } from './services/automation/common/campaignKeys.js';
 import './App.css';
 import CharSheet from './components/char-sheet/CharSheet.jsx';
 import Initiative from './components/initiative/initiative.jsx';
@@ -17,7 +18,7 @@ import useCampaignManagement from './hooks/management/useCampaignManagement.js';
 import { useCharacterWizard } from './hooks/wizard/useCharacterWizard.js';
 import rulesFactory from './services/rules/rulesFactory.js';
 import Subscriber from './components/common/Subscriber.jsx';
-import { setRuntimeObject, seedTrackedResources, getStore } from './hooks/runtime/useRuntimeState.js';
+import { setRuntimeObject, seedTrackedResources, getStore, notify } from './hooks/runtime/useRuntimeState.js';
 import { applyServerOverride, trackedResourcesToStoreEntries } from './services/rules/trackedResources.js';
 import Notes from './components/notes/Notes.jsx';
 import Quests from './components/quests/Quests.jsx';
@@ -176,14 +177,14 @@ function App() {
         }
 
         // Seed campaign-level runtime data (targetEffects, etc.)
-        const campaignServerData = serverData ? serverData[campaignName] : null;
-        if (campaignServerData && typeof campaignServerData === 'object') {
-          const campaignStore = getStore(campaignName);
-          for (const [key, value] of Object.entries(campaignServerData)) {
-            if (!campaignStore.has(key) && value != null) {
-              campaignStore.set(key, value);
+        // Campaign keys are now at the top level of serverData, seeded into the 'campaign' store
+        const campaignStore = getStore('campaign');
+        if (serverData && typeof serverData === 'object') {
+            for (const [key, value] of Object.entries(serverData)) {
+                if (!campaignStore.has(key) && value != null) {
+                    campaignStore.set(key, value);
+                }
             }
-          }
         }
       })();
     }, [computedCharacters, campaignName]);
@@ -424,24 +425,15 @@ function App() {
       return;
     }
     pendingPromptIdRef.current = null;
-    // When characterKey === campaignName, the SSE event key is "change-{campaign}-{campaign}"
-    // and event.data contains the full store object. Extract targetEffects if present.
-    let actualData = event.data;
-    let effectiveStoreKey = storeKey;
-    if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && actualData.targetEffects !== undefined) {
-        actualData = actualData.targetEffects;
-        effectiveStoreKey = 'targetEffects';
-    } else if (storeKey === 'targetEffects' && actualData && typeof actualData === 'object' && !Array.isArray(actualData)) {
-        actualData = actualData[storeKey];
-    }
-    // When the store key is a character name, event.data is the full character store object.
-    // Apply each property directly to the character store instead of wrapping it.
-    if (effectiveStoreKey !== 'targetEffects' && actualData && typeof actualData === 'object' && !Array.isArray(actualData)) {
-        setRuntimeObject(storeKey, actualData, campaignName, true);
+
+    // Campaign-level keys: SSE key is "change-{campaign}-{key}" -> store in campaign store
+    // Character keys: SSE key is "change-{campaign}-{characterName}" -> apply full object to character store
+    if (isCampaignKey(storeKey)) {
+        const campaignStore = getStore('campaign');
+        campaignStore.set(storeKey, event.data);
+        notify('campaign');
     } else {
-        // Primitive values (boolean, number, string) should be stored under the character store,
-        // not the campaign store. Wrap in an object with the character key.
-        setRuntimeObject(storeKey, { [effectiveStoreKey]: actualData }, campaignName, true);
+        setRuntimeObject(storeKey, event.data, campaignName, true);
     }
   }, [campaignName, setCharacters]);
 

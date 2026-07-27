@@ -30,7 +30,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,
         source: action.name,
@@ -40,7 +40,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         duration: auto.duration || 'until_end_of_current_turn',
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
     const speedZeroAlready = conditions.some(c => String(c).toLowerCase() === 'speed_zero');

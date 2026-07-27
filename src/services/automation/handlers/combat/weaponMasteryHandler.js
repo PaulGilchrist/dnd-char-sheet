@@ -109,9 +109,9 @@ export async function applyPostDamageMasteryEffects(attackName, playerStats, cam
             continue;
         }
         if (masteryName !== 'Slow') {
-            const alreadyApplied = getRuntimeValue(campaignName, `_${masteryName}_appliedTarget`, campaignName);
+            const alreadyApplied = getRuntimeValue('campaign', `_${masteryName}_appliedTarget`, campaignName);
             if (alreadyApplied === targetName) { continue; }
-            setRuntimeValue(campaignName, `_${masteryName}_appliedTarget`, targetName, campaignName);
+            setRuntimeValue('campaign', `_${masteryName}_appliedTarget`, targetName, campaignName);
         }
         await applyMasteryEffect(masteryName, playerStats, campaignName, targetName);
     }
@@ -161,7 +161,7 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
         if (skip) return skip;
     }
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     let newEffect = {
         target: targetName,
         source: masteryName,
@@ -221,7 +221,7 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
         ], campaignName, 1);
     }
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     // Mark once-per-turn for Cleave
     if (mastery.oncePerTurn && masteryName === 'Cleave') {

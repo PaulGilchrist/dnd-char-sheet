@@ -29,7 +29,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,
         source: playerName,
@@ -39,7 +39,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         duration: auto.duration || 'end_of_turn',
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     return {
         type: 'popup',

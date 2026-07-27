@@ -118,7 +118,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     }
                 }
             }
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             storedEffects.push({
                 target: targetName,
                 source: 'Telekinetic Adept',
@@ -127,7 +127,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 value: 10,
                 duration: 'until_start_of_next_turn',
             });
-            setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
             thrustResult = `${targetName} failed the ${saveType} save (DC ${saveDc}) — Prone + pushed 10ft.`;
         }
     }

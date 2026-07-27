@@ -142,7 +142,7 @@ describe('createLogAndShow - Target Effects', () => {
     describe('target effects clearing on attack hit', () => {
         it('removes sap effects from targetEffects after a hit', async () => {
             getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'test-campaign' && prop === 'targetEffects') {
+                if (name === 'campaign' && prop === 'targetEffects') {
                     return [
                         { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
                         { effect: 'distracting_strike_advantage', target: 'Goblin', source: 'OtherEnemy' },
@@ -174,7 +174,7 @@ describe('createLogAndShow - Target Effects', () => {
             ${'initiative'} | ${{}}
         `('does not clear target effects when rollType is "$rollType"', async ({ rollType }) => {
             getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'test-campaign' && prop === 'targetEffects') {
+                if (name === 'campaign' && prop === 'targetEffects') {
                     return [{ effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' }];
                 }
                 return null;
@@ -189,7 +189,7 @@ describe('createLogAndShow - Target Effects', () => {
 
         it('does not clear target effects when targetEffects is empty', async () => {
             getRuntimeValue.mockImplementation((name, prop, _campaign) => {
-                if (name === 'test-campaign' && prop === 'targetEffects') return [];
+                if (name === 'campaign' && prop === 'targetEffects') return [];
                 return null;
             });
             const fn = createFn();

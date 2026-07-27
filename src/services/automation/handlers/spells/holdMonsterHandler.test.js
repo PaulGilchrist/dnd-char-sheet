@@ -147,7 +147,7 @@ describe('processHoldMonsterRepeatSave', () => {
       );
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({ target: 'Other', source: 'OtherCaster' }),
@@ -155,7 +155,7 @@ describe('processHoldMonsterRepeatSave', () => {
         campaignName,
       );
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.not.arrayContaining([
           expect.objectContaining({ source: casterName }),
@@ -315,7 +315,7 @@ describe('holdMonsterHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({

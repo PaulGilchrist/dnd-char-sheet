@@ -159,7 +159,7 @@ describe('createLogAndShow - auto_effect miss trigger (Studied Attacks)', () => 
             const targetEffectsCalls = setRuntimeValue.mock.calls.filter(isTargetEffectsCall);
             expect(targetEffectsCalls.length).toBe(1);
             expect(targetEffectsCalls[0]).toEqual([
-                'test-campaign',
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({

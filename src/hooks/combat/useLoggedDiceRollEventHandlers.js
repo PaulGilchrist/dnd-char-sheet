@@ -26,7 +26,7 @@ export function setupEventListeners(deps) {
             const pending = getPendingSavePrompt(e.detail.promptId);
             if (!pending) return;
 
-            const createSaveListenerPrompts = new Set(getRuntimeValue(campaignName, 'pendingSaveListenerPrompts') || []);
+            const createSaveListenerPrompts = new Set(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
             if (createSaveListenerPrompts.has(e.detail.promptId)) return;
             const normalizedSaveType = normalizeSaveType(e.detail.saveType || pending.saveType);
             const targetChar = (charactersRef.current || []).find(c => c.name === e.detail.targetName);

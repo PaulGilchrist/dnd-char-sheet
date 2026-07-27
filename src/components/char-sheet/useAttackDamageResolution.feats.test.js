@@ -186,7 +186,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
                     source: 'Charge Attack',
@@ -461,7 +461,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
                     source: 'Crusher',
@@ -493,7 +493,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
                     effect: 'crusher_enhanced_critical',
@@ -525,7 +525,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
                     effect: 'slasher_enhanced_critical',
@@ -669,7 +669,7 @@ describe('useAttackDamageResolution - feats', () => {
             };
             await resolveAttackDamage(attack);
             await tick();
-            expect(setRuntimeValue).toHaveBeenCalledWith('test-campaign', 'targetEffects', expect.arrayContaining([
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
                 expect.objectContaining({
                     target: 'Goblin',
                     source: 'Tavern Brawler',

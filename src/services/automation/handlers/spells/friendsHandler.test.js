@@ -109,7 +109,7 @@ describe('friendsHandler.handle', () => {
             await handle(makeAction(), defaultPlayerStats, campaignName, null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 '_activeFriends_Bard1',
                 null,
                 campaignName,
@@ -290,7 +290,7 @@ describe('friendsHandler.handle', () => {
                 2,
             );
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                campaignName,
+                'campaign',
                 '_activeFriends_Bard1',
                 'CustomTarget',
                 campaignName,

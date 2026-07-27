@@ -129,8 +129,8 @@ describe('rayOfEnfeeblementHandler', () => {
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'test-campaign',
-                'targetEffects',
+            'campaign',
+            'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({
                         target: 'Goblin',
@@ -282,8 +282,8 @@ describe('rayOfEnfeeblementHandler', () => {
             await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'test-campaign',
-                'targetEffects',
+            'campaign',
+            'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({
                         target: 'Goblin',

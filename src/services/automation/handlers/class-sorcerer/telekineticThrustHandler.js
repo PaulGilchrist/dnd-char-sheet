@@ -127,7 +127,7 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
     addCondition(combatContext, targetName, conditionDef, 0, null, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
     storage.set('combatSummary', combatContext, campaignName);
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const pushValue = option.value || 10;
     const newEffect = {
         target: targetName,
@@ -138,7 +138,7 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
         duration: 'until_start_of_next_turn',
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 }
 
 function buildResultMessage(actionName, targetName, option, saveDc, saveType, success) {

@@ -254,8 +254,8 @@ describe('branchesOfTheTree (teleport_and_slow)', () => {
     }).catch(() => {});
 
     expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      campaignName,
-      'targetEffects',
+        'campaign',
+        'targetEffects',
       expect.arrayContaining([
         expect.objectContaining({
           effect: 'speed_reduction',

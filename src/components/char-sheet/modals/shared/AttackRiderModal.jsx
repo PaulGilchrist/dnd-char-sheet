@@ -139,7 +139,7 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
                 onClose();
                 return;
             } else {
-                const targetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const massFearIndex = targetEffects.findIndex(te => te.effect === 'mass_fear');
                 if (massFearIndex !== -1) {
                     const updatedEffects = [...targetEffects];
@@ -147,7 +147,7 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
                         ...updatedEffects[massFearIndex],
                         target: selectedTargetName,
                     };
-                    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
                 }
             }
             setSfResult({

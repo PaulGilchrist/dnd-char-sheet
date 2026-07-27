@@ -140,12 +140,12 @@ export function createSaves(deps) {
         if (!target) return;
 
         let disadvantage = pending.metamagicHeighten || false;
-        const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+        const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
         const riderEffectIdx = targetEffects.findIndex(te => te.target === pending.targetName && te.effect === 'disadvantage_on_next_save');
         if (riderEffectIdx !== -1) {
             disadvantage = true;
             targetEffects.splice(riderEffectIdx, 1);
-            setRuntimeValue(campaignName, 'targetEffects', targetEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
         }
 
         // Bane: apply -1d4 penalty to saving throws

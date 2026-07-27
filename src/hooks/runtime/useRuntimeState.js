@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { isCampaignKey } from '../../services/automation/common/campaignKeys.js';
 
 const stores = new Map();
 export const listeners = new Map();
@@ -60,13 +61,29 @@ export function addStorageChangeListener(characterKey, listener) {
 }
 
 export function getRuntimeValue(characterKey, propertyName) {
-  const store = getStore(characterKey);
-  const hasKey = store.has(propertyName);
-  const value = hasKey ? store.get(propertyName) : null;
-  return value;
+    if (isCampaignKey(propertyName) && characterKey !== 'campaign') {
+        console.error(
+            '[getRuntimeValue] Campaign-level key read with wrong characterKey. ' +
+            `Key: "${propertyName}", characterKey: "${characterKey}". ` +
+            'Should use characterKey = "campaign" for campaign-level data.',
+            { characterKey, propertyName, stack: new Error().stack }
+        );
+    }
+    const store = getStore(characterKey);
+    const hasKey = store.has(propertyName);
+    const value = hasKey ? store.get(propertyName) : null;
+    return value;
 }
 
 export function setRuntimeValue(characterKey, propertyName, value, campaignName) {
+    if (isCampaignKey(propertyName) && characterKey !== 'campaign') {
+        console.error(
+            '[setRuntimeValue] Campaign-level key written with wrong characterKey. ' +
+            `Key: "${propertyName}", characterKey: "${characterKey}". ` +
+            'Should use characterKey = "campaign" for campaign-level data.',
+            { characterKey, propertyName, value, campaignName, stack: new Error().stack }
+        );
+    }
     const store = getStore(characterKey);
     const existing = store.get(propertyName);
     if (valuesEqual(existing, value)) {

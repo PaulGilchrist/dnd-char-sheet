@@ -23,7 +23,7 @@ export function buildSaveDc(auto, playerStats) {
 export function createSaveListener(campaignName, config) {
     const promptId = utils.guid();
 
-    const pendingSaves = getRuntimeValue(campaignName, 'pendingSavePrompts') || {};
+    const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
     pendingSaves[promptId] = {
         promptId,
         campaignName,
@@ -43,7 +43,7 @@ export function createSaveListener(campaignName, config) {
         secondaryDamageType: config.secondaryDamageType || null,
         secondaryRawDamage: config.secondaryRawDamage || 0,
     };
-    setRuntimeValue(campaignName, 'pendingSavePrompts', pendingSaves, campaignName);
+    setRuntimeValue('campaign', 'pendingSavePrompts', pendingSaves, campaignName);
 
     sendSavePrompt(campaignName, {
         promptId,
@@ -68,9 +68,9 @@ export function createSaveListener(campaignName, config) {
         const handler = (event) => {
             if (event.detail.promptId !== promptId) return;
             window.removeEventListener('save-result', handler);
-            const saves = getRuntimeValue(campaignName, 'pendingSavePrompts') || {};
+            const saves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
             delete saves[promptId];
-            setRuntimeValue(campaignName, 'pendingSavePrompts', saves, campaignName);
+            setRuntimeValue('campaign', 'pendingSavePrompts', saves, campaignName);
             resolve(event.detail);
          };
         window.addEventListener('save-result', handler);
@@ -81,9 +81,9 @@ export function createSaveListener(campaignName, config) {
     });
 
     saveResultPromise.finally(() => {
-        const saves = getRuntimeValue(campaignName, 'pendingSavePrompts') || {};
+        const saves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
         delete saves[promptId];
-        setRuntimeValue(campaignName, 'pendingSavePrompts', saves, campaignName);
+        setRuntimeValue('campaign', 'pendingSavePrompts', saves, campaignName);
     });
 
     return { promptId, promise: saveResultPromise };

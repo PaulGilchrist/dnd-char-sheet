@@ -36,7 +36,7 @@ function ClairvoyantCombatantModal({ action, playerStats, campaignName, targetNa
         }
 
         // Set the combat advantage/disadvantage effects via targetEffects
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const newEffect = {
             target: targetName,
             source: featureName,
@@ -48,7 +48,7 @@ function ClairvoyantCombatantModal({ action, playerStats, campaignName, targetNa
             defenderDisadvantage: true,
         };
         const updatedEffects = [...storedEffects, newEffect];
-        setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
         // Store the active target for contextBuilder
         await setRuntimeValue(playerName, 'clairvoyantCombatantTarget', targetName, campaignName);
@@ -103,10 +103,10 @@ function ClairvoyantCombatantModal({ action, playerStats, campaignName, targetNa
                 }).catch((e) => { console.error("[clairvoyantCombatant] Error:", e); });
             } else {
                 // Target succeeded — remove the effects
-                const filteredEffects = (getRuntimeValue(campaignName, 'targetEffects', campaignName) || []).filter(
+                const filteredEffects = (getRuntimeValue('campaign', 'targetEffects', campaignName) || []).filter(
                     e => !(e.target === targetName && e.source === featureName && e.effect === 'clairvoyant_combatant')
                 );
-                setRuntimeValue(campaignName, 'targetEffects', filteredEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
 
                 // Clear the active target
                 await setRuntimeValue(playerName, 'clairvoyantCombatantTarget', null, campaignName);

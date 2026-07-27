@@ -607,7 +607,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
             } else if (maneuver.effect === 'push') {
                 const pushDistance = maneuver.value || 15;
                 description += ` ${targetName} was pushed ${pushDistance} feet away.`;
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: maneuver.name,
@@ -620,10 +620,10 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                     saveAbility: maneuver.saveAbility,
                 };
                 const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'goad') {
                 description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
@@ -631,7 +631,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                     duration: 'until_end_of_user_next_turn',
                 };
                 const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'prone') {
                 description += ` ${targetName} fell Prone.`;
                 const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
@@ -670,7 +670,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
     if (maneuver.effect === 'next_attack_advantage' || maneuver.effect === 'distracting_strike_advantage') {
         description += ` The next attack against ${targetName || 'the target'} by an ally has Advantage.`;
         if (targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const newEffect = {
                 target: targetName,
                 source: playerStats.name,
@@ -678,7 +678,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                 value: null,
                 duration: 'until_end_of_turn',
             };
-            await setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+            await setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
         }
     }
 
@@ -889,7 +889,7 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
 
     if (maneuver.effect === 'advantage_and_damage') {
         await setRuntimeValue(playerStats.name, 'feintingAttackDieValue', dieValue, campaignName);
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const currentRound = getCurrentCombatRound();
         const newEffect = {
             target: playerStats.name,
@@ -900,7 +900,7 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
             duration: 'until_end_of_turn',
             appliedRound: currentRound,
         };
-        await setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+        await setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
         addExpiration(playerStats.name, playerStats.name, [
             { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: maneuver.name, target: playerStats.name }
         ], campaignName, 2);
@@ -1105,7 +1105,7 @@ export async function executeSweepingAttack(action, playerStats, campaignName, s
         };
     }
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: secondaryTargetName,
         source: 'Sweeping Attack',
@@ -1119,7 +1119,7 @@ export async function executeSweepingAttack(action, playerStats, campaignName, s
         saveAbility: null,
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     const logEntry = {
         type: 'ability_use',
@@ -1739,7 +1739,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
             } else if (maneuver.effect === 'push') {
                 const pushDistance = maneuver.value || 15;
                 description += ` ${targetName} was pushed ${pushDistance} feet away.`;
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: maneuver.name,
@@ -1752,10 +1752,10 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
                     saveAbility: maneuver.saveAbility,
                 };
                 const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'goad') {
                 description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
@@ -1763,7 +1763,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
                     duration: 'until_end_of_user_next_turn',
                 };
                 const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'prone') {
                 description += ` ${targetName} fell Prone.`;
                 const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
@@ -1800,7 +1800,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
     if (maneuver.effect === 'next_attack_advantage' || maneuver.effect === 'distracting_strike_advantage') {
         description += ` The next attack against ${targetName || 'the target'} by an ally has Advantage.`;
         if (targetName) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const newEffect = {
                 target: targetName,
                 source: playerStats.name,
@@ -1808,7 +1808,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
                 value: null,
                 duration: 'until_end_of_turn',
             };
-            await setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+            await setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
         }
     }
 
@@ -1898,7 +1898,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
 
     if (maneuver.effect === 'advantage_and_damage') {
         await setRuntimeValue(playerStats.name, 'feintingAttackDieValue', dieValue, campaignName);
-        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const currentRound = getCurrentCombatRound();
         const newEffect = {
             target: playerStats.name,
@@ -1909,7 +1909,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
             duration: 'until_end_of_turn',
             appliedRound: currentRound,
         };
-        await setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+        await setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
         addExpiration(playerStats.name, playerStats.name, [
             { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: maneuver.name, target: playerStats.name }
         ], campaignName, 2);

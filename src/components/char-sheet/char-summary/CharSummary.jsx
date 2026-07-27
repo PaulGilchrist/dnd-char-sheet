@@ -74,7 +74,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const _baitAndSwitchBonus = useSyncedState(playerStats.name, 'baitAndSwitchBonus', null, campaignName);
     const _activeBuffs = useSyncedState(playerStats.name, 'activeBuffs', null, campaignName);
     // Also subscribe to campaign-level cover refresh to catch changes from other characters
-    const _coverRefreshCampaign = useSyncedState(campaignName, 'coverRefresh', 0, campaignName);
+    const _coverRefreshCampaign = useSyncedState('campaign', 'coverRefresh', 0, campaignName);
     void [_coverRefresh, _bulwarkOfForceActive, _naturesSanctuaryActive, _bulwarkOfForceTargets, _naturesSanctuaryCreatures, _wrathOfTheSeaActive, _mantleOfMajestyActive, _innerRadianceActive, _unbreakableMajestyActive, _baitAndSwitchActive, _baitAndSwitchBonus, _activeBuffs, _coverRefreshCampaign];
 
     const { current: hasInspiration, update: setHasInspiration } = useTrackedResource(

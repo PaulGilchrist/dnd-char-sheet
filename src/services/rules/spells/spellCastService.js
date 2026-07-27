@@ -60,7 +60,7 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 
     if (!targetName || !ability) return;
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects');
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects');
     const effects = Array.isArray(storedEffects) ? storedEffects : [];
 
     // Base Hex: apply ability check disadvantage for chosen ability
@@ -101,7 +101,7 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
         }
     }
 
-    setRuntimeValue(campaignName, 'targetEffects', effects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 }
 
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {

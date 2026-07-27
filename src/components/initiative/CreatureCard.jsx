@@ -339,9 +339,9 @@ function CreatureCard({
                             <button
                                 className='badge-break-btn'
                                 onClick={() => {
-                                    const existingEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                                    const existingEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                                     const filtered = existingEffects.filter(te => !(te.target === creature.name && te.effect === 'reckless_attack'));
-                                    setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName);
+                                    setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
                                 }}
                                 type='button'
                                 title='Deactivate Reckless Attack'

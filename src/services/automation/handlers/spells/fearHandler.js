@@ -86,7 +86,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
             // Track Fear-specific effect: affected creature can re-save if it ends its turn
             // without line of sight to the caster
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const effects = Array.isArray(targetEffects) ? targetEffects : [];
             const existingIdx = effects.findIndex(
                 te => te.target === targetName && te.effect === 'fear_end_on_los'
@@ -104,7 +104,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             } else {
                 effects.push(fearEffect);
             }
-            setRuntimeValue(campaignName, 'targetEffects', effects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
             results.push(`${targetName} drops what it's holding and is Frightened.`);
         }

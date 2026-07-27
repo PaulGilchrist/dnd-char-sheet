@@ -139,7 +139,7 @@ export function createLogAndShow(deps) {
         // Sundering Blow: add +5 to hit bonus for next attack against the target
         let sunderingBlowBonus = 0;
         if (target && rollType === 'attack') {
-            const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const targetEffectsForTarget = allTargetEffects.filter(te => te.target === target.name);
             for (const te of targetEffectsForTarget) {
                 if (te.effect === 'next_attack_bonus') {
@@ -152,7 +152,7 @@ export function createLogAndShow(deps) {
         let baneAttackPenalty = 0;
         let baneAttackRoll = null;
         if (target && rollType === 'attack') {
-            const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const targetEffectsForTarget = allTargetEffects.filter(te => te.target === utils.getName(characterName));
             for (const te of targetEffectsForTarget) {
                 if (te.effect === 'bane_penalty') {
@@ -487,7 +487,7 @@ export function createLogAndShow(deps) {
                         const dexAbility = ps?.abilities?.find(a => a.name === 'Dexterity');
                         const dexMod = dexAbility?.bonus || 0;
                         const saveDc = 8 + dexMod + prof;
-                        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                         const deathStrikeEffect = {
                             target: targetName2,
                             source: 'Death Strike',
@@ -498,7 +498,7 @@ export function createLogAndShow(deps) {
                             damageDoubled: true,
                         };
                         const updatedEffects = [...storedEffects, deathStrikeEffect];
-                        setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+                        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
                     }
                 }
             }
@@ -725,7 +725,7 @@ export function createLogAndShow(deps) {
                     p => p.type === 'auto_effect' && p.trigger === 'miss' && p.effect === 'next_attack_advantage'
                 );
                 if (missEffects.length > 0) {
-                    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     for (const effect of missEffects) {
                         const newEffect = {
                             target: characterName,
@@ -736,7 +736,7 @@ export function createLogAndShow(deps) {
                         };
                         storedEffects.push(newEffect);
                     }
-                    setRuntimeValue(campaignName, 'targetEffects', storedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
                     for (const effect of missEffects) {
                         addEntry(campaignName, {
                             type: 'ability_use',
@@ -803,21 +803,21 @@ export function createLogAndShow(deps) {
             }
 
             if (targetName && hit) {
-                const allEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const allEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const vexEffects = allEffects.filter(te => te.effect === 'next_attack_advantage' && te.target === characterName && te.vexTarget === targetName);
                 if (vexEffects.length > 0) {
                     const clearedEffects = allEffects.filter(te => !(te.effect === 'next_attack_advantage' && te.target === characterName && te.vexTarget === targetName));
-                    setRuntimeValue(campaignName, 'targetEffects', clearedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
                 }
                 const distractingEffects = allEffects.filter(te => te.effect === 'distracting_strike_advantage' && te.target === targetName && te.source !== characterName);
                 if (distractingEffects.length > 0) {
                     const clearedEffects = allEffects.filter(te => !(te.effect === 'distracting_strike_advantage' && te.target === targetName && te.source !== characterName));
-                    setRuntimeValue(campaignName, 'targetEffects', clearedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
                 }
                 const sapEffects = allEffects.filter(te => te.effect === 'disadvantage_next_attack' && te.target === characterName);
                 if (sapEffects.length > 0) {
                     const clearedEffects = allEffects.filter(te => !(te.effect === 'disadvantage_next_attack' && te.target === characterName));
-                    setRuntimeValue(campaignName, 'targetEffects', clearedEffects, campaignName);
+                    setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
                 }
             }
         }
@@ -1126,7 +1126,7 @@ export function createLogAndShow(deps) {
                 // Bane: apply -1d4 penalty to saving throws
                 let baneSavePenalty = 0;
                 let baneSaveRoll = null;
-                const allTargetEffectsForSave = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const allTargetEffectsForSave = getRuntimeValue('campaign', 'targetEffects') || [];
                 const baneEffectsForSave = allTargetEffectsForSave.filter(te => te.target === targetName && te.effect === 'bane_penalty');
                 if (baneEffectsForSave.length > 0) {
                     const r = rollExpression('1d4');

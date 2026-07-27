@@ -46,7 +46,7 @@ describe('viciousMockeryHandler', () => {
 
         expect(result.type).toBe('popup');
         expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestCampaign',
+            'campaign',
             'targetEffects',
             expect.arrayContaining([
                 expect.objectContaining({

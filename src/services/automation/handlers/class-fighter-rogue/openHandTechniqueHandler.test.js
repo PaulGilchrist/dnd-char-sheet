@@ -237,7 +237,7 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
       });
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({
@@ -273,9 +273,9 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
         bonus: 5,
       });
 
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        campaignName, 'targetEffects', expect.any(Array), campaignName,
-      );
+       expect(setRuntimeValue).not.toHaveBeenCalledWith(
+         'campaign', 'targetEffects', expect.any(Array), campaignName,
+       );
     });
 
     it('appends new effect to existing targetEffects array', async () => {
@@ -294,7 +294,7 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
       );
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([existingEffect]),
         campaignName,
@@ -313,7 +313,7 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
       );
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({ effect: 'push_15ft', value: 30 }),

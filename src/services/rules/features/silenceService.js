@@ -93,9 +93,9 @@ export function isCreatureInSilenceZone(targetName, casterName, campaignName) {
     return isDistanceInRange(dist, radiusNum);
 }
 
-function getCombatContextSync(campaignName) {
+function getCombatContextSync(_campaignName) {
     try {
-        const stored = getRuntimeValue(campaignName, 'combatSummary');
+        const stored = getRuntimeValue('campaign', 'combatSummary');
         if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
     } catch (_e) { /* ignore */ }
     return null;

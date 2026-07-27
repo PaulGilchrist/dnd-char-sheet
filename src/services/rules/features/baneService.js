@@ -80,7 +80,7 @@ export async function applyBaneEffect(spell, playerStats, campaignName, mapName,
         }).catch((e) => { console.error('[baneSpell] Error logging save:', e); });
 
         if (!saveResult.success) {
-            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const effects = Array.isArray(storedEffects) ? storedEffects : [];
             const baneEffect = {
                 target: targetName,
@@ -97,7 +97,7 @@ export async function applyBaneEffect(spell, playerStats, campaignName, mapName,
             } else {
                 effects.push(baneEffect);
             }
-            setRuntimeValue(campaignName, 'targetEffects', effects, campaignName, true);
+            setRuntimeValue('campaign', 'targetEffects', effects, campaignName, true);
 
             logTargets.push({ name: targetName, saved: false });
 

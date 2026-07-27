@@ -16,9 +16,9 @@ function removeConditionByKey(creatureName, conditionKey, campaignName) {
 }
 
 function removeTargetEffect(targetName, effectType, campaignName) {
-    const existingEffects = getRuntimeValue(campaignName, 'targetEffects') || []
+    const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const filtered = existingEffects.filter(te => !(te.target === targetName && te.effect === effectType))
-    setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName)
+    setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
 }
 
 function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage }) {

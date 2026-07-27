@@ -532,7 +532,7 @@ describe('useAttackDamageResolution - class features', () => {
             await resolveAttackDamage(makeAttack());
             await tick();
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'test-campaign',
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({
@@ -579,7 +579,7 @@ describe('useAttackDamageResolution - class features', () => {
             await resolveAttackDamage(makeAttack());
             await tick();
             expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'test-campaign',
+                'campaign',
                 'targetEffects',
                 expect.anything(),
                 'test-campaign',

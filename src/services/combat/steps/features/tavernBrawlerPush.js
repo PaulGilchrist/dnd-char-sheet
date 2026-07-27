@@ -19,8 +19,8 @@ export const tavernBrawlerPush = {
     const cs = await getCombatContext(ctx.campaignName);
     const t = cs ? getTargetFromAttacker(cs, ctx.playerStats.name) : null;
     if (t?.name) {
-      const effs = getRuntimeValue(ctx.campaignName, 'targetEffects') || [];
-      setRuntimeValue(ctx.campaignName, 'targetEffects', [...effs, { target: t.name, source: 'Tavern Brawler', effect: 'push', value: 5, duration: 'until_end_of_turn' }], ctx.campaignName);
+      const effs = getRuntimeValue('campaign', 'targetEffects') || [];
+      setRuntimeValue('campaign', 'targetEffects', [...effs, { target: t.name, source: 'Tavern Brawler', effect: 'push', value: 5, duration: 'until_end_of_turn' }], ctx.campaignName);
     }
     return { data: prevData };
   },

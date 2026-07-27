@@ -102,7 +102,7 @@ describe('quiveringPalmHandler.handle', () => {
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'quivering_palm') return null;
         if (b === 'kiPoints') return 5;
         return undefined;
       });
@@ -126,7 +126,7 @@ describe('quiveringPalmHandler.handle', () => {
       getCombatContext.mockResolvedValue({});
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return 'Ogre';
+        if (_a === 'campaign' && b === 'quivering_palm') return 'Ogre';
         return undefined;
       });
 
@@ -147,7 +147,7 @@ describe('quiveringPalmHandler.handle', () => {
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'quivering_palm') return null;
         return undefined;
       });
 
@@ -171,7 +171,7 @@ describe('quiveringPalmHandler.handle', () => {
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'quivering_palm') return null;
         return undefined;
       });
 
@@ -195,7 +195,7 @@ describe('quiveringPalmHandler.handle', () => {
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'quivering_palm') return null;
         return undefined;
       });
 
@@ -218,7 +218,7 @@ describe('quiveringPalmHandler.handle', () => {
       });
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return null;
+        if (_a === 'campaign' && b === 'quivering_palm') return null;
         if (b === 'kiPoints') return 1;
         return undefined;
       });
@@ -238,7 +238,7 @@ describe('quiveringPalmHandler.handle', () => {
       getCombatContext.mockResolvedValue({});
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
       getRuntimeValue.mockImplementation((_a, b, _c) => {
-        if (_a === campaignName && b === 'quivering_palm') return 'Goblin';
+        if (_a === 'campaign' && b === 'quivering_palm') return 'Goblin';
         return undefined;
       });
 
@@ -289,7 +289,7 @@ describe('quiveringPalmHandler.applyShockwave', () => {
     expect(result.payload.finalDamage).toBe(55);
     expect(result.payload.damageExpression).toBe('10d12');
     expect(result.payload.damageType).toBe('Force');
-    expect(setRuntimeValue).toHaveBeenCalledWith(campaignName, 'quivering_palm', null, campaignName);
+    expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'quivering_palm', null, campaignName);
   });
 
   it('returns half damage on successful save', async () => {
@@ -337,7 +337,7 @@ describe('quiveringPalmHandler.applyRelease', () => {
     expect(result.type).toBe('popup');
     expect(result.payload.type).toBe('automation_info');
     expect(result.payload.description).toContain('harmlessly');
-    expect(setRuntimeValue).toHaveBeenCalledWith(campaignName, 'quivering_palm', null, campaignName);
+    expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'quivering_palm', null, campaignName);
     expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
       type: 'ability_use',
       description: expect.stringContaining('released the vibrations harmlessly'),

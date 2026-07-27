@@ -125,7 +125,7 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
  */
 export function endFriendsOnHostileAction(casterName, campaignName) {
     const key = `_activeFriends_${casterName}`;
-    const activeTarget = getRuntimeValue(campaignName, key, campaignName);
+    const activeTarget = getRuntimeValue('campaign', key, campaignName);
     if (!activeTarget) return;
 
     const conditions = (() => {
@@ -137,7 +137,7 @@ export function endFriendsOnHostileAction(casterName, campaignName) {
     if (filtered.length !== conditions.length) {
         setRuntimeValue(activeTarget, 'activeConditions', filtered, campaignName);
     }
-    setRuntimeValue(campaignName, key, null, campaignName);
+    setRuntimeValue('campaign', key, null, campaignName);
 
     addEntry(campaignName, {
         type: 'ability_use',

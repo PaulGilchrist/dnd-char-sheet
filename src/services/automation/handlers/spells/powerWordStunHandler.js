@@ -101,12 +101,12 @@ function getTrackingKey(targetName) {
 }
 
 function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
     const effects = Array.isArray(targetEffects) ? targetEffects : [];
     const cleaned = effects.filter(
         te => !(te.target === targetName && te.effect === 'power_word_stun_repeat_save' && te.source === casterName)
     );
-    setRuntimeValue(campaignName, 'targetEffects', cleaned, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
 }
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -165,7 +165,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         setRuntimeValue(casterName, trackingKey, true, campaignName);
 
         // Store target effect for end-of-turn repeated saves
-        const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+        const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
         const effects = Array.isArray(targetEffects) ? targetEffects : [];
         const existingIdx = effects.findIndex(
             te => te.target === targetName && te.effect === 'power_word_stun_repeat_save'
@@ -183,7 +183,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         } else {
             effects.push(stunEffect);
         }
-        setRuntimeValue(campaignName, 'targetEffects', effects, campaignName);
+        setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
         addEntry(campaignName, {
             type: 'condition',

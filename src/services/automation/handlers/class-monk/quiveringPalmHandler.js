@@ -16,7 +16,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const target = cs ? getTargetFromAttacker(cs, playerName) : null;
     const targetName = target?.name || null;
 
-    const existingTarget = getRuntimeValue(campaignName, QUIVERING_PALM_EFFECT);
+    const existingTarget = getRuntimeValue('campaign', QUIVERING_PALM_EFFECT);
 
     if (existingTarget) {
         addEntry(campaignName, {
@@ -150,9 +150,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     await setRuntimeValue(playerName, resource, currentResource - cost, campaignName);
-    await setRuntimeValue(campaignName, QUIVERING_PALM_EFFECT, targetName, campaignName);
+    await setRuntimeValue('campaign', QUIVERING_PALM_EFFECT, targetName, campaignName);
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,
         source: action.name,
@@ -165,7 +165,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         condition: null,
     };
     const updatedEffects = [...storedEffects, newEffect];
-    await setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     addEntry(campaignName, {
         type: 'ability_use',
@@ -190,7 +190,7 @@ export async function applyShockwave(action, playerStats, campaignName, targetNa
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    await setRuntimeValue(campaignName, QUIVERING_PALM_EFFECT, null, campaignName);
+    await setRuntimeValue('campaign', QUIVERING_PALM_EFFECT, null, campaignName);
     await cleanupQuiveringPalmEffect(campaignName, targetName);
 
     const damageExpression = auto.damageExpression || '10d12';
@@ -285,7 +285,7 @@ export async function applyRelease(action, playerStats, campaignName, targetName
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    await setRuntimeValue(campaignName, QUIVERING_PALM_EFFECT, null, campaignName);
+    await setRuntimeValue('campaign', QUIVERING_PALM_EFFECT, null, campaignName);
     await cleanupQuiveringPalmEffect(campaignName, targetName);
 
     addEntry(campaignName, {
@@ -308,7 +308,7 @@ export async function applyRelease(action, playerStats, campaignName, targetName
 }
 
 async function cleanupQuiveringPalmEffect(campaignName, targetName) {
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const updatedEffects = storedEffects.filter(e => !(e.effect === QUIVERING_PALM_EFFECT && e.target === targetName));
-    await setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 }

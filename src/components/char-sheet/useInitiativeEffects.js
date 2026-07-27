@@ -97,10 +97,10 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                     creature.concentration = null;
                     storageService.default.set('combatSummary', cs, campaignName);
                     if (concentrationSpell === 'Bane') {
-                        const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                         const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === playerStats.name));
                         if (filtered.length !== storedEffects.length) {
-                            setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName, true);
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
                 }

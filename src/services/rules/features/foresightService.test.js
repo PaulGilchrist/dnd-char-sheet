@@ -136,7 +136,7 @@ describe('foresightService', () => {
 
                 expect(mockSetRuntimeValue).toHaveBeenNthCalledWith(
                     2,
-                    campaignName,
+                    'campaign',
                     'targetEffects',
                     expect.any(Array),
                     campaignName,

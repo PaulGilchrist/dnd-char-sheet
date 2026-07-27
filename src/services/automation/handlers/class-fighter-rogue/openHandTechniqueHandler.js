@@ -147,7 +147,7 @@ export async function applyOpenHandTechnique(action, playerStats, campaignName, 
 async function applyOpenHandEffect(action, playerStats, campaignName, targetName, option) {
     if (!targetName) return;
 
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,
         source: action.name,
@@ -160,7 +160,7 @@ async function applyOpenHandEffect(action, playerStats, campaignName, targetName
         condition: option.condition || null,
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     if (option.effect === 'prone') {
         const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];

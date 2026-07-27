@@ -36,7 +36,7 @@ function breakConcentration(combatSummary, creatureName) {
 }
 
 function clearAllConcentrations(campaignName) {
-    const cs = getRuntimeValue(campaignName, 'combatSummary');
+    const cs = getRuntimeValue('campaign', 'combatSummary');
     const creatures = cs?.creatures || [];
     let changed = false;
     for (const creature of creatures) {
@@ -51,10 +51,10 @@ function clearAllConcentrations(campaignName) {
 }
 
 function clearBaneEffects(campaignName, casterName) {
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === casterName));
     if (filtered.length !== storedEffects.length) {
-        setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName, true);
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
     }
 }
 

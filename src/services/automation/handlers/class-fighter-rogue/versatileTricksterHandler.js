@@ -40,7 +40,7 @@ export async function applyVersatileTrickster(action, playerStats, campaignName,
     }
 
     // Apply Trip effect to secondary target
-    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: secondaryTargetName,
         source: action.name || 'Versatile Trickster',
@@ -62,7 +62,7 @@ export async function applyVersatileTrickster(action, playerStats, campaignName,
         restoreCost: null,
     };
     const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue(campaignName, 'targetEffects', updatedEffects, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     addEntry(campaignName, {
         type: 'ability_use',

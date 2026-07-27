@@ -257,7 +257,7 @@ export default function useAttackDamageResolution({
             } else if (paused._modalType === 'secondaryTarget') {
                 setModalState({ secondaryTargetModal: paused._modalProps });
             } else if (paused._modalType === 'tacticalMaster') {
-                setRuntimeObject(campaignName, { tacticalMasterPending: paused._modalProps }, campaignName, true);
+                setRuntimeObject('campaign', { tacticalMasterPending: paused._modalProps }, campaignName, true);
             } else if (paused._modalType === 'shieldBash') {
                 setModalState({ shieldBashModal: paused._modalProps });
             }
@@ -362,7 +362,7 @@ export default function useAttackDamageResolution({
         let logDescription = description;
         if (option) {
             if (option.effect === 'push_15ft' && targetName) {
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
@@ -371,10 +371,10 @@ export default function useAttackDamageResolution({
                     value: 15,
                     duration: 'instant',
                 };
-                setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+                setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
                 logDescription += ` ${targetName} pushed 15 feet.`;
             } else if (option.effect === 'speed_reduction' && targetName) {
-                const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
@@ -383,7 +383,7 @@ export default function useAttackDamageResolution({
                     value: option.value || '15_ft_until_start_of_next_turn',
                     duration: 'until_start_of_next_turn',
                 };
-                setRuntimeValue(campaignName, 'targetEffects', [...storedEffects, newEffect], campaignName);
+                setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
                 logDescription += ` ${targetName}'s speed reduced by 15 feet.`;
             }
         }

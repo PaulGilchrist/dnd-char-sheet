@@ -119,7 +119,7 @@ describe('sentinelHaltHandler.handle', () => {
       await handle(action, ps, campaignName, null);
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        campaignName,
+        'campaign',
         'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({

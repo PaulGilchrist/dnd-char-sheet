@@ -170,9 +170,9 @@ function SaveAttackAoeModal({
                         disadvantage: heightenTarget === targetName,
                     });
 
-                    const existingPrompts = new Set(getRuntimeValue(campaignName, 'pendingSaveListenerPrompts') || []);
+                    const existingPrompts = new Set(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
                     existingPrompts.add(promptId);
-                    setRuntimeValue(campaignName, 'pendingSaveListenerPrompts', existingPrompts, campaignName);
+                    setRuntimeValue('campaign', 'pendingSaveListenerPrompts', existingPrompts, campaignName);
 
                     prompts.push({ promptId, targetName });
                 }

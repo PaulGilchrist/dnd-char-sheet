@@ -10,12 +10,12 @@ function getTrackingKey(targetName) {
 }
 
 function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
     const effects = Array.isArray(targetEffects) ? targetEffects : [];
     const cleaned = effects.filter(
         te => !(te.target === targetName && te.effect === 'slow_repeat_save' && te.source === casterName)
     );
-    setRuntimeValue(campaignName, 'targetEffects', cleaned, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
 }
 
 export async function processSlowRepeatSave(casterName, targetName, saveDc, campaignName) {
@@ -55,14 +55,14 @@ export async function processSlowRepeatSave(casterName, targetName, saveDc, camp
         cleanupTargetEffect(casterName, targetName, campaignName);
 
         // Remove slow-related target effects
-        const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
         const filteredEffects = Array.isArray(allTargetEffects) ? allTargetEffects.filter(
             te => !(te.target === targetName && te.effect === 'speed_halved' && te.source === casterName) &&
                   !(te.target === targetName && te.effect === 'no_reactions' && te.source === casterName) &&
                   !(te.target === targetName && te.effect === 'ac_penalty' && te.source === casterName) &&
                   !(te.target === targetName && te.effect === 'dex_save_disadvantage' && te.source === casterName)
         ) : [];
-        setRuntimeValue(campaignName, 'targetEffects', filteredEffects, campaignName);
+        setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
 
         addEntry(campaignName, {
             type: 'save_result',
@@ -191,7 +191,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             ], campaignName);
 
             // Store target effects for the slow debuffs
-            const targetEffects = getRuntimeValue(campaignName, 'targetEffects', campaignName) || [];
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const effects = Array.isArray(targetEffects) ? targetEffects : [];
             const slowEffect = {
                 target: targetName,
@@ -259,7 +259,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 somaticFailureEffect,
                 slowRepeatSaveEffect,
             ];
-            setRuntimeValue(campaignName, 'targetEffects', allEffects, campaignName);
+            setRuntimeValue('campaign', 'targetEffects', allEffects, campaignName);
 
             addEntry(campaignName, {
                 type: 'condition',
