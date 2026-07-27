@@ -2,6 +2,7 @@ import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
 import { getAbilityModifier } from '../../shared/abilityLookup.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../ui/logService.js';
 
 export function buildSaveDc(auto, playerStats) {
     if (auto.saveDc === 'ability') {
@@ -77,6 +78,69 @@ export function createSaveListener(campaignName, config) {
      });
 
     const saveResultPromise = promise.then(async (detail) => {
+        const promptData = pendingSaves[promptId];
+        const attackerName = promptData?.attackerName || detail.attackerName || 'Unknown';
+        const targetName = promptData?.targetName || detail.targetName || 'Unknown';
+        const saveType = promptData?.saveType || detail.saveType || 'CON';
+        const saveDc = promptData?.saveDc || detail.saveDc || 0;
+        const success = detail.success;
+        const roll = detail.roll ?? 0;
+        const saveBonus = detail.saveBonus ?? 0;
+        const total = detail.total ?? 0;
+        const advantage = promptData?.advantage;
+        const disadvantage = promptData?.disadvantage;
+        const dcSuccess = promptData?.dcSuccess;
+        const sourceName = promptData?.sourceName;
+        const condition = promptData?.condition;
+        const damageFormula = promptData?.damageFormula;
+        const damageType = promptData?.damageType;
+        const rawDamage = promptData?.rawDamage;
+
+        let rollDetail = `rolled ${roll}${saveBonus !== 0 ? ' +' + saveBonus : ''} = ${total}`;
+        if (advantage && disadvantage) {
+            rollDetail += ' (advantage & disadvantage cancel)';
+        } else if (advantage) {
+            rollDetail += ' (advantage)';
+        } else if (disadvantage) {
+            rollDetail += ' (disadvantage)';
+        }
+        if (dcSuccess !== undefined && dcSuccess !== null) {
+            const successLabel = dcSuccess === 0 ? 'none' : (dcSuccess === 0.5 ? 'half' : 'full');
+            rollDetail += ` — ${successLabel} success`;
+        }
+
+        const description = `${targetName} ${success ? 'succeeded' : 'failed'} ${saveType} save (DC ${saveDc}, ${rollDetail})`;
+
+        const entry = {
+            type: 'save_result',
+            characterName: attackerName,
+            targetName,
+            saveDc,
+            saveType,
+            success,
+            roll,
+            total,
+            saveBonus,
+            description,
+        };
+
+        if (sourceName && sourceName !== attackerName) {
+            entry.sourceName = sourceName;
+        }
+        if (condition) {
+            entry.condition = condition;
+        }
+        if (damageFormula) {
+            entry.damageFormula = damageFormula;
+        }
+        if (damageType) {
+            entry.damageType = damageType;
+        }
+        if (rawDamage) {
+            entry.rawDamage = rawDamage;
+        }
+
+        await addEntry(campaignName, entry).catch((e) => { console.error('[savePrompt] Error logging save result:', e); });
         return detail;
     });
 

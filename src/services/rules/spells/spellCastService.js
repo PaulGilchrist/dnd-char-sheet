@@ -172,6 +172,28 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         setRuntimeValue(playerStats.name, 'lastActionSpellCast', 1, campaignName);
     }
 
+    // Look up full spell data from spells.json if the spell object is incomplete
+    // (character sheet stores only { name, prepared } for most spellcasting classes)
+    let fullSpell = spell;
+    const needsLookup = !spell.area_of_effect || (spell.automation?.type && !spell.automation?.effects);
+    if (needsLookup) {
+        try {
+            const spellsUrl = playerStats.rules === '2024' ? '/data/2024/spells.json' : '/data/spells.json';
+            const response = await fetch(spellsUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const allSpells = await response.json();
+            const lookup = allSpells.find(s => s.name === spell.name);
+            if (lookup) {
+                fullSpell = { ...spell, ...lookup, index: undefined, name: spell.name };
+                console.log('[spellCast] Full spell loaded for:', spell.name, 'has dc:', !!fullSpell.dc, 'has aoe:', !!fullSpell.area_of_effect);
+            } else {
+                console.error('[spellCast] Spell not found in spells.json:', spell.name, 'available:', allSpells.filter(s => s.name.toLowerCase().includes('burning')).map(s => s.name));
+            }
+        } catch (e) {
+            console.error('[spellCast] Failed to look up full spell data for:', spell.name, e);
+        }
+    }
+
     const spellLevel = spell.level || 1;
     const innateSorceryActive = isInnateSorceryActive(playerStats.name, campaignName);
     const damageInfo = resolveSpellDamageWithTypes(spell, spellLevel);
@@ -449,7 +471,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
-        if (spell.dc && spell.status_effects && spell.status_effects.length > 0) {
+        if (spell.dc && spell.status_effects && spell.status_effects.length > 0 && !fullSpell.area_of_effect) {
             const target = await getTargetInfo();
             const context = {
                 targetName: target?.name,
@@ -658,7 +680,8 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
         // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
-        if (spell.automation?.type) {
+        // Skip spells with automation.effects — those have AoE/single-target effects handled below
+        if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success) {
             const action = {
                 name: spell.name,
                 spell: spell,
@@ -691,28 +714,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         const effects = hasEldritchHex ? 'ability check disadvantage + saving throw disadvantage' : 'ability check disadvantage';
         addEntry(campaignName, { type: 'spell', characterName: playerStats.name, targetName: hexTarget, spellName: 'Hex', spellLevel: 1, castingTime: '1 bonus action', hexAbility: ability, effectsApplied: effects }).catch(() => {});
         return;
-    }
-
-    // Look up full spell data from spells.json if the spell object is incomplete
-    // (character sheet stores only { name, prepared } for most spellcasting classes)
-    let fullSpell = spell;
-    if (!spell.area_of_effect && !spell.dc) {
-        console.log('[spellCast] Spell missing area_of_effect/dc, looking up:', spell.name, 'spell keys:', Object.keys(spell));
-        try {
-            const spellsUrl = playerStats.rules === '2024' ? '/data/2024/spells.json' : '/data/spells.json';
-            const response = await fetch(spellsUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const allSpells = await response.json();
-            const lookup = allSpells.find(s => s.name === spell.name);
-            if (lookup) {
-                fullSpell = { ...spell, ...lookup, index: undefined, name: spell.name };
-                console.log('[spellCast] Full spell loaded for:', spell.name, 'has dc:', !!fullSpell.dc, 'has aoe:', !!fullSpell.area_of_effect);
-            } else {
-                console.error('[spellCast] Spell not found in spells.json:', spell.name, 'available:', allSpells.filter(s => s.name.toLowerCase().includes('burning')).map(s => s.name));
-            }
-        } catch (e) {
-            console.error('[spellCast] Failed to look up full spell data for:', spell.name, e);
-        }
     }
 
     const rollContext = { ...metaCtx, damageType: effectiveDamageType };
@@ -826,8 +827,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         const aoe = fullSpell.area_of_effect;
         const aoeShape = aoe?.shape || aoe?.type;
         const isAreaShape = aoeShape ? ['emanation','cone','line','sphere','cube','cylinder','square','circle','wall','cage','floor','area'].includes(String(aoeShape).toLowerCase()) : false;
-
-        console.log('[spellCast] Decision for', spell.name, ': spell.dc=', !!spell.dc, 'fullSpell.dc=', !!fullSpell.dc, 'aoeShape=', aoeShape, 'isAreaShape=', isAreaShape);
 
         if (isAreaShape) {
             const cs = getCombatContext(campaignName);

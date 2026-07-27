@@ -196,16 +196,25 @@ function AOEConditionModal({
 
         persistAndNotify(getCombatSummary(campaignName), campaignName);
 
-        setResults(prev => [...prev, {
-            targetName,
-            success,
-            roll: detail.roll ?? 0,
-            total: detail.total ?? 0,
-            saveBonus: detail.saveBonus ?? 0,
-            conditionApplied: !success,
-        }]);
-        setPendingPrompts(prev => prev.filter(p => p.promptId !== detail.promptId));
-    }, [campaignName, saveDc, saveType, pendingPrompts, effects, conditionLabel, applyConditionsToTarget, playerStats.name]);
+        setResults(prev => {
+            const newResults = [...prev, {
+                targetName,
+                success,
+                roll: detail.roll ?? 0,
+                total: detail.total ?? 0,
+                saveBonus: detail.saveBonus ?? 0,
+                conditionApplied: !success,
+            }];
+            return newResults;
+        });
+        setPendingPrompts(prev => {
+            const updated = prev.filter(p => p.promptId !== detail.promptId);
+            if (updated.length === 0) {
+                setTimeout(() => onClose(), 500);
+            }
+            return updated;
+        });
+    }, [campaignName, saveDc, saveType, pendingPrompts, effects, conditionLabel, applyConditionsToTarget, playerStats.name, onClose]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;

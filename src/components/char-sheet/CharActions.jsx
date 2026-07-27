@@ -65,11 +65,7 @@ import { applyMasteryEffect } from '../../services/automation/handlers/combat/we
 import { normalizeAutoDamage } from './useAttackDamageResolution.js';
 
 import './CharActions.css'
-import { isEqual } from 'lodash';
-
-const areEqual = (prevProps, nextProps) => isEqual(prevProps.playerStats, nextProps.playerStats) && prevProps.conditionAttackMode === nextProps.conditionAttackMode && prevProps.exhaustionPenalty === nextProps.exhaustionPenalty && prevProps.cannotAct === nextProps.cannotAct;
-
-const CharActions = React.memo(function CharActions({ playerStats, campaignName, exhaustionPenalty = 0, conditionAttackMode, conditionEffects, cannotAct, mapName, onBuffsChange, characters, onSpellModalStateChange, spellModalState }) {
+const CharActions = function CharActions({ playerStats, campaignName, exhaustionPenalty = 0, conditionAttackMode, conditionEffects, cannotAct, mapName, onBuffsChange, characters, onSpellModalStateChange, spellModalState }) {
     const [actions, setActions] = useState([]);
     const [selectedActionSpell, setSelectedActionSpell] = useState(null);
     const [featRangeEffects, setFeatRangeEffects] = useState(null);
@@ -1974,6 +1970,6 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
             )}
         </div>
     )
-}, areEqual);
+}
 
 export default CharActions
