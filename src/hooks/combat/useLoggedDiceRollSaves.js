@@ -267,7 +267,7 @@ export function createSaves(deps) {
         }
         const ignoreResistance = (pending.playerStats && hasIgnoreResistance(pending.playerStats, pending.damageType)) || false;
         const allCharacters = charactersRef.current || [];
-        const applyResult = applyDamageToTarget(combatSummary, pending.targetName, finalDamage, [pending.damageType], campaignName, allCharacters, ignoreResistance, pending.attackerName || characterName);
+        const applyResult = await applyDamageToTarget(combatSummary, pending.targetName, finalDamage, [pending.damageType], campaignName, allCharacters, ignoreResistance, pending.attackerName || characterName);
 
         storage.set('combatSummary', combatSummary, campaignName);
 

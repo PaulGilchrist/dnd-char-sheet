@@ -52,6 +52,7 @@ export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
 
     return async function logAndShow(name, bonus, rollType, context) {
+        console.log('[useLoggedDiceRollAttack] logAndShow entry:', { name, rollType, contextTargetName: context?.targetName, contextAttackerName: context?.attackerName, contextAutoDamageName: context?.autoDamageName });
         const r1 = rollD20();
         const r2 = rollD20();
 
@@ -251,6 +252,7 @@ export function createLogAndShow(deps) {
         let hit = isAutoMiss ? false : (target ? (effectiveD20Roll + effectiveBonus >= effectiveAc) : undefined);
         const targetName = (rollType === 'attack' || rollType === 'save') ? (target?.name || context?.targetName) : undefined;
         const attackerName = context?.attackerName || characterName;
+        console.log('[useLoggedDiceRollAttack] target resolution:', { targetName, contextTargetName: context?.targetName, targetObjName: target?.name, explicitTargetName, combatSummaryHasCreatures: !!(combatSummary?.creatures?.length) });
         if (rollType === 'save' && !context?.attackerName && context?.saveDc) {
             console.error('[useLoggedDiceRollAttack] Save roll missing context.attackerName:', { characterName, targetName, name, context });
         }
@@ -659,6 +661,7 @@ export function createLogAndShow(deps) {
             }, campaignName);
 
             // Save unified last attack to combat summary for all reaction features
+            console.log('[useLoggedDiceRollAttack] lastAttack write check:', { combatSummary: !!combatSummary, targetName, contextTargetName: context?.targetName, contextAttackerName: context?.attackerName, contextAutoDamageName: context?.autoDamageName });
             if (combatSummary && targetName) {
                 const lastAttackData = {
                     attackerName: characterName,
@@ -709,6 +712,7 @@ export function createLogAndShow(deps) {
                     statusEffects: context?.statusEffects || null,
                     affectedTargets: context?.affectedTargets || [targetName],
                 };
+                console.log('[useLoggedDiceRollAttack] writing lastAttack:', JSON.stringify(lastAttackData, null, 2));
                 setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
             }
 
@@ -775,7 +779,7 @@ export function createLogAndShow(deps) {
                     const grazeFormula = `${grazeDamageAmount} [Graze]`;
                     const combatSummary2 = await loadCombatSummary(campaignName);
                     const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, grazeDamageType)) || false;
-                    const applyResult = applyDamageToTarget(combatSummary2, targetName, grazeDamageAmount, [grazeDamageType], campaignName, characters, ignoreResistance, characterName);
+                    const applyResult = await applyDamageToTarget(combatSummary2, targetName, grazeDamageAmount, [grazeDamageType], campaignName, characters, ignoreResistance, characterName);
                     const grazeTargetMaxHp = target?.type === 'player'
                         ? (getRuntimeValue(target.name, 'hitPoints') ?? 0)
                         : target?.maxHp ?? 0;
@@ -861,7 +865,7 @@ export function createLogAndShow(deps) {
                     const halfDamage = Math.floor(adjustedStoredTotal / 2);
                     const combatSummary2 = await loadCombatSummary(campaignName);
                     const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, context?.damageType)) || false;
-                    const applyResult = applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
+                    const applyResult = await applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
                     const missTargetMaxHp = target?.type === 'player'
                         ? (getRuntimeValue(target.name, 'hitPoints') ?? 0)
                         : target?.maxHp ?? 0;
@@ -907,7 +911,7 @@ export function createLogAndShow(deps) {
                         const halfDamage = Math.floor(adjustedPotentTotal / 2);
                         const combatSummary2 = await loadCombatSummary(campaignName);
                         const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, context?.damageType)) || false;
-                        const applyResult = applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
+                    const applyResult = await applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
                         const missTargetMaxHp = target?.type === 'player'
                             ? (getRuntimeValue(target.name, 'hitPoints') ?? 0)
                             : target?.maxHp ?? 0;
@@ -963,7 +967,7 @@ export function createLogAndShow(deps) {
                     const halfDamage = Math.floor(adjustedPotentTotal / 2);
                     const combatSummary2 = await loadCombatSummary(campaignName);
                     const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, context?.damageType)) || false;
-                    const applyResult = applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
+                    const applyResult = await applyDamageToTarget(combatSummary2, targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, context.attackerName || characterName);
                     const missTargetMaxHp = target?.type === 'player'
                         ? (getRuntimeValue(target.name, 'hitPoints') ?? 0)
                         : target?.maxHp ?? 0;
@@ -1275,7 +1279,7 @@ export function createLogAndShow(deps) {
                     const attackerChar = (characters || []).find(c => c.name === attackerName);
                     const ignoreResistance = (attackerChar?.computedStats && hasIgnoreResistance(attackerChar.computedStats, damageType)) || false;
                     const combatSummaryForSave = await loadCombatSummary(campaignName);
-                    const applyResult = applyDamageToTarget(combatSummaryForSave, applyTarget, finalDamage, [damageType], campaignName, characters, ignoreResistance, attackerName);
+                    const applyResult = await applyDamageToTarget(combatSummaryForSave, applyTarget, finalDamage, [damageType], campaignName, characters, ignoreResistance, attackerName);
 
                     logEntry({
                         type: 'roll',

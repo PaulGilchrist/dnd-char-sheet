@@ -109,13 +109,13 @@ export function rollSaveForCreature(creature, saveType, saveDc, disadvantage = f
   return { roll: finalRoll, total, bonus, success, rawRolls: [roll1, roll2] };
 }
 
-export function applyDamageToTarget(combatSummary, targetName, rawDamage, damageTypes, campaignName, characters, ignoreResistance = false, attackerName = null, suppressHpLog = false, options = {}) {
+export async function applyDamageToTarget(combatSummary, targetName, rawDamage, damageTypes, campaignName, characters, ignoreResistance = false, attackerName = null, suppressHpLog = false, options = {}) {
   if (!combatSummary) return null;
   const creature = combatSummary.creatures.find(c => c.name === targetName);
   if (!creature) return null;
   if (isNaN(rawDamage) || rawDamage === null || rawDamage === undefined) return null;
 
-  const existingAttack = storage.get('lastAttack', campaignName) || null;
+  const existingAttack = await storage.get('lastAttack', campaignName) || null;
   const isSecondary = existingAttack?.primaryDamage != null;
   const newLastAttack = {
     ...existingAttack,

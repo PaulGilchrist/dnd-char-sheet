@@ -32,7 +32,7 @@ import { getChaModifier } from '../../services/rules/spells/metamagicRules.js';
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
 import { registerPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 
-function handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters) {
+async function handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters) {
     if (context?.overchannelActive) {
         if (context?.overchannelUseCount > 1) {
             const overchannelSpellLevel = context?.overchannelSpellLevel || 1;
@@ -42,7 +42,7 @@ function handleOverchannelSelfDamage(characterName, campaignName, context, logEn
             const necroticResult = rollExpression(necroticFormula);
             if (necroticResult) {
                 const casterCombatSummary = getCombatSummary(campaignName);
-                const casterApplyResult = applyDamageToTarget(casterCombatSummary, characterName, necroticResult.total, ['Necrotic'], campaignName, characters, true, characterName);
+                const casterApplyResult = await applyDamageToTarget(casterCombatSummary, characterName, necroticResult.total, ['Necrotic'], campaignName, characters, true, characterName);
                 logEntry({
                     type: 'roll',
                     characterName,
@@ -119,7 +119,7 @@ export function createLogDamageAndShow(deps) {
                 const halfDamage = Math.floor(adjustedPotentTotal / 2);
                 const combatSummary2 = await loadCombatSummary(campaignName);
                 const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, context?.damageType)) || false;
-                const applyResult = applyDamageToTarget(combatSummary2, context?.targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, characterName);
+                const applyResult = await applyDamageToTarget(combatSummary2, context?.targetName, halfDamage, [context?.damageType], campaignName, characters, ignoreResistance, characterName);
                 const target = combatSummary2?.creatures?.find(c => c.name === context?.targetName) || null;
                 const targetMaxHp = target?.type === 'player'
                     ? (getRuntimeValue(target.name, 'hitPoints') ?? 0)
@@ -244,7 +244,7 @@ export function createLogDamageAndShow(deps) {
 
             for (const { creature } of carefulAffected) {
                 if (creature.type === 'npc') {
-                    const applyResult = applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
+                    const applyResult = await applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
                     carefulAllyResults.push({
                         creatureName: creature.name,
                         saveSuccess: true,
@@ -262,7 +262,7 @@ export function createLogDamageAndShow(deps) {
             const carefulAffected = affected.filter(a => isCarefulAlly(a.creature.name));
 
             for (const { creature } of nonCarefulAffected) {
-                const applyResult = applyDamageToTarget(combatSummary, creature.name, adjustedTotal, [damageType], campaignName, characters, false, casterName);
+                const applyResult = await applyDamageToTarget(combatSummary, creature.name, adjustedTotal, [damageType], campaignName, characters, false, casterName);
                 if (applyResult && applyResult.finalDamage > 0) {
                     endInvisibilityOnHostileAction(casterName, campaignName);
                 }
@@ -270,7 +270,7 @@ export function createLogDamageAndShow(deps) {
             }
 
             for (const { creature } of carefulAffected) {
-                const applyResult = applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
+                const applyResult = await applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
                 carefulAllyResults.push({
                     creatureName: creature.name,
                     saveSuccess: true,
@@ -291,7 +291,7 @@ export function createLogDamageAndShow(deps) {
 
         for (const pp of soulstitchProtectedPlayers) {
             const creature = pp.creature;
-            const applyResult = applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
+            const applyResult = await applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
             carefulAllyResults.push({
                 creatureName: creature.name,
                 saveSuccess: true,
@@ -306,7 +306,7 @@ export function createLogDamageAndShow(deps) {
 
         for (const pp of carefulSpellPlayers) {
             const creature = pp.creature;
-            const applyResult = applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
+            const applyResult = await applyDamageToTarget(combatSummary, creature.name, 0, [damageType], campaignName, characters, false, casterName);
             carefulAllyResults.push({
                 creatureName: creature.name,
                 saveSuccess: true,
@@ -565,7 +565,7 @@ export function createLogDamageAndShow(deps) {
                     secondaryRawDamage = Math.floor(secondaryTotal / 2);
                 }
                 const secondaryIgnoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, secondaryDamageType)) || false;
-                const secondaryApplyResult = applyDamageToTarget(combatSummary, target.name, secondaryRawDamage, [secondaryDamageType], campaignName, characters, secondaryIgnoreResistance, characterName, true, { skipConcentration: true });
+                const secondaryApplyResult = await applyDamageToTarget(combatSummary, target.name, secondaryRawDamage, [secondaryDamageType], campaignName, characters, secondaryIgnoreResistance, characterName, true, { skipConcentration: true });
                 secondaryFinalDamage = secondaryApplyResult?.finalDamage ?? secondaryRawDamage;
                 if (secondaryApplyResult && secondaryApplyResult.finalDamage > 0) {
                     endInvisibilityOnHostileAction(characterName, campaignName);
@@ -589,8 +589,8 @@ export function createLogDamageAndShow(deps) {
         }
 
         const primaryApplyResult = secondaryFinalDamage > 0
-          ? applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true, { concentrationTotalDamage: finalDamage + secondaryFinalDamage })
-          : applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true);
+          ? await applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true, { concentrationTotalDamage: finalDamage + secondaryFinalDamage })
+          : await applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true);
 
         if (primaryApplyResult && primaryApplyResult.finalDamage > 0) {
             endInvisibilityOnHostileAction(characterName, campaignName);
@@ -861,7 +861,7 @@ export function createLogDamageAndShow(deps) {
                     gwfDisplayRolls: displayRolls,
                 });
 
-                const twinApplyResult = applyDamageToTarget(combatSummary, twinTarget.name, twinFinalDamage, [damageType], campaignName, characters, ignoreResistance, characterName);
+                const twinApplyResult = await applyDamageToTarget(combatSummary, twinTarget.name, twinFinalDamage, [damageType], campaignName, characters, ignoreResistance, characterName);
 
                 if (twinApplyResult && twinApplyResult.finalDamage > 0) {
                     endInvisibilityOnHostileAction(characterName, campaignName);
@@ -917,7 +917,7 @@ export function createLogDamageAndShow(deps) {
                         gwfOriginalRolls: gwfDisplayRolls !== gwfBaseRolls ? gwfBaseRolls : null,
                     });
 
-                    const multiApplyResult = applyDamageToTarget(combatSummary, multiTarget.name, multiFinalDamage, [damageType], campaignName, null);
+                    const multiApplyResult = await applyDamageToTarget(combatSummary, multiTarget.name, multiFinalDamage, [damageType], campaignName, null);
 
                     setPopupHtml(prev => ({
                         ...prev,
@@ -949,7 +949,7 @@ export function createLogDamageAndShow(deps) {
                         isCrit,
                     });
 
-                    const multiApplyResult = applyDamageToTarget(combatSummary, multiTarget.name, total, [damageType], campaignName, null, ignoreResistance, characterName);
+                    const multiApplyResult = await applyDamageToTarget(combatSummary, multiTarget.name, total, [damageType], campaignName, null, ignoreResistance, characterName);
 
                     if (multiApplyResult && multiApplyResult.finalDamage > 0) {
                         endInvisibilityOnHostileAction(characterName, campaignName);
@@ -1028,7 +1028,7 @@ export function createLogDamageAndShow(deps) {
                 gwfDisplayRolls: gwfDisplayRolls,
             });
 
-            const applyResult = applyDamageToTarget(combatSummary, target.name, carefulDamage, [damageType], campaignName, characters, ignoreResistance, characterName);
+            const applyResult = await applyDamageToTarget(combatSummary, target.name, carefulDamage, [damageType], campaignName, characters, ignoreResistance, characterName);
 
             if (applyResult && applyResult.finalDamage > 0) {
                 endInvisibilityOnHostileAction(characterName, campaignName);
@@ -1089,7 +1089,7 @@ export function createLogDamageAndShow(deps) {
                 gwfDisplayRolls: gwfDisplayRolls,
             });
 
-            const applyResult = applyDamageToTarget(combatSummary, target.name, successfulSave, [damageType], campaignName, null, ignoreResistance, characterName);
+            const applyResult = await applyDamageToTarget(combatSummary, target.name, successfulSave, [damageType], campaignName, null, ignoreResistance, characterName);
 
             if (applyResult && applyResult.finalDamage > 0) {
                 endInvisibilityOnHostileAction(characterName, campaignName);
@@ -1283,7 +1283,7 @@ export function createLogDamageAndShow(deps) {
                     const secondaryIgnoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, secondaryDamageType)) || false;
                     const damageSequenceId = `seq_${Date.now()}_${Math.random()}`;
                     const multiAttackOptions = { damageSequenceId };
-                    secondaryApplyResultData = applyDamageToTarget(combatSummary, target.name, secondaryRawDamage, [secondaryDamageType], campaignName, characters, secondaryIgnoreResistance, characterName, true, { ...multiAttackOptions, skipConcentration: true });
+                    secondaryApplyResultData = await applyDamageToTarget(combatSummary, target.name, secondaryRawDamage, [secondaryDamageType], campaignName, characters, secondaryIgnoreResistance, characterName, true, { ...multiAttackOptions, skipConcentration: true });
                     secondaryFinalDamage = secondaryApplyResultData?.finalDamage ?? secondaryRawDamage;
                     if (secondaryApplyResultData && secondaryApplyResultData.finalDamage > 0) {
                         endInvisibilityOnHostileAction(characterName, campaignName);
@@ -1300,12 +1300,12 @@ export function createLogDamageAndShow(deps) {
                     };
 
                     const totalConcentrationDamage = reducedTotal + secondaryRawDamage;
-                    const primaryApplyResult = applyDamageToTarget(combatSummary, target.name, reducedTotal, [damageType], campaignName, characters, ignoreResistance, characterName, true, { ...multiAttackOptions, concentrationTotalDamage: totalConcentrationDamage });
+                    const primaryApplyResult = await applyDamageToTarget(combatSummary, target.name, reducedTotal, [damageType], campaignName, characters, ignoreResistance, characterName, true, { ...multiAttackOptions, concentrationTotalDamage: totalConcentrationDamage });
                     applyResult = rayReduction > 0 ? { ...primaryApplyResult, rayOfEnfeebleReduction: rayReduction } : primaryApplyResult;
                     clearReTriggeredSequence(damageSequenceId);
                 }
             } else {
-                const primaryApplyResult = applyDamageToTarget(combatSummary, target.name, reducedTotal, [damageType], campaignName, characters, ignoreResistance, characterName, true);
+                const primaryApplyResult = await applyDamageToTarget(combatSummary, target.name, reducedTotal, [damageType], campaignName, characters, ignoreResistance, characterName, true);
                 applyResult = rayReduction > 0 ? { ...primaryApplyResult, rayOfEnfeebleReduction: rayReduction } : primaryApplyResult;
             }
         }
@@ -1451,7 +1451,7 @@ export function createLogDamageAndShow(deps) {
                         note: 'death_strike_damage_roll_before_apply',
                     });
 
-                    const dsApplyResult = applyDamageToTarget(combatSummary, target.name, doubledTotal, [damageType], campaignName, characters, ignoreResistance || false, characterName);
+                    const dsApplyResult = await applyDamageToTarget(combatSummary, target.name, doubledTotal, [damageType], campaignName, characters, ignoreResistance || false, characterName);
 
                     if (!applyResult) {
                         applyResult = dsApplyResult;
@@ -1574,6 +1574,7 @@ export function createLogDamageAndShow(deps) {
         // Store damage rolls for later access (e.g., Piercer feat) — merge into existing lastAttack
         if (popupData.rolls && popupData.damageType) {
             const existingLastAttack = getRuntimeValue('campaign', 'lastAttack', campaignName) || {};
+            console.log('[useLoggedDiceRollDamage] existing lastAttack before merge:', JSON.stringify(existingLastAttack, null, 2));
             const lastAttackData = {
                 ...existingLastAttack,
                 rolls: displayRolls,
@@ -1586,6 +1587,7 @@ export function createLogDamageAndShow(deps) {
                 statusEffects: context?.statusEffects || null,
                 affectedTargets: context?.affectedTargets || [target?.name].filter(Boolean),
             };
+            console.log('[useLoggedDiceRollDamage] writing merged lastAttack:', JSON.stringify(lastAttackData, null, 2));
             setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }
 
@@ -1610,7 +1612,7 @@ export function createLogDamageAndShow(deps) {
                     gwfDisplayRolls: gwfDisplayRolls,
                 });
 
-                const twinApplyResult = applyDamageToTarget(combatSummary, twinTarget.name, adjustedTotal, [damageType], campaignName, characters, false, characterName);
+                const twinApplyResult = await applyDamageToTarget(combatSummary, twinTarget.name, adjustedTotal, [damageType], campaignName, characters, false, characterName);
 
                 if (twinApplyResult && twinApplyResult.finalDamage > 0) {
                     endInvisibilityOnHostileAction(characterName, campaignName);
@@ -1648,7 +1650,7 @@ export function createLogDamageAndShow(deps) {
                     gwfDisplayRolls: gwfDisplayRolls,
                 });
 
-                const multiApplyResult = applyDamageToTarget(combatSummary, multiTarget.name, adjustedTotal, [damageType], campaignName, null, false, characterName);
+                const multiApplyResult = await applyDamageToTarget(combatSummary, multiTarget.name, adjustedTotal, [damageType], campaignName, null, false, characterName);
 
                 setPopupHtml(prev => ({
                     ...prev,

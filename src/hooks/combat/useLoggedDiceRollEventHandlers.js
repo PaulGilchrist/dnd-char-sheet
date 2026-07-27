@@ -22,7 +22,7 @@ export function setupEventListeners(deps) {
     if (!window.__pendingResultHandlersInstalled) {
         window.__pendingResultHandlersInstalled = true;
 
-        window.addEventListener('save-result', (e) => {
+        window.addEventListener('save-result', async (e) => {
             const pending = getPendingSavePrompt(e.detail.promptId);
             if (!pending) return;
 
@@ -105,8 +105,8 @@ export function setupEventListeners(deps) {
 
             // Apply primary damage with combined concentration total (if secondary exists)
             const applyResult = secondaryData
-                ? applyDamageToTarget(combatSummary, pendingTargetName, finalDamage, [pending.damageType], pending.campaignName, charactersRef.current, ignoreResistance, attacker, true, { concentrationTotalDamage: finalDamage + secondaryData.total })
-                : applyDamageToTarget(combatSummary, pendingTargetName, finalDamage, [pending.damageType], pending.campaignName, charactersRef.current, ignoreResistance, attacker, true);
+                ? await applyDamageToTarget(combatSummary, pendingTargetName, finalDamage, [pending.damageType], pending.campaignName, charactersRef.current, ignoreResistance, attacker, true, { concentrationTotalDamage: finalDamage + secondaryData.total })
+                : await applyDamageToTarget(combatSummary, pendingTargetName, finalDamage, [pending.damageType], pending.campaignName, charactersRef.current, ignoreResistance, attacker, true);
 
             const isIntercepted = applyResult?.intercepted;
             const appliedDamage = isIntercepted ? (applyResult.damageDealt ?? 0) : (applyResult?.finalDamage ?? 0);
@@ -119,7 +119,7 @@ export function setupEventListeners(deps) {
             let secondaryFinalDamage = 0;
             let secondaryApplyResultData = null;
             if (secondaryData) {
-                secondaryApplyResultData = applyDamageToTarget(combatSummary, pendingTargetName, secondaryData.total, [secondaryData.damageType], pending.campaignName, charactersRef.current, secondaryData.ignoreResistance, attacker, true, { skipConcentration: true });
+                secondaryApplyResultData = await applyDamageToTarget(combatSummary, pendingTargetName, secondaryData.total, [secondaryData.damageType], pending.campaignName, charactersRef.current, secondaryData.ignoreResistance, attacker, true, { skipConcentration: true });
                 secondaryFinalDamage = secondaryApplyResultData?.finalDamage ?? secondaryData.total;
                 if (secondaryApplyResultData && secondaryApplyResultData.finalDamage > 0) {
                     endInvisibilityOnHostileAction(attacker, pending.campaignName);
@@ -254,7 +254,7 @@ export function setupEventListeners(deps) {
                 const necroticResult = rollExpression(necroticFormula);
                 if (necroticResult) {
                     const casterCombatSummary = getCombatSummary(campaignName);
-                    const casterApplyResult = applyDamageToTarget(casterCombatSummary, characterName, necroticResult.total, ['Necrotic'], campaignName, charactersRef.current, true, characterName);
+                    const casterApplyResult = await applyDamageToTarget(casterCombatSummary, characterName, necroticResult.total, ['Necrotic'], campaignName, charactersRef.current, true, characterName);
                     logEntry({
                         type: 'roll',
                         characterName,

@@ -328,7 +328,7 @@ describe('changeData - saveFile', () => {
             f.filePath.includes('test-campaign'),
         );
         expect(file).toBeDefined();
-        expect(file.data).toBe(JSON.stringify(testData));
+        expect(file.data).toBe(JSON.stringify(testData, null, 2));
     });
 
     it('should handle empty campaign store gracefully', () => {
@@ -361,7 +361,7 @@ describe('changeData - saveFile', () => {
         const file = savedData.writtenFiles.find(f =>
             f.filePath.includes('complex-campaign'),
         );
-        expect(file.data).toBe(JSON.stringify(complexData));
+        expect(file.data).toBe(JSON.stringify(complexData, null, 2));
     });
 
     it('should handle write errors without crashing', () => {

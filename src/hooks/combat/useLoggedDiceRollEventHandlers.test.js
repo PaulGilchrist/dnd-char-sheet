@@ -2,6 +2,8 @@
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
+
 vi.mock('../../services/rules/effects/expirations.js', () => ({ addExpiration: vi.fn() }));
 vi.mock('../../services/dice/diceRoller.js', () => ({ rollExpression: vi.fn(), rollExpressionDoubled: vi.fn() }));
 vi.mock('../../services/encounters/combatData.js', () => ({ getCombatSummary: vi.fn() }));
@@ -104,11 +106,12 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
 
     // --- save-result: basic ---
     describe('save-result event', () => {
-        it('applies damage and logs when save fails', () => {
+        it('applies damage and logs when save fails', async () => {
             setup();
             const pid = 'p1';
             testPendingSaves = { [pid]: createSavePrompt(pid) };
             window.dispatchEvent(new CustomEvent('save-result', { detail: { promptId: pid, targetName: 'Goblin', success: false, roll: 8, total: 11, saveBonus: 3 } }));
+            await flushPromises();
             expect(applyDamageToTarget).toHaveBeenCalled();
             expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({ type: 'roll', rollType: 'save-damage', name: 'Fireball' }));
         });

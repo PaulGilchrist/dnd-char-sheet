@@ -118,7 +118,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
   });
 
   describe('Dragon Constellation advantage', () => {
-    it('grants concentration save advantage when Starry Form Dragon is active', () => {
+    it('grants concentration save advantage when Starry Form Dragon is active', async () => {
       const dragonConstellationCreature = createNpcCreature('Druid', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -143,14 +143,14 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
       rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 20 });
 
-      applyDamageToTarget(cs, 'Druid', 10, ['Slashing'], 'TestCampaign', [
+      await applyDamageToTarget(cs, 'Druid', 10, ['Slashing'], 'TestCampaign', [
         createMinimalCharacter('Druid', 1),
       ]);
 
       expect(rollConcentrationSave).toHaveBeenCalledWith(0, 10, true, false);
     });
 
-    it('does not grant advantage for non-Dragon constellations', () => {
+    it('does not grant advantage for non-Dragon constellations', async () => {
       const druidCreature = createNpcCreature('Druid', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -175,7 +175,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
       rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 15 });
 
-      applyDamageToTarget(cs, 'Druid', 10, ['Slashing'], 'TestCampaign', [
+      await applyDamageToTarget(cs, 'Druid', 10, ['Slashing'], 'TestCampaign', [
         createMinimalCharacter('Druid', 1),
       ]);
 
@@ -184,7 +184,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
   });
 
   describe('Relentless Hunter — Ranger level 13+', () => {
-    it('skips concentration save for Rangers level 13+', () => {
+    it('skips concentration save for Rangers level 13+', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -200,7 +200,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
       stubNpcRuntime(30);
 
-      applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
+      await applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
 
       // Relentless Hunter skips the concentration save entirely
       expect(rollConcentrationSave).not.toHaveBeenCalled();
@@ -208,7 +208,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       expect(rangerCreature.concentration).not.toBeNull();
     });
 
-    it('does not skip concentration save for Rangers below level 13', () => {
+    it('does not skip concentration save for Rangers below level 13', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -225,12 +225,12 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       stubNpcRuntime(30);
       rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 15 });
 
-      applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
+      await applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
 
       expect(rollConcentrationSave).toHaveBeenCalled();
     });
 
-    it('does not skip concentration save for non-Rangers regardless of level', () => {
+    it('does not skip concentration save for non-Rangers regardless of level', async () => {
       const wizardCreature = createNpcCreature('Wizard', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -247,12 +247,12 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       stubNpcRuntime(30);
       rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 15 });
 
-      applyDamageToTarget(cs, 'Wizard', 10, ['Slashing'], 'TestCampaign', [wizardCharacter]);
+      await applyDamageToTarget(cs, 'Wizard', 10, ['Slashing'], 'TestCampaign', [wizardCharacter]);
 
       expect(rollConcentrationSave).toHaveBeenCalled();
     });
 
-    it('throws when Ranger player level is null', () => {
+    it('throws when Ranger player level is null', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
@@ -286,7 +286,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
 
   describe('concentration save logging', () => {
-    it('logs a condition entry when NPC fails save (no special features)', () => {
+    it('logs a condition entry when NPC fails save (no special features)', async () => {
       const orcCreature = createNpcCreature('Orc', 30, 30, {
         concentration: { spell: 'Haste', dc: 15 },
         saveBonuses: { con: -1 },
@@ -296,7 +296,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       stubNpcRuntime(30);
       rollConcentrationSave.mockReturnValue({ success: false, roll: 5, total: 4 });
 
-      applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
+      await applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
         createMinimalCharacter('Orc', 1),
       ]);
 
@@ -309,7 +309,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       expect(orcCreature.concentration).toBeNull();
     });
 
-    it('logs a roll entry when NPC passes save (no special features)', () => {
+    it('logs a roll entry when NPC passes save (no special features)', async () => {
       const orcCreature = createNpcCreature('Orc', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 5 },
@@ -319,7 +319,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       stubNpcRuntime(30);
       rollConcentrationSave.mockReturnValue({ success: true, roll: 12, total: 17 });
 
-      applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
+      await applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
         createMinimalCharacter('Orc', 1),
       ]);
 
@@ -337,7 +337,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
   });
 
   describe('save bonus from creature', () => {
-    it('uses creature saveBonuses con for concentration save', () => {
+    it('uses creature saveBonuses con for concentration save', async () => {
       const creature = createNpcCreature('Orc', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 3 },
@@ -347,7 +347,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       stubNpcRuntime(30);
       rollConcentrationSave.mockReturnValue({ success: true, roll: 10, total: 13 });
 
-      applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
+      await applyDamageToTarget(cs, 'Orc', 10, ['Slashing'], 'TestCampaign', [
         createMinimalCharacter('Orc', 1),
       ]);
 
