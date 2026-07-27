@@ -70,6 +70,18 @@ export const readFile = () => {
                         }
                         delete data[campaign];
                     }
+                    // Migrate: flatten deprecated "campaign" wrapper to top level
+                    if (data['campaign'] && typeof data['campaign'] === 'object') {
+                        const nested = data['campaign'];
+                        for (const [key, value] of Object.entries(nested)) {
+                            if (isCampaignDataKey(key)) {
+                                if (!(key in data)) {
+                                    data[key] = value;
+                                }
+                            }
+                        }
+                        delete data['campaign'];
+                    }
                     characterChangeData.set(campaign, data);
                 } else {
                     characterChangeData.set(campaign, {});

@@ -21,7 +21,8 @@ const storage = {
             return null;
         }
         try {
-            const response = await fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(key)}`);
+            const fullUrl = `/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(key)}`;
+            const response = await fetch(fullUrl);
             if (response.ok) {
                 const data = await response.json();
                 if (data.value != null) {
@@ -61,6 +62,10 @@ const storage = {
           }).catch(() => {});
       },
     getProperty: async (name, propertyName, campaignName) => {
+        // Campaign-level keys are stored at the top level, not under a "campaign" wrapper.
+        if (name === 'campaign') {
+            return await storage.get(propertyName, campaignName);
+        }
         const firstName = utils.getName(name);
         const obj = await storage.get(firstName, campaignName);
         if(obj && obj[propertyName] != null) {
@@ -69,6 +74,11 @@ const storage = {
         return null;
       },
     setProperty: async (name, propertyName, value, campaignName) => {
+        // Campaign-level keys are stored at the top level, not under a "campaign" wrapper.
+        if (name === 'campaign') {
+            await storage.set(propertyName, value, campaignName);
+            return;
+        }
         const firstName = utils.getName(name);
         // For combatSummary.lastAttack, merge with the full combatSummary from server
         if (name === 'combatSummary' && propertyName === 'lastAttack') {

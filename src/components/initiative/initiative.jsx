@@ -208,7 +208,13 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         const dataKey = event.key.slice(`change-${campaignName}-`.length)
         if (dataKey === 'combatSummary') {
             if (!event.data?.creatures) return
-            const merged = { ...event.data, activeCreatureName: event.data.activeCreatureName || activeCreatureName }
+            const merged = { ...event.data }
+            if (!merged.activeCreatureName) {
+                const activeName = getActiveCreatureName(campaignName)
+                if (activeName) {
+                    merged.activeCreatureName = activeName
+                }
+            }
             combatSummaryRef.current = merged
             setCombatSummaryCache(merged, campaignName)
             setCombatSummaryG(merged)
@@ -250,7 +256,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                // so ConditionEffectBadges picks up the updated runtime state
                setRuntimeStateTick(t => t + 1)
            }
-        }, [campaignName, characters, activeCreatureName, handleOverlayEvent, setCombatSummaryG, setActiveCreatureNameG])
+        }, [campaignName, characters, handleOverlayEvent, setCombatSummaryG, setActiveCreatureNameG])
 
     React.useEffect(() => {
         if (!combatSummary) return
@@ -303,12 +309,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             if (!cs) return
             const { newActiveName, roundIncrement } = getNextCreatureName(cs, activeCreatureName)
             if (!roundIncrement) {
-               cs.activeCreatureName = newActiveName
-                storage.set('activeCreatureName', newActiveName, campaignName)
-               setActiveCreatureName(newActiveName)
+                 storage.set('activeCreatureName', newActiveName, campaignName)
+                setActiveCreatureName(newActiveName)
               } else {
                 cs.round++
-                cs.activeCreatureName = newActiveName
                 storage.set('combatSummary', cs, campaignName)
                 setCombatSummary(cloneDeep(cs))
                 storage.set('activeCreatureName', newActiveName, campaignName)
@@ -380,12 +384,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 if (!activeCreatureNameRef.current) {
                     const activeName = getActiveCreatureName(campaignName)
                     if (activeName) {
-                        merged.activeCreatureName = activeName
                         setActiveCreatureName(activeName)
                         activeCreatureNameRef.current = activeName
                     } else {
                         const firstCreature = merged.creatures[0]?.name || null
-                        merged.activeCreatureName = firstCreature
                         setActiveCreatureName(firstCreature)
                         activeCreatureNameRef.current = firstCreature
                     }
@@ -395,7 +397,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 const creatures = setupCreatures(characters, numOfNpc, utils.getName)
                 const newSummary = { round: 1, creatures }
                 const firstName = creatures[0]?.name
-                newSummary.activeCreatureName = firstName
                 storage.set('combatSummary', newSummary, campaignName)
                 setCombatSummary(newSummary)
                 combatSummaryRef.current = newSummary
@@ -462,7 +463,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const summary = getCombatSummary(campaignName)
             if (!summary) return
             combatSummaryRef.current = summary
-            summary.activeCreatureName = summary.creatures[0]?.name
             let clearedHuntersMark = false
             for (const creature of (summary?.creatures || [])) {
                 if (creature.type === 'player') {

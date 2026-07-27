@@ -90,25 +90,40 @@ export function setRuntimeValue(characterKey, propertyName, value, campaignName)
       return;
     }
     store.set(propertyName, value);
-    const obj = Object.fromEntries(store);
 
    if (!campaignName) {
      console.error('setRuntimeValue called with undefined campaignName', { characterKey, propertyName, value, stack: new Error().stack });
    }
+
+   // Campaign-level keys are stored at the top level of the change data file.
+   // POST the individual property directly instead of accumulating into a "campaign" wrapper.
+   if (characterKey === 'campaign') {
+     const fullUrl = `/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(propertyName)}`;
+     fetch(fullUrl, {
+       method: 'POST',
+       mode: 'cors',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ value })
+     }).catch((e) => { console.error("[useRuntimeState] Error:", e); });
+     notify(characterKey);
+     return;
+   }
+
+   const obj = Object.fromEntries(store);
 
    // When characterKey === propertyName, the server would extract the wrong value
    // from the full store object (it would get value[characterKey] instead of value[propertyName]).
    // Send the value directly in this case.
    const bodyValue = characterKey === propertyName ? { value } : { value: obj };
 
-    fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(characterKey)}`, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyValue)
-    }).catch((e) => { console.error("[useRuntimeState] Error:", e); });
+     fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(characterKey)}`, {
+       method: 'POST',
+       mode: 'cors',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify(bodyValue)
+     }).catch((e) => { console.error("[useRuntimeState] Error:", e); });
 
-   notify(characterKey);
+    notify(characterKey);
 }
 
 export function setRuntimeObject(characterKey, fullObject, campaignName, skipSync = false) {

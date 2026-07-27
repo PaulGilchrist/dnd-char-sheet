@@ -1,4 +1,5 @@
 import { getCombatContext } from '../rules/combat/damageUtils.js'
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 
 export { getCombatContext }
 
@@ -27,6 +28,12 @@ export async function loadCombatSummary(campaignName) {
         if (fromApi.creatures?.length > 0 && !fromApi.activeCreatureName) {
           fromApi.activeCreatureName = fromApi.creatures[0].name
         }
+        if (!fromApi.activeCreatureName) {
+          const topLevel = getRuntimeValue('campaign', 'activeCreatureName', campaignName)
+          if (topLevel) {
+            fromApi.activeCreatureName = topLevel
+          }
+        }
         setCombatSummaryCache(fromApi, campaignName)
         return fromApi
       }
@@ -47,6 +54,10 @@ export async function loadActiveCreatureName(campaignName) {
       const fromApi = await getCombatContext(campaignName)
       if (fromApi?.activeCreatureName) {
         return fromApi.activeCreatureName
+      }
+      const topLevel = getRuntimeValue('campaign', 'activeCreatureName', campaignName)
+      if (topLevel) {
+        return topLevel
       }
     } catch { /* fall through */ }
   }

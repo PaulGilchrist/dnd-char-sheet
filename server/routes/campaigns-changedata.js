@@ -50,6 +50,15 @@ router.post('/api/campaigns/:campaign/positioning', asyncHandler((req, res) => {
 router.get('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
     const { campaign, key } = req.params;
     if (key === 'log') return next();
+    if (key === 'campaign') {
+        console.error(
+            '[campaigns-changedata] Client read from deprecated "campaign" key. ' +
+            `Campaign: "${campaign}", key: "${key}". Campaign-level keys should GET from /api/campaigns/:campaign/:key directly. ` +
+            'Check useRuntimeState.js or storage.js for getRuntimeValue("campaign", ...) or storage.getProperty("campaign", ...).',
+            { campaign, key, stack: new Error().stack }
+        );
+        return res.status(400).json({ error: 'Use /api/campaigns/:campaign/:key for campaign-level data' });
+    }
     if (key === campaign) {
         console.error(
             '[campaigns-changedata] GET to :campaign/:campaign with key === campaign. ' +
@@ -70,7 +79,15 @@ router.get('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
 router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
     const { campaign, key } = req.params;
     if (key === 'log') return next();
-    const value = req.body.value || req.body;
+    if (key === 'campaign') {
+        console.error(
+            '[campaigns-changedata] Client wrote to deprecated "campaign" key. ' +
+            `Campaign: "${campaign}", key: "${key}". Campaign-level keys should POST to /api/campaigns/:campaign/:key directly. ` +
+            'Check useRuntimeState.js or storage.js for setRuntimeValue("campaign", ...) or storage.setProperty("campaign", ...).',
+            { campaign, key, body: req.body, stack: new Error().stack }
+        );
+        return res.status(400).json({ error: 'Use /api/campaigns/:campaign/:key for campaign-level data' });
+    }
 
     if (key === campaign) {
         console.error(
@@ -79,6 +96,8 @@ router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
             { campaign, key, stack: new Error().stack }
         );
     }
+
+    const value = req.body.value || req.body;
 
     if (!characterChangeData.has(campaign)) {
         characterChangeData.set(campaign, {});
