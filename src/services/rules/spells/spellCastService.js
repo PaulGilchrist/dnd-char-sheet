@@ -105,6 +105,7 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 }
 
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
+    console.log('[spellCast] executeSpellCast ENTER:', spell.name, 'keys:', Object.keys(spell).join(','));
     if (getActiveBuffs(playerStats.name, campaignName).some(b => b.blocksSpellcasting)) {
         return;
     }
@@ -693,6 +694,28 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return;
     }
 
+    // Look up full spell data from spells.json if the spell object is incomplete
+    // (character sheet stores only { name, prepared } for most spellcasting classes)
+    let fullSpell = spell;
+    if (!spell.area_of_effect && !spell.dc) {
+        console.log('[spellCast] Spell missing area_of_effect/dc, looking up:', spell.name, 'spell keys:', Object.keys(spell));
+        try {
+            const spellsUrl = playerStats.rules === '2024' ? '/data/2024/spells.json' : '/data/spells.json';
+            const response = await fetch(spellsUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const allSpells = await response.json();
+            const lookup = allSpells.find(s => s.name === spell.name);
+            if (lookup) {
+                fullSpell = { ...spell, ...lookup, index: undefined, name: spell.name };
+                console.log('[spellCast] Full spell loaded for:', spell.name, 'has dc:', !!fullSpell.dc, 'has aoe:', !!fullSpell.area_of_effect);
+            } else {
+                console.error('[spellCast] Spell not found in spells.json:', spell.name, 'available:', allSpells.filter(s => s.name.toLowerCase().includes('burning')).map(s => s.name));
+            }
+        } catch (e) {
+            console.error('[spellCast] Failed to look up full spell data for:', spell.name, e);
+        }
+    }
+
     const rollContext = { ...metaCtx, damageType: effectiveDamageType };
 
     if (attackerPos && targetPos) {
@@ -793,17 +816,19 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         }
     }
 
-    if (spell.dc) {
+    if (spell.dc || fullSpell.dc) {
         try {
-            await triggerSoulstitchSpells(spell, metaCtx, playerStats, campaignName, mapName);
+            await triggerSoulstitchSpells(fullSpell, metaCtx, playerStats, campaignName, mapName);
         } catch (e) {
             console.error('[spellCast] Soulstitch Spells trigger failed:', e);
         }
 
         // AoE spells without dedicated automation: show modal for creature selection
-        const aoe = spell.area_of_effect;
+        const aoe = fullSpell.area_of_effect;
         const aoeShape = aoe?.shape || aoe?.type;
         const isAreaShape = aoeShape ? ['emanation','cone','line','sphere','cube','cylinder','square','circle','wall','cage','floor','area'].includes(String(aoeShape).toLowerCase()) : false;
+
+        console.log('[spellCast] Decision for', spell.name, ': spell.dc=', !!spell.dc, 'fullSpell.dc=', !!fullSpell.dc, 'aoeShape=', aoeShape, 'isAreaShape=', isAreaShape);
 
         if (isAreaShape) {
             const cs = getCombatContext(campaignName);
@@ -822,9 +847,9 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 }
             }
 
-            const rangeFeet = rangeToFeet(spell.range);
+            const rangeFeet = rangeToFeet(fullSpell.range || spell.range);
             const slotLevel = metaCtx?.slotLevel || spell.level;
-            const damageAtSlotLevel = spell.damage?.damage_at_slot_level || spell.damage?.damage_at_character_level || {};
+            const damageAtSlotLevel = fullSpell.damage?.damage_at_slot_level || fullSpell.damage?.damage_at_character_level || spell.damage?.damage_at_slot_level || {};
             let damageExpression = damageAtSlotLevel[slotLevel];
             if (!damageExpression && Object.keys(damageAtSlotLevel).length > 0) {
                 const levels = Object.keys(damageAtSlotLevel).map(Number).sort((a, b) => a - b);
@@ -843,16 +868,19 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                     type: 'modal',
                     modalName: 'saveAttackAoe',
                     payload: {
-                        action: { name: spell.name, automation: {}, spell },
+                        action: { name: fullSpell.name, automation: {}, spell: fullSpell },
                         playerStats,
                         campaignName,
                         shape: aoeShape,
                         range: rangeFeet,
                         damage: damageExpression || '0',
                         damageType: effectiveDamageType,
-                        saveType: spell.dc.dc_type || 'DEX',
+                        saveType: fullSpell.dc?.dc_type || spell.dc.dc_type || 'DEX',
                         saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),
-                        dcSuccess: spell.dc.dc_success === 0 ? 'none' : (spell.dc.dc_success === 0.5 ? 'half' : spell.dc.dc_success),
+                        dcSuccess: (() => {
+                            const success = fullSpell.dc?.dc_success ?? spell.dc.dc_success;
+                            return success === 0 ? 'none' : (success === 0.5 ? 'half' : success);
+                        })(),
                          activeOverlay,
                          metamagicCareful: metaCtx?.metamagicCareful || false,
                          metamagicHeighten: hasInvisible || metaCtx?.metamagicHeighten,
@@ -867,8 +895,8 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             attackerName: playerStats.name,
             ...rollContext,
             saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),
-            saveType: spell.dc.dc_type,
-            dcSuccess: spell.dc.dc_success,
+            saveType: fullSpell.dc?.dc_type || spell.dc.dc_type,
+            dcSuccess: fullSpell.dc?.dc_success ?? spell.dc.dc_success,
             metamagicHeighten: hasInvisible || metaCtx?.metamagicHeighten,
             isCantrip: spell.baseLevel === 0 || spell.level === 0,
             overchannelActive,

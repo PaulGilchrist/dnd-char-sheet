@@ -167,11 +167,12 @@ function SaveAttackAoeModal({
                         saveDc: saveDc,
                         sourceName: playerStats.name,
                         rawDamage,
+                        dcSuccess,
                         disadvantage: heightenTarget === targetName,
                     });
 
-                    const existingPrompts = new Set(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
-                    existingPrompts.add(promptId);
+                    const existingPrompts = Array.from(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
+                    existingPrompts.push(promptId);
                     setRuntimeValue('campaign', 'pendingSaveListenerPrompts', existingPrompts, campaignName);
 
                     prompts.push({ promptId, targetName });
@@ -225,6 +226,8 @@ function SaveAttackAoeModal({
         const resolvedDamage = scalingEntry?.damage || damage;
         const damageRoll = rollExpression(resolvedDamage);
 
+        const combatSummary = getCombatSummary(campaignName);
+
         if (finalDamage > 0) {
             addEntry(campaignName, {
                 type: 'roll',
@@ -242,7 +245,6 @@ function SaveAttackAoeModal({
                 timestamp: Date.now(),
             }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging player save:', e); });
 
-            const combatSummary = getCombatSummary(campaignName);
             const characters = combatSummary?.creatures?.filter(c => c.type === 'player') || [];
             applyDamageToTarget(
                 combatSummary, targetName, finalDamage, [damageType],
@@ -294,7 +296,9 @@ function SaveAttackAoeModal({
             timestamp: Date.now(),
         }, campaignName);
 
-        persistAndNotify(combatSummary, campaignName);
+        if (combatSummary) {
+            persistAndNotify(combatSummary, campaignName);
+        }
         const targetResult = {
             targetName,
             success,
@@ -317,7 +321,7 @@ function SaveAttackAoeModal({
             });
             setPendingPrompts(prev => prev.filter(p => p.promptId !== detail.promptId));
         }
-    }, [campaignName, combatSummary, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts]);
+    }, [campaignName, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;

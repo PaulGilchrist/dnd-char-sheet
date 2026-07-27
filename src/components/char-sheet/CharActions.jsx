@@ -641,6 +641,7 @@ const CharActions = React.memo(function CharActions({ playerStats, campaignName,
         buildCtxSync,
         handleAttackClick,
         handleDamageClick: resolveAttackDamage,
+        setModalState,
     });
 
     const MONK_KI_FEATURES = ['Flurry of Blows', 'Patient Defense', 'Step of the Wind', 'Heightened Flurry of Blows', 'Heightened Patient Defense', 'Heightened Step of the Wind', 'Hand of Healing', 'Stunning Strike'];

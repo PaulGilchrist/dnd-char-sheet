@@ -21,6 +21,7 @@ export function useActionSpellMetamagic({
     buildCtx,
     buildCtxSync,
     handleAttackClick,
+    setModalState,
 }) {
     const [pendingActionMetamagic, setPendingActionMetamagic] = useState(null);
     const isBonusSorcerer = playerStats.class?.name === 'Sorcerer';
@@ -157,6 +158,33 @@ export function useActionSpellMetamagic({
     }, [pendingActionMetamagic, playerStats.name, campaignName]);
 
     const resolveSpellDamage = async (attack) => {
+
+        const aoe = attack.area_of_effect;
+        const aoeShape = aoe?.shape || aoe?.type;
+        const isAreaShape = aoeShape ? ['emanation','cone','line','sphere','cube','cylinder','square','circle','wall','cage','floor','area'].includes(String(aoeShape).toLowerCase()) : false;
+        if (isAreaShape && setModalState) {
+            const saveDcValue = attack.saveDc || playerStats.spellAbilities?.saveDc;
+            const dcSuccessValue = attack.saveSuccess === 0 ? 'none' : (attack.saveSuccess === 0.5 ? 'half' : attack.saveSuccess);
+            const damageExpression = attack.damage || '0';
+            const damageType = attack.damageType || '';
+            const saveType = attack.saveType || 'DEX';
+            const range = attack.range || '15 feet';
+            const rangeFeet = range === 'Self' ? 0 : (typeof range === 'number' ? range : parseInt(String(range).replace(/[^0-9]/g, '')) || 0);
+            setModalState({ saveAttackAoeModal: {
+                action: { name: attack.name, automation: {}, spell: attack },
+                playerStats,
+                campaignName,
+                shape: aoeShape,
+                range: rangeFeet,
+                damage: damageExpression,
+                damageType,
+                saveType,
+                saveDc: saveDcValue,
+                dcSuccess: dcSuccessValue,
+            }});
+            return;
+        }
+
         if (!isBonusSorcerer) {
             const spell = playerStats.spellAbilities?.spells?.find(s => s.name === attack.name);
             if (!spell) {
