@@ -30,14 +30,107 @@
   font-size: 0.8rem;
 }
 
-/* Description as paragraph with pre-wrap */
+/* Description with rendered markdown */
 .notes-list-description {
   margin: 0;
   font-size: 0.88rem;
   color: var(--color-text);
-  line-height: 1.4;
-  white-space: pre-wrap;
+  line-height: 1.5;
   word-break: break-word;
+}
+
+.notes-list-description .markdown-preview {
+  font-size: inherit;
+}
+
+.notes-list-description .markdown-preview h1 {
+  font-size: 1.1rem;
+  margin: 0.3em 0 0.15em;
+}
+
+.notes-list-description .markdown-preview h2 {
+  font-size: 1rem;
+  margin: 0.3em 0 0.15em;
+}
+
+.notes-list-description .markdown-preview h3 {
+  font-size: 0.95rem;
+  margin: 0.3em 0 0.15em;
+}
+
+.notes-list-description .markdown-preview h4 {
+  font-size: 0.9rem;
+  margin: 0.3em 0 0.15em;
+}
+
+.notes-list-description .markdown-preview h5,
+.notes-list-description .markdown-preview h6 {
+  font-size: 0.88rem;
+  margin: 0.3em 0 0.15em;
+}
+
+.notes-list-description .markdown-preview p {
+  margin: 0.25em 0;
+}
+
+.notes-list-description .markdown-preview ul,
+.notes-list-description .markdown-preview ol {
+  margin: 0.25em 0;
+  padding-left: 1.5em;
+}
+
+.notes-list-description .markdown-preview li {
+  margin: 0.1em 0;
+}
+
+.notes-list-description .markdown-preview blockquote {
+  border-left: 3px solid var(--border-color-light);
+  margin: 0.25em 0;
+  padding: 0.15em 0.75em;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.notes-list-description .markdown-preview code {
+  background: var(--code-bg, #f4f4f4);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+
+.notes-list-description .markdown-preview pre {
+  background: var(--code-bg, #f4f4f4);
+  padding: 8px 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  margin: 0.3em 0;
+}
+
+.notes-list-description .markdown-preview pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.notes-list-description .markdown-preview hr {
+  border: none;
+  border-top: 1px solid var(--border-color-light);
+  margin: 0.5em 0;
+}
+
+.notes-list-description .markdown-preview a {
+  color: var(--link-color, #1a73e8);
+  text-decoration: underline;
+}
+
+.notes-list-description .markdown-preview strong {
+  font-weight: 700;
+}
+
+.notes-list-description .markdown-preview em {
+  font-style: italic;
 }
 
 /* Textarea override: Notes uses taller textarea */

@@ -3,6 +3,7 @@ import { useCrudList } from '../../hooks/useCrudList.js';
 import { useEntityManagement } from '../../hooks/useEntityManagement.js';
 import { loadNotes, saveNotes, deleteNote } from '../../services/campaign/notesService.js';
 import PreviewToggle from '../common/PreviewToggle.jsx';
+import MarkdownPreview from '../common/MarkdownPreview.jsx';
 import './Notes.css';
 
 function Notes({ campaignName, characters, isLocalhost, onBack }) {
@@ -208,9 +209,9 @@ function Notes({ campaignName, characters, isLocalhost, onBack }) {
                   )}
                 </div>
               </div>
-              <p className="notes-list-description">
-                {truncateDescription(note.description, 150)}
-              </p>
+              <div className="notes-list-description">
+                <MarkdownPreview text={truncateDescription(note.description, 150)} />
+              </div>
             </li>
           ))}
         </ul>
