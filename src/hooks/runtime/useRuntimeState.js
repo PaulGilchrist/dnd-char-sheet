@@ -46,7 +46,7 @@ export function seedTrackedResources(characterKey, trackedEntries) {
     }
 }
 
-function notify(characterKey) {
+export function notify(characterKey) {
     const set = listeners.get(characterKey);
     if (set) {
         set.forEach(fn => fn());

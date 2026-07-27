@@ -8,6 +8,7 @@ import {
 import { sendSaveResult } from '../../services/combat/conditions/savePromptService.js';
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
+import { rollExpression } from '../../services/dice/diceRoller.js';
 import storage from '../../services/ui/storage.js';
 import { MELEE_REACH_FEET } from '../../services/combat/baseCombatActions.js';
 import { hasIgnoreResistance, evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
@@ -152,7 +153,6 @@ export function createSaves(deps) {
         let baneSavePenalty = 0;
         const baneEffectsForSave = targetEffects.filter(te => te.target === pending.targetName && te.effect === 'bane_penalty');
         if (baneEffectsForSave.length > 0) {
-            const { rollExpression } = await import('../../services/dice/diceRoller.js');
             const r = rollExpression('1d4');
             if (r) {
                 baneSavePenalty = -r.total;
