@@ -37,7 +37,7 @@ function saveLogFile() {
       try {
         const log = logCache.get(campaign);
         const trimmed = log.slice(-500);
-        fs.writeFileSync(file, JSON.stringify(trimmed));
+        fs.writeFileSync(file, JSON.stringify(trimmed, null, 2));
       } catch (err) {
         console.error(`Failed to save log for campaign ${campaign}:`, err.message);
       }

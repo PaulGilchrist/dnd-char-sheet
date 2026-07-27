@@ -107,7 +107,7 @@ export const saveFile = () => {
             fs.mkdirSync(dir, { recursive: true });
         }
         try {
-            const serialized = JSON.stringify(data);
+            const serialized = JSON.stringify(data, null, 2);
             let current = '';
             try { current = fs.readFileSync(filePath, 'utf-8'); } catch (_err) { /* file not found */ }
             if (current !== serialized) {
