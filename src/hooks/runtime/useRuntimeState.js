@@ -84,12 +84,12 @@ export function setRuntimeValue(characterKey, propertyName, value, campaignName)
    // Send the value directly in this case.
    const bodyValue = characterKey === propertyName ? { value } : { value: obj };
 
-   fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(characterKey)}`, {
-     method: 'POST',
-     mode: 'cors',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify(bodyValue)
-   }).catch((e) => { console.error("[useRuntimeState] Error:", e); });
+    fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(characterKey)}`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyValue)
+    }).catch((e) => { console.error("[useRuntimeState] Error:", e); });
 
    notify(characterKey);
 }

@@ -820,6 +820,9 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'ac_penalty') {
       effects.acPenalty = (effects.acPenalty || 0) + (te.value || 2);
     }
+    if (te.effect === 'bane_penalty') {
+      effects.banePenalty = true;
+    }
     if (te.effect === 'dex_save_disadvantage') {
       effects.slowDexSaveDisadvantage = true;
       if (!effects.saveDisadvantage.includes('dex')) {

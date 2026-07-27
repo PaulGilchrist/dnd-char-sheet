@@ -759,6 +759,13 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const newBuffs = Array.isArray(existingBuffs) ? existingBuffs.filter(b => b.name !== "Hunter's Mark") : []
             setRuntimeValue(creatureName, 'activeBuffs', newBuffs, campaignName)
         }
+        if (spell === 'Bane') {
+            const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+            const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === creatureName));
+            if (filtered.length !== storedEffects.length) {
+                setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName, true);
+            }
+        }
     }
 
     const handleAutoBreakCondition = (creatureName, condition) => {

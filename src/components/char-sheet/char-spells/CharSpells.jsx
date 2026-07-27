@@ -12,6 +12,7 @@ import MultiTargetPopup from '../popups/MultiTargetPopup.jsx'
 import SecondaryTargetModal from '../modals/shared/SecondaryTargetModal.jsx'
 import MultiTargetCountPopup from '../popups/MultiTargetCountPopup.jsx'
 import TargetWithCheckboxesPopup from '../popups/TargetWithCheckboxesPopup.jsx'
+import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
 import SingleTargetPopup from '../popups/SingleTargetPopup.jsx'
 import TargetWithTypePopup from '../popups/TargetWithTypePopup.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
@@ -135,7 +136,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -352,6 +353,18 @@ return (
                         attackerPos={pendingHeroesFeast.attackerPos}
                         onConfirm={handleHeroesFeastConfirm}
                         onSkip={handleHeroesFeastSkip}
+                      />
+                    )}
+                    {pendingBane && (
+                      <CreatureSelectionModal
+                        title="Bane"
+                        icon="fa-shield-halved"
+                        targets={pendingBane.creatureTargets}
+                        maxTargets={pendingBane.maxTargets}
+                        description="Curse up to three creatures of your choice that you can see within range. Affected creatures subtract 1d4 from attack rolls and saving throws."
+                        confirmLabel="Cast Bane"
+                        onConfirm={handleBaneConfirm}
+                        onSkip={handleBaneSkip}
                       />
                     )}
                     {pendingGreaterRestoration && (() => {

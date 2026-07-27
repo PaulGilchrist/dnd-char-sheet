@@ -20,6 +20,9 @@ export default function CharActionSpellPopups({
     actionPendingAid,
     actionHandleAidConfirm,
     actionHandleAidSkip,
+    actionPendingBane,
+    actionHandleBaneConfirm,
+    actionHandleBaneSkip,
     actionPendingGreaterRestoration,
     actionHandleGreaterRestorationConfirm,
     actionHandleGreaterRestorationSkip,
@@ -67,6 +70,18 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Aid"
                     onConfirm={actionHandleAidConfirm}
                     onSkip={actionHandleAidSkip}
+                />
+            )}
+            {actionPendingBane && (
+                <CreatureSelectionModal
+                    title="Bane"
+                    icon="fa-shield-halved"
+                    targets={actionPendingBane.creatureTargets}
+                    maxTargets={actionPendingBane.maxTargets}
+                    description="Curse up to three creatures of your choice that you can see within range. Affected creatures subtract 1d4 from attack rolls and saving throws."
+                    confirmLabel="Cast Bane"
+                    onConfirm={actionHandleBaneConfirm}
+                    onSkip={actionHandleBaneSkip}
                 />
             )}
             {actionPendingGreaterRestoration && (

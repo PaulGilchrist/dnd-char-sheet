@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import utils from '../../services/ui/utils.js';
-import { rollD20 } from '../../services/dice/diceRoller.js';
+import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
 import { sendSaveResult, clearSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import Subscriber from './Subscriber.jsx';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
@@ -246,10 +246,28 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         }
       } catch (_e) { /* ignore */ }
     }
-    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus;
+
+    // Bane: apply -1d4 penalty to saving throws
+    let baneSavePenalty = 0;
+    let baneSaveRoll = null;
+    const allTargetEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const baneEffects = allTargetEffects.filter(te => te.target === current.targetName && te.effect === 'bane_penalty');
+    if (baneEffects.length > 0) {
+      const r = rollExpression('1d4');
+      if (r) {
+        baneSavePenalty = -r.total;
+        baneSaveRoll = r.total;
+      }
+    }
+
+    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty;
     const success = total >= current.saveDc;
     const auraBonusStr = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined;
-    const bonusDetail = [auraBonusStr, cosmicOmenDetail].filter(Boolean).join(' ') || undefined;
+    const bonusDetailParts = [auraBonusStr, cosmicOmenDetail];
+    if (baneSaveRoll) {
+      bonusDetailParts.push(`-${baneSaveRoll} [Bane]`);
+    }
+    const bonusDetail = bonusDetailParts.filter(Boolean).join(' ') || undefined;
 
     const rollMode = current.disadvantage ? 'disadvantage' : hasAdvantage ? 'advantage' : 'normal';
 
@@ -288,7 +306,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode } }
+        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll } }
         : p
     ));
 
@@ -316,6 +334,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       rawRolls,
       mode: rollMode,
       bonusDetail: result.bonusDetail,
+      baneRoll: result.baneRoll,
     });
 
     window.dispatchEvent(new CustomEvent('save-result', {
@@ -329,6 +348,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         total: result.total,
         saveBonus,
         bonusDetail: result.bonusDetail,
+        baneRoll: result.baneRoll,
         rawDamage: current.rawDamage,
         dcSuccess: current.dcSuccess,
         rawRolls,

@@ -147,6 +147,18 @@ export function createSaves(deps) {
             targetEffects.splice(riderEffectIdx, 1);
             setRuntimeValue(campaignName, 'targetEffects', targetEffects, campaignName);
         }
+
+        // Bane: apply -1d4 penalty to saving throws
+        let baneSavePenalty = 0;
+        const baneEffectsForSave = targetEffects.filter(te => te.target === pending.targetName && te.effect === 'bane_penalty');
+        if (baneEffectsForSave.length > 0) {
+            const { rollExpression } = await import('../../services/dice/diceRoller.js');
+            const r = rollExpression('1d4');
+            if (r) {
+                baneSavePenalty = -r.total;
+            }
+        }
+
         const targetChar = (charactersRef.current || []).find(c => c.name === pending.targetName);
         const targetSaveModifiers = targetChar?.saveModifiers || targetChar?.computedStats?.saveModifiers || [];
         const advantage = targetSaveModifiers.some(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
@@ -155,6 +167,7 @@ export function createSaves(deps) {
         const isDexSave = saveType.toUpperCase() === 'DEX';
         const dodgeAdvantage = isDodging && isDexSave;
         const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage);
+        saveResult.total += baneSavePenalty;
 
         const normalizedSaveType = normalizeSaveType(saveType);
         const targetConditions = getRuntimeValue(pending.targetName, 'activeConditions', campaignName) || [];

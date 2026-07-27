@@ -134,6 +134,9 @@ function RollEntry({ entry }) {
             </span>
           )}
           <span className="log-total"><b>{entry.total}{(isDamage || isSaveDamage || isAoeDamage || isOverchannelDamage || isGrazeDamage) ? '' : (entry.bonus != null && entry.bonus >= 0 ? `+${entry.bonus}` : (entry.bonus != null ? `${entry.bonus}` : ''))}{entry.bonusDetail ? ' ' + entry.bonusDetail : ''}</b></span>
+          {entry.baneRoll != null && (
+            <span className="log-bane-penalty"> -1d4 [Bane]: -{entry.baneRoll}</span>
+          )}
           {entry.gwfApplied && entry.gwfOriginalRolls && (
             <span className="log-gwf">
               <i className="fa-solid fa-shield-halved"></i> GWF: {entry.gwfOriginalRolls.join(', ')} → {entry.gwfDisplayRolls?.join(', ') || entry.rolls.join(', ')}

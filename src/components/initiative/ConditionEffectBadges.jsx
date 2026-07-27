@@ -127,6 +127,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (tauntingStepEffect) {
         badges.push({ label: 'Taunted', cls: 'effect-disadvantage', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })
     }
+    if (effects.banePenalty) {
+        const baneEffect = targetEffects?.find(te => te.effect === 'bane_penalty' && te.target === creatureName)
+        const casterName = baneEffect?.source || 'unknown'
+        badges.push({ label: 'Bane', cls: 'effect-disadvantage', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `Bane from ${casterName}: -1d4 on attack rolls and saving throws` })
+    }
 
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {

@@ -1,7 +1,7 @@
 import * as concentrationRules from './concentrationRules.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import storage from '../../../services/ui/storage.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
 
@@ -50,6 +50,14 @@ function clearAllConcentrations(campaignName) {
     }
 }
 
+function clearBaneEffects(campaignName, casterName) {
+    const storedEffects = getRuntimeValue(campaignName, 'targetEffects') || [];
+    const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === casterName));
+    if (filtered.length !== storedEffects.length) {
+        setRuntimeValue(campaignName, 'targetEffects', filtered, campaignName, true);
+    }
+}
+
 function addConcentration(combatSummary, creatureName, spellName, dc, target = null) {
     const creature = combatSummary.creatures.find(c => c.name === creatureName)
     if (!creature) return
@@ -82,6 +90,7 @@ export {
     rollConcentrationSave,
     breakConcentration,
     clearAllConcentrations,
+    clearBaneEffects,
     addConcentration,
     buildConcentrationPopup,
 }

@@ -176,6 +176,7 @@ import { handle as handleGnomishLineage } from './handlers/class-other/gnomishLi
 import { handle as handleLargeForm } from './handlers/class-other/largeFormHandler.js';
 import { handle as handleFiendishLegacy } from './handlers/class-other/fiendishLegacyHandler.js';
 import { handle as handleAid, applyAid as applyAidEffect } from './handlers/healing/aidHandler.js';
+import { applyBaneEffect } from '../../services/rules/features/baneService.js';
 import { handle as handleAuraOfPurity } from './handlers/buffs/auraOfPurityHandler.js';
 import { handle as handleHolyAura } from './handlers/buffs/holyAuraHandler.js';
 import { handle as handleBladeWard } from './handlers/buffs/bladeWardHandler.js';
@@ -205,6 +206,7 @@ import { handle as handleHypnoticPattern } from './handlers/spells/hypnoticPatte
 import { handle as handleMassSuggestion } from './handlers/spells/massSuggestionHandler.js';
 import { handle as handleSuggestion } from './handlers/spells/suggestionHandler.js';
 import { handle as handleSilence } from './handlers/spells/silenceHandler.js';
+import { handle as handleBane } from './handlers/spells/baneHandler.js';
 import { handle as handleSlow } from './handlers/spells/slowHandler.js';
 import { handle as handleResilientSphere } from './handlers/spells/resilientSphereHandler.js';
 import { handle as handlePowerWordStun } from './handlers/spells/powerWordStunHandler.js';
@@ -503,6 +505,7 @@ const HANDLER_MAP = {
         ray_of_enfeeblement: handleRayOfEnfeeblement,
         vicious_mockery: handleViciousMockery,
         silence: handleSilence,
+        bane: handleBane,
         slow: handleSlow,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
@@ -511,7 +514,7 @@ const HANDLER_MAP = {
         sentinel: handleSentinelHalt,
 };
 export {
-    applyAidEffect, applyGreaterRestorationEffect, applyHeroesFeastEffect, applyLesserRestorationEffect,
+    applyAidEffect, applyBaneEffect, applyGreaterRestorationEffect, applyHeroesFeastEffect, applyLesserRestorationEffect,
     applyLongstriderEffect, applyMageArmorEffect, applyProtectionFromEnergyHandler, applyProtectionFromPoisonHandler,
     applyRemoveCurseEffect, applyBoonOfEnergyResistance, applyWeaponMasteryChoice, applyWeaponKindMastery, applyResistanceEffect,
     applyStoneSkinHandler, isProtectionFromEvilAndGoodActive, isCreatureWarded, isProtectionFromPoisonActive,
