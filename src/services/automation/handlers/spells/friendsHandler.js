@@ -2,6 +2,7 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -64,6 +65,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
     setRuntimeValue(targetName, 'activeConditions', [...filtered, condKey], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, [condKey], targetName);
 
     // Apply expiration (2 rounds = 12 seconds minimum; concentration handles the rest)
     addExpiration(playerStats.name, targetName, [

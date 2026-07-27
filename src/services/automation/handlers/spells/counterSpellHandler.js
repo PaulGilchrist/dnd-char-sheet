@@ -1,13 +1,13 @@
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { setRuntimeValue, getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { findLastAttack, rollbackSpellEffects } from '../../common/damageRollback.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Counterspell';
-    const saveType = auto.saveType || 'CON';
 
     const cs = await getCombatContext(campaignName);
     if (!cs) {
@@ -22,35 +22,77 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const target = getTargetFromAttacker(cs, playerName);
-    if (!target) {
+    const lastAttack = await findLastAttack(campaignName);
+    if (!lastAttack.attackEvent) {
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
                 name: featureName,
-                description: `${featureName} requires a target. Select a creature in combat and try again.`,
+                description: `${featureName} — No recent attack to counter.`,
                 automation: auto,
             },
         };
     }
 
-    const targetName = target.name;
+    const hasSpellIndicator = lastAttack.attackEvent.damageFormula ||
+                              lastAttack.attackEvent.attackName ||
+                              lastAttack.attackEvent.spellName ||
+                              lastAttack.attackEvent.saveType;
+
+    if (!hasSpellIndicator) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName} — No spell detected in the most recent attack.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const attackerName = lastAttack.attackEvent.attackerName;
+    if (!attackerName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName} — Could not identify the spellcaster.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const attackerCreature = cs.creatures.find(c => c.name === attackerName);
+    if (!attackerCreature) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName} — ${attackerName} is not in combat.`,
+                automation: auto,
+            },
+        };
+    }
 
     const saveDc = buildSaveDc(auto, playerStats);
 
     const { promptId } = createSaveListener(campaignName, {
-        targetName,
-        saveType,
+        targetName: attackerName,
+        saveType: 'CON',
         saveDc,
         disadvantage: !!action.metaCtx?.metamagicHeighten,
     });
 
+    const spellName = lastAttack.attackEvent.damageName || lastAttack.attackEvent.spellName || 'unknown spell';
     addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: featureName,
-        description: `${featureName} triggered — ${targetName} must make ${saveType} save (DC ${saveDc})`,
+        description: `${featureName} triggered — Countering ${attackerName}'s '${spellName}'. ${attackerName} must make CON save (DC ${saveDc})`,
         promptId,
     }).catch((e) => { console.error("[counterSpell] Error:", e); });
 
@@ -58,26 +100,37 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         if (event.detail.promptId !== promptId) return;
 
         if (!event.detail.success) {
+            const rolledBack = await rollbackSpellEffects(lastAttack.attackEvent, campaignName, featureName);
+
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: playerName,
                 rollType: `save-${auto.type}`,
-                targetName,
+                targetName: attackerName,
                 saveDc,
-                saveType,
+                saveType: 'CON',
                 success: false,
-                description: `${targetName} failed ${saveType} save. ${targetName}'s spell is countered and wasted.`,
+                description: `${attackerName} failed CON save. ${featureName} counters '${spellName}'!`,
             }).catch((e) => { console.error("[counterSpell] Error:", e); });
+
+            if (rolledBack.logDescription) {
+                addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: playerName,
+                    abilityName: featureName,
+                    description: rolledBack.logDescription,
+                }).catch((e) => { console.error("[counterSpell] Error:", e); });
+            }
         } else {
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: playerName,
                 rollType: `save-${auto.type}`,
-                targetName,
+                targetName: attackerName,
                 saveDc,
-                saveType,
+                saveType: 'CON',
                 success: true,
-                description: `${targetName} succeeded on ${saveType} save. ${featureName} fails to counter the spell.`,
+                description: `${attackerName} succeeded on CON save. ${featureName} fails to counter '${spellName}'.`,
             }).catch((e) => { console.error("[counterSpell] Error:", e); });
 
             const passives = playerStats.automation?.passives;
@@ -101,8 +154,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         payload: {
             type: 'automation_info',
             name: featureName,
-            targetName,
-            description: `${targetName} must make a ${saveType} saving throw (DC ${saveDc}).`,
+            targetName: attackerName,
+            description: `${attackerName}'s '${spellName}' is being countered — ${attackerName} must make a CON saving throw (DC ${saveDc}).`,
             automation: auto,
         },
     };

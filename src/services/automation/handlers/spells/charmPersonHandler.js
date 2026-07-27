@@ -7,6 +7,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 import { rollD20 } from '../../../dice/diceRoller.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 function dispatchSaveResult(campaignName, promptId, targetName, saveType, saveDc, saveResult) {
     sendSaveResult(campaignName, targetName, {
@@ -117,6 +118,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['charmed'], targetName);
 
     addExpiration(casterName, targetName, [
         { type: 'charmed', condition: 'charmed' },

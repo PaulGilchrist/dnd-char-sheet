@@ -200,13 +200,15 @@ function SaveAttackAoeModal({
                 primaryDamageType: damageType || null,
                 actualDamage: lastNpcResult.finalDamage || 0,
                 damageApplied: lastNpcResult.finalDamage > 0,
+                statusEffects: action.automation?.effects?.fail?.map(e => e.condition || e.type).filter(Boolean) || null,
+                affectedTargets: selectedNames,
                 timestamp: Date.now(),
             }, campaignName);
         }
 
         persistAndNotify(combatSummary, campaignName);
         return { results, prompts };
-    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
+    }, [campaignName, action.name, action.automation?.effects?.fail, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
 
     const handleSaveResult = useCallback(async (event, ctx) => {
         const detail = event.detail;

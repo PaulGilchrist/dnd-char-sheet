@@ -706,8 +706,9 @@ export function createLogAndShow(deps) {
                     autoReroll: context?.autoReroll || null,
                     autoRerollBonus: context?.autoRerollBonus || null,
                     defensiveDuelistBonus: context?.defensiveDuelistBonus || 0,
-
                     baitAndSwitchBonus: context?.baitAndSwitchBonus || 0,
+                    statusEffects: context?.statusEffects || null,
+                    affectedTargets: context?.affectedTargets || [targetName],
                 };
                 setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
             }

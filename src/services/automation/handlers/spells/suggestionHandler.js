@@ -4,6 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -70,6 +71,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['charmed'], targetName);
 
     addExpiration(casterName, targetName, [
         { type: 'charmed', condition: 'charmed' },

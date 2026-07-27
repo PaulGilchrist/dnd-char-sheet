@@ -6,6 +6,7 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 function getAreaRadius(auto) {
     const size = auto.size || '10-foot';
@@ -153,6 +154,9 @@ export async function processGreaseAreaSave(casterName, targetName, campaignName
             const conditions = Array.isArray(storedConditions) ? storedConditions : [];
             const filtered = conditions.filter(c => String(c).toLowerCase() !== tracking.condition.toLowerCase());
             setRuntimeValue(targetName, 'activeConditions', [...filtered, tracking.condition.toLowerCase()], campaignName);
+
+            // Update lastAttack for counterspell rollback
+            updateLastAttackWithEffects(campaignName, [tracking.condition.toLowerCase()], targetName);
 
             addEntry(campaignName, {
                 type: 'save_result',

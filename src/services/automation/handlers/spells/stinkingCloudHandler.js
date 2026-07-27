@@ -4,6 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 /**
  * Stinking Cloud spell handler for 2024 ruleset.
@@ -194,6 +195,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const conditions = Array.isArray(storedConditions) ? storedConditions : [];
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'poisoned');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'poisoned'], campaignName);
+
+            // Update lastAttack for counterspell rollback
+            updateLastAttackWithEffects(campaignName, ['poisoned'], targetName);
 
             // Set tracking for end-of-turn repeat save
             const trackingKey = getTrackingKey(targetName);

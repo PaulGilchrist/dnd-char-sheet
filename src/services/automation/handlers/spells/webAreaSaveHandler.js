@@ -5,6 +5,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 /**
  * Web spell area save handler for 2024 ruleset.
@@ -82,6 +83,9 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
         const conditions = Array.isArray(storedConditions) ? storedConditions : [];
         const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'restrained'], campaignName);
+
+        // Update lastAttack for counterspell rollback
+        updateLastAttackWithEffects(campaignName, ['restrained'], targetName);
 
         addEntry(campaignName, {
             type: 'save_result',

@@ -309,6 +309,17 @@ export function setupEventListeners(deps) {
                 if (effectsToExpire.length > 0) {
                     addExpiration(characterName, targetName, effectsToExpire, pending.campaignName, 2);
                 }
+
+                // Update lastAttack with statusEffects for counterspell rollback
+                const existingLastAttack = getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
+                if (existingLastAttack) {
+                    const updatedLastAttack = {
+                        ...existingLastAttack,
+                        statusEffects: pending.statusEffects,
+                        affectedTargets: existingLastAttack.affectedTargets || [targetName],
+                    };
+                    setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, pending.campaignName);
+                }
             }
 
             const popupData = {

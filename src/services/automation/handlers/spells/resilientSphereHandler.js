@@ -3,6 +3,7 @@ import { resolveTarget } from '../../common/targetResolver.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
@@ -101,6 +102,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         note: `${targetName} is enclosed in Otiluke's Resilient Sphere. Nothing can pass through the barrier. The sphere is immune to all damage. Inside can't be damaged from outside; inside can't damage outside. Enclosed creature can use action to roll sphere at half speed. Others can pick up and move it. Disintegrate destroys it.`,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[resilientSphere] Error:", e); });
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['resilient_sphere'], targetName);
 
     addEntry(campaignName, {
         type: 'save_result',

@@ -4,6 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 
 /**
@@ -194,6 +195,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'paralyzed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'paralyzed'], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['paralyzed'], targetName);
 
     // Set tracking for end-of-turn repeat saves
     setRuntimeValue(casterName, trackingKey, true, campaignName);

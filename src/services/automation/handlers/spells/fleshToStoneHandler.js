@@ -4,6 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 
 const MAX_FAILS = 3;
@@ -324,6 +325,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'restrained'], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['restrained'], targetName);
 
     // Initialize save tracking: [successCount, failureCount]
     setRuntimeValue(casterName, trackingKey, [0, 1], campaignName);

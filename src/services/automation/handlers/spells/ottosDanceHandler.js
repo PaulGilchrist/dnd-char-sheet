@@ -4,6 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 
 /**
@@ -214,6 +215,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         String(c).toLowerCase() !== 'speed_zero'
     );
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed', 'speed_zero'], campaignName);
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['charmed', 'speed_zero'], targetName);
 
     // Set tracking for repeat saves
     setRuntimeValue(casterName, trackingKey, true, campaignName);

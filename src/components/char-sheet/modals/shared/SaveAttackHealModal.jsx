@@ -97,6 +97,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
                 primaryDamageType: damageType || null,
                 actualDamage: lastNpcResult.finalDamage || 0,
                 damageApplied: lastNpcResult.finalDamage > 0,
+                affectedTargets: targets,
                 timestamp: Date.now(),
             }, campaignName);
         }

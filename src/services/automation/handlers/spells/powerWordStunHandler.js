@@ -5,6 +5,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 /**
  * Process a repeated CON save for a creature already Stunned by Power Word Stun.
@@ -161,6 +162,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         const filtered = conditions.filter(c => String(c).toLowerCase() !== 'stunned');
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'stunned'], campaignName);
 
+        // Update lastAttack for counterspell rollback
+        updateLastAttackWithEffects(campaignName, ['stunned'], targetName);
+
         // Set tracking for end-of-turn repeat saves
         setRuntimeValue(casterName, trackingKey, true, campaignName);
 
@@ -200,6 +204,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     } else {
         // Target has more than 150 HP → Speed 0 until start of next turn
         setRuntimeValue(targetName, 'activeConditions', [...(getRuntimeValue(targetName, 'activeConditions', campaignName) || []), 'speed_zero'], campaignName);
+
+        // Update lastAttack for counterspell rollback
+        updateLastAttackWithEffects(campaignName, ['speed_zero'], targetName);
 
         // Set expiration: speed_zero ends at start of caster's next turn
         addExpiration(casterName, targetName, [

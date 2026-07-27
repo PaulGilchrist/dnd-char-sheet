@@ -4,6 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 function getTrackingKey(targetName) {
     return `_slow_${targetName.replace(/\s+/g, '_')}`;
@@ -180,6 +181,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const conditions = Array.isArray(storedConditions) ? storedConditions : [];
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'slow');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'slow'], campaignName);
+
+            // Update lastAttack for counterspell rollback
+            updateLastAttackWithEffects(campaignName, ['slow'], targetName);
 
             // Set tracking for end-of-turn repeat save
             const trackingKey = getTrackingKey(targetName);

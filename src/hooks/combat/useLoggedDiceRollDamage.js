@@ -736,6 +736,8 @@ export function createLogDamageAndShow(deps) {
             primaryDamageType: damageType || null,
             actualDamage: primaryApplyResult?.finalDamage ?? finalDamage,
             damageApplied: (primaryApplyResult?.finalDamage ?? finalDamage) > 0,
+            statusEffects: context?.statusEffects || null,
+            affectedTargets: context?.affectedTargets || [target.name],
             timestamp: Date.now(),
         };
         setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
@@ -1538,6 +1540,8 @@ export function createLogDamageAndShow(deps) {
                 damageTypes: [damageType],
                 actualDamage: applyResult?.finalDamage ?? adjustedTotal,
                 damageApplied: true,
+                statusEffects: context?.statusEffects || null,
+                affectedTargets: context?.affectedTargets || [target?.name].filter(Boolean),
             };
             setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }

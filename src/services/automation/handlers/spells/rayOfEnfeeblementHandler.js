@@ -2,6 +2,7 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -120,6 +121,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         note: `${targetName} has Disadvantage on Strength-based d20 tests and subtracts 1d8 from all damage rolls (Concentration, up to 1 minute). Target repeats CON save at end of each turn.`,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[rayOfEnfeeblement] Error:", e); });
+
+    // Update lastAttack for counterspell rollback
+    updateLastAttackWithEffects(campaignName, ['ray_of_enfeeble_debuff'], targetName);
 
     return {
         type: 'popup',

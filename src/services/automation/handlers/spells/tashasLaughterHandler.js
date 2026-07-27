@@ -4,6 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
 
 /**
  * Tasha's Hideous Laughter spell handler for 2024 ruleset.
@@ -186,6 +187,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 String(c).toLowerCase() !== 'incapacitated'
             );
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'prone', 'incapacitated'], campaignName);
+
+            // Update lastAttack for counterspell rollback
+            updateLastAttackWithEffects(campaignName, ['prone', 'incapacitated'], targetName);
 
             // Set tracking for end-of-turn repeat save
             const trackingKey = getTrackingKey(targetName);

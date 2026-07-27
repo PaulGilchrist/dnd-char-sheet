@@ -123,7 +123,13 @@ describe('damageRollback', () => {
             getRuntimeValue.mockReturnValue(attack);
 
             const result = await findLastAttack(campaignName);
-            expect(result.attackEvent).toBe(attack);
+            // attackEvent is enriched with affectedTargets and statusEffects
+            expect(result.attackEvent.attackerName).toBe('Orc');
+            expect(result.attackEvent.targetName).toBe('Wizard');
+            expect(result.attackEvent.d20).toBe(17);
+            expect(result.attackEvent.hit).toBe(true);
+            expect(result.attackEvent.affectedTargets).toEqual(['Wizard']);
+            expect(result.attackEvent.statusEffects).toBeNull();
             expect(result.attackerName).toBe('Orc');
             expect(result.targetName).toBe('Wizard');
         });
@@ -149,7 +155,11 @@ describe('damageRollback', () => {
             getRuntimeValue.mockReturnValue(attack);
 
             const result = await findAttackRollAgainstTarget('Hero', campaignName);
-            expect(result.attackEvent).toBe(attack);
+            // attackEvent is enriched with affectedTargets and statusEffects
+            expect(result.attackEvent.targetName).toBe('Hero');
+            expect(result.attackEvent.attackerName).toBe('Goblin');
+            expect(result.attackEvent.affectedTargets).toEqual(['Hero']);
+            expect(result.attackEvent.statusEffects).toBeNull();
             expect(result.attackerName).toBe('Goblin');
         });
     });

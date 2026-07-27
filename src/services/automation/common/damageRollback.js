@@ -2,6 +2,7 @@ import { getCombatContext } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
 import { addEntry } from '../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { removeCondition } from '../../combat/conditions/conditionSaveService.js';
 
 /**
  * Get the last attack from the root-level lastAttack key.
@@ -21,7 +22,11 @@ export async function findLastAttack(campaignName) {
     const actualDamage = a.actualDamage ?? (primary + secondary);
 
     return {
-        attackEvent: a,
+        attackEvent: {
+            ...(a.affectedTargets == null ? { affectedTargets: [a.targetName] } : {}),
+            ...(a.statusEffects == null ? { statusEffects: null } : {}),
+            ...a,
+        },
         attackerName: a.attackerName,
         targetName: a.targetName,
         primaryDamage: primary,
@@ -149,6 +154,101 @@ export async function storeDamageRolls(campaignName, lastAttack) {
     const updatedLastAttack = {
         ...existing,
         ...lastAttack,
+    };
+
+    await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
+}
+
+/**
+ * Rollback all effects of a countered spell.
+ * Heals damage, removes conditions, and cleans targetEffects for all affected targets.
+ * Returns summary of what was rolled back.
+ *
+ * @param {Object} lastAttack - The lastAttack object from the spell being countered
+ * @param {string} campaignName - Campaign name
+ * @param {string} featureName - Name of the feature (e.g. 'Counterspell')
+ * @returns {Promise<{targetsHealed: number, conditionsRemoved: Array, effectsRemoved: number, damageHealed: number, logDescription: string}>}
+ */
+export async function rollbackSpellEffects(lastAttack, campaignName, featureName) {
+    const targets = lastAttack.affectedTargets || [lastAttack.targetName];
+    const attackerName = lastAttack.attackerName || 'Unknown';
+    const spellName = lastAttack.damageName || lastAttack.spellName || 'unknown spell';
+
+    const cs = await getCombatContext(campaignName);
+    if (!cs) {
+        console.error(`[${featureName}] No combat context for rollback`);
+        return { targetsHealed: 0, conditionsRemoved: [], effectsRemoved: 0, damageHealed: 0, logDescription: '' };
+    }
+
+    let rolledBack = {
+        targetsHealed: 0,
+        conditionsRemoved: [],
+        effectsRemoved: 0,
+        damageHealed: 0,
+        logDescription: '',
+    };
+
+    const totalDamage = (lastAttack.primaryDamage || 0) + (lastAttack.secondaryDamage || 0);
+    const conditionKeys = lastAttack.statusEffects || [];
+
+    for (const targetName of targets) {
+        // Heal damage
+        if (totalDamage > 0) {
+            const healResult = applyHealingToTarget(cs, targetName, totalDamage, campaignName);
+            if (healResult?.newHp != null) {
+                rolledBack.damageHealed += totalDamage;
+                rolledBack.targetsHealed++;
+            }
+        }
+
+        // Remove conditions
+        for (const condition of conditionKeys) {
+            try {
+                removeCondition(cs, targetName, condition, getRuntimeValue, setRuntimeValue, campaignName);
+                rolledBack.conditionsRemoved.push({ targetName, condition });
+            } catch (e) {
+                console.error(`[${featureName}] Failed to remove condition '${condition}' from ${targetName}:`, e);
+            }
+        }
+    }
+
+    // Remove targetEffects for this attacker
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filtered = storedEffects.filter(te => !(te.target && targets.includes(te.target) && te.source === attackerName));
+    if (filtered.length < storedEffects.length) {
+        rolledBack.effectsRemoved = storedEffects.length - filtered.length;
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
+    }
+
+    // Build log description
+    const damageStr = rolledBack.damageHealed > 0 ? `${rolledBack.damageHealed} HP healed` : 'no damage dealt';
+    const conditionStr = rolledBack.conditionsRemoved.length > 0
+        ? `${rolledBack.conditionsRemoved.length} condition(s) removed`
+        : 'no conditions to remove';
+    const effectStr = rolledBack.effectsRemoved > 0 ? `${rolledBack.effectsRemoved} target effect(s) cleared` : 'no target effects to clear';
+    const affectedList = targets.join(', ');
+
+    rolledBack.logDescription = `${attackerName}'s spell '${spellName}' was countered — ${damageStr}, ${conditionStr}, ${effectStr} on ${affectedList}.`;
+
+    return rolledBack;
+}
+
+/**
+ * Update lastAttack with statusEffects for counterspell rollback.
+ * Call this from automation handlers after applying conditions on failed save.
+ *
+ * @param {string} campaignName - Campaign name
+ * @param {Array} statusEffects - Array of condition keys applied
+ * @param {string} [targetName] - Target name (defaults to lastAttack.targetName)
+ */
+export async function updateLastAttackWithEffects(campaignName, statusEffects, targetName) {
+    const existingLastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!existingLastAttack) return;
+
+    const updatedLastAttack = {
+        ...existingLastAttack,
+        statusEffects: statusEffects,
+        affectedTargets: existingLastAttack.affectedTargets || [targetName || existingLastAttack.targetName],
     };
 
     await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
