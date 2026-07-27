@@ -58,6 +58,14 @@ function clearBaneEffects(campaignName, casterName) {
     }
 }
 
+function clearBlessEffects(campaignName, casterName) {
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filtered = storedEffects.filter(te => !(te.effect === 'bless_bonus' && te.source === casterName));
+    if (filtered.length !== storedEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+    }
+}
+
 function addConcentration(combatSummary, creatureName, spellName, dc, target = null) {
     const creature = combatSummary.creatures.find(c => c.name === creatureName)
     if (!creature) return
@@ -91,6 +99,7 @@ export {
     breakConcentration,
     clearAllConcentrations,
     clearBaneEffects,
+    clearBlessEffects,
     addConcentration,
     buildConcentrationPopup,
 }

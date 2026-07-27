@@ -14,6 +14,7 @@ import {
     applyResistanceEffect,
     applyShieldOfFaithEffect,
     applyBaneEffect,
+    applyBlessEffect,
 } from '../../services/automation/index.js'
 import { useConfirmableFlow } from './useConfirmableFlow.js'
 import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js'
@@ -44,6 +45,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingRemoveCurse = getPending('removeCurse');
   const pendingMagicMissile = getPending('magicMissile');
   const pendingBane = getPending('bane');
+  const pendingBless = getPending('bless');
 
   const gateMetamagic = React.useCallback(async (spell, metaCtx = {}) => {
     const isGreaterRestoration = (spell.name || '').toLowerCase() === 'greater restoration';
@@ -128,6 +130,24 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('bane', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || '30 feet',
+          maxTargets: 3,
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
+    const isBless = (spell.name || '').toLowerCase() === 'bless';
+    if (isBless) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
+      if (creatureTargets.length > 0) {
+        cfSetPending('bless', {
           spell,
           spellName: spell.name,
           spellLevel: spell.level || 0,
@@ -518,6 +538,18 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleBaneSkip = createSkipHandler('bane', (pending) => pending.creatureTargets);
 
+  const handleBlessConfirm = createConfirmHandler('bless', async (pending, result) => {
+    await applyBlessEffect(
+      { name: pending.spellName, spell: pending.spell, automation: { type: 'bless', range: pending.range, maxTargets: pending.maxTargets } },
+      playerStats,
+      campaignName,
+      null,
+      result
+    );
+  }, (pending) => pending.creatureTargets);
+
+  const handleBlessSkip = createSkipHandler('bless', (pending) => pending.creatureTargets);
+
   const handleHeroesFeastConfirm = createConfirmHandler('heroesFeast', async (pending, result) => {
     await applyHeroesFeastEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'heroes_feast', range: pending.range, maxTargets: pending.maxTargets } },
@@ -635,5 +667,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceConfirm, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceConfirm, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip };
 }

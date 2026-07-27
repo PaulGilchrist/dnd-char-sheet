@@ -260,12 +260,27 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     }
 
-    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty;
+    // Bless: add 1d4 to saving throws
+    let blessSaveBonus = 0;
+    let blessSaveRoll = null;
+    const blessEffects = allTargetEffects.filter(te => te.target === current.targetName && te.effect === 'bless_bonus');
+    if (blessEffects.length > 0) {
+      const r = rollExpression('1d4');
+      if (r) {
+        blessSaveBonus += r.total;
+        blessSaveRoll = r.total;
+      }
+    }
+
+    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus;
     const success = total >= current.saveDc;
     const auraBonusStr = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined;
     const bonusDetailParts = [auraBonusStr, cosmicOmenDetail];
     if (baneSaveRoll) {
       bonusDetailParts.push(`-${baneSaveRoll} [Bane]`);
+    }
+    if (blessSaveRoll) {
+      bonusDetailParts.push(`+${blessSaveRoll} [Bless]`);
     }
     const bonusDetail = bonusDetailParts.filter(Boolean).join(' ') || undefined;
 
@@ -306,7 +321,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll } }
+        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll, blessRoll: blessSaveRoll } }
         : p
     ));
 

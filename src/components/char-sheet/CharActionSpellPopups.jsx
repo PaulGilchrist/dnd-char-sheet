@@ -23,6 +23,9 @@ export default function CharActionSpellPopups({
     actionPendingBane,
     actionHandleBaneConfirm,
     actionHandleBaneSkip,
+    actionPendingBless,
+    actionHandleBlessConfirm,
+    actionHandleBlessSkip,
     actionPendingGreaterRestoration,
     actionHandleGreaterRestorationConfirm,
     actionHandleGreaterRestorationSkip,
@@ -82,6 +85,18 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Bane"
                     onConfirm={actionHandleBaneConfirm}
                     onSkip={actionHandleBaneSkip}
+                />
+            )}
+            {actionPendingBless && (
+                <CreatureSelectionModal
+                    title="Bless"
+                    icon="fa-hands"
+                    targets={actionPendingBless.creatureTargets}
+                    maxTargets={actionPendingBless.maxTargets}
+                    description="You bless up to three creatures of your choice within range. Affected creatures add 1d4 to attack rolls and saving throws."
+                    confirmLabel="Cast Bless"
+                    onConfirm={actionHandleBlessConfirm}
+                    onSkip={actionHandleBlessSkip}
                 />
             )}
             {actionPendingGreaterRestoration && (

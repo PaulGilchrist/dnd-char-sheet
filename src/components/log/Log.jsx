@@ -137,6 +137,9 @@ function RollEntry({ entry }) {
           {entry.baneRoll != null && (
             <span className="log-bane-penalty"> -1d4 [Bane]: -{entry.baneRoll}</span>
           )}
+          {entry.blessRoll != null && (
+            <span className="log-bless-bonus"> +1d4 [Bless]: +{entry.blessRoll}</span>
+          )}
           {entry.gwfApplied && entry.gwfOriginalRolls && (
             <span className="log-gwf">
               <i className="fa-solid fa-shield-halved"></i> GWF: {entry.gwfOriginalRolls.join(', ')} → {entry.gwfDisplayRolls?.join(', ') || entry.rolls.join(', ')}

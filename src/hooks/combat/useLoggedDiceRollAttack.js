@@ -164,6 +164,21 @@ export function createLogAndShow(deps) {
                 }
             }
         }
+
+        // Bless: add 1d4 to attack rolls for blessed attackers
+        let blessAttackBonus = 0;
+        let blessAttackRoll = null;
+        if (rollType === 'attack') {
+            const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const blessEffects = allTargetEffects.filter(te => te.target === utils.getName(characterName) && te.effect === 'bless_bonus');
+            if (blessEffects.length > 0) {
+                const r = rollExpression('1d4');
+                if (r) {
+                    blessAttackBonus += r.total;
+                    blessAttackRoll = r.total;
+                }
+            }
+        }
         if (forcedMode === 'advantage') {
             effectiveD20Roll = Math.max(r1, r2);
         } else if (forcedMode === 'disadvantage') {
@@ -193,7 +208,7 @@ export function createLogAndShow(deps) {
                 }
             }
         }
-        const effectiveBonus = bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty;
+        const effectiveBonus = bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus;
 
         const sacredWeaponBonus = context?.sacredWeaponBonus || 0;
 
@@ -210,6 +225,7 @@ export function createLogAndShow(deps) {
         if (sunderingBlowBonus > 0) bonusDetailParts.push('+' + sunderingBlowBonus + ' [Sundering Blow]');
         if (cosmicOmenAppliedBonus !== 0 && cosmicOmenDetail) bonusDetailParts.push(cosmicOmenDetail);
         if (baneAttackPenalty < 0) bonusDetailParts.push(`${baneAttackPenalty} [Bane]`);
+        if (blessAttackBonus > 0) bonusDetailParts.push('+' + blessAttackBonus + ' [Bless]');
         const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', ') + ')' : undefined;
 
         let isAutoMiss = context?.isAutoMiss === true;
@@ -536,9 +552,10 @@ export function createLogAndShow(deps) {
             rolls: [r1, r2],
             mode: context?.forcedMode || 'normal',
             total: effectiveD20Roll,
-            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty,
+            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus,
             bonusDetail: finalBonusDetail,
             baneRoll: baneAttackRoll,
+            blessRoll: blessAttackRoll,
             isNatural20: effectiveD20Roll === 20,
             isNatural1: effectiveD20Roll === 1,
             targetName,
@@ -563,9 +580,10 @@ export function createLogAndShow(deps) {
                 rollType,
                 name,
                 rolls: luckyRerolled ? [luckyRerollValue] : [r1, r2],
-            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty,
+            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus,
                 bonusDetail: finalBonusDetail,
                 baneRoll: baneAttackRoll,
+                blessRoll: blessAttackRoll,
                 targetName,
                 targetAc,
                 hit,
@@ -1136,7 +1154,19 @@ export function createLogAndShow(deps) {
                     }
                 }
 
-                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty;
+                // Bless: add 1d4 to saving throws for blessed targets
+                let blessSaveBonus = 0;
+                let blessSaveRoll = null;
+                const blessEffectsForSave = allTargetEffectsForSave.filter(te => te.target === targetName && te.effect === 'bless_bonus');
+                if (blessEffectsForSave.length > 0) {
+                    const r = rollExpression('1d4');
+                    if (r) {
+                        blessSaveBonus += r.total;
+                        blessSaveRoll = r.total;
+                    }
+                }
+
+                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty + blessSaveBonus;
                 saveSuccess = saveDc != null ? (saveTotal >= saveDc) : null;
 
                 setRuntimeValue(characterName, 'lastSaveRoll', {
@@ -1188,6 +1218,7 @@ export function createLogAndShow(deps) {
                     total: saveTotal,
                     bonus,
                     baneRoll: baneSaveRoll,
+                    blessRoll: blessSaveRoll,
                     isNatural20: effectiveD20ForSave === 20,
                     isNatural1: effectiveD20ForSave === 1,
                     targetName: targetName,

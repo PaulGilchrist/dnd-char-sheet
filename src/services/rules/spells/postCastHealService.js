@@ -4,7 +4,6 @@ import { applyHealingDirectly, logHealingToSSE } from '../../automation/common/h
 const HEALING_SPELL_NAMES = new Set([
     'aid',
     'aura of life',
-    'bless',
     'cure wounds',
     'death ward',
     'greater restoration',

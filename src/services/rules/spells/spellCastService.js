@@ -40,6 +40,7 @@ import { triggerHolyAura } from '../features/holyAuraService.js';
 import { triggerSilence, getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
 import { triggerSlow } from '../features/slowService.js';
 import { triggerBaneSpell } from '../features/baneService.js';
+import { triggerBlessSpell } from '../features/blessService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerSleep } from '../features/sleepService.js';
@@ -331,6 +332,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Bane — multi-target CHA save, applies -1d4 to attack rolls and saving throws
         if (spell.name && spell.name.toLowerCase() === 'bane') {
             await triggerBaneSpell(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Bless — multi-target, adds 1d4 to attack rolls and saving throws (no save required)
+        if (spell.name && spell.name.toLowerCase() === 'bless') {
+            await triggerBlessSpell(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
             return;
         }
 

@@ -159,6 +159,16 @@ export function createSaves(deps) {
             }
         }
 
+        // Bless: add 1d4 to saving throws
+        let blessSaveBonus = 0;
+        const blessEffectsForSave = targetEffects.filter(te => te.target === pending.targetName && te.effect === 'bless_bonus');
+        if (blessEffectsForSave.length > 0) {
+            const r = rollExpression('1d4');
+            if (r) {
+                blessSaveBonus += r.total;
+            }
+        }
+
         const targetChar = (charactersRef.current || []).find(c => c.name === pending.targetName);
         const targetSaveModifiers = targetChar?.saveModifiers || targetChar?.computedStats?.saveModifiers || [];
         const advantage = targetSaveModifiers.some(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
@@ -167,7 +177,7 @@ export function createSaves(deps) {
         const isDexSave = saveType.toUpperCase() === 'DEX';
         const dodgeAdvantage = isDodging && isDexSave;
         const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage);
-        saveResult.total += baneSavePenalty;
+        saveResult.total += baneSavePenalty + blessSaveBonus;
 
         const normalizedSaveType = normalizeSaveType(saveType);
         const targetConditions = getRuntimeValue(pending.targetName, 'activeConditions', campaignName) || [];
