@@ -203,14 +203,14 @@ export function createLogAndShow(deps) {
             if (baseBonus !== 0) {
                 bonusDetailParts.push((baseBonus > 0 ? '+' : '') + baseBonus + ' to hit');
             }
-            bonusDetailParts.push(sacredWeaponBonus + ' Sacred Weapon');
+            bonusDetailParts.push('+' + sacredWeaponBonus + ' Sacred Weapon');
         } else {
             if (bonus > 0) bonusDetailParts.push('+' + bonus + ' to hit');
         }
-        if (sunderingBlowBonus > 0) bonusDetailParts.push(sunderingBlowBonus + ' [Sundering Blow]');
+        if (sunderingBlowBonus > 0) bonusDetailParts.push('+' + sunderingBlowBonus + ' [Sundering Blow]');
         if (cosmicOmenAppliedBonus !== 0 && cosmicOmenDetail) bonusDetailParts.push(cosmicOmenDetail);
         if (baneAttackPenalty < 0) bonusDetailParts.push(`${baneAttackPenalty} [Bane]`);
-        const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', +') + ')' : undefined;
+        const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', ') + ')' : undefined;
 
         let isAutoMiss = context?.isAutoMiss === true;
 
@@ -536,7 +536,7 @@ export function createLogAndShow(deps) {
             rolls: [r1, r2],
             mode: context?.forcedMode || 'normal',
             total: effectiveD20Roll,
-            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus,
+            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty,
             bonusDetail: finalBonusDetail,
             baneRoll: baneAttackRoll,
             isNatural20: effectiveD20Roll === 20,
@@ -563,7 +563,7 @@ export function createLogAndShow(deps) {
                 rollType,
                 name,
                 rolls: luckyRerolled ? [luckyRerollValue] : [r1, r2],
-            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus,
+            bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty,
                 bonusDetail: finalBonusDetail,
                 baneRoll: baneAttackRoll,
                 targetName,
