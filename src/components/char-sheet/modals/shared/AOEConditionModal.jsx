@@ -91,6 +91,19 @@ function AOEConditionModal({
                 const success = saveTotal >= saveDc;
 
                 if (carefulSpellProtected) {
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: playerStats.name,
+                        targetName,
+                        saveDc,
+                        saveType,
+                        success: true,
+                        roll: saveRoll,
+                        total: saveTotal,
+                        saveBonus,
+                        description: `${targetName} succeeded on ${saveType} save (DC ${saveDc}, rolled ${saveRoll} + ${saveBonus} = ${saveTotal}) — Careful Spell protected`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
                     results.push({
                         targetName,
                         success: true,
@@ -102,15 +115,6 @@ function AOEConditionModal({
                 } else if (!success) {
                     applyConditionsToTarget(targetName, conditionList, campaignName);
 
-                    results.push({
-                        targetName,
-                        success: false,
-                        roll: saveRoll,
-                        total: saveTotal,
-                        saveBonus,
-                        conditionApplied: true,
-                    });
-
                     await addEntry(campaignName, {
                         type: 'condition',
                         action: 'applied',
@@ -121,6 +125,20 @@ function AOEConditionModal({
                         sourceName: playerStats.name,
                         timestamp: Date.now(),
                     }).catch((e) => { console.error('[AOEConditionModal] Error logging condition:', e); });
+
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: playerStats.name,
+                        targetName,
+                        saveDc,
+                        saveType,
+                        success: false,
+                        roll: saveRoll,
+                        total: saveTotal,
+                        saveBonus,
+                        description: `${targetName} failed ${saveType} save (DC ${saveDc}, rolled ${saveRoll} + ${saveBonus} = ${saveTotal})`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
                 } else {
                     results.push({
                         targetName,
@@ -130,6 +148,20 @@ function AOEConditionModal({
                         saveBonus,
                         conditionApplied: false,
                     });
+
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: playerStats.name,
+                        targetName,
+                        saveDc,
+                        saveType,
+                        success: true,
+                        roll: saveRoll,
+                        total: saveTotal,
+                        saveBonus,
+                        description: `${targetName} succeeded on ${saveType} save (DC ${saveDc}, rolled ${saveRoll} + ${saveBonus} = ${saveTotal})`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
                 }
             } else {
                 const carefulSpellProtected = isCarefulSpell && isCarefulAlly(targetName);
@@ -192,6 +224,34 @@ function AOEConditionModal({
                 sourceName: playerStats.name,
                 timestamp: Date.now(),
             }).catch((e) => { console.error('[AOEConditionModal] Error logging condition:', e); });
+
+            await addEntry(campaignName, {
+                type: 'save_result',
+                characterName: playerStats.name,
+                targetName,
+                saveDc,
+                saveType,
+                success: false,
+                roll: detail.roll ?? 0,
+                total: detail.total ?? 0,
+                saveBonus: detail.saveBonus ?? 0,
+                description: `${targetName} failed ${saveType} save (DC ${saveDc}, rolled ${detail.roll ?? 0}${detail.saveBonus !== 0 ? ' + ' + detail.saveBonus : ''} = ${detail.total ?? 0})`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
+        } else {
+            await addEntry(campaignName, {
+                type: 'save_result',
+                characterName: playerStats.name,
+                targetName,
+                saveDc,
+                saveType,
+                success: true,
+                roll: detail.roll ?? 0,
+                total: detail.total ?? 0,
+                saveBonus: detail.saveBonus ?? 0,
+                description: `${targetName} succeeded on ${saveType} save (DC ${saveDc}, rolled ${detail.roll ?? 0}${detail.saveBonus !== 0 ? ' + ' + detail.saveBonus : ''} = ${detail.total ?? 0})`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
         }
 
         persistAndNotify(getCombatSummary(campaignName), campaignName);
@@ -365,6 +425,34 @@ function AOEConditionModal({
                 sourceName: playerStats.name,
                 timestamp: Date.now(),
             }).catch((e) => { console.error('[AOEConditionModal] Error logging condition:', e); });
+
+            addEntry(campaignName, {
+                type: 'save_result',
+                characterName: playerStats.name,
+                targetName,
+                saveDc,
+                saveType,
+                success: false,
+                roll: detail.roll ?? 0,
+                total: detail.total ?? 0,
+                saveBonus: detail.saveBonus ?? 0,
+                description: `${targetName} failed ${saveType} save (DC ${saveDc}, rolled ${detail.roll ?? 0}${detail.saveBonus !== 0 ? ' + ' + detail.saveBonus : ''} = ${detail.total ?? 0})`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
+        } else {
+            addEntry(campaignName, {
+                type: 'save_result',
+                characterName: playerStats.name,
+                targetName,
+                saveDc,
+                saveType,
+                success: true,
+                roll: detail.roll ?? 0,
+                total: detail.total ?? 0,
+                saveBonus: detail.saveBonus ?? 0,
+                description: `${targetName} succeeded on ${saveType} save (DC ${saveDc}, rolled ${detail.roll ?? 0}${detail.saveBonus !== 0 ? ' + ' + detail.saveBonus : ''} = ${detail.total ?? 0})`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[AOEConditionModal] Error logging save result:', e); });
         }
 
         persistAndNotify(getCombatSummary(campaignName), campaignName);
