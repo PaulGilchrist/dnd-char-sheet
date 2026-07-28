@@ -24,7 +24,9 @@ export function setupEventListeners(deps) {
 
         window.addEventListener('save-result', async (e) => {
             const pending = getPendingSavePrompt(e.detail.promptId);
-            if (!pending) return;
+            if (!pending) {
+                return;
+            }
 
             const createSaveListenerPrompts = new Set(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
             if (createSaveListenerPrompts.has(e.detail.promptId)) return;

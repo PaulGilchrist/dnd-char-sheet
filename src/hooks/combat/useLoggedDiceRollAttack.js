@@ -52,7 +52,6 @@ export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
 
     return async function logAndShow(name, bonus, rollType, context) {
-        console.log('[useLoggedDiceRollAttack] logAndShow entry:', { name, rollType, contextTargetName: context?.targetName, contextAttackerName: context?.attackerName, contextAutoDamageName: context?.autoDamageName });
         const r1 = rollD20();
         const r2 = rollD20();
 
@@ -252,7 +251,6 @@ export function createLogAndShow(deps) {
         let hit = isAutoMiss ? false : (target ? (effectiveD20Roll + effectiveBonus >= effectiveAc) : undefined);
         const targetName = (rollType === 'attack' || rollType === 'save') ? (target?.name || context?.targetName) : undefined;
         const attackerName = context?.attackerName || characterName;
-        console.log('[useLoggedDiceRollAttack] target resolution:', { targetName, contextTargetName: context?.targetName, targetObjName: target?.name, explicitTargetName, combatSummaryHasCreatures: !!(combatSummary?.creatures?.length) });
         if (rollType === 'save' && !context?.attackerName && context?.saveDc) {
             console.error('[useLoggedDiceRollAttack] Save roll missing context.attackerName:', { characterName, targetName, name, context });
         }
@@ -663,7 +661,6 @@ export function createLogAndShow(deps) {
             }, campaignName);
 
             // Save unified last attack to combat summary for all reaction features
-            console.log('[useLoggedDiceRollAttack] lastAttack write check:', { combatSummary: !!combatSummary, targetName, contextTargetName: context?.targetName, contextAttackerName: context?.attackerName, contextAutoDamageName: context?.autoDamageName });
             if (combatSummary && targetName) {
                 const lastAttackData = {
                     attackerName: characterName,
@@ -714,7 +711,6 @@ export function createLogAndShow(deps) {
                     statusEffects: context?.statusEffects || null,
                     affectedTargets: context?.affectedTargets || [targetName],
                 };
-                console.log('[useLoggedDiceRollAttack] writing lastAttack:', JSON.stringify(lastAttackData, null, 2));
                 setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
             }
 

@@ -1592,8 +1592,8 @@ export function createLogDamageAndShow(deps) {
                 statusEffects: context?.statusEffects || null,
                 affectedTargets: context?.affectedTargets || [target?.name].filter(Boolean),
             };
-            console.log('[merge lastAttack] result:', JSON.stringify(lastAttackData, null, 2));
-            setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
+        console.log('[merge lastAttack] result:', JSON.stringify(lastAttackData, null, 2));
+        setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }
 
         if (context?.metamagicTwinTarget && target) {

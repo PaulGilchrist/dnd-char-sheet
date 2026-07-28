@@ -222,7 +222,9 @@ export function storeSpellLastAttack(campaignName, config) {
  */
 export async function addTargetResult(campaignName, result) {
     const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-    if (!existing || existing.rollType !== 'spell-save') return;
+    if (!existing || existing.rollType !== 'spell-save') {
+        return;
+    }
 
     const entry = {
         targetName: result.targetName,
