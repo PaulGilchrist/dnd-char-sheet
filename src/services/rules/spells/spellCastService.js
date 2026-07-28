@@ -42,7 +42,6 @@ import { triggerBaneSpell } from '../features/baneService.js';
 import { triggerBlessSpell } from '../features/blessService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
-import { triggerSleep } from '../features/sleepService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
 import { triggerTashasHideousLaughter } from '../features/tashasHideousLaughterService.js';
 import { executeHandler as executeLongstrider } from '../../automation/index.js';
@@ -414,11 +413,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
-        // Sleep — multi-target WIS save for all creatures in 5-ft-radius sphere: Incapacitated with repeating save
-        if (spell.name && spell.name.toLowerCase() === 'sleep') {
-            await triggerSleep(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
-            return;
-        }
 
         // Stinking Cloud — multi-target CON save for all creatures in 20-ft-radius sphere: Poisoned with repeating save
         if (spell.name && spell.name.toLowerCase() === 'stinking cloud') {

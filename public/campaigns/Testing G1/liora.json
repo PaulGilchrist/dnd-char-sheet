@@ -46,7 +46,6 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Acolyte",
   "class": {
     "name": "Cleric",
     "subclass": {
@@ -57,7 +56,9 @@
     "primalOrder": ""
   },
   "expertSkills": [],
-  "feats": [],
+  "feats": [
+    "Magic Initiate"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Aasimar",
@@ -102,6 +103,9 @@
     "Religion",
     "Survival"
   ],
+  "toolProficiencies": [
+    "Calligrapher's Supplies"
+  ],
   "specialActions": [],
   "spells": [
     "Detect Magic",
@@ -118,10 +122,25 @@
     "Spirit Guardians",
     "Revivify",
     "Resistance",
-    "Cure Wounds"
+    "Cure Wounds",
+    "Poison Spray",
+    "Shocking Grasp",
+    "Sleep",
+    "Bane"
+  ],
+  "magicInitiateInstances": [
+    {
+      "class": "Wizard",
+      "cantrips": [
+        "Poison Spray",
+        "Shocking Grasp"
+      ],
+      "level1Spell": "Sleep"
+    }
   ],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Acolyte",
   "imagePath": "images/Liora.png"
 }

@@ -11495,7 +11495,15 @@
       "saveType": "WIS",
       "saveDc": "spell_save_dc",
       "range": "60 feet",
-      "duration": "Concentration, up to 1 minute"
+      "duration": "Concentration, up to 1 minute",
+      "effects": {
+        "fail": [
+          {
+            "type": "incapacitated",
+            "condition": "incapacitated"
+          }
+        ]
+      }
     }
   },
   {
