@@ -4,6 +4,9 @@ import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import storage from '../../../services/ui/storage.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
+import { clearExpirationEffects } from '../../rules/effects/expirations.js'
+import utils from '../../ui/utils.js'
+import { logConditionEvent } from '../../encounters/combatLoggingService.js'
 
 function hasDragonConstellation(creature, characters) {
     if (!creature || !creature.name) return false;
@@ -94,6 +97,65 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
     }
 }
 
+async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
+    const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
+
+    if (casterEffects.length === 0) return
+
+    const remaining = targetEffects.filter(te => !(te.source === casterName && te.duration === 'concentration'))
+    setRuntimeValue('campaign', 'targetEffects', remaining, campaignName, true)
+
+    for (const effect of casterEffects) {
+        if (effect.target) {
+            const invisKey = `_activeInvisibility_${effect.target}`
+            if (getRuntimeValue('campaign', invisKey, campaignName) === casterName) {
+                const campaignData = getRuntimeValue('campaign', '', campaignName) || {}
+                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== invisKey))
+                setRuntimeValue('campaign', '', rest, campaignName)
+            }
+        }
+    }
+
+    for (const effect of casterEffects) {
+        if (effect.condition) {
+            const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)
+            const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === effect.condition)
+            if (!stillHasCondition) {
+                const condList = getRuntimeValue(effect.target, 'activeConditions') || []
+                const filtered = condList.filter(c => utils.getName(c) !== utils.getName(effect.condition))
+                if (filtered.length !== condList.length) {
+                    setRuntimeValue(effect.target, 'activeConditions', filtered, campaignName)
+                    logConditionEvent(campaignName, 'removed', effect.target, effect.condition, 'Concentration lost by ' + casterName)
+                }
+            }
+        }
+    }
+
+    const expirations = getRuntimeValue(casterName, 'pendingExpirations') || []
+    if (Array.isArray(expirations) && expirations.length > 0) {
+        for (const entry of expirations) {
+            clearExpirationEffects(entry.effects, entry.target, casterName, campaignName)
+        }
+        setRuntimeValue(casterName, 'pendingExpirations', [], campaignName)
+    }
+
+    cleanupBuffsByName(casterName, spellName, campaignName)
+}
+
+function cleanupBuffsByName(casterName, buffName, campaignName) {
+    const cs = getCombatSummary(campaignName)
+    if (!cs || !cs.creatures) return
+    for (const creature of cs.creatures) {
+        const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []
+        if (!Array.isArray(buffs)) continue
+        const filtered = buffs.filter(b => b.name !== buffName)
+        if (filtered.length !== buffs.length) {
+            setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName)
+        }
+    }
+}
+
 export {
     rollConcentrationSave,
     breakConcentration,
@@ -102,4 +164,5 @@ export {
     clearBlessEffects,
     addConcentration,
     buildConcentrationPopup,
+    cleanupConcentrationEffects,
 }

@@ -251,7 +251,7 @@ describe('stinkingCloudHandler', () => {
         expect(addExpiration).toHaveBeenCalledWith(
           'TestWizard',
           'EnemyGoblin',
-          [{ type: 'poisoned', condition: 'poisoned' }],
+          [{ type: 'condition', condition: 'poisoned' }],
           campaignName,
         );
       });

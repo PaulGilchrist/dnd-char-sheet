@@ -71,6 +71,16 @@ export async function applyInvisibility(action, playerStats, campaignName, mapNa
         const invisKey = `_activeInvisibility_${targetName}`;
         setRuntimeValue('campaign', invisKey, playerStats.name, campaignName);
 
+        const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const invisEffect = {
+            target: targetName,
+            effect: 'invisible',
+            source: playerStats.name,
+            condition: 'invisible',
+            duration: 'concentration',
+        };
+        setRuntimeValue('campaign', 'targetEffects', [...targetEffects, invisEffect], campaignName);
+
         addExpiration(playerStats.name, targetName, [
             { type: 'remove_active_buff', buffName: INVISIBILITY_BUFF_NAME }
         ], campaignName);

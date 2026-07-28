@@ -225,38 +225,45 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 effect: 'speed_halved',
                 source: casterName,
                 condition: 'slow',
+                duration: 'concentration',
             };
             const noReactionEffect = {
                 target: targetName,
                 effect: 'no_reactions',
                 source: casterName,
+                duration: 'concentration',
             };
             const acPenaltyEffect = {
                 target: targetName,
                 effect: 'ac_penalty',
                 source: casterName,
                 value: -2,
+                duration: 'concentration',
             };
             const dexSaveDisadvantageEffect = {
                 target: targetName,
                 effect: 'dex_save_disadvantage',
                 source: casterName,
+                duration: 'concentration',
             };
             const actionLimitEffect = {
                 target: targetName,
                 effect: 'action_limit',
                 source: casterName,
+                duration: 'concentration',
             };
             const singleAttackEffect = {
                 target: targetName,
                 effect: 'single_attack_limit',
                 source: casterName,
+                duration: 'concentration',
             };
             const somaticFailureEffect = {
                 target: targetName,
                 effect: 'somatic_failure_chance',
                 source: casterName,
                 chance: 25,
+                duration: 'concentration',
             };
             const slowRepeatSaveEffect = {
                 target: targetName,

@@ -42,6 +42,7 @@ import {
     breakConcentration,
     addConcentration,
     buildConcentrationPopup,
+    cleanupConcentrationEffects,
 } from '../../services/combat/concentration/concentrationService.js'
 import {
     logConditionEvent,
@@ -522,11 +523,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 creature.concentration = null
                 storage.set('combatSummary', combatSummary, campaignName)
                 setCombatSummary(cloneDeep(combatSummary))
-                if (concentrationSpell === "Hunter's Mark") {
-                    const existingBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []
-                    const newBuffs = Array.isArray(existingBuffs) ? existingBuffs.filter(b => b.name !== "Hunter's Mark") : []
-                    setRuntimeValue(creature.name, 'activeBuffs', newBuffs, campaignName)
-                }
+                cleanupConcentrationEffects(creature.name, concentrationSpell, campaignName)
             }
         }
         window.addEventListener('concentration-result', handler)
@@ -749,6 +746,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         const mode = hasConcentrationBreaker ? 'disadvantage' : (advantageSources.length > 0 ? 'advantage' : 'normal')
         logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, mode, advantageSources.length > 0 ? advantageSources : undefined)
+
+        if (!success) {
+            cleanupConcentrationEffects(creatureName, concentration.spell, campaignName)
+        }
     }
 
     const handleBreakConcentration = (creatureName) => {
@@ -758,18 +759,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         storage.set('combatSummary', combatSummary, campaignName)
         setCombatSummary(cloneDeep(combatSummary))
         logConditionEvent(campaignName, 'removed', creatureName, `Concentration: ${spell}`)
-        if (spell === "Hunter's Mark") {
-            const existingBuffs = getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []
-            const newBuffs = Array.isArray(existingBuffs) ? existingBuffs.filter(b => b.name !== "Hunter's Mark") : []
-            setRuntimeValue(creatureName, 'activeBuffs', newBuffs, campaignName)
-        }
-        if (spell === 'Bane') {
-            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === creatureName));
-            if (filtered.length !== storedEffects.length) {
-                setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
-            }
-        }
+        cleanupConcentrationEffects(creatureName, spell, campaignName)
     }
 
     const handleAutoBreakCondition = (creatureName, condition) => {

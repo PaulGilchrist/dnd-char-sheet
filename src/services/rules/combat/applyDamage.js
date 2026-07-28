@@ -3,7 +3,8 @@ import storage from '../../ui/storage.js';
 import { rollD20 } from '../../dice/diceRoller.js';
 import utils from '../../ui/utils.js';
 import { sendDeathSavePrompt, sendConcentrationPrompt } from '../../combat/conditions/savePromptService.js';
-import { rollConcentrationSave } from '../../combat/concentration/concentrationRules.js';
+import { rollConcentrationSave } from '../../combat/concentration/concentrationRules.js'
+import { cleanupConcentrationEffects } from '../../combat/concentration/concentrationService.js';
 import { addEntry } from '../../ui/logService.js';
 import { getDamageReduction, getDamageResistances } from '../../combat/automation/automationPassives.js';
 import { isCreatureInSilenceZone } from '../../rules/features/silenceService.js';
@@ -504,6 +505,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             condition: 'Concentrating on ' + spellName,
             sourceName: 'Concentration broken by damage',
           }).catch((e) => { console.error("[applyDamage] Error:", e); });
+          cleanupConcentrationEffects(creature.name, spellName, campaignName);
         } else {
           addEntry(campaignName, {
             type: 'roll',

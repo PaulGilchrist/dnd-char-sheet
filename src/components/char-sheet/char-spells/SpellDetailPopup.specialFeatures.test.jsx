@@ -30,6 +30,7 @@ vi.mock('../../../services/encounters/combatData.js', () => ({
 vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
   addConcentration: vi.fn(),
   breakConcentration: vi.fn(),
+  cleanupConcentrationEffects: vi.fn(),
 }));
 
 vi.mock('../../../services/ui/storage.js', () => ({

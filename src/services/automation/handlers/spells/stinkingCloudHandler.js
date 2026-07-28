@@ -228,7 +228,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
             // Add expiration for concentration
             addExpiration(casterName, targetName, [
-                { type: 'poisoned', condition: 'poisoned' },
+                { type: 'condition', condition: 'poisoned' },
             ], campaignName);
 
             // Store target effect for end-of-turn repeated saves

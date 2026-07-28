@@ -866,7 +866,7 @@ async function applyHolyNimbusDamage(activeName, characters, campaignName) {
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 }
 
-function clearExpirationEffects(effects, targetName, attackerName, campaignName) {
+export function clearExpirationEffects(effects, targetName, attackerName, campaignName) {
     if (!effects || !Array.isArray(effects)) return;
 
     for (const effect of effects) {

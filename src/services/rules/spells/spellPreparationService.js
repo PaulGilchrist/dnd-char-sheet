@@ -1,6 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { breakConcentration, addConcentration } from '../../../services/combat/concentration/concentrationService.js';
+import { breakConcentration, addConcentration, cleanupConcentrationEffects } from '../../../services/combat/concentration/concentrationService.js';
 import * as storageService from '../../../services/ui/storage.js';
 import { isPsionicSpell, hasPsionicSorcery } from './metamagicRules.js';
 import { addEntry } from '../../ui/logService.js';
@@ -443,9 +443,9 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
     }
   }
 
-  // Cleanup old concentration buffs
+  // Cleanup old concentration effects
   if (oldConcentrationSpell) {
-    cleanupBuffsByName(playerName, oldConcentrationSpell, campaignName);
+    cleanupConcentrationEffects(playerName, oldConcentrationSpell, campaignName);
   }
 
   // Set new concentration
