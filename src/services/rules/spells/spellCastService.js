@@ -170,7 +170,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const lookup = allSpells.find(s => s.name === spell.name);
             if (lookup) {
                 fullSpell = { ...spell, ...lookup, index: undefined, name: spell.name };
-                console.log('[spellCast] Full spell loaded for:', spell.name, 'has dc:', !!fullSpell.dc, 'has aoe:', !!fullSpell.area_of_effect);
             } else {
                 console.error('[spellCast] Spell not found in spells.json:', spell.name, 'available:', allSpells.filter(s => s.name.toLowerCase().includes('burning')).map(s => s.name));
             }

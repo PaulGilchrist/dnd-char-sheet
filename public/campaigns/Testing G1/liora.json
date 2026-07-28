@@ -28,14 +28,14 @@
       "name": "Intelligence",
       "baseScore": 10,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
       "name": "Wisdom",
       "baseScore": 14,
       "featIncrease": 0,
-      "backgroundIncrease": 2,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
@@ -126,7 +126,8 @@
     "Poison Spray",
     "Shocking Grasp",
     "Sleep",
-    "Bane"
+    "Bane",
+    "Fireball"
   ],
   "magicInitiateInstances": [
     {

@@ -7,6 +7,7 @@ import { applyDamageToTarget, computeDamageAfterSave, computeDamageAfterEvasion,
 import { addEntry } from '../../../../services/ui/logService.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
+import { storeSpellLastAttack, addTargetResult } from '../../../../services/automation/common/damageRollback.js';
 import CreatureSelectionModal from './CreatureSelectionModal.jsx';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
@@ -57,12 +58,19 @@ function SaveAttackAoeModal({
         const combatSummary = getCombatSummary(campaignName);
         if (!combatSummary) return;
 
+        storeSpellLastAttack(campaignName, {
+            casterName: playerStats.name,
+            spellName: action.name,
+            saveType,
+            saveDc,
+            attackScope: 'aoe',
+        });
+
         const results = [];
         const prompts = [];
         const characters = combatSummary?.creatures?.filter(c => c.type === 'player') || [];
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
-        let lastNpcResult = null;
 
         for (const targetName of selectedNames) {
             const target = combatSummary.creatures.find(c => c.name === targetName);
@@ -125,7 +133,14 @@ function SaveAttackAoeModal({
                     }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging save:', e); });
                 }
 
-                lastNpcResult = { targetName, success, roll: saveRoll, total: saveTotal, saveBonus, rawDamage, finalDamage };
+                addTargetResult(campaignName, {
+                    targetName,
+                    saveResult: success ? 'success' : 'failure',
+                    roll: saveRoll,
+                    total: saveTotal,
+                    conditions: [],
+                    appliedDamage: finalDamage,
+                });
                 results.push({
                     targetName,
                     success,
@@ -180,35 +195,9 @@ function SaveAttackAoeModal({
             }
         }
 
-        if (lastNpcResult) {
-            await setRuntimeValue('campaign', 'lastAttack', {
-                attackerName: playerStats.name,
-                targetName: lastNpcResult.targetName,
-                d20: lastNpcResult.roll,
-                d20Rolls: [lastNpcResult.roll],
-                bonus: lastNpcResult.saveBonus,
-                total: lastNpcResult.total,
-                rollType: 'attack',
-                saveType: saveType || null,
-                saveDc: saveDc,
-                saveResult: lastNpcResult.success ? 'success' : 'failure',
-                damageFormula: resolvedDamage || null,
-                damageName: action.name || null,
-                damageType: damageType || null,
-                rawDamage: lastNpcResult.rawDamage || 0,
-                primaryDamage: lastNpcResult.rawDamage || 0,
-                primaryDamageType: damageType || null,
-                actualDamage: lastNpcResult.finalDamage || 0,
-                damageApplied: lastNpcResult.finalDamage > 0,
-                statusEffects: action.automation?.effects?.fail?.map(e => e.condition || e.type).filter(Boolean) || null,
-                affectedTargets: selectedNames,
-                timestamp: Date.now(),
-            }, campaignName);
-        }
-
         persistAndNotify(combatSummary, campaignName);
         return { results, prompts };
-    }, [campaignName, action.name, action.automation?.effects?.fail, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
+    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
 
     const handleSaveResult = useCallback(async (event, ctx) => {
         const detail = event.detail;
@@ -276,27 +265,14 @@ function SaveAttackAoeModal({
             }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging player damage:', e); });
         }
 
-        await setRuntimeValue('campaign', 'lastAttack', {
-            attackerName: playerStats.name,
+        addTargetResult(campaignName, {
             targetName,
-            d20: detail.roll ?? 0,
-            d20Rolls: [detail.roll ?? 0],
-            bonus: saveBonus,
-            total: detail.total ?? 0,
-            rollType: 'attack',
-            saveType: saveType || null,
-            saveDc: saveDc,
             saveResult: success ? 'success' : 'failure',
-            damageFormula: resolvedDamage || null,
-            damageName: action.name || null,
-            damageType: damageType || null,
-            rawDamage: rawDamage || 0,
-            primaryDamage: rawDamage || 0,
-            primaryDamageType: damageType || null,
-            actualDamage: finalDamage || 0,
-            damageApplied: finalDamage > 0,
-            timestamp: Date.now(),
-        }, campaignName);
+            roll: detail.roll ?? 0,
+            total: detail.total ?? 0,
+            conditions: [],
+            appliedDamage: finalDamage,
+        });
 
         if (combatSummary) {
             persistAndNotify(combatSummary, campaignName);
