@@ -199,6 +199,12 @@
   margin: 4px 0;
 }
 
+.sp-advantage-badge {
+  color: #22c55e;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
 .sp-disadvantage-badge {
   color: #ef4444;
   font-weight: bold;
