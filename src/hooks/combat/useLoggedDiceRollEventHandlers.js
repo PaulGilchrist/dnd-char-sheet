@@ -31,6 +31,7 @@ export function setupEventListeners(deps) {
             const prompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
             const filteredPrompts = prompts.filter(id => id !== e.detail.promptId);
             setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, pending.campaignName);
+            if (prompts.includes(e.detail.promptId)) return;
             const normalizedSaveType = normalizeSaveType(e.detail.saveType || pending.saveType);
             const targetChar = (charactersRef.current || []).find(c => c.name === e.detail.targetName);
             const targetConditions = getRuntimeValue(e.detail.targetName, 'activeConditions', pending.campaignName) || [];
