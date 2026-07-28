@@ -968,6 +968,38 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     if (popupHtml.type === 'automation_info') {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div className="dice-roll-header"><i className="fa-solid fa-info-circle"></i>{popupHtml.name}</div><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.description) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
                     }
+                    if (popupHtml.type === 'heal_multi') {
+                        const healResults = popupHtml.results || [];
+                        const totalHealed = healResults.reduce((sum, r) => sum + r.healAmount, 0);
+                        return (
+                            <Popup onClickOrKeyDown={() => setPopupHtml(null)}>
+                                <div className="dice-roll-result">
+                                    <div className="dice-roll-header">
+                                        <i className="fa-solid fa-heart"></i> {popupHtml.name}
+                                    </div>
+                                    <div className="dice-roll-total">{totalHealed}</div>
+                                    <div className="dice-roll-breakdown">
+                                        {popupHtml.formula}: <span className="dice-rolled">{popupHtml.rolls.join(', ')}</span>
+                                    </div>
+                                    {popupHtml.bonusHeal > 0 && (
+                                        <div className="dice-roll-heal-bonus">
+                                            <i className="fa-solid fa-sparkles"></i> Bonus: +{popupHtml.bonusHeal} ({popupHtml.bonusHealDetail})
+                                        </div>
+                                    )}
+                                    {healResults.length > 0 && (
+                                        <div className="dice-roll-heal-multi">
+                                            {healResults.map((r, i) => (
+                                                <div key={i} className="dice-roll-heal-multi-target">
+                                                    <strong>{r.targetName}</strong>: +{r.healAmount} HP ({r.rolls.join(', ')})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="dice-roll-hint">click to dismiss</div>
+                                </div>
+                            </Popup>
+                        );
+                    }
                     return <AttackResultPopup
                         popupHtml={popupHtml}
                         onClose={() => setPopupHtml(null)}

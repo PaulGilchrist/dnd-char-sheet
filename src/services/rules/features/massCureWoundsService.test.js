@@ -126,7 +126,7 @@ describe('massCureWoundsService', () => {
         describe('slot level resolution', () => {
             it('uses slotLevel from metaCtx when provided', async () => {
                 rollExpression.mockReturnValue({ total: 27, rolls: [15, 12] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -141,7 +141,7 @@ describe('massCureWoundsService', () => {
 
             it('falls back to spell.level when metaCtx has no slotLevel', async () => {
                 rollExpression.mockReturnValue({ total: 27, rolls: [15, 12] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -156,7 +156,7 @@ describe('massCureWoundsService', () => {
 
             it('falls back to lower slot level expression when exact level not found', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -177,7 +177,7 @@ describe('massCureWoundsService', () => {
 
             it('uses highest available slot level when slotLevel exceeds all defined', async () => {
                 rollExpression.mockReturnValue({ total: 40, rolls: [8, 8, 8, 8, 8] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -200,7 +200,7 @@ describe('massCureWoundsService', () => {
         describe('spell casting modifier resolution', () => {
             it('uses spellCastingAbility from spell object to lookup ability bonus', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -222,7 +222,7 @@ describe('massCureWoundsService', () => {
 
             it('uses negative ability bonus in expression', async () => {
                 rollExpression.mockReturnValue({ total: 0, rolls: [1, 1, 1, 1, 1] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -248,7 +248,7 @@ describe('massCureWoundsService', () => {
 
             it('falls back to spellAbilities.modifier when ability lookup fails', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getCombatContext.mockResolvedValue({ players: [], creatures: [] });
+                getCombatContext.mockResolvedValue({ players: [], creatures: [{ name: 'Goblin', maxHp: 7, currentHp: 3 }] });
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -285,7 +285,7 @@ describe('massCureWoundsService', () => {
                 expect(result).toEqual({ noTargets: true });
             });
 
-            it('excludes caster from target list', async () => {
+            it('includes caster in target list', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [
@@ -299,7 +299,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Orc', maxHp: 15, currentHp: 10 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(10);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -309,8 +308,8 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets).toHaveLength(2);
-                expect(result.targets.map(t => t.targetName)).not.toContain('Cleric');
+                expect(result.targets).toHaveLength(3);
+                expect(result.targets.map(t => t.targetName)).toContain('Cleric');
                 expect(result.targets.map(t => t.targetName)).toContain('Goblin');
                 expect(result.targets.map(t => t.targetName)).toContain('Orc');
             });
@@ -332,7 +331,6 @@ describe('massCureWoundsService', () => {
                         currentHp: 10,
                     })),
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -345,7 +343,7 @@ describe('massCureWoundsService', () => {
                 expect(result.targets).toHaveLength(6);
             });
 
-            it('filters creatures by AoE radius when caster has grid position', async () => {
+            it('includes all creatures regardless of distance', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [
@@ -358,10 +356,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Far Orc', maxHp: 15, currentHp: 10 },
                     ],
                 });
-                getDistanceFeet.mockImplementation((a, b) => {
-                    if (a.gridX === 0 && b.gridX === 1) return 5;
-                    return 60;
-                });
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -371,11 +365,12 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets.length).toBe(1);
-                expect(result.targets[0].targetName).toBe('Close Goblin');
+                expect(result.targets.length).toBe(2);
+                expect(result.targets.map(t => t.targetName)).toContain('Close Goblin');
+                expect(result.targets.map(t => t.targetName)).toContain('Far Orc');
             });
 
-            it('sorts targets by distance closest first', async () => {
+            it('returns creatures in array order without distance sorting', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [
@@ -390,11 +385,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Mid Creature', maxHp: 20, currentHp: 10 },
                     ],
                 });
-                getDistanceFeet.mockImplementation((_caster, target) => {
-                    if (target.gridX === 1) return 5;
-                    if (target.gridX === 2) return 10;
-                    return 15;
-                });
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -405,13 +395,13 @@ describe('massCureWoundsService', () => {
                 );
 
                 expect(result.targets.map(t => t.targetName)).toEqual([
+                    'Far Creature',
                     'Near Creature',
                     'Mid Creature',
-                    'Far Creature',
                 ]);
             });
 
-            it('uses placedItems for grid position when creature not in players', async () => {
+            it('includes all creatures regardless of grid position', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [{ name: 'Cleric', gridX: 5, gridY: 5 }],
@@ -421,7 +411,6 @@ describe('massCureWoundsService', () => {
                     ],
                     placedItems: [{ name: 'Goblin', gridX: 6, gridY: 5 }],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -431,11 +420,12 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets).toHaveLength(1);
-                expect(result.targets[0].targetName).toBe('Goblin');
+                expect(result.targets).toHaveLength(2);
+                expect(result.targets.map(t => t.targetName)).toContain('Cleric');
+                expect(result.targets.map(t => t.targetName)).toContain('Goblin');
             });
 
-            it('includes creatures without grid position when caster has grid position', async () => {
+            it('includes all creatures when caster has grid position', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [
@@ -448,7 +438,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Ghost', maxHp: 10, currentHp: 5 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -458,12 +447,13 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets).toHaveLength(2);
+                expect(result.targets).toHaveLength(3);
+                expect(result.targets.map(t => t.targetName)).toContain('Cleric');
                 expect(result.targets.map(t => t.targetName)).toContain('Goblin');
                 expect(result.targets.map(t => t.targetName)).toContain('Ghost');
             });
 
-            it('takes first N creatures without distance filtering when caster has no grid position', async () => {
+            it('takes first N creatures from the array', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
                 getCombatContext.mockResolvedValue({
                     players: [],
@@ -483,15 +473,14 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets.length).toBe(3);
-                expect(result.targets.map(t => t.targetName)).toEqual(['Goblin', 'Orc', 'Troll']);
+                expect(result.targets.length).toBe(4);
+                expect(result.targets.map(t => t.targetName)).toEqual(['Cleric', 'Goblin', 'Orc', 'Troll']);
             });
         });
 
         describe('AoE resolution', () => {
-            it('handles non-standard AoE size format', async () => {
+            it('ignores AoE size and includes all creatures', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(3);
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 0, gridY: 0 },
@@ -502,7 +491,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 3 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const spell = {
                     ...massCureWoundsSpell,
@@ -517,12 +505,11 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets).toHaveLength(1);
+                expect(result.targets).toHaveLength(2);
             });
 
-            it('defaults to 30-foot-radius when area_of_effect is missing', async () => {
+            it('includes all creatures regardless of area_of_effect', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(3);
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 0, gridY: 0 },
@@ -533,7 +520,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 3 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const spell = {
                     name: 'Mass Cure Wounds',
@@ -549,7 +535,7 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets).toHaveLength(1);
+                expect(result.targets).toHaveLength(2);
             });
         });
 
@@ -587,7 +573,10 @@ describe('massCureWoundsService', () => {
 
             it('caps healing at target maxHp', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(6);
+                getRuntimeValue.mockImplementation((name) => {
+                    if (name === 'Goblin') return 6;
+                    return null;
+                });
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 5, gridY: 5 },
@@ -598,7 +587,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 6 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -608,12 +596,16 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets[0].healAmount).toBe(1);
+                const goblinResult = result.targets.find(t => t.targetName === 'Goblin');
+                expect(goblinResult.healAmount).toBe(1);
             });
 
             it('does not apply healing when target is at full health', async () => {
                 rollExpression.mockReturnValue({ total: 50, rolls: [10, 10, 10, 10, 10] });
-                getRuntimeValue.mockReturnValue(7);
+                getRuntimeValue.mockImplementation((name) => {
+                    if (name === 'Goblin') return 7;
+                    return null;
+                });
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 5, gridY: 5 },
@@ -624,7 +616,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 7 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -634,13 +625,16 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(applyHealingToTarget).not.toHaveBeenCalled();
-                expect(result.targets[0].healAmount).toBe(0);
+                const goblinResult = result.targets.find(t => t.targetName === 'Goblin');
+                expect(goblinResult.healAmount).toBe(0);
             });
 
             it('uses stored runtime HP when available', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(1);
+                getRuntimeValue.mockImplementation((name) => {
+                    if (name === 'Goblin') return 1;
+                    return null;
+                });
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 5, gridY: 5 },
@@ -651,7 +645,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 5 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const result = await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -661,14 +654,18 @@ describe('massCureWoundsService', () => {
                     mapName,
                 );
 
-                expect(result.targets[0].healAmount).toBe(6);
+                const goblinResult = result.targets.find(t => t.targetName === 'Goblin');
+                expect(goblinResult.healAmount).toBe(6);
             });
         });
 
         describe('logging and events', () => {
             it('posts log entries for each target that receives healing', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(5);
+                getRuntimeValue.mockImplementation((name) => {
+                    if (name === 'Goblin') return 5;
+                    return null;
+                });
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 5, gridY: 5 },
@@ -679,7 +676,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 3 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 await triggerMassCureWounds(
                     massCureWoundsSpell,
@@ -702,7 +698,10 @@ describe('massCureWoundsService', () => {
 
             it('dispatches combat-summary-updated event', async () => {
                 rollExpression.mockReturnValue({ total: 20, rolls: [10, 10] });
-                getRuntimeValue.mockReturnValue(5);
+                getRuntimeValue.mockImplementation((name) => {
+                    if (name === 'Goblin') return 5;
+                    return null;
+                });
                 getCombatContext.mockResolvedValue({
                     players: [
                         { name: 'Cleric', gridX: 5, gridY: 5 },
@@ -713,7 +712,6 @@ describe('massCureWoundsService', () => {
                         { name: 'Goblin', maxHp: 7, currentHp: 5 },
                     ],
                 });
-                getDistanceFeet.mockReturnValue(5);
 
                 const eventHandler = vi.fn();
                 window.addEventListener('combat-summary-updated', eventHandler);

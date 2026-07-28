@@ -3,8 +3,6 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
 
 const MASS_CURE_WOUNDS_NAME = 'Mass Cure Wounds';
@@ -45,12 +43,8 @@ function resolveHealExpression(spell, slotLevel, spellCastingMod) {
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
-    const playerName = playerStats.name;
     const slotLevel = auto?.slotLevel || action.spell?.level || 5;
     const maxTargets = auto?.maxTargets || 6;
-    const aoeSize = action.spell?.area_of_effect?.size || '30-foot-radius';
-    const aoeMatch = aoeSize.match(/(\d+)-foot-radius/);
-    const rangeFt = aoeMatch ? parseInt(aoeMatch[1], 10) : 30;
 
     const spellCastingMod = getSpellCastingMod(playerStats, action.spell);
     const healExpression = resolveHealExpression(action.spell, slotLevel, spellCastingMod);
@@ -62,40 +56,23 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const maximize = hasHealingMaximization(playerStats);
-    const result = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
-    if (!result) return null;
-
     const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
-    const healAmount = result.total + bonusHeal;
 
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) return null;
 
-    const allyNames = getAllyList(playerName);
-    const allyList = Array.isArray(allyNames) && allyNames.length > 0 ? allyNames : [];
-    const effectiveAllies = allyList.length > 0 && allyList.some(a => a !== playerName)
-        ? allyList
-        : combatSummary.creatures?.map(c => c.name) || [];
-    const eligible = [];
-
-    for (const allyName of effectiveAllies) {
-        if (allyName === playerName) continue;
-        const creature = combatSummary.creatures?.find(c => c.name === allyName);
-        if (!creature) continue;
-        if (await isWithinRange(playerName, allyName, rangeFt)) {
-            eligible.push(creature);
-        }
-    }
+    const allCreatures = combatSummary.creatures || [];
+    const eligible = allCreatures.filter(c => c.name);
 
     if (eligible.length === 0) {
         return {
             type: 'popup',
-            payload: { type: 'automation_info', name: MASS_CURE_WOUNDS_NAME, description: `${MASS_CURE_WOUNDS_NAME}: No allies within range.` },
+            payload: { type: 'automation_info', name: MASS_CURE_WOUNDS_NAME, description: `${MASS_CURE_WOUNDS_NAME}: No creatures in combat.` },
         };
     }
 
     if (eligible.length <= maxTargets) {
-        return confirmMassCureWounds(action, playerStats, campaignName, eligible.map(c => c.name), healAmount, healExpression, result.rolls, bonusHeal, bonusDetails);
+        return confirmMassCureWounds(action, playerStats, campaignName, eligible.map(c => c.name), healExpression, maximize, bonusHeal, bonusDetails, slotLevel);
     }
 
     const creatureTargets = eligible.map(c => c.name);
@@ -109,32 +86,45 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             campaignName,
             creatureTargets,
             maxTargets,
-            healAmount,
             healExpression,
-            rolls: result.rolls,
+            maximize,
             bonusHeal,
+            bonusDetails,
+            slotLevel,
         },
     };
 }
 
-export async function confirmMassCureWounds(action, playerStats, campaignName, selectedTargetNames, healAmount, healExpression, _rolls, _bonusHeal, bonusDetails) {
+export async function confirmMassCureWounds(action, playerStats, campaignName, selectedTargetNames, healExpression, maximize, bonusHeal, bonusDetails, _slotLevel) {
     const playerName = playerStats.name;
     const maxTargets = action.automation?.maxTargets || 6;
     const finalTargets = selectedTargetNames.slice(0, maxTargets);
     const combatSummary = await getCombatContext(campaignName);
     const results = [];
+    const allRolls = [];
+    let totalHealed = 0;
 
     for (const targetName of finalTargets) {
         const maxHp = combatSummary?.creatures?.find(c => c.name === targetName)?.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const actualHeal = Math.min(healAmount, maxHp - currentHp);
+        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        if (!rollResult) continue;
+
+        const targetHealAmount = rollResult.total + bonusHeal;
+        const actualHeal = Math.min(targetHealAmount, maxHp - currentHp);
 
         if (actualHeal > 0) {
             applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
         }
 
         const newHp = Math.min(maxHp, currentHp + actualHeal);
+
+        const formulaParts = [healExpression];
+        if (bonusDetails.length > 0) {
+            const bonusParts = bonusDetails.map(d => `${d.amount} ${d.name}`).join(' + ');
+            formulaParts.push(`(${bonusParts})`);
+        }
 
         await addEntry(campaignName, {
             type: 'hp_change',
@@ -145,12 +135,14 @@ export async function confirmMassCureWounds(action, playerStats, campaignName, s
             isHealing: true,
             sourceName: playerName,
             note: MASS_CURE_WOUNDS_NAME,
-            formula: healExpression,
+            formula: formulaParts.join(' + '),
             bonusDetails: bonusDetails && bonusDetails.length > 0 ? bonusDetails : undefined,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[massCureWounds] Error:', e); });
 
-        results.push({ targetName, healAmount: actualHeal });
+        results.push({ targetName, healAmount: actualHeal, rolls: rollResult.rolls, rawTotal: rollResult.total + bonusHeal });
+        allRolls.push(...rollResult.rolls);
+        totalHealed += actualHeal;
     }
 
     if (results.some(r => r.healAmount > 0) && bonusDetails?.some(d => d.name === 'Fortified Health')) {
@@ -159,14 +151,17 @@ export async function confirmMassCureWounds(action, playerStats, campaignName, s
 
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
-    const totalHealed = results.reduce((sum, r) => sum + r.healAmount, 0);
     return {
         type: 'popup',
         payload: {
-            type: 'automation_info',
+            type: 'heal_multi',
             name: MASS_CURE_WOUNDS_NAME,
-            automationType: action.automation.type,
-            description: `${MASS_CURE_WOUNDS_NAME} healed ${totalHealed} HP across ${results.length} target(s): ${finalTargets.join(', ') || 'none'}.`,
+            formula: healExpression,
+            rolls: allRolls,
+            results: results.map(r => ({ targetName: r.targetName, healAmount: r.healAmount, rolls: r.rolls })),
+            totalHealed: totalHealed,
+            bonusHeal: bonusHeal || 0,
+            bonusHealDetail: bonusDetails && bonusDetails.length > 0 ? bonusDetails.map(d => `${d.amount} ${d.name}`).join(', ') : '',
         },
     };
 }

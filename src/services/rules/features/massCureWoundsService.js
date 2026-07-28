@@ -3,8 +3,6 @@ import { getCombatContext } from '../combat/damageUtils.js';
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
-import { getDistanceFeet } from '../combat/rangeValidation.js';
-import { isDistanceInRange } from '../combat/rangeCheck.js';
 import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
 
 const MASS_CURE_WOUNDS_NAME = 'Mass Cure Wounds';
@@ -67,67 +65,35 @@ export async function triggerMassCureWounds(spell, metaCtx, playerStats, campaig
     }
 
     const maximize = hasHealingMaximization(playerStats);
-    const result = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
-    if (!result) {
-        return null;
-    }
-
     const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
-    const healAmount = result.total + bonusHeal;
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) {
         return null;
     }
 
     const casterName = playerStats.name;
-    const casterPos = combatSummary.players?.find(p => p.name === casterName);
-    const aoeSize = spell.area_of_effect?.size || '30-foot-radius';
-    const aoeMatch = aoeSize.match(/(\d+)-foot-radius/);
-    const aoeRadius = aoeMatch ? parseInt(aoeMatch[1], 10) : 30;
-    const casterGridPos = casterPos ? { gridX: casterPos.gridX, gridY: casterPos.gridY } : null;
-
     const maxTargets = 6;
-    const targets = [];
-
-    if (casterGridPos) {
-        const sortedCreatures = [...(() => { const x = combatSummary.creatures; if (x == null) { console.error('[massCureWoundsService] Missing array:', x); throw new Error('Expected array, got ' + x); } return x; })()]
-            .filter(c => c.name !== casterName)
-            .map(c => {
-                const targetPlayer = combatSummary.players?.find(p => p.name === c.name);
-                const targetNpc = combatSummary.placedItems?.find(i => i.name === c.name);
-                const targetGridX = targetPlayer?.gridX ?? targetNpc?.gridX;
-                const targetGridY = targetPlayer?.gridY ?? targetNpc?.gridY;
-                const dist = (targetGridX != null && targetGridY != null)
-                    ? getDistanceFeet(casterGridPos, { gridX: targetGridX, gridY: targetGridY })
-                    : null;
-                return { creature: c, dist, gridX: targetGridX, gridY: targetGridY };
-            })
-            .filter(item => isDistanceInRange(item.dist, aoeRadius))
-            .sort((a, b) => a.dist - b.dist)
-            .slice(0, maxTargets);
-
-        for (const item of sortedCreatures) {
-            targets.push(item.creature);
-        }
-    } else {
-        const eligible = (() => { const x = combatSummary.creatures; if (x == null) { console.error('[massCureWoundsService] Missing array:', x); throw new Error('Expected array, got ' + x); } return x; })()
-            .filter(c => c.name !== casterName)
-            .slice(0, maxTargets);
-        targets.push(...eligible);
-    }
+    const allCreatures = (() => { const x = combatSummary.creatures; if (x == null) { console.error('[massCureWoundsService] Missing array:', x); throw new Error('Expected array, got ' + x); } return x; })();
+    const targets = allCreatures.slice(0, maxTargets);
 
     if (targets.length === 0) {
         return { noTargets: true };
     }
 
     const results = [];
+    const allRolls = [];
+    let totalHealed = 0;
 
     for (const target of targets) {
         const targetName = target.name;
         const maxHp = target.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const actualHeal = Math.min(healAmount, maxHp - currentHp);
+        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        if (!rollResult) continue;
+
+        const targetHealAmount = rollResult.total + bonusHeal;
+        const actualHeal = Math.min(targetHealAmount, maxHp - currentHp);
 
         if (actualHeal > 0) {
             applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
@@ -155,7 +121,9 @@ export async function triggerMassCureWounds(spell, metaCtx, playerStats, campaig
             timestamp: Date.now(),
         }).catch((e) => { console.error("[massCureWounds] Error:", e); });
 
-        results.push({ targetName, healAmount: actualHeal });
+        results.push({ targetName, healAmount: actualHeal, rolls: rollResult.rolls, rawTotal: rollResult.total + bonusHeal });
+        allRolls.push(...rollResult.rolls);
+        totalHealed += actualHeal;
     }
 
     if (results.some(r => r.healAmount > 0) && bonusDetails?.some(d => d.name === 'Fortified Health')) {
@@ -164,5 +132,5 @@ export async function triggerMassCureWounds(spell, metaCtx, playerStats, campaig
 
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
-    return { targets: results, formula: healExpression, totalHealed: results.reduce((sum, r) => sum + r.healAmount, 0), rolls: result.rolls, rawTotal: result.total + bonusHeal };
+    return { targets: results, formula: healExpression, totalHealed, rolls: allRolls, rawTotal: results.reduce((sum, r) => sum + r.rawTotal, 0) };
 }

@@ -344,3 +344,20 @@
 .dice-roll-heal-bonus i {
     margin-right: 4px;
 }
+
+.dice-roll-heal-multi {
+    margin: 8px 0;
+    text-align: left;
+}
+
+.dice-roll-heal-multi-target {
+    padding: 3px 8px;
+    margin: 2px 0;
+    background: rgba(76, 175, 80, 0.08);
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.dice-roll-heal-multi-target strong {
+    color: #4CAF50;
+}

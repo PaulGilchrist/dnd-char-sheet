@@ -753,7 +753,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     const handleMassCureWoundsConfirm = React.useCallback(async (targetNames) => {
         if (!targetNames || !modalState.massCureWoundsModal) return;
         const { action, playerStats, campaignName } = modalState.massCureWoundsModal;
-        const result = await confirmMassCureWounds(action, playerStats, campaignName, targetNames, modalState.massCureWoundsModal.healAmount, modalState.massCureWoundsModal.healExpression, modalState.massCureWoundsModal.rolls, modalState.massCureWoundsModal.bonusHeal);
+        const result = await confirmMassCureWounds(action, playerStats, campaignName, targetNames, modalState.massCureWoundsModal.healExpression, modalState.massCureWoundsModal.maximize, modalState.massCureWoundsModal.bonusHeal, modalState.massCureWoundsModal.bonusDetails, modalState.massCureWoundsModal.slotLevel);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }

@@ -42,6 +42,7 @@ import { triggerBlessSpell } from '../features/blessService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
+import { triggerMassCureWounds } from '../features/massCureWoundsService.js';
 import { triggerTashasHideousLaughter } from '../features/tashasHideousLaughterService.js';
 import { executeHandler as executeLongstrider } from '../../automation/index.js';
 import { executeHandler as executeProtectionFromEnergy } from '../../automation/index.js';
@@ -495,6 +496,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 context.statusEffects = spell.status_effects;
             }
             rollDamage(spell.name, '0', 0, [], 0, context);
+        }
+
+        // Mass Cure Wounds — up to 6 creatures in 30-ft radius sphere regain 5d8 + modifier HP
+        if (spell.name && spell.name.toLowerCase() === 'mass cure wounds') {
+            await triggerMassCureWounds(spell, metaCtx, playerStats, campaignName, mapName);
+            return;
         }
 
         // Generic healing: use heal_at_slot_level for any healing spell without a dedicated handler
