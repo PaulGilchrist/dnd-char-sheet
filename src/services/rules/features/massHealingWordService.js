@@ -65,13 +65,7 @@ export async function triggerMassHealingWord(spell, metaCtx, playerStats, campai
     }
 
     const maximize = hasHealingMaximization(playerStats);
-    const result = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
-    if (!result) {
-        return null;
-    }
-
     const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
-    const healAmount = result.total + bonusHeal;
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) {
         return null;
@@ -79,22 +73,27 @@ export async function triggerMassHealingWord(spell, metaCtx, playerStats, campai
 
     const casterName = playerStats.name;
     const maxTargets = 6;
-    const targets = (() => { const x = combatSummary.creatures; if (x == null) { console.error('[massHealingWordService] Missing array:', x); throw new Error('Expected array, got ' + x); } return x; })()
-        .filter(c => c.name !== casterName)
-        .slice(0, maxTargets);
+    const allCreatures = (() => { const x = combatSummary.creatures; if (x == null) { console.error('[massHealingWordService] Missing array:', x); throw new Error('Expected array, got ' + x); } return x; })();
+    const targets = allCreatures.slice(0, maxTargets);
 
     if (targets.length === 0) {
         return { noTargets: true };
     }
 
     const results = [];
+    const allRolls = [];
+    let totalHealed = 0;
 
     for (const target of targets) {
         const targetName = target.name;
         const maxHp = target.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const actualHeal = Math.min(healAmount, maxHp - currentHp);
+        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        if (!rollResult) continue;
+
+        const targetHealAmount = rollResult.total + bonusHeal;
+        const actualHeal = Math.min(targetHealAmount, maxHp - currentHp);
 
         if (actualHeal > 0) {
             applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
@@ -116,13 +115,15 @@ export async function triggerMassHealingWord(spell, metaCtx, playerStats, campai
             maxHp,
             isHealing: true,
             sourceName: casterName,
-            note: 'Mass Healing Word',
+            note: MASS_HEALING_WORD_NAME,
             formula: formulaParts.join(' + '),
             bonusDetails: bonusDetails && bonusDetails.length > 0 ? bonusDetails : undefined,
             timestamp: Date.now(),
         }).catch((e) => { console.error("[massHealingWord] Error:", e); });
 
-        results.push({ targetName, healAmount: actualHeal });
+        results.push({ targetName, healAmount: actualHeal, rolls: rollResult.rolls, rawTotal: rollResult.total + bonusHeal });
+        allRolls.push(...rollResult.rolls);
+        totalHealed += actualHeal;
     }
 
     if (results.some(r => r.healAmount > 0) && bonusDetails?.some(d => d.name === 'Fortified Health')) {
@@ -131,5 +132,5 @@ export async function triggerMassHealingWord(spell, metaCtx, playerStats, campai
 
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
-    return { targets: results, formula: healExpression, totalHealed: results.reduce((sum, r) => sum + r.healAmount, 0), rolls: result.rolls, rawTotal: result.total + bonusHeal };
+    return { targets: results, formula: healExpression, totalHealed, rolls: allRolls, rawTotal: results.reduce((sum, r) => sum + r.rawTotal, 0) };
 }

@@ -8410,12 +8410,10 @@
       "9": "8d4 + MOD"
     },
     "automation": {
-      "type": "healing",
-      "healExpression": "heal_at_slot_level",
+      "type": "mass_healing_word",
       "action": "bonus_action",
       "casting_time": "1 bonus action",
-      "maxTargets": 6,
-      "range": "60 feet"
+      "maxTargets": 6
     }
   },
   {

@@ -43,6 +43,7 @@ import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
 import { triggerMassCureWounds } from '../features/massCureWoundsService.js';
+import { triggerMassHealingWord } from '../features/massHealingWordService.js';
 import { triggerTashasHideousLaughter } from '../features/tashasHideousLaughterService.js';
 import { executeHandler as executeLongstrider } from '../../automation/index.js';
 import { executeHandler as executeProtectionFromEnergy } from '../../automation/index.js';
@@ -501,6 +502,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Mass Cure Wounds — up to 6 creatures in 30-ft radius sphere regain 5d8 + modifier HP
         if (spell.name && spell.name.toLowerCase() === 'mass cure wounds') {
             await triggerMassCureWounds(spell, metaCtx, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Mass Healing Word — up to 6 creatures regain 2d4 + spellcasting ability modifier HP
+        if (spell.name && spell.name.toLowerCase() === 'mass healing word') {
+            await triggerMassHealingWord(spell, metaCtx, playerStats, campaignName, mapName);
             return;
         }
 

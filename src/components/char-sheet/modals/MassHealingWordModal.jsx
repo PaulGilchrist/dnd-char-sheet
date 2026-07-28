@@ -12,7 +12,7 @@ export default function MassHealingWordModal({
             icon="fa-feather"
             targets={creatureTargets}
             maxTargets={maxTargets}
-            description="Choose up to 6 allies within 60 feet to heal."
+            description="Choose up to 6 creatures to heal."
             confirmLabel="Heal"
             confirmIcon="fa-feather"
             onConfirm={onConfirm}
