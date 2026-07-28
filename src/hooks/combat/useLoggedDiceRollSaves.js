@@ -157,6 +157,18 @@ export function createSaves(deps) {
             }
         }
 
+        // Bane on attacker: grant +1d4 to the target's save when the attacker is cursed by Bane
+        let baneAttackerBonus = 0;
+        if (pending.attackerName) {
+            const baneOnAttacker = targetEffects.filter(te => te.target === pending.attackerName && te.effect === 'bane_penalty');
+            if (baneOnAttacker.length > 0) {
+                const r = rollExpression('1d4');
+                if (r) {
+                    baneAttackerBonus += r.total;
+                }
+            }
+        }
+
         // Bless: add 1d4 to saving throws
         let blessSaveBonus = 0;
         const blessEffectsForSave = targetEffects.filter(te => te.target === pending.targetName && te.effect === 'bless_bonus');
@@ -175,7 +187,7 @@ export function createSaves(deps) {
         const isDexSave = saveType.toUpperCase() === 'DEX';
         const dodgeAdvantage = isDodging && isDexSave;
         const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage);
-        saveResult.total += baneSavePenalty + blessSaveBonus;
+        saveResult.total += baneSavePenalty + blessSaveBonus + baneAttackerBonus;
 
         const normalizedSaveType = normalizeSaveType(saveType);
         const targetConditions = getRuntimeValue(pending.targetName, 'activeConditions', campaignName) || [];

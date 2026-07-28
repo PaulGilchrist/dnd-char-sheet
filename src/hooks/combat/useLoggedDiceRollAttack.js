@@ -1158,6 +1158,20 @@ export function createLogAndShow(deps) {
                     }
                 }
 
+                // Bane on attacker: grant +1d4 to the target's save when the attacker is cursed by Bane
+                let baneAttackerBonus = 0;
+                let baneAttackerRoll = null;
+                if (attackerName) {
+                    const baneOnAttacker = allTargetEffectsForSave.filter(te => te.target === attackerName && te.effect === 'bane_penalty');
+                    if (baneOnAttacker.length > 0) {
+                        const r = rollExpression('1d4');
+                        if (r) {
+                            baneAttackerBonus = r.total;
+                            baneAttackerRoll = r.total;
+                        }
+                    }
+                }
+
                 // Bless: add 1d4 to saving throws for blessed targets
                 let blessSaveBonus = 0;
                 let blessSaveRoll = null;
@@ -1170,7 +1184,7 @@ export function createLogAndShow(deps) {
                     }
                 }
 
-                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty + blessSaveBonus;
+                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus;
                 saveSuccess = saveDc != null ? (saveTotal >= saveDc) : null;
 
                 setRuntimeValue(characterName, 'lastSaveRoll', {
@@ -1223,6 +1237,7 @@ export function createLogAndShow(deps) {
                     total: saveTotal,
                     bonus,
                     baneRoll: baneSaveRoll,
+                    baneAttackerRoll: baneAttackerRoll,
                     blessRoll: blessSaveRoll,
                     isNatural20: effectiveD20ForSave === 20,
                     isNatural1: effectiveD20ForSave === 1,

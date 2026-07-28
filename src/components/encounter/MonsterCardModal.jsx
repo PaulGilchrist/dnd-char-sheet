@@ -77,7 +77,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
     });
   }, [campaignName, mapName]);
 
-  const allTargetEffects = useRuntimeValue(campaignName, 'targetEffects') ?? [];
+  const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
   const monsterTargetEffects = allTargetEffects.filter(te => te.target === (creatureName || monster?.name));
   const inspiringMoveNoOA = useRuntimeValue(monsterName, 'inspiringMovementNoOA', campaignName);
   const remarkableNoOA = useRuntimeValue(monsterName, 'remarkableAthleteNoOA', campaignName);

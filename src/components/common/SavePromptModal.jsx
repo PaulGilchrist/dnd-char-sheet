@@ -247,7 +247,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       } catch (_e) { /* ignore */ }
     }
 
-    // Bane: apply -1d4 penalty to saving throws
+    // Bane: apply -1d4 penalty to saving throws for cursed targets
     let baneSavePenalty = 0;
     let baneSaveRoll = null;
     const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -257,6 +257,20 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       if (r) {
         baneSavePenalty = -r.total;
         baneSaveRoll = r.total;
+      }
+    }
+
+    // Bane on attacker: grant +1d4 to the target's save when the attacker is cursed by Bane
+    let baneAttackerBonus = 0;
+    let baneAttackerRoll = null;
+    if (current.attackerName) {
+      const baneOnAttacker = allTargetEffects.filter(te => te.target === current.attackerName && te.effect === 'bane_penalty');
+      if (baneOnAttacker.length > 0) {
+        const r = rollExpression('1d4');
+        if (r) {
+          baneAttackerBonus = r.total;
+          baneAttackerRoll = r.total;
+        }
       }
     }
 
@@ -272,12 +286,15 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     }
 
-    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus;
+    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus;
     const success = total >= current.saveDc;
     const auraBonusStr = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined;
     const bonusDetailParts = [auraBonusStr, cosmicOmenDetail];
     if (baneSaveRoll) {
       bonusDetailParts.push(`-${baneSaveRoll} [Bane]`);
+    }
+    if (baneAttackerRoll) {
+      bonusDetailParts.push(`+${baneAttackerRoll} [Bane]`);
     }
     if (blessSaveRoll) {
       bonusDetailParts.push(`+${blessSaveRoll} [Bless]`);
@@ -321,7 +338,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll, blessRoll: blessSaveRoll } }
+        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll, blessRoll: blessSaveRoll, baneAttackerRoll: baneAttackerRoll } }
         : p
     ));
 
