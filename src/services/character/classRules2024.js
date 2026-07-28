@@ -17,10 +17,10 @@ const classRules = {
             // Preserve class_levels before merging
         const classLevels = characterClass.class_levels || [];
 
-           // Merge with player summary data
-        if (playerSummary.class) {
-            Object.assign(characterClass, playerSummary.class);
-          }
+            // Merge with player summary data
+         if (playerSummary.class) {
+             Object.assign(characterClass, playerSummary.class);
+           }
 
            // Restore class_levels after merge (they may have been overwritten)
         characterClass.class_levels = classLevels;

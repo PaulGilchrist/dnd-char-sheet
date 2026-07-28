@@ -88,7 +88,7 @@ const rulesFactory = {
 
           // Re-read class/race from the appropriate ruleset after playerStats is built
          // because rules.getPlayerStats may have set them differently
-        playerStats.class = cr.getClass(allClasses, playerStats);
+        playerStats.class = cr.getClass(allClasses, playerSummary);
         playerStats.race = rr.getRace(allRaces, playerStats);
         playerStats.immunities = rr.getImmunities(playerStats);
         playerStats.resistances = rr.getResistances(playerStats);

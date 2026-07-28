@@ -1,6 +1,7 @@
 import { cloneDeep } from 'lodash';
 import classRules from '../../character/classRules2024.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import utils from '../../ui/utils.js';
 
 export function getSpellAbilities(allSpells, playerStats, playerSummary) {
     let spellAbilities = null;
@@ -125,7 +126,8 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             spellAbilities.spellCastingAbility = castingAbility;
         }
 
-        const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
+        const abilityName = spellAbilities.spellCastingAbility?.length <= 3 ? utils.getAbilityLongName(spellAbilities.spellCastingAbility) : spellAbilities.spellCastingAbility;
+        const spellAbility = playerStats.abilities.find(ability => ability.name === abilityName);
         if (!spellAbility) {
             spellAbilities.modifier = 0;
             spellAbilities.toHit = playerStats.proficiency;
@@ -440,7 +442,8 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
 
         // Recalculate spellcasting ability stats if lineage/feat set it after the initial calculation
         if (spellAbilities.spellCastingAbility) {
-            const spellAbility = playerStats.abilities.find(ability => ability.name === spellAbilities.spellCastingAbility);
+            const abilityName = spellAbilities.spellCastingAbility.length <= 3 ? utils.getAbilityLongName(spellAbilities.spellCastingAbility) : spellAbilities.spellCastingAbility;
+            const spellAbility = playerStats.abilities.find(ability => ability.name === abilityName);
             if (!spellAbility) {
                 spellAbilities.modifier = 0;
                 spellAbilities.toHit = playerStats.proficiency;
