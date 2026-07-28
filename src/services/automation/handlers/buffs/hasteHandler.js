@@ -60,6 +60,18 @@ export async function applyHaste(action, playerStats, campaignName, mapName, tar
             setRuntimeValue(targetName, 'activeBuffs', buffs, campaignName);
         }
 
+        const conditionEffects = getRuntimeValue(targetName, 'conditionEffects', campaignName) || {};
+        console.log('[haste] BEFORE set conditionEffects for', targetName, ':', JSON.stringify(conditionEffects));
+        const existingAdvantages = conditionEffects.saveAdvantageAbilities || [];
+        const updatedAdvantages = existingAdvantages.includes('DEX') ? existingAdvantages : [...existingAdvantages, 'DEX'];
+        const newConditionEffects = {
+            ...conditionEffects,
+            saveAdvantageCount: (conditionEffects.saveAdvantageCount || 0) + 1,
+            saveAdvantageAbilities: updatedAdvantages,
+        };
+        setRuntimeValue(targetName, 'conditionEffects', newConditionEffects, campaignName);
+        console.log('[haste] AFTER set conditionEffects for', targetName, ':', JSON.stringify(newConditionEffects));
+
         addExpiration(playerStats.name, targetName, [
             { type: 'remove_active_buff', buffName: HASTE_BUFF_NAME }
         ], campaignName);

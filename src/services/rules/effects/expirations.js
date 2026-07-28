@@ -977,6 +977,16 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
                         setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     }
                 }
+                if (effect.buffName === 'Haste') {
+                    const conditionEffects = getRuntimeValue(targetName, 'conditionEffects') || {};
+                    const newSaveAdvantageCount = Math.max(0, (conditionEffects.saveAdvantageCount || 1) - 1);
+                    const newSaveAdvantageAbilities = (conditionEffects.saveAdvantageAbilities || []).filter(a => a !== 'DEX');
+                    setRuntimeValue(targetName, 'conditionEffects', {
+                        ...conditionEffects,
+                        saveAdvantageCount: newSaveAdvantageCount,
+                        saveAdvantageAbilities: newSaveAdvantageAbilities,
+                    }, campaignName);
+                }
                 break;
             }
 

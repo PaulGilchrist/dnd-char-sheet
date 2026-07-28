@@ -1139,8 +1139,10 @@ export function createLogDamageAndShow(deps) {
         }
 
         const targetConditionEffectsForSave = getRuntimeValue(target.name, 'conditionEffects', campaignName) || {};
-        const saveAdvantage = targetConditionEffectsForSave.saveAdvantageCount > 0 ||
-            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase()));
+        console.log('[save-advantage] target:', target.name, 'conditionEffects:', JSON.stringify(targetConditionEffectsForSave), 'saveType:', saveType);
+        const saveAdvantage = !!(targetConditionEffectsForSave.saveAdvantageCount > 0 ||
+            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())));
+        console.log('[save-advantage] saveAdvantage:', saveAdvantage);
 
         const pendingData = {
             targetName: target.name, rawDamage: adjustedTotal, saveDc, saveType, dcSuccess,
