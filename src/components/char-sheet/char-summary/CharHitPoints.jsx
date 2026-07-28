@@ -12,13 +12,7 @@ function CharHitPoints({ playerStats, campaignName, isLocalhost }) {
       const effectiveMaxHp = (playerStats.hitPoints || 0) + (Number(aidIncrease) || 0);
       const tempHp = useRuntimeValue(playerStats.name, 'tempHp', campaignName);
 
-      React.useEffect(() => {
-          if (storedHp === null || storedHp === undefined) {
-              setRuntimeValue(playerStats.name, 'currentHitPoints', playerStats.hitPoints, campaignName);
-          }
-      }, [storedHp, playerStats.hitPoints, playerStats.name, campaignName]);
-
-      const currentHitPoints = storedHp != null ? storedHp : effectiveMaxHp;
+       const currentHitPoints = storedHp != null ? storedHp : effectiveMaxHp;
      const [showInputCurrentHitPoints, setShowInputCurrentHitPoints] = React.useState(false);
      const handleInputToggleCurrentHitPoints = () => {
          setShowInputCurrentHitPoints((showInputCurrentHitPoints) => !showInputCurrentHitPoints);
