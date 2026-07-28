@@ -105,8 +105,8 @@ await setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 - **No fallbacks:** Use `console.error` for error logging instead of silent fallbacks. Only use defaults for known values defined in the rules.
 
 ## Core Rules
-- NEVER REMOVE DEBUG LOGGING WITHOUT THE USERS PERMISSION FIRST
-- We only have enough memory for one subagent at a time
+- During debugging, all added debug logging must remain in the code until I explicitly say the bug is fixed.
+- Use subagents, but only run one subagent at a time so its context can be cleared before starting the next.
 - Never leave dead code.  It just confuses people later.
 - Look for and re-use existing code and avoid duplicating code.
 - If a map is active, use position on map, but if no map is active, assume all creatures are within range.

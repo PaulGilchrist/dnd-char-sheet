@@ -43,6 +43,7 @@ import { handle as handleWeaponKindMastery, applySelections as applyWeaponKindMa
 import { handle as handleBuffAlly } from './handlers/buffs/buffAllyHandler.js';
 import { handle as handleEncouragingSong } from './handlers/buffs/encouragingSongHandler.js';
 import { handle as handleHaste, applyHaste, isHasteActive } from './handlers/buffs/hasteHandler.js';
+import { handle as handleInvisibility, applyInvisibility, isInvisibilityActive } from './handlers/buffs/invisibilityHandler.js';
 import { handle as handleRevivification } from './handlers/healing/revivificationHandler.js';
 import { handle as handleBardicInspiration } from './handlers/class-bard/bardicInspirationHandler.js';
 import { handle as handleAutoReroll } from './handlers/combat/autoRerollHandler.js';
@@ -512,6 +513,7 @@ const HANDLER_MAP = {
         bless: handleBless,
         slow: handleSlow,
         haste: handleHaste,
+        invisibility: handleInvisibility,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -528,6 +530,8 @@ export {
     getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
     applyHaste,
     isHasteActive,
+    applyInvisibility,
+    isInvisibilityActive,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';

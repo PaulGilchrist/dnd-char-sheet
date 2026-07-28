@@ -79,7 +79,7 @@ describe('invisibilityService', () => {
                 type: 'ability_use',
                 characterName: invisibleName,
                 abilityName: 'Invisibility',
-                description: `Invisibility ends for ${invisibleName} after a hostile action.`,
+                description: `Invisibility ends for ${invisibleName}: target made a hostile action (attack roll, dealt damage, or cast a spell).`,
             });
         });
 

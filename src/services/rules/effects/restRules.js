@@ -7,6 +7,7 @@ import { getCombatSummary } from '../../../services/encounters/combatData.js'
 import { clearAllConcentrations } from '../../../services/combat/concentration/concentrationService.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import { grantCelestialResilience } from '../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js'
+import { endInvisibility } from '../features/invisibilityService.js'
 
 export function clearHuntersMarkConcentration(name, campaignName) {
   const cs = getCombatSummary(campaignName)
@@ -543,6 +544,14 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
   clearHuntersMarkConcentration(name, campaignName)
   clearAllConcentrations(campaignName)
 
+  // Clear Invisibility buff and condition (not managed by expiration system)
+  const invisKey = `_activeInvisibility_${name}`
+  const invisCaster = getRuntimeValue('campaign', invisKey, campaignName)
+  if (invisCaster) {
+    endInvisibility(name, campaignName, 'target finished a rest')
+    setRuntimeValue('campaign', invisKey, null, campaignName)
+  }
+
   return { celestialResilienceAllies }
 }
 
@@ -733,6 +742,14 @@ export async function applyLongRest(playerStats, campaignName) {
     clearAllExpirationEffects(name, campaignName)
     clearHuntersMarkConcentration(name, campaignName)
     clearAllConcentrations(campaignName)
+
+    // Clear Invisibility buff and condition (not managed by expiration system)
+    const invisKey = `_activeInvisibility_${name}`
+    const invisCaster = getRuntimeValue('campaign', invisKey, campaignName)
+    if (invisCaster) {
+      endInvisibility(name, campaignName, 'target finished a rest')
+      setRuntimeValue('campaign', invisKey, null, campaignName)
+    }
 
       // Reset Psionic Strike once-per-turn flag on long rest
      setRuntimeValue(name, 'psionicStrikeUsedThisTurn', null, campaignName, true)

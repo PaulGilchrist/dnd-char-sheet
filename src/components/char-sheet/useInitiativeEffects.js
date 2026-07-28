@@ -4,6 +4,7 @@ import utils from '../../services/ui/utils.js'
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
+import { endInvisibility } from '../../services/rules/features/invisibilityService.js';
 
 // INITIATIVE RESET: When adding a new once-per-turn tracker, reset it with
 // setRuntimeValue(playerStats.name, '_TrackerName_usedRound', null, campaignName)
@@ -111,6 +112,14 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                         }
                     }
                 }
+            }
+
+            // Clear Invisibility on initiative roll (new combat)
+            const invisKey = `_activeInvisibility_${playerStats.name}`
+            const invisCaster = getRuntimeValue('campaign', invisKey, campaignName)
+            if (invisCaster) {
+                endInvisibility(playerStats.name, campaignName, 'target rolled initiative')
+                setRuntimeValue('campaign', invisKey, null, campaignName)
             }
 
             // Clear Bastion of Law ward on initiative roll (new combat)
