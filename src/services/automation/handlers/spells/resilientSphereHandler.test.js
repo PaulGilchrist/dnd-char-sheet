@@ -8,6 +8,11 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
+vi.mock('../../common/damageRollback.js', () => ({
+  storeSpellLastAttack: vi.fn(),
+  addTargetResult: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
 }));

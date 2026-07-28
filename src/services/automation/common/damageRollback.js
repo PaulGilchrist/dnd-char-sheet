@@ -160,6 +160,100 @@ export async function storeDamageRolls(campaignName, lastAttack) {
 }
 
 /**
+ * Create a lastAttack entry for a save-based spell (single-target or AoE).
+ * Call this at the start of a spell handler before the target loop.
+ *
+ * @param {string} campaignName
+ * @param {Object} config
+ * @param {string} config.casterName - The caster's name
+ * @param {string} config.spellName - The spell or feature name
+ * @param {string} config.saveType - Save ability (e.g. 'WIS', 'DEX')
+ * @param {number} config.saveDc - The save DC
+ * @param {'aoe'|'single'} config.attackScope - Whether the spell targets one creature or an area
+ * @param {string|null} [config.damageFormula] - Damage formula (null for condition-only spells)
+ * @param {string|null} [config.damageType] - Damage type (null for condition-only spells)
+ * @param {number} [config.damageOnSuccess] - Base damage on successful save (0 for most spells)
+ * @param {number} [config.damageOnFailure] - Base damage on failed save (0 for condition-only spells)
+ */
+export function storeSpellLastAttack(campaignName, config) {
+    const { casterName, spellName, saveType, saveDc, attackScope, damageFormula, damageType, damageOnSuccess, damageOnFailure } = config;
+
+    if (!casterName) console.warn('[storeSpellLastAttack] casterName is missing');
+    if (!spellName) console.warn('[storeSpellLastAttack] spellName is missing');
+    if (!saveType) console.warn('[storeSpellLastAttack] saveType is missing');
+    if (saveDc == null) console.warn('[storeSpellLastAttack] saveDc is missing');
+
+    const lastAttack = {
+        attackerName: casterName || null,
+        attackName: spellName || null,
+        rollType: 'spell-save',
+        saveType: saveType || null,
+        saveDc: saveDc ?? 0,
+        attackScope: attackScope || 'aoe',
+        damageFormula: damageFormula || null,
+        damageType: damageType || null,
+        damageOnSuccess: damageOnSuccess || 0,
+        damageOnFailure: damageOnFailure || 0,
+        targetResults: [],
+        affectedTargets: [],
+        statusEffects: [],
+        rawDamage: 0,
+        primaryDamage: 0,
+        actualDamage: 0,
+        damageApplied: false,
+        timestamp: Date.now(),
+    };
+
+    setRuntimeValue('campaign', 'lastAttack', lastAttack, campaignName);
+}
+
+/**
+ * Add a per-target save result to the current spell lastAttack.
+ * Recomputes aggregated fields (affectedTargets, statusEffects, damage) after each call.
+ *
+ * @param {string} campaignName
+ * @param {Object} result
+ * @param {string} result.targetName - Target creature name
+ * @param {'success'|'failure'|'immune'} result.saveResult - Save outcome
+ * @param {number} [result.roll] - Natural d20 result
+ * @param {number} [result.total] - Total save roll (d20 + bonus)
+ * @param {string[]} [result.conditions] - Condition keys applied on failure (empty for success/immune)
+ * @param {number} [result.appliedDamage] - Actual damage dealt after resistances (0 for condition-only)
+ */
+export async function addTargetResult(campaignName, result) {
+    const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+    if (!existing || existing.rollType !== 'spell-save') return;
+
+    const entry = {
+        targetName: result.targetName,
+        saveResult: result.saveResult || 'failure',
+        roll: result.roll ?? 0,
+        total: result.total ?? 0,
+        conditions: result.conditions || [],
+        appliedDamage: result.appliedDamage || 0,
+    };
+
+    const targetResults = [...(existing.targetResults || []), entry];
+
+    const affectedTargets = targetResults.map(r => r.targetName);
+    const statusEffects = [...new Set(targetResults.flatMap(r => r.conditions))];
+    const actualDamage = targetResults.reduce((sum, r) => sum + r.appliedDamage, 0);
+
+    const updated = {
+        ...existing,
+        targetResults,
+        affectedTargets,
+        statusEffects,
+        rawDamage: actualDamage,
+        primaryDamage: actualDamage,
+        actualDamage,
+        damageApplied: actualDamage > 0,
+    };
+
+    setRuntimeValue('campaign', 'lastAttack', updated, campaignName);
+}
+
+/**
  * Rollback all effects of a countered spell.
  * Heals damage, removes conditions, and cleans targetEffects for all affected targets.
  * Returns summary of what was rolled back.
@@ -171,7 +265,6 @@ export async function storeDamageRolls(campaignName, lastAttack) {
  * @returns {Promise<{targetsHealed: number, conditionsRemoved: Array, effectsRemoved: number, damageHealed: number, logDescription: string}>}
  */
 export async function rollbackSpellEffects(lastAttack, campaignName, featureName, existingCombatContext) {
-    const targets = lastAttack.affectedTargets || [lastAttack.targetName];
     const attackerName = lastAttack.attackerName || 'Unknown';
     const spellName = lastAttack.attackName || lastAttack.damageName || 'unknown spell';
 
@@ -189,31 +282,50 @@ export async function rollbackSpellEffects(lastAttack, campaignName, featureName
         logDescription: '',
     };
 
-    const totalDamage = lastAttack.actualDamage ?? ((lastAttack.primaryDamage || 0) + (lastAttack.secondaryDamage || 0));
-    const conditionKeys = lastAttack.statusEffects || [];
+    const targetResults = lastAttack.targetResults;
+    const targets = lastAttack.affectedTargets || [lastAttack.targetName];
 
-    for (const targetName of targets) {
-        // Heal damage
-        if (totalDamage > 0) {
-            const healResult = applyHealingToTarget(cs, targetName, totalDamage, campaignName);
-            if (healResult?.newHp != null) {
-                rolledBack.damageHealed += totalDamage;
-                rolledBack.targetsHealed++;
+    if (targetResults && targetResults.length > 0) {
+        for (const tr of targetResults) {
+            if (tr.appliedDamage > 0) {
+                const healResult = applyHealingToTarget(cs, tr.targetName, tr.appliedDamage, campaignName);
+                if (healResult?.newHp != null) {
+                    rolledBack.damageHealed += tr.appliedDamage;
+                    rolledBack.targetsHealed++;
+                }
+            }
+            for (const condition of tr.conditions) {
+                try {
+                    removeCondition(cs, tr.targetName, condition, getRuntimeValue, setRuntimeValue, campaignName);
+                    rolledBack.conditionsRemoved.push({ targetName: tr.targetName, condition });
+                } catch (e) {
+                    console.error(`[${featureName}] Failed to remove condition '${condition}' from ${tr.targetName}:`, e);
+                }
             }
         }
+    } else {
+        const totalDamage = lastAttack.actualDamage ?? ((lastAttack.primaryDamage || 0) + (lastAttack.secondaryDamage || 0));
+        const conditionKeys = lastAttack.statusEffects || [];
 
-        // Remove conditions
-        for (const condition of conditionKeys) {
-            try {
-                removeCondition(cs, targetName, condition, getRuntimeValue, setRuntimeValue, campaignName);
-                rolledBack.conditionsRemoved.push({ targetName, condition });
-            } catch (e) {
-                console.error(`[${featureName}] Failed to remove condition '${condition}' from ${targetName}:`, e);
+        for (const targetName of targets) {
+            if (totalDamage > 0) {
+                const healResult = applyHealingToTarget(cs, targetName, totalDamage, campaignName);
+                if (healResult?.newHp != null) {
+                    rolledBack.damageHealed += totalDamage;
+                    rolledBack.targetsHealed++;
+                }
+            }
+            for (const condition of conditionKeys) {
+                try {
+                    removeCondition(cs, targetName, condition, getRuntimeValue, setRuntimeValue, campaignName);
+                    rolledBack.conditionsRemoved.push({ targetName, condition });
+                } catch (e) {
+                    console.error(`[${featureName}] Failed to remove condition '${condition}' from ${targetName}:`, e);
+                }
             }
         }
     }
 
-    // Remove targetEffects for this attacker
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filtered = storedEffects.filter(te => !(te.target && targets.includes(te.target) && te.source === attackerName));
     if (filtered.length < storedEffects.length) {
@@ -221,7 +333,6 @@ export async function rollbackSpellEffects(lastAttack, campaignName, featureName
         setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
     }
 
-    // Build log description
     const damageStr = rolledBack.damageHealed > 0 ? `${rolledBack.damageHealed} HP healed` : 'no damage dealt';
     const conditionStr = rolledBack.conditionsRemoved.length > 0
         ? `${rolledBack.conditionsRemoved.length} condition(s) removed`

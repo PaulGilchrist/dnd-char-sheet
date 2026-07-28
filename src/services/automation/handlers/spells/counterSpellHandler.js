@@ -37,7 +37,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const hasSpellIndicator = lastAttack.attackEvent.damageFormula ||
                               lastAttack.attackEvent.attackName ||
-                              lastAttack.attackEvent.saveType;
+                              lastAttack.attackEvent.saveType ||
+                              lastAttack.attackEvent.rollType === 'spell-save';
     if (!hasSpellIndicator) {
         return {
             type: 'popup',

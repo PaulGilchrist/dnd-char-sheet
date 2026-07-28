@@ -12,6 +12,11 @@ vi.mock('../../common/savePrompt.js', () => ({
     })),
 }));
 
+vi.mock('../../common/damageRollback.js', () => ({
+    storeSpellLastAttack: vi.fn(),
+    addTargetResult: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(() => []),
     setRuntimeValue: vi.fn(),

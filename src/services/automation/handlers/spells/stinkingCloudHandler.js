@@ -4,7 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 /**
  * Stinking Cloud spell handler for 2024 ruleset.
@@ -131,6 +131,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'CON',
+        saveDc: dc,
+        attackScope: 'aoe',
+    });
+
     const targets = cs.creatures.filter(c => c.name !== casterName);
 
     let affectedCount = 0;
@@ -177,6 +186,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
         if (saveResult.success) {
             savedCount++;
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: casterName,
@@ -196,8 +213,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'poisoned');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'poisoned'], campaignName);
 
-            // Update lastAttack for counterspell rollback
-            updateLastAttackWithEffects(campaignName, ['poisoned'], targetName);
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'failure',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: ['poisoned'],
+                appliedDamage: 0,
+            });
 
             // Set tracking for end-of-turn repeat save
             const trackingKey = getTrackingKey(targetName);

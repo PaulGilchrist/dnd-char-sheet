@@ -4,13 +4,22 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'WIS',
+        saveDc: dc,
+        attackScope: 'single',
+    });
+
     const targetInfo = await resolveTarget(campaignName, casterName);
     const targetName = targetInfo?.target?.name;
 
@@ -45,6 +54,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveResult = await promise;
 
     if (saveResult.success) {
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'success',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: [],
+            appliedDamage: 0,
+        });
         addEntry(campaignName, {
             type: 'save_result',
             characterName: casterName,
@@ -72,8 +89,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
 
-    // Update lastAttack for counterspell rollback
-    updateLastAttackWithEffects(campaignName, ['charmed'], targetName);
+    await addTargetResult(campaignName, {
+        targetName,
+        saveResult: 'failure',
+        roll: saveResult.roll ?? 0,
+        total: saveResult.total ?? 0,
+        conditions: ['charmed'],
+        appliedDamage: 0,
+    });
 
     addExpiration(casterName, targetName, [
         { type: 'charmed', condition: 'charmed' },

@@ -6,6 +6,11 @@ vi.mock('../../common/savePrompt.js', () => ({
   createSaveListener: vi.fn(),
 }));
 
+vi.mock('../../common/damageRollback.js', () => ({
+  storeSpellLastAttack: vi.fn(),
+  addTargetResult: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));

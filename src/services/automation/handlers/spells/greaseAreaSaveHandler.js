@@ -6,7 +6,7 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { addTargetResult } from '../../common/damageRollback.js';
 
 function getAreaRadius(auto) {
     const size = auto.size || '10-foot';
@@ -155,8 +155,14 @@ export async function processGreaseAreaSave(casterName, targetName, campaignName
             const filtered = conditions.filter(c => String(c).toLowerCase() !== tracking.condition.toLowerCase());
             setRuntimeValue(targetName, 'activeConditions', [...filtered, tracking.condition.toLowerCase()], campaignName);
 
-            // Update lastAttack for counterspell rollback
-            updateLastAttackWithEffects(campaignName, [tracking.condition.toLowerCase()], targetName);
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'failure',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [tracking.condition.toLowerCase()],
+                appliedDamage: 0,
+            });
 
             addEntry(campaignName, {
                 type: 'save_result',
@@ -169,6 +175,14 @@ export async function processGreaseAreaSave(casterName, targetName, campaignName
                 description: `${targetName} failed ${tracking.saveType} save against Grease. Becomes Prone.`,
             }).catch((e) => { console.error("[greaseAreaSave] Error:", e); });
         } else {
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: casterName,

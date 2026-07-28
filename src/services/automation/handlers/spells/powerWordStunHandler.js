@@ -5,7 +5,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 /**
  * Process a repeated CON save for a creature already Stunned by Power Word Stun.
@@ -127,6 +127,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'CON',
+        saveDc: dc,
+        attackScope: 'single',
+    });
+
     const targetInfo = await resolveTarget(campaignName, casterName);
     const targetName = targetInfo?.target?.name;
 
@@ -163,7 +172,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'stunned'], campaignName);
 
         // Update lastAttack for counterspell rollback
-        updateLastAttackWithEffects(campaignName, ['stunned'], targetName);
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'failure',
+            roll: 0,
+            total: 0,
+            conditions: ['stunned'],
+            appliedDamage: 0,
+        });
 
         // Set tracking for end-of-turn repeat saves
         setRuntimeValue(casterName, trackingKey, true, campaignName);
@@ -206,7 +222,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         setRuntimeValue(targetName, 'activeConditions', [...(getRuntimeValue(targetName, 'activeConditions', campaignName) || []), 'speed_zero'], campaignName);
 
         // Update lastAttack for counterspell rollback
-        updateLastAttackWithEffects(campaignName, ['speed_zero'], targetName);
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'failure',
+            roll: 0,
+            total: 0,
+            conditions: ['speed_zero'],
+            appliedDamage: 0,
+        });
 
         // Set expiration: speed_zero ends at start of caster's next turn
         addExpiration(casterName, targetName, [

@@ -2,12 +2,21 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
+
+    storeSpellLastAttack(campaignName, {
+        casterName: playerStats.name,
+        spellName: 'Friends',
+        saveType: 'WIS',
+        saveDc: dc,
+        attackScope: 'single',
+    });
+
     const targetName = auto.targetName || 'Unknown';
 
     // Track active Friends for early-end conditions
@@ -35,6 +44,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveResult = await promise;
 
     if (saveResult.success) {
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'success',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: [],
+            appliedDamage: 0,
+        });
         addEntry(campaignName, {
             type: 'save_result',
             characterName: playerStats.name,
@@ -66,8 +83,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
     setRuntimeValue(targetName, 'activeConditions', [...filtered, condKey], campaignName);
 
-    // Update lastAttack for counterspell rollback
-    updateLastAttackWithEffects(campaignName, [condKey], targetName);
+    await addTargetResult(campaignName, {
+        targetName,
+        saveResult: 'failure',
+        roll: saveResult.roll ?? 0,
+        total: saveResult.total ?? 0,
+        conditions: ['charmed'],
+        appliedDamage: 0,
+    });
 
     // Apply expiration (2 rounds = 12 seconds minimum; concentration handles the rest)
     addExpiration(playerStats.name, targetName, [

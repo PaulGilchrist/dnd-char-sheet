@@ -4,7 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -23,6 +23,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'WIS',
+        saveDc: dc,
+        attackScope: 'aoe',
+    });
+
     const targets = cs.creatures.filter(c => c.name !== casterName);
 
     // Limit to maxTargets (default 12)
@@ -57,6 +66,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
         if (saveResult.success) {
             savedCount++;
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: casterName,
@@ -75,8 +92,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
 
-            // Update lastAttack for counterspell rollback
-            updateLastAttackWithEffects(campaignName, ['charmed'], targetName);
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'failure',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: ['charmed'],
+                appliedDamage: 0,
+            });
 
             addEntry(campaignName, {
                 type: 'condition',

@@ -14,10 +14,6 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
@@ -27,7 +23,12 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
-import { handle, processSleepRepeatSave } from './sleepHandler.js';
+vi.mock('../../common/damageRollback.js', () => ({
+  storeSpellLastAttack: vi.fn(),
+  addTargetResult: vi.fn(),
+}));
+
+import { handle } from './sleepHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -66,13 +67,6 @@ const baseCombatContext = {
 function getSetRuntimeCall(target, prop) {
   return setRuntimeValue.mock.calls.find(
     call => call[0] === target && call[1] === prop,
-  );
-}
-
-// Helper to get campaign-level setRuntimeValue calls (characterKey = 'campaign')
-function getCampaignSetRuntimeCall(prop) {
-  return setRuntimeValue.mock.calls.find(
-    call => call[0] === 'campaign' && call[1] === prop,
   );
 }
 
@@ -355,22 +349,6 @@ describe('sleepHandler.handle', () => {
       expect(condCall[2]).toEqual(['blinded', 'incapacitated']);
     });
 
-    it('should set tracking for repeat saves', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-track',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const trackCall = getSetRuntimeCall('TestCaster', '_sleep_Goblin');
-      expect(trackCall).toBeDefined();
-      expect(trackCall[2]).toBe(true);
-    });
-
     it('should add expiration for incapacitated condition', async () => {
       getCombatContext.mockResolvedValue(baseCombatContext);
       buildSaveDc.mockReturnValue(15);
@@ -387,30 +365,6 @@ describe('sleepHandler.handle', () => {
         'Goblin',
         expect.arrayContaining([{ type: 'incapacitated', condition: 'incapacitated' }]),
         campaignName,
-      );
-    });
-
-    it('should store target effect for repeat saves', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-target-effect',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const effectCall = getCampaignSetRuntimeCall('targetEffects');
-      expect(effectCall).toBeDefined();
-      expect(effectCall[2]).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            target: 'Goblin',
-            effect: 'sleep_repeat_save',
-            source: 'TestCaster',
-          }),
-        ]),
       );
     });
 
@@ -454,47 +408,6 @@ describe('sleepHandler.handle', () => {
         rollType: 'save-sleep',
       }));
     });
-
-    it('should store target effect with all fields including dc and saveType', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(17);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-full-effect',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
-
-      const effectCall = getCampaignSetRuntimeCall('targetEffects');
-      const effect = effectCall[2][0];
-      expect(effect.target).toBe('Goblin');
-      expect(effect.effect).toBe('sleep_repeat_save');
-      expect(effect.source).toBe('TestCaster');
-      expect(effect.condition).toBe('incapacitated');
-      expect(effect.dc).toBe(17);
-      expect(effect.saveType).toBe('WIS');
-    });
-
-    it('should update existing target effect instead of duplicating', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      getRuntimeValue
-        .mockReturnValueOnce([])
-        .mockReturnValueOnce([
-          { target: 'Goblin', effect: 'sleep_repeat_save', source: 'TestCaster' },
-        ]);
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-update-effect',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const effectCall = getCampaignSetRuntimeCall('targetEffects');
-      expect(effectCall[2]).toHaveLength(1);
-      expect(effectCall[2][0].dc).toBe(15);
-    });
   });
 
   describe('popup payload', () => {
@@ -524,7 +437,7 @@ describe('sleepHandler.handle', () => {
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.payload.description).toContain('Incapacitated');
-      expect(result.payload.description).toContain('repeat the save');
+      expect(result.payload.description).toContain('The spell ends');
     });
 
     it('should mention shake free in summary', async () => {
@@ -605,142 +518,3 @@ describe('sleepHandler.handle', () => {
   });
 });
 
-describe('sleepHandler.processSleepRepeatSave', () => {
-  beforeEach(clearAllMocks);
-
-  it('should return null when no tracking exists', async () => {
-    getRuntimeValue.mockReturnValue(null);
-    const result = await processSleepRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-    expect(result).toBeNull();
-    expect(createSaveListener).not.toHaveBeenCalled();
-  });
-
-  it('should create save listener with WIS save type', async () => {
-    getRuntimeValue.mockImplementation((caster, key) => {
-      if (key === '_sleep_Goblin') return true;
-      return [];
-    });
-    createSaveListener.mockReturnValue({
-      promptId: 'sleep-repeat-listener',
-      promise: Promise.resolve({ success: true }),
-    });
-
-    await processSleepRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-    expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
-      targetName: 'Goblin',
-      saveType: 'WIS',
-      saveDc: 15,
-      dcSuccess: 'none',
-      disadvantage: false,
-    });
-  });
-
-  it('should call addEntry with ability_use on repeat save', async () => {
-    getRuntimeValue.mockImplementation((caster, key) => {
-      if (key === '_sleep_Goblin') return true;
-      return [];
-    });
-    createSaveListener.mockReturnValue({
-      promptId: 'sleep-repeat-ability',
-      promise: Promise.resolve({ success: true }),
-    });
-
-    await processSleepRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-    expect(addEntry).toHaveBeenCalledWith(
-      campaignName,
-      expect.objectContaining({
-        type: 'ability_use',
-        characterName: 'TestCaster',
-        abilityName: 'Sleep (repeat save)',
-      }),
-    );
-  });
-
-  describe('successful repeat save', () => {
-    it('should remove Incapacitated condition, clear tracking, clean up target effect, and log', async () => {
-      getRuntimeValue.mockImplementation((caster, key, _camp) => {
-        if (key === '_sleep_Goblin') return true;
-        if (key === 'activeConditions') return ['Incapacitated', 'Frightened', 'poisoned'];
-        if (key === 'targetEffects') return [{ target: 'Goblin', effect: 'sleep_repeat_save', source: 'TestCaster' }];
-        return [];
-      });
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-repeat-consolidated',
-        promise: Promise.resolve({ success: true }),
-      });
-
-      const result = await processSleepRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-      const condCall = getSetRuntimeCall('Goblin', 'activeConditions');
-      expect(condCall[2]).toEqual(['Frightened', 'poisoned']);
-      expect(result.payload.description).toContain('succeeded on WIS save');
-
-      const trackCall = getSetRuntimeCall('TestCaster', '_sleep_Goblin');
-      expect(trackCall[2]).toBe(null);
-
-      const effectCall = getCampaignSetRuntimeCall('targetEffects');
-      expect(effectCall[2]).toEqual([]);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'condition',
-          action: 'removed',
-          condition: 'Incapacitated',
-        }),
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'save_result',
-        targetName: 'Goblin',
-        success: true,
-        rollType: 'save-sleep',
-      }));
-    });
-  });
-
-  describe('failed repeat save', () => {
-    it('should apply Unconscious condition, deduplicate, clear tracking, clean up target effect, and log', async () => {
-      getRuntimeValue.mockImplementation((caster, key, _camp) => {
-        if (key === '_sleep_Goblin') return true;
-        if (key === 'activeConditions') return ['unconscious', 'blinded'];
-        if (key === 'targetEffects') return [{ target: 'Goblin', effect: 'sleep_repeat_save', source: 'TestCaster' }];
-        return [];
-      });
-      createSaveListener.mockReturnValue({
-        promptId: 'sleep-repeat-fail-consolidated',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      const result = await processSleepRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-      const condCall = getSetRuntimeCall('Goblin', 'activeConditions');
-      expect(condCall[2]).toEqual(['blinded', 'unconscious']);
-      expect(result.payload.description).toContain('Unconscious');
-
-      const trackCall = getSetRuntimeCall('TestCaster', '_sleep_Goblin');
-      expect(trackCall[2]).toBe(null);
-
-      const effectCall = getCampaignSetRuntimeCall('targetEffects');
-      expect(effectCall[2]).toEqual([]);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'condition',
-          action: 'applied',
-          condition: 'Unconscious',
-        }),
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'save_result',
-        targetName: 'Goblin',
-        success: false,
-        rollType: 'save-sleep',
-      }));
-    });
-  });
-});

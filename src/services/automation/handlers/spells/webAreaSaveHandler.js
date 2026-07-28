@@ -5,7 +5,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { addTargetResult } from '../../common/damageRollback.js';
 
 /**
  * Web spell area save handler for 2024 ruleset.
@@ -84,8 +84,14 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
         const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'restrained'], campaignName);
 
-        // Update lastAttack for counterspell rollback
-        updateLastAttackWithEffects(campaignName, ['restrained'], targetName);
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'failure',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: ['restrained'],
+            appliedDamage: 0,
+        });
 
         addEntry(campaignName, {
             type: 'save_result',
@@ -98,6 +104,14 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
             description: `${targetName} failed ${tracking.saveType} save against Web. Becomes Restrained.`,
         }).catch((e) => { console.error("[webAreaSave] Error:", e); });
     } else {
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'success',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: [],
+            appliedDamage: 0,
+        });
         addEntry(campaignName, {
             type: 'save_result',
             characterName: casterName,

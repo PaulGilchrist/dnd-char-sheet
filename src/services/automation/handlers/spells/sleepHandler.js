@@ -4,131 +4,16 @@ import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 /**
  * Sleep spell handler for 2024 ruleset.
  * Mechanics:
  * - WIS save or Incapacitated until end of target's next turn
- * - At end of target's next turn: repeat save; failure = Unconscious for duration
  * - Spell ends if target takes damage
  * - Spell ends if someone within 5ft takes action to shake target
  * - Creatures with "Magical Sleep" or "Exhaustion" immunity auto-succeed
  */
-
-function getTrackingKey(targetName) {
-    return `_sleep_${targetName.replace(/\s+/g, '_')}`;
-}
-
-function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const cleaned = effects.filter(
-        te => !(te.target === targetName && te.effect === 'sleep_repeat_save' && te.source === casterName)
-    );
-    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
-}
-
-export async function processSleepRepeatSave(casterName, targetName, saveDc, campaignName) {
-    const trackingKey = getTrackingKey(targetName);
-    const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (!tracking) {
-        return null;
-    }
-
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'WIS',
-        saveDc,
-        dcSuccess: 'none',
-        disadvantage: false,
-    });
-
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: 'Sleep (repeat save)',
-        description: `${targetName} makes a WIS save (DC ${saveDc}) at end of turn (Sleep).`,
-        promptId,
-    }).catch((e) => { console.error("[sleep] Error:", e); });
-
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        // First save succeeded — remove Incapacitated, clear tracking
-        const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conds = Array.isArray(storedConds) ? storedConds : [];
-        setRuntimeValue(targetName, 'activeConditions', conds.filter(c => String(c).toLowerCase() !== 'incapacitated'), campaignName);
-        setRuntimeValue(casterName, trackingKey, null, campaignName);
-        cleanupTargetEffect(casterName, targetName, campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-sleep',
-            targetName,
-            saveDc,
-            saveType: 'WIS',
-            success: true,
-            description: `${targetName} succeeded on WIS save. Sleep ends!`,
-        }).catch((e) => { console.error("[sleep] Error:", e); });
-
-        addEntry(campaignName, {
-            type: 'condition',
-            action: 'removed',
-            characterName: targetName,
-            condition: 'Incapacitated',
-            reason: 'Sleep (successful repeat save)',
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[sleep] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Sleep',
-                description: `${targetName} succeeded on WIS save. Sleep ends!`,
-            },
-        };
-    }
-
-    // Second save failed — apply Unconscious, clear tracking
-    const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    const conds = Array.isArray(storedConds) ? storedConds : [];
-    setRuntimeValue(targetName, 'activeConditions', [...conds.filter(c => String(c).toLowerCase() !== 'unconscious'), 'unconscious'], campaignName);
-    setRuntimeValue(casterName, trackingKey, null, campaignName);
-    cleanupTargetEffect(casterName, targetName, campaignName);
-
-    addEntry(campaignName, {
-        type: 'condition',
-        action: 'applied',
-        characterName: targetName,
-        condition: 'Unconscious',
-        reason: 'Sleep (failed repeat save)',
-        note: `${targetName} is now Unconscious for the duration of Sleep.`,
-        timestamp: Date.now(),
-    }).catch((e) => { console.error("[sleep] Error:", e); });
-
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-sleep',
-        targetName,
-        saveDc,
-        saveType: 'WIS',
-        success: false,
-        description: `${targetName} failed WIS save and is now Unconscious.`,
-    }).catch((e) => { console.error("[sleep] Error:", e); });
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: 'Sleep',
-            description: `${targetName} failed WIS save and is now Unconscious.`,
-        },
-    };
-}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -149,6 +34,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const casterName = playerStats.name;
     const targets = cs.creatures.filter(c => c.name !== casterName);
 
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'WIS',
+        saveDc: dc,
+        attackScope: 'aoe',
+    });
+
     let affectedCount = 0;
     let savedCount = 0;
     let immunityCount = 0;
@@ -157,7 +50,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     for (const target of targets) {
         const targetName = target.name;
 
-        // Check for immunities: Magical Sleep or Exhaustion immunity
         const targetImmunities = target.immunities || [];
         const hasMagicalSleepImmunity = targetImmunities.some(
             imm => String(imm).toLowerCase() === 'magical sleep'
@@ -175,6 +67,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 description: `${targetName} is immune to Sleep (does not sleep / Exhaustion immunity).`,
             }).catch((e) => { console.error("[sleep] Error:", e); });
             results.push(`${targetName} is immune to Sleep.`);
+
+            addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'immune',
+                roll: 0,
+                total: 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
             continue;
         }
 
@@ -208,48 +109,35 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 success: true,
                 description: `${targetName} succeeded on WIS save against Sleep.`,
             }).catch((e) => { console.error("[sleep] Error:", e); });
+
+            addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
         } else {
             affectedCount++;
 
-            // Apply Incapacitated condition
             const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
             const conditions = Array.isArray(storedConditions) ? storedConditions : [];
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
 
-            // Update lastAttack for counterspell rollback
-            updateLastAttackWithEffects(campaignName, ['incapacitated'], targetName);
-
-            // Set tracking for end-of-turn repeat save
-            const trackingKey = getTrackingKey(targetName);
-            setRuntimeValue(casterName, trackingKey, true, campaignName);
-
-            // Add expiration for concentration
             addExpiration(casterName, targetName, [
                 { type: 'incapacitated', condition: 'incapacitated' },
             ], campaignName);
 
-            // Store target effect for end-of-turn repeated saves
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-            const effects = Array.isArray(targetEffects) ? targetEffects : [];
-            const existingIdx = effects.findIndex(
-                te => te.target === targetName && te.effect === 'sleep_repeat_save'
-            );
-            const sleepEffect = {
-                target: targetName,
-                effect: 'sleep_repeat_save',
-                source: casterName,
-                condition: 'incapacitated',
-                dc: dc,
-                saveType: 'WIS',
-                duration: 'concentration',
-            };
-            if (existingIdx >= 0) {
-                effects[existingIdx] = sleepEffect;
-            } else {
-                effects.push(sleepEffect);
-            }
-            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
+            addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'failure',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: ['incapacitated'],
+                appliedDamage: 0,
+            });
 
             addEntry(campaignName, {
                 type: 'condition',
@@ -257,7 +145,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 characterName: targetName,
                 condition: 'Incapacitated',
                 reason: 'Sleep spell',
-                note: `${targetName} is Incapacitated by Sleep. At the end of its next turn, it repeats the save. Failure means Unconscious for the duration. The spell ends if the target takes damage or someone within 5ft shakes it.`,
+                note: `${targetName} is Incapacitated by Sleep. The spell ends if the target takes damage or someone within 5ft shakes it.`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[sleep] Error:", e); });
 
@@ -269,7 +157,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 saveDc: dc,
                 saveType: 'WIS',
                 success: false,
-                description: `${targetName} failed WIS save against Sleep and is Incapacitated. At the end of each of its turns, it repeats the save.`,
+                description: `${targetName} failed WIS save against Sleep and is Incapacitated.`,
             }).catch((e) => { console.error("[sleep] Error:", e); });
 
             results.push(`${targetName} is Incapacitated.`);
@@ -277,7 +165,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const summary = affectedCount > 0
-        ? `Sleep affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immunityCount} creature(s) immune. Affected creatures are Incapacitated until the end of their next turn, then repeat the save. Failure on the second save means Unconscious for the duration. The spell ends if a target takes damage or someone within 5ft shakes it.`
+        ? `Sleep affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immunityCount} creature(s) immune. Affected creatures are Incapacitated until the end of their next turn. The spell ends if a target takes damage or someone within 5ft shakes it.`
         : `No creatures affected by Sleep. ${savedCount} creature(s) saved. ${immunityCount} creature(s) immune.`;
 
     return {

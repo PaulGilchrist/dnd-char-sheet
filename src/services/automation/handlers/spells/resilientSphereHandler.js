@@ -3,7 +3,7 @@ import { resolveTarget } from '../../common/targetResolver.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
@@ -24,6 +24,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'DEX',
+        saveDc: dc,
+        attackScope: 'single',
+    });
+
     const targetInfo = await resolveTarget(campaignName, casterName);
     const targetName = targetInfo?.target?.name;
 
@@ -57,6 +66,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveResult = await promise;
 
     if (saveResult.success) {
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'success',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: [],
+            appliedDamage: 0,
+        });
         addEntry(campaignName, {
             type: 'save_result',
             characterName: casterName,
@@ -103,8 +120,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         timestamp: Date.now(),
     }).catch((e) => { console.error("[resilientSphere] Error:", e); });
 
-    // Update lastAttack for counterspell rollback
-    updateLastAttackWithEffects(campaignName, ['resilient_sphere'], targetName);
+    await addTargetResult(campaignName, {
+        targetName,
+        saveResult: 'failure',
+        roll: saveResult.roll ?? 0,
+        total: saveResult.total ?? 0,
+        conditions: ['resilient_sphere'],
+        appliedDamage: 0,
+    });
 
     addEntry(campaignName, {
         type: 'save_result',

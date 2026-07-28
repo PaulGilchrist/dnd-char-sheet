@@ -4,7 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { updateLastAttackWithEffects } from '../../common/damageRollback.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 
 /**
@@ -163,6 +163,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    storeSpellLastAttack(campaignName, {
+        casterName,
+        spellName: action.name,
+        saveType: 'WIS',
+        saveDc: dc,
+        attackScope: 'single',
+    });
+
     const targetInfo = await resolveTarget(campaignName, casterName);
     const targetName = targetInfo?.target?.name;
 
@@ -204,6 +213,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     if (saveResult.success) {
         // Successful save: dances comically until end of next turn, speed_zero
+        await addTargetResult(campaignName, {
+            targetName,
+            saveResult: 'success',
+            roll: saveResult.roll ?? 0,
+            total: saveResult.total ?? 0,
+            conditions: [],
+            appliedDamage: 0,
+        });
         return await processOttoDanceSuccessSave(casterName, targetName, action.name, campaignName);
     }
 
@@ -216,8 +233,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     );
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed', 'speed_zero'], campaignName);
 
-    // Update lastAttack for counterspell rollback
-    updateLastAttackWithEffects(campaignName, ['charmed', 'speed_zero'], targetName);
+    await addTargetResult(campaignName, {
+        targetName,
+        saveResult: 'failure',
+        roll: saveResult.roll ?? 0,
+        total: saveResult.total ?? 0,
+        conditions: ['charmed', 'speed_zero'],
+        appliedDamage: 0,
+    });
 
     // Set tracking for repeat saves
     setRuntimeValue(casterName, trackingKey, true, campaignName);
