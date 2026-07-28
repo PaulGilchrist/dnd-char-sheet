@@ -271,8 +271,8 @@ describe('WizardStepSpells', () => {
     });
   });
 
-  describe('Available spells filtering by max slot level', () => {
-    it('excludes spells above max slot level from available list', async () => {
+  describe('All spells available regardless of slot level', () => {
+    it('shows all spells regardless of character spell slot level', async () => {
       spellLimits.getSpellLimits.mockResolvedValueOnce({
         cantrip: 3, level1: 4, level2: 3, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
@@ -289,11 +289,11 @@ describe('WizardStepSpells', () => {
         expect(screen.getByText('Cantrip')).toBeInTheDocument();
         expect(screen.getByText('Level1')).toBeInTheDocument();
         expect(screen.getByText('Level2')).toBeInTheDocument();
-        expect(screen.queryByText('Level3')).not.toBeInTheDocument();
+        expect(screen.getByText('Level3')).toBeInTheDocument();
       });
     });
 
-    it('includes cantrips even when no spell slots available', async () => {
+    it('shows all spell levels even when character has no spell slots', async () => {
       spellLimits.getSpellLimits.mockResolvedValueOnce({
         cantrip: 2, level1: 0, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
@@ -306,7 +306,7 @@ describe('WizardStepSpells', () => {
       render(<WizardStepSpells {...mockProps} allSpells={allSpells} formData={{ ...mockProps.formData, spells: [] }} />);
       await waitFor(() => {
         expect(screen.getByText('Cantrip1')).toBeInTheDocument();
-        expect(screen.queryByText('Level1')).not.toBeInTheDocument();
+        expect(screen.getByText('Level1')).toBeInTheDocument();
       });
     });
   });
