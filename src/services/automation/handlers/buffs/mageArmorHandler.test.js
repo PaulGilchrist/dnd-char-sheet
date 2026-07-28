@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, applyMageArmor } from './mageArmorHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../../services/rules/combat/damageUtils.js';
 
 import { resolveMapPositions } from '../../common/targetResolver.js';
@@ -12,10 +11,6 @@ import { addEntry } from '../../../../services/ui/logService.js';
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
-}));
-
-vi.mock('../../../rules/effects/expirations.js', () => ({
-    addExpiration: vi.fn(),
 }));
 
 vi.mock('../../../../services/rules/combat/damageUtils.js', () => ({
@@ -167,7 +162,7 @@ describe('mageArmorHandler.applyMageArmor', () => {
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('1 target(s)');
-        expect(result.payload.description).toContain('+3 AC');
+        expect(result.payload.description).toContain('Mage Armor');
 
         const buffsCall = setRuntimeValue.mock.calls.find(
             (c) => c[0] === 'Ally1' && c[1] === 'activeBuffs',
@@ -177,7 +172,7 @@ describe('mageArmorHandler.applyMageArmor', () => {
             expect.objectContaining({
                 name: 'Mage Armor',
                 effect: 'mage_armor',
-                acBonus: 3,
+                baseAc: 13,
                 sourceCharacter: 'TestWizard',
             }),
         );
@@ -275,44 +270,6 @@ describe('mageArmorHandler.applyMageArmor', () => {
             'Ally1',
         );
         expect(strResult).toBeNull();
-    });
-
-    it('calls addExpiration for each target', async () => {
-        getRuntimeValue.mockImplementation((name, key) => {
-            if (key === 'activeBuffs') return [];
-            return null;
-        });
-
-        await applyMageArmor(
-            makeAction(),
-            makePlayerStats(),
-            campaignName,
-            null,
-            ['Ally1', 'Ally2'],
-        );
-
-        expect(addExpiration).toHaveBeenCalledWith(
-            'TestWizard',
-            'Ally1',
-            expect.arrayContaining([
-                expect.objectContaining({
-                    type: 'remove_active_buff',
-                    buffName: 'Mage Armor',
-                }),
-            ]),
-            campaignName,
-        );
-        expect(addExpiration).toHaveBeenCalledWith(
-            'TestWizard',
-            'Ally2',
-            expect.arrayContaining([
-                expect.objectContaining({
-                    type: 'remove_active_buff',
-                    buffName: 'Mage Armor',
-                }),
-            ]),
-            campaignName,
-        );
     });
 
     it('handles activeBuffs not set (null stored value)', async () => {

@@ -455,10 +455,15 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
      }
    }
 
-   // Clear active buffs and conditions as part of the atomic batch so SSE echo carries correct final state
-   updates.activeBuffs = [];
-   updates.activeConditions = [];
-   updates.activeConditionMeta = {};
+    // Clear active buffs and conditions as part of the atomic batch so SSE echo carries correct final state
+    // Preserve Mage Armor (8-hour duration, not cleared on short rest)
+    const activeBuffsForShortRest = getRuntimeValue(name, 'activeBuffs') || [];
+    const filteredBuffsForShortRest = Array.isArray(activeBuffsForShortRest)
+        ? activeBuffsForShortRest.filter(b => b.name === 'Mage Armor')
+        : [];
+    updates.activeBuffs = filteredBuffsForShortRest;
+    updates.activeConditions = [];
+    updates.activeConditionMeta = {};
 
     // Clear Awakened Mind target on short rest
     updates.awakenedMindTarget = null;

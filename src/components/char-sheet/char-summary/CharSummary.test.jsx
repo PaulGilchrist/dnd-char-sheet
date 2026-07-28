@@ -103,7 +103,7 @@ describe('CharSummary - Buff Effects', () => {
 
     it.each([
         [{ effect: 'haste' }, /\+2 from Haste/],
-        [{ effect: 'mage_armor' }, /\+3 from Mage Armor/],
+        [{ effect: 'mage_armor' }, /\(13 \+ \d+ Dex\)/],
         [{ effect: 'shield' }, /\+5 from Shield/],
         [{ effect: 'ice_walk' }, /ice walk/],
     ])('shows indicator for %j buff effect', (buff, expectedText) => {

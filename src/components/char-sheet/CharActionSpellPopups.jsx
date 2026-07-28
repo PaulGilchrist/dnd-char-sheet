@@ -42,6 +42,9 @@ export default function CharActionSpellPopups({
     actionPendingMagicMissile,
     actionHandleMagicMissileConfirm,
     actionHandleMagicMissileSkip,
+    actionPendingMageArmor,
+    actionHandleMageArmorConfirm,
+    actionHandleMageArmorSkip,
     pendingActionMetamagic,
     handleActionMetamagicConfirm,
     handleActionMetamagicSkip,
@@ -167,6 +170,17 @@ export default function CharActionSpellPopups({
                 />
               );
             })()}
+            {actionPendingMageArmor && (
+                <SecondaryTargetModal
+                    title="Mage Armor"
+                    targets={actionPendingMageArmor.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleMageArmorConfirm([targetName])}
+                    onSkip={actionHandleMageArmorSkip}
+                    description="Choose a creature within range. The target's base AC becomes 13 + Dexterity modifier. Mage Armor lasts 8 hours and ends on a long rest."
+                    confirmLabel="Cast Mage Armor"
+                    confirmIcon="fa-shield-halved"
+                />
+            )}
             {pendingActionMetamagic && (
                 <MetamagicPopup
                     spell={{ name: pendingActionMetamagic.spellName, level: pendingActionMetamagic.spellLevel || 0 }}

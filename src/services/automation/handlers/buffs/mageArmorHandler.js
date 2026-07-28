@@ -1,5 +1,4 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { resolveMapPositions } from '../../common/targetResolver.js';
@@ -66,23 +65,19 @@ export async function applyMageArmor(action, playerStats, campaignName, mapName,
             buffs.push({
                 name: MAGE_ARMOR_BUFF_NAME,
                 effect: 'mage_armor',
-                acBonus: 3,
+                baseAc: 13,
                 duration,
                 sourceCharacter: playerStats.name,
             });
             setRuntimeValue(targetName, 'activeBuffs', buffs, campaignName);
         }
 
-        addExpiration(playerStats.name, targetName, [
-            { type: 'remove_active_buff', buffName: MAGE_ARMOR_BUFF_NAME }
-        ], campaignName);
-
         addEntry(campaignName, {
             type: 'ability_use',
             characterName: playerStats.name,
             abilityName: MAGE_ARMOR_BUFF_NAME,
-            description: `${playerStats.name} cast ${MAGE_ARMOR_BUFF_NAME} on ${targetName}. Target's AC increases by 3 (13 + Dex modifier).`,
-        }).catch((e) => { console.error("[mageArmorHandler] Error:", e); });
+            description: `${playerStats.name} cast ${MAGE_ARMOR_BUFF_NAME} on ${targetName}. Target's base AC becomes 13 + Dexterity modifier.`,
+        }).catch((e) => { console.error('[mageArmorHandler] Error logging:', e); });
     }
 
     return {
@@ -90,7 +85,7 @@ export async function applyMageArmor(action, playerStats, campaignName, mapName,
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${targetNames.length} target(s) gained +3 AC from ${action.name}.`,
+            description: `${targetNames.length} target(s) received Mage Armor from ${action.name}. Base AC becomes 13 + Dexterity modifier.`,
         },
     };
 }

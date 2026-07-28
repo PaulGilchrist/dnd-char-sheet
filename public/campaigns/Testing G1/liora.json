@@ -28,14 +28,14 @@
       "name": "Intelligence",
       "baseScore": 10,
       "featIncrease": 0,
-      "backgroundIncrease": 1,
+      "backgroundIncrease": 0,
       "miscIncrease": 0
     },
     {
       "name": "Wisdom",
       "baseScore": 14,
       "featIncrease": 0,
-      "backgroundIncrease": 1,
+      "backgroundIncrease": 2,
       "miscIncrease": 0
     },
     {
@@ -127,7 +127,8 @@
     "Shocking Grasp",
     "Sleep",
     "Bane",
-    "Fireball"
+    "Fireball",
+    "Mage Armor"
   ],
   "magicInitiateInstances": [
     {

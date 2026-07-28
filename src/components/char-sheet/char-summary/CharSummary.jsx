@@ -275,6 +275,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     let shieldOfFaithBonus = 0;
     let defensiveDuelistBonus = 0;
     let mageArmorActive = false;
+    let mageArmorAc = 0;
     let iceWalkActive = false;
     let acrobaticMovementActive = false;
     let glisteningFlightHover = false;
@@ -291,7 +292,10 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
         if (buff.effect === 'avenging_angel_flight') flySpeed = buff.flySpeed || 60;
         if (buff.effect === 'speed_boost' && buff.speedBonus) buffSpeedBonus += buff.speedBonus;
         if (buff.effect === 'large_form') buffSpeedBonus += 10;
-        if (buff.effect === 'mage_armor') mageArmorActive = true;
+        if (buff.effect === 'mage_armor') {
+            mageArmorActive = true;
+            mageArmorAc = buff.baseAc || 13;
+        }
         if (buff.effect === 'shield') shieldAcBonus = 5;
         if (buff.effect === 'defensive_duelist' && buff.acBonus) defensiveDuelistBonus += buff.acBonus;
         if (buff.effect === 'ice_walk') iceWalkActive = true;
@@ -313,6 +317,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     if (!swimSpeed && playerStats.swimSpeed) {
         swimSpeed = playerStats.swimSpeed;
     }
+    const dexBonus = playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
     const hasteActive = activeBuffs.some(b => b.effect === 'haste');
     if (hasteActive) {
         speed = speed * 2;
@@ -468,7 +473,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             </div>
             <div className='summaryGrid'>
                 <div>
-                    <div className='clickable' onClick={showArmorClassFormulaPopup}><b>Armor Class: </b>{circleFormsACOverride ?? (playerStats.armorClass + hasteAcBonus + shieldAcBonus + baitAndSwitchBonus + shieldOfFaithBonus + defensiveDuelistBonus + (conditionEffects?.wardingBondAcBonus || 0) - (conditionEffects?.acPenalty || 0))}{(hasteAcBonus > 0 || mageArmorActive || shieldAcBonus > 0 || shieldOfFaithBonus > 0 || defensiveDuelistBonus > 0) && <span className="aura-source" title={mageArmorActive ? "From Mage Armor" : undefined}>{hasteAcBonus > 0 && ` (+${hasteAcBonus} from Haste)`}{mageArmorActive && ' (+3 from Mage Armor)'}</span>}{shieldAcBonus > 0 && <span className="aura-source" title="From Shield"> (+5 from Shield)</span>}{shieldOfFaithBonus > 0 && <span className="aura-source" title="From Shield of Faith"> (+2 from Shield of Faith)</span>}{defensiveDuelistBonus > 0 && <span className="aura-source" title="From Defensive Duelist"> (+{defensiveDuelistBonus} from Defensive Duelist)</span>}{baitAndSwitchBonus > 0 && <span className="aura-source" title={`From ${baitAndSwitchSource || 'Bait and Switch'}`}> (+{baitAndSwitchBonus} from {baitAndSwitchSource || 'Bait and Switch'})</span>}{(conditionEffects?.wardingBondAcBonus || 0) > 0 && <span className="aura-source" title="From Warding Bond"> (+{conditionEffects.wardingBondAcBonus} from Warding Bond)</span>}{(conditionEffects?.acPenalty || 0) > 0 && <span className="stat--penalized" title="Slow spell penalty"> ({'−'}{conditionEffects.acPenalty} from Slow)</span>}{smiteOfProtectionCoverActive && <span className="aura-source cover-badge" title="Half Cover from Smite of Protection — applies to all attackers while in Aura of Protection"> (+2 Cover: Smite of Protection)</span>}{bulwarkOfForceCoverActive && <span className="aura-source cover-badge" title="Half Cover from Bulwark of Force — applies to all attackers"> (+2 Cover: Bulwark of Force)</span>}{naturesSanctuaryCoverActive && <span className="aura-source cover-badge" title="Half Cover from Nature's Sanctuary — applies to all attackers"> (+2 Cover: Nature's Sanctuary)</span>}</div>
+                    <div className='clickable' onClick={showArmorClassFormulaPopup}><b>Armor Class: </b>{circleFormsACOverride ?? (mageArmorActive ? mageArmorAc + dexBonus + hasteAcBonus + shieldAcBonus + baitAndSwitchBonus + shieldOfFaithBonus + defensiveDuelistBonus + (conditionEffects?.wardingBondAcBonus || 0) - (conditionEffects?.acPenalty || 0) : (playerStats.armorClass + hasteAcBonus + shieldAcBonus + baitAndSwitchBonus + shieldOfFaithBonus + defensiveDuelistBonus + (conditionEffects?.wardingBondAcBonus || 0) - (conditionEffects?.acPenalty || 0)))}{(hasteAcBonus > 0 || mageArmorActive || shieldAcBonus > 0 || shieldOfFaithBonus > 0 || defensiveDuelistBonus > 0) && <span className="aura-source" title={mageArmorActive ? `From Mage Armor (13 + ${dexBonus} Dex)` : undefined}>{hasteAcBonus > 0 && ` (+${hasteAcBonus} from Haste)`}{mageArmorActive && ` (${mageArmorAc} + ${dexBonus} Dex)`}</span>}{shieldAcBonus > 0 && <span className="aura-source" title="From Shield"> (+5 from Shield)</span>}{shieldOfFaithBonus > 0 && <span className="aura-source" title="From Shield of Faith"> (+2 from Shield of Faith)</span>}{defensiveDuelistBonus > 0 && <span className="aura-source" title="From Defensive Duelist"> (+{defensiveDuelistBonus} from Defensive Duelist)</span>}{baitAndSwitchBonus > 0 && <span className="aura-source" title={`From ${baitAndSwitchSource || 'Bait and Switch'}`}> (+{baitAndSwitchBonus} from {baitAndSwitchSource || 'Bait and Switch'})</span>}{(conditionEffects?.wardingBondAcBonus || 0) > 0 && <span className="aura-source" title="From Warding Bond"> (+{conditionEffects.wardingBondAcBonus} from Warding Bond)</span>}{(conditionEffects?.acPenalty || 0) > 0 && <span className="stat--penalized" title="Slow spell penalty"> ({'−'}{conditionEffects.acPenalty} from Slow)</span>}{smiteOfProtectionCoverActive && <span className="aura-source cover-badge" title="Half Cover from Smite of Protection — applies to all attackers while in Aura of Protection"> (+2 Cover: Smite of Protection)</span>}{bulwarkOfForceCoverActive && <span className="aura-source cover-badge" title="Half Cover from Bulwark of Force — applies to all attackers"> (+2 Cover: Bulwark of Force)</span>}{naturesSanctuaryCoverActive && <span className="aura-source cover-badge" title="Half Cover from Nature's Sanctuary — applies to all attackers"> (+2 Cover: Nature's Sanctuary)</span>}</div>
                     <CharHitPoints playerStats={playerStats} campaignName={campaignName} isLocalhost={isLocalhost}></CharHitPoints>
                       <b>Speed: </b><span className={exhaustionLevel > 0 || conditionEffects?.speedZero ? 'stat--penalized' : ''}>{totalSpeedWithBuff} ft.{climbSpeed ? `, climb ${climbSpeed} ft.` : ''}{swimSpeed !== null ? `, swim ${swimSpeed} ft.` : ''}{flySpeed !== null ? `, fly ${flySpeed + auraSpeedBonus} ft. ${(glisteningFlightHover || dragonWingsHover) ? ' (hover)' : ''}` : ''}{iceWalkActive ? ', ice walk' : ''}{acrobaticMovementActive ? ', acrobatic movement' : ''}</span> {auraSpeedBonus > 0 && auraSpeedSource && <span className="aura-source" title={`From ${auraSpeedSource}'s Aura of Alacrity`}> (+{auraSpeedBonus})</span>}<br />
                     <CharGold playerStats={playerStats} campaignName={campaignName}></CharGold>

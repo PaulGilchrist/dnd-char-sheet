@@ -672,11 +672,14 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
    }
 
 
- export function clearAllExpirationEffects(characterName, campaignName) {
-    if (!characterName || !campaignName) return;
+  export function clearAllExpirationEffects(characterName, campaignName) {
+     if (!characterName || !campaignName) return;
 
-     // Clear all active buffs (Innate Sorcery, Reckless Attack, etc.)
-      setRuntimeValue(characterName, 'activeBuffs', [], campaignName);
+      // Clear all active buffs (Innate Sorcery, Reckless Attack, etc.)
+      // Preserve Mage Armor (8-hour duration, only ends on long rest)
+      const existingBuffs = getRuntimeValue(characterName, 'activeBuffs') || [];
+      const mageArmorBuffs = Array.isArray(existingBuffs) ? existingBuffs.filter(b => b.name === 'Mage Armor') : [];
+      setRuntimeValue(characterName, 'activeBuffs', mageArmorBuffs, campaignName);
       setRuntimeValue(characterName, 'mantleOfMajestyActive', null, campaignName);
       setRuntimeValue(characterName, 'innerRadianceActive', null, campaignName);
       setRuntimeValue(characterName, 'unbreakableMajestyActive', null, campaignName);

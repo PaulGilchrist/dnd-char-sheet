@@ -13,7 +13,6 @@ import SecondaryTargetModal from '../modals/shared/SecondaryTargetModal.jsx'
 import MultiTargetCountPopup from '../popups/MultiTargetCountPopup.jsx'
 import TargetWithCheckboxesPopup from '../popups/TargetWithCheckboxesPopup.jsx'
 import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
-import SingleTargetPopup from '../popups/SingleTargetPopup.jsx'
 import TargetWithTypePopup from '../popups/TargetWithTypePopup.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
 import { getExcludedSpellNames } from '../../../services/ui/spellSectionUtils.js'
@@ -563,14 +562,14 @@ return (
                       );
                     })()}
                     {pendingMageArmor && (
-                      <SingleTargetPopup
-                        spell={{ name: pendingMageArmor.spellName, level: pendingMageArmor.spellLevel || 0 }}
-                        playerStats={playerStats}
-                        campaignName={campaignName}
-                        range={pendingMageArmor.range}
-                        creatureTargets={pendingMageArmor.creatureTargets}
-                        onConfirm={handleMageArmorConfirm}
+                      <SecondaryTargetModal
+                        title="Mage Armor"
+                        targets={pendingMageArmor.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                        onTargetSelected={(targetName) => handleMageArmorConfirm([targetName])}
                         onSkip={handleMageArmorSkip}
+                        description="Choose a creature within range. The target's base AC becomes 13 + Dexterity modifier. Mage Armor lasts 8 hours and ends on a long rest."
+                        confirmLabel="Cast Mage Armor"
+                        confirmIcon="fa-shield-halved"
                       />
                     )}
                     {pendingProtectionFromEnergy && (
