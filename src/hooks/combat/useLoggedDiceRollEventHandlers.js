@@ -24,14 +24,16 @@ export function setupEventListeners(deps) {
 
         window.addEventListener('save-result', async (e) => {
             const pending = getPendingSavePrompt(e.detail.promptId);
-            if (!pending) {
-                return;
-            }
 
             const prompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
             const filteredPrompts = prompts.filter(id => id !== e.detail.promptId);
-            setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, pending.campaignName);
-            if (prompts.includes(e.detail.promptId)) return;
+            if (filteredPrompts.length !== prompts.length) {
+                setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, pending?.campaignName);
+            }
+
+            if (!pending) {
+                return;
+            }
             const normalizedSaveType = normalizeSaveType(e.detail.saveType || pending.saveType);
             const targetChar = (charactersRef.current || []).find(c => c.name === e.detail.targetName);
             const targetConditions = getRuntimeValue(e.detail.targetName, 'activeConditions', pending.campaignName) || [];
