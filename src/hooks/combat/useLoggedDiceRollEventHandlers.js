@@ -315,20 +315,14 @@ export function setupEventListeners(deps) {
                 if (effectsToExpire.length > 0) {
                     addExpiration(characterName, targetName, effectsToExpire, pending.campaignName, 2);
                 }
-
-                // Update lastAttack with statusEffects for counterspell rollback
-                const existingLastAttack = await getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
-                if (existingLastAttack) {
-                    const updatedLastAttack = {
-                        ...existingLastAttack,
-                        statusEffects: pending.statusEffects,
-                        affectedTargets: existingLastAttack.affectedTargets || [targetName],
-                    };
-                    setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, pending.campaignName);
-                }
             }
 
             // Always write lastAttack for save-based damage (player targets) — counterspell needs this
+            // But first, check if a spell handler/modal already owns lastAttack (spell-save) — skip if so
+            const checkLastAttack = await getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
+            if (checkLastAttack?.rollType === 'spell-save') {
+                return;
+            }
             const saveLastAttackData = {
                 attackerName: pending.attackerName || pending.sourceAttackerName || characterName,
                 targetName: e.detail.targetName,

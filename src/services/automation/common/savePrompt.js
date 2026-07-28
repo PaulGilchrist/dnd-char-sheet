@@ -46,6 +46,10 @@ export function createSaveListener(campaignName, config) {
     };
     setRuntimeValue('campaign', 'pendingSavePrompts', pendingSaves, campaignName);
 
+    const listenerPrompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
+    listenerPrompts.push(promptId);
+    setRuntimeValue('campaign', 'pendingSaveListenerPrompts', listenerPrompts, campaignName);
+
     sendSavePrompt(campaignName, {
         promptId,
         targetName: config.targetName,
