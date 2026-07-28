@@ -28,8 +28,9 @@ export function setupEventListeners(deps) {
                 return;
             }
 
-            const createSaveListenerPrompts = new Set(getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || []);
-            if (createSaveListenerPrompts.has(e.detail.promptId)) return;
+            const prompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
+            const filteredPrompts = prompts.filter(id => id !== e.detail.promptId);
+            setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, pending.campaignName);
             const normalizedSaveType = normalizeSaveType(e.detail.saveType || pending.saveType);
             const targetChar = (charactersRef.current || []).find(c => c.name === e.detail.targetName);
             const targetConditions = getRuntimeValue(e.detail.targetName, 'activeConditions', pending.campaignName) || [];

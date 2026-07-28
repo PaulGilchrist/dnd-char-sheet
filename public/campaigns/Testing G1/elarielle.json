@@ -21,7 +21,7 @@
       "name": "Constitution",
       "baseScore": 15,
       "featIncrease": 0,
-      "backgroundIncrease": 2,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
@@ -35,7 +35,7 @@
       "name": "Wisdom",
       "baseScore": 9,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 1,
       "miscIncrease": 0
     },
     {
@@ -118,7 +118,8 @@
     "Ray of Frost",
     "Shocking Grasp",
     "Counterspell",
-    "Color Spray"
+    "Color Spray",
+    "Bless"
   ],
   "magicInitiateInstances": [
     {
