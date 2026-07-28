@@ -4,6 +4,7 @@ import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
 import TargetWithCheckboxesPopup from './popups/TargetWithCheckboxesPopup.jsx'
 import MagicMissileTargetPopup from './popups/MagicMissileTargetPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
+import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
 
@@ -26,6 +27,12 @@ export default function CharActionSpellPopups({
     actionPendingBless,
     actionHandleBlessConfirm,
     actionHandleBlessSkip,
+    actionPendingHaste,
+    actionHandleHasteConfirm,
+    actionHandleHasteSkip,
+    actionPendingHeal,
+    actionHandleHealConfirm,
+    actionHandleHealSkip,
     actionPendingGreaterRestoration,
     actionHandleGreaterRestorationConfirm,
     actionHandleGreaterRestorationSkip,
@@ -97,6 +104,28 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Bless"
                     onConfirm={actionHandleBlessConfirm}
                     onSkip={actionHandleBlessSkip}
+                />
+            )}
+            {actionPendingHaste && (
+                <SecondaryTargetModal
+                    title="Haste"
+                    targets={actionPendingHaste.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleHasteConfirm([targetName])}
+                    onSkip={actionHandleHasteSkip}
+                    description="Choose a willing creature within range. Target's speed doubles, gains +2 AC, and gets advantage on DEX saves."
+                    confirmLabel="Cast Haste"
+                    confirmIcon="fa-bolt"
+                />
+            )}
+            {actionPendingHeal && (
+                <SecondaryTargetModal
+                    title="Heal"
+                    targets={actionPendingHeal.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleHealConfirm({ targetName })}
+                    onSkip={actionHandleHealSkip}
+                    description="A surge of positive energy washes through the creature, causing it to regain 70 hit points. This spell also ends blindness, deafness, and any diseases affecting the target."
+                    confirmLabel="Cast Heal"
+                    confirmIcon="fa-heart"
                 />
             )}
             {actionPendingGreaterRestoration && (

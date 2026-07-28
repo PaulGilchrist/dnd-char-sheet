@@ -116,7 +116,8 @@
     "Poison Spray",
     "Shocking Grasp",
     "Haste",
-    "Heal"
+    "Heal",
+    "Hold Person"
   ],
   "magicInitiateInstances": [
     {

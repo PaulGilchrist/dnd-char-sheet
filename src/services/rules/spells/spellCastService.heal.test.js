@@ -116,6 +116,7 @@ function makeSpell(overrides = {}) {
     casting_time: '1 action',
     components: ['V', 'S'],
     range: '60 feet',
+    area_of_effect: { type: 'creature', size: '60 feet' },
     heal_at_slot_level: { 6: '70' },
     ...overrides,
   }
@@ -172,7 +173,7 @@ describe('executeSpellCast - heal spells', () => {
   })
 
   describe('heal spell', () => {
-    it('applies healing and posts log entry when combat context and target exist', async () => {
+    it('falls through to generic heal_at_slot_level path in executeSpellCast', async () => {
       mockCombatContext('Target', 30, 100)
       mockHealingResult(70, 30, 100)
       const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }) })
@@ -182,7 +183,7 @@ describe('executeSpellCast - heal spells', () => {
       expect(applyHealing.applyHealingToTarget).toHaveBeenCalledTimes(1)
     })
 
-    it('removes Blinded, Deafened, and Poisoned conditions from target', async () => {
+    it('falls through to generic heal_at_slot_level path which does not remove conditions', async () => {
       vi.mocked(runtime.getRuntimeValue).mockReturnValue(['Blinded', 'Deafened', 'Poisoned', 'Prone'])
       mockCombatContext('Target', 30, 100)
       mockHealingResult(70, 30, 100)
@@ -190,7 +191,7 @@ describe('executeSpellCast - heal spells', () => {
 
       await executeSpellCast(makeSpell(), { slotLevel: 6 }, services)
 
-      expect(runtime.setRuntimeValue).toHaveBeenCalledWith(
+      expect(runtime.setRuntimeValue).not.toHaveBeenCalledWith(
         'Target',
         'activeConditions',
         ['Prone'],

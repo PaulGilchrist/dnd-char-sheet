@@ -311,12 +311,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
-        // Heal — restores 70 HP and removes Blinded, Deafened, Poisoned conditions
-        if (spell.name && spell.name.toLowerCase() === 'heal') {
-            const target = await getTargetInfo();
-            return await triggerHeal(spell, { ...metaCtx, targetName: target?.name }, playerStats, campaignName, mapName);
-        }
-
         // Flesh to Stone — CON save, progressive Restrained→Petrified
         if (spell.name && spell.name.toLowerCase() === 'flesh to stone') {
             await triggerFleshToStone(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
@@ -1245,100 +1239,6 @@ async function applyPowerWordKillToTarget(targetName, playerStats, campaignName)
             },
         }));
     }
-}
-
-async function triggerHeal(spell, metaCtx, playerStats, campaignName, _mapName) {
-    const combatSummary = await getCombatContext(campaignName);
-    if (!combatSummary) return;
-
-    const targetName = metaCtx?.targetName;
-    if (!targetName) return;
-
-    const creature = combatSummary.creatures.find(c => c.name === targetName);
-    if (!creature) return;
-
-    if (metaCtx?.slotLevel == null && spell.level == null) {
-        console.error('[spellCast] triggerHeal: slot level is missing (metaCtx.slotLevel and spell.level)')
-        throw new Error('slot level is required for heal spell')
-    }
-    const slotLevel = metaCtx?.slotLevel || spell.level;
-    const healAtSlotLevel = spell.heal_at_slot_level;
-    let healAmount = 70;
-    if (healAtSlotLevel) {
-        const expression = healAtSlotLevel[slotLevel] || healAtSlotLevel[Object.keys(healAtSlotLevel).map(Number).sort((a, b) => a - b).pop()];
-        if (expression) {
-            const parsed = parseInt(expression, 10);
-            if (Number.isNaN(parsed)) {
-                console.error('[spellCast] triggerHeal: heal_at_slot_level expression is not a valid number:', expression)
-                throw new Error('heal_at_slot_level expression must be a valid number for heal spell')
-            }
-            healAmount = parsed;
-        }
-    }
-    const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
-    healAmount += bonusHeal;
-    const maxHp = creature.maxHp || playerStats.hitPoints || 0;
-    const currentHp = creature.currentHp ?? getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? maxHp;
-    const actualHeal = Math.min(healAmount, maxHp - currentHp);
-
-    if (actualHeal > 0) {
-        applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
-        const formulaParts = [healAtSlotLevel ? `${healAtSlotLevel[slotLevel] || '70'}` : `${healAmount - bonusHeal}`];
-        if (bonusDetails.length > 0) {
-            const bonusParts = bonusDetails.map(d => `${d.amount} ${d.name}`).join(' + ');
-            formulaParts.push(`(${bonusParts})`);
-        }
-        addEntry(campaignName, {
-            type: 'hp_change',
-            targetName,
-            delta: actualHeal,
-            currentHp: Math.min(maxHp, currentHp + actualHeal),
-            maxHp,
-            isHealing: true,
-            sourceName: playerStats.name,
-            note: spell.name,
-            formula: formulaParts.join(' + '),
-            bonusDetails: bonusDetails && bonusDetails.length > 0 ? bonusDetails : undefined,
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[spellCast] Error:", e); });
-    }
-
-    const conditionsToRemove = ['blinded', 'deafened', 'poisoned'];
-    const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName);
-    if (storedConditions == null || !Array.isArray(storedConditions)) {
-        console.error('[spellCast] triggerHeal: activeConditions is not an array');
-        throw new Error('activeConditions must be an array');
-    }
-    const conditions = storedConditions;
-    const newConditions = conditions.filter(c => !conditionsToRemove.includes(String(c).toLowerCase()));
-    if (newConditions.length !== conditions.length) {
-        setRuntimeValue(targetName, 'activeConditions', newConditions, campaignName);
-        for (const removed of conditionsToRemove) {
-            if (!newConditions.some(c => String(c).toLowerCase() === removed)) {
-                addEntry(campaignName, {
-                    type: 'condition',
-                    action: 'removed',
-                    characterName: targetName,
-                    condition: removed.charAt(0).toUpperCase() + removed.slice(1),
-                    reason: 'Heal',
-                    timestamp: Date.now(),
-                }).catch((e) => { console.error("[spellCast] Error:", e); });
-            }
-        }
-    }
-
-    addEntry(campaignName, {
-        type: 'hp_change',
-        targetName,
-        delta: actualHeal,
-        currentHp: Math.min(maxHp, currentHp + actualHeal),
-        maxHp,
-        isHealing: true,
-        sourceName: playerStats.name,
-        note: 'Heal',
-    }).catch((e) => { console.error("[spellCast] Error:", e); });
-
-    return { targetName, healAmount: actualHeal, formula: healAtSlotLevel ? `${healAtSlotLevel[slotLevel] || '70'}` : '70', rolls: [], rawTotal: actualHeal, bonusHeal, bonusDetails };
 }
 
 const DIVINATION_SCHOOL = 'divination';

@@ -1397,7 +1397,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
 
     const { castAction: actionCastAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, { featEffects: featRangeEffects }, cachedActionCastPosRef, setModalState);
 
-    const { pendingMetamagic: actionPendingMetamagic, gateMetamagic: actionGateMetamagic, handleConfirm: actionHandleConfirm, handleSkip: actionHandleSkip, pendingAid: actionPendingAid, handleAidConfirm: actionHandleAidConfirm, handleAidSkip: actionHandleAidSkip, pendingBane: actionPendingBane, handleBaneConfirm: actionHandleBaneConfirm, handleBaneSkip: actionHandleBaneSkip, pendingBless: actionPendingBless, handleBlessConfirm: actionHandleBlessConfirm, handleBlessSkip: actionHandleBlessSkip, pendingGreaterRestoration: actionPendingGreaterRestoration, handleGreaterRestorationConfirm: actionHandleGreaterRestorationConfirm, handleGreaterRestorationSkip: actionHandleGreaterRestorationSkip, pendingRemoveCurse: actionPendingRemoveCurse, handleRemoveCurseConfirm: actionHandleRemoveCurseConfirm, handleRemoveCurseSkip: actionHandleRemoveCurseSkip, pendingMagicMissile: actionPendingMagicMissile, handleMagicMissileConfirm: actionHandleMagicMissileConfirm, handleMagicMissileSkip: actionHandleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, actionCastAction, setModalState, characters);
+    const { pendingMetamagic: actionPendingMetamagic, gateMetamagic: actionGateMetamagic, handleConfirm: actionHandleConfirm, handleSkip: actionHandleSkip, pendingAid: actionPendingAid, handleAidConfirm: actionHandleAidConfirm, handleAidSkip: actionHandleAidSkip, pendingBane: actionPendingBane, handleBaneConfirm: actionHandleBaneConfirm, handleBaneSkip: actionHandleBaneSkip, pendingBless: actionPendingBless, handleBlessConfirm: actionHandleBlessConfirm, handleBlessSkip: actionHandleBlessSkip, pendingHaste: actionPendingHaste, handleHasteConfirm: actionHandleHasteConfirm, handleHasteSkip: actionHandleHasteSkip, pendingHeal: actionPendingHeal, handleHealConfirm: actionHandleHealConfirm, handleHealSkip: actionHandleHealSkip, pendingGreaterRestoration: actionPendingGreaterRestoration, handleGreaterRestorationConfirm: actionHandleGreaterRestorationConfirm, handleGreaterRestorationSkip: actionHandleGreaterRestorationSkip, pendingRemoveCurse: actionPendingRemoveCurse, handleRemoveCurseConfirm: actionHandleRemoveCurseConfirm, handleRemoveCurseSkip: actionHandleRemoveCurseSkip, pendingMagicMissile: actionPendingMagicMissile, handleMagicMissileConfirm: actionHandleMagicMissileConfirm, handleMagicMissileSkip: actionHandleMagicMissileSkip } = useSpellMetamagicFlow(playerStats, campaignName, actionCastAction, setModalState, characters);
 
     const handleActionSpellCast = React.useCallback(async (spell, metaCtx) => {
         setSelectedActionSpell(null);
@@ -1579,6 +1579,12 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     actionPendingBless={actionPendingBless}
                     actionHandleBlessConfirm={actionHandleBlessConfirm}
                     actionHandleBlessSkip={actionHandleBlessSkip}
+                    actionPendingHaste={actionPendingHaste}
+                    actionHandleHasteConfirm={actionHandleHasteConfirm}
+                    actionHandleHasteSkip={actionHandleHasteSkip}
+                    actionPendingHeal={actionPendingHeal}
+                    actionHandleHealConfirm={actionHandleHealConfirm}
+                    actionHandleHealSkip={actionHandleHealSkip}
                     actionPendingGreaterRestoration={actionPendingGreaterRestoration}
                     actionHandleGreaterRestorationConfirm={actionHandleGreaterRestorationConfirm}
                     actionHandleGreaterRestorationSkip={actionHandleGreaterRestorationSkip}
