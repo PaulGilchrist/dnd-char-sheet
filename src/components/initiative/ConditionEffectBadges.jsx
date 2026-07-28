@@ -45,6 +45,9 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
                 effects.attackAdvantageCount = (effects.attackAdvantageCount || 0) + 1
                 effects.attackAdvantageReasons.push('Clairvoyant Combatant')
             }
+            if (buff.effect === 'haste') {
+                effects.hasteActive = true
+            }
         }
     }
     const badges = []
@@ -137,6 +140,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const casterName = blessEffect?.source || 'unknown'
         badges.push({ label: 'Bless', cls: 'effect-bless', icon: 'fa-hands', removable: true, removeAction: 'target_effect', effectType: 'bless_bonus', tooltip: `Bless from ${casterName}: +1d4 on attack rolls and saving throws` })
     }
+    if (effects.hasteActive) {
+        const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
+        badges.push({ label: 'Hasted', cls: 'effect-target-adv', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
+    }
 
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
@@ -176,7 +183,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
             }
             case 'remove_buff': {
                 const buffs = getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []
-                const filtered = buffs.filter(b => b.effect !== 'advantage_attacks_and_saves' && b.effect !== 'vow_of_enmity' && b.effect !== 'dodge')
+                const filtered = buffs.filter(b => b.effect !== 'advantage_attacks_and_saves' && b.effect !== 'vow_of_enmity' && b.effect !== 'dodge' && b.effect !== 'haste')
                 setRuntimeValue(creatureName, 'activeBuffs', filtered, campaignName)
                 break
             }

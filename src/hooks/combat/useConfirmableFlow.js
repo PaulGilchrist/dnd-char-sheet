@@ -3,7 +3,7 @@ import { addEntry } from '../../services/ui/logService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
 
 const ROLLBACK_SPELLS = [
-  'bane', 'bless', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
+  'bane', 'bless', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
   'remove curse', 'mage armor', 'protection from energy', 'resistance',
   'shield of faith', 'magic missile'
 ];

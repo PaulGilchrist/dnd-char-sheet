@@ -318,6 +318,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
         speed = speed * 2;
         hasteAcBonus = 2;
     }
+    const totalSpeedWithHaste = speed + auraSpeedBonus;
     const shieldOfFaithActive = activeBuffs.some(b => b.effect === 'shield_of_faith');
     if (shieldOfFaithActive) {
         shieldOfFaithBonus = 2;
@@ -381,7 +382,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     if (stormbornPassive && flySpeed === null && wrathOfTheSeaActive) {
         hasFlySpeedBuff = true;
     }
-    const totalSpeedWithBuff = totalSpeed + buffSpeedBonus;
+    const totalSpeedWithBuff = totalSpeedWithHaste + buffSpeedBonus;
     if (hasFlySpeedBuff) flySpeed = totalSpeedWithBuff;
 
     const exhaustionPenalty = 2 * exhaustionLevel;

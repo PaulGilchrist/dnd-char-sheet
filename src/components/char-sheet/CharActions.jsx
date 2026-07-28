@@ -644,34 +644,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
 
     const HAS_FLURRY_HEALING_HARM = playerStats.specialActions?.some(f => f.name === "Flurry of Healing and Harm");
 
-    async function handleHasteAttack(actionName, actionCampaignName) {
-        if (cannotAct) return;
-        const hasteUsedThisTurn = getRuntimeValue(playerStats.name, 'hasteExtraActionUsed', actionCampaignName);
-        if (hasteUsedThisTurn) {
-            setPopupHtml({ type: 'automation_info', name: 'Haste', description: 'Haste extra action already used this turn.' });
-            return;
-        }
-        await setRuntimeValue(playerStats.name, 'hasteExtraActionUsed', true, actionCampaignName);
-        setPopupHtml({ type: 'automation_info', name: 'Haste', description: 'Haste extra action: Attack (one weapon attack only).' });
-    }
-
-    async function handleHasteAction(actionName, actionCampaignName) {
-        if (cannotAct) return;
-        const hasteUsedThisTurn = getRuntimeValue(playerStats.name, 'hasteExtraActionUsed', actionCampaignName);
-        if (hasteUsedThisTurn) {
-            setPopupHtml({ type: 'automation_info', name: 'Haste', description: 'Haste extra action already used this turn.' });
-            return;
-        }
-        await setRuntimeValue(playerStats.name, 'hasteExtraActionUsed', true, actionCampaignName);
-        const descriptions = {
-            'Dash': 'Haste extra action: Dash.',
-            'Disengage': 'Haste extra action: Disengage.',
-            'Hide': 'Haste extra action: Hide.',
-            'Use an Object': 'Haste extra action: Use an Object.',
-        };
-        setPopupHtml({ type: 'automation_info', name: 'Haste', description: descriptions[actionName] || `Haste extra action: ${actionName}.` });
-    }
-
     const handleSweepingAttackConfirm = React.useCallback(async (targetName, modalData) => {
         if (!targetName || !modalData) return;
         const result = await executeSweepingAttack(
@@ -1519,50 +1491,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                         </React.Fragment>;
                     })}
                 </div>
-                {(() => {
-                    const activeBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
-                    const hasteActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'haste');
-                    if (!hasteActive) return null;
-                    const hasteUsedThisTurn = getRuntimeValue(playerStats.name, 'hasteExtraActionUsed', campaignName);
-                    const hasteActions = ['Attack', 'Dash', 'Disengage', 'Hide', 'Use an Object'];
-                    return (
-                        <div>
-                            <span className='sectionHeader'>Haste Extra Action</span>
-                            <div className='attacks'>
-                                <div className='left'><b>Action</b></div>
-                                <div><b>Range</b></div>
-                                <div><b>Level</b></div>
-                                <div><b>Hit</b></div>
-                                <div><b>Damage</b></div>
-                                <div className='left'><b>Type</b></div>
-                                {is2024Rules && <div><b>Mastery</b></div>}
-                                {hasteActions.map(actionName => {
-                                    const isAttack = actionName === 'Attack';
-                                    const isDisabled = hasteUsedThisTurn;
-                                    const handleClick = () => {
-                                        if (cannotAct || isDisabled) return;
-                                        if (isAttack) {
-                                            handleHasteAttack(actionName, campaignName);
-                                        } else {
-                                            handleHasteAction(actionName, campaignName);
-                                        }
-                                    };
-                                    return (
-                                        <React.Fragment key={actionName}>
-                                            <div className={`left clickable ${isDisabled ? 'disabled-attack' : ''}`} onClick={handleClick}>{actionName}</div>
-                                            <div>—</div>
-                                            <div>-</div>
-                                            <div>—</div>
-                                            <div>—</div>
-                                            <div className='left'>{isAttack ? 'Melee/Ranged' : 'Special'}</div>
-                                            {is2024Rules && <div></div>}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })()}
                 <div className='half-line'></div>
                 <CharActionModals
                     playerStats={playerStats}

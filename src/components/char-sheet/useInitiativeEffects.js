@@ -159,6 +159,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             // Clear Poisoned Weapons badge on initiative roll (new combat)
             setRuntimeValue(playerStats.name, 'poisonedWeaponsActive', null, campaignName);
 
+            // Clear Haste buff on initiative roll (new combat)
+            const hasteBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
+            const filteredHaste = hasteBuffs.filter(b => b.name !== 'Haste');
+            if (filteredHaste.length !== hasteBuffs.length) {
+                setRuntimeValue(playerStats.name, 'activeBuffs', filteredHaste, campaignName);
+            }
+
             const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
 
             // Check for Perfect Focus (Monk level 15)

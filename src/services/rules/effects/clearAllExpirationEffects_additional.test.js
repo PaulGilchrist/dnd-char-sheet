@@ -639,7 +639,7 @@ describe('clearExpirationEffects — additional effect types', () => {
   });
 
   describe('remove_active_buff edge cases', () => {
-    it('does not add new conditions when speed_zero already present', () => {
+    it('removes haste buff without adding lethargy conditions', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_active_buff', buffName: 'Haste' }], appliedRound: 1 },
       ];
@@ -653,9 +653,15 @@ describe('clearExpirationEffects — additional effect types', () => {
 
       clearAllExpirationEffects('Goblin', 'MyCampaign');
 
-      // newConditions = conditions.filter(!speed_zero) + ['speed_zero'] + ['incapacitated']
-      // = ['poisoned'] + ['speed_zero'] + ['incapacitated'] = ['poisoned', 'speed_zero', 'incapacitated']
+      // Should only remove the Haste buff, no lethargy conditions added
       expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Human',
+        'activeBuffs',
+        [],
+        'MyCampaign',
+      );
+      // Should NOT add speed_zero or incapacitated
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
         'Human',
         'activeConditions',
         ['poisoned', 'speed_zero', 'incapacitated'],
@@ -663,7 +669,7 @@ describe('clearExpirationEffects — additional effect types', () => {
       );
     });
 
-    it('does not add incapacitated when already present', () => {
+    it('does not modify conditions when removing haste buff', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_active_buff', buffName: 'Haste' }], appliedRound: 1 },
       ];
@@ -677,7 +683,15 @@ describe('clearExpirationEffects — additional effect types', () => {
 
       clearAllExpirationEffects('Goblin', 'MyCampaign');
 
+      // Should only remove the Haste buff, conditions unchanged
       expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Human',
+        'activeBuffs',
+        [],
+        'MyCampaign',
+      );
+      // Should NOT add speed_zero
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
         'Human',
         'activeConditions',
         ['incapacitated', 'poisoned', 'speed_zero'],

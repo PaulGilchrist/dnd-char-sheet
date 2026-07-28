@@ -244,7 +244,7 @@ describe('clearExpirationEffects effect types (via clearAllExpirationEffects)', 
       );
     });
 
-    it('adds speed_zero and incapacitated conditions when removing haste buff', () => {
+    it('removes haste buff without adding lethargy conditions', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_active_buff', buffName: 'Haste' }], appliedRound: 1 },
       ];
@@ -261,6 +261,14 @@ describe('clearExpirationEffects effect types (via clearAllExpirationEffects)', 
       clearAllExpirationEffects('Goblin', 'MyCampaign');
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Human',
+        'activeBuffs',
+        [],
+        'MyCampaign',
+      );
+
+      // Should NOT add speed_zero or incapacitated conditions
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
         'Human',
         'activeConditions',
         ['poisoned', 'speed_zero', 'incapacitated'],

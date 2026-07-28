@@ -1138,10 +1138,15 @@ export function createLogDamageAndShow(deps) {
             saveDisadvantage = disadvantageSources > 1;
         }
 
+        const targetConditionEffectsForSave = getRuntimeValue(target.name, 'conditionEffects', campaignName) || {};
+        const saveAdvantage = targetConditionEffectsForSave.saveAdvantageCount > 0 ||
+            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase()));
+
         const pendingData = {
             targetName: target.name, rawDamage: adjustedTotal, saveDc, saveType, dcSuccess,
             damageType, attackerName: attackerName || characterName, name, formula, modifier, rolls, campaignName, setPopupHtml,
             metamagicHeighten: saveDisadvantage,
+            saveAdvantage,
             isCantrip: context?.isCantrip || false,
             overchannelActive: context?.overchannelActive || false,
             overchannelUseCount: context?.overchannelUseCount || 0,
@@ -1168,6 +1173,7 @@ export function createLogDamageAndShow(deps) {
             sourceAttackerName: attackerName || characterName,
             rawDamage: adjustedTotal,
             disadvantage: saveDisadvantage,
+            advantage: saveAdvantage,
         });
 
         logEntry({

@@ -42,6 +42,7 @@ import { handle as handleWeaponMasteryChoice, applyMasterySelection as applyWeap
 import { handle as handleWeaponKindMastery, applySelections as applyWeaponKindMastery } from './handlers/combat/weaponKindMasteryHandler.js';
 import { handle as handleBuffAlly } from './handlers/buffs/buffAllyHandler.js';
 import { handle as handleEncouragingSong } from './handlers/buffs/encouragingSongHandler.js';
+import { handle as handleHaste, applyHaste, isHasteActive } from './handlers/buffs/hasteHandler.js';
 import { handle as handleRevivification } from './handlers/healing/revivificationHandler.js';
 import { handle as handleBardicInspiration } from './handlers/class-bard/bardicInspirationHandler.js';
 import { handle as handleAutoReroll } from './handlers/combat/autoRerollHandler.js';
@@ -510,6 +511,7 @@ const HANDLER_MAP = {
         bane: handleBane,
         bless: handleBless,
         slow: handleSlow,
+        haste: handleHaste,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -523,7 +525,9 @@ export {
     applyStoneSkinHandler, isProtectionFromEvilAndGoodActive, isCreatureWarded, isProtectionFromPoisonActive,
     isStoneSkinActive, getStoneSkinDamageTypes, isRayOfEnfeeblementActive, getResistanceDamageType,
     isResistanceUsedThisTurn, applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus,
-    getWardingBondTarget, getWardingBondSource, isWardingBondActive,
+    getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
+    applyHaste,
+    isHasteActive,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';

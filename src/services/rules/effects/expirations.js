@@ -964,7 +964,6 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
 
             case 'remove_active_buff': {
                 const allBuffs = Array.isArray(getRuntimeValue(targetName, 'activeBuffs')) ? getRuntimeValue(targetName, 'activeBuffs') : [];
-                const wasHaste = allBuffs.some(b => b.name === effect.buffName && b.effect === 'haste');
                 setRuntimeValue(
                     targetName,
                     'activeBuffs',
@@ -977,23 +976,6 @@ function clearExpirationEffects(effects, targetName, attackerName, campaignName)
                     if (cleanedEffects.length !== storedEffects.length) {
                         setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     }
-                }
-                if (wasHaste) {
-                    const conditions = Array.isArray(getRuntimeValue(targetName, 'activeConditions')) ? getRuntimeValue(targetName, 'activeConditions') : [];
-                    const hasSpeedZero = conditions.some(c => String(c).toLowerCase() === 'speed_zero');
-                    const hasIncapacitated = conditions.some(c => String(c).toLowerCase() === 'incapacitated');
-                    const newConditions = [
-                        ...conditions.filter(c => String(c).toLowerCase() !== 'speed_zero'),
-                        'speed_zero',
-                        ...(!hasIncapacitated ? ['incapacitated'] : []),
-                    ];
-                    if (newConditions.length !== conditions.length || !hasSpeedZero) {
-                        setRuntimeValue(targetName, 'activeConditions', newConditions, campaignName);
-                    }
-                    addExpiration(attackerName, targetName, [
-                        { type: 'speed_zero' },
-                        { type: 'condition', condition: 'incapacitated' }
-                    ], campaignName, 2);
                 }
                 break;
             }

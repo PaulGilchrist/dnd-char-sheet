@@ -463,7 +463,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     // Haste: Advantage on Dexterity saving throws
     const hasteActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'haste');
     if (hasteActive) {
-        conditionEffects.saveAdvantageCount = (conditionEffects.saveAdvantageCount || 0) + 1;
+        conditionEffects.saveAdvantageAbilities = [...(conditionEffects.saveAdvantageAbilities || []), 'DEX'];
     }
 
     // Holy Nimbus: Holy Ward grants advantage on saving throws against Fiends/Undead for allies
@@ -961,10 +961,10 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     if (typeof popupHtml === 'string') {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml) }}></div></Popup>;
                     }
+                    if (popupHtml.type === 'shield_of_faith_target_selection') return null;
                     if (popupHtml.html) {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.html) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
                     }
-                    if (popupHtml.type === 'shield_of_faith_target_selection') return null;
                     if (popupHtml.type === 'automation_info') {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div className="dice-roll-header"><i className="fa-solid fa-info-circle"></i>{popupHtml.name}</div><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.description) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
                     }

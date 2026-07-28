@@ -693,7 +693,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
               )}
             </div>
             <div className="sp-body">
-              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{current.disadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
+              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{current.advantage ? ' (Advantage)' : ''}{current.disadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
               <p className="sp-dc">DC {current.saveDc}</p>
               {current.dcSuccess === 'half' && (() => {
                 const normalizedSaveType = normalizeSaveType(current.saveType);
