@@ -115,10 +115,10 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Haste",
-    "Heal",
-    "Hold Person",
-    "Invisibility"
+    "Mass Cure Wounds",
+    "Mass Heal",
+    "Mass Healing Word",
+    "Mass Suggestion"
   ],
   "magicInitiateInstances": [
     {

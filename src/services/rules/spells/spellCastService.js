@@ -261,6 +261,28 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return;
     }
 
+    // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
+    // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
+    // Skip spells with automation.effects — those have AoE/single-target effects handled below
+    // Must come before generic healing path so spells like Mass Heal (which has heal_at_slot_level)
+    // get routed to their automation handler instead of the single-target generic healer
+    if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success) {
+        const action = {
+            name: spell.name,
+            spell: spell,
+            automation: spell.automation,
+            metaCtx,
+        };
+        const handlerResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
+        if (handlerResult) {
+            return { automationPopup: handlerResult };
+        }
+        triggerArcaneWard(spell, metaCtx, playerStats, campaignName).catch(e => {
+            console.error('[spellCast] Arcane Ward trigger failed:', e);
+        });
+        return;
+    }
+
     if (!formula) {
 
         // Fear — multi-target WIS save for all creatures (30-ft cone)
@@ -662,26 +684,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 };
                 await executeHandler(action, playerStats, campaignName, mapName, characters);
             }
-        }
-
-        // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
-        // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
-        // Skip spells with automation.effects — those have AoE/single-target effects handled below
-        if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success) {
-            const action = {
-                name: spell.name,
-                spell: spell,
-                automation: spell.automation,
-                metaCtx,
-            };
-            const handlerResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
-            if (handlerResult) {
-                return { automationPopup: handlerResult };
-            }
-            triggerArcaneWard(spell, metaCtx, playerStats, campaignName).catch(e => {
-                console.error('[spellCast] Arcane Ward trigger failed:', e);
-            });
-            return;
         }
 
     }

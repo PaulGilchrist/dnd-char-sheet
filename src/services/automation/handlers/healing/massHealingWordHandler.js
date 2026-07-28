@@ -73,9 +73,13 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     if (!combatSummary) return null;
 
     const allyNames = getAllyList(playerName);
+    const allyList = Array.isArray(allyNames) && allyNames.length > 0 ? allyNames : [];
+    const effectiveAllies = allyList.length > 0 && allyList.some(a => a !== playerName)
+        ? allyList
+        : combatSummary.creatures?.map(c => c.name) || [];
     const eligible = [];
 
-    for (const allyName of allyNames) {
+    for (const allyName of effectiveAllies) {
         if (allyName === playerName) continue;
         const creature = combatSummary.creatures?.find(c => c.name === allyName);
         if (!creature) continue;

@@ -1166,8 +1166,11 @@ export default function CharActionModals({
                 <MassHealModal
                     creatureTargets={mergedModalState.massHealModal.creatureTargets}
                     maxTargets={mergedModalState.massHealModal.maxTargets}
+                    pool={mergedModalState.massHealModal.totalPool}
                     onConfirm={handleMassHealConfirm}
                     onSkip={() => setModalState({ massHealModal: null })}
+                    campaignName={mergedModalState.massHealModal.campaignName}
+                    combatSummary={mergedModalState.massHealModal.combatSummary}
                 />
             )}
             {mergedModalState.massCureWoundsModal && (

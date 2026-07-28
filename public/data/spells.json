@@ -6597,7 +6597,10 @@
     "classes": [
       "Cleric"
     ],
-    "subclasses": []
+    "subclasses": [],
+    "automation": {
+      "type": "mass_heal"
+    }
   },
   {
     "index": "mass-healing-word",

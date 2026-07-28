@@ -740,10 +740,10 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         setModalState({ zealousPresenceModal: null });
     }, [setPopupHtml, modalState.zealousPresenceModal, setModalState]);
 
-    const handleMassHealConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.massHealModal) return;
+    const handleMassHealConfirm = React.useCallback(async (distribution) => {
+        if (!distribution || !modalState.massHealModal) return;
         const { action, playerStats, campaignName } = modalState.massHealModal;
-        const result = await confirmMassHeal(action, playerStats, campaignName, targetNames, modalState.massHealModal.totalPool, modalState.massHealModal.bonusHeal);
+        const result = await confirmMassHeal(action, playerStats, campaignName, distribution, modalState.massHealModal.totalPool, modalState.massHealModal.bonusHeal, modalState.massHealModal.bonusDetails);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }

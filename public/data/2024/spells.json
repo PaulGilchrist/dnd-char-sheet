@@ -8366,6 +8366,9 @@
     ],
     "heal_at_slot_level": {
       "9": "700"
+    },
+    "automation": {
+      "type": "mass_heal"
     }
   },
   {

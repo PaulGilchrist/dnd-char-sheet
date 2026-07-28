@@ -41,7 +41,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const maxTargets = auto?.maxTargets || 10;
-    const rangeFt = auto?.range ? rangeToFeet(auto.range) : 60;
+    const rangeFt = auto?.range ? rangeToFeet(auto.range) : rangeToFeet(action.spell?.range || '60 feet');
 
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) return null;
@@ -61,10 +61,13 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     void (totalPool + (bonusHeal > 0 ? bonusHeal * maxTargets : 0));
 
     const allyNames = getAllyList(playerName);
+    const allyList = Array.isArray(allyNames) && allyNames.length > 0 ? allyNames : [];
+    const effectiveAllies = allyList.length > 1 || (allyList.length === 1 && allyList[0] !== playerName)
+        ? allyList
+        : combatSummary.creatures?.map(c => c.name) || [];
     const eligible = [];
 
-    for (const allyName of allyNames) {
-        if (allyName === playerName) continue;
+    for (const allyName of effectiveAllies) {
         const creature = combatSummary.creatures?.find(c => c.name === allyName);
         if (!creature) continue;
         if (await isWithinRange(playerName, allyName, rangeFt)) {
@@ -77,10 +80,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             type: 'popup',
             payload: { type: 'automation_info', name: MASS_HEAL_NAME, description: `${MASS_HEAL_NAME}: No allies within range.` },
         };
-    }
-
-    if (eligible.length <= maxTargets) {
-        return confirmMassHeal(action, playerStats, campaignName, eligible.map(c => c.name), totalPool, bonusHeal, bonusDetails);
     }
 
     const creatureTargets = eligible.map(c => c.name);
@@ -96,28 +95,27 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             maxTargets,
             totalPool,
             bonusHeal,
+            bonusDetails,
+            combatSummary,
         },
     };
 }
 
-export async function confirmMassHeal(action, playerStats, campaignName, selectedTargetNames, totalPool, bonusHeal, bonusDetails) {
+export async function confirmMassHeal(action, playerStats, campaignName, distribution, totalPool, bonusHeal, bonusDetails) {
     const playerName = playerStats.name;
-    const maxTargets = action.automation?.maxTargets || 10;
-    const finalTargets = selectedTargetNames.slice(0, maxTargets);
     const combatSummary = await getCombatContext(campaignName);
-    let remainingPool = totalPool + (bonusHeal > 0 ? bonusHeal * finalTargets.length : 0);
     const results = [];
 
-    for (const targetName of finalTargets) {
+    for (const [targetName, userAmount] of Object.entries(distribution)) {
         const maxHp = combatSummary?.creatures?.find(c => c.name === targetName)?.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const healAmount = Math.min(totalPool - (totalPool - remainingPool) + bonusHeal, maxHp - currentHp);
-        const actualHeal = Math.min(healAmount, remainingPool);
+        const missingHp = maxHp - currentHp;
+        const actualHeal = Math.min(userAmount, missingHp, totalPool);
 
         if (actualHeal > 0) {
             applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
-            remainingPool -= actualHeal;
+            totalPool -= actualHeal;
         }
 
         const newHp = Math.min(maxHp, currentHp + actualHeal);
@@ -131,7 +129,7 @@ export async function confirmMassHeal(action, playerStats, campaignName, selecte
             isHealing: true,
             sourceName: playerName,
             note: MASS_HEAL_NAME,
-            formula: `${totalPool}${bonusHeal > 0 ? ' + bonus' : ''}`,
+            formula: `${Object.keys(distribution).length} targets`,
             bonusDetails: bonusDetails && bonusDetails.length > 0 ? bonusDetails : undefined,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[massHeal] Error:', e); });
@@ -154,7 +152,7 @@ export async function confirmMassHeal(action, playerStats, campaignName, selecte
             type: 'automation_info',
             name: MASS_HEAL_NAME,
             automationType: action.automation.type,
-            description: `${MASS_HEAL_NAME} healed ${totalHealed} HP across ${results.length} target(s): ${finalTargets.join(', ') || 'none'}.`,
+            description: `${MASS_HEAL_NAME} healed ${totalHealed} HP across ${results.length} target(s): ${Object.keys(distribution).join(', ') || 'none'}.`,
         },
     };
 }
