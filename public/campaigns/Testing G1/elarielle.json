@@ -112,14 +112,12 @@
   ],
   "specialActions": [],
   "spells": [
-    "Chill Touch",
     "Fire Bolt",
     "Poison Spray",
-    "Ray of Frost",
     "Shocking Grasp",
-    "Counterspell",
     "Color Spray",
-    "Bless"
+    "Bless",
+    "Fear"
   ],
   "magicInitiateInstances": [
     {

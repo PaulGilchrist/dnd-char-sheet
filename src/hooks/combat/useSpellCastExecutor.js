@@ -85,6 +85,9 @@ function handleModalResult(popup, setModalState) {
         case 'aoeCondition':
             setModalState({ aoeConditionModal: payload });
             break;
+        case 'fear':
+            setModalState({ fearModal: payload });
+            break;
         case 'wildMagicSurge':
             setModalState({ wildMagicSurgeModal: payload });
             break;

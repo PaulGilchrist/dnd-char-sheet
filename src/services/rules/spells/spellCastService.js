@@ -17,7 +17,6 @@ import { addExpiration } from '../effects/expirations.js';
 import { triggerFalseLife } from '../features/falseLifeService.js';
 import { triggerHealingWord } from '../features/healingWordService.js';
 import { usesSpellSlot } from '../features/spellUtils.js';
-import { triggerFear } from '../features/fearService.js';
 import { triggerFeignDeath } from '../features/feignDeathService.js';
 import { triggerFleshToStone } from '../features/fleshToStoneService.js';
 import { triggerRemoveCurse } from '../features/removeCurseService.js';
@@ -267,12 +266,26 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Fear — multi-target WIS save for all creatures (30-ft cone)
         if (spell.name && spell.name.toLowerCase() === 'fear' && spell.dc) {
             const fearInnateBonus = innateSorceryActive ? 1 : 0;
-            const fearMetaCtx = { ...metaCtx, spellSaveDc: spellSaveDc + fearInnateBonus };
-            await triggerFear(spell, fearMetaCtx, playerStats, campaignName, mapName);
+            const fearModalPayload = {
+                action: { name: 'Fear', automation: { type: 'fear' } },
+                playerStats,
+                campaignName,
+                saveType: 'WIS',
+                saveDc: spellSaveDc + fearInnateBonus,
+                activeOverlay: null,
+                metamagicCareful: metaCtx?.metamagicCareful || false,
+                metamagicHeighten: metaCtx?.metamagicHeighten,
+            };
             triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
                 console.error('[spellCast] False Life trigger failed:', e);
             });
-            return;
+            return {
+                automationPopup: {
+                    type: 'modal',
+                    modalName: 'fear',
+                    payload: fearModalPayload,
+                },
+            };
         }
 
         // Regenerate — heal target, set turn-start healing, track body part regrowth

@@ -226,19 +226,30 @@ describe('executeSpellCast - no-damage spell routing', () => {
   })
 
   // ------------------------------------------------------------------
-  // Fear — triggers two services (Fear + False Life)
+  // Fear — returns fear modal + triggers False Life
   // ------------------------------------------------------------------
   describe('fear dual-trigger', () => {
-    it('triggers both Fear and False Life', async () => {
-      const fear = await import('../features/fearService.js')
+    it('returns fear modal and triggers False Life', async () => {
       const falseLife = await import('../features/falseLifeService.js')
       const services = makeServices()
       const spell = makeSpell({ name: 'Fear', dc: { dc_type: 'wis', dc_success: 'half' } })
       delete spell.damage
 
-      await executeSpellCast(spell, makeMetaCtx(), services)
+      const result = await executeSpellCast(spell, makeMetaCtx(), services)
 
-      expect(fear.triggerFear).toHaveBeenCalled()
+      expect(result.automationPopup).toEqual({
+        type: 'modal',
+        modalName: 'fear',
+        payload: expect.objectContaining({
+          action: { name: 'Fear', automation: { type: 'fear' } },
+          playerStats: services.playerStats,
+          campaignName: 'testCampaign',
+          saveType: 'WIS',
+          saveDc: 17,
+          activeOverlay: null,
+          metamagicCareful: false,
+        }),
+      })
       expect(falseLife.triggerFalseLife).toHaveBeenCalled()
     })
   })
