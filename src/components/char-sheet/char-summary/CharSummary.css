@@ -490,3 +490,24 @@
     font-size: 0.8em;
     opacity: 0.6;
 }
+
+.char-summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.char-summary-badges .char-conditions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+}
+
+.char-summary-badges .char-conditions-grid {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}

@@ -217,20 +217,22 @@ describe('CharConditions', () => {
       expect(callCountAfter).toBe(callCountBefore);
     });
 
-    it('condition without ability is not savable', () => {
+    it('condition without ability is not savable (renders as span)', () => {
       runtimeValues['Test Character::activeConditions'] = ['blinded'];
       runtimeValues['Test Character::activeConditionMeta'] = { blinded: { dc: 10, ability: null } };
       render(<CharConditions {...defaultProps} />);
-      const blindedBtn = screen.getByText('Blinded DC 10');
-      expect(blindedBtn).toHaveClass('condition-badge--display-only');
+      const badge = screen.getByText('Blinded DC 10');
+      expect(badge.className).toContain('creature-badge effect-condition');
+      expect(badge.tagName).toBe('SPAN');
     });
 
-    it('condition with ability is savable', () => {
+    it('condition with ability is savable (renders as button)', () => {
       runtimeValues['Test Character::activeConditions'] = ['charmed'];
       runtimeValues['Test Character::activeConditionMeta'] = { charmed: { dc: 12, ability: 'wis' } };
       render(<CharConditions {...defaultProps} />);
-      const charmedBtn = screen.getByText('Charmed DC 12');
-      expect(charmedBtn).toHaveClass('condition-badge--savable');
+      const badge = screen.getByText('Charmed DC 12');
+      expect(badge.className).toContain('creature-badge effect-condition');
+      expect(badge.tagName).toBe('BUTTON');
     });
 
     it('removes condition from active list on successful save', async () => {
@@ -331,7 +333,7 @@ describe('CharConditions', () => {
       };
 
       render(<CharConditions {...defaultProps} />);
-      expect(screen.getByText('Bless DC 10')).toBeInTheDocument();
+      expect(screen.queryByText('Bless DC 10')).not.toBeInTheDocument();
     });
 
     it('does not render concentration badge when no concentration', () => {
@@ -347,7 +349,7 @@ describe('CharConditions', () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it('concentration badge is displayed with spinner icon', () => {
+    it('does not render concentration badge (handled in char-summary-badges)', () => {
       runtimeValues['Test Character::activeConditions'] = [];
       runtimeValues['Test Character::activeConditionMeta'] = {};
       mockCombatSummary = {
@@ -357,8 +359,7 @@ describe('CharConditions', () => {
       };
 
       render(<CharConditions {...defaultProps} />);
-      const badge = screen.getByText('Haste DC 13');
-      expect(badge.closest('.concentration-badge')).toBeInTheDocument();
+      expect(screen.queryByTestId('creature-badge')).not.toBeInTheDocument();
     });
   });
 
@@ -375,7 +376,7 @@ describe('CharConditions', () => {
       render(<CharConditions {...defaultProps} exhaustionLevel={2} />);
       expect(screen.getByText('Charmed DC 12')).toBeInTheDocument();
       expect(screen.getByText('Exhaustion (2)')).toBeInTheDocument();
-      expect(screen.getByText('Bless DC 10')).toBeInTheDocument();
+      expect(screen.queryByText('Bless DC 10')).not.toBeInTheDocument();
     });
   });
 

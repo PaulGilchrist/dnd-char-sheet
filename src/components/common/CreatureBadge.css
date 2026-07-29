@@ -1,0 +1,155 @@
+/* ── Base badge ─────────────────────────────────────────── */
+.creature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.65em;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid;
+  margin: 1px;
+  cursor: default;
+  font-family: inherit;
+  line-height: inherit;
+}
+
+button.creature-badge {
+  background: transparent;
+  border-style: solid;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+button.creature-badge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Remove button ──────────────────────────────────────── */
+.creature-badge-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid rgba(220, 38, 38, 0.7);
+  border-radius: 50%;
+  background-color: var(--background-color, #1a1a2e);
+  color: #e74c3c;
+  font-size: 0.55em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.creature-badge-remove:hover {
+  background-color: rgba(220, 38, 38, 0.3);
+}
+
+/* ── Semantic color variants ────────────────────────────── */
+.creature-badge.effect-buff {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #3b82f6;
+}
+
+.creature-badge.effect-debuff {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+.creature-badge.effect-neutral {
+  background-color: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #8b5cf6;
+}
+
+/* ── Condition badge (clickable save button) ────────────── */
+.creature-badge.effect-condition {
+  background-color: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.5);
+  color: inherit;
+  padding: 2px 6px;
+  font-size: 0.7em;
+}
+
+.creature-badge.effect-condition:hover:not(:disabled) {
+  background-color: rgba(220, 38, 38, 0.35);
+}
+
+/* ── Backward-compatible aliases ────────────────────────── */
+.creature-badge.effect-disadvantage {
+  background-color: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+}
+
+.creature-badge.effect-target-adv {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+.creature-badge.effect-target-disadv {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #3b82f6;
+}
+
+.creature-badge.effect-speed-zero {
+  background-color: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+}
+
+.creature-badge.effect-cannot-act {
+  background-color: rgba(220, 38, 38, 0.25);
+  border-color: rgba(220, 38, 38, 0.6);
+  color: #ef4444;
+}
+
+.creature-badge.effect-bless {
+  background-color: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #22c55e;
+}
+
+.creature-badge.effect-stealth-attack {
+  background-color: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #8b5cf6;
+}
+
+.creature-badge.effect-auto-crit {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+.creature-badge.effect-no-conc {
+  background-color: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #a855f7;
+}
+
+.creature-badge.effect-auto-fail {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.creature-badge.effect-resist {
+  background-color: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #22c55e;
+}

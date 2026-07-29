@@ -28,6 +28,10 @@ import { addEntry } from '../../../services/ui/logService.js';
 import CharConditions from './CharConditions.jsx'
 import AllySelectionModal from '../../common/AllySelectionModal.jsx'
 import TrackedResourceInput from './TrackedResourceInput.jsx';
+import CreatureBadge from '../../common/CreatureBadge.jsx'
+import ConditionEffectBadges from '../../initiative/ConditionEffectBadges.jsx'
+import { isBuffActive } from '../../../services/automation/common/buffToggle.js';
+import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc } from '../../../services/combat/auras/unbreakableMajesty.js';
 
 const signFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
 
@@ -387,6 +391,54 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     if (stormbornPassive && flySpeed === null && wrathOfTheSeaActive) {
         hasFlySpeedBuff = true;
     }
+    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
+    const myTargetEffects = allTargetEffects.filter(te => te.target === playerStats.name);
+    const rawConditions = useRuntimeValue(playerStats.name, 'activeConditions');
+    const rawConditionMeta = useRuntimeValue(playerStats.name, 'activeConditionMeta');
+    const conditionObjects = React.useMemo(() => {
+        const storedConditions = rawConditions ?? [];
+        const conditionMeta = rawConditionMeta ?? {};
+        return storedConditions.map((key, i) => {
+            const condKey = String(key).toLowerCase();
+            const meta = conditionMeta[condKey] || {};
+            return {
+                id: `runtime-${key}-${i}`,
+                key,
+                label: key.charAt(0).toUpperCase() + key.slice(1),
+                dc: meta.dc || 0,
+                ability: meta.ability || 'con',
+            };
+        });
+    }, [rawConditions, rawConditionMeta]);
+
+    const rawCombatSummary = getCombatSummary(campaignName);
+    const rawCreaturesForBadges = rawCombatSummary?.creatures;
+    const playerCreatureForBadges = (rawCreaturesForBadges || []).find(c => c.name === playerStats.name);
+    const concentrationForBadges = playerCreatureForBadges?.concentration ?? null;
+    const wildShapeActiveChar = isBuffActive(playerStats.name, 'Wild Shape', campaignName);
+    const isMajestyActiveChar = isUnbreakableMajestyActive(playerStats.name, campaignName);
+    const majestyDcChar = isMajestyActiveChar ? getUnbreakableMajestySaveDc(playerStats.name, campaignName) : 0;
+    const recklessAttackActiveChar = myTargetEffects.some(te => te.effect === 'reckless_attack');
+
+    const sanctuaryInfoChar = React.useMemo(() => {
+        const creatures = rawCreaturesForBadges || [];
+        for (const other of creatures) {
+            if (other.type !== 'player') continue;
+            const active = getRuntimeValue(other.name, 'naturesSanctuaryActive', campaignName);
+            if (!active) continue;
+            const creatureList = getRuntimeValue(other.name, 'naturesSanctuaryCreatures', campaignName) || [];
+            if (creatureList.includes(playerStats.name)) {
+                const resistance = getRuntimeValue(other.name, 'naturesSanctuaryResistance', campaignName) || 'None';
+                return { druid: other.name, resistance };
+            }
+        }
+        return null;
+    }, [rawCreaturesForBadges, campaignName, playerStats?.name]);
+
+    const allCreaturesForBadges = rawCreaturesForBadges || [];
+    const huntersMarkOnCreature = allCreaturesForBadges?.some(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === playerStats.name);
+    const markCreature = huntersMarkOnCreature ? allCreaturesForBadges.find(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === playerStats.name) : null;
+
     const totalSpeedWithBuff = totalSpeedWithHaste + buffSpeedBonus;
     if (hasFlySpeedBuff) flySpeed = totalSpeedWithBuff;
 
@@ -522,10 +574,10 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     <span className="ally-badge clickable no-print" onClick={handleAllyModalOpen} title="Manage allies">
                         <i className="fa-solid fa-users"></i> Allies ({currentAllies.length})
                     </span>
-                    {flyBuffActive && <span className="automation-badge">{flyBuffName} Active</span>}
-                    {largeFormActive && <span className="automation-badge">Large Form</span>}
-                    {huntersMarkActive && <span className="automation-badge">Hunter's Mark Active</span>}
-                    {tremorsenseActive && <span className="automation-badge">Tremorsense 60 ft.</span>}
+                    {flyBuffActive && <CreatureBadge icon='fa-feather' label={`${flyBuffName} Active`} cls='effect-buff' />}
+                    {largeFormActive && <CreatureBadge icon='fa-expand' label='Large Form' cls='effect-buff' />}
+                    {huntersMarkActive && <CreatureBadge icon='fa-crosshairs' label="Hunter's Mark Active" cls='effect-neutral' />}
+                    {tremorsenseActive && <CreatureBadge icon='fa-ear' label='Tremorsense 60 ft.' cls='effect-buff' />}
                 </div>
                 <div>
                     <TrackedResourceInput label="Short Rest Hit Dice" resourceKey="shortRestHitDice" playerName={playerStats.name} getMax={() => playerStats.level} deps={[playerStats]} campaignName={campaignName} playerStats={playerStats} />
@@ -619,7 +671,31 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     onClose={() => setShowAvatarModal(false)}
                 />
             )}
-                <CharConditions playerStats={playerStats} campaignName={campaignName} activeMapName={activeMapName} characters={characters} exhaustionLevel={exhaustionLevel} onConditionsChange={onConditionsChange} conditionEffects={conditionEffects} />
+                <div className='char-summary-badges'>
+                    <CharConditions playerStats={playerStats} campaignName={campaignName} activeMapName={activeMapName} characters={characters} exhaustionLevel={exhaustionLevel} onConditionsChange={onConditionsChange} conditionEffects={conditionEffects} />
+                    <ConditionEffectBadges conditions={conditionObjects} targetEffects={myTargetEffects} creatureName={playerStats.name} campaignName={campaignName} allCreatures={allCreaturesForBadges} isLocalhost={isLocalhost} />
+                    {wildShapeActiveChar && (
+                        <CreatureBadge icon='fa-paw' label='Wild Shape' cls='effect-buff' tooltip='Wild Shape: Animal form active — spellcasting blocked, resistance types apply' />
+                    )}
+                    {isMajestyActiveChar && (
+                        <CreatureBadge icon='fa-shield-halved' label={`Majesty DC ${majestyDcChar}`} cls='effect-buff' tooltip={`Unbreakable Majesty (DC ${majestyDcChar})\n\nFirst attack per turn that hits forces attacker to make a CHA save or the attack misses.`} />
+                    )}
+                    {wrathOfTheSeaActive && (
+                        <CreatureBadge icon='fa-water' label='Wrath of the Sea' cls='effect-buff' tooltip='Wrath of the Sea: Ocean spray emanation active — Bonus Action to force CON save or take WIS modifier d6 Cold damage' />
+                    )}
+                    {sanctuaryInfoChar && (
+                        <CreatureBadge icon='fa-leaf' label='Sanctuary' cls='effect-buff' tooltip={`Nature's Sanctuary: Half Cover (AC +2), ${sanctuaryInfoChar.resistance} resistance. Protected by ${sanctuaryInfoChar.druid}'s Nature's Sanctuary`} />
+                    )}
+                    {recklessAttackActiveChar && (
+                        <CreatureBadge icon='fa-shield-halved' label='Reckless Attack' cls='effect-debuff' tooltip='Reckless Attack: Advantage on Strength attack rolls, attack rolls against you have Advantage' />
+                    )}
+                    {concentrationForBadges && (
+                        <CreatureBadge icon='fa-spinner' label={`${concentrationForBadges.spell} DC ${concentrationForBadges.dc}`} cls='effect-neutral' tooltip={`Concentration: ${concentrationForBadges.spell} (DC ${concentrationForBadges.dc} Constitution)`} />
+                    )}
+                    {huntersMarkOnCreature && markCreature && (
+                        <CreatureBadge icon='fa-crosshairs' label="Hunter's Mark" cls='effect-neutral' tooltip={`Marked by ${markCreature?.name}`} />
+                    )}
+                </div>
               </div>
                {surgeEffects && Array.isArray(surgeEffects) && surgeEffects.length > 0 && (
                    <div className="wild-surge-badge">

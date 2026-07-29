@@ -40,6 +40,20 @@ Read-only inspection only: `git log`, `git show`, `git diff`, `git status`, `git
 
 - mv is ONLY permitted when refactoring a folder into multiple subfolders.
 
+## CreatureBadge Component (unified badge rendering)
+
+**`CreatureBadge.jsx`** is a shared presentational component for ALL badges across the app. It renders as `<button>` (with `onClick`) or `<span>` (no click). Props: `{ icon, label, cls, tooltip, removable, onRemove, onClick, disabled }`. The remove button has title `"Remove effect"`.
+
+**CSS** in `CreatureBadge.css` with semantic color classes: `effect-buff` (blue), `effect-debuff` (red), `effect-neutral` (purple), `effect-condition` (red for saves). Backward-compatible aliases exist for all old effect class names.
+
+**Consumers:**
+- `ConditionEffectBadges.jsx` — renders target effects via CreatureBadge
+- `CreatureCard.jsx` — all condition/target/feature badges via CreatureBadge
+- `CharConditions.jsx` — condition save badges and concentration via CreatureBadge
+- `CharSummary.jsx` — new `char-summary-badges` section with ConditionEffectBadges + special feature badges (Wild Shape, Majesty, Wrath of the Sea, Sanctuary, Reckless Attack, Hunter's Mark marked-by, Concentration)
+
+**Key gotcha:** All remove buttons now have the same title `"Remove effect"`. Tests that check for remove buttons must account for possible duplicates from multiple active badges.
+
 ## Repo Tooling
 
 - `eslint.config.js` — Flat config (ESM) with custom `server-first` plugin enforcing no localStorage game state, no `window.__state`, and requiring `useSyncedState` for game data

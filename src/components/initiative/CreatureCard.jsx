@@ -7,6 +7,7 @@ import CreatureHp from './CreatureHp.jsx'
 import { getAbilityLabel } from '../../services/combat/conditions/conditionUtils.js'
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx'
+import CreatureBadge from '../common/CreatureBadge.jsx'
 import { isBuffActive } from '../../services/automation/common/buffToggle.js';
 import { CONDITION_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc, clearUnbreakableMajesty } from '../../services/combat/auras/unbreakableMajesty.js'
@@ -155,27 +156,16 @@ function CreatureCard({
                     if (!cond || typeof cond !== 'object') return null;
                     const canRoll = creature.type === 'player' || isLocalhost
                     return (
-                        <div key={cond.id || cond.key} className='condition-badge-wrapper'>
-                            <button
-                                className='condition-badge initiative-condition-badge'
-                                onClick={() => canRoll && onRollConditionSave(creature.name, cond)}
-                                disabled={!canRoll}
-                                type='button'
-                                title={cond.dc ? `${cond.label}\n\n${CONDITION_DESCRIPTIONS[cond.label] || ''}\n\nDC ${cond.dc} ${getAbilityLabel(cond.ability)}` : (CONDITION_DESCRIPTIONS[cond.label] || cond.label)}
-                            >
-                                {cond.dc ? `${cond.label} DC ${cond.dc}` : cond.label}
-                            </button>
-                            {isLocalhost && (
-                                <button
-                                    className='condition-break-btn'
-                                    onClick={() => onBreakCondition(creature.name, cond)}
-                                    type='button'
-                                    title='Automatically break condition'
-                                >
-                                    <i className='fa-solid fa-xmark'></i>
-                                </button>
-                            )}
-                        </div>
+                        <CreatureBadge
+                            key={cond.id || cond.key}
+                            label={cond.dc ? `${cond.label} DC ${cond.dc}` : cond.label}
+                            cls='effect-condition'
+                            tooltip={cond.dc ? `${cond.label}\n\n${CONDITION_DESCRIPTIONS[cond.label] || ''}\n\nDC ${cond.dc} ${getAbilityLabel(cond.ability)}` : (CONDITION_DESCRIPTIONS[cond.label] || cond.label)}
+                            onClick={canRoll ? () => onRollConditionSave(creature.name, cond) : undefined}
+                            disabled={!canRoll}
+                            removable={isLocalhost}
+                            onRemove={() => onBreakCondition(creature.name, cond)}
+                        />
                     )
                 })}
                 <ConditionEffectBadges conditions={creature.conditions?.filter(c => c && typeof c === 'object' && c.key) || []} targetEffects={myTargetEffects} creatureName={creature.name} campaignName={campaignName} allCreatures={allCreatures} hasTacticalShift={hasTacticalShift} hasSpeedyOpportunityDisadvantage={hasSpeedyOpportunityDisadvantage} hasSpeedyDifficultTerrainIgnore={hasSpeedyDifficultTerrainIgnore} isLocalhost={isLocalhost} coronaDisadvantage={coronaDisadvantage} />
@@ -190,156 +180,99 @@ function CreatureCard({
                     </button>
                 )}
                 {creature.concentration ? (
-                    <div className='concentration-badge-wrapper'>
-                        <button
-                            className='initiative-concentration-badge'
-                            onClick={() => onRollConcentrationSave(creature.name)}
-                            type='button'
-                            title={`Concentration: ${creature.concentration.spell} (DC ${creature.concentration.dc} Constitution)`}
-                        >
-                            <i className='fa-solid fa-spinner'></i> {creature.concentration.spell} DC {creature.concentration.dc}
-                        </button>
-                        <button
-                            className='concentration-break-btn'
-                            onClick={() => onBreakConcentration(creature.name)}
-                            type='button'
-                            title='Break concentration'
-                        >
-                            <i className='fa-solid fa-xmark'></i>
-                        </button>
-                    </div>
+                    <CreatureBadge
+                        icon='fa-spinner'
+                        label={`${creature.concentration.spell} DC ${creature.concentration.dc}`}
+                        cls='effect-neutral'
+                        tooltip={`Concentration: ${creature.concentration.spell} (DC ${creature.concentration.dc} Constitution)`}
+                        onClick={isLocalhost ? () => onRollConcentrationSave(creature.name) : undefined}
+                        removable={isLocalhost}
+                        onRemove={() => onBreakConcentration(creature.name)}
+                    />
                 ) : null}
                 {allCreatures?.some(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name) && (() => {
                     const markCreature = allCreatures.find(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name);
                     return (
-                        <div className='hunters-mark-badge-wrapper'>
-                            <span className='initiative-hunters-mark-badge' title={`Marked by ${markCreature?.name}`}>
-                                <i className='fa-solid fa-crosshairs'></i> Hunter's Mark
-                            </span>
-                            {isLocalhost && (
-                                <button
-                                    className='badge-break-btn'
-                                    onClick={() => {
-                                        if (markCreature) {
-                                            const concentration = getRuntimeValue(markCreature.name, 'concentration');
-                                            if (concentration?.spell === "Hunter's Mark") {
-                                                setRuntimeValue(markCreature.name, 'concentration', null, campaignName);
-                                            }
-                                        }
-                                    }}
-                                    type='button'
-                                    title="Remove Hunter's Mark"
-                                >
-                                    <i className='fa-solid fa-xmark'></i>
-                                </button>
-                            )}
-                        </div>
+                        <CreatureBadge
+                            icon='fa-crosshairs'
+                            label="Hunter's Mark"
+                            cls='effect-neutral'
+                            tooltip={`Marked by ${markCreature?.name}`}
+                            removable={isLocalhost}
+                            onRemove={() => {
+                                if (markCreature) {
+                                    const concentration = getRuntimeValue(markCreature.name, 'concentration');
+                                    if (concentration?.spell === "Hunter's Mark") {
+                                        setRuntimeValue(markCreature.name, 'concentration', null, campaignName);
+                                    }
+                                }
+                            }}
+                        />
                     );
                 })()}
                 {isMajestyActive && (
-                    <div className='majesty-badge-wrapper'>
-                        <button
-                            className='initiative-majesty-badge'
-                            onClick={() => isLocalhost && clearUnbreakableMajesty(creature.name, campaignName)}
-                            disabled={!isLocalhost}
-                            type='button'
-                            title={`Unbreakable Majesty (DC ${majestyDc})\n\nFirst attack per turn that hits forces attacker to make a CHA save or the attack misses.\nClick to deactivate.`}
-                        >
-                            <i className='fa-solid fa-shield-halved'></i> Majesty DC {majestyDc}
-                        </button>
-                        {isLocalhost && (
-                            <button
-                                className='majesty-break-btn'
-                                onClick={() => clearUnbreakableMajesty(creature.name, campaignName)}
-                                type='button'
-                                title='Deactivate Unbreakable Majesty'
-                            >
-                                <i className='fa-solid fa-xmark'></i>
-                            </button>
-                        )}
-                    </div>
+                    <CreatureBadge
+                        icon='fa-shield-halved'
+                        label={`Majesty DC ${majestyDc}`}
+                        cls='effect-buff'
+                        tooltip={`Unbreakable Majesty (DC ${majestyDc})\n\nFirst attack per turn that hits forces attacker to make a CHA save or the attack misses.\nClick to deactivate.`}
+                        onClick={isLocalhost ? () => clearUnbreakableMajesty(creature.name, campaignName) : undefined}
+                        disabled={!isLocalhost}
+                        removable={isLocalhost}
+                        onRemove={() => clearUnbreakableMajesty(creature.name, campaignName)}
+                    />
                 )}
                 {wildShapeActive && (
-                    <div className='wild-shape-badge-wrapper'>
-                        <span className='initiative-wild-shape-badge' title='Wild Shape: Animal form active — spellcasting blocked, resistance types apply'>
-                            <i className='fa-solid fa-paw'></i> Wild Shape
-                        </span>
-                        {isLocalhost && (
-                            <button
-                                className='badge-break-btn'
-                                onClick={() => {
-                                    const buffs = getRuntimeValue(creature.name, 'activeBuffs') || [];
-                                    const filtered = buffs.filter(b => b.effect !== 'Wild Shape');
-                                    setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
-                                }}
-                                type='button'
-                                title='Deactivate Wild Shape'
-                            >
-                                <i className='fa-solid fa-xmark'></i>
-                            </button>
-                        )}
-                    </div>
+                    <CreatureBadge
+                        icon='fa-paw'
+                        label='Wild Shape'
+                        cls='effect-buff'
+                        tooltip='Wild Shape: Animal form active — spellcasting blocked, resistance types apply'
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            const buffs = getRuntimeValue(creature.name, 'activeBuffs') || [];
+                            const filtered = buffs.filter(b => b.effect !== 'Wild Shape');
+                            setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                        }}
+                    />
                 )}
                 {wrathOfTheSeaActive && (
-                    <div className='wrath-of-the-sea-badge-wrapper'>
-                        <span className='initiative-wrath-of-the-sea-badge' title='Wrath of the Sea: Ocean spray emanation active — Bonus Action to force CON save or take WIS modifier d6 Cold damage'>
-                            <i className='fa-solid fa-water'></i> Wrath of the Sea
-                        </span>
-                        {isLocalhost && (
-                            <button
-                                className='badge-break-btn'
-                                onClick={() => {
-                                    setRuntimeValue(creature.name, 'wrathOfTheSeaActive', false, campaignName);
-                                }}
-                                type='button'
-                                title='Deactivate Wrath of the Sea'
-                            >
-                                <i className='fa-solid fa-xmark'></i>
-                            </button>
-                        )}
-                    </div>
+                    <CreatureBadge
+                        icon='fa-water'
+                        label='Wrath of the Sea'
+                        cls='effect-buff'
+                        tooltip='Wrath of the Sea: Ocean spray emanation active — Bonus Action to force CON save or take WIS modifier d6 Cold damage'
+                        removable={isLocalhost}
+                        onRemove={() => setRuntimeValue(creature.name, 'wrathOfTheSeaActive', false, campaignName)}
+                    />
                 )}
                 {sanctuaryInfo && (
-                    <div className='sanctuary-badge-wrapper'>
-                        <span className='initiative-sanctuary-badge' title={`Nature's Sanctuary: Half Cover (AC +2), ${sanctuaryInfo.resistance} resistance. Protected by ${sanctuaryInfo.druid}'s Nature's Sanctuary`}>
-                            <i className='fa-solid fa-leaf'></i> Sanctuary
-                        </span>
-                        {isLocalhost && (
-                            <button
-                                className='badge-break-btn'
-                                onClick={() => {
-                                    const creatures = getRuntimeValue(sanctuaryInfo.druid, 'naturesSanctuaryCreatures', campaignName) || [];
-                                    const filtered = creatures.filter(c => c !== creature.name);
-                                    setRuntimeValue(sanctuaryInfo.druid, 'naturesSanctuaryCreatures', filtered, campaignName);
-                                }}
-                                type='button'
-                                title={'Remove from Nature\'s Sanctuary'}
-                            >
-                                <i className='fa-solid fa-xmark'></i>
-                            </button>
-                        )}
-                    </div>
+                    <CreatureBadge
+                        icon='fa-leaf'
+                        label='Sanctuary'
+                        cls='effect-buff'
+                        tooltip={`Nature's Sanctuary: Half Cover (AC +2), ${sanctuaryInfo.resistance} resistance. Protected by ${sanctuaryInfo.druid}'s Nature's Sanctuary`}
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            const creatures = getRuntimeValue(sanctuaryInfo.druid, 'naturesSanctuaryCreatures', campaignName) || [];
+                            const filtered = creatures.filter(c => c !== creature.name);
+                            setRuntimeValue(sanctuaryInfo.druid, 'naturesSanctuaryCreatures', filtered, campaignName);
+                        }}
+                    />
                 )}
                 {recklessAttackActive && (
-                    <div className='reckless-attack-badge-wrapper'>
-                        <span className='initiative-reckless-attack-badge' title='Reckless Attack: Advantage on Strength attack rolls, attack rolls against you have Advantage'>
-                            <i className='fa-solid fa-shield-halved'></i> Reckless Attack
-                        </span>
-                        {isLocalhost && (
-                            <button
-                                className='badge-break-btn'
-                                onClick={() => {
-                                    const existingEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                                    const filtered = existingEffects.filter(te => !(te.target === creature.name && te.effect === 'reckless_attack'));
-                                    setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
-                                }}
-                                type='button'
-                                title='Deactivate Reckless Attack'
-                            >
-                                <i className='fa-solid fa-xmark'></i>
-                            </button>
-                        )}
-                    </div>
+                    <CreatureBadge
+                        icon='fa-shield-halved'
+                        label='Reckless Attack'
+                        cls='effect-debuff'
+                        tooltip='Reckless Attack: Advantage on Strength attack rolls, attack rolls against you have Advantage'
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            const existingEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                            const filtered = existingEffects.filter(te => !(te.target === creature.name && te.effect === 'reckless_attack'));
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
+                        }}
+                    />
                 )}
             </div>
         </div>

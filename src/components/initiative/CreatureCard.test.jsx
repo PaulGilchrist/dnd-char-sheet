@@ -120,6 +120,9 @@ describe('CreatureCard', () => {
             onRollConcentrationSave: vi.fn(),
             onBreakConcentration: vi.fn(),
         };
+        wrathOfTheSeaMocks = {};
+        sanctuaryMocks = {};
+        buffToggle.isBuffActive.mockReturnValue(false);
     });
 
     describe('rendering - player creatures', () => {
@@ -254,7 +257,7 @@ describe('CreatureCard', () => {
                 { id: 'c1', label: 'Prone', dc: null, ability: null },
             ];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
-            const conditionBtn = document.querySelector('.condition-badge');
+            const conditionBtn = document.querySelector('.creature-badge');
             expect(conditionBtn).toHaveTextContent('Prone');
         });
 
@@ -265,24 +268,24 @@ describe('CreatureCard', () => {
             expect(props.onRollConditionSave).toHaveBeenCalledWith('Alice', conditions[0]);
         });
 
-        it('should disable condition save button for non-localhost NPC', () => {
+        it('should render condition as span (not button) for non-localhost NPC', () => {
             const conditions = [{ id: 'c1', label: 'Blinded', dc: 12, ability: 'Wisdom' }];
             render(<CreatureCard {...props} creature={{ ...defaultNpcCreature, conditions }} isLocalhost={false} />);
-            const conditionBtn = screen.getByText('Blinded DC 12');
-            expect(conditionBtn).toBeDisabled();
+            const conditionBadge = screen.getByText('Blinded DC 12');
+            expect(conditionBadge.tagName).toBe('SPAN');
         });
 
         it('should call onBreakCondition when break button is clicked', () => {
             const conditions = [{ id: 'c1', label: 'Blinded' }];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
-            fireEvent.click(screen.getByTitle('Automatically break condition'));
+            fireEvent.click(screen.getByTitle('Remove effect'));
             expect(props.onBreakCondition).toHaveBeenCalledWith('Alice', conditions[0]);
         });
 
         it('should not render condition break button for non-localhost', () => {
             const conditions = [{ id: 'c1', label: 'Blinded' }];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} isLocalhost={false} />);
-            expect(screen.queryByTitle('Automatically break condition')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
         it('should call onOpenEffectAdder when add effect button is clicked', () => {
@@ -314,7 +317,7 @@ describe('CreatureCard', () => {
         it('should call onBreakConcentration when break button is clicked', () => {
             const concentration = { spell: 'Fireball', dc: 15 };
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, concentration }} />);
-            fireEvent.click(screen.getByTitle('Break concentration'));
+            fireEvent.click(screen.getByTitle('Remove effect'));
             expect(props.onBreakConcentration).toHaveBeenCalledWith('Alice');
         });
 
@@ -430,7 +433,7 @@ describe('CreatureCard', () => {
             ];
             render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" />);
             expect(screen.getByText("Hunter's Mark")).toBeInTheDocument();
-            expect(screen.getByTitle("Remove Hunter's Mark")).toBeInTheDocument();
+            expect(screen.getByTitle('Remove effect')).toBeInTheDocument();
         });
 
         it('should not render Hunter\'s Mark X button for non-localhost', () => {
@@ -440,35 +443,35 @@ describe('CreatureCard', () => {
             ];
             render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" isLocalhost={false} />);
             expect(screen.getByText("Hunter's Mark")).toBeInTheDocument();
-            expect(screen.queryByTitle("Remove Hunter's Mark")).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
         it('should render Wild Shape badge with X button when active', () => {
             buffToggle.isBuffActive.mockReturnValue(true);
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
             expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            expect(screen.getByTitle('Deactivate Wild Shape')).toBeInTheDocument();
+            expect(screen.getByTitle('Remove effect')).toBeInTheDocument();
         });
 
         it('should not render Wild Shape X button for non-localhost', () => {
             buffToggle.isBuffActive.mockReturnValue(true);
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
             expect(screen.getByText('Wild Shape')).toBeInTheDocument();
-            expect(screen.queryByTitle('Deactivate Wild Shape')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
         it('should render Wrath of the Sea badge with X button when active', () => {
             wrathOfTheSeaMocks = { Alice: true };
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
             expect(screen.getByText('Wrath of the Sea')).toBeInTheDocument();
-            expect(screen.getByTitle('Deactivate Wrath of the Sea')).toBeInTheDocument();
+            expect(screen.getByTitle('Remove effect')).toBeInTheDocument();
         });
 
         it('should not render Wrath of the Sea X button for non-localhost', () => {
             wrathOfTheSeaMocks = { Alice: true };
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
             expect(screen.getByText('Wrath of the Sea')).toBeInTheDocument();
-            expect(screen.queryByTitle('Deactivate Wrath of the Sea')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
         it('should render Nature\'s Sanctuary badge with X button when creature is in sanctuary', () => {
@@ -483,7 +486,7 @@ describe('CreatureCard', () => {
 
             render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" />);
             expect(screen.getByText('Sanctuary')).toBeInTheDocument();
-            expect(screen.getByTitle('Remove from Nature\'s Sanctuary')).toBeInTheDocument();
+            expect(screen.getByTitle('Remove effect')).toBeInTheDocument();
         });
 
         it('should not render Sanctuary X button for non-localhost', () => {
@@ -498,7 +501,7 @@ describe('CreatureCard', () => {
 
             render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" isLocalhost={false} />);
             expect(screen.getByText('Sanctuary')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove from Nature\'s Sanctuary')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
 
         it('should render Reckless Attack badge with X button when active', () => {
@@ -510,7 +513,7 @@ describe('CreatureCard', () => {
             const allCreatures = [defaultPlayerCreature];
             render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={allCreatures} campaignName="test-campaign" />);
             expect(screen.getByText('Reckless Attack')).toBeInTheDocument();
-            expect(screen.getByTitle('Deactivate Reckless Attack')).toBeInTheDocument();
+            expect(screen.getByTitle('Remove effect')).toBeInTheDocument();
         });
 
         it('should not render Reckless Attack X button for non-localhost', () => {
@@ -522,7 +525,7 @@ describe('CreatureCard', () => {
             const allCreatures = [defaultPlayerCreature];
             render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={allCreatures} campaignName="test-campaign" isLocalhost={false} />);
             expect(screen.getByText('Reckless Attack')).toBeInTheDocument();
-            expect(screen.queryByTitle('Deactivate Reckless Attack')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 });

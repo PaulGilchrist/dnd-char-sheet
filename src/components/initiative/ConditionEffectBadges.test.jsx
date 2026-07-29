@@ -74,7 +74,7 @@ describe('ConditionEffectBadges', () => {
             render(
                 <ConditionEffectBadges conditions={null} creatureName="Alice" campaignName="test" />
             );
-            expect(screen.queryByTestId('condition-effect-badge')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('creature-badge')).not.toBeInTheDocument();
         });
     });
 

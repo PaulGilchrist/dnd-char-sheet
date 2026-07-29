@@ -13,6 +13,7 @@ import Popup from '../../common/popup.jsx'
 import DiceRollResult from '../DiceRollResult.jsx'
 import { computeAuraBonus } from '../../../services/combat/auras/auraOfProtection.js'
 import { getCombatSummary } from '../../../services/encounters/combatData.js'
+import CreatureBadge from '../../common/CreatureBadge.jsx'
 import './CharConditions.css'
 
 const STORAGE_KEY = 'activeConditions'
@@ -71,8 +72,6 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
   }, [playerStats.name, campaignName])
 
   const combatSummary = getCombatSummary(campaignName)
-  const playerCreature = combatSummary?.creatures?.find(c => c.name === playerStats.name)
-  const concentration = playerCreature?.concentration ?? null
 
   function logEntry(entry) {
     addEntry(campaignName, entry).catch((e) => { console.error("[CharConditions] Error:", e); })
@@ -205,9 +204,8 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
   const active = exhaustionLevel > 0
   const hasConditions = activeConditions.length > 0
   const hasExhaustion = active
-  const hasConcentration = !!concentration
 
-  if (!hasConditions && !hasExhaustion && !hasConcentration) {
+  if (!hasConditions && !hasExhaustion) {
     return popupHtml ? (
       <Popup onClickOrKeyDown={() => setPopupHtml(null)}>
         <DiceRollResult {...popupHtml} />
@@ -232,16 +230,14 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
           const onClick = hasSave ? () => handleConditionSave(key) : null
 
           return (
-            <button
+            <CreatureBadge
               key={key}
-              className={`condition-badge condition-badge--active ${hasSave ? 'condition-badge--savable' : 'condition-badge--display-only'}`}
+              label={displayText}
+              cls='effect-condition'
+              tooltip={title}
               onClick={onClick}
-              type="button"
-              title={title}
               disabled={!hasSave}
-            >
-              {displayText}
-            </button>
+            />
           )
         })}
         {hasExhaustion && (
@@ -249,13 +245,6 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
             <button className="exhaustion-badge-btn" onClick={() => adjustExhaustion(-1)} type="button" disabled={exhaustionLevel <= 0}>−</button>
             <span className="exhaustion-badge-label" title={`Exhaustion level ${exhaustionLevel}${dead ? ' - DEAD' : ''}\n\n${CONDITION_DESCRIPTIONS['Exhausted'] || ''}`}>Exhaustion ({exhaustionLevel})</span>
             <button className="exhaustion-badge-btn" onClick={() => adjustExhaustion(1)} type="button" disabled={dead}>+</button>
-          </span>
-        )}
-        {hasConcentration && (
-          <span className="concentration-badge">
-            <span className="concentration-badge-label" title={`Concentration: ${concentration.spell} (DC ${concentration.dc} Constitution)`}>
-              <i className="fa-solid fa-spinner"></i> {concentration.spell} DC {concentration.dc}
-            </span>
           </span>
         )}
       </div>

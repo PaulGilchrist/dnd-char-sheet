@@ -1,6 +1,7 @@
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { EFFECT_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
+import CreatureBadge from '../common/CreatureBadge.jsx'
 
 function getEffectDescription(label) {
     if (EFFECT_DESCRIPTIONS[label]) return EFFECT_DESCRIPTIONS[label]
@@ -19,6 +20,17 @@ function removeTargetEffect(targetName, effectType, campaignName) {
     const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const filtered = existingEffects.filter(te => !(te.target === targetName && te.effect === effectType))
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
+}
+
+const EFFECT_TO_SEMANTIC = {
+    'effect-stealth-attack': 'effect-neutral',
+    'effect-speed-zero': 'effect-debuff',
+    'effect-target-disadv': 'effect-buff',
+    'effect-cannot-act': 'effect-debuff',
+}
+
+function resolveCls(cls) {
+    return EFFECT_TO_SEMANTIC[cls] || cls
 }
 
 function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage }) {
@@ -64,90 +76,90 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     }
     const stealthAttackCost = creatureName && campaignName ? (getRuntimeValue(creatureName, 'stealthAttackCost', campaignName) ?? 0) : 0
     if (stealthAttackCost > 0) {
-        badges.push({ label: 'Stealth Attack', cls: 'effect-stealth-attack', icon: 'fa-eye-slash', removable: true, removeAction: 'stealth_attack' })
+        badges.push({ label: 'Stealth Attack', cls: 'effect-neutral', icon: 'fa-eye-slash', removable: true, removeAction: 'stealth_attack' })
     }
     if (effects.speedReduction) {
         const label = effects.speedReduction >= 1000 ? 'Speed 0' : `Speed -${effects.speedReduction}`
-        badges.push({ label, cls: 'effect-speed-zero', icon: 'fa-minus', removable: true, removeAction: 'target_effect', effectType: 'speed_reduction' })
+        badges.push({ label, cls: 'effect-debuff', icon: 'fa-minus', removable: true, removeAction: 'target_effect', effectType: 'speed_reduction' })
     }
     if (effects.noAdvantageAgainst) {
         const noAdvConditionKeys = ['blinded', 'charmed', 'invisible', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious']
         const noAdvCondition = conditions.find(c => noAdvConditionKeys.includes(c.key))
-        badges.push({ label: 'No Adv vs', cls: 'effect-target-disadv', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: noAdvCondition?.key || 'blinded' })
+        badges.push({ label: 'No Adv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: noAdvCondition?.key || 'blinded' })
     }
     if (effects.targetDisadvantageCount > 0 && !effects.noAdvantageAgainst) {
         const disAdvConditionKeys = ['blinded', 'charmed', 'invisible', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious']
         const disAdvCondition = conditions.find(c => disAdvConditionKeys.includes(c.key))
-        badges.push({ label: 'Disadv vs', cls: 'effect-target-disadv', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: disAdvCondition?.key || 'blinded' })
+        badges.push({ label: 'Disadv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: disAdvCondition?.key || 'blinded' })
     }
     if (effects.targetAttackDisadvantageCount > 0) {
-        badges.push({ label: 'Attack Disadv', cls: 'effect-target-disadv', icon: 'fa-arrow-down', removable: true, removeAction: 'target_effect', effectType: 'slasher_enhanced_critical' })
+        badges.push({ label: 'Attack Disadv', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'target_effect', effectType: 'slasher_enhanced_critical' })
     }
     if (effects.attackAdvantageCount > 0 || effects.targetAdvantageCount > 0) {
         const reasons = [(effects.attackAdvantageReasons || []), (effects.targetAdvantageReasons || [])].flat()
         const reasonText = reasons.length > 0 ? reasons.join(', ') : 'Advantage on attack rolls'
         const advSource = reasons.find(r => r === 'Vow of Enmity') || effects.attackAdvantageReasons?.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'vow_of_enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
-        badges.push({ label: 'Adv', cls: 'effect-target-adv', icon: 'fa-arrow-up', removable: true, removeAction: advSource ? (advSource.effect === 'vow_of_enmity' ? 'vow_of_enmity' : 'remove_buff') : 'target_effect', tooltip: `Advantage on attack rolls${reasonText !== 'Advantage on attack rolls' ? ' (' + reasonText + ')' : ''}` })
+        badges.push({ label: 'Adv', cls: 'effect-buff', icon: 'fa-arrow-up', removable: true, removeAction: advSource ? (advSource.effect === 'vow_of_enmity' ? 'vow_of_enmity' : 'remove_buff') : 'target_effect', tooltip: `Advantage on attack rolls${reasonText !== 'Advantage on attack rolls' ? ' (' + reasonText + ')' : ''}` })
     }
     if (effects.saveAdvantageCount > 0) {
         const reasons = (effects.saveAdvantageReasons || []).length > 0 ? effects.saveAdvantageReasons.join(', ') : 'Advantage on saving throws'
         const saveAdvSource = effects.saveAdvantageReasons?.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
-        badges.push({ label: 'Adv Save', cls: 'effect-target-adv', icon: 'fa-shield-halved', removable: true, removeAction: saveAdvSource ? (saveAdvSource.effect === 'advantage_attacks_and_saves' ? 'remove_buff' : 'vow_of_enmity') : 'target_effect', tooltip: `Advantage on saving throws${reasons !== 'Advantage on saving throws' ? ' (' + reasons + ')' : ''}` })
+        badges.push({ label: 'Adv Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: saveAdvSource ? (saveAdvSource.effect === 'advantage_attacks_and_saves' ? 'remove_buff' : 'vow_of_enmity') : 'target_effect', tooltip: `Advantage on saving throws${reasons !== 'Advantage on saving throws' ? ' (' + reasons + ')' : ''}` })
     }
     if (effects.dexSaveAdvantageCount > 0) {
         const dodgeBuff = activeBuffs.find(b => b.effect === 'dodge')
-        badges.push({ label: 'Adv DEX Save', cls: 'effect-target-adv', icon: 'fa-shield-halved', removable: true, removeAction: dodgeBuff ? 'remove_buff' : 'target_effect', tooltip: 'Advantage on Dexterity saving throws' })
+        badges.push({ label: 'Adv DEX Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: dodgeBuff ? 'remove_buff' : 'target_effect', tooltip: 'Advantage on Dexterity saving throws' })
     }
-    if (effects.riderSaveDisadvantage) badges.push({ label: 'Save Disadv', cls: 'effect-disadvantage', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'disadvantage_on_next_save' })
+    if (effects.riderSaveDisadvantage) badges.push({ label: 'Save Disadv', cls: 'effect-debuff', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'disadvantage_on_next_save' })
     if (effects.saveDisadvantageCount > 0) {
       const reasons = (effects.saveDisadvantage || []).length > 0 ? ` (${effects.saveDisadvantage.join(', ')})` : ''
-      badges.push({ label: `Save Disadv${reasons}`, cls: 'effect-disadvantage', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'hex_save_disadvantage' })
+      badges.push({ label: `Save Disadv${reasons}`, cls: 'effect-debuff', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'hex_save_disadvantage' })
     }
     if (effects.abilityCheckDisadvantageAbilities?.length > 0) {
       const abilityNames = effects.abilityCheckDisadvantageAbilities.map(a => a.substring(0, 3).toLowerCase()).join(', ')
-      badges.push({ label: `Check Disadv (${abilityNames})`, cls: 'effect-disadvantage', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'hex_ability_check_disadvantage' })
+      badges.push({ label: `Check Disadv (${abilityNames})`, cls: 'effect-debuff', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'hex_ability_check_disadvantage' })
     }
-    if (effects.riderAttackBonus > 0) badges.push({ label: `+${effects.riderAttackBonus} to hit`, cls: 'effect-target-adv', icon: 'fa-bullseye', removable: true, removeAction: 'target_effect', effectType: 'next_attack_bonus' })
-    if (effects.riderCannotOpportunityAttack) badges.push({ label: 'No OA', cls: 'effect-cannot-act', icon: 'fa-ban', removable: true, removeAction: 'target_effect', effectType: 'no_opportunity_attacks' })
+    if (effects.riderAttackBonus > 0) badges.push({ label: `+${effects.riderAttackBonus} to hit`, cls: 'effect-debuff', icon: 'fa-bullseye', removable: true, removeAction: 'target_effect', effectType: 'next_attack_bonus' })
+    if (effects.riderCannotOpportunityAttack) badges.push({ label: 'No OA', cls: 'effect-debuff', icon: 'fa-ban', removable: true, removeAction: 'target_effect', effectType: 'no_opportunity_attacks' })
     const noOA = getRuntimeValue(creatureName, 'inspiringMovementNoOA', campaignName) || hasTacticalShift
     if (creatureName && campaignName && noOA) {
-        badges.push({ label: 'Insp. Move', cls: 'effect-cannot-act', icon: 'fa-person-walking', removable: true, removeAction: 'inspiring_move' })
+        badges.push({ label: 'Insp. Move', cls: 'effect-buff', icon: 'fa-person-walking', removable: true, removeAction: 'inspiring_move' })
     }
     const remarkableNoOA = getRuntimeValue(creatureName, 'remarkableAthleteNoOA', campaignName)
     if (creatureName && campaignName && remarkableNoOA) {
-        badges.push({ label: 'No OA (Crit)', cls: 'effect-cannot-act', icon: 'fa-ban', removable: true, removeAction: 'remarkable_no_oa' })
+        badges.push({ label: 'No OA (Crit)', cls: 'effect-buff', icon: 'fa-ban', removable: true, removeAction: 'remarkable_no_oa' })
     }
     if (hasSpeedyOpportunityDisadvantage) {
-        badges.push({ label: 'OA Disadv', cls: 'effect-disadvantage', icon: 'fa-arrow-down', removable: true, removeAction: 'oa_disadv' })
+        badges.push({ label: 'OA Disadv', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'oa_disadv' })
     }
     if (hasSpeedyDifficultTerrainIgnore) {
-        badges.push({ label: 'No Difficult Terrain on Dash', cls: 'effect-cannot-act', icon: 'fa-person-walking', removable: true, removeAction: 'difficult_terrain_ignore' })
+        badges.push({ label: 'No Difficult Terrain on Dash', cls: 'effect-buff', icon: 'fa-person-walking', removable: true, removeAction: 'difficult_terrain_ignore' })
     }
     if (coronaDisadvantage) {
-        badges.push({ label: 'Disadv Fire/Radiant', cls: 'effect-disadvantage', icon: 'fa-sun', removable: true, removeAction: 'corona_disadvantage' })
+        badges.push({ label: 'Disadv Fire/Radiant', cls: 'effect-debuff', icon: 'fa-sun', removable: true, removeAction: 'corona_disadvantage' })
     }
     const tauntingStepEffect = targetEffects?.find(te => te.effect === 'taunting_step' && te.target === creatureName)
     if (tauntingStepEffect) {
-        badges.push({ label: 'Taunted', cls: 'effect-disadvantage', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })
+        badges.push({ label: 'Taunted', cls: 'effect-debuff', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })
     }
     if (effects.banePenalty) {
         const baneEffect = targetEffects?.find(te => te.effect === 'bane_penalty' && te.target === creatureName)
         const casterName = baneEffect?.source || 'unknown'
-        badges.push({ label: 'Bane', cls: 'effect-disadvantage', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `Bane from ${casterName}: -1d4 on attack rolls and saving throws` })
+        badges.push({ label: 'Bane', cls: 'effect-debuff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `Bane from ${casterName}: -1d4 on attack rolls and saving throws` })
     }
     if (effects.blessBonus) {
         const blessEffect = targetEffects?.find(te => te.effect === 'bless_bonus' && te.target === creatureName)
         const casterName = blessEffect?.source || 'unknown'
-        badges.push({ label: 'Bless', cls: 'effect-bless', icon: 'fa-hands', removable: true, removeAction: 'target_effect', effectType: 'bless_bonus', tooltip: `Bless from ${casterName}: +1d4 on attack rolls and saving throws` })
+        badges.push({ label: 'Bless', cls: 'effect-buff', icon: 'fa-hands', removable: true, removeAction: 'target_effect', effectType: 'bless_bonus', tooltip: `Bless from ${casterName}: +1d4 on attack rolls and saving throws` })
     }
     if (effects.hasteActive) {
         const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
-        badges.push({ label: 'Hasted', cls: 'effect-target-adv', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
+        badges.push({ label: 'Hasted', cls: 'effect-buff', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
     }
     const silenceEffect = targetEffects?.find(te => te.effect === 'silenced' && te.target === creatureName)
     if (silenceEffect) {
         const casterName = silenceEffect.source || 'unknown'
-        badges.push({ label: 'Silenced', cls: 'effect-disadvantage', icon: 'fa-volume-xmark', removable: true, removeAction: 'target_effect', effectType: 'silenced', tooltip: `Silenced by ${casterName} — Deafened, cannot cast spells with Verbal components` })
+        badges.push({ label: 'Silenced', cls: 'effect-debuff', icon: 'fa-volume-xmark', removable: true, removeAction: 'target_effect', effectType: 'silenced', tooltip: `Silenced by ${casterName} — Deafened, cannot cast spells with Verbal components` })
     }
 
     const handleRemoveEffect = (badge) => {
@@ -198,21 +210,15 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     return (
         <>
             {badges.map((b, i) => (
-                <div key={`${b.label}-${i}`} style={{position: 'relative'}}>
-                    <div className={`condition-effect-badge ${b.cls}`} title={b.tooltip || getEffectDescription(b.label)}>
-                        <i className={`fa-solid ${b.icon}`}></i> {b.label}
-                    </div>
-                    {isLocalhost && b.removable && (
-                        <button
-                            className='badge-break-btn'
-                            onClick={() => handleRemoveEffect(b)}
-                            type='button'
-                            title='Remove effect'
-                        >
-                            <i className='fa-solid fa-xmark'></i>
-                        </button>
-                    )}
-                </div>
+                <CreatureBadge
+                    key={`${b.label}-${i}`}
+                    icon={b.icon}
+                    label={b.label}
+                    cls={resolveCls(b.cls)}
+                    tooltip={b.tooltip || getEffectDescription(b.label)}
+                    removable={isLocalhost && b.removable}
+                    onRemove={() => handleRemoveEffect(b)}
+                />
             ))}
         </>
     )
