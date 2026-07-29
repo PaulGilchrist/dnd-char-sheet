@@ -1210,6 +1210,33 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 break;
             }
 
+            case 'clear_silence_zone': {
+                const casterName = effect.casterName || targetName;
+                const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+                if (!Array.isArray(targetEffects)) break;
+
+                const silencedTargetsList = targetEffects.filter(
+                    te => te.effect === 'silenced' && te.source === casterName
+                );
+
+                for (const te of silencedTargetsList) {
+                    const storedConditions = getRuntimeValue(te.target, 'activeConditions', campaignName) || [];
+                    const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'deafened');
+                    if (filtered.length !== conditions.length) {
+                        setRuntimeValue(te.target, 'activeConditions', filtered, campaignName);
+                    }
+                }
+
+                const cleaned = targetEffects.filter(
+                    te => !(te.effect === 'silenced' && te.source === casterName)
+                );
+                if (cleaned.length !== targetEffects.length) {
+                    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
+                }
+                break;
+            }
+
             default:
                 break;
              }

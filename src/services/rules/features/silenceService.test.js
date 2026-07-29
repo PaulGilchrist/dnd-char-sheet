@@ -5,6 +5,9 @@ import {
     isSilenceActive,
     getSilenceSource,
     isCreatureInSilenceZone,
+    getSilencedTargets,
+    addSilencedTarget,
+    removeSilencedTargets,
 } from './silenceService.js';
 
 vi.mock('../../automation/index.js', () => ({
@@ -13,6 +16,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../combat/rangeValidation.js', () => ({
@@ -24,7 +28,7 @@ vi.mock('../combat/rangeCheck.js', () => ({
 }));
 
 const { executeHandler } = await import('../../automation/index.js');
-const { getRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js');
+const { getRuntimeValue, setRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js');
 const { getDistanceFeet } = await import('../combat/rangeValidation.js');
 
 describe('silenceService', () => {
@@ -280,4 +284,225 @@ describe('silenceService', () => {
             expect(isCreatureInSilenceZone('Target', 'Caster', 'TestCampaign')).toBe(true);
         });
     });
+
+    describe('getSilencedTargets', () => {
+        it('returns list of targets silenced by the specified caster', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Orc', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Wizard', effect: 'silenced', source: 'OtherCaster' },
+                { target: 'Goblin', effect: 'frightened', source: 'ClericBoy' },
+            ]);
+
+            const result = getSilencedTargets('ClericBoy', 'TestCampaign');
+            expect(result).toEqual(['Goblin', 'Orc']);
+        });
+
+        it('returns empty array when no silenced targets', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'frightened', source: 'ClericBoy' },
+            ]);
+
+            const result = getSilencedTargets('ClericBoy', 'TestCampaign');
+            expect(result).toEqual([]);
+        });
+
+        it('returns empty array when targetEffects is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = getSilencedTargets('ClericBoy', 'TestCampaign');
+            expect(result).toEqual([]);
+        });
+
+        it('returns empty array when targetEffects is empty', () => {
+            getRuntimeValue.mockReturnValue([]);
+
+            const result = getSilencedTargets('ClericBoy', 'TestCampaign');
+            expect(result).toEqual([]);
+        });
+
+        it('filters only by effect and source', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Orc', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Dragon', effect: 'silenced', source: 'WizardGirl' },
+            ]);
+
+            const result = getSilencedTargets('ClericBoy', 'TestCampaign');
+            expect(result).toEqual(['Goblin', 'Orc']);
+        });
+    });
+
+    describe('addSilencedTarget', () => {
+        it('adds a new silenced target to targetEffects', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+            ]);
+
+            addSilencedTarget('ClericBoy', 'Orc', 'TestCampaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+                    { target: 'Orc', effect: 'silenced', source: 'ClericBoy', duration: 'concentration' },
+                ],
+                'TestCampaign',
+            );
+        });
+
+        it('updates existing silenced target entry', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+            ]);
+
+            addSilencedTarget('ClericBoy', 'Goblin', 'TestCampaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'silenced', source: 'ClericBoy', duration: 'concentration' },
+                ],
+                'TestCampaign',
+            );
+        });
+
+        it('creates new array when targetEffects is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+
+            addSilencedTarget('ClericBoy', 'Goblin', 'TestCampaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'silenced', source: 'ClericBoy', duration: 'concentration' },
+                ],
+                'TestCampaign',
+            );
+        });
+
+        it('creates new array when targetEffects is empty', () => {
+            getRuntimeValue.mockReturnValue([]);
+
+            addSilencedTarget('ClericBoy', 'Goblin', 'TestCampaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'silenced', source: 'ClericBoy', duration: 'concentration' },
+                ],
+                'TestCampaign',
+            );
+        });
+
+        it('handles different sources correctly', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'WizardGirl' },
+            ]);
+
+            addSilencedTarget('ClericBoy', 'Goblin', 'TestCampaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'silenced', source: 'WizardGirl' },
+                    { target: 'Goblin', effect: 'silenced', source: 'ClericBoy', duration: 'concentration' },
+                ],
+                'TestCampaign',
+            );
+        });
+    });
+
+    describe('removeSilencedTargets', () => {
+        it('removes all silenced targets from the specified caster', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Orc', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Wizard', effect: 'silenced', source: 'OtherCaster' },
+            ]);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual(['Goblin', 'Orc']);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Wizard', effect: 'silenced', source: 'OtherCaster' },
+                ],
+                'TestCampaign',
+            );
+        });
+
+        it('returns empty array when no silenced targets from caster', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'OtherCaster' },
+            ]);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual([]);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns all silenced targets when caster is the only one', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'silenced', source: 'ClericBoy' },
+                { target: 'Orc', effect: 'silenced', source: 'ClericBoy' },
+            ]);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual(['Goblin', 'Orc']);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [],
+                'TestCampaign',
+            );
+        });
+
+        it('returns empty array when targetEffects is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual([]);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns empty array when targetEffects is empty', () => {
+            getRuntimeValue.mockReturnValue([]);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual([]);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not modify entries with different effect types', () => {
+            getRuntimeValue.mockReturnValue([
+                { target: 'Goblin', effect: 'frightened', source: 'ClericBoy' },
+                { target: 'Orc', effect: 'silenced', source: 'ClericBoy' },
+            ]);
+
+            const result = removeSilencedTargets('ClericBoy', 'TestCampaign');
+
+            expect(result).toEqual(['Orc']);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [
+                    { target: 'Goblin', effect: 'frightened', source: 'ClericBoy' },
+                ],
+                'TestCampaign',
+            );
+        });
+    });
 });
+// @cleaned-by-ai

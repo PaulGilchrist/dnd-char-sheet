@@ -68,6 +68,7 @@ import VitalityOfTheTreeModal from './modals/VitalityOfTheTreeModal.jsx'
 import InspiringSmiteModal from './modals/InspiringSmiteModal.jsx'
 import RecklessAttackModal from './modals/shared/RecklessAttackModal.jsx'
 import MassHealModal from './modals/MassHealModal.jsx'
+import SilenceModal from './modals/SilenceModal.jsx'
 import MassCureWoundsModal from './modals/MassCureWoundsModal.jsx'
 import PrayerOfHealingModal from './modals/PrayerOfHealingModal.jsx'
 import PowerWordFortifyModal from './modals/PowerWordFortifyModal.jsx'
@@ -575,6 +576,12 @@ export default function CharActionModals({
                 <FearModal
                     {...mergedModalState.fearModal}
                     onClose={() => setModalState({ fearModal: null })}
+                />
+            )}
+            {mergedModalState.silenceModal && (
+                <SilenceModal
+                    {...mergedModalState.silenceModal}
+                    onClose={() => setModalState({ silenceModal: null })}
                 />
             )}
             {mergedModalState.massSuggestionModal && (

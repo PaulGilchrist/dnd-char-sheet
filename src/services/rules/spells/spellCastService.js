@@ -35,7 +35,7 @@ import { endInvisibilityOnHostileAction } from '../features/invisibilityService.
 import { triggerGlobeOfInvulnerability } from '../features/globeOfInvulnerabilityService.js';
 import { triggerHeroism } from '../features/heroismService.js';
 import { triggerHolyAura } from '../features/holyAuraService.js';
-import { triggerSilence, getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
+import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
 import { triggerSlow } from '../features/slowService.js';
 import { triggerBaneSpell } from '../features/baneService.js';
 import { triggerBlessSpell } from '../features/blessService.js';
@@ -457,8 +457,40 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Silence — 20-ft-radius sphere: creatures inside are Deafened, immune to Thunder, cannot cast Verbal spells
         if (spell.name && spell.name.toLowerCase() === 'silence') {
-            await triggerSilence(spell, metaCtx, playerStats, campaignName, mapName);
-            return;
+            const rangeFeet = (() => {
+                const match = String(spell.range || '120 feet').match(/(\d+)-?foot/);
+                return match ? parseInt(match[1], 10) : 120;
+            })();
+            const aoeSize = spell.area_of_effect?.size || '20-foot-radius';
+            const aoeMatch = aoeSize.match(/(\d+)-foot-radius/);
+            const aoeRadius = aoeMatch ? parseInt(aoeMatch[1], 10) : 20;
+            const slotLevel = metaCtx?.slotLevel || spell.level || 2;
+
+            triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
+                console.error('[spellCast] False Life trigger failed:', e);
+            });
+
+            const combatSummary = getCombatSummary(campaignName) || { creatures: [], players: [] };
+            const allCreatures = [
+                ...combatSummary.players?.map(p => ({ name: p.name, type: 'player' })) || [],
+                ...combatSummary.creatures?.map(c => ({ name: c.name, type: 'creature' })) || [],
+            ];
+
+            return {
+                automationPopup: {
+                    type: 'modal',
+                    modalName: 'silenceTargetSelection',
+                    payload: {
+                        action: { name: 'Silence', automation: { type: 'silence', aoeRadius, range: rangeFeet } },
+                        playerStats,
+                        campaignName,
+                        aoeRadius,
+                        slotLevel,
+                        activeOverlay: null,
+                        creatureTargets: allCreatures,
+                    },
+                },
+            };
         }
 
 

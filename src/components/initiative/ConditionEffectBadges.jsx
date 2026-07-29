@@ -144,6 +144,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
         badges.push({ label: 'Hasted', cls: 'effect-target-adv', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
     }
+    const silenceEffect = targetEffects?.find(te => te.effect === 'silenced' && te.target === creatureName)
+    if (silenceEffect) {
+        const casterName = silenceEffect.source || 'unknown'
+        badges.push({ label: 'Silenced', cls: 'effect-disadvantage', icon: 'fa-volume-xmark', removable: true, removeAction: 'target_effect', effectType: 'silenced', tooltip: `Silenced by ${casterName} — Deafened, cannot cast spells with Verbal components` })
+    }
 
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {

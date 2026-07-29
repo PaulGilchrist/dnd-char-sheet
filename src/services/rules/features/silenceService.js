@@ -1,10 +1,11 @@
 import { executeHandler } from '../../automation/index.js';
 import { getDistanceFeet } from '../combat/rangeValidation.js';
 import { isDistanceInRange } from '../combat/rangeCheck.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const SILENCE_NAME = 'Silence';
 const SILENCE_EFFECT = 'silence';
+const SILENCE_TARGET_EFFECT = 'silenced';
 const SILENCE_KEY = 'silenceCaster';
 const SILENCE_CENTER_KEY = 'silenceCenter';
 const SILENCE_RADIUS_KEY = 'silenceRadius';
@@ -91,6 +92,52 @@ export function isCreatureInSilenceZone(targetName, casterName, campaignName) {
 
     const dist = getDistanceFeet(center, { gridX: targetCreature.gridX, gridY: targetCreature.gridY });
     return isDistanceInRange(dist, radiusNum);
+}
+
+export function getSilencedTargets(casterName, campaignName) {
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    if (!Array.isArray(targetEffects)) return [];
+    return targetEffects
+        .filter(te => te.effect === SILENCE_TARGET_EFFECT && te.source === casterName)
+        .map(te => te.target);
+}
+
+export function addSilencedTarget(casterName, targetName, campaignName) {
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const effects = Array.isArray(targetEffects) ? targetEffects : [];
+    const existingIdx = effects.findIndex(
+        te => te.target === targetName && te.effect === SILENCE_TARGET_EFFECT && te.source === casterName
+    );
+    if (existingIdx >= 0) {
+        effects[existingIdx] = {
+            target: targetName,
+            effect: SILENCE_TARGET_EFFECT,
+            source: casterName,
+            duration: 'concentration',
+        };
+    } else {
+        effects.push({
+            target: targetName,
+            effect: SILENCE_TARGET_EFFECT,
+            source: casterName,
+            duration: 'concentration',
+        });
+    }
+    setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
+}
+
+export function removeSilencedTargets(casterName, campaignName) {
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    if (!Array.isArray(targetEffects)) return [];
+    const cleaned = targetEffects.filter(
+        te => !(te.effect === SILENCE_TARGET_EFFECT && te.source === casterName)
+    );
+    if (cleaned.length !== targetEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
+    }
+    return targetEffects
+        .filter(te => te.effect === SILENCE_TARGET_EFFECT && te.source === casterName)
+        .map(te => te.target);
 }
 
 function getCombatContextSync(_campaignName) {
