@@ -25,6 +25,7 @@ import { triggerHypnoticPattern } from '../features/hypnoticPatternService.js';
 import { triggerMassSuggestion } from '../features/massSuggestionService.js';
 import { triggerSuggestion } from '../features/suggestionService.js';
 import { triggerForesight } from '../features/foresightService.js';
+import { triggerBlur } from '../features/blurService.js';
 import { triggerResilientSphere } from '../features/resilientSphereService.js';
 import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
@@ -425,6 +426,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const target = await getTargetInfo();
             const foresightMetaCtx = { ...metaCtx, targetName: target?.name };
             await triggerForesight(spell, foresightMetaCtx, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Blur — self-target illusion that gives attackers disadvantage on attack rolls against you
+        if (spell.name && spell.name.toLowerCase() === 'blur') {
+            await triggerBlur(spell, metaCtx, playerStats, campaignName, mapName);
             return;
         }
 

@@ -87,6 +87,25 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
   const monsterActiveBuffs = getRuntimeValue(monsterName, 'activeBuffs') || [];
   const shieldOfFaithBonus = Array.isArray(monsterActiveBuffs) && monsterActiveBuffs.some(b => b.effect === 'shield_of_faith') ? 2 : 0;
 
+  // Convert monster.senses (dict {blindsight: 60, truesight: 120}) to array [{name, value}] format
+  const monsterSensesArray = useMemo(() => {
+    if (!monster?.senses) return null;
+    const senses = [];
+    const senseMap = {
+      blindsight: 'Blindsight',
+      darkvision: 'Darkvision',
+      truesight: 'Truesight',
+      tremorsense: 'Tremorsense',
+    };
+    for (const [key, value] of Object.entries(monster.senses)) {
+      const label = senseMap[key];
+      if (label && value != null) {
+        senses.push({ name: label, value: `${value} ft.` });
+      }
+    }
+    return senses.length > 0 ? senses : null;
+  }, [monster]);
+
   const handleAllyModalOpen = () => {
     const combatSummary = getCombatSummary(campaignName);
     const targets = combatSummary?.creatures?.map(c => ({
@@ -222,12 +241,13 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
     const targetConditions = (target?.conditions || []).map(c => c.key)
 
     const targetSaveModifiers = target?.type === 'player' ? targetComputed?.saveModifiers : (target?.saveModifiers || []);
-    const attackerEffects = computeConditionEffects(attackerConditions, targetSaveModifiers, monsterTargetEffects, false, false, false, false, null, false, null, false, false, false, false, false, false, false)
+
+    const attackerEffects = computeConditionEffects(attackerConditions, targetSaveModifiers, monsterTargetEffects, false, false, false, false, null, false, null, false, false, false, false, false, false, false, monsterSensesArray)
     const attackerCannotAct = attackerConditions.some(c => CONDITIONS_THAT_CANNOT_ACT.has(c))
     if (attackerCannotAct) return
 
     const targetRiderForTarget = allTargetEffects.filter(te => te.target === target?.name)
-    const targetEffectData = computeConditionEffects(targetConditions, targetSaveModifiers, targetRiderForTarget, false, false, false, false, null, false, null, false, false, false, false, false, false, false)
+    const targetEffectData = computeConditionEffects(targetConditions, targetSaveModifiers, targetRiderForTarget, false, false, false, false, null, false, null, false, false, false, false, false, false, false, null)
 
     const riderAttackBonus = targetEffectData.riderAttackBonus || 0;
     const effectiveBonus = bonus + riderAttackBonus;

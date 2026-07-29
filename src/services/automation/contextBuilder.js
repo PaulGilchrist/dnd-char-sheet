@@ -463,6 +463,21 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                 forcedMode = 'disadvantage';
             }
         }
+        // Blur and Foresight: attackers without Blindsight or Truesight have disadvantage on attacks against the target
+        if (forcedMode === undefined && targetName) {
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const hasBlindsightOrTruesight = (playerStats.senses || []).some(s => {
+                const name = (s.name || s.type || '').toLowerCase();
+                return name === 'blindsight' || name === 'truesight';
+            });
+            if (!hasBlindsightOrTruesight) {
+                const blurEffect = storedEffects.find(te => te.effect === 'blur' && te.target === targetName);
+                const foresightEffect = storedEffects.find(te => te.effect === 'foresight' && te.target === targetName);
+                if (blurEffect || foresightEffect) {
+                    dis++;
+                }
+            }
+        }
         if (forcedMode === undefined && targetName) {
             const noMapCorona = getCoronaSaveDisadvantage({
                 targetName,

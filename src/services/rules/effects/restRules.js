@@ -552,6 +552,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredPwtEffects, campaignName, true)
     }
 
+    // Clear Blur on short rest
+    const blurEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBlurEffects = blurEffects.filter(e => e.effect !== 'blur');
+    if (filteredBlurEffects.length !== blurEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true)
+    }
+
   clearAllExpirationEffects(name, campaignName)
   clearHuntersMarkConcentration(name, campaignName)
   clearAllConcentrations(campaignName)
@@ -727,6 +734,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredPwtEffects = pwtEffects.filter(e => e.effect !== 'pass_without_trace_bonus');
     if (filteredPwtEffects.length !== pwtEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredPwtEffects, campaignName, true)
+    }
+
+    // Clear Blur on long rest
+    const blurEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBlurEffects = blurEffects.filter(e => e.effect !== 'blur');
+    if (filteredBlurEffects.length !== blurEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true)
     }
 
     // Clear Wrath of the Sea badge on long rest

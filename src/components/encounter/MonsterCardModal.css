@@ -240,7 +240,7 @@
 
 .mc-defenses {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 4px;
 }
 
@@ -256,9 +256,6 @@
   margin-right: 4px;
 }
 
-.mc-defense-cr {
-  grid-column: span 2;
-}
 
 .mc-section {
   font-size: 0.85rem;

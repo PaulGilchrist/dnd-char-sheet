@@ -1,12 +1,20 @@
 const CONDITIONS_THAT_CANNOT_ACT = new Set([
    'incapacitated', 'paralyzed', 'petrified', 'stunned', 'unconscious',
-])
+ ])
 
 const CONDITIONS_THAT_SPEED_ZERO = new Set([
     'grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero',
 ])
 
 const CONDITION_KEYWORDS = new Set(['charmed', 'frightened', 'poison', 'magic'])
+
+function attackerHasBlindsightOrTruesight(senses) {
+  if (!senses || !Array.isArray(senses)) return false;
+  return senses.some(s => {
+    const name = (s.name || s.type || '').toLowerCase();
+    return name === 'blindsight' || name === 'truesight';
+  });
+}
 
 function saveModifierApplies(modifier, saveType, abilityName, isRaging = false, shapeShiftActive = false, isPeerlessAthlete = false, isLargeFormActive = false, combatContext = null, conditions = [], attackerName = null, isLivingLegendActive = false, isElderChampionActive = false, isElderChampionAttackerActive = false, isHolyAuraActive = false, isProtectionFromPoisonActive = false, isTranceOfOrderActive = false, hasPowerfulBuild = false) {
   const conditionSet = new Set(conditions);
@@ -331,7 +339,7 @@ function applySaveModifiers(effects, modifiers, saveType, abilityName, isRaging 
 // Every new te.effect value MUST be added there with label/description/group/icon.
 // The GM UI depends on this registry to display manual-add options.
 
-function computeConditionEffects(conditions = [], saveModifiers = [], targetEffects = [], isRaging = false, shapeShiftActive = false, isPeerlessAthlete = false, isLargeFormActive = false, combatContext = null, seeInvisibilityActive = false, attackerName = null, isLivingLegendActive = false, isElderChampionActive = false, isElderChampionAttackerActive = false, isHolyAuraActive = false, isProtectionFromPoisonActive = false, isTranceOfOrderActive = false, hasPowerfulBuild = false) {
+function computeConditionEffects(conditions = [], saveModifiers = [], targetEffects = [], isRaging = false, shapeShiftActive = false, isPeerlessAthlete = false, isLargeFormActive = false, combatContext = null, seeInvisibilityActive = false, attackerName = null, isLivingLegendActive = false, isElderChampionActive = false, isElderChampionAttackerActive = false, isHolyAuraActive = false, isProtectionFromPoisonActive = false, isTranceOfOrderActive = false, hasPowerfulBuild = false, attackerSenses = null) {
   const effects = {
     attackAdvantageCount: 0,
     attackAdvantageReasons: [],
@@ -721,14 +729,22 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
         effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
       }
     }
-    // Handle Foresight — the target has Advantage on D20 Tests, and other creatures have Disadvantage on attack rolls against it
+    // Handle Foresight — the target has Advantage on D20 Tests, and other creatures have Disadvantage on attack rolls against it (unless attacker has Blindsight or Truesight)
     if (te.effect === 'foresight') {
       effects.attackAdvantageCount = (effects.attackAdvantageCount || 0) + 1;
       effects.attackAdvantageReasons.push('Foresight');
       effects.saveAdvantageCount = (effects.saveAdvantageCount || 0) + 1;
       effects.saveAdvantageReasons.push('Foresight');
       effects.abilityCheckAdvantage = true;
-      effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
+      if (!attackerHasBlindsightOrTruesight(attackerSenses)) {
+        effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
+      }
+    }
+    // Handle Blur — creatures have Disadvantage on attack rolls against the target (unless attacker has Blindsight or Truesight)
+    if (te.effect === 'blur') {
+      if (!attackerHasBlindsightOrTruesight(attackerSenses)) {
+        effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
+      }
     }
     // Handle Hex — target has Disadvantage on ability checks of chosen ability
     if (te.effect === 'hex_ability_check_disadvantage') {

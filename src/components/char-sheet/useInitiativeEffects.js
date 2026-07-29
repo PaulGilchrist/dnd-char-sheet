@@ -143,6 +143,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
             }
 
+            // Clear Blur on initiative roll (new combat)
+            const blurEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredBlurEffects = blurEffects.filter(te => te.effect !== 'blur');
+            if (filteredBlurEffects.length !== blurEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true);
+            }
+
             // Clear Trance of Order on initiative roll (new combat)
             setRuntimeValue(playerStats.name, 'tranceOfOrderActive', null, campaignName);
 
