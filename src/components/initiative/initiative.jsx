@@ -54,8 +54,7 @@ import Subscriber from '../common/Subscriber.jsx'
 import Popup from '../common/popup.jsx'
 import DiceRollResult from '../char-sheet/DiceRollResult.jsx'
 import CreatureCard from './CreatureCard.jsx'
-import ConditionPicker from './ConditionPicker.jsx'
-import ConcentrationPicker from './ConcentrationPicker.jsx'
+import EffectAdder from './EffectAdder.jsx'
 import './initiative.css'
 
 function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName }) {
@@ -89,15 +88,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [combatSummary])
 
-    const [conditionPickerTarget, setConditionPickerTarget] = useSyncedState(campaignName, 'combat-ui-conditionPickerTarget', null, campaignName)
     const [conditionPopup, setConditionPopup] = React.useState(null)
-    const [conditionPickerDc, setConditionPickerDc] = React.useState(10)
-    const [conditionPickerAbility, setConditionPickerAbility] = React.useState('con')
-    const [conditionPickerSelected, setConditionPickerSelected] = React.useState(null)
 
-    const [concentrationPickerTarget, setConcentrationPickerTarget] = useSyncedState(campaignName, 'combat-ui-concentrationPickerTarget', null, campaignName)
-    const [concentrationSpellName, setConcentrationSpellName] = React.useState('')
-    const [concentrationDc, setConcentrationDc] = React.useState(10)
+    const [effectAdderTarget, setEffectAdderTarget] = useSyncedState(campaignName, 'combat-ui-effectAdderTarget', null, campaignName)
+    const [effectAdderTab, setEffectAdderTab] = React.useState('conditions')
 
     const [campaignNpcs, setCampaignNpcs] = React.useState([])
 
@@ -639,26 +633,51 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         }
     }
 
-    const openConditionPicker = (creature) => {
+    const openEffectAdder = (creature, tab) => {
         if (!isLocalhost) return
-        setConditionPickerTarget(creature)
-        setConditionPickerDc(10)
-        setConditionPickerAbility('con')
-        setConditionPickerSelected(null)
+        setEffectAdderTarget(creature)
+        setEffectAdderTab(tab)
     }
 
-    const handleApplyCondition = () => {
-        if (!conditionPickerTarget || !conditionPickerSelected || !combatSummary) return
-        const conditionDef = CONDITIONS.find(c => c.key === conditionPickerSelected)
-        if (!conditionDef) return
-        const targetCharacter = characters.find(c => utils.getName(c.name) === conditionPickerTarget.name)
-        const targetStats = targetCharacter?.computedStats || targetCharacter
-        addCondition(combatSummary, conditionPickerTarget.name, conditionDef, conditionPickerDc, conditionPickerAbility, getRuntimeValue, setRuntimeValue, campaignName, targetStats)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-        setConditionPickerTarget(null)
-        setConditionPickerSelected(null)
-        logConditionEvent(campaignName, 'applied', conditionPickerTarget.name, conditionDef.label, conditionPickerDc, conditionPickerAbility)
+    const handleApplyEffect = (tab, data) => {
+        if (!effectAdderTarget || !combatSummary) return
+
+        if (tab === 'conditions') {
+            const conditionDef = CONDITIONS.find(c => c.key === data.conditionKey)
+            if (!conditionDef) return
+            const targetCharacter = characters.find(c => utils.getName(c.name) === effectAdderTarget.name)
+            const targetStats = targetCharacter?.computedStats || targetCharacter
+            addCondition(combatSummary, effectAdderTarget.name, conditionDef, data.dc, data.ability, getRuntimeValue, setRuntimeValue, campaignName, targetStats)
+            storage.set('combatSummary', combatSummary, campaignName)
+            setCombatSummary(cloneDeep(combatSummary))
+            logConditionEvent(campaignName, 'applied', effectAdderTarget.name, conditionDef.label, data.dc, data.ability)
+        } else if (tab === 'effects') {
+            const effectEntry = { target: effectAdderTarget.name, effect: data.effectKey }
+            if (data.source) effectEntry.source = data.source
+            if (data.value !== undefined) effectEntry.value = data.value
+            if (data.ability) effectEntry.ability = data.ability
+            if (data.dc !== undefined) {
+                effectEntry.saveDc = data.dc
+                effectEntry.saveAbility = data.ability || 'wis'
+            }
+            if (data.notes) effectEntry.notes = data.notes
+            const existing = getRuntimeValue('campaign', 'targetEffects') || []
+            const filtered = existing.filter(te => !(te.target === effectAdderTarget.name && te.effect === data.effectKey))
+            setRuntimeValue('campaign', 'targetEffects', [...filtered, effectEntry], campaignName)
+            logConditionEvent(campaignName, 'target-effect-applied', effectAdderTarget.name, data.effectKey, data.dc, data.ability)
+        } else if (tab === 'concentration') {
+            const targetBuffs = getRuntimeValue(effectAdderTarget.name, 'activeBuffs', campaignName)
+            if (Array.isArray(targetBuffs) && targetBuffs.some(b => b.name === 'Rage')) {
+                setEffectAdderTarget(null)
+                return
+            }
+            addConcentration(combatSummary, effectAdderTarget.name, data.spellName, data.dc)
+            storage.set('combatSummary', combatSummary, campaignName)
+            setCombatSummary(cloneDeep(combatSummary))
+            logConditionEvent(campaignName, 'concentration-started', effectAdderTarget.name, `Concentration: ${data.spellName}`, data.dc, 'con')
+        }
+
+        setEffectAdderTarget(null)
     }
 
     const handleRollConditionSave = async (creatureName, condition) => {
@@ -680,27 +699,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         setConditionPopup(buildConditionPopup(r1, bonus, bonusDetail, getAbilityLabel(condition.ability), condition.label, condition.dc, success, rolls, rolls && rolls.length > 1))
 
         logConditionSave(campaignName, creatureName, r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
-    }
-
-    const openConcentrationPicker = (creature) => {
-        if (!isLocalhost) return
-        setConcentrationPickerTarget(creature)
-        setConcentrationSpellName('')
-        setConcentrationDc(10)
-    }
-
-    const handleApplyConcentration = () => {
-        if (!concentrationPickerTarget || !concentrationSpellName.trim() || !combatSummary) return
-        // Can't concentrate while raging
-        const targetBuffs = getRuntimeValue(concentrationPickerTarget.name, 'activeBuffs', campaignName);
-        if (Array.isArray(targetBuffs) && targetBuffs.some(b => b.name === 'Rage')) return;
-        addConcentration(combatSummary, concentrationPickerTarget.name, concentrationSpellName, concentrationDc)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-        setConcentrationPickerTarget(null)
-        setConcentrationSpellName('')
-        setConcentrationDc(10)
-        logConditionEvent(campaignName, 'concentration-started', concentrationPickerTarget.name, `Concentration: ${concentrationSpellName.trim()}`, concentrationDc, 'con')
     }
 
     const handleRollConcentrationSave = async (creatureName) => {
@@ -832,10 +830,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                             onTargetChange={handleTargetChange}
                             onRollConditionSave={handleRollConditionSave}
                             onBreakCondition={handleAutoBreakCondition}
-                            onOpenConditionPicker={openConditionPicker}
+                            onOpenEffectAdder={openEffectAdder}
                             onRollConcentrationSave={handleRollConcentrationSave}
                             onBreakConcentration={handleBreakConcentration}
-                            onOpenConcentrationPicker={openConcentrationPicker}
                             allCreatures={combatSummary.creatures}
                             campaignName={campaignName}
                             hasTacticalShift={hasTacticalShift}
@@ -863,28 +860,13 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     characters={characters}
                 />
             )}
-            {conditionPickerTarget && (
-                <ConditionPicker
-                    targetName={conditionPickerTarget.name}
-                    selected={conditionPickerSelected}
-                    dc={conditionPickerDc}
-                    ability={conditionPickerAbility}
-                    onSelect={setConditionPickerSelected}
-                    onDcChange={setConditionPickerDc}
-                    onAbilityChange={setConditionPickerAbility}
-                    onCancel={() => setConditionPickerTarget(null)}
-                    onApply={handleApplyCondition}
-                />
-            )}
-            {concentrationPickerTarget && (
-                <ConcentrationPicker
-                    targetName={concentrationPickerTarget.name}
-                    spellName={concentrationSpellName}
-                    dc={concentrationDc}
-                    onSpellNameChange={setConcentrationSpellName}
-                    onDcChange={setConcentrationDc}
-                    onCancel={() => setConcentrationPickerTarget(null)}
-                    onApply={handleApplyConcentration}
+            {effectAdderTarget && (
+                <EffectAdder
+                    targetName={effectAdderTarget.name}
+                    initialTab={effectAdderTab}
+                    onCancel={() => setEffectAdderTarget(null)}
+                    onApply={handleApplyEffect}
+                    creatures={combatSummary?.creatures || []}
                 />
             )}
             {conditionPopup && (

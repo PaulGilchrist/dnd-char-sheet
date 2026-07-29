@@ -341,20 +341,27 @@
     background-color: rgba(220, 38, 38, 0.3);
 }
 
-.initiative .condition-add-btn {
+.initiative .effect-add-btn {
     padding: 2px 8px;
-    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border: 1px dashed rgba(168, 85, 247, 0.5);
     border-radius: 4px;
     background-color: transparent;
     color: inherit;
     font-size: 0.7em;
     cursor: pointer;
     opacity: 0.5;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
 }
 
-.initiative .condition-add-btn:hover {
+.initiative .effect-add-btn:hover {
     opacity: 1;
+    border-color: rgba(168, 85, 247, 0.8);
+}
+
+.initiative .effect-add-btn .fa-wand-magic-sparkles {
+    margin-right: 2px;
+    font-size: 0.85em;
 }
 
 .initiative .condition-effect-badge {

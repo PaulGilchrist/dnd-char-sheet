@@ -1,0 +1,325 @@
+.ea-overlay {
+    position: fixed;
+    top: 0;
+    left: 180px;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.ea-modal {
+    background-color: var(--background-color-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.ea-modal h3 {
+    margin: 0 0 16px;
+    font-size: 1.15em;
+    font-weight: bold;
+    color: var(--color-header);
+}
+
+.ea-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.ea-tab {
+    padding: 6px 16px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background-color: transparent;
+    color: var(--color-text);
+    font-size: 0.85em;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.ea-tab:hover {
+    opacity: 0.85;
+}
+
+.ea-tab--active {
+    opacity: 1;
+    background-color: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.ea-search {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--background-color-input);
+    color: var(--color-text);
+    font-size: 0.9em;
+}
+
+.ea-search:focus {
+    outline: 2px solid #a855f7;
+    border-color: #a855f7;
+}
+
+.ea-scroll {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.ea-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.ea-grid .ea-badge {
+    flex: 0 0 auto;
+}
+
+.ea-group-label {
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin: 12px 0 6px;
+    padding: 0 2px;
+}
+
+.ea-group-label:first-of-type {
+    margin-top: 0;
+}
+
+.ea-group-effects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.ea-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: transparent;
+    color: inherit;
+    font-size: 0.78em;
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.ea-badge:hover {
+    opacity: 0.9;
+    background-color: rgba(168, 85, 247, 0.1);
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.ea-badge--selected {
+    opacity: 1;
+    background-color: rgba(220, 38, 38, 0.2);
+    border-color: rgba(220, 38, 38, 0.5);
+}
+
+.ea-badge i {
+    font-size: 0.85em;
+}
+
+.ea-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.ea-config {
+    margin-top: 0;
+    padding: 4px 0;
+}
+
+.ea-config-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1em;
+    margin-bottom: 4px;
+}
+
+.ea-config-header i {
+    font-size: 1.1em;
+}
+
+.ea-config-desc {
+    font-size: 0.82em;
+    color: var(--color-text-muted);
+    margin: 0 0 14px;
+    line-height: 1.4;
+}
+
+.ea-config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82em;
+    margin-bottom: 10px;
+}
+
+.ea-config-field:last-child {
+    margin-bottom: 0;
+}
+
+.ea-config-field label {
+    font-size: 0.9em;
+    color: var(--color-text-secondary);
+}
+
+.ea-config-field input[type="text"],
+.ea-config-field input[type="number"],
+.ea-config-field select {
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color-input);
+    color: inherit;
+    font-size: 0.95em;
+    max-width: 240px;
+}
+
+.ea-config-field input:focus,
+.ea-config-field select:focus {
+    outline: 2px solid #a855f7;
+    border-color: #a855f7;
+}
+
+.ea-config-field textarea {
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color-input);
+    color: inherit;
+    font-size: 0.9em;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 50px;
+}
+
+.ea-config-field textarea:focus {
+    outline: 2px solid #a855f7;
+    border-color: #a855f7;
+}
+
+.ea-fields {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    justify-content: center;
+}
+
+.ea-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85em;
+    align-items: center;
+}
+
+.ea-fields input[type="text"] {
+    width: 180px;
+    padding: 4px 8px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color-input);
+    color: inherit;
+    font-size: 0.9em;
+}
+
+.ea-fields input[type="number"] {
+    width: 70px;
+    padding: 4px 8px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color-input);
+    color: inherit;
+    font-size: 0.9em;
+}
+
+.ea-fields select {
+    width: 140px;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--background-color-input);
+    color: inherit;
+    font-size: 0.9em;
+}
+
+.ea-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.ea-actions button:first-child {
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    background-color: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.ea-actions button:first-child:hover:not(:disabled) {
+    background-color: var(--background-color-button-secondary-hover);
+}
+
+.ea-actions button:first-child:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ea-actions button:last-child {
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    background-color: var(--color-link);
+    color: #fff;
+    border: none;
+    transition: opacity 0.2s ease;
+}
+
+.ea-actions button:last-child:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.ea-actions button:last-child:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

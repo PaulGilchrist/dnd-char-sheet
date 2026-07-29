@@ -326,6 +326,11 @@ function applySaveModifiers(effects, modifiers, saveType, abilityName, isRaging 
   }
 }
 
+// !!! ADDING A NEW TARGET EFFECT? !!!
+// First check if it exists in src/services/combat/conditions/targetEffectDefinitions.js
+// Every new te.effect value MUST be added there with label/description/group/icon.
+// The GM UI depends on this registry to display manual-add options.
+
 function computeConditionEffects(conditions = [], saveModifiers = [], targetEffects = [], isRaging = false, shapeShiftActive = false, isPeerlessAthlete = false, isLargeFormActive = false, combatContext = null, seeInvisibilityActive = false, attackerName = null, isLivingLegendActive = false, isElderChampionActive = false, isElderChampionAttackerActive = false, isHolyAuraActive = false, isProtectionFromPoisonActive = false, isTranceOfOrderActive = false, hasPowerfulBuild = false) {
   const effects = {
     attackAdvantageCount: 0,

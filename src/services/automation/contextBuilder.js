@@ -59,6 +59,11 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
 
         const innateSorceryBonus = getInnateSorceryBonus(playerName, campaignName);
 
+        // !!! ADDING A NEW TARGET EFFECT? !!!
+        // First check if it exists in src/services/combat/conditions/targetEffectDefinitions.js
+        // Every new te.effect value MUST be added there with label/description/group/icon.
+        // The GM UI depends on this registry to display manual-add options.
+
         // Accumulate advantage/disadvantage counts so they cancel per rules
         let adv = 0;
         let dis = 0;

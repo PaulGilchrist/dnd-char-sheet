@@ -104,6 +104,15 @@ await setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 - **Remove dead code:** When refactoring, delete unused variables and branches. Don't leave orphaned code "just in case."
 - **No fallbacks:** Use `console.error` for error logging instead of silent fallbacks. Only use defaults for known values defined in the rules.
 
+## targetEffects Registry
+
+All targetEffect types (te.effect values) are defined in `src/services/combat/conditions/targetEffectDefinitions.js`.
+
+- **Before adding a new one**, check if it already exists in that file.
+- **Every new effect** must be added to that file with label, description, icon, and group.
+- The GM's manual-add UI (`EffectAdder.jsx`) reads solely from this registry.
+- Use `getEffectDefinition(effectKey)` in handler code to look up a definition before creating a new targetEffect.
+
 ## Core Rules
 - During debugging, all added debug logging must remain in the code until I explicitly say the bug is fixed.
 - Use subagents, but only run one subagent at a time so its context can be cleared before starting the next.

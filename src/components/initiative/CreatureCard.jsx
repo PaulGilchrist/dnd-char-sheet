@@ -34,10 +34,9 @@ function CreatureCard({
     onTargetChange,
     onRollConditionSave,
     onBreakCondition,
-    onOpenConditionPicker,
+    onOpenEffectAdder,
     onRollConcentrationSave,
     onBreakConcentration,
-    onOpenConcentrationPicker,
     allCreatures,
     campaignName,
     hasTacticalShift,
@@ -182,12 +181,12 @@ function CreatureCard({
                 <ConditionEffectBadges conditions={creature.conditions?.filter(c => c && typeof c === 'object' && c.key) || []} targetEffects={myTargetEffects} creatureName={creature.name} campaignName={campaignName} allCreatures={allCreatures} hasTacticalShift={hasTacticalShift} hasSpeedyOpportunityDisadvantage={hasSpeedyOpportunityDisadvantage} hasSpeedyDifficultTerrainIgnore={hasSpeedyDifficultTerrainIgnore} isLocalhost={isLocalhost} coronaDisadvantage={coronaDisadvantage} />
                 {isLocalhost && (
                     <button
-                        className='condition-add-btn'
-                        onClick={() => onOpenConditionPicker(creature)}
+                        className='effect-add-btn'
+                        onClick={() => onOpenEffectAdder(creature, 'conditions')}
                         type='button'
-                        title='Add condition'
+                        title='Add condition, effect, or concentration'
                     >
-                        <i className='fa-solid fa-plus'></i>
+                        <i className='fa-solid fa-wand-magic-sparkles'></i> Add
                     </button>
                 )}
                 {creature.concentration ? (
@@ -209,15 +208,6 @@ function CreatureCard({
                             <i className='fa-solid fa-xmark'></i>
                         </button>
                     </div>
-                ) : isLocalhost ? (
-                    <button
-                        className='concentration-add-btn'
-                        onClick={() => onOpenConcentrationPicker(creature)}
-                        type='button'
-                        title='Add concentration'
-                    >
-                        <i className='fa-solid fa-spinner'></i>
-                    </button>
                 ) : null}
                 {allCreatures?.some(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name) && (() => {
                     const markCreature = allCreatures.find(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name);

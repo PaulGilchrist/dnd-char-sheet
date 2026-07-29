@@ -114,7 +114,7 @@ vi.mock('../encounter/MonsterCardModal.jsx', () => ({ default: () => <div data-t
 vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
 vi.mock('../common/Popup.jsx', () => ({ default: ({ children, onClickOrKeyDown }) => (<div data-testid="popup-overlay" onClick={onClickOrKeyDown}><div data-testid="popup-modal">{children}</div></div>) }));
 vi.mock('../char-sheet/DiceRollResult.jsx', () => ({ default: ({ name }) => <div data-testid="dice-roll-result">{name}</div> }));
-vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalhost, onHpChange, onInitiativeChange, onTargetChange, onRollConditionSave, onBreakCondition, onOpenConditionPicker, onRollConcentrationSave, onBreakConcentration, onOpenConcentrationPicker, onRemoveNpc, onNpcClick, onNameChange, allCreatures, overlays, _campaignNpcs }) => (
+vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalhost, onHpChange, onInitiativeChange, onTargetChange, onRollConditionSave, onBreakCondition, onOpenEffectAdder, onRollConcentrationSave, onBreakConcentration, onRemoveNpc, onNpcClick, onNameChange, allCreatures, overlays, _campaignNpcs }) => (
     <div data-testid={`creature-card-${creature.name}`} className={`creature-card ${creature.type} ${isActive ? 'active' : ''}`}>
         <span>{creature.name}</span>
         <input data-testid={`hp-input-${creature.name}`} type="number" value={creature.currentHp ?? 0} onChange={(e) => onHpChange(creature.name, parseInt(e.target.value) || 0)} />
@@ -130,14 +130,12 @@ vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalho
                 {isLocalhost && <button data-testid={`condition-break-${cond.id || i}`} onClick={() => onBreakCondition(creature.name, cond)} type="button" title="Automatically break condition">X</button>}
             </div>
         ))}
-        {isLocalhost && <button data-testid={`condition-add-${creature.name}`} onClick={() => onOpenConditionPicker(creature)} type="button" title="Add condition">+</button>}
+        {isLocalhost && <button data-testid={`effect-add-${creature.name}`} onClick={() => onOpenEffectAdder(creature, 'conditions')} type="button" title="Add condition, effect, or concentration">Add</button>}
         {creature.concentration ? (
             <div data-testid={`concentration-badge-${creature.name}`}>
                 <button data-testid={`concentration-save-${creature.name}`} onClick={() => onRollConcentrationSave(creature.name)} type="button">{creature.concentration.spell}</button>
                 <button data-testid={`concentration-break-${creature.name}`} onClick={() => onBreakConcentration(creature.name)} type="button" title="Break concentration">X</button>
             </div>
-        ) : isLocalhost ? (
-            <button data-testid={`concentration-add-${creature.name}`} onClick={() => onOpenConcentrationPicker(creature)} type="button" title="Add concentration">+</button>
         ) : null}
         {creature.type !== 'player' && isLocalhost && (
             <button data-testid={`npc-remove-${creature.name}`} onClick={() => onRemoveNpc(creature.name)} type="button" title="Remove NPC">X</button>
@@ -150,8 +148,25 @@ vi.mock('./CreatureCard.jsx', () => ({ default: ({ creature, isActive, isLocalho
         )}
     </div>
 ) }));
-vi.mock('./ConditionPicker.jsx', () => ({ default: ({ targetName, selected: _sel, onSelect, onApply, onCancel }) => (<div className="condition-picker-overlay" onClick={onCancel}><div className="condition-picker-modal"><h3>Add Condition to {targetName}</h3><div className="condition-picker-grid">{['Blinded', 'Charmed', 'Poisoned'].map(c => <button key={c} onClick={() => onSelect(c.toLowerCase())} type="button">{c}</button>)}</div><div className="condition-picker-actions"><button onClick={onCancel} type="button">Cancel</button><button onClick={onApply} disabled={!_sel} type="button">Apply</button></div></div></div>) }));
-vi.mock('./ConcentrationPicker.jsx', () => ({ default: ({ targetName, spellName, onSpellNameChange, onApply, onCancel }) => (<div className="condition-picker-overlay" onClick={onCancel}><div className="condition-picker-modal"><h3>Concentration for {targetName}</h3><div className="condition-picker-fields"><label>Spell<input type="text" value={spellName} onChange={(e) => onSpellNameChange(e.target.value)} placeholder="Spell name" /></label></div><div className="condition-picker-actions"><button onClick={onCancel} type="button">Cancel</button><button onClick={onApply} disabled={!spellName.trim()} type="button">Apply</button></div></div></div>) }));
+vi.mock('./EffectAdder.jsx', () => ({ default: ({ targetName, initialTab, onCancel, onApply }) => (
+    <div className="ea-overlay" onClick={onCancel}>
+        <div className="ea-modal">
+            <h3>{targetName}</h3>
+            <div className="ea-tabs">
+                <button className={`ea-tab ${initialTab === 'conditions' ? 'ea-tab--active' : ''}`} type="button">Conditions</button>
+                <button className={`ea-tab ${initialTab === 'effects' ? 'ea-tab--active' : ''}`} type="button">Effects</button>
+                <button className={`ea-tab ${initialTab === 'concentration' ? 'ea-tab--active' : ''}`} type="button">Concentration</button>
+            </div>
+            <div className="ea-grid">
+                {['Blinded', 'Charmed', 'Poisoned'].map(c => <button key={c} onClick={() => onApply('conditions', { conditionKey: c.toLowerCase(), dc: 10, ability: 'con' })} type="button">{c}</button>)}
+            </div>
+            <div className="ea-actions">
+                <button onClick={onCancel} type="button">Cancel</button>
+                <button onClick={() => onApply('conditions', { conditionKey: 'blinded', dc: 10, ability: 'con' })} type="button">Apply</button>
+            </div>
+        </div>
+    </div>
+) }));
 
 describe('Initiative - Callback Integration', () => {
     let props;

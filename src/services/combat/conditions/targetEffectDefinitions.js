@@ -1,0 +1,362 @@
+/**
+ * @typedef {Object} TargetEffectDef
+ * @property {string} effect - Unique key used in runtime store (te.effect value)
+ * @property {string} label - Display name shown in UI
+ * @property {string} description - What the effect actually does
+ * @property {string} icon - Font Awesome icon class (e.g. 'fa-volume-xmark')
+ * @property {string} cls - CSS class for badge color styling
+ * @property {string} group - Category group for the picker UI
+ * @property {string[]} [fields] - Extra config fields shown when selected: 'value', 'ability', 'source', 'dc'
+ * @property {Object} [defaults] - Default values for config fields
+ * @property {string} [sourceLabel] - Override label for the source field
+ */
+
+/** @type {TargetEffectDef[]} */
+const TARGET_EFFECT_DEFINITIONS = [
+  // ── Attack ──────────────────────────────────────────────
+  {
+    effect: 'goad',
+    label: 'Goad',
+    description: 'Attacks against creatures other than the goader have Disadvantage.',
+    icon: 'fa-bullseye',
+    cls: 'effect-disadvantage',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'disadvantage_next_attack',
+    label: 'Sap (Disadv Next Attack)',
+    description: 'Disadvantage on the next attack roll (Sap weapon mastery).',
+    icon: 'fa-arrow-down',
+    cls: 'effect-disadvantage',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'slasher_enhanced_critical',
+    label: 'Slasher (Attack Disadv)',
+    description: 'Target has Disadvantage on attack rolls (Slasher feat).',
+    icon: 'fa-arrow-down',
+    cls: 'effect-disadvantage',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'crusher_enhanced_critical',
+    label: 'Crusher (Attack Adv)',
+    description: 'Attack rolls against the target have Advantage (Crusher feat).',
+    icon: 'fa-arrow-up',
+    cls: 'effect-target-adv',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'distracting_strike_advantage',
+    label: 'Distracting Strike',
+    description: 'The next attack roll against the target has Advantage.',
+    icon: 'fa-arrow-up',
+    cls: 'effect-target-adv',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'next_attack_advantage',
+    label: 'Next Attack Advantage',
+    description: 'The creature\'s next attack roll has Advantage.',
+    icon: 'fa-arrow-up',
+    cls: 'effect-target-adv',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'next_attack_bonus',
+    label: 'Next Attack +N Bonus',
+    description: 'The creature\'s next attack roll gains a bonus.',
+    icon: 'fa-bullseye',
+    cls: 'effect-target-adv',
+    group: 'Attack',
+    fields: ['source', 'value'],
+    defaults: { value: 5 },
+  },
+  {
+    effect: 'reckless_attack',
+    label: 'Reckless Attack',
+    description: 'Attacks have Advantage, but attack rolls against the creature also have Advantage.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-target-adv',
+    group: 'Attack',
+    fields: ['source'],
+  },
+  {
+    effect: 'taunting_step',
+    label: 'Taunted',
+    description: 'Disadvantage on attack rolls against creatures other than the taunting source.',
+    icon: 'fa-wand-sparkles',
+    cls: 'effect-disadvantage',
+    group: 'Attack',
+    fields: ['source'],
+  },
+
+  // ── Defensive ──────────────────────────────────────────
+  {
+    effect: 'protection',
+    label: 'Protection',
+    description: 'Attacks against the target have Disadvantage (Protection fighting style).',
+    icon: 'fa-shield-halved',
+    cls: 'effect-target-disadv',
+    group: 'Defensive',
+    fields: ['source'],
+  },
+  {
+    effect: 'escape_the_horde',
+    label: 'Escape the Horde',
+    description: 'Attacks against the target have Disadvantage (Escape the Horde).',
+    icon: 'fa-shield-halved',
+    cls: 'effect-target-disadv',
+    group: 'Defensive',
+    fields: ['source'],
+  },
+  {
+    effect: 'multiattack_defense',
+    label: 'Multiattack Defense',
+    description: 'Attacks against the target have Disadvantage (Multiattack Defense).',
+    icon: 'fa-shield-halved',
+    cls: 'effect-target-disadv',
+    group: 'Defensive',
+    fields: ['source'],
+  },
+  {
+    effect: 'no_reactions',
+    label: 'No Reactions',
+    description: 'The creature cannot take Reactions.',
+    icon: 'fa-ban',
+    cls: 'effect-cannot-act',
+    group: 'Defensive',
+  },
+  {
+    effect: 'no_opportunity_attacks',
+    label: 'No Opportunity Attacks',
+    description: 'The creature cannot make Opportunity Attacks.',
+    icon: 'fa-ban',
+    cls: 'effect-cannot-act',
+    group: 'Defensive',
+  },
+
+  // ── Saves & Checks ──────────────────────────────────────
+  {
+    effect: 'disadvantage_on_next_save',
+    label: 'Save Disadv (Next)',
+    description: 'Disadvantage on the creature\'s next saving throw.',
+    icon: 'fa-shield',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+    fields: ['source'],
+  },
+  {
+    effect: 'dex_save_disadvantage',
+    label: 'DEX Save Disadv',
+    description: 'Disadvantage on Dexterity saving throws.',
+    icon: 'fa-shield',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+  },
+  {
+    effect: 'hex_save_disadvantage',
+    label: 'Hex (Save Disadv)',
+    description: 'Disadvantage on saving throws of the chosen ability (Eldritch Hex).',
+    icon: 'fa-shield',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+    fields: ['ability', 'source'],
+    defaults: { ability: 'wis' },
+  },
+  {
+    effect: 'hex_ability_check_disadvantage',
+    label: 'Hex (Check Disadv)',
+    description: 'Disadvantage on ability checks of the chosen ability (Hex).',
+    icon: 'fa-shield',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+    fields: ['ability', 'source'],
+    defaults: { ability: 'wis' },
+  },
+  {
+    effect: 'disadvantage_perception_checks',
+    label: 'Perception Disadv',
+    description: 'Disadvantage on Perception checks.',
+    icon: 'fa-eye-slash',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+  },
+  {
+    effect: 'bane_penalty',
+    label: 'Bane (-1d4)',
+    description: 'The creature suffers -1d4 on attack rolls and saving throws (Bane).',
+    icon: 'fa-shield-halved',
+    cls: 'effect-disadvantage',
+    group: 'Saves & Checks',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+
+  // ── Spells ──────────────────────────────────────────────
+  {
+    effect: 'silenced',
+    label: 'Silenced',
+    description: 'Deafened and cannot cast spells with Verbal components.',
+    icon: 'fa-volume-xmark',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
+    effect: 'bless_bonus',
+    label: 'Bless (+1d4)',
+    description: 'The creature gains +1d4 on attack rolls and saving throws (Bless).',
+    icon: 'fa-hands',
+    cls: 'effect-bless',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
+    effect: 'foresight',
+    label: 'Foresight',
+    description: 'Advantage on d20 tests; attack rolls against the creature have Disadvantage.',
+    icon: 'fa-eye',
+    cls: 'effect-target-adv',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
+    effect: 'clairvoyant_combatant',
+    label: 'Clairvoyant Combatant',
+    description: 'You have Advantage on attacks vs the target; the target has Disadvantage on attacks vs you.',
+    icon: 'fa-eye',
+    cls: 'effect-target-adv',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
+    effect: 'death_strike',
+    label: 'Death Strike',
+    description: 'Double damage on a failed Constitution saving throw (Death Strike).',
+    icon: 'fa-skull',
+    cls: 'effect-auto-crit',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+  {
+    effect: 'ray_of_enfeeble_debuff',
+    label: 'Ray of Enfeeblement',
+    description: 'Strength check Disadvantage and damage dealt is halved.',
+    icon: 'fa-hand-fist',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
+    effect: 'pass_without_trace_bonus',
+    label: 'Pass Without Trace',
+    description: 'The creature gains a +10 bonus to Dexterity (Stealth) checks.',
+    icon: 'fa-footprints',
+    cls: 'effect-target-adv',
+    group: 'Spells',
+    fields: ['source', 'value'],
+    defaults: { value: 10 },
+  },
+  {
+    effect: 'slow_repeat_save',
+    label: 'Slow (Repeating)',
+    description: 'WIS save each turn or suffer the Slow effect: speed halved, -2 AC, -2 DEX saves, no reactions, limited actions.',
+    icon: 'fa-clock',
+    cls: 'effect-speed-zero',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+  {
+    effect: 'web_repeat_save',
+    label: 'Web (Repeating)',
+    description: 'DEX save each turn or become Restrained.',
+    icon: 'fa-spider-web',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+  {
+    effect: 'stinking_cloud_repeat_save',
+    label: 'Stinking Cloud (Repeating)',
+    description: 'CON save each turn or become Poisoned.',
+    icon: 'fa-cloud',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+  {
+    effect: 'power_word_stun_repeat_save',
+    label: 'Power Word Stun (Repeating)',
+    description: 'CON save each turn or remain Stunned (Power Word Stun).',
+    icon: 'fa-star',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+    defaults: { dc: 15 },
+  },
+
+  // ── Movement ────────────────────────────────────────────
+  {
+    effect: 'speed_reduction',
+    label: 'Speed Reduced',
+    description: 'The creature\'s Speed is reduced by N feet.',
+    icon: 'fa-minus',
+    cls: 'effect-speed-zero',
+    group: 'Movement',
+    fields: ['source', 'value'],
+    defaults: { value: 10 },
+  },
+  {
+    effect: 'push',
+    label: 'Push',
+    description: 'The creature is pushed N feet away.',
+    icon: 'fa-arrow-right',
+    cls: 'effect-cannot-act',
+    group: 'Movement',
+    fields: ['source', 'value'],
+    defaults: { value: 10 },
+  },
+  {
+    effect: 'prone_and_push',
+    label: 'Prone + Push',
+    description: 'The creature is knocked Prone and pushed N feet.',
+    icon: 'fa-arrow-right',
+    cls: 'effect-cannot-act',
+    group: 'Movement',
+    fields: ['source', 'value'],
+    defaults: { value: 10 },
+  },
+  {
+    effect: 'ac_penalty',
+    label: 'AC Penalty',
+    description: 'The creature\'s Armor Class is reduced by N.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-disadvantage',
+    group: 'Movement',
+    fields: ['source', 'value'],
+    defaults: { value: 2 },
+  },
+]
+
+/**
+ * Look up a targetEffect definition by its effect key.
+ * Use this in handler code before creating a new targetEffect to ensure it exists in the registry.
+ * @param {string} effectKey
+ * @returns {TargetEffectDef|undefined}
+ */
+function getEffectDefinition(effectKey) {
+  return TARGET_EFFECT_DEFINITIONS.find(def => def.effect === effectKey)
+}
+
+export { TARGET_EFFECT_DEFINITIONS, getEffectDefinition }

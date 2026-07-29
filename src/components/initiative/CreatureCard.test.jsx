@@ -116,10 +116,9 @@ describe('CreatureCard', () => {
             onTargetChange: vi.fn(),
             onRollConditionSave: vi.fn(),
             onBreakCondition: vi.fn(),
-            onOpenConditionPicker: vi.fn(),
+            onOpenEffectAdder: vi.fn(),
             onRollConcentrationSave: vi.fn(),
             onBreakConcentration: vi.fn(),
-            onOpenConcentrationPicker: vi.fn(),
         };
     });
 
@@ -286,15 +285,15 @@ describe('CreatureCard', () => {
             expect(screen.queryByTitle('Automatically break condition')).not.toBeInTheDocument();
         });
 
-        it('should call onOpenConditionPicker when add condition button is clicked', () => {
+        it('should call onOpenEffectAdder when add effect button is clicked', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            fireEvent.click(screen.getByTitle('Add condition'));
-            expect(props.onOpenConditionPicker).toHaveBeenCalledWith(defaultPlayerCreature);
+            fireEvent.click(screen.getByTitle('Add condition, effect, or concentration'));
+            expect(props.onOpenEffectAdder).toHaveBeenCalledWith(defaultPlayerCreature, 'conditions');
         });
 
         it('should not render condition add button for non-localhost', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
-            expect(screen.queryByTitle('Add condition')).not.toBeInTheDocument();
+            expect(screen.queryByTitle('Add condition, effect, or concentration')).not.toBeInTheDocument();
         });
     });
 
@@ -319,10 +318,9 @@ describe('CreatureCard', () => {
             expect(props.onBreakConcentration).toHaveBeenCalledWith('Alice');
         });
 
-        it('should call onOpenConcentrationPicker when add concentration button is clicked', () => {
+        it('should render the unified add button', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            fireEvent.click(screen.getByTitle('Add concentration'));
-            expect(props.onOpenConcentrationPicker).toHaveBeenCalledWith(defaultPlayerCreature);
+            expect(screen.getByTitle('Add condition, effect, or concentration')).toBeInTheDocument();
         });
     });
 
