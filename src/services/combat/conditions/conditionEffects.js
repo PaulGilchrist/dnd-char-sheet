@@ -826,6 +826,9 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'bless_bonus') {
       effects.blessBonus = true;
     }
+    if (te.effect === 'pass_without_trace_bonus') {
+      effects.passWithoutTraceBonus = te.bonusExpression || '10';
+    }
     if (te.effect === 'dex_save_disadvantage') {
       effects.slowDexSaveDisadvantage = true;
       if (!effects.saveDisadvantage.includes('dex')) {

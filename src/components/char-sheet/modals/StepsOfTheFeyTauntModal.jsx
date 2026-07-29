@@ -170,15 +170,16 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
                     duration: 'until_start_of_next_turn',
                     timestamp: Date.now(),
                 };
-                const existingIndex = storedEffects.findIndex(
+                const effects = [...storedEffects];
+                const existingIndex = effects.findIndex(
                     te => te.effect === 'taunting_step' && te.target === targetName
                 );
                 if (existingIndex >= 0) {
-                    storedEffects[existingIndex] = tauntingEffect;
+                    effects[existingIndex] = tauntingEffect;
                 } else {
-                    storedEffects.push(tauntingEffect);
+                    effects.push(tauntingEffect);
                 }
-                await setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
+                await setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
                 addExpiration(playerName, targetName, [
                     { type: 'targetEffect', effect: 'taunting_step', target: targetName }

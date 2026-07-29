@@ -402,11 +402,11 @@ export function createLogDamageAndShow(deps) {
         let disadvantage = context?.metamagicHeighten || false;
         if (!disadvantage) {
             const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-            const riderEffectIdx = targetEffects.findIndex(te => te.target === target.name && te.effect === 'disadvantage_on_next_save');
-            if (riderEffectIdx !== -1) {
+            const idx = targetEffects.findIndex(te => te.target === target.name && te.effect === 'disadvantage_on_next_save');
+            if (idx !== -1) {
                 disadvantage = true;
-                targetEffects.splice(riderEffectIdx, 1);
-                setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
+                targetEffects.splice(idx, 1);
+                setRuntimeValue('campaign', 'targetEffects', [...targetEffects], campaignName);
             }
         }
         if (!disadvantage) {
@@ -794,11 +794,11 @@ export function createLogDamageAndShow(deps) {
                 let twinDisadvantage = context?.metamagicHeighten || false;
                 if (!twinDisadvantage) {
                     const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-                    const riderEffectIdx = targetEffects.findIndex(te => te.target === twinTarget.name && te.effect === 'disadvantage_on_next_save');
-                    if (riderEffectIdx !== -1) {
+                    const idx = targetEffects.findIndex(te => te.target === twinTarget.name && te.effect === 'disadvantage_on_next_save');
+                    if (idx !== -1) {
                         twinDisadvantage = true;
-                        targetEffects.splice(riderEffectIdx, 1);
-                        setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
+                        targetEffects.splice(idx, 1);
+                        setRuntimeValue('campaign', 'targetEffects', [...targetEffects], campaignName);
                     }
                 }
                 if (!twinDisadvantage) {

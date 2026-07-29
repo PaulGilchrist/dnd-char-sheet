@@ -221,7 +221,7 @@ async function handleTeleportAndSlow(action, playerStats, campaignName, mapName)
 
         if (!isSuccessful) {
             const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(storedEffects) ? storedEffects : [];
+            const effects = Array.isArray(storedEffects) ? [...storedEffects] : [];
             effects.push({
                 effect: 'speed_reduction',
                 target: activeCreatureName,

@@ -679,7 +679,7 @@ function AutomationEntry({ entry }) {
       <div className="log-entry-header">
         <span className="log-icon"><i className="fas fa-wand-sparkles"></i></span>
         <span className="log-character">{entry.creatureName || entry.characterName || 'Automation'}</span>
-        <span className="log-name">{entry.automationType || 'Automation'}</span>
+        <span className="log-name">{entry.name || entry.automationType || 'Automation'}</span>
         <span className="log-time">{formatTimestamp(entry.timestamp)}</span>
       </div>
       <div className="log-automation-details">

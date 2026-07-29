@@ -27,6 +27,9 @@ export default function CharActionSpellPopups({
     actionPendingBless,
     actionHandleBlessConfirm,
     actionHandleBlessSkip,
+    actionPendingPassWithoutTrace,
+    actionHandlePassWithoutTraceConfirm,
+    actionHandlePassWithoutTraceSkip,
     actionPendingHaste,
     actionHandleHasteConfirm,
     actionHandleHasteSkip,
@@ -107,6 +110,17 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Bless"
                     onConfirm={actionHandleBlessConfirm}
                     onSkip={actionHandleBlessSkip}
+                />
+            )}
+            {actionPendingPassWithoutTrace && (
+                <CreatureSelectionModal
+                    title="Pass Without Trace"
+                    icon="fa-ghost"
+                    targets={actionPendingPassWithoutTrace.creatureTargets}
+                    description="A veil of shadows and silence radiates from you, masking you and your companions from detection. Choose creatures within 30 feet of you. Each chosen creature has a +10 bonus to Dexterity (Stealth) checks and can't be tracked except by magical means."
+                    confirmLabel="Cast Pass Without Trace"
+                    onConfirm={actionHandlePassWithoutTraceConfirm}
+                    onSkip={actionHandlePassWithoutTraceSkip}
                 />
             )}
             {actionPendingHaste && (

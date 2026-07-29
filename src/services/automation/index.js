@@ -219,6 +219,7 @@ import { handle as handleOttoDance } from './handlers/spells/ottosDanceHandler.j
 import { handle as handleStinkingCloud } from './handlers/spells/stinkingCloudHandler.js';
 import { handle as handleTashasLaughter } from './handlers/spells/tashasLaughterHandler.js';
 import { handle as handlePassWithoutTrace } from './handlers/buffs/passWithoutTraceHandler.js';
+import { applyPassWithoutTraceEffect } from '../../services/rules/features/passWithoutTraceService.js';
 import { handle as handleProtectionFromEvilAndGood, isProtectionFromEvilAndGoodActive, isCreatureWarded } from './handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { handle as handleResistance, applyResistance as applyResistanceEffect, getResistanceDamageType, isResistanceUsedThisTurn } from './handlers/buffs/resistanceHandler.js';
 import { handle as handleRayOfEnfeeblement, isRayOfEnfeeblementActive } from './handlers/spells/rayOfEnfeeblementHandler.js';
@@ -532,6 +533,7 @@ export {
     isHasteActive,
     applyInvisibility,
     isInvisibilityActive,
+    applyPassWithoutTraceEffect,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';

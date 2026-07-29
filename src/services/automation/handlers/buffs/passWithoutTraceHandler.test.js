@@ -1,8 +1,9 @@
 // @improved-by-ai
-import { handle, getPassWithoutTraceStealthBonus, isPassWithoutTraceActive } from './passWithoutTraceHandler.js'
+import { handle, isPassWithoutTraceActive } from './passWithoutTraceHandler.js'
 import { toggleBuff } from '../../common/buffToggle.js'
 import { addExpiration } from '../../../rules/effects/expirations.js'
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js'
+import { getCombatContext } from '../../../rules/combat/damageUtils.js'
 
 vi.mock('../../common/buffToggle.js', () => ({
     toggleBuff: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
     setRuntimeValue: vi.fn(),
+}))
+
+vi.mock('../../../rules/combat/damageUtils.js', () => ({
+    getCombatContext: vi.fn(),
 }))
 
 const CAMPAIGN = 'test-campaign'
@@ -36,8 +41,15 @@ describe('passWithoutTraceHandler', () => {
     })
 
     describe('handle', () => {
-        it('activates buff and sets +10 stealth bonus when not active', async () => {
+        it('returns target selection popup when spell is activated', async () => {
             toggleBuff.mockReturnValue({ wasActive: false })
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Rogue' },
+                    { name: 'Barbarian' },
+                    { name: 'Wizard' },
+                ],
+            })
             const playerStats = { name: 'Rogue' }
 
             const result = await handle(makeAction(), playerStats, CAMPAIGN, null)
@@ -62,42 +74,24 @@ describe('passWithoutTraceHandler', () => {
                 ]),
                 CAMPAIGN
             )
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Rogue',
-                'passWithoutTraceStealthBonus',
-                10,
-                CAMPAIGN
-            )
             expect(result).toEqual({
                 type: 'popup',
                 payload: expect.objectContaining({
-                    type: 'automation_info',
+                    type: 'pass_without_trace_target_selection',
                     name: 'Pass Without Trace',
-                    automationType: 'pass_without_trace',
-                    description: expect.stringContaining('activated'),
+                    creatureTargets: ['Rogue', 'Barbarian', 'Wizard'],
+                    auraRange: 30,
                 }),
             })
         })
 
-        it('deactivates buff and clears stealth bonus when already active', async () => {
-            toggleBuff.mockReturnValue({ wasActive: true })
-            const playerStats = { name: 'Rogue' }
-
-            const result = await handle(makeAction(), playerStats, CAMPAIGN, null)
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Rogue',
-                'passWithoutTraceStealthBonus',
-                0,
-                CAMPAIGN
-            )
-            expect(result.payload.description).toContain('deactivated')
-        })
-
-        it('uses custom auraRange when specified in automation', async () => {
+        it('returns target selection popup with custom auraRange', async () => {
             toggleBuff.mockReturnValue({ wasActive: false })
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Rogue' }],
+            })
 
-            await handle(makeAction({ auraRange: 60 }), { name: 'Rogue' }, CAMPAIGN, null)
+            const result = await handle(makeAction({ auraRange: 60 }), { name: 'Rogue' }, CAMPAIGN, null)
 
             expect(toggleBuff).toHaveBeenCalledWith(
                 'Rogue',
@@ -105,24 +99,34 @@ describe('passWithoutTraceHandler', () => {
                 expect.objectContaining({ auraRange: 60 }),
                 CAMPAIGN
             )
-        })
-    })
-
-    describe('getPassWithoutTraceStealthBonus', () => {
-        it('returns the stored bonus value', () => {
-            getRuntimeValue.mockReturnValue(10)
-
-            expect(getPassWithoutTraceStealthBonus('Rogue', CAMPAIGN)).toBe(10)
+            expect(result.payload.auraRange).toBe(60)
         })
 
-        it('returns 0 for null, undefined, NaN, non-number strings, and zero', () => {
-            const values = [null, undefined, NaN, 'not-a-number', 0]
+        it('returns info popup when no combat context', async () => {
+            toggleBuff.mockReturnValue({ wasActive: false })
+            getCombatContext.mockResolvedValue(null)
 
-            for (const val of values) {
-                getRuntimeValue.mockReturnValue(val)
+            const result = await handle(makeAction(), { name: 'Rogue' }, CAMPAIGN, null)
 
-                expect(getPassWithoutTraceStealthBonus('Rogue', CAMPAIGN)).toBe(0)
-            }
+            expect(result).toEqual({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Pass Without Trace',
+                    description: 'No combat context found. Cannot apply Pass Without Trace.',
+                },
+            })
+        })
+
+        it('toggles buff but still returns target selection when already active', async () => {
+            toggleBuff.mockReturnValue({ wasActive: true })
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Rogue' }],
+            })
+
+            const result = await handle(makeAction(), { name: 'Rogue' }, CAMPAIGN, null)
+
+            expect(result.payload.type).toBe('pass_without_trace_target_selection')
         })
     })
 
@@ -133,6 +137,12 @@ describe('passWithoutTraceHandler', () => {
             ])
 
             expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(true)
+        })
+
+        it('returns false when buff is not active', () => {
+            getRuntimeValue.mockReturnValue([])
+
+            expect(isPassWithoutTraceActive('Rogue', CAMPAIGN)).toBe(false)
         })
     })
 })

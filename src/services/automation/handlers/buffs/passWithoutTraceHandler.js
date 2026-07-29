@@ -1,8 +1,7 @@
 import { toggleBuff } from '../../common/buffToggle.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-
-const STEALTH_BONUS_KEY = 'passWithoutTraceStealthBonus';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -24,39 +23,32 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         addExpiration(playerName, playerName, [
             { type: 'remove_active_buff', buffName: action.name }
         ], campaignName);
-
-        setRuntimeValue(
-            playerName,
-            STEALTH_BONUS_KEY,
-            10,
-            campaignName
-        );
-    } else {
-        setRuntimeValue(
-            playerName,
-            STEALTH_BONUS_KEY,
-            0,
-            campaignName
-        );
     }
+
+    const combatSummary = await getCombatContext(campaignName);
+    if (!combatSummary) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `No combat context found. Cannot apply ${action.name}.`,
+            },
+        };
+    }
+
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
 
     return {
         type: 'popup',
         payload: {
-            type: 'automation_info',
+            type: 'pass_without_trace_target_selection',
             name: action.name,
-            automationType: auto.type,
-            description: wasActive
-                ? `${action.name} deactivated — aura ends, Stealth bonus removed`
-                : `${action.name} activated — you and chosen creatures in 30-ft emanation have +10 to Stealth checks and leave no tracks`,
+            creatureTargets,
+            auraRange,
             automation: auto,
         },
     };
-}
-
-export function getPassWithoutTraceStealthBonus(playerName, campaignName) {
-    const stored = getRuntimeValue(playerName, STEALTH_BONUS_KEY, campaignName);
-    return typeof stored === 'number' && !isNaN(stored) ? stored : 0;
 }
 
 export function isPassWithoutTraceActive(playerName, campaignName) {
