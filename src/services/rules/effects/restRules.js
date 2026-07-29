@@ -467,6 +467,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     updates.activeConditions = [];
     updates.activeConditionMeta = {};
 
+    // Clear Globe of Invulnerability target effects on short rest
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    if (Array.isArray(storedEffects)) {
+      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier');
+      setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
+    }
+
     // Clear Awakened Mind target on short rest
     updates.awakenedMindTarget = null;
 
@@ -610,10 +617,16 @@ export async function applyLongRest(playerStats, campaignName) {
      }
    }
 
-     // Clear active buffs and conditions as part of the atomic batch so SSE echo carries correct final state
-     charData.activeBuffs = [];
-     charData.activeConditions = [];
-     charData.activeConditionMeta = {};
+      // Clear active buffs and conditions as part of the atomic batch so SSE echo carries correct final state
+      charData.activeBuffs = [];
+      charData.activeConditions = [];
+      charData.activeConditionMeta = {};
+
+      // Clear Globe of Invulnerability target effects on long rest
+      const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+      if (Array.isArray(storedEffects)) {
+        setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier'), campaignName);
+      }
 
       // Clear Awakened Mind target on long rest
       charData.awakenedMindTarget = null;

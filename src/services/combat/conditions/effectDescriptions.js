@@ -40,6 +40,7 @@ export const EFFECT_DESCRIPTIONS = {
     'Disadv Fire/Radiant': 'Has disadvantage on saving throws against Fire and Radiant damage.',
     'Stealth Attack': 'Supreme Sneak active — next attack costs Sneak Attack dice, Invisible condition is preserved with cover.',
     'Zealous Presence': 'Advantage on attack rolls and saving throws until the start of the barbarian\'s next turn.',
+    'Globe of Invulnerability': 'Creatures inside the globe are protected from spells of 5th level or lower from outside the barrier.',
 }
 
 // HP status descriptions

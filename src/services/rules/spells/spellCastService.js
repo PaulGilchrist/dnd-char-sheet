@@ -245,6 +245,40 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         }).catch(() => {});
     }
 
+    // Globe of Invulnerability — block spells of level 5 or lower from outside targeting creatures inside
+    if (spellLevel <= 5) {
+        const globeTargetInfo = await getTargetInfo();
+        const globeTargetName = globeTargetInfo?.name || null;
+        if (globeTargetName) {
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const effects = Array.isArray(storedEffects) ? storedEffects : [];
+            const globeEffect = effects.find(
+                te => te.target === globeTargetName && te.effect === 'globe_barrier'
+            );
+            if (globeEffect) {
+                const globeCaster = globeEffect.source;
+                if (playerStats.name !== globeCaster) {
+                    await addEntry(campaignName, {
+                        type: 'automation',
+                        creatureName: globeCaster,
+                        name: 'Globe of Invulnerability',
+                        description: `${spell.name} (level ${spellLevel}) from ${playerStats.name} blocked — target is protected by Globe of Invulnerability.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+
+                    return {
+                        type: 'popup',
+                        payload: {
+                            type: 'automation_info',
+                            name: 'Globe of Invulnerability',
+                            description: `${spell.name} (level ${spellLevel}) is blocked by Globe of Invulnerability protecting ${globeTargetName}.`,
+                        },
+                    };
+                }
+            }
+        }
+    }
+
     if (spell.name.toLowerCase() === 'power word heal') {
         if (metaCtx?.multiTarget) {
             await applyPowerWordHealToTarget(metaCtx.multiTarget, playerStats, campaignName);

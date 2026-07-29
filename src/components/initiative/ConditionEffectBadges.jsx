@@ -275,6 +275,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Silenced', cls: 'effect-debuff', icon: 'fa-volume-xmark', removable: true, removeAction: 'target_effect', effectType: 'silenced', tooltip: `Silenced by ${casterName} — Deafened, cannot cast spells with Verbal components` })
     }
 
+    const globeEffect = targetEffects?.find(te => te.effect === 'globe_barrier' && te.target === creatureName)
+    if (globeEffect) {
+        const casterName = globeEffect.source || 'unknown'
+        badges.push({ label: 'Globe of Invulnerability', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'globe_barrier', tooltip: `Protected by Globe of Invulnerability from ${casterName} — spells of 5th level or lower blocked` })
+    }
+
     const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
     targetEffects?.forEach(te => {
         if (repeatSaveTypes.includes(te.effect) && te.target === creatureName) {

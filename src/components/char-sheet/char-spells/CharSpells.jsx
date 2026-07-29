@@ -135,7 +135,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -398,6 +398,17 @@ return (
                         confirmLabel="Cast Pass Without Trace"
                         onConfirm={handlePassWithoutTraceConfirm}
                         onSkip={handlePassWithoutTraceSkip}
+                      />
+                    )}
+                    {pendingGlobe && (
+                      <CreatureSelectionModal
+                        title="Globe of Invulnerability"
+                        icon="fa-shield-halved"
+                        targets={pendingGlobe.creatureTargets}
+                        description="Choose creatures within 10 feet to protect by the globe barrier. All creatures inside the barrier are protected from spells of 5th level or lower from outside the globe."
+                        confirmLabel="Activate Globe"
+                        onConfirm={handleGlobeConfirm}
+                        onSkip={handleGlobeSkip}
                       />
                     )}
                     {pendingHaste && (
