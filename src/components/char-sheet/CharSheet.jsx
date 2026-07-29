@@ -397,11 +397,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         conditionEffects.targetDisadvantageCount = (conditionEffects.targetDisadvantageCount || 0) + 1;
     }
 
-    // Blade Ward: Attackers subtract 1d4 from attack rolls against you
-    const bladeWardActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'blade_ward');
-    if (bladeWardActive) {
-        conditionEffects.targetDisadvantageCount = (conditionEffects.targetDisadvantageCount || 0) + 1;
-    }
+
 
     // Shield: +5 AC until start of next turn, immune to Magic Missile
     const shieldActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield');

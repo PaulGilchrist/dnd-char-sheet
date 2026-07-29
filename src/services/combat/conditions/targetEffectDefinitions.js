@@ -195,8 +195,8 @@ const TARGET_EFFECT_DEFINITIONS = [
     icon: 'fa-shield-halved',
     cls: 'effect-disadvantage',
     group: 'Saves & Checks',
-    fields: ['source', 'dc'],
-    defaults: { dc: 15 },
+    fields: ['source', 'dc', 'displayLabel'],
+    defaults: { dc: 15, displayLabel: 'Bane' },
   },
 
   // ── Spells ──────────────────────────────────────────────

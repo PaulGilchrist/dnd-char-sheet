@@ -39,7 +39,7 @@ export async function applyBlessEffect(spell, playerStats, campaignName, mapName
     const casterName = playerStats.name;
 
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-    const effects = Array.isArray(storedEffects) ? storedEffects : [];
+    const effects = Array.isArray(storedEffects) ? [...storedEffects] : [];
 
     for (const targetName of targetNames) {
         const blessEffect = {

@@ -104,6 +104,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
+                    if (concentrationSpell === 'Blade Ward') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const filtered = storedEffects.filter(te => !(te.effect === 'bane_penalty' && te.source === playerStats.name));
+                        if (filtered.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                    }
                     if (concentrationSpell === 'Bless') {
                         const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                         const filtered = storedEffects.filter(te => !(te.effect === 'bless_bonus' && te.source === playerStats.name));

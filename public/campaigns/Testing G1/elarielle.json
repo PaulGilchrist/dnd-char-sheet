@@ -115,11 +115,11 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Prayer of Healing",
-    "See Invisibility",
-    "Silence",
-    "Slow",
-    "Charm Monster"
+    "Blade Ward",
+    "Blur",
+    "Dominate Beast",
+    "Dominate Monster",
+    "Dominate Person"
   ],
   "magicInitiateInstances": [
     {

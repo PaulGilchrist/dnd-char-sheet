@@ -61,6 +61,12 @@ function clearBaneEffects(campaignName, casterName) {
     }
 }
 
+// Blade Ward uses the same bane_penalty effect, so clearBaneEffects handles it too
+// This is kept for backwards compatibility and clarity
+function clearBladeWardEffects(campaignName, casterName) {
+    return clearBaneEffects(campaignName, casterName);
+}
+
 function clearBlessEffects(campaignName, casterName) {
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filtered = storedEffects.filter(te => !(te.effect === 'bless_bonus' && te.source === casterName));
@@ -161,6 +167,7 @@ export {
     breakConcentration,
     clearAllConcentrations,
     clearBaneEffects,
+    clearBladeWardEffects,
     clearBlessEffects,
     addConcentration,
     buildConcentrationPopup,

@@ -256,7 +256,9 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.banePenalty) {
         const baneEffect = targetEffects?.find(te => te.effect === 'bane_penalty' && te.target === creatureName)
         const casterName = baneEffect?.source || 'unknown'
-        badges.push({ label: 'Bane', cls: 'effect-debuff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `Bane from ${casterName}: -1d4 on attack rolls and saving throws` })
+        const displayLabel = baneEffect?.displayLabel || 'Bane'
+        const isSelf = casterName === creatureName
+        badges.push({ label: displayLabel, cls: isSelf ? 'effect-buff' : 'effect-debuff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `${displayLabel} from ${casterName}: -1d4 on attack rolls and saving throws` })
     }
     if (effects.blessBonus) {
         const blessEffect = targetEffects?.find(te => te.effect === 'bless_bonus' && te.target === creatureName)

@@ -148,19 +148,22 @@ export function createLogAndShow(deps) {
             }
         }
 
-        // Bane: apply -1d4 penalty to attack rolls against bane-cursed targets
+        // Bane/Blade Ward: apply -1d4 penalty to attack rolls
         let baneAttackPenalty = 0;
         let baneAttackRoll = null;
+        let baneDisplayLabel = 'Bane';
         if (target && rollType === 'attack') {
             const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const targetEffectsForTarget = allTargetEffects.filter(te => te.target === utils.getName(characterName));
-            for (const te of targetEffectsForTarget) {
-                if (te.effect === 'bane_penalty') {
-                    const r = rollExpression('1d4');
-                    if (r) {
-                        baneAttackPenalty -= r.total;
-                        baneAttackRoll = r.total;
-                    }
+            // Bane: effect on the attacker (creature being cursed attacks with penalty)
+            const attackerEffects = allTargetEffects.filter(te => te.target === utils.getName(characterName) && te.effect === 'bane_penalty');
+            // Blade Ward: effect on the target (target applied it to themselves)
+            const targetEffects = allTargetEffects.filter(te => te.target === target.name && te.effect === 'bane_penalty' && te.source === target.name);
+            for (const te of [...attackerEffects, ...targetEffects]) {
+                const r = rollExpression('1d4');
+                if (r) {
+                    baneAttackPenalty -= r.total;
+                    baneAttackRoll = r.total;
+                    baneDisplayLabel = te.displayLabel || 'Bane';
                 }
             }
         }
@@ -224,7 +227,7 @@ export function createLogAndShow(deps) {
         }
         if (sunderingBlowBonus > 0) bonusDetailParts.push('+' + sunderingBlowBonus + ' [Sundering Blow]');
         if (cosmicOmenAppliedBonus !== 0 && cosmicOmenDetail) bonusDetailParts.push(cosmicOmenDetail);
-        if (baneAttackPenalty < 0) bonusDetailParts.push(`${baneAttackPenalty} [Bane]`);
+        if (baneAttackPenalty < 0) bonusDetailParts.push(`${baneAttackPenalty} [${baneDisplayLabel}]`);
         if (blessAttackBonus > 0) bonusDetailParts.push('+' + blessAttackBonus + ' [Bless]');
         const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', ') + ')' : undefined;
 
@@ -555,6 +558,7 @@ export function createLogAndShow(deps) {
             bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus,
             bonusDetail: finalBonusDetail,
             baneRoll: baneAttackRoll,
+            baneDisplayLabel: baneDisplayLabel,
             blessRoll: blessAttackRoll,
             isNatural20: effectiveD20Roll === 20,
             isNatural1: effectiveD20Roll === 1,
@@ -583,6 +587,7 @@ export function createLogAndShow(deps) {
             bonus: bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus,
                 bonusDetail: finalBonusDetail,
                 baneRoll: baneAttackRoll,
+                baneDisplayLabel: baneDisplayLabel,
                 blessRoll: blessAttackRoll,
                 targetName,
                 targetAc,
@@ -1145,9 +1150,10 @@ export function createLogAndShow(deps) {
                     } catch (_e) { /* ignore */ }
                 }
 
-                // Bane: apply -1d4 penalty to saving throws
+                // Bane/Blade Ward: apply -1d4 penalty to saving throws
                 let baneSavePenalty = 0;
                 let baneSaveRoll = null;
+                let baneSaveDisplayLabel = 'Bane';
                 const allTargetEffectsForSave = getRuntimeValue('campaign', 'targetEffects') || [];
                 const baneEffectsForSave = allTargetEffectsForSave.filter(te => te.target === targetName && te.effect === 'bane_penalty');
                 if (baneEffectsForSave.length > 0) {
@@ -1155,12 +1161,14 @@ export function createLogAndShow(deps) {
                     if (r) {
                         baneSavePenalty = -r.total;
                         baneSaveRoll = r.total;
+                        baneSaveDisplayLabel = baneEffectsForSave[0].displayLabel || 'Bane';
                     }
                 }
 
-                // Bane on attacker: grant +1d4 to the target's save when the attacker is cursed by Bane
+                // Bane/Blade Ward on attacker: grant +1d4 to the target's save when the attacker is cursed
                 let baneAttackerBonus = 0;
                 let baneAttackerRoll = null;
+                let baneAttackerDisplayLabel = 'Bane';
                 if (attackerName) {
                     const baneOnAttacker = allTargetEffectsForSave.filter(te => te.target === attackerName && te.effect === 'bane_penalty');
                     if (baneOnAttacker.length > 0) {
@@ -1168,6 +1176,7 @@ export function createLogAndShow(deps) {
                         if (r) {
                             baneAttackerBonus = r.total;
                             baneAttackerRoll = r.total;
+                            baneAttackerDisplayLabel = baneOnAttacker[0].displayLabel || 'Bane';
                         }
                     }
                 }
@@ -1237,7 +1246,9 @@ export function createLogAndShow(deps) {
                     total: saveTotal,
                     bonus,
                     baneRoll: baneSaveRoll,
+                    baneDisplayLabel: baneSaveDisplayLabel,
                     baneAttackerRoll: baneAttackerRoll,
+                    baneAttackerDisplayLabel: baneAttackerDisplayLabel,
                     blessRoll: blessSaveRoll,
                     isNatural20: effectiveD20ForSave === 20,
                     isNatural1: effectiveD20ForSave === 1,

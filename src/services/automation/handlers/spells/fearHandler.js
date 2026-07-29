@@ -114,7 +114,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             // Track Fear-specific effect: affected creature can re-save if it ends its turn
             // without line of sight to the caster
             const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(targetEffects) ? targetEffects : [];
+            const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
             const existingIdx = effects.findIndex(
                 te => te.target === targetName && te.effect === 'fear_end_on_los'
             );

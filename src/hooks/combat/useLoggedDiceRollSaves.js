@@ -147,24 +147,32 @@ export function createSaves(deps) {
             setRuntimeValue('campaign', 'targetEffects', [...targetEffects], campaignName);
         }
 
-        // Bane: apply -1d4 penalty to saving throws
+        // Bane/Blade Ward: apply -1d4 penalty to saving throws
         let baneSavePenalty = 0;
+        let baneSaveRoll = null;
+        let baneSaveDisplayLabel = 'Bane';
         const baneEffectsForSave = targetEffects.filter(te => te.target === pending.targetName && te.effect === 'bane_penalty');
         if (baneEffectsForSave.length > 0) {
             const r = rollExpression('1d4');
             if (r) {
                 baneSavePenalty = -r.total;
+                baneSaveRoll = r.total;
+                baneSaveDisplayLabel = baneEffectsForSave[0].displayLabel || 'Bane';
             }
         }
 
-        // Bane on attacker: grant +1d4 to the target's save when the attacker is cursed by Bane
+        // Bane/Blade Ward on attacker: grant +1d4 to the target's save when the attacker is cursed
         let baneAttackerBonus = 0;
+        let baneAttackerRoll = null;
+        let baneAttackerDisplayLabel = 'Bane';
         if (pending.attackerName) {
             const baneOnAttacker = targetEffects.filter(te => te.target === pending.attackerName && te.effect === 'bane_penalty');
             if (baneOnAttacker.length > 0) {
                 const r = rollExpression('1d4');
                 if (r) {
                     baneAttackerBonus += r.total;
+                    baneAttackerRoll = r.total;
+                    baneAttackerDisplayLabel = baneOnAttacker[0].displayLabel || 'Bane';
                 }
             }
         }
@@ -314,6 +322,11 @@ export function createSaves(deps) {
             finalDamage: applyResult?.finalDamage,
             damageApplied: true,
             damageReduced: applyResult?.damageReduced,
+            baneRoll: baneSaveRoll,
+            baneDisplayLabel: baneSaveDisplayLabel,
+            baneAttackerRoll: baneAttackerRoll,
+            baneAttackerDisplayLabel: baneAttackerDisplayLabel,
+            blessRoll: null,
         });
     }
 

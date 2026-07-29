@@ -81,7 +81,7 @@ export async function applyBaneEffect(spell, playerStats, campaignName, mapName,
 
         if (!saveResult.success) {
             const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(storedEffects) ? storedEffects : [];
+            const effects = Array.isArray(storedEffects) ? [...storedEffects] : [];
             const baneEffect = {
                 target: targetName,
                 effect: 'bane_penalty',

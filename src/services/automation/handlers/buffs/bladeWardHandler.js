@@ -1,5 +1,7 @@
 import { toggleBuff } from '../../common/buffToggle.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../ui/logService.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -17,6 +19,39 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         addExpiration(playerName, playerName, [
             { type: 'remove_active_buff', buffName }
         ], campaignName);
+
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const effects = Array.isArray(storedEffects) ? [...storedEffects] : [];
+        const bladeWardEffect = {
+            target: playerName,
+            effect: 'bane_penalty',
+            source: playerName,
+            displayLabel: 'Blade Ward',
+            duration: 'concentration',
+        };
+        const existingIndex = effects.findIndex(
+            te => te.target === playerName && te.effect === 'bane_penalty' && te.source === playerName
+        );
+        if (existingIndex >= 0) {
+            effects[existingIndex] = bladeWardEffect;
+        } else {
+            effects.push(bladeWardEffect);
+        }
+        setRuntimeValue('campaign', 'targetEffects', effects, campaignName, true);
+
+        addEntry(campaignName, {
+            type: 'automation',
+            characterName: playerName,
+            abilityName: buffName,
+            description: `${buffName} activated — attackers subtract 1d4 from attack rolls against you`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[bladeWard] Error logging activation:', e); });
+    } else {
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const filtered = storedEffects.filter(te => !(te.target === playerName && te.effect === 'bane_penalty' && te.source === playerName));
+        if (filtered.length !== storedEffects.length) {
+            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+        }
     }
 
     return {
