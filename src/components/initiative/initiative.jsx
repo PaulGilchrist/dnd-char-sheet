@@ -15,7 +15,7 @@ import { getAbilityLabel, CONDITIONS } from '../../services/combat/conditions/co
 // inside the initiative-rolled handler and handleNextCreature round-increment block.
 import { loadNPCs } from '../../services/npcs/npcsService.js'
 import { npcToMonsterFormat, npcHasStatBlock } from '../../services/encounters/npcStatBlockUtils.js'
-import { expireStaleEffects, applyTurnStartEffects } from '../../services/rules/effects/expirations.js'
+import { expireStaleEffects, applyTurnStartEffects, clearExpirationEffects } from '../../services/rules/effects/expirations.js'
 import { loadCombatSummary, getCombatSummary, getActiveCreatureName, setCombatSummaryCache } from '../../services/encounters/combatData.js'
 import { clearPerRoundMajestyTrackers } from '../../services/combat/auras/unbreakableMajesty.js'
 import {
@@ -505,6 +505,25 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     creature.concentration = null
                     storage.set('combatSummary', summary, campaignName)
                     clearedHuntersMark = true
+                }
+
+                // Clear dominate expirations owned by this creature (initiative-based expiration)
+                const dominateList = getRuntimeValue(creature.name, 'pendingExpirations')
+                if (Array.isArray(dominateList) && dominateList.length > 0) {
+                    for (const entry of dominateList) {
+                        if (entry.effects && Array.isArray(entry.effects)) {
+                            for (const effect of entry.effects) {
+                                if (effect.type === 'dominated') {
+                                    clearExpirationEffects([effect], entry.target, creature.name, campaignName)
+                                }
+                            }
+                        }
+                    }
+                    const filteredExpirations = dominateList.filter(entry => {
+                        if (!entry.effects || !Array.isArray(entry.effects)) return true
+                        return entry.effects.every(e => e.type !== 'dominated')
+                    })
+                    setRuntimeValue(creature.name, 'pendingExpirations', filteredExpirations, campaignName)
                 }
             }
             if (clearedHuntersMark) {

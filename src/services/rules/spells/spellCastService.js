@@ -31,6 +31,9 @@ import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
 import { triggerCharmPerson } from '../features/charmPersonService.js';
 import { triggerCharmMonster } from '../features/charmMonsterService.js';
+import { triggerDominateBeast } from '../features/dominateBeastService.js';
+import { triggerDominateMonster } from '../features/dominateMonsterService.js';
+import { triggerDominatePerson } from '../features/dominatePersonService.js';
 import { triggerRayOfEnfeeblement } from '../features/rayOfEnfeeblementService.js';
 import { triggerViciousMockeryForGeneric } from '../features/viciousMockeryService.js';
 import { endInvisibilityOnHostileAction } from '../features/invisibilityService.js';
@@ -459,6 +462,36 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
             if (charmMonsterResult) {
                 return { automationPopup: charmMonsterResult };
+            }
+            return;
+        }
+
+        // Dominate Beast — single beast target WIS save or Charmed (concentration)
+        if (spell.name && spell.name.toLowerCase() === 'dominate beast') {
+            const dominateBeastTarget = await getTargetInfo();
+            const dominateBeastResult = await triggerDominateBeast(spell, { ...metaCtx, spellSaveDc, targetName: dominateBeastTarget?.name }, playerStats, campaignName, mapName);
+            if (dominateBeastResult) {
+                return { automationPopup: dominateBeastResult };
+            }
+            return;
+        }
+
+        // Dominate Monster — single creature target WIS save or Charmed (concentration)
+        if (spell.name && spell.name.toLowerCase() === 'dominate monster') {
+            const dominateMonsterTarget = await getTargetInfo();
+            const dominateMonsterResult = await triggerDominateMonster(spell, { ...metaCtx, spellSaveDc, targetName: dominateMonsterTarget?.name }, playerStats, campaignName, mapName);
+            if (dominateMonsterResult) {
+                return { automationPopup: dominateMonsterResult };
+            }
+            return;
+        }
+
+        // Dominate Person — single humanoid target WIS save or Charmed (concentration)
+        if (spell.name && spell.name.toLowerCase() === 'dominate person') {
+            const dominatePersonTarget = await getTargetInfo();
+            const dominatePersonResult = await triggerDominatePerson(spell, { ...metaCtx, spellSaveDc, targetName: dominatePersonTarget?.name }, playerStats, campaignName, mapName);
+            if (dominatePersonResult) {
+                return { automationPopup: dominatePersonResult };
             }
             return;
         }

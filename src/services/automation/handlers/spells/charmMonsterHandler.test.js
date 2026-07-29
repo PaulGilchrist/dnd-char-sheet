@@ -272,7 +272,7 @@ describe('charmMonsterHandler.handle', () => {
       );
     });
 
-    it('registers expiration with 1 hour duration', async () => {
+    it('registers expiration with charmed type (no expireOnCreatureName)', async () => {
       setupBaseMocks({ success: false });
       getRuntimeValue.mockReturnValue([]);
 
@@ -283,8 +283,6 @@ describe('charmMonsterHandler.handle', () => {
         'Goblin',
         expect.arrayContaining([{ type: 'charmed', condition: 'charmed' }]),
         campaignName,
-        undefined,
-        'TestCaster',
       );
     });
 

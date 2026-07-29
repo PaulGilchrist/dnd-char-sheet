@@ -1017,6 +1017,16 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 removeNpcCondition(targetName, effect.condition, campaignName);
                 break;
 
+            case 'charmed':
+                removeActiveCondition(targetName, 'charmed', campaignName);
+                removeNpcCondition(targetName, 'charmed', campaignName);
+                break;
+
+            case 'dominated':
+                removeActiveCondition(targetName, 'charmed', campaignName);
+                removeNpcCondition(targetName, 'charmed', campaignName);
+                break;
+
             case 'tashas_laughter_expiration':
                 setRuntimeValue(targetName, `tashas_laughter_${targetName.replace(/\s+/g, '_')}_damageTrigger`, false, campaignName);
                 break;

@@ -40,7 +40,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
   rollD20: vi.fn(() => 10),
 }));
 
-import { handle } from './charmPersonHandler.js';
+import { handle } from './dominateBeastHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -63,8 +63,8 @@ function makePlayerStats(overrides = {}) {
 
 function makeAction(automation = {}) {
   return {
-    name: 'Charm Person',
-    automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15, ...automation },
+    name: 'Dominate Beast',
+    automation: { type: 'dominate_beast', saveType: 'WIS', saveDc: 15, ...automation },
   };
 }
 
@@ -84,7 +84,7 @@ function setupBaseMocks(saveResult = { success: true }, isNpc = false) {
   });
 }
 
-describe('charmPersonHandler.handle', () => {
+describe('dominateBeastHandler.handle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -136,8 +136,8 @@ describe('charmPersonHandler.handle', () => {
       expect(addEntry).toHaveBeenCalledWith(campaignName, {
         type: 'ability_use',
         characterName: 'TestCaster',
-        abilityName: 'Charm Person',
-        description: expect.stringContaining('TestCaster casts Charm Person on Goblin'),
+        abilityName: 'Dominate Beast',
+        description: expect.stringContaining('TestCaster casts Dominate Beast on Goblin'),
         promptId: 'test-prompt-id',
       });
     });
@@ -190,12 +190,14 @@ describe('charmPersonHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('succeeded on WIS save');
       expect(result.payload.description).toContain('Goblin');
+      expect(result.payload.description).toContain('DC 15');
+      expect(result.payload.description).toContain('Roll:');
 
       expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         type: 'save_result',
         targetName: 'Goblin',
         success: true,
-        rollType: 'save-charm-person',
+        rollType: 'save-dominate-beast',
         saveDc: 15,
         saveType: 'WIS',
       }));
@@ -219,11 +221,13 @@ describe('charmPersonHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe('Charm Person');
+      expect(result.payload.name).toBe('Dominate Beast');
       expect(result.payload.description).toContain('TestCaster');
       expect(result.payload.description).toContain('Goblin');
-      expect(result.payload.description).toContain('harmful');
       expect(result.payload.description).toContain('Charmed');
+      expect(result.payload.description).toContain('DC 15');
+      expect(result.payload.description).toContain('Roll:');
+      expect(result.payload.description).toContain('concentration');
     });
 
     it('applies charmed condition with deduplication and preservation of other conditions', async () => {
@@ -268,7 +272,7 @@ describe('charmPersonHandler.handle', () => {
       );
     });
 
-    it('registers expiration with charmed type (no expireOnCreatureName)', async () => {
+    it('registers expiration with dominated type (no expireOnCreatureName)', async () => {
       setupBaseMocks({ success: false });
       getRuntimeValue.mockReturnValue([]);
 
@@ -277,7 +281,7 @@ describe('charmPersonHandler.handle', () => {
       expect(addExpiration).toHaveBeenCalledWith(
         'TestCaster',
         'Goblin',
-        expect.arrayContaining([{ type: 'charmed', condition: 'charmed' }]),
+        expect.arrayContaining([{ type: 'dominated', condition: 'charmed' }]),
         campaignName,
       );
     });
@@ -293,8 +297,8 @@ describe('charmPersonHandler.handle', () => {
         action: 'applied',
         characterName: 'Goblin',
         condition: 'Charmed',
-        reason: 'Charm Person spell',
-        note: expect.stringContaining('friendly acquaintance'),
+        reason: 'Dominate Beast spell',
+        note: expect.stringContaining('telepathic link'),
         timestamp: expect.any(Number),
       }));
     });
@@ -309,7 +313,7 @@ describe('charmPersonHandler.handle', () => {
         type: 'save_result',
         targetName: 'Goblin',
         success: false,
-        rollType: 'save-charm-person',
+        rollType: 'save-dominate-beast',
         saveDc: 15,
         saveType: 'WIS',
       }));
@@ -326,7 +330,7 @@ describe('charmPersonHandler.handle', () => {
       });
       getRuntimeValue.mockReturnValue([]);
 
-      const result = await handle({ name: 'Charm Person' }, makePlayerStats(), campaignName, null);
+      const result = await handle({ name: 'Dominate Beast' }, makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
       expect(buildSaveDc).toHaveBeenCalledWith({}, makePlayerStats());
@@ -336,9 +340,9 @@ describe('charmPersonHandler.handle', () => {
       setupBaseMocks({ success: false });
       getRuntimeValue.mockReturnValue([]);
 
-      const result = await handle({ name: 'My Charm Person', automation: { type: 'charm_person' } }, makePlayerStats(), campaignName, null);
+      const result = await handle({ name: 'My Dominate Beast', automation: { type: 'dominate_beast' } }, makePlayerStats(), campaignName, null);
 
-      expect(result.payload.name).toBe('My Charm Person');
+      expect(result.payload.name).toBe('My Dominate Beast');
     });
 
     it('uses custom playerStats name in descriptions', async () => {

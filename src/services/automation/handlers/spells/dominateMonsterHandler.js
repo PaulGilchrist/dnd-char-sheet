@@ -40,10 +40,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveAdvantage = auto.advantage || false;
 
     const casterName = playerStats.name;
+    const spellName = action.name;
 
     storeSpellLastAttack(campaignName, {
         casterName,
-        spellName: action.name,
+        spellName,
         saveType: 'WIS',
         saveDc: dc,
         attackScope: 'single',
@@ -57,8 +58,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             type: 'popup',
             payload: {
                 type: 'automation_info',
-                name: action.name,
-                description: 'No target selected. Charm Monster has no effect.',
+                name: spellName,
+                description: 'No target selected. Dominate has no effect.',
             },
         };
     }
@@ -77,10 +78,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     addEntry(campaignName, {
         type: 'ability_use',
         characterName: casterName,
-        abilityName: action.name,
-        description: `${casterName} casts Charm Monster on ${targetName}! ${targetName} must make a WIS save (DC ${dc})${saveAdvantage ? ' with Advantage' : ''} or become Charmed.`,
+        abilityName: spellName,
+        description: `${casterName} casts ${spellName} on ${targetName}! ${targetName} must make a WIS save (DC ${dc})${saveAdvantage ? ' with Advantage' : ''} or become Charmed.`,
         promptId,
-    }).catch((e) => { console.error("[charmMonster] Error:", e); });
+    }).catch((e) => { console.error(`[${spellName}] Error:`, e); });
 
     if (targetInfo?.target?.type === 'npc') {
         const cs = targetInfo.cs;
@@ -113,24 +114,25 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         addEntry(campaignName, {
             type: 'save_result',
             characterName: casterName,
-            rollType: 'save-charm-monster',
+            rollType: `save-${spellName.toLowerCase().replace(/\s+/g, '-')}`,
             targetName,
             saveDc: dc,
             saveType: 'WIS',
             success: true,
-            description: `${targetName} succeeded on WIS save against Charm Monster.`,
-        }).catch((e) => { console.error("[charmMonster] Error:", e); });
+            description: `${targetName} succeeded on WIS save against ${spellName}.`,
+        }).catch((e) => { console.error(`[${spellName}] Error:`, e); });
 
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
-                name: action.name,
-                description: `${targetName} succeeded on WIS save (DC ${dc}) against Charm Monster. Roll: ${saveResult.roll ?? 0} + ${saveResult.bonus ?? 0} = ${saveResult.total ?? 0}.`,
+                name: spellName,
+                description: `${targetName} succeeded on WIS save (DC ${dc}) against ${spellName}. Roll: ${saveResult.roll ?? 0} + ${saveResult.bonus ?? 0} = ${saveResult.total ?? 0}.`,
             },
         };
     }
 
+    // Failed save: apply Charmed condition
     const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
@@ -146,7 +148,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     });
 
     addExpiration(casterName, targetName, [
-        { type: 'charmed', condition: 'charmed' },
+        { type: 'dominated', condition: 'charmed' },
     ], campaignName);
 
     addEntry(campaignName, {
@@ -154,28 +156,28 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         action: 'applied',
         characterName: targetName,
         condition: 'Charmed',
-        reason: 'Charm Monster spell',
-        note: `${targetName} is Charmed by ${casterName} and regards them as a friendly acquaintance. The spell ends if ${casterName} or their companions do anything harmful to ${targetName}.`,
+        reason: `${spellName} spell`,
+        note: `${targetName} is Charmed by ${casterName} and regards them as a friendly acquaintance. You have a telepathic link with the target as long as you are on the same plane of existence. You can use this link to issue commands to the target (no action required). The spell ends if ${casterName} or allies deal damage to the target, or when the target takes damage and succeeds on a WIS save.`,
         timestamp: Date.now(),
-    }).catch((e) => { console.error("[charmMonster] Error:", e); });
+    }).catch((e) => { console.error(`[${spellName}] Error:`, e); });
 
     addEntry(campaignName, {
         type: 'save_result',
         characterName: casterName,
-        rollType: 'save-charm-monster',
+        rollType: `save-${spellName.toLowerCase().replace(/\s+/g, '-')}`,
         targetName,
         saveDc: dc,
         saveType: 'WIS',
         success: false,
-        description: `${targetName} failed WIS save against Charm Monster and is Charmed.`,
-    }).catch((e) => { console.error("[charmMonster] Error:", e); });
+        description: `${targetName} failed WIS save against ${spellName} and is Charmed.`,
+    }).catch((e) => { console.error(`[${spellName}] Error:`, e); });
 
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
-            name: action.name,
-            description: `${targetName} failed WIS save (DC ${dc}) against Charm Monster. Roll: ${saveResult.roll ?? 0} + ${saveResult.bonus ?? 0} = ${saveResult.total ?? 0} — ${targetName} is Charmed. The charmed creature regards ${casterName} as a friendly acquaintance. The spell ends if ${casterName} or companions do anything harmful to ${targetName}.`,
+            name: spellName,
+            description: `${targetName} failed WIS save (DC ${dc}) against ${spellName}. Roll: ${saveResult.roll ?? 0} + ${saveResult.bonus ?? 0} = ${saveResult.total ?? 0} — ${targetName} is Charmed by ${casterName}. You have a telepathic link with the target and can issue commands to it (no action required). The spell ends if concentration is lost, on initiative roll, short rest, or long rest.`,
         },
     };
 }
