@@ -20,7 +20,7 @@ export async function triggerDominateMonster(spell, metaCtx, playerStats, campai
     // Check if target is at full health to determine if target gets advantage on save
     const cs = await getCombatContext(campaignName);
     const targetCreature = cs?.creatures?.find(c => c.name === targetName);
-    const targetNotFullHealth = targetCreature && targetCreature.currentHp != null && targetCreature.maxHp != null && targetCreature.currentHp >= targetCreature.maxHp ? false : true;
+    const targetNotFullHealth = targetCreature && targetCreature.currentHp != null && targetCreature.maxHp != null && targetCreature.currentHp < targetCreature.maxHp;
 
     const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
     const slotLevel = metaCtx?.slotLevel || spell.level || 8;

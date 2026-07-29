@@ -17,7 +17,7 @@ vi.mock('../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
 }));
@@ -26,7 +26,7 @@ import { triggerDominatePerson } from './dominatePersonService.js';
 import { executeHandler } from '../../automation/index.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'TestCampaign';
 

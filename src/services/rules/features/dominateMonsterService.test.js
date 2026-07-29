@@ -110,11 +110,11 @@ describe('dominateMonsterService', () => {
   });
 
   describe('combat advantage', () => {
-    it('passes advantage=true when target is in combat', async () => {
+    it('passes advantage=true when target is not at full health', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster' },
-          { name: 'Goblin', type: 'npc' },
+          { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
         ],
       });
 
@@ -123,6 +123,23 @@ describe('dominateMonsterService', () => {
       expect(executeHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           automation: expect.objectContaining({ advantage: true }),
+        }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+    });
+
+    it('passes advantage=false when target is at full health', async () => {
+      getCombatContext.mockResolvedValue({
+        creatures: [{ name: 'Goblin', type: 'npc', currentHp: 10, maxHp: 10 }],
+      });
+
+      await triggerDominateMonster(makeSpell(), { targetName: 'Goblin' }, makePlayerStats(), campaignName, null);
+
+      expect(executeHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          automation: expect.objectContaining({ advantage: false }),
         }),
         makePlayerStats(),
         campaignName,
