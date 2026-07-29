@@ -184,9 +184,7 @@ describe('processSlowRepeatSave', () => {
 
     it('removes slow-related target effects for caster only', async () => {
       setupSuccessPath(['Slow'], [
-        { target: targetName, effect: 'speed_halved', source: casterName },
         { target: targetName, effect: 'no_reactions', source: casterName },
-        { target: targetName, effect: 'ac_penalty', source: casterName },
         { target: targetName, effect: 'dex_save_disadvantage', source: casterName },
         { target: targetName, effect: 'other_effect', source: 'OtherCaster' },
       ]);
@@ -479,9 +477,8 @@ describe('slowHandler.handle', () => {
       expect(targetEffectsCall).toBeDefined();
       const effects = targetEffectsCall[2];
       const effectTypes = effects.map((e) => e.effect);
-      expect(effectTypes).toContain('speed_halved');
       expect(effectTypes).toContain('no_reactions');
-      expect(effectTypes).toContain('ac_penalty');
+      expect(effectTypes).toContain('dex_save_disadvantage');
       expect(effectTypes).toContain('slow_repeat_save');
       const repeatSaveEffect = effects.find((e) => e.effect === 'slow_repeat_save');
       expect(repeatSaveEffect.dc).toBe(saveDc);

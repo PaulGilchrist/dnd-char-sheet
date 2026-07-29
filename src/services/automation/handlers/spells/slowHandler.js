@@ -58,9 +58,7 @@ export async function processSlowRepeatSave(casterName, targetName, saveDc, camp
         // Remove slow-related target effects
         const allTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
         const filteredEffects = Array.isArray(allTargetEffects) ? allTargetEffects.filter(
-            te => !(te.target === targetName && te.effect === 'speed_halved' && te.source === casterName) &&
-                  !(te.target === targetName && te.effect === 'no_reactions' && te.source === casterName) &&
-                  !(te.target === targetName && te.effect === 'ac_penalty' && te.source === casterName) &&
+            te => !(te.target === targetName && te.effect === 'no_reactions' && te.source === casterName) &&
                   !(te.target === targetName && te.effect === 'dex_save_disadvantage' && te.source === casterName)
         ) : [];
         setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
@@ -140,10 +138,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         spellName: action.name,
         saveType: 'WIS',
         saveDc: dc,
-        attackScope: 'aoe',
+        attackScope: action.metaCtx?.targets ? 'single' : 'aoe',
     });
 
-    const targets = cs.creatures.filter(c => c.name !== casterName);
+    const selectedTargets = action.metaCtx?.targets;
+    let targets;
+    if (selectedTargets && Array.isArray(selectedTargets) && selectedTargets.length > 0) {
+        targets = selectedTargets.map(name => ({ name }));
+    } else {
+        targets = cs.creatures.filter(c => c.name !== casterName);
+    }
 
     let affectedCount = 0;
     let savedCount = 0;
@@ -220,24 +224,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             // Store target effects for the slow debuffs
             const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const effects = Array.isArray(targetEffects) ? targetEffects : [];
-            const slowEffect = {
-                target: targetName,
-                effect: 'speed_halved',
-                source: casterName,
-                condition: 'slow',
-                duration: 'concentration',
-            };
             const noReactionEffect = {
                 target: targetName,
                 effect: 'no_reactions',
                 source: casterName,
-                duration: 'concentration',
-            };
-            const acPenaltyEffect = {
-                target: targetName,
-                effect: 'ac_penalty',
-                source: casterName,
-                value: -2,
                 duration: 'concentration',
             };
             const dexSaveDisadvantageEffect = {
@@ -277,16 +267,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             // Remove existing slow effects from this caster for this target
             const existingFiltered = effects.filter(
                 te => !(te.target === targetName && te.source === casterName &&
-                    ['speed_halved', 'no_reactions', 'ac_penalty', 'dex_save_disadvantage',
+                    ['no_reactions', 'dex_save_disadvantage',
                      'action_limit', 'single_attack_limit', 'somatic_failure_chance', 'slow_repeat_save']
                         .includes(te.effect))
             );
 
             const allEffects = [
                 ...existingFiltered,
-                slowEffect,
                 noReactionEffect,
-                acPenaltyEffect,
                 dexSaveDisadvantageEffect,
                 actionLimitEffect,
                 singleAttackEffect,

@@ -581,7 +581,6 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
 
         case 'slow':
           effects.speedHalved = true;
-          effects.speedReduction = (effects.speedReduction || 0) + 50;
           effects.acPenalty = (effects.acPenalty || 0) + 2;
           effects.slowNoReactions = true;
           effects.slowActionLimit = true;

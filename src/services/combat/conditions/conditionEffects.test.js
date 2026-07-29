@@ -104,7 +104,6 @@ describe('conditionEffects', () => {
       it('sets speedHalved, acPenalty, and action restrictions for slow', () => {
         const result = computeConditionEffects(['slow']);
         expect(result.speedHalved).toBe(true);
-        expect(result.speedReduction).toBe(50);
         expect(result.acPenalty).toBe(2);
         expect(result.slowNoReactions).toBe(true);
         expect(result.slowActionLimit).toBe(true);
