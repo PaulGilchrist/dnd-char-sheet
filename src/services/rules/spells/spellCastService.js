@@ -43,6 +43,7 @@ import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
 import { triggerMassCureWounds } from '../features/massCureWoundsService.js';
+import { triggerPrayerOfHealing } from '../features/prayerOfHealingService.js';
 import { triggerMassHealingWord } from '../features/massHealingWordService.js';
 import { triggerTashasHideousLaughter } from '../features/tashasHideousLaughterService.js';
 import { executeHandler as executeLongstrider } from '../../automation/index.js';
@@ -525,6 +526,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Mass Healing Word — up to 6 creatures regain 2d4 + spellcasting ability modifier HP
         if (spell.name && spell.name.toLowerCase() === 'mass healing word') {
             await triggerMassHealingWord(spell, metaCtx, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Prayer of Healing — up to 5 creatures within range each regain 2d8 + modifier HP
+        if (spell.name && spell.name.toLowerCase() === 'prayer of healing') {
+            await triggerPrayerOfHealing(spell, metaCtx, playerStats, campaignName, mapName);
             return;
         }
 

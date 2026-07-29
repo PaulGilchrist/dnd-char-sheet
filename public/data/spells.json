@@ -7511,7 +7511,10 @@
     ],
     "subclasses": [
       "Lore"
-    ]
+    ],
+    "automation": {
+      "type": "prayer_of_healing"
+    }
   },
   {
     "index": "prestidigitation",

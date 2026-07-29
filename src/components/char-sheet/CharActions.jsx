@@ -160,6 +160,8 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         }
     }, [setModalStateInternal, onSpellModalStateChange]);
 
+    const mergedModalState = React.useMemo(() => ({ ...modalState, ...spellModalState }), [modalState, spellModalState]);
+
     // Handle damage type choice popup (e.g. Blessed Strikes: Necrotic or Radiant)
     useEffect(() => {
         const handleHealingPopup = (e) => {
@@ -751,24 +753,24 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     }, [setPopupHtml, modalState.massHealModal, setModalState]);
 
     const handleMassCureWoundsConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.massCureWoundsModal) return;
-        const { action, playerStats, campaignName } = modalState.massCureWoundsModal;
-        const result = await confirmMassCureWounds(action, playerStats, campaignName, targetNames, modalState.massCureWoundsModal.healExpression, modalState.massCureWoundsModal.maximize, modalState.massCureWoundsModal.bonusHeal, modalState.massCureWoundsModal.bonusDetails, modalState.massCureWoundsModal.slotLevel);
+        if (!targetNames || !mergedModalState.massCureWoundsModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.massCureWoundsModal;
+        const result = await confirmMassCureWounds(action, playerStats, campaignName, targetNames, mergedModalState.massCureWoundsModal.healExpression, mergedModalState.massCureWoundsModal.maximize, mergedModalState.massCureWoundsModal.bonusHeal, mergedModalState.massCureWoundsModal.bonusDetails, mergedModalState.massCureWoundsModal.slotLevel);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }
         setModalState({ massCureWoundsModal: null });
-    }, [setPopupHtml, modalState.massCureWoundsModal, setModalState]);
+    }, [setPopupHtml, mergedModalState.massCureWoundsModal, setModalState]);
 
     const handlePrayerOfHealingConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.prayerOfHealingModal) return;
-        const { action, playerStats, campaignName } = modalState.prayerOfHealingModal;
-        const result = await confirmPrayerOfHealing(action, playerStats, campaignName, targetNames, modalState.prayerOfHealingModal.healAmount, modalState.prayerOfHealingModal.healExpression, modalState.prayerOfHealingModal.rolls, modalState.prayerOfHealingModal.bonusHeal, modalState.prayerOfHealingModal.currentRound);
+        if (!targetNames || !mergedModalState.prayerOfHealingModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.prayerOfHealingModal;
+        const result = await confirmPrayerOfHealing(action, playerStats, campaignName, targetNames, mergedModalState.prayerOfHealingModal.healExpression, mergedModalState.prayerOfHealingModal.maximize, mergedModalState.prayerOfHealingModal.bonusHeal, mergedModalState.prayerOfHealingModal.bonusDetails, mergedModalState.prayerOfHealingModal.slotLevel, mergedModalState.prayerOfHealingModal.currentRound);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }
         setModalState({ prayerOfHealingModal: null });
-    }, [setPopupHtml, modalState.prayerOfHealingModal, setModalState]);
+    }, [setPopupHtml, mergedModalState.prayerOfHealingModal, setModalState]);
 
     const handlePowerWordFortifyConfirm = React.useCallback(async (targetNames) => {
         if (!targetNames || !modalState.powerWordFortifyModal) return;
@@ -781,14 +783,14 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     }, [setPopupHtml, modalState.powerWordFortifyModal, setModalState]);
 
     const handleMassHealingWordConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.massHealingWordModal) return;
-        const { action, playerStats, campaignName } = modalState.massHealingWordModal;
-        const result = await confirmMassHealingWord(action, playerStats, campaignName, targetNames, modalState.massHealingWordModal.healExpression, modalState.massHealingWordModal.maximize, modalState.massHealingWordModal.bonusHeal, modalState.massHealingWordModal.bonusDetails, modalState.massHealingWordModal.slotLevel);
+        if (!targetNames || !mergedModalState.massHealingWordModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.massHealingWordModal;
+        const result = await confirmMassHealingWord(action, playerStats, campaignName, targetNames, mergedModalState.massHealingWordModal.healExpression, mergedModalState.massHealingWordModal.maximize, mergedModalState.massHealingWordModal.bonusHeal, mergedModalState.massHealingWordModal.bonusDetails, mergedModalState.massHealingWordModal.slotLevel);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }
         setModalState({ massHealingWordModal: null });
-    }, [setPopupHtml, modalState.massHealingWordModal, setModalState]);
+    }, [setPopupHtml, mergedModalState.massHealingWordModal, setModalState]);
 
     const handleNaturesSanctuaryConfirm = React.useCallback(async (targetNames) => {
         if (!targetNames || !modalState.naturesSanctuaryCreaturesModal) return;

@@ -4,6 +4,7 @@ import { triggerPrayerOfHealing } from './prayerOfHealingService.js';
 
 vi.mock('../../dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
+    rollExpressionMaximized: vi.fn(),
 }));
 
 vi.mock('../combat/damageUtils.js', () => ({
@@ -28,16 +29,40 @@ vi.mock('../combat/rangeValidation.js', () => ({
     rangeToFeet: vi.fn(),
 }));
 
-import { rollExpression } from '../../dice/diceRoller.js';
+vi.mock('../combat/rangeCheck.js', () => ({
+    isDistanceInRange: vi.fn((dist, range) => dist <= range),
+}));
+
+vi.mock('../../combat/automation/automationService.js', () => ({
+    resolveHealingBonusesWithDetails: vi.fn(() => ({ totalBonus: 0, details: [] })),
+    markFortifiedHealthUsed: vi.fn(),
+    hasHealingMaximization: vi.fn(() => false),
+}));
+
+import { rollExpression, rollExpressionMaximized } from '../../dice/diceRoller.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
 import { getDistanceFeet, rangeToFeet } from '../combat/rangeValidation.js';
+import {
+    resolveHealingBonusesWithDetails,
+    markFortifiedHealthUsed,
+    hasHealingMaximization,
+} from '../../combat/automation/automationService.js';
 
 const CAMPAIGN_NAME = 'TestCampaign';
 const MAP_NAME = 'testMap';
-const CLERIC_STATS = { name: 'Cleric' };
+const CLERIC_STATS = {
+    name: 'Cleric',
+    spellAbilities: {
+        spellCastingAbility: 'Wisdom',
+        modifier: 3,
+    },
+    proficiency: 3,
+    level: 5,
+    abilities: [{ name: 'Wisdom', bonus: 3 }],
+};
 const CLIC_POS = { gridX: 1, gridY: 1 };
 const DEFAULT_RANGE_FT = 30;
 const DEFAULT_DISTANCE_FT = 10;
@@ -57,6 +82,7 @@ function buildDefaultCombatContext() {
             { name: 'Ally3', maxHp: 40 },
         ],
         placedItems: [],
+        round: 1,
     };
 }
 
@@ -64,16 +90,18 @@ function buildPrayerSpell(slotLevel) {
     return {
         name: 'Prayer of Healing',
         level: slotLevel ?? 2,
+        range: '30 feet',
         heal_at_slot_level: {
-            1: '2d8',
-            2: '3d8',
-            3: '4d8',
+            2: '2d8 + MOD',
+            3: '3d8 + MOD',
+            4: '4d8 + MOD',
         },
     };
 }
 
 function mockDefaults(rollTotal = DEFAULT_ROLL_TOTAL) {
     rollExpression.mockReturnValue({ total: rollTotal, rolls: [9, 9] });
+    rollExpressionMaximized.mockReturnValue({ total: rollTotal, rolls: [9, 9] });
     getCombatContext.mockResolvedValue(buildDefaultCombatContext());
     rangeToFeet.mockReturnValue(DEFAULT_RANGE_FT);
     getDistanceFeet.mockReturnValue(DEFAULT_DISTANCE_FT);
@@ -317,12 +345,10 @@ describe('prayerOfHealingService', () => {
     });
 
     describe('healing calculation', () => {
-        it('uses default 2d8 when spell has no heal_at_slot_level', async () => {
-            rollExpression.mockReturnValue({ total: 12, rolls: [6, 6] });
-
+        it('returns null when spell has no heal_at_slot_level', async () => {
             const spell = { name: 'Prayer of Healing', level: 2 };
 
-            await triggerPrayerOfHealing(
+            const result = await triggerPrayerOfHealing(
                 spell,
                 {},
                 CLERIC_STATS,
@@ -330,16 +356,39 @@ describe('prayerOfHealingService', () => {
                 MAP_NAME,
             );
 
-            expect(rollExpression).toHaveBeenCalledWith('2d8');
+            expect(result).toBeNull();
+            expect(rollExpression).not.toHaveBeenCalled();
         });
 
-        it('uses heal_at_slot_level for lowest slot >= spell level', async () => {
+        it('uses heal_at_slot_level for slot level from metaCtx', async () => {
             rollExpression.mockReturnValue({ total: 25, rolls: [13, 12] });
 
             const spell = {
                 name: 'Prayer of Healing',
                 level: 2,
-                heal_at_slot_level: { 2: '3d8', 3: '4d8', 4: '5d8' },
+                range: '30 feet',
+                heal_at_slot_level: { 2: '2d8 + MOD', 3: '3d8 + MOD', 4: '4d8 + MOD' },
+            };
+
+            await triggerPrayerOfHealing(
+                spell,
+                { slotLevel: 4 },
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            expect(rollExpression).toHaveBeenCalledWith('4d8 + 3');
+        });
+
+        it('uses spell.level when metaCtx.slotLevel is not provided', async () => {
+            rollExpression.mockReturnValue({ total: 17, rolls: [9, 8] });
+
+            const spell = {
+                name: 'Prayer of Healing',
+                level: 2,
+                range: '30 feet',
+                heal_at_slot_level: { 2: '2d8 + MOD', 3: '3d8 + MOD' },
             };
 
             await triggerPrayerOfHealing(
@@ -350,48 +399,68 @@ describe('prayerOfHealingService', () => {
                 MAP_NAME,
             );
 
-            expect(rollExpression).toHaveBeenCalledWith('3d8');
+            expect(rollExpression).toHaveBeenCalledWith('2d8 + 3');
         });
 
-        it('falls back to first slot key when no slot >= spell level', async () => {
+        it('falls back to lowest slot level when metaCtx.slotLevel exceeds available', async () => {
             rollExpression.mockReturnValue({ total: 15, rolls: [8, 7] });
 
             const spell = {
                 name: 'Prayer of Healing',
-                level: 5,
-                heal_at_slot_level: { 1: '2d8', 2: '3d8' },
+                level: 2,
+                range: '30 feet',
+                heal_at_slot_level: { 2: '2d8 + MOD', 3: '3d8 + MOD' },
+            };
+
+            await triggerPrayerOfHealing(
+                spell,
+                { slotLevel: 9 },
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            // Should use highest available (3d8 + MOD) since 9 > 3
+            expect(rollExpression).toHaveBeenCalledWith('3d8 + 3');
+        });
+
+        it('uses spellCastingAbility from spell object when provided', async () => {
+            rollExpression.mockReturnValue({ total: 15, rolls: [8, 7] });
+
+            const spell = {
+                name: 'Prayer of Healing',
+                level: 2,
+                range: '30 feet',
+                spellCastingAbility: 'Charisma',
+                heal_at_slot_level: { 2: '2d8 + MOD' },
+            };
+
+            const stats = {
+                ...CLERIC_STATS,
+                spellAbilities: {
+                    spellCastingAbility: 'Wisdom',
+                    modifier: 3,
+                },
+                abilities: [
+                    { name: 'Wisdom', bonus: 3 },
+                    { name: 'Charisma', bonus: 5 },
+                ],
             };
 
             await triggerPrayerOfHealing(
                 spell,
                 {},
-                CLERIC_STATS,
+                stats,
                 CAMPAIGN_NAME,
                 MAP_NAME,
             );
 
-            expect(rollExpression).toHaveBeenCalledWith('2d8');
-        });
-
-        it('falls back to 2d8 when heal_at_slot_level is empty', async () => {
-            rollExpression.mockReturnValue({ total: 10, rolls: [5, 5] });
-
-            const spell = { name: 'Prayer of Healing', level: 1, heal_at_slot_level: {} };
-
-            await triggerPrayerOfHealing(
-                spell,
-                {},
-                CLERIC_STATS,
-                CAMPAIGN_NAME,
-                MAP_NAME,
-            );
-
-            expect(rollExpression).toHaveBeenCalledWith('2d8');
+            expect(rollExpression).toHaveBeenCalledWith('2d8 + 5');
         });
 
         it('uses spell.range for range calculation', async () => {
             await triggerPrayerOfHealing(
-                { name: 'Prayer of Healing', level: 1, range: '60 feet' },
+                { name: 'Prayer of Healing', level: 1, range: '60 feet', heal_at_slot_level: { 1: '2d8 + MOD' } },
                 {},
                 CLERIC_STATS,
                 CAMPAIGN_NAME,
@@ -403,7 +472,7 @@ describe('prayerOfHealingService', () => {
 
         it('uses default 30 feet when spell has no range', async () => {
             await triggerPrayerOfHealing(
-                buildPrayerSpell(),
+                { name: 'Prayer of Healing', level: 1, heal_at_slot_level: { 1: '2d8 + MOD' } },
                 {},
                 CLERIC_STATS,
                 CAMPAIGN_NAME,
@@ -413,7 +482,6 @@ describe('prayerOfHealingService', () => {
             expect(rangeToFeet).toHaveBeenCalledWith('30 feet');
         });
     });
-
 
     describe('healing application', () => {
         it('clamps healing to target max HP', async () => {
@@ -514,14 +582,15 @@ describe('prayerOfHealingService', () => {
                 MAP_NAME,
             );
 
-            expect(result.formula).toBe('3d8');
+            expect(result.formula).toBe('2d8 + 3');
         });
 
         it('uses formula from heal_at_slot_level override', async () => {
             const spell = {
                 name: 'Prayer of Healing',
                 level: 3,
-                heal_at_slot_level: { 3: '5d8' },
+                range: '30 feet',
+                heal_at_slot_level: { 3: '5d8 + MOD' },
             };
 
             const result = await triggerPrayerOfHealing(
@@ -532,7 +601,34 @@ describe('prayerOfHealingService', () => {
                 MAP_NAME,
             );
 
-            expect(result.formula).toBe('5d8');
+            expect(result.formula).toBe('5d8 + 3');
+        });
+
+        it('rolls separately for each target', async () => {
+            rollExpression.mockReturnValue({ total: 10, rolls: [5, 5] });
+
+            await triggerPrayerOfHealing(
+                buildPrayerSpell(),
+                {},
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            expect(rollExpression).toHaveBeenCalledTimes(3);
+        });
+
+        it('includes per-target rolls in result', async () => {
+            const result = await triggerPrayerOfHealing(
+                buildPrayerSpell(),
+                {},
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            expect(result.targets[0]).toHaveProperty('rolls');
+            expect(result.targets[0]).toHaveProperty('rawTotal');
         });
     });
 
@@ -559,8 +655,6 @@ describe('prayerOfHealingService', () => {
             );
         });
 
-
-
         it('posts hp_change log entry for each healed target', async () => {
             await triggerPrayerOfHealing(
                 buildPrayerSpell(),
@@ -573,7 +667,7 @@ describe('prayerOfHealingService', () => {
             const hpChangeCalls = vi.mocked(addEntry).mock.calls.filter(
                 call => call[1].type === 'hp_change',
             );
-            expect(hpChangeCalls.length).toBeGreaterThan(0);
+            expect(hpChangeCalls.length).toBe(3);
             expect(hpChangeCalls[0][1]).toMatchObject({
                 type: 'hp_change',
                 targetName: 'Ally1',
@@ -583,7 +677,7 @@ describe('prayerOfHealingService', () => {
             });
         });
 
-        it('posts prayer_of_healing log entry for each healed target', async () => {
+        it('does not post prayer_of_healing log entries', async () => {
             await triggerPrayerOfHealing(
                 buildPrayerSpell(),
                 {},
@@ -595,13 +689,7 @@ describe('prayerOfHealingService', () => {
             const prayerCalls = vi.mocked(addEntry).mock.calls.filter(
                 call => call[1].type === 'prayer_of_healing',
             );
-            expect(prayerCalls.length).toBe(3);
-            expect(prayerCalls[0][1]).toMatchObject({
-                type: 'prayer_of_healing',
-                targetName: 'Ally1',
-                casterName: 'Cleric',
-                isAffected: true,
-            });
+            expect(prayerCalls.length).toBe(0);
         });
 
         it('dispatches combat-summary-updated event', async () => {
@@ -617,10 +705,27 @@ describe('prayerOfHealingService', () => {
                 expect.objectContaining({ type: 'combat-summary-updated' }),
             );
         });
+
+        it('marks Fortified Health used when applicable', async () => {
+            resolveHealingBonusesWithDetails.mockReturnValue({
+                totalBonus: 5,
+                details: [{ name: 'Fortified Health', amount: 5 }],
+            });
+
+            await triggerPrayerOfHealing(
+                buildPrayerSpell(),
+                {},
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            expect(markFortifiedHealthUsed).toHaveBeenCalledWith(CLERIC_STATS, CAMPAIGN_NAME);
+        });
     });
 
     describe('error resilience', () => {
-        it('returns null when rollExpression returns null', async () => {
+        it('returns empty results when rollExpression returns null', async () => {
             rollExpression.mockReturnValue(null);
 
             const result = await triggerPrayerOfHealing(
@@ -631,7 +736,9 @@ describe('prayerOfHealingService', () => {
                 MAP_NAME,
             );
 
-            expect(result).toBeNull();
+            expect(result).toBeDefined();
+            expect(result.targets).toEqual([]);
+            expect(result.totalHealed).toBe(0);
         });
 
         it('handles applyHealingToTarget returning null without crashing', async () => {
@@ -687,6 +794,22 @@ describe('prayerOfHealingService', () => {
             );
 
             expect(result).toBeDefined();
+        });
+
+        it('uses maximized rolls when hasHealingMaximization', async () => {
+            hasHealingMaximization.mockReturnValue(true);
+            rollExpressionMaximized.mockReturnValue({ total: 20, rolls: [10, 10] });
+
+            await triggerPrayerOfHealing(
+                buildPrayerSpell(),
+                {},
+                CLERIC_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+            );
+
+            expect(rollExpressionMaximized).toHaveBeenCalledWith('2d8 + 3');
+            expect(rollExpression).not.toHaveBeenCalled();
         });
     });
 });

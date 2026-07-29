@@ -115,9 +115,10 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Mass Heal",
-    "Mass Suggestion",
-    "Pass Without Trace"
+    "Prayer of Healing",
+    "See Invisibility",
+    "Silence",
+    "Slow"
   ],
   "magicInitiateInstances": [
     {

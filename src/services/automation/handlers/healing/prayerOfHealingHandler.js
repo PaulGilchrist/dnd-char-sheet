@@ -1,32 +1,44 @@
-import { rollExpression } from '../../../dice/diceRoller.js';
+import { rollExpression, rollExpressionMaximized } from '../../../dice/diceRoller.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
-import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
-import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 
 const PRAYER_OF_HEALING_NAME = 'Prayer of Healing';
 
-function getHealExpression(spell) {
-    const healAtSlotLevel = spell.heal_at_slot_level;
-    if (healAtSlotLevel) {
-        const slotLevel = Object.keys(healAtSlotLevel)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .filter(l => l >= spell.level)
-            .shift();
-        if (slotLevel && healAtSlotLevel[slotLevel]) {
-            return healAtSlotLevel[slotLevel];
-        }
-        const keys = Object.keys(healAtSlotLevel);
-        if (keys.length > 0) {
-            return healAtSlotLevel[keys[0]];
+function getSpellCastingMod(playerStats, spell) {
+    const cantripSpellAbility = spell.spellCastingAbility || playerStats.spellAbilities?.spellCastingAbility;
+    if (cantripSpellAbility && playerStats.abilities) {
+        const ability = playerStats.abilities.find(a => a.name === cantripSpellAbility);
+        if (ability) {
+            return ability.bonus;
         }
     }
-    return '2d8';
+    if (playerStats.spellAbilities) {
+        return playerStats.spellAbilities.modifier || 0;
+    }
+    return 0;
+}
+
+function resolveHealExpression(spell, slotLevel, spellCastingMod) {
+    const healAtSlotLevel = spell.heal_at_slot_level;
+    if (!healAtSlotLevel) return null;
+
+    let expression = healAtSlotLevel[slotLevel];
+    if (!expression) {
+        const levels = Object.keys(healAtSlotLevel).map(Number).sort((a, b) => a - b);
+        const highestBelow = levels.filter(l => l <= slotLevel).pop();
+        if (highestBelow) {
+            expression = healAtSlotLevel[highestBelow];
+        }
+    }
+    if (!expression) return null;
+
+    if (spellCastingMod !== null && spellCastingMod !== undefined) {
+        expression = expression.replace(/\bMOD\b/g, String(spellCastingMod));
+    }
+    return expression;
 }
 
 function getAffectedKey(targetName) {
@@ -45,37 +57,28 @@ function markPrayerOfHealingUsed(targetName, campaignName, currentRound) {
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
-    const playerName = playerStats.name;
     const maxTargets = auto?.maxTargets || 5;
-    const rangeFt = auto?.range ? rangeToFeet(auto.range) : 30;
+    const slotLevel = auto?.slotLevel || action.spell?.level || 2;
+
+    const spellCastingMod = getSpellCastingMod(playerStats, action.spell);
+    const healExpression = resolveHealExpression(action.spell, slotLevel, spellCastingMod);
+    if (!healExpression) {
+        return {
+            type: 'popup',
+            payload: { type: 'automation_info', name: PRAYER_OF_HEALING_NAME, description: `${PRAYER_OF_HEALING_NAME}: Could not resolve heal expression.` },
+        };
+    }
+
+    const maximize = hasHealingMaximization(playerStats);
+    const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
 
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) return null;
 
     const currentRound = combatSummary?.round || 1;
-    const healExpression = getHealExpression(action.spell);
-    const maximize = hasHealingMaximization(playerStats);
-    const result = maximize ? rollExpression(healExpression) : rollExpression(healExpression);
-    if (!result) return null;
 
-    const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, 1, campaignName);
-    const healAmount = result.total + bonusHeal;
-
-    const allyNames = getAllyList(playerName);
-    const allyList = Array.isArray(allyNames) && allyNames.length > 0 ? allyNames : [];
-    const effectiveAllies = allyList.length > 0 && allyList.some(a => a !== playerName)
-        ? allyList
-        : combatSummary.creatures?.map(c => c.name) || [];
-    const eligible = [];
-
-    for (const allyName of effectiveAllies) {
-        if (allyName === playerName) continue;
-        const creature = combatSummary.creatures?.find(c => c.name === allyName);
-        if (!creature) continue;
-        if (await isWithinRange(playerName, allyName, rangeFt)) {
-            eligible.push(creature);
-        }
-    }
+    const allCreatures = combatSummary.creatures || [];
+    const eligible = allCreatures.filter(c => c.name);
 
     if (eligible.length === 0) {
         return {
@@ -85,7 +88,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     if (eligible.length <= maxTargets) {
-        return confirmPrayerOfHealing(action, playerStats, campaignName, eligible.map(c => c.name), healAmount, healExpression, result.rolls, bonusHeal, currentRound, bonusDetails);
+        return confirmPrayerOfHealing(action, playerStats, campaignName, eligible.map(c => c.name), healExpression, maximize, bonusHeal, bonusDetails, slotLevel, currentRound);
     }
 
     const creatureTargets = eligible.map(c => c.name);
@@ -99,21 +102,24 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             campaignName,
             creatureTargets,
             maxTargets,
-            healAmount,
             healExpression,
-            rolls: result.rolls,
+            maximize,
             bonusHeal,
+            bonusDetails,
+            slotLevel,
             currentRound,
         },
     };
 }
 
-export async function confirmPrayerOfHealing(action, playerStats, campaignName, selectedTargetNames, healAmount, healExpression, rolls, bonusHeal, currentRound, bonusDetails) {
+export async function confirmPrayerOfHealing(action, playerStats, campaignName, selectedTargetNames, healExpression, maximize, bonusHeal, bonusDetails, _slotLevel, currentRound) {
     const playerName = playerStats.name;
     const maxTargets = action.automation?.maxTargets || 5;
     const finalTargets = selectedTargetNames.slice(0, maxTargets);
     const combatSummary = await getCombatContext(campaignName);
     const results = [];
+    const allRolls = [];
+    let totalHealed = 0;
 
     for (const targetName of finalTargets) {
         if (isAffectedByPrayerOfHealing(targetName, campaignName, currentRound)) {
@@ -123,7 +129,11 @@ export async function confirmPrayerOfHealing(action, playerStats, campaignName, 
         const maxHp = combatSummary?.creatures?.find(c => c.name === targetName)?.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const actualHeal = Math.min(healAmount, maxHp - currentHp);
+        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        if (!rollResult) continue;
+
+        const targetHealAmount = rollResult.total + bonusHeal;
+        const actualHeal = Math.min(targetHealAmount, maxHp - currentHp);
 
         if (actualHeal > 0) {
             applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
@@ -131,6 +141,12 @@ export async function confirmPrayerOfHealing(action, playerStats, campaignName, 
         }
 
         const newHp = Math.min(maxHp, currentHp + actualHeal);
+
+        const formulaParts = [healExpression];
+        if (bonusDetails.length > 0) {
+            const bonusParts = bonusDetails.map(d => `${d.amount} ${d.name}`).join(' + ');
+            formulaParts.push(`(${bonusParts})`);
+        }
 
         await addEntry(campaignName, {
             type: 'hp_change',
@@ -141,20 +157,14 @@ export async function confirmPrayerOfHealing(action, playerStats, campaignName, 
             isHealing: true,
             sourceName: playerName,
             note: PRAYER_OF_HEALING_NAME,
-            formula: healExpression,
+            formula: formulaParts.join(' + '),
             bonusDetails: bonusDetails && bonusDetails.length > 0 ? bonusDetails : undefined,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[prayerOfHealing] Error:', e); });
 
-        await addEntry(campaignName, {
-            type: 'prayer_of_healing',
-            targetName,
-            casterName: playerName,
-            isAffected: true,
-            timestamp: Date.now(),
-        }).catch((e) => { console.error('[prayerOfHealing] Error:', e); });
-
-        results.push({ targetName, healAmount: actualHeal });
+        results.push({ targetName, healAmount: actualHeal, rolls: rollResult.rolls, rawTotal: rollResult.total + bonusHeal });
+        allRolls.push(...rollResult.rolls);
+        totalHealed += actualHeal;
     }
 
     if (results.some(r => r.healAmount > 0) && bonusDetails?.some(d => d.name === 'Fortified Health')) {
@@ -163,14 +173,17 @@ export async function confirmPrayerOfHealing(action, playerStats, campaignName, 
 
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
-    const totalHealed = results.reduce((sum, r) => sum + r.healAmount, 0);
     return {
         type: 'popup',
         payload: {
-            type: 'automation_info',
+            type: 'heal_multi',
             name: PRAYER_OF_HEALING_NAME,
-            automationType: action.automation.type,
-            description: `${PRAYER_OF_HEALING_NAME} healed ${totalHealed} HP across ${results.length} target(s): ${finalTargets.join(', ') || 'none'}.`,
+            formula: healExpression,
+            rolls: allRolls,
+            results: results.map(r => ({ targetName: r.targetName, healAmount: r.healAmount, rolls: r.rolls })),
+            totalHealed: totalHealed,
+            bonusHeal: bonusHeal || 0,
+            bonusHealDetail: bonusDetails && bonusDetails.length > 0 ? bonusDetails.map(d => `${d.amount} ${d.name}`).join(', ') : '',
         },
     };
 }

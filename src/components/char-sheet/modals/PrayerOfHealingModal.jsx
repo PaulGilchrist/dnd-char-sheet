@@ -12,8 +12,7 @@ export default function PrayerOfHealingModal({
             icon="fa-hands-praying"
             targets={creatureTargets}
             maxTargets={maxTargets}
-            description="Choose up to 5 allies within 30 feet to heal."
-            note="Each creature can only be healed by Prayer of Healing once per long rest."
+            description="Choose up to 5 creatures to heal."
             confirmLabel="Heal"
             confirmIcon="fa-hands-praying"
             onConfirm={onConfirm}
