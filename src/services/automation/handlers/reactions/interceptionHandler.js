@@ -51,7 +51,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
     }
 
-    const storedEffects = getRuntimeValue(playerName, 'targetEffects') || [];
+    const storedEffects = [...getRuntimeValue(playerName, 'targetEffects') || []];
     const protectionEffect = {
         effect: 'protection',
         target: defenderName,

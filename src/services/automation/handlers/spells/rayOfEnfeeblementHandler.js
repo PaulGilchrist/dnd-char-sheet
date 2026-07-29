@@ -58,7 +58,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }).catch((e) => { console.error("[rayOfEnfeeblement] Error:", e); });
 
         // Successful save: target has Disadvantage on next attack roll until start of caster's next turn
-        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
         const existingIndex = allTargetEffects.findIndex(
             te => te.target === targetName && te.effect === 'disadvantage_next_attack' && te.source === playerStats.name
         );
@@ -103,7 +103,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     // ── Failed save: apply debuffs via targetEffects ──
 
-    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
     const existingIndex = allTargetEffects.findIndex(
         te => te.target === targetName && te.effect === 'ray_of_enfeeble_debuff' && te.source === playerStats.name
     );

@@ -104,7 +104,7 @@ export function getSilencedTargets(casterName, campaignName) {
 
 export function addSilencedTarget(casterName, targetName, campaignName) {
     const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
+    const effects = [...targetEffects];
     const existingIdx = effects.findIndex(
         te => te.target === targetName && te.effect === SILENCE_TARGET_EFFECT && te.source === casterName
     );

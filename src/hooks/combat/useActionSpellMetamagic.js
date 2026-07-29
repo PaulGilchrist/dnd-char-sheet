@@ -1,93 +1,25 @@
 import { useState, useCallback } from 'react'
 import { getCurrentSorceryPoints, getMaxSorceryPoints, spendSorceryPoints, logMetamagicUse } from './useMetamagic.js'
 import { addEntry } from '../../services/ui/logService.js'
-import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js'
 import { isPsionicSpell, hasPsionicSorcery } from '../../services/rules/spells/metamagicRules.js'
-import { getRuntimeValue } from '../runtime/useRuntimeState.js'
-import { getEmpoweredEvocationFeatures, getEmpoweredEvocationIntModifier } from '../../services/rules/spells/postCastRiderService.js'
 import { prepareSpellCast, isFreeCastAuthorized } from '../../services/rules/spells/spellPreparationService.js'
-import { resolveSpellDamageWithTypes } from '../../services/rules/core/spellDamageUtils.js'
+import { executeSpellCast } from '../../services/rules/spells/spellCastService.js'
 
 export function useActionSpellMetamagic({
     playerStats,
     campaignName,
     mapName,
-    exhaustionPenalty,
     cannotAct,
-    popupHtml,
     setPopupHtml,
     rollAttack,
     rollDamage,
     buildCtx,
-    buildCtxSync,
     handleAttackClick,
     setModalState,
+    characters,
 }) {
     const [pendingActionMetamagic, setPendingActionMetamagic] = useState(null);
     const isBonusSorcerer = playerStats.class?.name === 'Sorcerer';
-
-    const applyElementalAffinity = (attack, formula, total, rolls, modifier) => {
-        const affinityType = getRuntimeValue(playerStats.name, '_Elemental_Affinity_chosenType', campaignName);
-        if (!affinityType || !attack.damageType) return { formula, total, rolls, modifier };
-
-        const damageType = String(attack.damageType).trim();
-        if (damageType.toLowerCase() !== affinityType.toLowerCase()) return { formula, total, rolls, modifier };
-
-        const chaAbility = playerStats.abilities.find(a => a.name === 'Charisma');
-        const chaMod = chaAbility?.bonus || 0;
-        if (chaMod <= 0) return { formula, total, rolls, modifier };
-
-        return {
-            formula: `${formula} + ${chaMod} [${affinityType}]`,
-            total: total + chaMod,
-            rolls: [...rolls],
-            modifier,
-        };
-    };
-
-    const applyEmpoweredEvocation = (attack, formula, total, rolls, modifier) => {
-        const hasEmpoweredEvoc = getEmpoweredEvocationFeatures(playerStats).length > 0;
-        if (!hasEmpoweredEvoc) return { formula, total, rolls, modifier };
-
-        const spellSchool = (attack.autoDamage?.autoDamageSchool || attack.school || '').toLowerCase();
-        if (spellSchool !== 'evocation') return { formula, total, rolls, modifier };
-
-        const intMod = getEmpoweredEvocationIntModifier(playerStats);
-        if (intMod <= 0) return { formula, total, rolls, modifier };
-
-        return {
-            formula: `${formula} + ${intMod} [Empowered Evocation]`,
-            total: total + intMod,
-            rolls: [...rolls],
-            modifier,
-        };
-    };
-
-    const applyPotentSpellcasting = (attack, formula, total, rolls, modifier) => {
-        const isCantrip = attack.baseLevel === 0 || attack.level === 0;
-        if (!isCantrip) return { formula, total, rolls, modifier };
-
-        const potentFeature = playerStats.automation?.actions?.find(
-            a => a.type === 'damage_bonus' && !a.upgrades && a.options?.some(o => o.toLowerCase().includes('spellcasting'))
-        );
-        if (!potentFeature) return { formula, total, rolls, modifier };
-
-        const optKey = `_${(potentFeature.name || 'PotentSpellcasting').replace(/\s+/g, '_')}_option`;
-        const chosen = getRuntimeValue(playerStats.name, optKey, campaignName);
-        if (potentFeature.options.length > 1 && !chosen) return { formula, total, rolls, modifier };
-        if (chosen && !chosen.toLowerCase().includes('spellcasting')) return { formula, total, rolls, modifier };
-
-        const wis = playerStats.abilities?.find(a => a.name === 'Wisdom');
-        const wisMod = Math.max(0, wis?.bonus || 0);
-        if (wisMod <= 0) return { formula, total, rolls, modifier };
-
-        return {
-            formula: `${formula} + ${wisMod} [Blessed Strikes]`,
-            total: total + wisMod,
-            rolls: [...rolls],
-            modifier,
-        };
-    };
 
     const handleActionMetamagicConfirm = useCallback((result) => {
         const pending = pendingActionMetamagic;
@@ -198,32 +130,39 @@ export function useActionSpellMetamagic({
                     spCost: 0,
                     timestamp: Date.now(),
                 }).catch(() => {});
-                const wasCrit = popupHtml?.isCrit;
-                if (wasCrit && setPopupHtml) setPopupHtml(null);
-                const rawResult = wasCrit ? rollExpressionDoubled(attack.damage) : rollExpression(attack.damage);
-                if (!rawResult) return;
-
-                const affResult = applyElementalAffinity(attack, attack.damage, rawResult.total, rawResult.rolls, rawResult.modifier);
-                const empResult = applyEmpoweredEvocation(attack, affResult.formula, affResult.total, affResult.rolls, affResult.modifier);
-                const { formula, total, rolls, modifier } = applyPotentSpellcasting(attack, empResult.formula, empResult.total, empResult.rolls, empResult.modifier);
-
-                if (!mapName) {
-                    const ctx = await buildCtxSync(attack);
-                    rollDamage(attack.name, formula, total, rolls, modifier, ctx);
-                } else {
-                    buildCtx(attack).then(ctx => {
-                        rollDamage(attack.name, formula, total, rolls, modifier, ctx);
-                    }).catch((e) => { console.error("[useActionSpellMetamagic] Error:", e); });
+                const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, attack.name, attack.spellLevel || 0, playerStats, campaignName);
+                const metaCtx = {};
+                const result = await prepareSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, metaCtx, {
+                    playerName: playerStats.name,
+                    playerStats,
+                    campaignName,
+                    isUpcast: false,
+                    freeCastAuthorized,
+                });
+                const castResult = await executeSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, result.metaCtx, {
+                    rollAttack,
+                    rollDamage,
+                    playerStats,
+                    getTargetInfo: async () => {
+                        const cs = await buildCtx(attack);
+                        return cs?.targetName ? { name: cs.targetName } : null;
+                    },
+                    campaignName,
+                    mapName,
+                    characters,
+                });
+                if (castResult?.automationPopup) {
+                    const popup = castResult.automationPopup;
+                    if (popup.type === 'modal' && setModalState) {
+                        // handled by useSpellCastExecutor pattern
+                    } else {
+                        setPopupHtml(popup.payload);
+                    }
                 }
                 return;
             }
 
             const spellLevel = attack.spellLevel || spell.level || 0;
-            const damageInfo = resolveSpellDamageWithTypes(spell, spellLevel);
-            if (!damageInfo) {
-                console.error('[resolveSpellDamage] No damage info for:', spell.name);
-                return;
-            }
 
             const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, attack.name, spellLevel, playerStats, campaignName);
             const metaCtx = {};
@@ -235,41 +174,36 @@ export function useActionSpellMetamagic({
                 freeCastAuthorized,
             });
 
-            addEntry(campaignName, {
-                type: 'spell',
-                characterName: playerStats.name,
-                spellName: attack.name,
-                spellLevel: spellLevel,
-                castingTime: attack.castingTime || 'Action',
-                metamagic: [],
-                spCost: 0,
-                timestamp: Date.now(),
-            }).catch(() => {});
-
-            const wasCrit = popupHtml?.isCrit;
-            if (wasCrit && setPopupHtml) setPopupHtml(null);
-            const rawResult = wasCrit ? rollExpressionDoubled(damageInfo.formula) : rollExpression(damageInfo.formula);
-            if (!rawResult) {
-                console.error('[resolveSpellDamage] rollExpression returned null for:', damageInfo.formula);
-                return;
-            }
-
-            const affResult = applyElementalAffinity(attack, damageInfo.formula, rawResult.total, rawResult.rolls, rawResult.modifier);
-            const empResult = applyEmpoweredEvocation(attack, affResult.formula, affResult.total, affResult.rolls, affResult.modifier);
-            const { formula, total, rolls, modifier } = applyPotentSpellcasting(attack, empResult.formula, empResult.total, empResult.rolls, empResult.modifier);
-
-            if (!mapName) {
-                const ctx = await buildCtxSync(attack);
-                rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...result.metaCtx, damageType: damageInfo.primaryType });
-            } else {
-                buildCtx(attack).then(ctx => {
-                    rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...result.metaCtx, damageType: damageInfo.primaryType });
-                }).catch((e) => { console.error("[useActionSpellMetamagic] Error:", e); });
+            const castResult = await executeSpellCast({ ...spell, name: attack.name, level: spellLevel }, result.metaCtx, {
+                rollAttack,
+                rollDamage,
+                playerStats,
+                getTargetInfo: async () => {
+                    const cs = await buildCtx(attack);
+                    return cs?.targetName ? { name: cs.targetName } : null;
+                },
+                campaignName,
+                mapName,
+                characters,
+            });
+            if (castResult?.automationPopup) {
+                const popup = castResult.automationPopup;
+                if (popup.type === 'modal' && setModalState) {
+                    // handled by useSpellCastExecutor pattern
+                } else {
+                    setPopupHtml(popup.payload);
+                }
             }
             return;
         }
 
-        const spellLevel = attack.spellLevel || 0;
+        const spell = playerStats.spellAbilities?.spells?.find(s => s.name === attack.name);
+        if (!spell) {
+            handleAttackClick(attack);
+            return;
+        }
+
+        const spellLevel = attack.spellLevel || spell.level || 0;
         const currentSP = getCurrentSorceryPoints(playerStats.name, getMaxSorceryPoints(playerStats));
         const isPsionic = isPsionicSpell(playerStats, attack.name);
         const hasPsionic = hasPsionicSorcery(playerStats);
@@ -282,22 +216,25 @@ export function useActionSpellMetamagic({
             isPsionic: isPsionic && hasPsionic,
             psionicCost: isPsionic && hasPsionic ? spellLevel : 0,
             action: async (metaCtx) => {
-                const wasCrit = popupHtml?.isCrit;
-                if (wasCrit && setPopupHtml) setPopupHtml(null);
-                const rawR = wasCrit ? rollExpressionDoubled(attack.damage) : rollExpression(attack.damage);
-                if (!rawR) return;
-
-                const affR = applyElementalAffinity(attack, attack.damage, rawR.total, rawR.rolls, rawR.modifier);
-                const empR = applyEmpoweredEvocation(attack, affR.formula, affR.total, affR.rolls, affR.modifier);
-                const { formula, total, rolls, modifier } = applyPotentSpellcasting(attack, empR.formula, empR.total, empR.rolls, empR.modifier);
-
-                if (!mapName) {
-                    const ctx = await buildCtxSync(attack);
-                    rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...metaCtx });
-                } else {
-                    buildCtx(attack).then(ctx => {
-                        rollDamage(attack.name, formula, total, rolls, modifier, { ...ctx, ...metaCtx });
-                    }).catch((e) => { console.error("[useActionSpellMetamagic] Error:", e); });
+                const castResult = await executeSpellCast({ ...spell, level: spellLevel }, metaCtx, {
+                    rollAttack,
+                    rollDamage,
+                    playerStats,
+                    getTargetInfo: async () => {
+                        const cs = await buildCtx(attack);
+                        return cs?.targetName ? { name: cs.targetName } : null;
+                    },
+                    campaignName,
+                    mapName,
+                    characters,
+                });
+                if (castResult?.automationPopup) {
+                    const popup = castResult.automationPopup;
+                    if (popup.type === 'modal' && setModalState) {
+                        // handled by useSpellCastExecutor pattern
+                    } else {
+                        setPopupHtml(popup.payload);
+                    }
                 }
             },
         });
@@ -307,7 +244,35 @@ export function useActionSpellMetamagic({
         if (cannotAct) return;
         const spell = playerStats.spellAbilities?.spells?.find(s => s.name === attack.name);
         if (!spell) {
-            handleAttackClick(attack);
+            const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, attack.name, attack.spellLevel || 0, playerStats, campaignName);
+            const metaCtx = {};
+            const result = await prepareSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, metaCtx, {
+                playerName: playerStats.name,
+                playerStats,
+                campaignName,
+                isUpcast: false,
+                freeCastAuthorized,
+            });
+            const castResult = await executeSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, result.metaCtx, {
+                rollAttack,
+                rollDamage,
+                playerStats,
+                getTargetInfo: async () => {
+                    const cs = await buildCtx(attack);
+                    return cs?.targetName ? { name: cs.targetName } : null;
+                },
+                campaignName,
+                mapName,
+                characters,
+            });
+            if (castResult?.automationPopup) {
+                const popup = castResult.automationPopup;
+                if (popup.type === 'modal' && setModalState) {
+                    // handled by useSpellCastExecutor pattern
+                } else {
+                    setPopupHtml(popup.payload);
+                }
+            }
             return;
         }
         if (!isBonusSorcerer) {
@@ -320,37 +285,60 @@ export function useActionSpellMetamagic({
                 isUpcast: false,
                 freeCastAuthorized,
             });
-            if (!mapName) {
-                const ctx = await buildCtxSync(attack);
-                rollAttack(attack.name, attack.hitBonus - exhaustionPenalty, { ...ctx, ...result.metaCtx });
-            } else {
-                buildCtx(attack).then(ctx => {
-                    rollAttack(attack.name, attack.hitBonus - exhaustionPenalty, { ...ctx, ...result.metaCtx });
-                }).catch((e) => { console.error("[useActionSpellMetamagic] Error:", e); });
+            const castResult = await executeSpellCast({ ...spell, name: attack.name, level: attack.spellLevel || 0 }, result.metaCtx, {
+                rollAttack,
+                rollDamage,
+                playerStats,
+                getTargetInfo: async () => {
+                    const cs = await buildCtx(attack);
+                    return cs?.targetName ? { name: cs.targetName } : null;
+                },
+                campaignName,
+                mapName,
+                characters,
+            });
+            if (castResult?.automationPopup) {
+                const popup = castResult.automationPopup;
+                if (popup.type === 'modal' && setModalState) {
+                    // handled by useSpellCastExecutor pattern
+                } else {
+                    setPopupHtml(popup.payload);
+                }
             }
             return;
         }
 
-        const spellLevel = spell.level || 0;
         const currentSP = getCurrentSorceryPoints(playerStats.name, getMaxSorceryPoints(playerStats));
         const isPsionic = isPsionicSpell(playerStats, spell.name);
         const hasPsionic = hasPsionicSorcery(playerStats);
 
         setPendingActionMetamagic({
             spellName: attack.name,
-            spellLevel: spellLevel,
+            spellLevel: spell.level || 0,
             castingTime: spell.casting_time || 'Action',
             _currentSP: currentSP,
             isPsionic: isPsionic && hasPsionic,
-            psionicCost: isPsionic && hasPsionic ? spellLevel : 0,
+            psionicCost: isPsionic && hasPsionic ? (spell.level || 0) : 0,
             action: async (metaCtx) => {
-                if (!mapName) {
-                    const ctx = await buildCtxSync(attack);
-                    rollAttack(attack.name, attack.hitBonus - exhaustionPenalty, { ...ctx, ...metaCtx });
-                } else {
-                    buildCtx(attack).then(ctx => {
-                        rollAttack(attack.name, attack.hitBonus - exhaustionPenalty, { ...ctx, ...metaCtx });
-                    }).catch((e) => { console.error("[useActionSpellMetamagic] Error:", e); });
+                const castResult = await executeSpellCast({ ...spell, level: spell.level || 0 }, metaCtx, {
+                    rollAttack,
+                    rollDamage,
+                    playerStats,
+                    getTargetInfo: async () => {
+                        const cs = await buildCtx(attack);
+                        return cs?.targetName ? { name: cs.targetName } : null;
+                    },
+                    campaignName,
+                    mapName,
+                    characters,
+                });
+                if (castResult?.automationPopup) {
+                    const popup = castResult.automationPopup;
+                    if (popup.type === 'modal' && setModalState) {
+                        // handled by useSpellCastExecutor pattern
+                    } else {
+                        setPopupHtml(popup.payload);
+                    }
                 }
             },
         });

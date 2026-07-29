@@ -150,6 +150,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true);
             }
 
+            // Clear Globe of Invulnerability on initiative roll (new combat)
+            const globeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredGlobeEffects = globeEffects.filter(te => te.effect !== 'globe_barrier');
+            if (filteredGlobeEffects.length !== globeEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredGlobeEffects, campaignName, true);
+            }
+
             // Clear Trance of Order on initiative roll (new combat)
             setRuntimeValue(playerStats.name, 'tranceOfOrderActive', null, campaignName);
 

@@ -845,15 +845,35 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleResistanceSkip = createSkipHandler('resistance', (pending) => pending.creatureTargets);
 
-  const handleGlobeConfirm = createConfirmHandler('globe', async (pending, result) => {
+  const handleGlobeConfirm = React.useCallback(async (result) => {
+    const pending = getPending('globe');
+    if (!pending) return;
+
+    cfClearPending('globe');
+
+    addEntry(campaignName, {
+      type: 'spell',
+      characterName: playerStats.name,
+      targetName: result?.[0] || null,
+      targets: result || [],
+      spellName: pending.spellName,
+      spellLevel: pending.spellLevel || 0,
+      castingTime: pending.castingTime,
+      timestamp: Date.now(),
+    }).catch(() => {});
+
     const action = {
       name: pending.spellName,
       spell: pending.spell,
       automation: { type: 'globe_of_invulnerability', range: pending.range },
       metaCtx: { creatures: result },
     };
-    await executeHandler(action, playerStats, campaignName, null);
-  }, (pending) => pending.creatureTargets);
+    const popup = await executeHandler(action, playerStats, campaignName, null);
+
+    if (popup && setPopupHtml) {
+      setPopupHtml(popup.payload);
+    }
+  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml]);
 
   const handleGlobeSkip = createSkipHandler('globe', (pending) => pending.creatureTargets);
 

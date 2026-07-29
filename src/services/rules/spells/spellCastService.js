@@ -66,8 +66,8 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 
     if (!targetName || !ability) return;
 
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects');
-    const effects = Array.isArray(storedEffects) ? storedEffects : [];
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const effects = [...storedEffects];
 
     // Base Hex: apply ability check disadvantage for chosen ability
     const existingAbilityCheckIndex = effects.findIndex(
@@ -110,9 +110,58 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
     setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 }
 
+ export async function checkGlobeOfInvulnerability(spell, targetName, playerStats, campaignName) {
+    const effectiveSpellLevel = spell.level ?? spell.baseLevel ?? 1;
+    console.error('[GlobeCheck] spell:', spell.name, 'level:', spell.level, 'baseLevel:', spell.baseLevel, 'effectiveSpellLevel:', effectiveSpellLevel, 'targetName:', targetName, 'playerStats.name:', playerStats.name);
+    if (effectiveSpellLevel <= 5 && targetName) {
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const effects = Array.isArray(storedEffects) ? storedEffects : [];
+        console.error('[GlobeCheck] targetEffects count:', effects.length);
+        const globeEffects = effects.filter(te => te.effect === 'globe_barrier');
+        console.error('[GlobeCheck] globe_effects:', globeEffects.map(ge => ({ target: ge.target, source: ge.source })));
+        const globeEffect = effects.find(
+            te => te.target === targetName && te.effect === 'globe_barrier'
+        );
+        console.error('[GlobeCheck] globeEffect found:', globeEffect ? { target: globeEffect.target, source: globeEffect.source } : null);
+        if (globeEffect) {
+            const attackerProtected = globeEffects.some(ge => ge.target === playerStats.name);
+            console.error('[GlobeCheck] attackerProtected:', attackerProtected);
+            if (!attackerProtected) {
+                await addEntry(campaignName, {
+                    type: 'automation',
+                    creatureName: globeEffect.source,
+                    name: 'Globe of Invulnerability',
+                    description: `${spell.name} (level ${effectiveSpellLevel}) from ${playerStats.name} blocked — target is protected by Globe of Invulnerability.`,
+                    timestamp: Date.now(),
+                }).catch(() => {});
+
+                return {
+                    automationPopup: {
+                        type: 'popup',
+                        payload: {
+                            type: 'automation_info',
+                            name: 'Globe of Invulnerability',
+                            description: `${spell.name} (level ${effectiveSpellLevel}) is blocked by Globe of Invulnerability protecting ${targetName}.`,
+                        },
+                    },
+                };
+            }
+        }
+    }
+    return null;
+}
+
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
+    console.error('[executeSpellCast] spell:', spell.name, 'level:', spell.level, 'baseLevel:', spell.baseLevel, 'playerStats.name:', playerStats.name);
     if (getActiveBuffs(playerStats.name, campaignName).some(b => b.blocksSpellcasting)) {
         return;
+    }
+
+    const globeTargetName = getTargetInfo ? (await getTargetInfo())?.name : null;
+    console.error('[executeSpellCast] globeTargetName:', globeTargetName);
+    const globeBlock = await checkGlobeOfInvulnerability(spell, globeTargetName, playerStats, campaignName);
+    if (globeBlock) {
+        return globeBlock;
     }
 
     // Compute hasInvisible early so it's available for all spell paths
@@ -243,40 +292,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
           concentration: !!spell.concentration,
           timestamp: Date.now(),
         }).catch(() => {});
-    }
-
-    // Globe of Invulnerability — block spells of level 5 or lower from outside targeting creatures inside
-    if (spellLevel <= 5) {
-        const globeTargetInfo = await getTargetInfo();
-        const globeTargetName = globeTargetInfo?.name || null;
-        if (globeTargetName) {
-            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(storedEffects) ? storedEffects : [];
-            const globeEffect = effects.find(
-                te => te.target === globeTargetName && te.effect === 'globe_barrier'
-            );
-            if (globeEffect) {
-                const globeCaster = globeEffect.source;
-                if (playerStats.name !== globeCaster) {
-                    await addEntry(campaignName, {
-                        type: 'automation',
-                        creatureName: globeCaster,
-                        name: 'Globe of Invulnerability',
-                        description: `${spell.name} (level ${spellLevel}) from ${playerStats.name} blocked — target is protected by Globe of Invulnerability.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-
-                    return {
-                        type: 'popup',
-                        payload: {
-                            type: 'automation_info',
-                            name: 'Globe of Invulnerability',
-                            description: `${spell.name} (level ${spellLevel}) is blocked by Globe of Invulnerability protecting ${globeTargetName}.`,
-                        },
-                    };
-                }
-            }
-        }
     }
 
     if (spell.name.toLowerCase() === 'power word heal') {
@@ -542,7 +557,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Globe of Invulnerability — toggle passive barrier that blocks spells of level 5 or lower
         if (spell.name && spell.name.toLowerCase() === 'globe of invulnerability') {
-            await triggerGlobeOfInvulnerability(spell, metaCtx, playerStats, campaignName, mapName);
+            const result = await triggerGlobeOfInvulnerability(spell, metaCtx, playerStats, campaignName, mapName);
+            if (result) {
+                return { automationPopup: result };
+            }
             return;
         }
 

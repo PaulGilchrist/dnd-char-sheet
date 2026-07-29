@@ -408,7 +408,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
         const duration = auto.duration || 'until_start_of_next_turn';
 
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const storedEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
         const protectionEffect = {
             effect: 'protection',
             target: defenderName,
