@@ -165,9 +165,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     if (auto?.effect === 'see_invisibility') {
         if (!wasActive) {
-            addExpiration(playerStats.name, targetName, [
-                { type: 'remove_active_buff', buffName: action.name }
-            ], campaignName);
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: action.name,
+                description: `See Invisibility activated for 1 hour. You can see invisible creatures and objects within 30 feet.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[buffHandler] See Invisibility log error:', e); });
+        } else {
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: action.name,
+                description: `${playerStats.name} deactivated See Invisibility.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[buffHandler] See Invisibility log error:', e); });
         }
     }
 

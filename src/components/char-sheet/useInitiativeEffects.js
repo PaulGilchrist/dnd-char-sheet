@@ -182,6 +182,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue(playerStats.name, 'activeBuffs', filteredHaste, campaignName);
             }
 
+            // Clear See Invisibility buff on initiative roll (new combat)
+            const seeInvisBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
+            const filteredSeeInvisBuffs = seeInvisBuffs.filter(b => b.effect !== 'see_invisibility');
+            if (filteredSeeInvisBuffs.length !== seeInvisBuffs.length) {
+                setRuntimeValue(playerStats.name, 'activeBuffs', filteredSeeInvisBuffs, campaignName);
+            }
+
             const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
 
             // Check for Perfect Focus (Monk level 15)

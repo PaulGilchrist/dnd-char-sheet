@@ -525,14 +525,22 @@ describe('buffHandler.handle', () => {
   });
 
   describe('See invisibility and Haste effects', () => {
-    it('adds expiration for see_invisibility and haste on activation, removes speed_zero on haste deactivation', async () => {
+    it('logs activation for see_invisibility, adds expiration for haste on activation, removes speed_zero on haste deactivation', async () => {
       const ps = makePlayerStats();
 
-      // See invisibility activation
+      // See invisibility activation (no expiration, just logging)
       let action = makeAction({ effect: 'see_invisibility' });
       buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
       await handle(action, ps, campaignName, null);
-      expect(expirations.addExpiration).toHaveBeenCalled();
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: ps.name,
+          abilityName: 'Test Buff',
+          description: expect.stringContaining('See Invisibility activated'),
+        })
+      );
 
       // Haste activation
       buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
