@@ -129,6 +129,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             setRuntimeValue(playerStats.name, 'bastionOfLawWardUsed', null, campaignName);
             setRuntimeValue(playerStats.name, 'bastionOfLawLastAttackDamage', null, campaignName);
 
+            // Clear Pass Without Trace on initiative roll (new combat)
+            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredEffects = storedEffects.filter(te => te.effect !== 'pass_without_trace_bonus');
+            if (filteredEffects.length !== storedEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
+            }
+
             // Clear Trance of Order on initiative roll (new combat)
             setRuntimeValue(playerStats.name, 'tranceOfOrderActive', null, campaignName);
 

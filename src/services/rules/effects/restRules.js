@@ -545,6 +545,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredClairvoyantEffects, campaignName, true)
     }
 
+    // Clear Pass Without Trace on short rest
+    const pwtEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredPwtEffects = pwtEffects.filter(e => e.effect !== 'pass_without_trace_bonus');
+    if (filteredPwtEffects.length !== pwtEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredPwtEffects, campaignName, true)
+    }
+
   clearAllExpirationEffects(name, campaignName)
   clearHuntersMarkConcentration(name, campaignName)
   clearAllConcentrations(campaignName)
@@ -713,6 +720,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredClairvoyantEffects = clairvoyantEffects.filter(e => e.effect !== 'clairvoyant_combatant');
     if (filteredClairvoyantEffects.length !== clairvoyantEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredClairvoyantEffects, campaignName, true)
+    }
+
+    // Clear Pass Without Trace on long rest
+    const pwtEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredPwtEffects = pwtEffects.filter(e => e.effect !== 'pass_without_trace_bonus');
+    if (filteredPwtEffects.length !== pwtEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredPwtEffects, campaignName, true)
     }
 
     // Clear Wrath of the Sea badge on long rest
