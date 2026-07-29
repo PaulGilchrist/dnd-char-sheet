@@ -115,11 +115,12 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Blade Ward",
-    "Blur",
-    "Dominate Beast",
-    "Dominate Monster",
-    "Dominate Person"
+    "Friends",
+    "Globe of Invulnerability",
+    "Greater Invisibility",
+    "Greater Restoration",
+    "Lesser Restoration",
+    "Hypnotic Pattern"
   ],
   "magicInitiateInstances": [
     {

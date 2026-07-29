@@ -119,10 +119,10 @@ describe('conditionEffects', () => {
         expect(result.targetAdvantageCount).toBe(1);
       });
 
-      it('grants attack disadvantage, target advantage, and save disadvantage for charmed', () => {
+      it('grants attack disadvantage and save disadvantage for charmed', () => {
         const result = computeConditionEffects(['charmed']);
         expect(result.attackDisadvantageCount).toBe(1);
-        expect(result.targetAdvantageCount).toBe(1);
+        expect(result.targetAdvantageCount).toBe(0);
         expect(result.saveDisadvantage).toContain('dex');
       });
 

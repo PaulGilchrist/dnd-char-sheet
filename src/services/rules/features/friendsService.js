@@ -3,6 +3,9 @@ import { getCombatContext } from '../combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
+import { addConcentration } from '../../combat/concentration/concentrationService.js';
+import storage from '../../ui/storage.js';
+import { getCombatSummary } from '../../encounters/combatData.js';
 
 /**
  * Check whether a creature (by name) is a Humanoid.
@@ -32,20 +35,21 @@ async function isTargetHumanoid(targetName, campaignName) {
 }
 
 /**
- * Check whether the caster has cast Friends on this target.
+ * Check whether the caster has cast Friends on this target within the past 24 hours.
  */
 function hasRecentFriendsCast(casterName, targetName, campaignName) {
-    const key = `_friends_24h_${casterName}_${targetName}`;
-    const lastCast = getRuntimeValue(casterName, key, campaignName);
-    return !!lastCast;
+    const targets = getRuntimeValue(casterName, '_friendsCastTargets', campaignName) || [];
+    return targets.includes(targetName);
 }
 
 /**
  * Record that Friends was cast on a target.
  */
 function recordFriendsCast(casterName, targetName, campaignName) {
-    const key = `_friends_24h_${casterName}_${targetName}`;
-    setRuntimeValue(casterName, key, true, campaignName);
+    const targets = getRuntimeValue(casterName, '_friendsCastTargets', campaignName) || [];
+    if (!targets.includes(targetName)) {
+        setRuntimeValue(casterName, '_friendsCastTargets', [...targets, targetName], campaignName);
+    }
 }
 
 export async function triggerFriends(spell, metaCtx, playerStats, campaignName, mapName) {
@@ -91,8 +95,41 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
         return { type: 'popup', payload: { type: 'automation_info', name: 'Friends', description: `No effect. You have already cast Friends on ${targetName} within the past 24 hours.` } };
     }
 
+    // Check 3: Target is not at full health (immunized — cannot be charmed)
+    const cs = await getCombatContext(campaignName);
+    const targetCreature = cs?.creatures?.find(c => c.name === targetName);
+    const targetIsPlayer = targetCreature?.type === 'player';
+    let currentHp = 0;
+    let maxHp = 0;
+    if (targetIsPlayer) {
+        currentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? playerStats.computedStats?.currentHp ?? 0;
+        maxHp = getRuntimeValue(targetName, 'hitPoints', campaignName) ?? playerStats.computedStats?.maxHp ?? 0;
+    } else {
+        currentHp = targetCreature?.currentHp ?? targetCreature?.hit_points?.current ?? 0;
+        maxHp = targetCreature?.maxHp ?? 0;
+    }
+    const isAtFullHealth = currentHp >= maxHp && maxHp > 0;
+    if (!isAtFullHealth) {
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Friends',
+            description: `${playerStats.name} casts Friends on ${targetName} but it has no effect — ${targetName} is not at full health and is immunized to the effect.`,
+        }).catch(() => {});
+        return { type: 'popup', payload: { type: 'automation_info', name: 'Friends', description: `No effect. ${targetName} is not at full health and is immunized to the effect.` } };
+    }
+
     // Record the cast for cooldown tracking
     recordFriendsCast(playerStats.name, targetName, campaignName);
+
+    // Set concentration on the caster so the badge shows in the initiative tracker
+    const csForConc = getCombatSummary(campaignName);
+    if (csForConc) {
+        const concentrationDc = 8 + (playerStats.proficiency || 2) + (playerStats.abilities?.CON?.bonus ?? 0);
+        addConcentration(csForConc, playerStats.name, 'Friends', concentrationDc);
+        storage.set('combatSummary', csForConc, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
 
     // Build the spell save DC
     const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);

@@ -485,8 +485,6 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
 
         case 'charmed':
           effects.attackDisadvantageCount++
-          effects.targetAdvantageCount++
-          effects.targetAdvantageReasons.push('Charmed')
           effects.saveDisadvantage.push('dex')
           break
 

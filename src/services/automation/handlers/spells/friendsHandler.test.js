@@ -181,6 +181,7 @@ describe('friendsHandler.handle', () => {
                     characterName: 'Goblin',
                     condition: 'Charmed',
                     reason: 'Friends cantrip',
+                    note: expect.stringContaining('initiative roll'),
                 }),
             );
         });
@@ -195,6 +196,9 @@ describe('friendsHandler.handle', () => {
             expect(result.payload.name).toBe('Friends');
             expect(result.payload.description).toContain('Charmed');
             expect(result.payload.description).toContain('Concentration');
+            expect(result.payload.description).toContain('initiative roll');
+            expect(result.payload.description).toContain('short rest');
+            expect(result.payload.description).toContain('long rest');
             expect(result.payload.targetName).toBe('Goblin');
         });
 

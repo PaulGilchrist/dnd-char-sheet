@@ -100,9 +100,10 @@ export const SHORT_REST_RESOURCES = [
     'encouragingsongUses',
      'piercerPunctureUsedThisTurn',
      'poisonedWeaponsActive',
-      '_Savage_Attacker_usedRound',
-      '_Shield_Bash_usedRound',
-      '_Hamstring_usedRound'
+       '_Savage_Attacker_usedRound',
+       '_Shield_Bash_usedRound',
+       '_Hamstring_usedRound',
+       '_friendsCastTargets'
 ]
 
 export function getShortRestResources() {
@@ -149,10 +150,11 @@ export const LONG_REST_RESOURCES = [
      '_BrutalStrike_usedRound',
       '_fortifiedHealth_usedRound',
       '_Shield_Bash_usedRound',
-      '_Hamstring_usedRound',
-      'piercerPunctureUsedThisTurn',
-    '_Savage_Attacker_usedRound',
-   'secondWindUses',
+       '_Hamstring_usedRound',
+       'piercerPunctureUsedThisTurn',
+     '_Savage_Attacker_usedRound',
+     '_friendsCastTargets',
+    'secondWindUses',
   'psionicEnergy',
   'focusPoints',
   'uncannymetabolismUses',

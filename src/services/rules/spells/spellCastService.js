@@ -442,7 +442,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         if (spell.name && spell.name.toLowerCase() === 'friends') {
             const friendsTarget = await getTargetInfo();
             const friendsMetaCtx = { ...metaCtx, spellSaveDc, targetName: friendsTarget?.name };
-            await triggerFriends(spell, friendsMetaCtx, playerStats, campaignName, mapName);
+            const friendsResult = await triggerFriends(spell, friendsMetaCtx, playerStats, campaignName, mapName);
+            if (friendsResult) {
+                return { automationPopup: friendsResult };
+            }
             return;
         }
 

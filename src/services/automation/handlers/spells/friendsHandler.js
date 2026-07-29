@@ -103,7 +103,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: targetName,
         condition: 'Charmed',
         reason: 'Friends cantrip',
-        note: `${targetName} is Charmed by ${playerStats.name} (Concentration, up to 1 minute). Spell ends if ${playerStats.name} makes an attack roll, deals damage, or forces a save.`,
+        note: `${targetName} is Charmed by ${playerStats.name} (Concentration, up to 1 minute). The spell ends if concentration is lost, on initiative roll, short rest, or long rest.`,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[friends] Error:", e); });
 
@@ -113,7 +113,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             type: 'automation_info',
             name: 'Friends',
             targetName,
-            description: `${targetName} failed the WIS save and is Charmed (Concentration, up to 1 min). The spell ends early if you make an attack roll, deal damage, or force a saving throw. When the spell ends, ${targetName} will know it was Charmed by you.`,
+            description: `${targetName} failed the WIS save and is Charmed (Concentration, up to 1 min). The spell ends if concentration is lost, on initiative roll, short rest, or long rest. When the spell ends, ${targetName} will know it was Charmed by you.`,
             automation: auto,
         },
     };

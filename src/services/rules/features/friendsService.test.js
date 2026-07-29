@@ -28,10 +28,25 @@ vi.mock('../../ui/logService.js', () => ({
     addEntry: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('../../ui/storage.js', () => ({
+    default: {
+        set: vi.fn(),
+    },
+}));
+
+vi.mock('../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(),
+}));
+
+const { getCombatSummary } = await import('../../encounters/combatData.js');
+const storage = await import('../../ui/storage.js');
+
 describe('friendsService', () => {
+    let dispatchSpy;
     beforeEach(() => {
         vi.clearAllMocks();
         addEntry.mockResolvedValue({});
+        dispatchSpy = vi.spyOn(window, 'dispatchEvent');
     });
 
     const campaignName = 'TestCampaign';
@@ -57,7 +72,11 @@ describe('friendsService', () => {
         });
 
         it('is case-insensitive for spell name matching', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
 
             await triggerFriends({ name: 'FRIENDS', level: 0 }, { targetName: 'Goblin' }, playerStats, campaignName, mapName);
@@ -66,7 +85,7 @@ describe('friendsService', () => {
         });
 
         it('returns no-target popup when no target is available', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await triggerFriends(
                 { name: 'Friends', level: 0 },
@@ -84,7 +103,7 @@ describe('friendsService', () => {
         });
 
         it('returns no-target popup when metaCtx is null', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await triggerFriends(
                 { name: 'Friends', level: 0 },
@@ -123,7 +142,7 @@ describe('friendsService', () => {
         it('falls back to first non-caster creature from combat context when targetName is missing', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
-                    { name: 'Goblin', type: 'npc' },
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 },
                 ],
             });
             getMonsterData.mockResolvedValue({ type: 'Humanoid' });
@@ -179,7 +198,7 @@ describe('friendsService', () => {
 
         it('returns cooldown popup when cast within 24 hours', async () => {
             getCombatContext.mockResolvedValue(null);
-            getRuntimeValue.mockReturnValue(true);
+            getRuntimeValue.mockReturnValue(['Goblin']);
 
             const result = await triggerFriends(
                 { name: 'Friends', level: 0 },
@@ -200,8 +219,88 @@ describe('friendsService', () => {
             }));
         });
 
+        it('returns immunized popup when target is not at full health', async () => {
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Wizard', type: 'player' },
+                    { name: 'Goblin', type: 'npc', currentHp: 3, maxHp: 7 },
+                ],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = await triggerFriends(
+                { name: 'Friends', level: 0 },
+                { targetName: 'Goblin' },
+                playerStats,
+                campaignName,
+                mapName,
+            );
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: { type: 'automation_info', name: 'Friends', description: 'No effect. Goblin is not at full health and is immunized to the effect.' },
+            });
+            expect(executeHandler).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                characterName: 'Wizard',
+                abilityName: 'Friends',
+                description: expect.stringContaining('immunized'),
+            }));
+        });
+
+        it('proceeds to handler when target is at full health', async () => {
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Wizard', type: 'player' },
+                    { name: 'Shopkeeper', type: 'npc', currentHp: 5, maxHp: 5 },
+                ],
+            });
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Wizard', type: 'player' },
+                    { name: 'Shopkeeper', type: 'npc', currentHp: 5, maxHp: 5 },
+                ],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
+            executeHandler.mockResolvedValue({ type: 'popup' });
+
+            await triggerFriends(
+                { name: 'Friends', level: 0 },
+                { targetName: 'Shopkeeper' },
+                playerStats,
+                campaignName,
+                mapName,
+            );
+
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    automation: expect.objectContaining({ targetName: 'Shopkeeper' }),
+                }),
+                playerStats,
+                campaignName,
+                mapName,
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Wizard',
+                '_friendsCastTargets',
+                ['Shopkeeper'],
+                campaignName,
+            );
+            expect(storage.default.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
+            expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+        });
+
         it('executes handler and records cast for valid Friends spell', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getCombatSummary.mockReturnValue({
+                creatures: [{ name: 'Wizard', type: 'player' }, { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
             getRuntimeValue.mockReturnValue(null);
             const expectedResult = { type: 'popup', payload: { type: 'automation_info' } };
             executeHandler.mockResolvedValue(expectedResult);
@@ -231,14 +330,18 @@ describe('friendsService', () => {
             );
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Wizard',
-                '_friends_24h_Wizard_Goblin',
-                true,
+                '_friendsCastTargets',
+                ['Goblin'],
                 campaignName,
             );
+            expect(storage.default.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
+            expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
         });
 
         it('passes targetName in automation to executeHandler', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Shopkeeper', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
             getMonsterData.mockResolvedValue({ type: 'Humanoid' });
             getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
@@ -264,7 +367,11 @@ describe('friendsService', () => {
         });
 
         it('uses spellSaveDc from metaCtx when provided', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
 
             await triggerFriends(
@@ -287,7 +394,11 @@ describe('friendsService', () => {
         });
 
         it('computes saveDc from proficiency when no spellAbilities.saveDc', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
             const stats = { name: 'Wizard', proficiency: 3 };
 
@@ -310,7 +421,11 @@ describe('friendsService', () => {
         });
 
         it('uses default proficiency of 2 when not available', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
             const stats = { name: 'Wizard' };
 
@@ -333,7 +448,11 @@ describe('friendsService', () => {
         });
 
         it('returns error popup when executeHandler throws', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockRejectedValue(new Error('Handler failed'));
 
             const result = await triggerFriends(
@@ -351,7 +470,11 @@ describe('friendsService', () => {
         });
 
         it('uses spell.level as fallback when metaCtx has no slotLevel', async () => {
-            getCombatContext.mockResolvedValue(null);
+            getCombatContext.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 }],
+            });
+            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getRuntimeValue.mockReturnValue(null);
             executeHandler.mockResolvedValue({ type: 'popup' });
 
             await triggerFriends(
