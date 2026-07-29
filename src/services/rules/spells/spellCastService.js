@@ -263,6 +263,23 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return;
     }
 
+    // Mass Suggestion — multi-target WIS save for selected creatures (up to 12), must show modal before generic automation routing
+    if (spell.name && spell.name.toLowerCase() === 'mass suggestion' && spellSaveDc) {
+        return {
+            automationPopup: {
+                type: 'modal',
+                modalName: 'massSuggestion',
+                payload: {
+                    action: { name: 'Mass Suggestion', automation: { type: 'mass_suggestion' } },
+                    playerStats,
+                    campaignName,
+                    saveType: 'WIS',
+                    saveDc: spellSaveDc,
+                },
+            },
+        };
+    }
+
     // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
     // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
     // Skip spells with automation.effects — those have AoE/single-target effects handled below

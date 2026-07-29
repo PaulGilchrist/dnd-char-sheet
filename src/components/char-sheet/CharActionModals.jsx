@@ -24,6 +24,7 @@ import SaveAttackHealModal from './modals/shared/SaveAttackHealModal.jsx'
 import SaveAttackAoeModal from './modals/shared/SaveAttackAoeModal.jsx'
 import AOEConditionModal from './modals/shared/AOEConditionModal.jsx'
 import FearModal from './modals/shared/FearModal.jsx'
+import MassSuggestionModal from './modals/shared/MassSuggestionModal.jsx'
 import ElementalAttunementModal from './modals/ElementalAttunementModal.jsx'
 import ElementalBurstModal from './modals/ElementalBurstModal.jsx'
 import DivineSparkModal from './modals/divine/DivineSparkModal.jsx'
@@ -574,6 +575,12 @@ export default function CharActionModals({
                 <FearModal
                     {...mergedModalState.fearModal}
                     onClose={() => setModalState({ fearModal: null })}
+                />
+            )}
+            {mergedModalState.massSuggestionModal && (
+                <MassSuggestionModal
+                    {...mergedModalState.massSuggestionModal}
+                    onClose={() => setModalState({ massSuggestionModal: null })}
                 />
             )}
             {mergedModalState.elementalAttunementModal && (

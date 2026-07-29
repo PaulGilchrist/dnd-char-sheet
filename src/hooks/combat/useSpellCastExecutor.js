@@ -88,6 +88,9 @@ function handleModalResult(popup, setModalState) {
         case 'fear':
             setModalState({ fearModal: payload });
             break;
+        case 'massSuggestion':
+            setModalState({ massSuggestionModal: payload });
+            break;
         case 'wildMagicSurge':
             setModalState({ wildMagicSurgeModal: payload });
             break;
