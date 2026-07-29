@@ -8,7 +8,6 @@ import { cleanupConcentrationEffects } from '../../combat/concentration/concentr
 import { addEntry } from '../../ui/logService.js';
 import { getDamageReduction, getDamageResistances } from '../../combat/automation/automationPassives.js';
 import { isCreatureInSilenceZone } from '../../rules/features/silenceService.js';
-import { processTashasLaughterRepeatSave } from '../../automation/handlers/spells/tashasLaughterHandler.js';
 import { applyWardingBond } from '../../rules/features/wardingBondService.js';
 import { checkPsychicVeil } from '../../rules/features/psychicVeilService.js';
 import { checkHolyAuraDamage } from '../../rules/features/holyAuraDamageService.js';
@@ -268,27 +267,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         if (existing) {
             existing.actualDamage = wardDamage;
             setRuntimeValue('campaign', 'lastAttack', existing, campaignName);
-        }
-    }
-
-    // Tasha's Hideous Laughter: damage-triggered repeat WIS save with Advantage
-    if (wardDamage > 0 && !isPlayer) {
-        // For NPCs, check creature.conditions directly (no getRuntimeValue call needed)
-        const rawConditions = creature.conditions || [];
-        const hasIncapacitated = rawConditions.some(c => {
-            const condKey = typeof c === 'object' ? c.key : String(c);
-            return String(condKey).toLowerCase() === 'incapacitated';
-        });
-        if (hasIncapacitated) {
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-            const tashasEffect = Array.isArray(targetEffects) ? targetEffects.find(
-                te => te.target === creature.name && te.effect === 'tashas_laughter_repeat_save'
-            ) : null;
-            if (tashasEffect) {
-                processTashasLaughterRepeatSave(tashasEffect.source, creature.name, tashasEffect.dc, campaignName).catch(e => {
-                    console.error('[applyDamage] Tasha\'s damage-triggered repeat save failed:', e);
-                });
-            }
         }
     }
 

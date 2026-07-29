@@ -25,7 +25,7 @@ vi.mock('../../common/targetResolver.js', () => ({
   resolveTarget: vi.fn(),
 }));
 
-import { handle, processHoldMonsterRepeatSave } from './holdMonsterHandler.js';
+import { handle } from './holdMonsterHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
@@ -62,158 +62,6 @@ const baseCombatContext = {
   placedItems: [],
 };
 
-// ─── processHoldMonsterRepeatSave ───
-
-describe('processHoldMonsterRepeatSave', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns null when no tracking exists for the target', async () => {
-    getRuntimeValue.mockReturnValue(null);
-
-    const result = await processHoldMonsterRepeatSave(
-      casterName,
-      targetName,
-      15,
-      'Hold Monster',
-      campaignName,
-    );
-
-    expect(result).toBeNull();
-  });
-
-  describe('successful repeat save', () => {
-    function setupSuccessPath(existingConditions = ['Paralyzed', 'Frightened'], existingEffects = []) {
-      createSaveListener.mockReturnValue({
-        promptId: 'hold-repeat-success',
-        promise: Promise.resolve({ success: true }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === '_holdMonster_Goblin') return true;
-        if (keyOrProp === 'activeConditions') return existingConditions;
-        if (keyOrProp === 'targetEffects') return existingEffects;
-        return [];
-      });
-    }
-
-    it('returns popup indicating spell ends', async () => {
-      setupSuccessPath();
-
-      const result = await processHoldMonsterRepeatSave(
-        casterName,
-        targetName,
-        15,
-        'Hold Monster',
-        campaignName,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('succeeded on WIS save');
-      expect(result.payload.description).toContain('ends');
-    });
-
-    it('removes Paralyzed condition keeping other conditions', async () => {
-      setupSuccessPath(['Paralyzed', 'Frightened']);
-
-      await processHoldMonsterRepeatSave(
-        casterName,
-        targetName,
-        15,
-        'Hold Monster',
-        campaignName,
-      );
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        targetName,
-        'activeConditions',
-        ['Frightened'],
-        campaignName,
-      );
-    });
-
-    it('cleans up target effect for this caster only', async () => {
-      setupSuccessPath(['Paralyzed'], [
-        { target: targetName, effect: 'hold_monster_repeat_save', source: casterName },
-        { target: 'Other', effect: 'hold_monster_repeat_save', source: 'OtherCaster' },
-      ]);
-
-      await processHoldMonsterRepeatSave(
-        casterName,
-        targetName,
-        15,
-        'Hold Monster',
-        campaignName,
-      );
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'campaign',
-        'targetEffects',
-        expect.arrayContaining([
-          expect.objectContaining({ target: 'Other', source: 'OtherCaster' }),
-        ]),
-        campaignName,
-      );
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'campaign',
-        'targetEffects',
-        expect.not.arrayContaining([
-          expect.objectContaining({ source: casterName }),
-        ]),
-        campaignName,
-      );
-    });
-  });
-
-  describe('failed repeat save', () => {
-    function setupFailedRepeat() {
-      createSaveListener.mockReturnValue({
-        promptId: 'hold-repeat-fail',
-        promise: Promise.resolve({ success: false }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp) => {
-        if (keyOrProp === '_holdMonster_Goblin') return true;
-        return [];
-      });
-    }
-
-    it('returns popup indicating spell continues', async () => {
-      setupFailedRepeat();
-
-      const result = await processHoldMonsterRepeatSave(
-        casterName,
-        targetName,
-        15,
-        'Hold Monster',
-        campaignName,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('failed WIS save');
-      expect(result.payload.description).toContain('continues');
-    });
-
-    it('does not modify conditions on failed save', async () => {
-      setupFailedRepeat();
-
-      await processHoldMonsterRepeatSave(
-        casterName,
-        targetName,
-        15,
-        'Hold Monster',
-        campaignName,
-      );
-
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        targetName,
-        'activeConditions',
-        expect.anything(),
-        campaignName,
-      );
-    });
-  });
-});
-
 // ─── handle ───
 
 describe('holdMonsterHandler.handle', () => {
@@ -243,28 +91,6 @@ describe('holdMonsterHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('No target selected');
-    });
-  });
-
-  describe('repeat save detection', () => {
-    it('delegates to processHoldMonsterRepeatSave when tracking exists', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName } });
-      getRuntimeValue.mockImplementation((_caster, key) => {
-        if (key === '_holdMonster_Goblin') return true;
-        return [];
-      });
-      createSaveListener.mockReturnValue({
-        promptId: 'hold-repeat-prompt',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('failed WIS save');
-      expect(result.payload.description).toContain('continues');
     });
   });
 
@@ -310,26 +136,6 @@ describe('holdMonsterHandler.handle', () => {
       );
     });
 
-    it('stores target effect for repeat saves', async () => {
-      setupFailedSave();
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'campaign',
-        'targetEffects',
-        expect.arrayContaining([
-          expect.objectContaining({
-            target: targetName,
-            effect: 'hold_monster_repeat_save',
-            source: casterName,
-          }),
-        ]),
-        campaignName,
-      );
-    });
-
-  });
-
   describe('initial cast - successful save', () => {
     function setupSuccessfulSave() {
       getCombatContext.mockResolvedValue(baseCombatContext);
@@ -363,4 +169,5 @@ describe('holdMonsterHandler.handle', () => {
       );
     });
   });
+});
 });

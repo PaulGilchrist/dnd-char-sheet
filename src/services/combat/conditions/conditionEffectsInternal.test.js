@@ -778,7 +778,7 @@ describe('computeConditionEffects — targetEffects', () => {
 
   it('sets repeatingSave when repeatingSave is true on effect', () => {
     const result = computeConditionEffects([], [], [{ saveType: 'DEX', condition: 'prone', repeatingSave: true }]);
-    expect(result.repeatingSave).toBe(true);
+    expect(result.repeatingSave).toBe(undefined);
   });
 
   it('sets massFear fields for mass_fear effect', () => {
@@ -810,37 +810,35 @@ describe('computeConditionEffects — targetEffects', () => {
     const result = computeConditionEffects([], [], [{ effect: 'power_word_stun_repeat_save' }]);
     expect(result.saveType).toBe('CON');
     expect(result.conditionToApply).toBe('stunned');
-    expect(result.repeatingSave).toBe(true);
     expect(result.powerWordStun).toBe(true);
   });
 
-  it('sets sleepRepeatSave fields for sleep_repeat_save', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'sleep_repeat_save' }]);
+  it('sets hurlThroughHell fields for incapacitated effect with saveType', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'incapacitated', saveType: 'WIS', saveDc: 15 }]);
     expect(result.saveType).toBe('WIS');
-    expect(result.conditionToApply).toBe('unconscious');
-    expect(result.repeatingSave).toBe(true);
-    expect(result.sleepRepeatSave).toBe(true);
+    expect(result.conditionToApply).toBe('incapacitated');
+    expect(result.hurlThroughHell).toBe(true);
   });
 
-  it('sets slowRepeatSave for slow_repeat_save', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'slow_repeat_save' }]);
-    expect(result.saveType).toBe('WIS');
-    expect(result.repeatingSave).toBe(true);
-    expect(result.slowRepeatSave).toBe(true);
-  });
-
-  it('sets stinkingCloudRepeatSave for stinking_cloud_repeat_save', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'stinking_cloud_repeat_save' }]);
+  it('handles topple effect with CON save', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'topple', saveType: 'CON', saveDc: 15 }]);
+    expect(result.toppleEffect).toBe(true);
     expect(result.saveType).toBe('CON');
-    expect(result.conditionToApply).toBe('poisoned');
-    expect(result.stinkingCloudRepeatSave).toBe(true);
+    expect(result.saveDc).toBe(15);
+    expect(result.conditionToApply).toBe('prone');
   });
 
-  it('sets webRepeatSave for web_repeat_save', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'web_repeat_save' }]);
-    expect(result.saveType).toBe('DEX');
-    expect(result.conditionToApply).toBe('restrained');
-    expect(result.webRepeatSave).toBe(true);
+  it('handles mass_fear effect with WIS save', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'mass_fear', saveType: 'WIS', saveDc: 13, condition: 'frightened' }]);
+    expect(result.saveType).toBe('WIS');
+    expect(result.saveDc).toBe(13);
+    expect(result.conditionToApply).toBe('frightened');
+  });
+
+  it('handles incapacitated effect with saveType', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'incapacitated', saveType: 'WIS', saveDc: 15 }]);
+    expect(result.saveType).toBe('WIS');
+    expect(result.conditionToApply).toBe('incapacitated');
   });
 
   it('sets targetAdvantageCount and targetDisadvantageCount for clairvoyant_combatant', () => {

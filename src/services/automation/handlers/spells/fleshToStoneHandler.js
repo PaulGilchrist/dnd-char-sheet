@@ -7,187 +7,6 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 
-const MAX_FAILS = 3;
-const MAX_SUCCESSES = 3;
-
-function getTrackingKey(targetName) {
-    return `_fleshToStone_${targetName.replace(/\s+/g, '_')}`;
-}
-
-/**
- * Process a repeated CON save for a creature already Restrained by Flesh to Stone.
- * Called at end of the affected creature's turn.
- * Returns { type, payload } for the popup, or null if no effect.
- */
-export async function processFleshToStoneRepeatSave(casterName, targetName, saveDc, campaignName) {
-    const trackingKey = getTrackingKey(targetName);
-    const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (!tracking || !Array.isArray(tracking) || tracking.length < 2) {
-        return null; // No active Flesh to Stone effect on this target
-    }
-
-    const [currentSuccesses, currentFails] = tracking;
-
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'CON',
-        saveDc,
-        dcSuccess: 'none',
-    });
-
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: 'Flesh to Stone',
-        description: `${targetName} makes a CON save (DC ${saveDc}) at end of turn (Flesh to Stone: ${currentSuccesses}/${MAX_SUCCESSES} successes, ${currentFails}/${MAX_FAILS} failures).`,
-        promptId,
-    }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        const newSuccesses = currentSuccesses + 1;
-        if (newSuccesses >= MAX_SUCCESSES) {
-            // Spell ends — remove Restrained, clear tracking
-            const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conds = Array.isArray(storedConds) ? storedConds : [];
-            setRuntimeValue(targetName, 'activeConditions', conds.filter(c => String(c).toLowerCase() !== 'restrained'), campaignName);
-            setRuntimeValue(casterName, trackingKey, null, campaignName);
-
-            // Clean up target effect
-            cleanupTargetEffect(casterName, targetName, campaignName);
-
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: casterName,
-                rollType: 'save-flesh-to-stone',
-                targetName,
-                saveDc,
-                saveType: 'CON',
-                success: true,
-                description: `${targetName} succeeded on CON save (${newSuccesses}/${MAX_SUCCESSES}). Flesh to Stone ends!`,
-            }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-            addEntry(campaignName, {
-                type: 'condition',
-                action: 'removed',
-                characterName: targetName,
-                condition: 'Restrained',
-                reason: 'Flesh to Stone ended (3 successful saves)',
-                timestamp: Date.now(),
-            }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: 'Flesh to Stone',
-                    description: `${targetName} succeeded on CON save (${newSuccesses}/${MAX_SUCCESSES}). Flesh to Stone ends!`,
-                },
-            };
-        }
-
-        // Still need more successes
-        setRuntimeValue(casterName, trackingKey, [newSuccesses, currentFails], campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-flesh-to-stone',
-            targetName,
-            saveDc,
-            saveType: 'CON',
-            success: true,
-            description: `${targetName} succeeded on CON save (${newSuccesses}/${MAX_SUCCESSES} successes, ${currentFails}/${MAX_FAILS} failures). Spell continues.`,
-        }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Flesh to Stone',
-                description: `${targetName} succeeded on CON save (${newSuccesses}/${MAX_SUCCESSES} successes). ${MAX_SUCCESSES - newSuccesses} more needed to end spell.`,
-            },
-        };
-    }
-
-    // Failed save
-    const newFails = currentFails + 1;
-    if (newFails >= MAX_FAILS) {
-        // Petrified! Upgrade Restrained → Petrified
-        const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conds = Array.isArray(storedConds) ? storedConds : [];
-        const withoutRestrained = conds.filter(c => String(c).toLowerCase() !== 'restrained');
-        const withoutPetrified = withoutRestrained.filter(c => String(c).toLowerCase() !== 'petrified');
-        setRuntimeValue(targetName, 'activeConditions', [...withoutPetrified, 'petrified'], campaignName);
-
-        setRuntimeValue(casterName, trackingKey, null, campaignName);
-        cleanupTargetEffect(casterName, targetName, campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-flesh-to-stone',
-            targetName,
-            saveDc,
-            saveType: 'CON',
-            success: false,
-            description: `${targetName} failed CON save (${newFails}/${MAX_FAILS})! Turned to stone — Petrified!`,
-        }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-        addEntry(campaignName, {
-            type: 'condition',
-            action: 'applied',
-            characterName: targetName,
-            condition: 'Petrified',
-            reason: 'Flesh to Stone (3 failed saves)',
-            note: `${targetName} turned to stone by Flesh to Stone.`,
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Flesh to Stone',
-                description: `${targetName} failed CON save (${newFails}/${MAX_FAILS}) and is Petrified!`,
-            },
-        };
-    }
-
-    // Still petrifying
-    setRuntimeValue(casterName, trackingKey, [currentSuccesses, newFails], campaignName);
-
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-flesh-to-stone',
-        targetName,
-        saveDc,
-        saveType: 'CON',
-        success: false,
-        description: `${targetName} failed CON save (${currentSuccesses}/${MAX_SUCCESSES} successes, ${newFails}/${MAX_FAILS} failures). Flesh hardens...`,
-    }).catch((e) => { console.error("[fleshToStone] Error:", e); });
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: 'Flesh to Stone',
-            description: `${targetName} failed CON save (${newFails}/${MAX_FAILS} failures). ${MAX_FAILS - newFails} more failures → Petrified.`,
-        },
-    };
-}
-
-function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const cleaned = effects.filter(
-        te => !(te.target === targetName && te.effect === 'flesh_to_stone_repeat_save' && te.source === casterName)
-    );
-    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
-}
-
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
@@ -229,14 +48,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const targetCreature = cs.creatures.find(c => c.name === targetName);
-
-    // Check if this target already has an active Flesh to Stone effect (repeat save)
-    const trackingKey = getTrackingKey(targetName);
-    const existingTracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (existingTracking && Array.isArray(existingTracking) && existingTracking.length >= 2) {
-        // This is a repeated end-of-turn save
-        return await processFleshToStoneRepeatSave(casterName, targetName, dc, campaignName);
-    }
 
     // Constructs automatically succeed on the save
     const creatureType = targetCreature?.type || '';
@@ -352,34 +163,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         appliedDamage: 0,
     });
 
-    // Initialize save tracking: [successCount, failureCount]
-    setRuntimeValue(casterName, trackingKey, [0, 1], campaignName);
-
     addExpiration(casterName, targetName, [
         { type: 'condition', condition: 'restrained' },
     ], campaignName);
-
-    // Store target effect for end-of-turn repeated saves
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const existingIdx = effects.findIndex(
-        te => te.target === targetName && te.effect === 'flesh_to_stone_repeat_save'
-    );
-    const fleshEffect = {
-        target: targetName,
-        effect: 'flesh_to_stone_repeat_save',
-        source: casterName,
-        condition: 'restrained',
-        dc: dc,
-        saveType: 'CON',
-        duration: 'concentration',
-    };
-    if (existingIdx >= 0) {
-        effects[existingIdx] = fleshEffect;
-    } else {
-        effects.push(fleshEffect);
-    }
-    setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
     addEntry(campaignName, {
         type: 'save_result',
@@ -389,7 +175,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         saveDc: dc,
         saveType: 'CON',
         success: false,
-        description: `${targetName} failed CON save against Flesh to Stone and is Restrained (1/3 failed saves). After 3 failed saves, ${targetName} becomes Petrified.`,
+        description: `${targetName} failed CON save against Flesh to Stone and is Restrained.`,
     }).catch((e) => { console.error("[fleshToStone] Error:", e); });
 
     addEntry(campaignName, {
@@ -398,7 +184,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: targetName,
         condition: 'Restrained',
         reason: 'Flesh to Stone',
-        note: `${targetName} is Restrained by Flesh to Stone. Must make CON save at end of each turn. 3 failures → Petrified`,
+        note: `${targetName} is Restrained by Flesh to Stone.`,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[fleshToStone] Error:", e); });
 
@@ -407,7 +193,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${targetName} failed CON save and is Restrained (1/3 failures). At the end of each of its turns, it must make another CON save. 3 failures → Petrified. 3 successes → spell ends.`,
+            description: `${targetName} failed CON save and is Restrained.`,
         },
     };
 }

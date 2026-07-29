@@ -16,104 +16,6 @@ import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollba
  * - Strong wind (Gust of Wind) disperses the cloud
  */
 
-function getTrackingKey(targetName) {
-    return `_stinking_cloud_${targetName.replace(/\s+/g, '_')}`;
-}
-
-function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const cleaned = effects.filter(
-        te => !(te.target === targetName && te.effect === 'stinking_cloud_repeat_save' && te.source === casterName)
-    );
-    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
-}
-
-export async function processStinkingCloudRepeatSave(casterName, targetName, saveDc, campaignName) {
-    const trackingKey = getTrackingKey(targetName);
-    const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (!tracking) {
-        return null;
-    }
-
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'CON',
-        saveDc,
-        dcSuccess: 'none',
-        disadvantage: false,
-    });
-
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: 'Stinking Cloud (repeat save)',
-        description: `${targetName} makes a CON save (DC ${saveDc}) at end of turn (Stinking Cloud).`,
-        promptId,
-    }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
-
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        // Save succeeded — remove Poisoned condition, clear tracking
-        const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conds = Array.isArray(storedConds) ? storedConds : [];
-        setRuntimeValue(targetName, 'activeConditions', conds.filter(c => String(c).toLowerCase() !== 'poisoned'), campaignName);
-        setRuntimeValue(casterName, trackingKey, null, campaignName);
-        cleanupTargetEffect(casterName, targetName, campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-stinking-cloud',
-            targetName,
-            saveDc,
-            saveType: 'CON',
-            success: true,
-            description: `${targetName} succeeded on CON save. Stinking Cloud ends!`,
-        }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
-
-        addEntry(campaignName, {
-            type: 'condition',
-            action: 'removed',
-            characterName: targetName,
-            condition: 'Poisoned',
-            reason: 'Stinking Cloud (successful repeat save)',
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Stinking Cloud',
-                description: `${targetName} succeeded on CON save. Stinking Cloud ends!`,
-            },
-        };
-    }
-
-    // Save failed — Poisoned already applied, keep tracking for next turn
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-stinking-cloud',
-        targetName,
-        saveDc,
-        saveType: 'CON',
-        success: false,
-        description: `${targetName} failed CON save and remains Poisoned by Stinking Cloud.`,
-    }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: 'Stinking Cloud',
-            description: `${targetName} failed CON save and remains Poisoned.`,
-        },
-    };
-}
-
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
@@ -222,36 +124,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 appliedDamage: 0,
             });
 
-            // Set tracking for end-of-turn repeat save
-            const trackingKey = getTrackingKey(targetName);
-            setRuntimeValue(casterName, trackingKey, true, campaignName);
-
             // Add expiration for concentration
             addExpiration(casterName, targetName, [
                 { type: 'condition', condition: 'poisoned' },
             ], campaignName);
-
-            // Store target effect for end-of-turn repeated saves
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-            const effects = Array.isArray(targetEffects) ? targetEffects : [];
-            const existingIdx = effects.findIndex(
-                te => te.target === targetName && te.effect === 'stinking_cloud_repeat_save'
-            );
-            const stinkingCloudEffect = {
-                target: targetName,
-                effect: 'stinking_cloud_repeat_save',
-                source: casterName,
-                condition: 'poisoned',
-                dc: dc,
-                saveType: 'CON',
-                duration: 'concentration',
-            };
-            if (existingIdx >= 0) {
-                effects[existingIdx] = stinkingCloudEffect;
-            } else {
-                effects.push(stinkingCloudEffect);
-            }
-            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
             addEntry(campaignName, {
                 type: 'condition',
@@ -259,7 +135,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 characterName: targetName,
                 condition: 'Poisoned',
                 reason: 'Stinking Cloud spell',
-                note: `${targetName} is Poisoned by Stinking Cloud. While Poisoned, the creature can't take an Action or Bonus Action. At the end of its next turn, it repeats the save. Failure means remaining Poisoned.`,
+                note: `${targetName} is Poisoned by Stinking Cloud. While Poisoned, the creature can't take an Action or Bonus Action.`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
 
@@ -271,7 +147,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 saveDc: dc,
                 saveType: 'CON',
                 success: false,
-                description: `${targetName} failed CON save against Stinking Cloud and is Poisoned. At the end of its next turn, it repeats the save.`,
+                description: `${targetName} failed CON save against Stinking Cloud and is Poisoned.`,
             }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
 
             results.push(`${targetName} is Poisoned.`);
@@ -279,7 +155,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const summary = affectedCount > 0
-        ? `Stinking Cloud affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Affected creatures are Poisoned (can't take Actions or Bonus Actions) until the end of their current turn. At the end of each of their turns, they repeat the save. Failure means remaining Poisoned.`
+        ? `Stinking Cloud affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Affected creatures are Poisoned (can't take Actions or Bonus Actions) until the end of their current turn.`
         : `No creatures affected by Stinking Cloud. ${savedCount} creature(s) saved.`;
 
     return {

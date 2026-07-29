@@ -27,7 +27,7 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
-import { processSlowRepeatSave, handle } from './slowHandler.js';
+import { handle } from './slowHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -64,223 +64,6 @@ const baseCombatContext = {
   players: [{ name: casterName, gridX: 5, gridY: 10 }],
   placedItems: [],
 };
-
-// ─── processSlowRepeatSave ───
-
-describe('processSlowRepeatSave', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns null when no tracking data exists', async () => {
-    getRuntimeValue.mockReturnValue(null);
-
-    const result = await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-    expect(result).toBeNull();
-    expect(createSaveListener).not.toHaveBeenCalled();
-    expect(addEntry).not.toHaveBeenCalled();
-  });
-
-  it('creates save listener with correct parameters', async () => {
-    getRuntimeValue.mockReturnValue(true);
-    createSaveListener.mockReturnValue({
-      promptId: 'save-prompt-1',
-      promise: Promise.resolve({ success: true }),
-    });
-
-    await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-    expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
-      targetName,
-      saveType: 'WIS',
-      saveDc,
-      dcSuccess: 'none',
-      disadvantage: false,
-    });
-  });
-
-  it('calls addEntry with ability_use on repeat save', async () => {
-    getRuntimeValue.mockReturnValue(true);
-    createSaveListener.mockReturnValue({
-      promptId: 'save-prompt-entry',
-      promise: Promise.resolve({ success: true }),
-    });
-
-    await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-    expect(addEntry).toHaveBeenCalledWith(campaignName, {
-      type: 'ability_use',
-      characterName: casterName,
-      abilityName: 'Slow (repeat save)',
-      description: expect.stringContaining(targetName),
-      promptId: 'save-prompt-entry',
-    });
-  });
-
-  describe('successful repeat save', () => {
-    function setupSuccessPath(existingConditions = ['Slow'], existingEffects = []) {
-      createSaveListener.mockReturnValue({
-        promptId: 'save-prompt-success',
-        promise: Promise.resolve({ success: true }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === '_slow_Goblin') return true;
-        if (keyOrProp === 'activeConditions') return existingConditions;
-        if (keyOrProp === 'targetEffects') return existingEffects;
-        return [];
-      });
-    }
-
-    it('returns popup indicating target succeeded on WIS save', async () => {
-      setupSuccessPath();
-
-      const result = await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('succeeded on WIS save');
-      expect(result.payload.description).toContain(targetName);
-    });
-
-    it('removes slow condition keeping other conditions', async () => {
-      setupSuccessPath(['Slow', 'poisoned']);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        targetName,
-        'activeConditions',
-        ['poisoned'],
-        campaignName,
-      );
-    });
-
-    it('handles target with no conditions gracefully', async () => {
-      setupSuccessPath([]);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        targetName,
-        'activeConditions',
-        [],
-        campaignName,
-      );
-    });
-
-    it('clears tracking key on success', async () => {
-      setupSuccessPath(['Slow']);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        casterName,
-        '_slow_Goblin',
-        null,
-        campaignName,
-      );
-    });
-
-    it('removes slow-related target effects for caster only', async () => {
-      setupSuccessPath(['Slow'], [
-        { target: targetName, effect: 'no_reactions', source: casterName },
-        { target: targetName, effect: 'dex_save_disadvantage', source: casterName },
-        { target: targetName, effect: 'other_effect', source: 'OtherCaster' },
-      ]);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'campaign',
-        'targetEffects',
-        expect.arrayContaining([
-          expect.objectContaining({ effect: 'other_effect', source: 'OtherCaster' }),
-        ]),
-        campaignName,
-      );
-    });
-
-    it('posts condition removal log entry', async () => {
-      setupSuccessPath(['Slow']);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'condition',
-          action: 'removed',
-          characterName: targetName,
-          condition: 'Slow',
-          reason: 'Slow (successful repeat save)',
-        }),
-      );
-    });
-
-    it('calls addEntry with save_result on success', async () => {
-      setupSuccessPath(['Slow']);
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'save_result',
-          characterName: casterName,
-          rollType: 'save-slow',
-          targetName,
-          saveDc,
-          saveType: 'WIS',
-          success: true,
-        }),
-      );
-    });
-  });
-
-  describe('failed repeat save', () => {
-    function setupFailedRepeat() {
-      createSaveListener.mockReturnValue({
-        promptId: 'save-prompt-fail',
-        promise: Promise.resolve({ success: false }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp) => {
-        if (keyOrProp === '_slow_Goblin') return true;
-        return [];
-      });
-    }
-
-    it('returns popup indicating target failed WIS save', async () => {
-      setupFailedRepeat();
-
-      const result = await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('failed WIS save');
-      expect(result.payload.description).toContain('continues');
-    });
-
-    it('calls addEntry with save_result on failed repeat', async () => {
-      setupFailedRepeat();
-
-      await processSlowRepeatSave(casterName, targetName, saveDc, campaignName);
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'save_result',
-          characterName: casterName,
-          rollType: 'save-slow',
-          targetName,
-          saveDc,
-          saveType: 'WIS',
-          success: false,
-        }),
-      );
-    });
-  });
-});
 
 // ─── handle ───
 
@@ -440,19 +223,6 @@ describe('slowHandler.handle', () => {
       );
     });
 
-    it('sets tracking key for repeat save', async () => {
-      setupFailedSave();
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        casterName,
-        '_slow_Goblin',
-        true,
-        campaignName,
-      );
-    });
-
     it('adds expiration for slow condition', async () => {
       setupFailedSave();
 
@@ -464,25 +234,6 @@ describe('slowHandler.handle', () => {
         expect.arrayContaining([expect.objectContaining({ type: 'condition', condition: 'slow' })]),
         campaignName,
       );
-    });
-
-    it('stores all slow debuff target effects with dc and saveType', async () => {
-      setupFailedSave();
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const targetEffectsCall = setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'targetEffects',
-      );
-      expect(targetEffectsCall).toBeDefined();
-      const effects = targetEffectsCall[2];
-      const effectTypes = effects.map((e) => e.effect);
-      expect(effectTypes).toContain('no_reactions');
-      expect(effectTypes).toContain('dex_save_disadvantage');
-      expect(effectTypes).toContain('slow_repeat_save');
-      const repeatSaveEffect = effects.find((e) => e.effect === 'slow_repeat_save');
-      expect(repeatSaveEffect.dc).toBe(saveDc);
-      expect(repeatSaveEffect.saveType).toBe('WIS');
     });
 
     it('posts condition applied log entry', async () => {
@@ -532,7 +283,6 @@ describe('slowHandler.handle', () => {
       expect(result.payload.description).toContain('action or bonus action');
       expect(result.payload.description).toContain('one attack max');
       expect(result.payload.description).toContain('somatic spell failure');
-      expect(result.payload.description).toContain('Repeats WIS save');
     });
   });
 

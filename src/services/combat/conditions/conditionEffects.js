@@ -402,22 +402,13 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     saveType: null,
     saveDc: null,
     saveAbility: null,
-    conditionToApply: null,
-    conditionDuration: null,
-    repeatingSave: false,
-    hexSaveDisadvantage: false,
-    hexSaveDisadvantageAbility: null,
-    strCheckDisadvantage: false,
-    strCheckAdvantage: false,
-    slowRepeatSave: false,
-    slowNoReactions: false,
-    slowActionLimit: false,
-    slowSingleAttackLimit: false,
-    slowSomaticFailure: false,
-    slowDexSaveDisadvantage: false,
-    stinkingCloudRepeatSave: false,
-    webRepeatSave: false,
-    acPenalty: 0,
+     conditionToApply: null,
+     conditionDuration: null,
+     hexSaveDisadvantage: false,
+     hexSaveDisadvantageAbility: null,
+     strCheckDisadvantage: false,
+     strCheckAdvantage: false,
+     acPenalty: 0,
     rayOfEnfeebleDamageReduction: false,
     seeInvisibilityActive: false,
     wardingBondAcBonus: 0,
@@ -586,8 +577,6 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
           effects.slowActionLimit = true;
           effects.slowSingleAttackLimit = true;
           effects.slowSomaticFailure = true;
-          effects.targetAdvantageCount++;
-          effects.targetAdvantageReasons.push('Slow');
           // DEX save disadvantage from Slow
           if (!effects.saveDisadvantage.includes('dex')) {
             effects.saveDisadvantage.push('dex');
@@ -684,7 +673,6 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
       effects.saveAbility = te.saveAbility;
       effects.conditionToApply = te.condition;
       effects.conditionDuration = te.duration || 'until_start_of_next_turn';
-      effects.repeatingSave = !!te.repeatingSave;
     }
     // Handle mass_fear effect
     if (te.effect === 'mass_fear') {
@@ -721,43 +709,7 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
       effects.saveDc = te.saveDc;
       effects.saveAbility = 'CON';
       effects.conditionToApply = 'stunned';
-      effects.repeatingSave = true;
       effects.powerWordStun = true;
-    }
-    // Handle Sleep — repeating WIS save at end of target's turn for Incapacitated→Unconscious
-    if (te.effect === 'sleep_repeat_save') {
-      effects.saveType = te.saveType || 'WIS';
-      effects.saveDc = te.saveDc;
-      effects.saveAbility = 'WIS';
-      effects.conditionToApply = 'unconscious';
-      effects.repeatingSave = true;
-      effects.sleepRepeatSave = true;
-    }
-    // Handle Slow — repeating WIS save at end of target's turn, success ends spell
-    if (te.effect === 'slow_repeat_save') {
-      effects.saveType = te.saveType || 'WIS';
-      effects.saveDc = te.saveDc;
-      effects.saveAbility = 'WIS';
-      effects.repeatingSave = true;
-      effects.slowRepeatSave = true;
-    }
-    // Handle Stinking Cloud — repeating CON save at end of target's turn for Poisoned condition
-    if (te.effect === 'stinking_cloud_repeat_save') {
-      effects.saveType = te.saveType || 'CON';
-      effects.saveDc = te.saveDc;
-      effects.saveAbility = 'CON';
-      effects.conditionToApply = 'poisoned';
-      effects.repeatingSave = true;
-      effects.stinkingCloudRepeatSave = true;
-    }
-    // Handle Web — repeating DEX save when creature enters or starts turn in webs for Restrained condition
-    if (te.effect === 'web_repeat_save') {
-      effects.saveType = te.saveType || 'DEX';
-      effects.saveDc = te.saveDc;
-      effects.saveAbility = 'DEX';
-      effects.conditionToApply = 'restrained';
-      effects.repeatingSave = true;
-      effects.webRepeatSave = true;
     }
     // Handle Clairvoyant Combatant — target has Disadvantage on attacks against you, you have Advantage on attacks against target
     if (te.effect === 'clairvoyant_combatant') {

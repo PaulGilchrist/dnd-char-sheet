@@ -1,7 +1,7 @@
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { handle, processTashasLaughterRepeatSave } from './tashasLaughterHandler.js';
+import { handle } from './tashasLaughterHandler.js';
 import * as savePrompt from '../../common/savePrompt.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -208,25 +208,6 @@ describe('tashasLaughterHandler.handle', () => {
       );
     });
 
-    it('should set tracking and damage trigger on failed save', async () => {
-      setupFailedSaveMock();
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'TestCaster',
-        '_tashas_laughter_Goblin',
-        true,
-        campaignName,
-      );
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin',
-        'tashas_laughter_Goblin_damageTrigger',
-        true,
-        campaignName,
-      );
-    });
-
     it('should add expiration for concentration', async () => {
       setupFailedSaveMock();
 
@@ -243,33 +224,6 @@ describe('tashasLaughterHandler.handle', () => {
         campaignName,
       );
     });
-
-    it('should store and overwrite target effect for repeated saves', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-      mockGetRuntimeValue((_playerName, key) => {
-        if (key === 'activeConditions') return [];
-        if (key === 'targetEffects') return [
-          { target: 'Goblin', effect: 'tashas_laughter_repeat_save', source: 'TestCaster', dc: 12 },
-        ];
-        return null;
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'laughter-overwrite',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      // Find the setRuntimeValue call for targetEffects (campaignName as first arg)
-      const effectsCall = runtimeState.setRuntimeValue.mock.calls.find(
-        call => call[1] === 'targetEffects',
-      );
-      const effectsArg = effectsCall[2];
-      expect(effectsArg).toHaveLength(1);
-      expect(effectsArg[0].dc).toBe(15);
-    });
-  });
 
   describe('successful save handling', () => {
     function setupSuccessfulSaveMock() {
@@ -294,115 +248,4 @@ describe('tashasLaughterHandler.handle', () => {
     });
   });
 });
-
-// ── processTashasLaughterRepeatSave ────────────────────────────────
-
-describe('tashasLaughterHandler.processTashasLaughterRepeatSave', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it('should return null when no tracking exists', async () => {
-    runtimeState.getRuntimeValue.mockReturnValue(null);
-    const result = await processTashasLaughterRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-    expect(result).toBeNull();
-    expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
-  });
-
-  it('should create save listener with WIS save type and advantage', async () => {
-    runtimeState.getRuntimeValue.mockImplementation((caster, key) => {
-      if (key === '_tashas_laughter_Goblin') return true;
-      return [];
-    });
-    savePrompt.createSaveListener.mockReturnValue({
-      promptId: 'laughter-repeat-listener',
-      promise: Promise.resolve({ success: true }),
-    });
-
-    await processTashasLaughterRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-    expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
-      targetName: 'Goblin',
-      saveType: 'WIS',
-      saveDc: 15,
-      dcSuccess: 'none',
-      advantage: true,
-    });
-  });
-
-  describe('successful repeat save', () => {
-    function setupRepeatSaveSuccess() {
-      runtimeState.getRuntimeValue.mockImplementation((target, prop) => {
-        if (prop === 'activeConditions') return ['Incapacitated', 'Frightened', 'Prone'];
-        if (prop === '_tashas_laughter_Goblin') return true;
-        return [];
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'laughter-repeat-success',
-        promise: Promise.resolve({ success: true }),
-      });
-    }
-
-    it('should remove Prone and Incapacitated conditions preserving others', async () => {
-      setupRepeatSaveSuccess();
-
-      const result = await processTashasLaughterRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin',
-        'activeConditions',
-        ['Frightened'],
-        campaignName,
-      );
-      expect(result.payload.description).toContain('succeeded on WIS save');
-    });
-
-    it('should clear tracking, damage trigger, and target effect', async () => {
-      setupRepeatSaveSuccess();
-
-      await processTashasLaughterRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'TestCaster',
-        '_tashas_laughter_Goblin',
-        null,
-        campaignName,
-      );
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin',
-        'tashas_laughter_Goblin_damageTrigger',
-        false,
-        campaignName,
-      );
-
-      const effectsArg = runtimeState.setRuntimeValue.mock.calls.find(
-        call => call[1] === 'targetEffects',
-      )?.[2];
-      expect(effectsArg).not.toContainEqual(
-        expect.objectContaining({ target: 'Goblin', effect: 'tashas_laughter_repeat_save', source: 'TestCaster' }),
-      );
-    });
-  });
-
-  describe('failed repeat save', () => {
-    function setupRepeatSaveFail() {
-      runtimeState.getRuntimeValue.mockImplementation((caster, key) => {
-        if (key === '_tashas_laughter_Goblin') return true;
-        return [];
-      });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'laughter-repeat-fail',
-        promise: Promise.resolve({ success: false }),
-      });
-    }
-
-    it('should keep conditions and return failure popup', async () => {
-      setupRepeatSaveFail();
-
-      const result = await processTashasLaughterRepeatSave('TestCaster', 'Goblin', 15, campaignName);
-
-      expect(result.payload.description).toContain('failed WIS save');
-      expect(result.payload.description).toContain('remains Prone and Incapacitated');
-    });
-  });
 });

@@ -7,110 +7,6 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 
-/**
- * Process a repeated WIS save for a creature already Paralyzed by Hold Person/Monster.
- * Called at end of the affected creature's turn.
- * Returns { type, payload } for the popup, or null if no effect.
- */
-export async function processHoldMonsterRepeatSave(casterName, targetName, saveDc, spellName, campaignName) {
-    const trackingKey = getTrackingKey(targetName);
-    const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (!tracking) {
-        return null;
-    }
-
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'WIS',
-        saveDc,
-        dcSuccess: 'none',
-    });
-
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: spellName,
-        description: `${targetName} makes a WIS save (DC ${saveDc}) at end of turn (${spellName}).`,
-        promptId,
-    }).catch((e) => { console.error("[holdMonster] Error:", e); });
-
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        // Spell ends — remove Paralyzed, clear tracking
-        const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conds = Array.isArray(storedConds) ? storedConds : [];
-        setRuntimeValue(targetName, 'activeConditions', conds.filter(c => String(c).toLowerCase() !== 'paralyzed'), campaignName);
-        setRuntimeValue(casterName, trackingKey, null, campaignName);
-
-        // Clean up target effect
-        cleanupTargetEffect(casterName, targetName, campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-hold-monster',
-            targetName,
-            saveDc,
-            saveType: 'WIS',
-            success: true,
-            description: `${targetName} succeeded on WIS save. ${spellName} ends!`,
-        }).catch((e) => { console.error("[holdMonster] Error:", e); });
-
-        addEntry(campaignName, {
-            type: 'condition',
-            action: 'removed',
-            characterName: targetName,
-            condition: 'Paralyzed',
-            reason: `${spellName} (successful save)`,
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[holdMonster] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: spellName,
-                description: `${targetName} succeeded on WIS save. ${spellName} ends!`,
-            },
-        };
-    }
-
-    // Failed save — spell continues
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-hold-monster',
-        targetName,
-        saveDc,
-        saveType: 'WIS',
-        success: false,
-        description: `${targetName} failed WIS save. ${spellName} continues.`,
-    }).catch((e) => { console.error("[holdMonster] Error:", e); });
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: spellName,
-            description: `${targetName} failed WIS save. ${spellName} continues.`,
-        },
-    };
-}
-
-function getTrackingKey(targetName) {
-    return `_holdMonster_${targetName.replace(/\s+/g, '_')}`;
-}
-
-function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const cleaned = effects.filter(
-        te => !(te.target === targetName && te.effect === 'hold_monster_repeat_save' && te.source === casterName)
-    );
-    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
-}
-
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
@@ -149,14 +45,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 description: `No target selected. ${action.name} has no effect.`,
             },
         };
-    }
-
-    // Check if this target already has an active Hold Person/Monster effect (repeat save)
-    const trackingKey = getTrackingKey(targetName);
-    const existingTracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (existingTracking) {
-        // This is a repeated end-of-turn save
-        return await processHoldMonsterRepeatSave(casterName, targetName, dc, action.name, campaignName);
     }
 
     const { promptId, promise } = createSaveListener(campaignName, {
@@ -222,34 +110,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         appliedDamage: 0,
     });
 
-    // Set tracking for end-of-turn repeat saves
-    setRuntimeValue(casterName, trackingKey, true, campaignName);
-
     addExpiration(casterName, targetName, [
         { type: 'condition', condition: 'paralyzed' },
     ], campaignName);
-
-    // Store target effect for end-of-turn repeated saves
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const existingIdx = effects.findIndex(
-        te => te.target === targetName && te.effect === 'hold_monster_repeat_save'
-    );
-    const holdEffect = {
-        target: targetName,
-        effect: 'hold_monster_repeat_save',
-        source: casterName,
-        condition: 'paralyzed',
-        dc: dc,
-        saveType: 'WIS',
-        duration: 'concentration',
-    };
-    if (existingIdx >= 0) {
-        effects[existingIdx] = holdEffect;
-    } else {
-        effects.push(holdEffect);
-    }
-    setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
     addEntry(campaignName, {
         type: 'save_result',
@@ -259,7 +122,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         saveDc: dc,
         saveType: 'WIS',
         success: false,
-        description: `${targetName} failed WIS save against ${action.name} and is Paralyzed. At the end of each of its turns, it repeats the save.`,
+        description: `${targetName} failed WIS save against ${action.name} and is Paralyzed.`,
     }).catch((e) => { console.error("[holdMonster] Error:", e); });
 
     addEntry(campaignName, {
@@ -268,7 +131,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         characterName: targetName,
         condition: 'Paralyzed',
         reason: action.name,
-        note: `${targetName} is Paralyzed by ${action.name}. Must make WIS save at end of each turn. Success ends the spell.`,
+        note: `${targetName} is Paralyzed by ${action.name}.`,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[holdMonster] Error:", e); });
 
@@ -277,7 +140,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${targetName} failed WIS save and is Paralyzed. At the end of each of its turns, it repeats the save, ending the spell on itself on a success.`,
+            description: `${targetName} failed WIS save and is Paralyzed.`,
         },
     };
 }

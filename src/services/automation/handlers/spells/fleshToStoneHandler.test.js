@@ -31,7 +31,7 @@ vi.mock('../../common/targetResolver.js', () => ({
   resolveTarget: vi.fn(),
 }));
 
-import { handle, processFleshToStoneRepeatSave } from './fleshToStoneHandler.js';
+import { handle } from './fleshToStoneHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
@@ -69,222 +69,6 @@ const baseCombatContext = {
   players: [{ name: casterName, gridX: 5, gridY: 10 }],
   placedItems: [],
 };
-
-// ─── processFleshToStoneRepeatSave ───
-
-describe('processFleshToStoneRepeatSave', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns null when no tracking exists for the target', async () => {
-    getRuntimeValue.mockReturnValue(null);
-
-    const result = await processFleshToStoneRepeatSave(
-      casterName,
-      targetName,
-      15,
-      campaignName,
-    );
-
-    expect(result).toBeNull();
-    expect(createSaveListener).not.toHaveBeenCalled();
-  });
-
-  describe('successful repeat save', () => {
-    function setupSuccessPath(
-      tracking = [0, 0],
-      existingConditions = ['Restrained'],
-      existingEffects = [],
-    ) {
-      createSaveListener.mockReturnValue({
-        promptId: 'fts-success',
-        promise: Promise.resolve({ success: true }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === '_fleshToStone_Goblin') return tracking;
-        if (keyOrProp === 'activeConditions') return existingConditions;
-        if (keyOrProp === 'targetEffects') return existingEffects;
-        return [];
-      });
-    }
-
-    it('ends spell after 3 successes', async () => {
-      setupSuccessPath([2, 0]);
-
-      const result = await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Flesh to Stone ends');
-    });
-
-    it('cleans up target effect for this caster only', async () => {
-      setupSuccessPath([2, 0], ['Restrained'], [
-        { target: targetName, effect: 'flesh_to_stone_repeat_save', source: casterName },
-        { target: 'Other', effect: 'flesh_to_stone_repeat_save', source: 'OtherCaster' },
-      ]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      const targetEffectsCall = setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'targetEffects',
-      );
-      const effects = targetEffectsCall[2];
-      expect(effects).toEqual([
-        { target: 'Other', effect: 'flesh_to_stone_repeat_save', source: 'OtherCaster' },
-      ]);
-    });
-
-    it('posts condition removal log entry', async () => {
-      setupSuccessPath([2, 0]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'condition',
-          action: 'removed',
-          characterName: targetName,
-          condition: 'Restrained',
-          reason: 'Flesh to Stone ended (3 successful saves)',
-        }),
-      );
-    });
-
-    it('calls addEntry with save_result on success', async () => {
-      setupSuccessPath([2, 0]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'save_result',
-          characterName: casterName,
-          targetName,
-          saveDc: 15,
-          saveType: 'CON',
-          success: true,
-        }),
-      );
-    });
-  });
-
-  describe('failed repeat save', () => {
-    function setupFailedPath(
-      tracking = [0, 0],
-      existingConditions = ['Restrained'],
-    ) {
-      createSaveListener.mockReturnValue({
-        promptId: 'fts-fail',
-        promise: Promise.resolve({ success: false }),
-      });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === '_fleshToStone_Goblin') return tracking;
-        if (keyOrProp === 'activeConditions') return existingConditions;
-        return [];
-      });
-    }
-
-    it('petrifies after 3 failures', async () => {
-      setupFailedPath([0, 2]);
-
-      const result = await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Petrified');
-    });
-
-    it('cleans up target effect on petrification', async () => {
-      setupFailedPath([0, 2], ['Restrained'], [
-        { target: targetName, effect: 'flesh_to_stone_repeat_save', source: casterName },
-      ]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      const targetEffectsCall = setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'targetEffects',
-      );
-      expect(targetEffectsCall[2]).toEqual([]);
-    });
-
-    it('posts condition applied log entry for petrification', async () => {
-      setupFailedPath([0, 2]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'condition',
-          action: 'applied',
-          characterName: targetName,
-          condition: 'Petrified',
-          reason: 'Flesh to Stone (3 failed saves)',
-        }),
-      );
-    });
-
-    it('calls addEntry with save_result on failure', async () => {
-      setupFailedPath([0, 2]);
-
-      await processFleshToStoneRepeatSave(
-        casterName,
-        targetName,
-        15,
-        campaignName,
-      );
-
-      expect(addEntry).toHaveBeenCalledWith(
-        campaignName,
-        expect.objectContaining({
-          type: 'save_result',
-          characterName: casterName,
-          targetName,
-          saveDc: 15,
-          saveType: 'CON',
-          success: false,
-        }),
-      );
-    });
-  });
-});
 
 // ─── handle ───
 
@@ -444,19 +228,6 @@ describe('fleshToStoneHandler.handle', () => {
       );
     });
 
-    it('initializes tracking [0, 1] on failed save', async () => {
-      setupFailedSave();
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        casterName,
-        '_fleshToStone_Goblin',
-        [0, 1],
-        campaignName,
-      );
-    });
-
     it('adds restrained expiration on failed save', async () => {
       setupFailedSave();
 
@@ -469,31 +240,6 @@ describe('fleshToStoneHandler.handle', () => {
           { type: 'condition', condition: 'restrained' },
         ]),
         campaignName,
-      );
-    });
-
-    it('stores target effect for repeat saves', async () => {
-      setupFailedSave();
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const targetEffectsCall = setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'targetEffects',
-      );
-      const effects = targetEffectsCall[2];
-      const fleshEffect = effects.find(
-        (e) => e.effect === 'flesh_to_stone_repeat_save',
-      );
-      expect(fleshEffect).toEqual(
-        expect.objectContaining({
-          target: targetName,
-          effect: 'flesh_to_stone_repeat_save',
-          source: casterName,
-          condition: 'restrained',
-          saveType: 'CON',
-          duration: 'concentration',
-          dc: 15,
-        }),
       );
     });
 
@@ -619,30 +365,4 @@ describe('fleshToStoneHandler.handle', () => {
     });
   });
 
-  describe('repeat save delegation', () => {
-    it('delegates to processFleshToStoneRepeatSave when tracking exists', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'monster' } });
-      getRuntimeValue.mockImplementation((_caster, key) => {
-        if (key === '_fleshToStone_Goblin') return [0, 1];
-        return [];
-      });
-      createSaveListener.mockReturnValue({
-        promptId: 'fts-delegate',
-        promise: Promise.resolve({ success: false }),
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('failed CON save');
-      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
-        targetName,
-        saveType: 'CON',
-        saveDc: 15,
-        dcSuccess: 'none',
-      });
-    });
-  });
 });

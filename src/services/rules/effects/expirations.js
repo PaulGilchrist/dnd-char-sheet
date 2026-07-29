@@ -7,11 +7,7 @@ import { getCurrentCombatRound, getActiveCreatureName, getCombatSummary, loadCom
 import { addEntry } from '../../ui/logService.js';
 import { isWithinRange } from '../combat/rangeCheck.js';
 import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
-import { processSlowRepeatSave } from '../../automation/handlers/spells/slowHandler.js';
-import { processTashasLaughterRepeatSave } from '../../automation/handlers/spells/tashasLaughterHandler.js';
-
- const KEY = 'pendingExpirations';
-
+const KEY = 'pendingExpirations';
 
 function ensureArray(value, name) {
     if (!Array.isArray(value)) {
@@ -241,44 +237,6 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
             }
             if (cleanedTopple.length !== allTargetEffectsTopple.length) {
                 setRuntimeValue('campaign', 'targetEffects', cleanedTopple, campaignName);
-            }
-        }
-    }
-
-    // Process Slow repeat saves for affected creatures at start of their turn
-    if (activeName && playerStats) {
-        const slowTracking = getRuntimeValue(activeName, `_slow_${activeName.replace(/\s+/g, '_')}`, campaignName);
-        if (slowTracking) {
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName);
-            if (!Array.isArray(targetEffects)) {
-                console.error('expirations: expected targetEffects to be an array in slow handler for', campaignName);
-                throw new Error('Missing array: targetEffects in slow handler for ' + campaignName);
-            }
-            const slowEffect = targetEffects.find(
-                te => te.target === activeName && te.effect === 'slow_repeat_save'
-            );
-            if (slowEffect) {
-                processSlowRepeatSave(slowEffect.source, activeName, slowEffect.dc, campaignName).catch(e => {
-                    console.error('[expirations] Slow repeat save failed:', e);
-                });
-            }
-        }
-
-        // Process Tasha's Hideous Laughter repeat saves for affected creatures at start of their turn
-        const tashasTracking = getRuntimeValue(activeName, `_tashas_laughter_${activeName.replace(/\s+/g, '_')}`, campaignName);
-        if (tashasTracking) {
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName);
-            if (!Array.isArray(targetEffects)) {
-                console.error('expirations: expected targetEffects to be an array in tashas handler for', campaignName);
-                throw new Error('Missing array: targetEffects in tashas handler for ' + campaignName);
-            }
-            const tashasEffect = targetEffects.find(
-                te => te.target === activeName && te.effect === 'tashas_laughter_repeat_save'
-            );
-            if (tashasEffect) {
-                processTashasLaughterRepeatSave(tashasEffect.source, activeName, tashasEffect.dc, campaignName).catch(e => {
-                    console.error('[expirations] Tasha\'s Hideous Laughter repeat save failed:', e);
-                });
             }
         }
     }

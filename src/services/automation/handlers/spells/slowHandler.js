@@ -6,115 +6,6 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
-function getTrackingKey(targetName) {
-    return `_slow_${targetName.replace(/\s+/g, '_')}`;
-}
-
-function cleanupTargetEffect(casterName, targetName, campaignName) {
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const effects = Array.isArray(targetEffects) ? targetEffects : [];
-    const cleaned = effects.filter(
-        te => !(te.target === targetName && te.effect === 'slow_repeat_save' && te.source === casterName)
-    );
-    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
-}
-
-export async function processSlowRepeatSave(casterName, targetName, saveDc, campaignName) {
-    const trackingKey = getTrackingKey(targetName);
-    const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
-    if (!tracking) {
-        return null;
-    }
-
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'WIS',
-        saveDc,
-        dcSuccess: 'none',
-        disadvantage: false,
-    });
-
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: 'Slow (repeat save)',
-        description: `${targetName} makes a WIS save (DC ${saveDc}) at end of turn (Slow).`,
-        promptId,
-    }).catch((e) => { console.error("[slow] Error:", e); });
-
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        // Successful save — remove Slow conditions, clear tracking
-        const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conds = Array.isArray(storedConds) ? storedConds : [];
-        const filtered = conds.filter(c =>
-            String(c).toLowerCase() !== 'slow'
-        );
-        setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
-        setRuntimeValue(casterName, trackingKey, null, campaignName);
-        cleanupTargetEffect(casterName, targetName, campaignName);
-
-        // Remove slow-related target effects
-        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-        const filteredEffects = Array.isArray(allTargetEffects) ? allTargetEffects.filter(
-            te => !(te.target === targetName && te.effect === 'no_reactions' && te.source === casterName) &&
-                  !(te.target === targetName && te.effect === 'dex_save_disadvantage' && te.source === casterName)
-        ) : [];
-        setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
-
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-slow',
-            targetName,
-            saveDc,
-            saveType: 'WIS',
-            success: true,
-            description: `${targetName} succeeded on WIS save. Slow ends!`,
-        }).catch((e) => { console.error("[slow] Error:", e); });
-
-        addEntry(campaignName, {
-            type: 'condition',
-            action: 'removed',
-            characterName: targetName,
-            condition: 'Slow',
-            reason: 'Slow (successful repeat save)',
-            timestamp: Date.now(),
-        }).catch((e) => { console.error("[slow] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Slow',
-                description: `${targetName} succeeded on WIS save. Slow ends!`,
-            },
-        };
-    }
-
-    // Failed save — spell continues, keep tracking
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-slow',
-        targetName,
-        saveDc,
-        saveType: 'WIS',
-        success: false,
-        description: `${targetName} failed WIS save. Slow continues.`,
-    }).catch((e) => { console.error("[slow] Error:", e); });
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: 'Slow',
-            description: `${targetName} failed WIS save. Slow continues.`,
-        },
-    };
-}
-
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
@@ -212,10 +103,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 appliedDamage: 0,
             });
 
-            // Set tracking for end-of-turn repeat save
-            const trackingKey = getTrackingKey(targetName);
-            setRuntimeValue(casterName, trackingKey, true, campaignName);
-
             // Add expiration for concentration (up to 10 rounds = 1 minute)
             addExpiration(casterName, targetName, [
                 { type: 'condition', condition: 'slow' },
@@ -255,20 +142,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 chance: 25,
                 duration: 'concentration',
             };
-            const slowRepeatSaveEffect = {
-                target: targetName,
-                effect: 'slow_repeat_save',
-                source: casterName,
-                dc: dc,
-                saveType: 'WIS',
-                duration: 'concentration',
-            };
 
             // Remove existing slow effects from this caster for this target
             const existingFiltered = effects.filter(
                 te => !(te.target === targetName && te.source === casterName &&
                     ['no_reactions', 'dex_save_disadvantage',
-                     'action_limit', 'single_attack_limit', 'somatic_failure_chance', 'slow_repeat_save']
+                     'action_limit', 'single_attack_limit', 'somatic_failure_chance']
                         .includes(te.effect))
             );
 
@@ -279,7 +158,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 actionLimitEffect,
                 singleAttackEffect,
                 somaticFailureEffect,
-                slowRepeatSaveEffect,
             ];
             setRuntimeValue('campaign', 'targetEffects', allEffects, campaignName);
 
@@ -289,7 +167,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 characterName: targetName,
                 condition: 'Slow',
                 reason: 'Slow spell',
-                note: `${targetName} is affected by Slow: Speed halved, -2 AC penalty, disadvantage on DEX saves, no reactions, action OR bonus action (not both), one attack max, 25% somatic spell failure. Repeats WIS save at end of each turn.`,
+                note: `${targetName} is affected by Slow: Speed halved, -2 AC penalty, disadvantage on DEX saves, no reactions, action OR bonus action (not both), one attack max, 25% somatic spell failure.`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[slow] Error:", e); });
 
@@ -301,7 +179,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 saveDc: dc,
                 saveType: 'WIS',
                 success: false,
-                description: `${targetName} failed WIS save against Slow. Speed halved, -2 AC, disadvantage on DEX saves, no reactions, action/bonus action (not both), one attack max. Repeats save at end of each turn.`,
+                description: `${targetName} failed WIS save against Slow. Speed halved, -2 AC, disadvantage on DEX saves, no reactions, action/bonus action (not both), one attack max, and 25% somatic spell failure chance.`,
             }).catch((e) => { console.error("[slow] Error:", e); });
 
             results.push(`${targetName} is slowed.`);
@@ -309,7 +187,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const summary = affectedCount > 0
-        ? `Slow affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Affected creatures have Speed halved, -2 AC penalty, disadvantage on DEX saves, no reactions, action or bonus action (not both), one attack max, and 25% somatic spell failure chance. Repeats WIS save at end of each turn.`
+        ? `Slow affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Affected creatures have Speed halved, -2 AC penalty, disadvantage on DEX saves, no reactions, action or bonus action (not both), one attack max, and 25% somatic spell failure chance.`
         : `No creatures affected by Slow. ${savedCount} creature(s) saved.`;
 
     return {

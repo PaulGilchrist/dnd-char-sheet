@@ -83,7 +83,6 @@ function setupMocks(targetName, hp, existingConditions = [], existingEffects = [
   buildSaveDc.mockReturnValue(15);
   resolveTarget.mockResolvedValue({ target: { name: targetName } });
   getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-    if (key === '_powerWordStun_' + targetName.replace(/\s+/g, '_')) return null;
     if (key === 'activeConditions') return existingConditions;
     if (key === 'targetEffects') return existingEffects;
     return null;
@@ -186,7 +185,6 @@ describe('powerWordStunHandler.handle - target with 150 HP or fewer', () => {
     buildSaveDc.mockReturnValue(15);
     resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
     getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-      if (key === '_powerWordStun_Goblin') return null;
       if (key === 'activeConditions') return null;
       if (key === 'targetEffects') return [];
       return null;
@@ -200,54 +198,6 @@ describe('powerWordStunHandler.handle - target with 150 HP or fewer', () => {
     expect(condCall[2]).toEqual(['stunned']);
   });
 
-  it('should update existing target effect instead of duplicating', async () => {
-    getCombatContext.mockResolvedValue(lowHpCombatContext);
-    buildSaveDc.mockReturnValue(15);
-    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-      if (key === '_powerWordStun_Goblin') return null;
-      if (key === 'activeConditions') return [];
-      if (key === 'targetEffects') {
-        return [
-          {
-            target: 'Goblin',
-            effect: 'power_word_stun_repeat_save',
-            source: 'OldCaster',
-            dc: 12,
-            saveType: 'CON',
-          },
-        ];
-      }
-      return null;
-    });
-
-    await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-    const effectsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'targetEffects');
-    expect(effectsCalls.length).toBe(1);
-    const effects = effectsCalls[0][2];
-    expect(effects.length).toBe(1);
-    expect(effects[0].source).toBe(casterName);
-    expect(effects[0].dc).toBe(15);
-  });
-
-  it('should store the DC from buildSaveDc in the target effect', async () => {
-    getCombatContext.mockResolvedValue(lowHpCombatContext);
-    buildSaveDc.mockReturnValue(18);
-    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-      if (key === '_powerWordStun_Goblin') return null;
-      if (key === 'activeConditions') return [];
-      if (key === 'targetEffects') return [];
-      return null;
-    });
-
-    await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-    const effectsCall = setRuntimeValue.mock.calls.find(call => call[1] === 'targetEffects');
-    const effect = effectsCall[2][0];
-    expect(effect.dc).toBe(18);
-  });
 });
 
 describe('powerWordStunHandler.handle - target with more than 150 HP', () => {
@@ -306,7 +256,6 @@ describe('powerWordStunHandler.handle - target with more than 150 HP', () => {
     buildSaveDc.mockReturnValue(15);
     resolveTarget.mockResolvedValue({ target: { name: 'Dragon' } });
     getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-      if (key === '_powerWordStun_Dragon') return null;
       if (key === 'activeConditions') return ['frightened'];
       if (key === 'targetEffects') return [];
       return null;
