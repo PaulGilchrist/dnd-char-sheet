@@ -2,7 +2,7 @@ import { executeHandler } from '../../automation/index.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
-import { setRuntimeValue, getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 /**
  * Check whether a creature (by name) is a Beast.
