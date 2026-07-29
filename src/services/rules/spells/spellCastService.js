@@ -29,6 +29,7 @@ import { triggerResilientSphere } from '../features/resilientSphereService.js';
 import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
 import { triggerCharmPerson } from '../features/charmPersonService.js';
+import { triggerCharmMonster } from '../features/charmMonsterService.js';
 import { triggerRayOfEnfeeblement } from '../features/rayOfEnfeeblementService.js';
 import { triggerViciousMockeryForGeneric } from '../features/viciousMockeryService.js';
 import { endInvisibilityOnHostileAction } from '../features/invisibilityService.js';
@@ -438,7 +439,20 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Charm Person — single humanoid target WIS save or Charmed
         if (spell.name && spell.name.toLowerCase() === 'charm person') {
             const charmTarget = await getTargetInfo();
-            await triggerCharmPerson(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
+            const charmPersonResult = await triggerCharmPerson(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
+            if (charmPersonResult) {
+                return { automationPopup: charmPersonResult };
+            }
+            return;
+        }
+
+        // Charm Monster — single creature target WIS save or Charmed
+        if (spell.name && spell.name.toLowerCase() === 'charm monster') {
+            const charmTarget = await getTargetInfo();
+            const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
+            if (charmMonsterResult) {
+                return { automationPopup: charmMonsterResult };
+            }
             return;
         }
 

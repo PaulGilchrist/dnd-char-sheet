@@ -194,6 +194,7 @@ import { handle as handleFleshToStone } from './handlers/spells/fleshToStoneHand
 import { handle as handleHoldMonster } from './handlers/spells/holdMonsterHandler.js';
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
 import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandler.js';
+import { handle as handleCharmMonster } from './handlers/spells/charmMonsterHandler.js';
 import { handle as handleSleep } from './handlers/spells/sleepHandler.js';
 import { handle as handleSleepShake } from './handlers/spells/sleepShakeHandler.js';
 import { handle as handleGlobeOfInvulnerability } from './handlers/spells/globeOfInvulnerabilityHandler.js';
@@ -476,6 +477,7 @@ const HANDLER_MAP = {
         hold_monster: handleHoldMonster,
         friends: handleFriends,
         charm_person: handleCharmPerson,
+        charm_monster: handleCharmMonster,
         globe_of_invulnerability: handleGlobeOfInvulnerability,
         grease_area_save: handleGreaseAreaSave,
         web_area_save: handleWebAreaSave,
