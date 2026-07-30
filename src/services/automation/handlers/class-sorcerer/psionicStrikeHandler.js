@@ -118,17 +118,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     }
                 }
             }
-            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const newEffects = [...storedEffects, {
-                target: targetName,
-                source: 'Telekinetic Adept',
-                option: 'Push 10ft',
-                effect: 'push',
-                value: 10,
-                duration: 'until_start_of_next_turn',
-            }];
-            setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
             thrustResult = `${targetName} failed the ${saveType} save (DC ${saveDc}) — Prone + pushed 10ft.`;
+            await addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerName,
+                abilityName: 'Telekinetic Thrust',
+                description: `${playerName} pushed ${targetName} 10 feet away.`,
+                targetName: targetName,
+            }).catch(() => {});
         }
     }
 

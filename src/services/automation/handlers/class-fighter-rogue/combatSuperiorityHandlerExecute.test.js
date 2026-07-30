@@ -224,7 +224,7 @@ describe('executeAttackRiderManeuver', () => {
         );
 
         expect(result.payload.description).toContain('was pushed 15 feet');
-        expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
             expect.objectContaining({ effect: 'push', value: 15 }),
         ]), 'test-campaign');
     });

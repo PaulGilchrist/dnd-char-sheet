@@ -217,7 +217,7 @@ describe('telekineticShoveHandler.handle', () => {
   });
 
   describe('save result handling', () => {
-    it('applies push effect on failed save', async () => {
+    it('does not apply push effect on failed save', async () => {
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
       savePrompt.buildSaveDc.mockReturnValue(13);
       useRuntimeState.getRuntimeValue.mockReturnValue([]);
@@ -225,7 +225,7 @@ describe('telekineticShoveHandler.handle', () => {
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
         'campaign',
         'targetEffects',
         expect.arrayContaining([
@@ -241,7 +241,7 @@ describe('telekineticShoveHandler.handle', () => {
       );
     });
 
-    it('uses custom pushDistance in the push effect on failed save', async () => {
+    it('logs push on failed save without applying targetEffect', async () => {
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Orc' } });
       savePrompt.buildSaveDc.mockReturnValue(14);
       useRuntimeState.getRuntimeValue.mockReturnValue([]);
@@ -249,15 +249,10 @@ describe('telekineticShoveHandler.handle', () => {
 
       await handle(makeAction({ pushDistance: 15 }), makePlayerStats(), campaignName, null);
 
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
         'campaign',
         'targetEffects',
-        expect.arrayContaining([
-          expect.objectContaining({
-            target: 'Orc',
-            value: 15,
-          }),
-        ]),
+        expect.anything(),
         campaignName,
       );
     });

@@ -127,18 +127,14 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
     addCondition(combatContext, targetName, conditionDef, 0, null, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
     storage.set('combatSummary', combatContext, campaignName);
 
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const pushValue = option.value || 10;
-    const newEffect = {
-        target: targetName,
-        source: action.name,
-        option: option.name,
-        effect: 'push',
-        value: pushValue,
-        duration: 'until_start_of_next_turn',
-    };
-    const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: action.name,
+        description: `${playerStats.name} knocked ${targetName} Prone and pushed ${pushValue} feet away.`,
+        targetName: targetName,
+    }).catch(() => {});
 }
 
 function buildResultMessage(actionName, targetName, option, saveDc, saveType, success) {
@@ -150,7 +146,7 @@ function buildResultMessage(actionName, targetName, option, saveDc, saveType, su
 }
 
 function getEffectDescription(option) {
-    if (option.effect === 'prone_and_push') {
+    if (option.effect === 'prone_and_push' || option.effect === 'push') {
         return `${option.name} — target falls Prone and is pushed ${option.value || 10} ft away`;
     }
     return option.name;

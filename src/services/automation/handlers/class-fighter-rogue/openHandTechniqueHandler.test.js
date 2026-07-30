@@ -301,7 +301,7 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
       );
     });
 
-    it('preserves the option value field in the effect entry', async () => {
+    it('does not apply push_15ft as targetEffect', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ options: [{ name: 'Push Far', effect: 'push_15ft', value: 30 }] });
       const savePromise = Promise.resolve({ success: false, total: 8, roll: 5, saveBonus: 3 });
@@ -312,12 +312,10 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
         action, ps, campaignName, 'Goblin', 'Push Far', 13,
       );
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
         'campaign',
         'targetEffects',
-        expect.arrayContaining([
-          expect.objectContaining({ effect: 'push_15ft', value: 30 }),
-        ]),
+        expect.anything(),
         campaignName,
       );
     });
@@ -344,6 +342,10 @@ describe('openHandTechniqueHandler.applyOpenHandTechnique', () => {
       );
       expect(failResult.payload.description).toContain('Failure');
       expect(failResult.payload.description).toContain('target pushed 15 ft away');
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        description: expect.stringContaining('pushed'),
+      }));
     });
 
     it('builds an effect description for unknown effect types using the option name', async () => {

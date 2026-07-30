@@ -6,13 +6,6 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { checkOncePerTurn, markOncePerTurn } from '../../common/oncePerTurn.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 const MASTERY_EFFECTS = {
-    Push: {
-        label: 'Push (10 ft)',
-        description: 'Push the creature up to 10 feet straight away from you if it is Large or smaller.',
-        effect: 'push',
-        value: 10,
-        sizeLimit: 'large_or_smaller',
-    },
     Topple: {
         label: 'Topple (Prone)',
         description: 'Force the creature to make a Constitution saving throw or fall Prone.',
@@ -122,34 +115,6 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
     const mastery = MASTERY_EFFECTS[masteryName];
     if (!mastery) return null;
 
-    if (mastery.sizeLimit && targetName && masteryName === 'Push') {
-        const sizeOrder = ['Fine', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'];
-        const maxAllowedIndex = mastery.sizeLimit === 'large_or_smaller'
-            ? sizeOrder.indexOf('Large')
-            : mastery.sizeLimit === 'medium_or_smaller'
-                ? sizeOrder.indexOf('Medium')
-                : mastery.sizeLimit === 'one_size_larger'
-                    ? sizeOrder.indexOf(playerStats.size || 'Medium') + 1
-                    : sizeOrder.length;
-        const cs = await getCombatContext(campaignName);
-        if (cs) {
-            const target = cs.creatures?.find(c => c.name === targetName);
-            if (target) {
-                const targetSizeIndex = sizeOrder.indexOf(target.size || 'Medium');
-                if (targetSizeIndex > maxAllowedIndex) {
-                    return {
-                        type: 'popup',
-                        payload: {
-                            type: 'automation_info',
-                            name: masteryName,
-                            description: `${masteryName}: Target is ${target.size} (too large — only ${mastery.sizeLimit === 'large_or_smaller' ? 'Large or smaller' : mastery.sizeLimit === 'medium_or_smaller' ? 'Medium or smaller' : 'up to one size larger than you'} affected).`,
-                        },
-                    };
-                }
-            }
-        }
-    }
-
     // Check once-per-turn for Cleave
     if (mastery.oncePerTurn && masteryName === 'Cleave') {
         const skip = await checkOncePerTurn(masteryName, '_Cleave_UsedRound', playerStats.name, campaignName);
@@ -258,7 +223,6 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
 function buildMasteryDescription(masteryName, targetName) {
     const target = targetName || 'target';
     switch (masteryName) {
-        case 'Push': return `${masteryName} applied to ${target} — pushed up to 10 ft away.`;
         case 'Topple': return `${masteryName}: ready to force a CON save vs Prone.`;
         case 'Sap': return `${masteryName} applied to ${target} — Disadvantage on next attack roll.`;
         case 'Slow': return `${masteryName} applied to ${target} — Speed reduced by 10 ft.`;

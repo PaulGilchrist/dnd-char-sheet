@@ -124,28 +124,10 @@ button.creature-badge:disabled {
   color: #22c55e;
 }
 
-.creature-badge.effect-stealth-attack {
-  background-color: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
-  color: #8b5cf6;
-}
-
 .creature-badge.effect-auto-crit {
   background-color: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.5);
   color: #ef4444;
-}
-
-.creature-badge.effect-no-conc {
-  background-color: rgba(168, 85, 247, 0.2);
-  border-color: rgba(168, 85, 247, 0.5);
-  color: #a855f7;
-}
-
-.creature-badge.effect-auto-fail {
-  background-color: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
 }
 
 .creature-badge.effect-resist {

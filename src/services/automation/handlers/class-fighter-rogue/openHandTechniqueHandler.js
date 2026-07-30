@@ -147,6 +147,18 @@ export async function applyOpenHandTechnique(action, playerStats, campaignName, 
 async function applyOpenHandEffect(action, playerStats, campaignName, targetName, option) {
     if (!targetName) return;
 
+    // Push effects are instant — just log, no targetEffect
+    if (option.effect === 'push_15ft') {
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: action.name,
+            description: `${playerStats.name} pushed ${targetName} 15 feet away.`,
+            targetName: targetName,
+        }).catch(() => {});
+        return;
+    }
+
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const newEffect = {
         target: targetName,

@@ -167,11 +167,12 @@ function CreatureCard({
                 {creature.conditions?.map(cond => {
                     if (!cond || typeof cond !== 'object') return null;
                     const canRoll = creature.type === 'player' || isLocalhost
+                    const condCls = cond.key === 'invisible' ? 'effect-buff' : 'effect-condition'
                     return (
                         <CreatureBadge
                             key={cond.id || cond.key}
                             label={cond.dc ? `${cond.label} DC ${cond.dc}` : cond.label}
-                            cls='effect-condition'
+                            cls={condCls}
                             tooltip={cond.dc ? `${cond.label}\n\n${CONDITION_DESCRIPTIONS[cond.label] || ''}\n\nDC ${cond.dc} ${getAbilityLabel(cond.ability)}` : (CONDITION_DESCRIPTIONS[cond.label] || cond.label)}
                             onClick={canRoll ? () => onRollConditionSave(creature.name, cond) : undefined}
                             disabled={!canRoll}

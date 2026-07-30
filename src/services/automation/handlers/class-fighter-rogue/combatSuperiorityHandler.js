@@ -606,20 +606,13 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
             } else if (maneuver.effect === 'push') {
                 const pushDistance = maneuver.value || 15;
                 description += ` ${targetName} was pushed ${pushDistance} feet away.`;
-                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                const newEffect = {
-                    target: targetName,
-                    source: maneuver.name,
-                    option: maneuver.name,
-                    effect: 'push',
-                    value: pushDistance,
-                    duration: 'instant',
-                    saveType: maneuver.saveType,
-                    saveDc,
-                    saveAbility: maneuver.saveAbility,
-                };
-                const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+                await addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: maneuver.name,
+                    description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
+                    targetName: targetName,
+                }).catch(() => {});
             } else if (maneuver.effect === 'goad') {
                 description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
                 const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -655,7 +648,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
         } else if (maneuver.effect === 'disarm') {
             description += ` or drop one object it's holding`;
         } else if (maneuver.effect === 'push') {
-            description += ` or be pushed ${maneuver.value || 15} feet away`;
+            description += ` or be pushed ${maneuver.value || 15} feet away (no lingering effect)`;
         } else if (maneuver.effect === 'goad') {
             description += ` or have Disadvantage on attacks against targets other than you`;
         } else if (maneuver.effect === 'prone') {
@@ -1738,20 +1731,13 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
             } else if (maneuver.effect === 'push') {
                 const pushDistance = maneuver.value || 15;
                 description += ` ${targetName} was pushed ${pushDistance} feet away.`;
-                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                const newEffect = {
-                    target: targetName,
-                    source: maneuver.name,
-                    option: maneuver.name,
-                    effect: 'push',
-                    value: pushDistance,
-                    duration: 'instant',
-                    saveType: maneuver.saveType,
-                    saveDc,
-                    saveAbility: maneuver.saveAbility,
-                };
-                const updatedEffects = [...storedEffects, newEffect];
-                setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+                await addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: maneuver.name,
+                    description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
+                    targetName: targetName,
+                }).catch(() => {});
             } else if (maneuver.effect === 'goad') {
                 description += ` ${targetName} has Disadvantage on attacks against targets other than you.`;
                 const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -1787,7 +1773,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
         } else if (maneuver.effect === 'disarm') {
             description += ` or drop one object it's holding`;
         } else if (maneuver.effect === 'push') {
-            description += ` or be pushed ${maneuver.value || 15} feet away`;
+            description += ` or be pushed ${maneuver.value || 15} feet away (no lingering effect)`;
         } else if (maneuver.effect === 'goad') {
             description += ` or have Disadvantage on attacks against targets other than you`;
         } else {

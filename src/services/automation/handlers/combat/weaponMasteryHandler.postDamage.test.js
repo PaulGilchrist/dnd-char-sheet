@@ -134,7 +134,7 @@ describe('applyPostDamageMasteryEffects', () => {
         });
         vi.mocked(automationService.collectWeaponMastery).mockReturnValue({
             baseMastery: 'Vex',
-            extraMasteries: ['Push', 'Sap'],
+            extraMasteries: ['Sap'],
         });
 
         await applyPostDamageMasteryEffects(
@@ -147,7 +147,6 @@ describe('applyPostDamageMasteryEffects', () => {
         const calls = vi.mocked(logService.addEntry).mock.calls;
         const abilityNames = calls.map(c => c[1].abilityName);
         expect(abilityNames).toContain('Vex');
-        expect(abilityNames).toContain('Push');
         expect(abilityNames).toContain('Sap');
     });
 

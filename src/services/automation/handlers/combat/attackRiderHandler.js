@@ -16,14 +16,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     // Expand push_or_prone effect into options (used by Shield Master 2024)
     if (options.length === 0 && auto.effect === 'push_or_prone') {
-        const dist = (auto.distance || '5 ft').replace(/[^0-9]/g, '');
         options = [
-            {
-                name: 'Push',
-                effect: 'push',
-                value: parseInt(dist, 10) || 5,
-                sizeLimit: auto.sizeLimit || null,
-            },
             {
                 name: 'Prone',
                 effect: 'prone',
@@ -416,7 +409,6 @@ export async function applyRiderOption(action, playerStats, campaignName, target
         if (opt.noOpportunityAttacks) desc += ' — target cannot make Opportunity Attacks until the start of your next turn';
         if (opt.effect === 'next_attack_advantage') desc += ` — the next attack against ${targetName || 'target'} gains +${opt.value || '5'}`;
         if (opt.effect === 'push_15ft') desc += ' — target pushed 15 ft away';
-        if (opt.effect === 'push') desc += ` — target pushed ${opt.value || 10} ft away`;
         if (opt.effect === 'speed_reduction') desc += ' — target Speed reduced by 15 ft';
         if (opt.effect === 'sudden_strike') desc += ' — make another attack against a different creature within 5 ft';
         if (opt.effect === 'mass_fear') desc += ' — target and creatures within 10 ft make WIS save or be Frightened';
@@ -493,6 +485,28 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
         }
 
         return resolveMassFear(campaignName, playerStats.name, targetName, option, playerStats, mapName);
+    }
+
+    // Push effect: just log and popup, no targetEffect (push is instant)
+    if (option.effect === 'push') {
+        const pushDistance = option.value || 10;
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: action.name,
+            description: `${playerStats.name} pushed ${targetName} ${pushDistance} feet away.`,
+            targetName: targetName,
+        }).catch(() => {});
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                automationType: auto.type,
+                description: `${targetName} was pushed ${pushDistance} feet away.`,
+                automation: auto,
+            },
+        };
     }
 
     // Default: apply standard rider effect
@@ -639,8 +653,6 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
         desc += ' — target must make a Constitution save or be Unconscious for 1 minute (repeats save at end of each turn)';
     } else if (option.effect === 'blinded') {
         desc += ' — target must make a Dexterity save or be Blinded until end of its next turn';
-    } else if (option.effect === 'push') {
-        desc += ` — target pushed ${option.value || 10} ft away`;
     } else if (option.effect === 'speed_reduction') {
         desc += ` — target's Speed reduced by ${option.value || 10} ft until the start of your next turn`;
     } else if (option.noOpportunityAttacks) {

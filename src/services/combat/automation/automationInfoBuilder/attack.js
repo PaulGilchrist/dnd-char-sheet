@@ -16,15 +16,6 @@ export const attackHandlers = {
             }
         }
         let options = auto.options || [];
-        if (options.length === 0 && !Array.isArray(auto.effects) && auto.effect === 'push') {
-            const dist = (auto.distance || '10 ft').replace(/[^0-9]/g, '');
-            options = [{
-                name: 'Push',
-                effect: 'push',
-                value: parseInt(dist, 10) || 10,
-                sizeLimit: auto.sizeLimit || null,
-            }];
-        }
         if (options.length === 0 && !Array.isArray(auto.effects) && auto.effect === 'reduce_speed') {
             const speedMatch = (auto.speedReduction || '10 ft').match(/(\d+)/);
             options = [{
@@ -34,14 +25,7 @@ export const attackHandlers = {
             }];
         }
         if (options.length === 0 && !Array.isArray(auto.effects) && auto.effect === 'push_or_prone') {
-            const dist = (auto.distance || '5 ft').replace(/[^0-9]/g, '');
             options = [
-                {
-                    name: 'Push',
-                    effect: 'push',
-                    value: parseInt(dist, 10) || 5,
-                    sizeLimit: auto.sizeLimit || null,
-                },
                 {
                     name: 'Prone',
                     effect: 'prone',
@@ -50,9 +34,6 @@ export const attackHandlers = {
                     saveAbility: auto.saveAbility || 'STR',
                 },
             ];
-            if (auto.oncePerTurn) {
-                options[1].saveDc = auto.saveDc || 'ability';
-            }
         }
         if (options.length === 0 && Array.isArray(auto.effects)) {
             options = auto.effects.map(effect => {
@@ -63,15 +44,6 @@ export const attackHandlers = {
                         effect: 'damage_bonus',
                         damageExpression: dice,
                         damageType: effect.damageType || '',
-                    };
-                }
-                if (effect.option === 'push') {
-                    const dist = (effect.distance || '10 ft').replace(/[^0-9]/g, '');
-                    return {
-                        name: effect.name || 'Push',
-                        effect: 'push',
-                        value: parseInt(dist, 10) || 10,
-                        sizeLimit: effect.sizeLimit || null,
                     };
                 }
                 if (effect.option === 'prone') {

@@ -229,11 +229,12 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
           const title = meta.dc ? CONDITION_DESCRIPTIONS[label] || label : (CONDITION_DESCRIPTIONS[label] || label)
           const onClick = hasSave ? () => handleConditionSave(key) : null
 
+          const condCls = key === 'invisible' ? 'effect-buff' : 'effect-condition'
           return (
             <CreatureBadge
               key={key}
               label={displayText}
-              cls='effect-condition'
+              cls={condCls}
               tooltip={title}
               onClick={onClick}
               disabled={!hasSave}

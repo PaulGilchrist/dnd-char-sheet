@@ -40,7 +40,7 @@ function makeAction(overrides = {}) {
         description: 'Apply a weapon mastery effect.',
         automation: {
             type: 'mastery_rider',
-            masteries: ['Vex', 'Push', 'Topple', 'Sap', 'Slow', 'Cleave', 'Nick', 'Graze'],
+            masteries: ['Vex', 'Topple', 'Sap', 'Slow', 'Cleave', 'Nick', 'Graze'],
             ...overrides.automation,
         },
         ...overrides,
@@ -73,8 +73,8 @@ describe('weaponMasteryHandler', () => {
     });
 
     describe('MASTERY_EFFECTS', () => {
-        it('should define all 8 mastery effects', () => {
-            const expectedKeys = ['Push', 'Topple', 'Sap', 'Slow', 'Vex', 'Cleave', 'Nick', 'Graze'];
+        it('should define all 7 mastery effects', () => {
+            const expectedKeys = ['Topple', 'Sap', 'Slow', 'Vex', 'Cleave', 'Nick', 'Graze'];
             expect(Object.keys(MASTERY_EFFECTS)).toEqual(expectedKeys);
         });
     });
@@ -97,7 +97,7 @@ describe('weaponMasteryHandler', () => {
                     playerStats: expect.any(Object),
                     campaignName: 'campaign',
                     targetName: 'Ogre',
-                    availableMasteries: ['Vex', 'Push', 'Topple', 'Sap', 'Slow', 'Cleave', 'Nick', 'Graze'],
+                    availableMasteries: ['Vex', 'Topple', 'Sap', 'Slow', 'Cleave', 'Nick', 'Graze'],
                 }),
             });
         });
@@ -153,33 +153,6 @@ describe('weaponMasteryHandler', () => {
         it('should return null for an unknown mastery name', async () => {
             const result = await applyMasteryEffect('Bash', makePlayerStats(), 'campaign', 'Goblin');
             expect(result).toBeNull();
-        });
-
-        // ── Push ────────────────────────────────────────────────────
-
-        it('should apply Push for targets within size limit', async () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue([]);
-            vi.mocked(damageUtils.getCombatContext).mockResolvedValue(makeCombatContext([{ name: 'Goblin', size: 'Medium' }]));
-
-            const result = await applyMasteryEffect('Push', makePlayerStats(), 'campaign', 'Goblin');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.name).toBe('Push');
-            expect(result.payload.description).toContain('Push applied');
-        });
-
-        it('should reject Push when target is too large', async () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue([]);
-            vi.mocked(damageUtils.getCombatContext).mockResolvedValue(
-                makeCombatContext([{ name: 'Ogre', size: 'Huge' }])
-            );
-
-            const result = await applyMasteryEffect('Push', makePlayerStats(), 'campaign', 'Ogre');
-
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toContain('too large');
-            expect(result.payload.description).toContain('Huge');
         });
 
         // ── Slow ──────────────────────────────────────────────────────

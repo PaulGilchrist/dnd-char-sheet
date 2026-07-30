@@ -142,7 +142,8 @@ describe('attackRiderHandler - rider effect descriptions', () => {
         });
         const result = await applyRiderOption(action, makePlayerStats(), 'campaign', 'Goblin', ['Push']);
 
-        expect(result.payload.description).toContain('pushed 10 ft away');
+        expect(result.payload.description).toContain('pushed 10 feet away');
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects', expect.anything());
     });
 
     it('should include push_15ft description', async () => {

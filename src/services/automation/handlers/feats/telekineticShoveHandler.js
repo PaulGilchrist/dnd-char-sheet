@@ -1,6 +1,5 @@
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -30,20 +29,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const saveResult = await promise;
     const success = saveResult.success;
 
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-
     if (!success) {
-        const newEffect = {
-            target: targetName,
-            source: action.name,
-            effect: 'push',
-            value: pushDistance,
-            direction: 'toward_or_away',
-            duration: 'immediate',
-        };
-        const updatedEffects = [...storedEffects, newEffect];
-        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
-
         addEntry(campaignName, {
             type: 'save_result',
             characterName: playerStats.name,
