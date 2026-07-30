@@ -23,6 +23,7 @@ vi.mock('../../ui/utils.js', () => ({
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
+  getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 // ── Imports ─────────────────────────────────────────────────────

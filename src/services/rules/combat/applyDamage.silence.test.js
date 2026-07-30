@@ -11,6 +11,7 @@ import * as silenceService from '../../rules/features/silenceService.js';
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 vi.mock('../../dice/diceRoller.js', () => ({

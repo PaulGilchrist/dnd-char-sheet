@@ -1,4 +1,4 @@
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue, getStore } from '../../../hooks/runtime/useRuntimeState.js';
 import storage from '../../ui/storage.js';
 import { rollD20 } from '../../dice/diceRoller.js';
 import utils from '../../ui/utils.js';
@@ -224,8 +224,17 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
     if (isPlayer) {
        const storedCurrentHp = getRuntimeValue(creature.name, 'currentHitPoints');
        if (storedCurrentHp == null) {
-           console.error(`[applyDamage] Arcane Ward: currentHitPoints not found for ${creature.name}`);
-           throw new Error(`Arcane Ward: currentHitPoints not found for ${creature.name}`);
+           const store = getStore(creature.name);
+           const storeKeys = [...store.keys()];
+           console.error(`[applyDamage] currentHitPoints not found for "${creature.name}"`, {
+               creatureNameChars: JSON.stringify(creature.name),
+               campaignName,
+               storeKeys,
+               creatureType: creature.type,
+               rawDamage,
+               finalDamage,
+           });
+           throw new Error(`currentHitPoints not found for ${JSON.stringify(creature.name)}`);
        }
 
        // Temp HP absorbs damage first

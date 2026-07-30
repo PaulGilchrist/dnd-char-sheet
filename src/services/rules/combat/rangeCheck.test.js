@@ -11,6 +11,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     if (key === '__campaign__' && prop === 'campaignName') return 'test-campaign';
     return null;
   }),
+  getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 describe('rangeCheck', () => {

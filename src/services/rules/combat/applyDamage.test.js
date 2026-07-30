@@ -11,6 +11,7 @@ vi.mock('../../dice/diceRoller.js', () => ({
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 vi.mock('../../ui/storage.js', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
@@ -589,7 +590,7 @@ describe('applyDamageToTarget', () => {
       stubPlayerRuntime(null);
       const player = createPlayerCreature('Monk');
       const cs = makeCombatSummary([player]);
-      await expect(applyDamageToTarget(cs, 'Monk', 5, ['Bludgeoning'], 'TestCampaign', [createMinimalCharacter('Monk')])).rejects.toThrow('Arcane Ward: currentHitPoints not found for Monk');
+      await expect(applyDamageToTarget(cs, 'Monk', 5, ['Bludgeoning'], 'TestCampaign', [createMinimalCharacter('Monk')])).rejects.toThrow('currentHitPoints not found for "Monk"');
     });
 
     it('dispatches combat-summary-updated for player damage', async () => {

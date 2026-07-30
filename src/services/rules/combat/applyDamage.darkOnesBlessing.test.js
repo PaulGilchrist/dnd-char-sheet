@@ -8,6 +8,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 vi.mock('../../../hooks/useAllySelection.js', () => ({

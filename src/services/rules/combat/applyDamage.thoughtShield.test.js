@@ -26,6 +26,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
+    getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
 vi.mock('../../ui/storage.js', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
