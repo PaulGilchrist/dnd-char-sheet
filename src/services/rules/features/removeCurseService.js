@@ -4,6 +4,10 @@ export async function triggerRemoveCurse(spell, metaCtx, playerStats, campaignNa
     const isRemoveCurse = (spell.name || '').toLowerCase() === 'remove curse';
     if (!isRemoveCurse) return null;
 
+    if (metaCtx?.targetName) {
+        return null;
+    }
+
     const action = {
         name: 'Remove Curse',
         automation: {

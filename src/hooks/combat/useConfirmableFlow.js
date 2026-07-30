@@ -1,23 +1,11 @@
 import { useState, useCallback, useRef } from 'react'
 import { addEntry } from '../../services/ui/logService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
-import { incrementFreeCastResource } from '../../services/rules/spells/spellPreparationService.js'
 
-const FREE_CAST_SPELLS = [
-  'bane', 'bless', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
-  'mage armor', 'protection from energy', 'resistance',
-  'shield of faith', 'magic missile'
-];
+export function rollbackSpellSlot(playerName, spellLevel, playerStats, campaignName) {
+  if (spellLevel <= 0) return;
 
-export function rollbackSpellSlot(playerName, spellName, spellLevel, playerStats, campaignName) {
   const isWarlock = playerStats.class?.name === 'Warlock';
-  const isFreeCast = spellName && FREE_CAST_SPELLS.some(name => (spellName || '').toLowerCase() === name);
-
-  if (isFreeCast) {
-    incrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName);
-    return;
-  }
-
   if (isWarlock) {
     for (let lv = spellLevel; lv <= 9; lv++) {
       const slotKey = `spell_slots_level_${lv}`;
@@ -34,7 +22,7 @@ export function rollbackSpellSlot(playerName, spellName, spellLevel, playerStats
     const current = getRuntimeValue(playerName, baseKey);
     const max = (playerStats.spellAbilities && playerStats.spellAbilities[baseKey]) || 0;
     const available = current != null ? current : max;
-    if (available >= 0) {
+    if (available > 0) {
       setRuntimeValue(playerName, baseKey, available + 1, campaignName);
     }
   }
@@ -103,7 +91,7 @@ export function useConfirmableFlow(playerStats, campaignName) {
         timestamp: Date.now(),
       }).catch(() => {});
 
-      rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName);
+      rollbackSpellSlot(playerStats.name, pending.spellLevel || 0, playerStats, campaignName);
     };
   }, [playerStats, campaignName]);
 

@@ -57,11 +57,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 }
 
 export async function applyRemoveCurse(action, playerStats, campaignName, mapName, result) {
-    if (!result || !result.targetName) {
+    const targetName = typeof result === 'string' ? result : (result?.targetName || (Array.isArray(result) ? result[0] : result));
+    if (!targetName) {
         return null;
     }
-
-    const targetName = result.targetName;
     const removedItems = [];
 
     // Remove cursed buffs

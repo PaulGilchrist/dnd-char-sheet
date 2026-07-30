@@ -103,11 +103,11 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
+        name: 'Hold Person',
+        level: 2,
         concentration: true,
         damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
+        dc: { dc_type: 'WIS', dc_success: 'half' },
       };
       const cs = {
         creatures: [{ name: 'Elara', concentration: null }],
@@ -118,7 +118,7 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
-      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Bane', 10, null);
+      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Hold Person', 10, null);
       expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', cs, mockCampaignName);
     });
 
@@ -126,11 +126,11 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
+        name: 'Hold Person',
+        level: 2,
         concentration: true,
         damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
+        dc: { dc_type: 'WIS', dc_success: 'half' },
       };
       vi.mocked(getCombatSummary).mockReturnValue(null);
 
@@ -169,11 +169,11 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
+        name: 'Hold Person',
+        level: 2,
         concentration: true,
         damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
+        dc: { dc_type: 'WIS', dc_success: 'half' },
       };
       const cs = {
         creatures: [{ name: 'Elara', concentration: { spell: 'Hold Monster' } }],
@@ -187,21 +187,21 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       expect(breakConcentration).toHaveBeenCalledWith(cs, 'Elara');
       expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', cs, mockCampaignName);
-      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Bane', 10, null);
+      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Hold Person', 10, null);
     });
 
     it('does not break concentration when recasting the same spell (concentration refresh)', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
+        name: 'Hold Person',
+        level: 2,
         concentration: true,
         damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
+        dc: { dc_type: 'WIS', dc_success: 'half' },
       };
       const cs = {
-        creatures: [{ name: 'Elara', concentration: { spell: 'Bane' } }],
+        creatures: [{ name: 'Elara', concentration: { spell: 'Hold Person' } }],
       };
       vi.mocked(getCombatSummary).mockReturnValue(cs);
 
@@ -220,11 +220,11 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
+        name: 'Hold Person',
+        level: 2,
         concentration: true,
         damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
+        dc: { dc_type: 'WIS', dc_success: 'half' },
       };
       const cs = {
         creatures: [

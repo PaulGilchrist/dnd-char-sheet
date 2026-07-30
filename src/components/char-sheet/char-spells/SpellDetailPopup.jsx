@@ -88,7 +88,7 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
     return applicable.length > 0 ? Math.max(...applicable) : null;
   }, [isCantrip, charDmg, slotDmg, playerLevel]);
 
-  const handleCast = () => {
+  const handleCast = async () => {
     if (!canCast) return;
     const metaCtx = { overchannel: useOverchannel };
     if (isDispelMagicAsBonusAction) {
@@ -96,17 +96,32 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
       metaCtx.dispelAbilityCheckBonus = profBonus;
     }
 
+    let castSpell = spell;
+    if (isCantrip && cantripAutoLevel) {
+      castSpell = { ...spell, level: cantripAutoLevel, baseLevel: 0 };
+    }
+
+    // Cantrips: prepareSpellCast handles concentration and baseLevel
     if (isCantrip) {
-      const modifiedSpell = cantripAutoLevel ? { ...spell, level: cantripAutoLevel, baseLevel: 0 } : { ...spell, baseLevel: 0 };
-      onCast(modifiedSpell, metaCtx);
+      const result = await prepareSpellCast(castSpell, metaCtx, {
+        playerName: playerStats.name,
+        playerStats,
+        campaignName,
+        isUpcast: false,
+        upcastLevel: undefined,
+        usePsionicPayment: false,
+        usePsychicDamage: false,
+        freeCastAuthorized,
+      });
+      onCast(result.modifiedSpell, result.metaCtx);
       return;
     }
 
-    const isUpcast = isUpcastable && Number(selectedUpcastLvl) !== spell.level;
+    const isUpcast = isUpcastable && Number(selectedUpcastLvl) !== castSpell.level;
     const upcastLevel = isUpcast ? Number(selectedUpcastLvl) : undefined;
 
     (async () => {
-      const result = await prepareSpellCast(spell, metaCtx, {
+      const result = await prepareSpellCast(castSpell, metaCtx, {
         playerName: playerStats.name,
         playerStats,
         campaignName,

@@ -35,6 +35,8 @@ vi.mock('../../../services/ui/storage.js', () => ({
   default: { set: vi.fn() },
 }));
 
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
+
 const baseMockPlayerStats = {
   name: 'Elara',
   level: 5,
@@ -98,7 +100,7 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
     vi.mocked(storageService.default.set).mockReturnValue();
   });
 
-  it('calls onCast with modified cantrip (baseLevel: 0)', () => {
+  it('calls onCast with modified cantrip (baseLevel: 0)', async () => {
     const onCast = vi.fn();
     const cantrip = {
       ...baseMockSpell,
@@ -108,13 +110,14 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
     renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast });
 
     fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+    await flushPromises();
     expect(onCast).toHaveBeenCalledTimes(1);
     const modifiedSpell = onCast.mock.calls[0][0];
     expect(modifiedSpell.level).toBe(0);
     expect(modifiedSpell.baseLevel).toBe(0);
   });
 
-  it('calls onCast with cantrip auto-level when playerLevel prop allows higher damage', () => {
+  it('calls onCast with cantrip auto-level when playerLevel prop allows higher damage', async () => {
     const onCast = vi.fn();
     const cantrip = {
       name: 'Fire Bolt',
@@ -135,13 +138,14 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
     renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 5 });
 
     fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+    await flushPromises();
     expect(onCast).toHaveBeenCalledTimes(1);
     const modifiedSpell = onCast.mock.calls[0][0];
     expect(modifiedSpell.level).toBe(5);
     expect(modifiedSpell.baseLevel).toBe(0);
   });
 
-  it('calls onCast with cantrip at lowest level when no character level range matches', () => {
+  it('calls onCast with cantrip at lowest level when no character level range matches', async () => {
     const onCast = vi.fn();
     const cantrip = {
       name: 'Fire Bolt',
@@ -160,6 +164,7 @@ describe('SpellDetailPopup - handleCast: Cantrip casting', () => {
     renderPopup(cantrip, baseMockPlayerStats, mockCampaignName, { onCast, playerLevel: 3 });
 
     fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
+    await flushPromises();
     expect(onCast).toHaveBeenCalledTimes(1);
     const modifiedSpell = onCast.mock.calls[0][0];
     // No applicable levels (all >= 5, playerLevel is 3), so cantripAutoLevel is null
