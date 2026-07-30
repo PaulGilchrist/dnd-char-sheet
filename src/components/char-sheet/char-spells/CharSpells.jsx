@@ -49,6 +49,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     });
     const [selectedSpell, setSelectedSpell] = React.useState(null);
     const [pendingGreaterRestorationTarget, setPendingGreaterRestorationTarget] = React.useState(null);
+    const [pendingLesserRestorationTarget, setPendingLesserRestorationTarget] = React.useState(null);
     const [showHexAbilityModal, setShowHexAbilityModal] = React.useState(false);
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     const [pendingSimpleMetamagic, setPendingSimpleMetamagic] = React.useState(null);
@@ -558,8 +559,8 @@ return (
 
                       return null;
                     })()}
-                    {pendingLesserRestoration && (() => {
-                      const loadTargetData = async (targetName) => {
+                    {(() => {
+                      const getConditionsForTarget = async (targetName) => {
                         const conditions = getRuntimeValue(targetName, 'activeConditions') || [];
                         let csConditions = [];
                         try {
@@ -572,33 +573,67 @@ return (
                           }
                         } catch { /* ignore */ }
                         const allConditions = [...new Set([...conditions, ...csConditions])];
-                        const ALLOWED_CONDITIONS = [{ id: 'blinded' }, { id: 'deafened' }, { id: 'paralyzed' }, { id: 'poisoned' }];
                         const conditionMatches = (c, targetCondition) =>
                           (typeof c === 'string' ? c.toLowerCase() : '').trim() === (typeof targetCondition === 'string' ? targetCondition.toLowerCase() : '').trim();
+                        const ALLOWED_CONDITIONS = ['blinded', 'deafened', 'paralyzed', 'poisoned'];
                         return ALLOWED_CONDITIONS
-                          .filter(c => allConditions.some(a => conditionMatches(a, c.id)))
-                          .map(c => ({ id: c.id, label: `${c.id.charAt(0).toUpperCase() + c.id.slice(1)} condition`, selectionData: { condition: c.id } }));
+                          .filter(c => allConditions.some(cond => conditionMatches(cond, c)))
+                          .map(c => ({ value: `condition:${c}`, label: `${c.charAt(0).toUpperCase() + c.slice(1)} condition` }));
                       };
-                      return (
-                        <TargetWithCheckboxesPopup
-                          spell={{ name: pendingLesserRestoration.spellName, level: pendingLesserRestoration.spellLevel || 0 }}
-                          playerStats={playerStats}
-                          campaignName={campaignName}
-                          creatureTargets={pendingLesserRestoration.creatureTargets}
-                          range={pendingLesserRestoration.range}
-                          onConfirm={handleLesserRestorationConfirm}
-                          onSkip={handleLesserRestorationSkip}
-                          loadTargetData={loadTargetData}
-                          icon="fa-solid fa-hand-holding-medical"
-                          title="Lesser Restoration"
-                          school="Abjuration"
-                          defaultLevel={2}
-                          description="Choose a creature within range and select one condition to remove. This spell can end one condition on the target: Blinded, Deafened, Paralyzed, or Poisoned."
-                          loadTargetData={loadTargetData}
-                          noItemsMessage="No applicable conditions found on this target"
-                          confirmLabel="Cast Lesser Restoration"
-                        />
-                      );
+
+                      const handleTargetSelected = async (targetName) => {
+                        const conditions = await getConditionsForTarget(targetName);
+                        setPendingLesserRestorationTarget({ targetName, conditions });
+                      };
+
+                      const handleConditionSelected = (conditionValue) => {
+                        const condition = conditionValue.split(':')[1];
+                        handleLesserRestorationConfirm({ targetName: pendingLesserRestorationTarget.targetName, condition });
+                        setPendingLesserRestorationTarget(null);
+                      };
+
+                      const handleConditionSkip = () => {
+                        setPendingLesserRestorationTarget(null);
+                      };
+
+                      const handleNoConditionsDismiss = () => {
+                        handleLesserRestorationSkip();
+                        setPendingLesserRestorationTarget(null);
+                      };
+
+                      if (pendingLesserRestoration && !pendingLesserRestorationTarget) {
+                        return (
+                          <SecondaryTargetModal
+                            title="Lesser Restoration"
+                            targets={pendingLesserRestoration.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                            onTargetSelected={handleTargetSelected}
+                            onSkip={handleLesserRestorationSkip}
+                            description={`Choose a creature within <strong>${pendingLesserRestoration.range}</strong>. You'll select one condition to remove.`}
+                            confirmLabel="Cast Lesser Restoration"
+                            confirmIcon="fa-hand-holding-medical"
+                          />
+                        );
+                      }
+
+                      if (pendingLesserRestorationTarget) {
+                        const hasConditions = pendingLesserRestorationTarget.conditions.length > 0;
+                        return (
+                          <SecondaryTargetModal
+                            title="Lesser Restoration"
+                            targets={pendingLesserRestorationTarget.conditions.map(c => ({ value: c.value, label: c.label }))}
+                            onTargetSelected={handleConditionSelected}
+                            onSkip={hasConditions ? handleConditionSkip : handleNoConditionsDismiss}
+                            description={hasConditions
+                              ? `Choose one condition to remove from ${pendingLesserRestorationTarget.targetName}.`
+                              : `No removable conditions found on ${pendingLesserRestorationTarget.targetName}.`}
+                            confirmLabel="Remove Condition"
+                            confirmIcon="fa-hand-holding-medical"
+                            hideConfirm={!hasConditions}
+                          />
+                        );
+                      }
+
+                      return null;
                     })()}
                     {pendingRemoveCurse && (() => {
                       const loadTargetData = async (targetName) => {

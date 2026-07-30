@@ -115,18 +115,13 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Greater Invisibility",
-    "Greater Restoration",
     "Lesser Restoration",
-    "Hypnotic Pattern",
-    "Summon Aberration",
-    "Summon Beast",
-    "Summon Celestial",
-    "Summon Construct",
-    "Summon Elemental",
-    "Summon Fey",
-    "Summon Fiend",
-    "Summon Undead"
+    "Power Word Fortify",
+    "Power Word Heal",
+    "Ray of Enfeeblement",
+    "Regenerate",
+    "Remove Curse",
+    "Resistance"
   ],
   "magicInitiateInstances": [
     {

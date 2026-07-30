@@ -104,6 +104,15 @@ export async function applyLesserRestoration(action, playerStats, campaignName, 
         timestamp: Date.now(),
     });
 
+    addEntry(campaignName, {
+        type: 'spell_effect',
+        characterName: playerStats.name,
+        spellName: action.name,
+        targetName,
+        effects: [`${conditionToRemove} condition removed`],
+        timestamp: Date.now(),
+    }).catch((e) => { console.error("[lesserRestoration] Error:", e); });
+
     return {
         type: 'popup',
         payload: {

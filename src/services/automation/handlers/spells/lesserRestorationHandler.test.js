@@ -288,6 +288,27 @@ describe('lesserRestorationHandler.applyLesserRestoration', () => {
       }));
     });
 
+    it('should call addEntry with spell_effect on successful removal', async () => {
+      getCombatContext.mockResolvedValue({ creatures: [] });
+      getRuntimeValue.mockReturnValue(['Blinded']);
+
+      await applyLesserRestoration(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Ally1', condition: 'Blinded' },
+      );
+
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'spell_effect',
+        characterName: 'TestCleric',
+        spellName: 'Lesser Restoration',
+        targetName: 'Ally1',
+        effects: ['Blinded condition removed'],
+      }));
+    });
+
     it('should not log when condition removal fails', async () => {
       getCombatContext.mockResolvedValue({ creatures: [] });
       getRuntimeValue.mockReturnValue(['Poisoned']);
