@@ -121,7 +121,8 @@
     "Regenerate",
     "Remove Curse",
     "Resistance",
-    "Power Word Stun"
+    "Power Word Stun",
+    "Cure Wounds"
   ],
   "magicInitiateInstances": [
     {

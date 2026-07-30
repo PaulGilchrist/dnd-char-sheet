@@ -320,7 +320,7 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
         timestamp: expect.any(Number),
       });
       await config.verify(automation);
-      expect(onExecute).toHaveBeenCalled();
+      expect(onExecute).not.toHaveBeenCalled();
       expect(result.current[config.pendingKey]).toBeNull();
     });
   }

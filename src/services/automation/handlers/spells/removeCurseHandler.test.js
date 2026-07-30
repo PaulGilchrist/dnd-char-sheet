@@ -177,6 +177,36 @@ describe('removeCurseHandler.handle', () => {
       expect(selfTarget.hasCurse).toBe(true);
     });
 
+    it('should report hasCurse for creatures with cursed condition in activeConditions', async () => {
+      getCombatContext.mockResolvedValue(makeCombatContext());
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions' && name === 'Goblin') return ['cursed'];
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const goblinTarget = result.payload.targets.find(t => t.name === 'Goblin');
+      expect(goblinTarget.hasCurse).toBe(true);
+    });
+
+    it('should report hasCurse for self with cursed condition in activeConditions', async () => {
+      getCombatContext.mockResolvedValue(makeCombatContext());
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions' && name === 'TestCaster') return ['cursed'];
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const selfTarget = result.payload.targets.find(t => t.isSelf);
+      expect(selfTarget.hasCurse).toBe(true);
+    });
+
     it('should pass range from automation config', async () => {
       getCombatContext.mockResolvedValue(makeCombatContext());
       getRuntimeValue.mockImplementation(() => []);
@@ -388,6 +418,117 @@ describe('removeCurseHandler.applyRemoveCurse', () => {
       );
 
       expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'attunement', expect.anything(), campaignName);
+    });
+  });
+
+  describe('cursed condition removal', () => {
+    it('should remove cursed condition from activeConditions', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions') return ['cursed'];
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      const result = await applyRemoveCurse(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Goblin' },
+      );
+
+      expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', [], campaignName);
+      expect(result.payload.description).toContain('Cursed condition');
+    });
+
+    it('should remove cursed condition metadata from activeConditionMeta', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions') return ['cursed'];
+        if (prop === 'activeConditionMeta') return { cursed: { dc: 15, ability: 'con' } };
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      await applyRemoveCurse(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Goblin' },
+      );
+
+      expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditionMeta', {}, campaignName);
+    });
+
+    it('should log condition removed entry when cursed condition is found', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions') return ['cursed'];
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      await applyRemoveCurse(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Goblin' },
+      );
+
+      expect(addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'condition',
+          action: 'removed',
+          characterName: 'Goblin',
+          condition: 'Cursed',
+          reason: 'Remove Curse',
+        }),
+      );
+    });
+
+    it('should not call setRuntimeValue for conditions when no cursed condition exists', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions') return ['blinded'];
+        if (prop === 'activeBuffs') return [];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      await applyRemoveCurse(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Goblin' },
+      );
+
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.anything(), campaignName);
+    });
+
+    it('should remove both cursed condition and cursed buffs together', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'activeConditions') return ['cursed'];
+        if (prop === 'activeBuffs') return [{ type: 'cursed', name: 'Cursed Sword' }];
+        if (prop === 'attunement') return [];
+        return [];
+      });
+
+      const result = await applyRemoveCurse(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+        { targetName: 'Goblin' },
+      );
+
+      expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', [], campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeBuffs', [], campaignName);
+      expect(result.payload.description).toContain('Cursed condition');
+      expect(result.payload.description).toContain('Curse');
     });
   });
 

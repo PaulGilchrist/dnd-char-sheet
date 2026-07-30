@@ -28,10 +28,6 @@ import { confirmRegenerate } from '../../services/rules/features/regenerateServi
 import { prepareSpellCast, isFreeCastAuthorized } from '../../services/rules/spells/spellPreparationService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
 
-async function executeSpellWithSlot(spell, metaCtx, onExecute) {
-  onExecute(spell, metaCtx);
-}
-
 function getCreatureTargets(excludeName, campaignName, characters = []) {
   const cs = getCombatSummary(campaignName);
   if (cs?.creatures) {
@@ -673,55 +669,47 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   }, [pendingMultiTarget, playerStats, campaignName, onExecute, cfClearPending]);
 
   const handleAidConfirm = createConfirmHandler('aid', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyAidEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'aid', range: pending.range, maxTargets: pending.maxTargets } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleAidSkip = createSkipHandler('aid', (pending) => pending.creatureTargets);
 
   const handleBaneConfirm = createConfirmHandler('bane', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyBaneEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'bane', range: pending.range, maxTargets: pending.maxTargets } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleBaneSkip = createSkipHandler('bane', (pending) => pending.creatureTargets);
 
   const handleBlessConfirm = createConfirmHandler('bless', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyBlessEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'bless', range: pending.range, maxTargets: pending.maxTargets } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleBlessSkip = createSkipHandler('bless', (pending) => pending.creatureTargets);
 
   const handleSlowConfirm = createConfirmHandler('slow', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     const action = {
       name: pending.spellName,
       spell: pending.spell,
       automation: { type: 'slow', range: pending.range },
-      metaCtx: { targets },
+      metaCtx: { targets: result },
     };
     await executeHandler(action, playerStats, campaignName, null, null);
   }, (pending) => pending.creatureTargets);
@@ -729,51 +717,44 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleSlowSkip = createSkipHandler('slow', (pending) => pending.creatureTargets);
 
   const handleHasteConfirm = createConfirmHandler('haste', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyHaste(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'haste' } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleHasteSkip = createSkipHandler('haste', (pending) => pending.creatureTargets);
 
   const handleInvisibilityConfirm = createConfirmHandler('invisibility', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyInvisibility(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'invisibility' } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleInvisibilitySkip = createSkipHandler('invisibility', (pending) => pending.creatureTargets);
 
   const handleGreaterInvisibilityConfirm = createConfirmHandler('greaterInvisibility', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyGreaterInvisibility(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'greater_invisibility' } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleGreaterInvisibilitySkip = createSkipHandler('greaterInvisibility', (pending) => pending.creatureTargets);
 
   const handleHealConfirm = createConfirmHandler('heal', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
+    const targetName = result.targetName;
     if (!targetName) return;
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await triggerHeal(
       { name: pending.spellName, spell: pending.spell, level: pending.spellLevel },
       { targetName },
@@ -791,14 +772,11 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     cfClearPending('passWithoutTrace');
 
-    const targets = result || [];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
-
     addEntry(campaignName, {
       type: 'spell',
       characterName: playerStats.name,
-      targetName: targets?.[0] || null,
-      targets: targets,
+      targetName: result?.[0] || null,
+      targets: result || [],
       spellName: pending.spellName,
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
@@ -810,34 +788,29 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
 
     if (popup && setPopupHtml) {
       setPopupHtml(popup.payload);
     }
-  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml, onExecute]);
+  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml]);
 
   const handlePassWithoutTraceSkip = createSkipHandler('passWithoutTrace', (pending) => pending.creatureTargets);
 
   const handleHeroesFeastConfirm = createConfirmHandler('heroesFeast', async (pending, result) => {
-    const targets = Array.isArray(result) ? result : [result];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
     await applyHeroesFeastEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'heroes_feast', range: pending.range, maxTargets: pending.maxTargets } },
       playerStats,
       campaignName,
       null,
-      targets
+      result
     );
   }, (pending) => pending.creatureTargets);
 
   const handleHeroesFeastSkip = createSkipHandler('heroesFeast', (pending) => pending.creatureTargets);
 
   const handleGreaterRestorationConfirm = createConfirmHandler('greaterRestoration', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    if (!targetName) return;
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await confirmGreaterRestoration(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'greater_restoration', range: pending.range } },
       playerStats,
@@ -873,9 +846,6 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   };
 
   const handleLesserRestorationConfirm = createConfirmHandler('lesserRestoration', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    if (!targetName) return;
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await applyLesserRestorationEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'lesser_restoration', range: pending.range } },
       playerStats,
@@ -888,22 +858,21 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleLesserRestorationSkip = createSkipHandler('lesserRestoration', (pending) => pending.creatureTargets);
 
   const handleRemoveCurseConfirm = createConfirmHandler('removeCurse', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
-    await confirmRemoveCurse(
+    const popup = await confirmRemoveCurse(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'remove_curse', range: pending.range } },
       playerStats,
       campaignName,
       null,
       result
     );
+    if (popup?.payload && setPopupHtml) {
+      setPopupHtml(popup.payload);
+    }
   }, (pending) => pending.creatureTargets);
 
   const handleRemoveCurseSkip = createSkipHandler('removeCurse', (pending) => pending.creatureTargets);
 
   const handleMageArmorConfirm = createConfirmHandler('mageArmor', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await applyMageArmorEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'mage_armor', range: pending.range } },
       playerStats,
@@ -916,8 +885,6 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleMageArmorSkip = createSkipHandler('mageArmor', (pending) => pending.creatureTargets);
 
   const handleShieldOfFaithConfirm = createConfirmHandler('shieldOfFaith', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await applyShieldOfFaithEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'shield_of_faith', range: pending.range } },
       playerStats,
@@ -930,8 +897,6 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleShieldOfFaithSkip = createSkipHandler('shieldOfFaith', (pending) => pending.creatureTargets);
 
   const handleProtectionFromEnergyConfirm = createConfirmHandler('protectionFromEnergy', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await applyProtectionFromEnergyHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_energy', damageTypes: pending.damageTypes } },
       playerStats,
@@ -944,8 +909,6 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleProtectionFromEnergySkip = createSkipHandler('protectionFromEnergy', (pending) => pending.creatureTargets);
 
   const handleResistanceConfirm = createConfirmHandler('resistance', async (pending, result) => {
-    const targetName = result.targetName || (Array.isArray(result) ? result[0] : result);
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
     await applyResistanceEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'damage_reduction', reductionExpression: '1d4', damageTypes: [], trigger: 'damage_taken_of_chosen_resistance_type' } },
       playerStats,
@@ -963,14 +926,11 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     cfClearPending('globe');
 
-    const targets = result || [];
-    await executeSpellWithSlot(pending.spell, { targets }, onExecute);
-
     addEntry(campaignName, {
       type: 'spell',
       characterName: playerStats.name,
-      targetName: targets?.[0] || null,
-      targets: targets,
+      targetName: result?.[0] || null,
+      targets: result || [],
       spellName: pending.spellName,
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
@@ -981,14 +941,14 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       name: pending.spellName,
       spell: pending.spell,
       automation: { type: 'globe_of_invulnerability', range: pending.range },
-      metaCtx: { creatures: targets },
+      metaCtx: { creatures: result },
     };
     const popup = await executeHandler(action, playerStats, campaignName, null);
 
     if (popup && setPopupHtml) {
       setPopupHtml(popup.payload);
     }
-  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml, onExecute]);
+  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml]);
 
   const handleGlobeSkip = createSkipHandler('globe', (pending) => pending.creatureTargets);
 
@@ -997,10 +957,8 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     if (!pending) return;
     cfClearPending('regenerate');
 
-    const targetName = result?.targetName || (Array.isArray(result) ? result[0] : result);
+    const targetName = result?.targetName;
     if (!targetName) return;
-
-    await executeSpellWithSlot(pending.spell, { targetName }, onExecute);
 
     const popup = await confirmRegenerate(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'regenerate', range: pending.range } },
@@ -1013,7 +971,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     if (popup && setPopupHtml) {
       setPopupHtml(popup.payload);
     }
-  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml, onExecute]);
+  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml]);
 
   const handleRegenerateSkip = createSkipHandler('regenerate', (pending) => pending.creatureTargets);
 

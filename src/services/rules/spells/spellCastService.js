@@ -358,9 +358,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     // Skip spells with automation.effects — those have AoE/single-target effects handled below
     // Must come before generic healing path so spells like Mass Heal (which has heal_at_slot_level)
     // get routed to their automation handler instead of the single-target generic healer
-    // Skip remove_curse — has dedicated handler that handles target selection + effect application
-    const hasDedicatedHandler = spell.name && (spell.name.toLowerCase() === 'remove curse');
-    if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success && !hasDedicatedHandler) {
+    if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success) {
         const action = {
             name: spell.name,
             spell: spell,

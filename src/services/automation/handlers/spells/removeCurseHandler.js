@@ -18,13 +18,18 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
+    const hasConditionCurse = (name) => {
+        const conditions = getRuntimeValue(name, 'activeConditions') || [];
+        return conditions.some(c => String(c).toLowerCase() === 'cursed');
+    };
+
     const creatureTargets = combatSummary.creatures
         .filter(c => c.name !== playerStats.name)
         .map(c => {
             const activeBuffs = getRuntimeValue(c.name, 'activeBuffs') || [];
             const cursedBuffs = activeBuffs.filter(b => b.type === 'cursed' || b.cursed);
             const attunement = getRuntimeValue(c.name, 'attunement') || [];
-            const hasCurse = cursedBuffs.length > 0 || attunement.length > 0;
+            const hasCurse = cursedBuffs.length > 0 || attunement.length > 0 || hasConditionCurse(c.name);
             return {
                 name: c.name,
                 hasCurse: hasCurse,
@@ -36,7 +41,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const selfBuffs = getRuntimeValue(playerStats.name, 'activeBuffs') || [];
     const selfCursedBuffs = selfBuffs.filter(b => b.type === 'cursed' || b.cursed);
     const selfAttunement = getRuntimeValue(playerStats.name, 'attunement') || [];
-    const selfHasCurse = selfCursedBuffs.length > 0 || selfAttunement.length > 0;
+    const selfHasCurse = selfCursedBuffs.length > 0 || selfAttunement.length > 0 || hasConditionCurse(playerStats.name);
 
     const allTargets = [
         { name: playerStats.name, hasCurse: selfHasCurse, cursedBuffs: selfCursedBuffs, attunement: selfAttunement, isSelf: true },
@@ -57,10 +62,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 }
 
 export async function applyRemoveCurse(action, playerStats, campaignName, mapName, result) {
-    const targetName = typeof result === 'string' ? result : (result?.targetName || (Array.isArray(result) ? result[0] : result));
-    if (!targetName) {
+    if (!result || !result.targetName) {
         return null;
     }
+
+    const targetName = result.targetName;
     const removedItems = [];
 
     // Remove cursed buffs
@@ -81,6 +87,31 @@ export async function applyRemoveCurse(action, playerStats, campaignName, mapNam
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[removeCurse] Error:", e); });
         }
+    }
+
+    // Remove cursed condition (applied via GM EffectAdder)
+    const activeConditions = getRuntimeValue(targetName, 'activeConditions') || [];
+    const hasCurseCondition = activeConditions.some(c => String(c).toLowerCase() === 'cursed');
+    if (hasCurseCondition) {
+        const filteredConditions = activeConditions.filter(c => String(c).toLowerCase() !== 'cursed');
+        setRuntimeValue(targetName, 'activeConditions', filteredConditions, campaignName);
+
+        const conditionMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+        if (conditionMeta.cursed) {
+            const remainingMeta = { ...conditionMeta };
+            delete remainingMeta.cursed;
+            setRuntimeValue(targetName, 'activeConditionMeta', remainingMeta, campaignName);
+        }
+
+        removedItems.push('Cursed condition');
+        addEntry(campaignName, {
+            type: 'condition',
+            action: 'removed',
+            characterName: targetName,
+            condition: 'Cursed',
+            reason: 'Remove Curse',
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[removeCurse] Error:", e); });
     }
 
     // Break attunement to cursed magic items
