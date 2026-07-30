@@ -24,6 +24,10 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
 }));
 
+vi.mock('./combatData.js', () => ({
+  loadCombatSummary: vi.fn(() => null),
+}));
+
 // ── Imports ─────────────────────────────────────────────────────
 
 import {
@@ -391,5 +395,99 @@ describe('loadEncounterToInitiative', () => {
     const result = await loadEncounterToInitiative([createMonster('Goblin')], chars, 'TestCampaign');
 
     expect(result.combatSummary.creatures).toHaveLength(2);
+  });
+});
+
+// ── Tests for getNextUniqueMonsterName ──────────────────────────
+
+import { getNextUniqueMonsterName } from './encounterToInitiative.js';
+
+describe('getNextUniqueMonsterName', () => {
+  it('returns base name when no numbered versions exist', () => {
+    const creatures = [];
+    expect(getNextUniqueMonsterName('Goblin', creatures)).toBe('Goblin 1');
+  });
+
+  it('returns base name 1 when only unnumbered base name exists', () => {
+    const creatures = [{ name: 'Goblin' }];
+    expect(getNextUniqueMonsterName('Goblin', creatures)).toBe('Goblin 1');
+  });
+
+  it('returns next number after highest existing number', () => {
+    const creatures = [{ name: 'Goblin 1' }, { name: 'Goblin 2' }];
+    expect(getNextUniqueMonsterName('Goblin', creatures)).toBe('Goblin 3');
+  });
+
+  it('handles non-sequential numbers', () => {
+    const creatures = [{ name: 'Goblin 1' }, { name: 'Goblin 5' }];
+    expect(getNextUniqueMonsterName('Goblin', creatures)).toBe('Goblin 6');
+  });
+
+  it('does not interfere with similarly-named creatures', () => {
+    const creatures = [{ name: 'Goblin 1' }, { name: 'Goblin King' }];
+    expect(getNextUniqueMonsterName('Goblin', creatures)).toBe('Goblin 2');
+  });
+
+  it('handles empty name', () => {
+    const creatures = [];
+    expect(getNextUniqueMonsterName('', creatures)).toBe(' 1');
+  });
+
+  it('handles special regex characters in name', () => {
+    const creatures = [{ name: 'Goblin (Elite)' }, { name: 'Goblin (Elite) 1' }];
+    expect(getNextUniqueMonsterName('Goblin (Elite)', creatures)).toBe('Goblin (Elite) 2');
+  });
+});
+
+// ── Tests for addMonstersToInitiative ───────────────────────────
+
+import { addMonstersToInitiative } from './encounterToInitiative.js';
+import { loadCombatSummary } from './combatData.js';
+
+describe('addMonstersToInitiative', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadCombatSummary.mockResolvedValue(null);
+  });
+
+  it('adds monsters to existing combatSummary', async () => {
+    loadCombatSummary.mockResolvedValue({ round: 1, creatures: [{ name: 'Player 1', type: 'player' }] });
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+    const monsters = [createMonster('Goblin')];
+
+    const result = await addMonstersToInitiative(monsters, [], 'TestCampaign');
+
+    const npcs = result.creatures.filter((c) => c.type === 'npc');
+    expect(npcs).toHaveLength(1);
+    expect(npcs[0].name).toBe('Goblin 1');
+  });
+
+  it('stores monsterIndex on created creatures', async () => {
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+    const monsters = [{ index: 'goblin', name: 'Goblin', qty: 1, hit_points: 7, armor_class: 13 }];
+
+    const result = await addMonstersToInitiative(monsters, [], 'TestCampaign');
+
+    const npc = result.creatures.find((c) => c.type === 'npc');
+    expect(npc.monsterIndex).toBe('goblin');
+  });
+
+  it('uses unique names when monsters already exist', async () => {
+    loadCombatSummary.mockResolvedValue({
+      round: 1,
+      creatures: [
+        { name: 'Goblin 1', type: 'npc' },
+        { name: 'Goblin 2', type: 'npc' },
+      ],
+    });
+
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+    const monsters = [createMonster('Goblin')];
+
+    const result = await addMonstersToInitiative(monsters, [], 'TestCampaign');
+
+    const goblins = result.creatures.filter((c) => c.name.startsWith('Goblin'));
+    expect(goblins).toHaveLength(3);
+    expect(goblins.map(c => c.name)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
   });
 });

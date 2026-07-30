@@ -1,6 +1,12 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+}));
+
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+
 import {
   normalizeCurrency,
   formatCurrencyString,
@@ -254,5 +260,102 @@ describe('generateLootSuggestions', () => {
     ]);
     expect(result.totalEncounterXp).toBe(100);
     expect(Array.isArray(result.lootEntries)).toBe(true);
+  });
+});
+
+// ── Tests for generateLootFromCombatSummary ─────────────────────
+
+import { generateLootFromCombatSummary } from './lootGenerator.js';
+
+describe('generateLootFromCombatSummary', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue(createMockResponse([]));
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns empty when combatSummary is null', async () => {
+    const result = await generateLootFromCombatSummary(null, [], 'TestCampaign');
+    expect(result).toEqual({ lootEntries: [], totalEncounterXp: 0 });
+  });
+
+  it('returns empty when creatures is missing', async () => {
+    const result = await generateLootFromCombatSummary({ creatures: null }, [], 'TestCampaign');
+    expect(result).toEqual({ lootEntries: [], totalEncounterXp: 0 });
+  });
+
+  it('excludes player-summoned creatures from loot calculation', async () => {
+    global.fetch.mockResolvedValue(createMockResponse([
+      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
+      { index: 'orc', name: 'Orc', xp: 200, challenge_rating: 1/4 },
+    ]));
+
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') {
+        return [
+          { target: 'Goblin 1', source: 'Druid', effect: 'summoned' },
+        ];
+      }
+      return null;
+    });
+
+    const combatSummary = {
+      creatures: [
+        { name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' },
+        { name: 'Orc 1', type: 'npc', monsterIndex: 'orc' },
+      ],
+    };
+    const characters = [{ name: 'Druid' }, { name: 'Wizard' }];
+
+    const result = await generateLootFromCombatSummary(combatSummary, characters, 'TestCampaign');
+
+    expect(result.totalEncounterXp).toBe(200);
+  });
+
+  it('includes GM-summoned creatures in loot calculation', async () => {
+    global.fetch.mockResolvedValue(createMockResponse([
+      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
+    ]));
+
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') {
+        return [
+          { target: 'Goblin 1', source: 'GM', effect: 'summoned' },
+        ];
+      }
+      return null;
+    });
+
+    const combatSummary = {
+      creatures: [
+        { name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' },
+      ],
+    };
+    const characters = [{ name: 'Druid' }];
+
+    const result = await generateLootFromCombatSummary(combatSummary, characters, 'TestCampaign');
+
+    expect(result.totalEncounterXp).toBe(50);
+  });
+
+  it('includes creatures without summoned effect', async () => {
+    global.fetch.mockResolvedValue(createMockResponse([
+      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25 },
+    ]));
+
+    getRuntimeValue.mockReturnValue(null);
+
+    const combatSummary = {
+      creatures: [
+        { name: 'Goblin 1', type: 'npc', monsterIndex: 'goblin' },
+      ],
+    };
+
+    const result = await generateLootFromCombatSummary(combatSummary, [], 'TestCampaign');
+
+    expect(result.totalEncounterXp).toBe(50);
   });
 });

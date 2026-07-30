@@ -357,7 +357,7 @@ async function mount(overrides = {}) {
     ...overrides,
   });
 
-  return render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+  return render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
 }
 
 describe('EncounterBuilder interactions', () => {
@@ -529,7 +529,7 @@ describe('EncounterBuilder interactions', () => {
 
       // Manually render with custom filter panel to capture callback
       render(
-        <EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />
+        <EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />
       );
 
       // The real component manages filter state internally, so we verify
@@ -649,7 +649,7 @@ describe('EncounterBuilder interactions', () => {
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       const saveBtn = screen.getByText(/Save/);
       fireEvent.click(saveBtn);
 
@@ -674,7 +674,7 @@ describe('EncounterBuilder interactions', () => {
         currentEncounterName: 'goblin-ambush',
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       // The component manages currentEncounterName internally via useState
       // The button text depends on whether currentEncounterName is truthy
       // Since it starts as null, Save button shows. After loading an encounter,
@@ -698,7 +698,7 @@ describe('EncounterBuilder interactions', () => {
         currentEncounterName: 'existing-encounter',
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       // Verify the button text is either Save or Update depending on internal state
       const saveOrUpdateBtn = screen.getByText(/Save|Update/);
       expect(saveOrUpdateBtn).toBeInTheDocument();
@@ -720,7 +720,7 @@ describe('EncounterBuilder interactions', () => {
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       const loadBtn = screen.getByText('Load');
       fireEvent.click(loadBtn);
 
@@ -809,7 +809,7 @@ describe('EncounterBuilder interactions', () => {
         currentEncounterName: 'saved-encounter',
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       // currentEncounterName is internal state; it starts as null so Reset is hidden
       // After loading an encounter, the component sets it and Reset appears
       // This is verified by the component's conditional rendering logic
@@ -832,7 +832,7 @@ describe('EncounterBuilder interactions', () => {
 
       // Reset button only shows when there's a loaded encounter (internal state)
       // The reset handler clears: encounterTitle, currentEncounterName, lootData,
-      // encounterCompleted, combatStarted, filter, selectedMonsters, searchQuery, description
+      // filter, selectedMonsters, searchQuery, description
       // This is verified by the component's handleReset function
       expect(screen.queryByText('Reset')).not.toBeInTheDocument();
     });
@@ -881,8 +881,8 @@ describe('EncounterBuilder interactions', () => {
     });
   });
 
-  describe('start encounter flow', () => {
-    it('shows Start Encounter button when loot is generated and combat not started', async () => {
+  describe('join encounter flow', () => {
+    it('shows Join Encounter button when loot is generated and monsters selected', async () => {
       // Manually set up mocks to avoid beforeEach clearing the implementation
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
@@ -898,7 +898,7 @@ describe('EncounterBuilder interactions', () => {
       const { generateLootSuggestions } = await import('../../services/items/lootGenerator.js');
       generateLootSuggestions.mockResolvedValue({ lootEntries: ['Gold coins (50)', 'Silver ring'], totalEncounterXp: 200 });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
@@ -910,42 +910,19 @@ describe('EncounterBuilder interactions', () => {
         expect(screen.getByText('Loot Suggestions')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      expect(screen.getByText(/Start/i)).toBeInTheDocument();
+      expect(screen.getByText(/Join/i)).toBeInTheDocument();
     });
 
-    it('hides Start Encounter button when no loot is generated', async () => {
+    it('shows Join Encounter button as soon as monsters are selected', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
-      expect(screen.queryByText('Start Encounter')).not.toBeInTheDocument();
+      expect(screen.getByText('Join Encounter')).toBeInTheDocument();
     });
 
-    it('shows Complete Encounter button after combat is started via session', async () => {
-      localStorage.setItem(`encounterSession-${mockCampaignName}`, JSON.stringify({
-        currentEncounterName: 'test',
-        description: '',
-        lootData: { lootEntries: ['Gold'], totalEncounterXp: 200 },
-        combatStarted: true,
-        encounterCompleted: false,
-        selectedMonsters: [{ index: 'goblin', name: 'Goblin', qty: 1 }],
-        filter: { difficulty: 1, playerLevels: [5, 3], environment: '' },
-        encounterTitle: 'Test Encounter',
-      }));
-
-      await mount();
-
-      await waitFor(() => {
-        expect(screen.getByText('Complete Encounter')).toBeInTheDocument();
-      });
-    });
-
-    it('shows XP Awarded when encounter is completed', async () => {
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
+    it('shows Award Loot button when loot text is populated', async () => {
+      localStorage.clear();
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
       useEncounterManagement.mockReturnValue({
         modalOpen: false, modalMode: null, encounters: [], loading: false,
@@ -954,10 +931,10 @@ describe('EncounterBuilder interactions', () => {
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
 
-      const { generateLootSuggestions } = await import('../../services/items/lootGenerator.js');
-      generateLootSuggestions.mockResolvedValue({ lootEntries: ['Gold coins (50)', 'Silver ring'], totalEncounterXp: 200 });
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
@@ -968,42 +945,7 @@ describe('EncounterBuilder interactions', () => {
         expect(screen.getByText('Loot Suggestions')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const startBtn = screen.getByText(/Start/i);
-      fireEvent.click(startBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Complete/i)).toBeInTheDocument();
-      }, { timeout: 3000 });
-
-      const completeBtn = screen.getByText(/Complete/i);
-      fireEvent.click(completeBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('XP Awarded')).toBeInTheDocument();
-      }, { timeout: 3000 });
-
-      confirmSpy.mockRestore();
-    });
-
-    it('does not show Start/Complete buttons when encounter is already completed', async () => {
-      localStorage.setItem(`encounterSession-${mockCampaignName}`, JSON.stringify({
-        currentEncounterName: 'test',
-        description: '',
-        lootData: { lootEntries: ['Gold'], totalEncounterXp: 200 },
-        combatStarted: true,
-        encounterCompleted: true,
-        selectedMonsters: [{ index: 'goblin', name: 'Goblin', qty: 1 }],
-        filter: { difficulty: 1, playerLevels: [5, 3], environment: '' },
-        encounterTitle: 'Test Encounter',
-      }));
-
-      await mount();
-
-      await waitFor(() => {
-        expect(screen.getByText('XP Awarded')).toBeInTheDocument();
-        expect(screen.queryByText('Start Encounter')).not.toBeInTheDocument();
-        expect(screen.queryByText('Complete Encounter')).not.toBeInTheDocument();
-      });
+      expect(screen.getByText('Join Encounter')).toBeInTheDocument();
     });
   });
 
@@ -1207,7 +1149,7 @@ describe('EncounterBuilder interactions', () => {
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={[]} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={[]} onJoinEncounter={vi.fn()} />);
       expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
     });
 
@@ -1224,7 +1166,7 @@ describe('EncounterBuilder interactions', () => {
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
 
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={null} onStartCombat={vi.fn()} />);
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={null} onJoinEncounter={vi.fn()} />);
       expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
     });
   });

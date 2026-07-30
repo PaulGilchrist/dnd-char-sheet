@@ -782,6 +782,55 @@
   border-bottom: none;
 }
 
+.encounter-builder .encounter-loot-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.5;
+  background: var(--background-color-input);
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.encounter-builder .encounter-loot-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.encounter-builder .encounter-loot-actions-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.encounter-builder .encounter-award-loot-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.encounter-builder .encounter-btn-join {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  background: rgba(239, 83, 80, 0.2) !important;
+  color: var(--color-error) !important;
+  border-color: var(--color-error) !important;
+  padding: 6px 14px !important;
+  font-size: 0.85rem !important;
+  white-space: nowrap !important;
+}
+
+.encounter-builder .encounter-btn-join:hover {
+  background: rgba(239, 83, 80, 0.35) !important;
+}
+
 .encounter-builder .encounter-btn-loot {
   background: rgba(255, 193, 7, 0.15);
   color: var(--color-warning);
@@ -851,15 +900,6 @@
     .encounter-builder .encounter-btn-complete:hover {
      background: rgba(255, 193, 7, 0.35) !important;
     }
-
-  .encounter-builder .encounter-xp-complete {
-    color: var(--color-success);
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
 
   .encounter-builder .encounter-list-description p {
   margin: 0;

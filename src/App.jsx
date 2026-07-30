@@ -518,7 +518,7 @@ function App() {
           />
         )}
           {activeView === 'encounter' && (
-            <EncounterBuilder characters={characters} campaignName={campaignName} onStartCombat={() => setActiveView('initiative')} />
+            <EncounterBuilder characters={characters} campaignName={campaignName} onJoinEncounter={() => setActiveView('initiative')} />
           )}
         {activeView === 'notes' && (
           <Notes

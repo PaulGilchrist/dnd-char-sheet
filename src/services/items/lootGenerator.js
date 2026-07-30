@@ -1,3 +1,5 @@
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+
 const treasureTierMap = [
   { minCR: 0, maxCR: 1.5, tier: 'none', valueRange: [0, 0], cpWeight: 1, spWeight: 0, gpWeight: 0, ppWeight: 0 },
   { minCR: 1.5, maxCR: 3, tier: 'poor', valueRange: [25, 75], cpWeight: 0.35, spWeight: 0.40, gpWeight: 0.25, ppWeight: 0 },
@@ -339,4 +341,64 @@ function getTreasureFrequency(cr) {
 function totalValueForTier(tier) {
   const [lo, hi] = tier.valueRange;
   return (lo + hi) / 2;
+}
+
+export async function generateLootFromCombatSummary(combatSummary, characters, _campaignName) {
+  if (!combatSummary || !combatSummary.creatures) {
+    return { lootEntries: [], totalEncounterXp: 0 };
+  }
+
+  const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+  const characterNames = new Set((characters || []).map(c => c.name));
+
+  const filteredCreatures = combatSummary.creatures.filter(creature => {
+    if (creature.type !== 'npc') return true;
+    if (!creature.monsterIndex) return true;
+    const isSummoned = targetEffects.some(
+      te => te.target === creature.name && te.effect === 'summoned'
+    );
+    if (!isSummoned) return true;
+    const summoner = targetEffects.find(
+      te => te.target === creature.name && te.effect === 'summoned'
+    );
+    if (!summoner) return true;
+    if (summoner.source === 'GM') return true;
+    if (characterNames.has(summoner.source)) return false;
+    return true;
+  });
+
+  const monsterCounts = {};
+  for (const creature of filteredCreatures) {
+    if (!creature.monsterIndex) continue;
+    if (!monsterCounts[creature.monsterIndex]) {
+      monsterCounts[creature.monsterIndex] = { count: 0, creature };
+    }
+    monsterCounts[creature.monsterIndex].count++;
+  }
+
+  const monsterList = Object.values(monsterCounts).map(({ count, creature }) => ({
+    index: creature.monsterIndex,
+    name: creature.name,
+    qty: count,
+  }));
+
+  const monsterData = await loadJSONData('monsters.json');
+  const monsterMap = {};
+  if (monsterData) {
+    for (const m of monsterData) {
+      monsterMap[m.index] = m;
+    }
+  }
+
+  const enrichedList = monsterList.map(entry => {
+    const fullMonster = monsterMap[entry.index] || {};
+    return {
+      name: entry.name,
+      qty: entry.qty,
+      xp: fullMonster.xp || 0,
+      challenge_rating: fullMonster.challenge_rating,
+    };
+  });
+
+  return generateLootSuggestions(enrichedList);
 }

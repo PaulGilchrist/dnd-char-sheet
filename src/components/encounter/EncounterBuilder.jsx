@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js';
 import { useMonstersData } from '../../hooks/ui/useMonstersData.js';
 import useEncounterManagement from '../../hooks/management/useEncounterManagement.js';
+import { getCombatSummary } from '../../services/encounters/combatData.js';
 import EncounterFilterPanel from './EncounterFilterPanel.jsx';
 import EncounterSummaryPanel from './EncounterSummaryPanel.jsx';
 import EncounterMonsterTable from './EncounterMonsterTable.jsx';
@@ -11,8 +12,8 @@ import EncounterGeneratorModal from './EncounterGeneratorModal.jsx';
 import MonsterCardModal from './MonsterCardModal.jsx';
 import PreviewToggle from '../common/PreviewToggle.jsx';
 import { formatEncounterName } from '../../services/encounters/encountersService.js';
-import { loadEncounterToInitiative } from '../../services/encounters/encounterToInitiative.js';
-import { generateLootSuggestions } from '../../services/items/lootGenerator.js';
+import { addMonstersToInitiative } from '../../services/encounters/encounterToInitiative.js';
+import { generateLootSuggestions, generateLootFromCombatSummary } from '../../services/items/lootGenerator.js';
 import { calculateXPThreshold, calculateDifficultyMultiplier } from '../../services/encounters/encounterGenerator.js';
 import { ENCOUNTER_CONFIG } from '../../config/encounterConfig.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -100,7 +101,7 @@ function stripMonsters(monsters) {
   }));
 }
 
-function EncounterBuilder({ characters, campaignName, onStartCombat }) {
+function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
   const { monsters, loading } = useMonstersData();
 
   const [filter, setFilter] = useState(() => {
@@ -113,10 +114,10 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
        playerLevels,
        environment: saved ? saved.environment : '',
        };
-     });
+    });
 
-    // When characters change (e.g., campaign switch), show in party summary for display purposes only
-   // Player levels filter is not auto-overwritten so loaded encounters preserve their settings
+  // When characters change (e.g., campaign switch), show in party summary for display purposes only
+  // Player levels filter is not auto-overwritten so loaded encounters preserve their settings
 
   // Save difficulty to localStorage when it changes
   useEffect(() => {
@@ -149,91 +150,10 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
   const [currentEncounterName, setCurrentEncounterName] = useState(null);
   const [description, setDescription] = useState('');
   const [lootData, setLootData] = useState({ lootEntries: [], totalEncounterXp: 0 });
-   const [generatingLoot, setGeneratingLoot] = useState(false);
-   const [encounterCompleted, setEncounterCompleted] = useState(false);
-  const [combatStarted, setCombatStarted] = useState(false);
-
-      // GM-only working session persistence (survives unmount when navigating to initiative)
-   // localStorage-only: transient GM workspace state, no server endpoint exists for sessions
-   function saveSession() {
-      try {
-        localStorage.setItem(`encounterSession-${campaignName}`, JSON.stringify({
-          currentEncounterName, description, lootData, combatStarted, encounterCompleted,
-          selectedMonsters: stripMonsters(selectedMonsters),
-         filter: { difficulty: filter.difficulty, playerLevels: filter.playerLevels },
-        encounterTitle,
-         }));
-        } catch { /* ignore */ }
-       }
-
-  // localStorage-only: transient GM workspace state, no server endpoint exists for sessions
-  function loadSavedSession(existingsMonsters) {
-    try {
-       const sessionData = localStorage.getItem(`encounterSession-${campaignName}`);
-       if (!sessionData) return null;
-        const parsed = JSON.parse(sessionData);
-        if (parsed && Array.isArray(parsed.selectedMonsters)) {
-         return {
-           ...parsed,
-          selectedMonsters: parsed.selectedMonsters.map(ref => {
-             const full = (existingsMonsters || []).find(m => m.index === ref.index);
-            return full ? { ...full, qty: ref.qty || 1 } : { ...ref, qty: ref.qty || 1 };
-            }),
-            };
-         }
-        } catch { /* ignore */ }
-     return null;
-        }
-
-// Restore session on mount (resolves monster refs against current monsters data) - only runs when monsters load
-   useEffect(() => {
-         const session = loadSavedSession(monsters);
-        if (!session) return;
-        setCurrentEncounterName(session.currentEncounterName || null);
-       setDescription(session.description || '');
-       setLootData(session.lootData || { lootEntries: [], totalEncounterXp: 0 });
-     setCombatStarted(!!session.combatStarted);
-         setEncounterCompleted(!!session.encounterCompleted);
-         if (session.filter) {
-            setFilter({ difficulty: session.filter.difficulty, playerLevels: session.filter.playerLevels || [1], environment: session.filter.environment || '' });
-                   }
-       if (session.encounterTitle) setEncounterTitle(session.encounterTitle);
-          setSelectedMonsters(session.selectedMonsters);
-            }, [campaignName, monsters]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Retroactively compute effectiveXP for loaded encounters when monster data becomes available
-    useEffect(() => {
-      if (!currentEncounterName || selectedMonsters.length === 0 || !monsters.length) return;
-      const hasEffectiveXP = selectedMonsters.some(m => m.xp != null);
-      if (hasEffectiveXP) return;
-      const totalXP = calculateTotalMonsterXP(selectedMonsters);
-      const count = calculateMonsterCount(selectedMonsters);
-      const mult = calculateDifficultyMultiplier(count, filter.playerLevels.length);
-      const newEffectiveXP = Math.round(totalXP * mult);
-      if (newEffectiveXP > 0) {
-        loadEncounterData(currentEncounterName).then(data => {
-          if (data && !data.effectiveXP) {
-            data.effectiveXP = newEffectiveXP;
-            updateEncounter(currentEncounterName, data);
-          }
-        }).catch((e) => { console.error("[EncounterBuilder] Error:", e); });
-      }
-    }, [selectedMonsters, monsters, currentEncounterName, filter.playerLevels]); // eslint-disable-line react-hooks/exhaustive-deps
-
-// Guard to skip persist effect on initial render - lets restore effect run first
-   const persisted = useRef(false);
-
-// Persist working session to localStorage - skips first render, only saves (never auto-clears)
-    useEffect(() => {
-         if (!persisted.current) {
-            persisted.current = true;
-           return;
-               }
-
-        if (combatStarted && !encounterCompleted && lootData.lootEntries.length > 0) {
-             saveSession();
-                }
-           }, [campaignName, currentEncounterName, description, lootData, combatStarted, encounterCompleted, selectedMonsters, filter, encounterTitle]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [generatingLoot, setGeneratingLoot] = useState(false);
+  const [lootTextValue, setLootTextValue] = useState('');
+  const [showAwardLoot, setShowAwardLoot] = useState(false);
+  const [awardingLoot, setAwardingLoot] = useState(false);
 
 
 
@@ -355,27 +275,107 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
     try {
       const lootResult = await generateLootSuggestions(selectedMonsters);
       setLootData(lootResult || { lootEntries: [], totalEncounterXp: 0 });
-      setEncounterCompleted(false);
-      } catch (error) {
+      setLootTextValue(lootResult.lootEntries.join('\n'));
+    } catch (error) {
       console.error('Failed to generate loot:', error);
-      } finally {
+    } finally {
       setGeneratingLoot(false);
+    }
+  };
+
+  const handleJoinEncounter = async () => {
+    if (!selectedMonsters.length) return;
+
+    logEntry({
+      type: 'encounter',
+      action: 'joined',
+      encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
+      monsters: selectedMonsters.map(m => `${m.qty || 1}x ${m.name}`),
+    });
+
+    await addMonstersToInitiative(selectedMonsters, characters, campaignName);
+
+    setSelectedMonsters([]);
+    setLootData({ lootEntries: [], totalEncounterXp: 0 });
+    setLootTextValue('');
+    setDescription('');
+
+    if (onJoinEncounter) {
+      onJoinEncounter();
+    }
+  };
+
+  const handleAwardLoot = async () => {
+    if (awardingLoot) return;
+    setAwardingLoot(true);
+    try {
+      const numChars = characters && characters.length > 0 ? characters.length : filter.playerLevels.length;
+      const xpPerChar = Math.floor(lootData.totalEncounterXp / numChars);
+
+      const lootItems = lootTextValue
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      if (lootItems.length > 0 && lootItems.some(item => item !== 'No loot for these monsters')) {
+        await logService.addEntry(campaignName, {
+          type: 'loot',
+          encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
+          lootItems: lootItems.filter(item => item !== 'No loot for these monsters'),
+          xpPerChar,
+          totalEncounterXp: lootData.totalEncounterXp,
+        });
       }
-    };
+
+      await logEntry({
+        type: 'encounter',
+        action: 'loot_awarded',
+        encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
+        xpPerChar,
+        totalEncounterXp: lootData.totalEncounterXp,
+        lootItems,
+      });
+
+      for (const charData of (characters || [])) {
+        const currentXp = getRuntimeValue(charData.name, 'xp') || 0;
+        setRuntimeValue(charData.name, 'xp', currentXp + xpPerChar, campaignName);
+      }
+
+      setShowAwardLoot(false);
+      setLootTextValue('');
+      setLootData({ lootEntries: [], totalEncounterXp: 0 });
+    } catch (error) {
+      console.error('Failed to award loot:', error);
+    } finally {
+      setAwardingLoot(false);
+    }
+  };
+
+  const handlePrepareAwardLoot = async () => {
+    try {
+      const lootResult = await generateLootFromCombatSummary(
+        await getCombatSummary(campaignName),
+        characters,
+        campaignName
+      );
+      setLootData(lootResult || { lootEntries: [], totalEncounterXp: 0 });
+      setLootTextValue(lootResult.lootEntries.join('\n'));
+      setShowAwardLoot(true);
+    } catch (error) {
+      console.error('Failed to prepare loot:', error);
+    }
+  };
 
   const handleSaveEncounter = () => {
     const data = {
       selectedMonsters: stripMonsters(selectedMonsters),
       description: description,
       lootData,
-      encounterCompleted,
       effectiveXP,
       };
     if (currentEncounterName) {
-      // Update existing encounter — no modal needed
       updateEncounter(currentEncounterName, data);
     } else {
-      // New encounter — prompt for name
       setPendingEncounterData(data);
       openSaveModal();
     }
@@ -399,99 +399,43 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
 
       setDescription(data.description || '');
         setLootData(data.lootData || { lootEntries: [], totalEncounterXp: 0 });
-               setEncounterCompleted(false);
-               setCombatStarted(false);
+        setLootTextValue((data.lootData?.lootEntries || []).join('\n'));
 
-          const monsterRefs = data.selectedMonsters || [];
-         const resolvedMonsters = monsterRefs.map(ref => {
-           const fullMonster = (monsters || []).find(m => m.index === ref.index);
-           if (fullMonster) {
-             return { ...fullMonster, qty: ref.qty || 1 };
-           }
-           return { ...ref, qty: ref.qty || 1 };
-         });
+        const monsterRefs = data.selectedMonsters || [];
+       const resolvedMonsters = monsterRefs.map(ref => {
+         const fullMonster = (monsters || []).find(m => m.index === ref.index);
+         if (fullMonster) {
+           return { ...fullMonster, qty: ref.qty || 1 };
+         }
+         return { ...ref, qty: ref.qty || 1 };
+       });
 
-         setSelectedMonsters(resolvedMonsters);
+       setSelectedMonsters(resolvedMonsters);
 
-         if (!data.effectiveXP && monsterRefs.length > 0) {
-           const totalXP = monsterRefs.reduce((sum, ref) => {
-             const full = (monsters || []).find(m => m.index === ref.index);
-             return sum + ((full?.xp || ref.xp || 0) * (ref.qty || 1));
-           }, 0);
-           const mult = calculateDifficultyMultiplier(
-             monsterRefs.reduce((s, r) => s + (r.qty || 1), 0),
-             filter.playerLevels.length
-           );
-           data.effectiveXP = Math.round(totalXP * mult);
+       if (monsterRefs.length > 0 && monsters.length > 0) {
+         const totalXP = monsterRefs.reduce((sum, ref) => {
+           const full = (monsters || []).find(m => m.index === ref.index);
+           return sum + ((full?.xp || ref.xp || 0) * (ref.qty || 1));
+         }, 0);
+         const mult = calculateDifficultyMultiplier(
+           monsterRefs.reduce((s, r) => s + (r.qty || 1), 0),
+           filter.playerLevels.length
+         );
+         const effectiveXP = Math.round(totalXP * mult);
+         if (data.effectiveXP !== effectiveXP) {
+           data.effectiveXP = effectiveXP;
            updateEncounter(name, data);
          }
-
-           }
-         } catch (error) {
-        console.error('Failed to load encounter:', error);
        }
-     };
+
+         }
+       } catch (error) {
+      console.error('Failed to load encounter:', error);
+     }
+       };
 
    const logEntry = async (entry) => {
      try { await logService.addEntry(campaignName, entry); } catch { /* ignore */ }
-   };
-
-    const handleStartEncounter = async () => {
-      if (!selectedMonsters.length) return;
-
-      // Write combatStarted=true directly to localStorage before navigation unmounts the component
-      // localStorage-only: transient GM workspace state, no server endpoint for sessions
-      try {
-        localStorage.setItem(`encounterSession-${campaignName}`, JSON.stringify({
-          currentEncounterName, description, lootData, encounterCompleted,
-          combatStarted: true,
-          selectedMonsters: stripMonsters(selectedMonsters),
-          filter: { difficulty: filter.difficulty, playerLevels: filter.playerLevels, environment: filter.environment },
-          encounterTitle,
-        }));
-      } catch { /* ignore */ }
-
-      logEntry({
-        type: 'encounter',
-        action: 'started',
-        encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
-        monsters: selectedMonsters.map(m => `${m.qty || 1}x ${m.name}`),
-      });
-
-      setCombatStarted(true);
-      await loadEncounterToInitiative(selectedMonsters, characters, campaignName);
-      onStartCombat();
-    };
-
-   const handleCompleteEncounter = async () => {
-     const numChars = characters && characters.length > 0 ? characters.length : filter.playerLevels.length;
-     const xpPerChar = Math.floor(lootData.totalEncounterXp / numChars);
-
-     if (!window.confirm(`Award ${xpPerChar} XP to each of ${numChars} party members and log the loot?`)) return;
-
-     for (const charData of (characters || [])) {
-       const currentXp = getRuntimeValue(charData.name, 'xp') || 0;
-       setRuntimeValue(charData.name, 'xp', currentXp + xpPerChar, campaignName);
-     }
-
-     await logService.addEntry(campaignName, {
-         type: 'loot',
-         encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
-         lootItems: lootData.lootEntries.filter(item => item !== 'No loot for these monsters'),
-         xpPerChar,
-         totalEncounterXp: lootData.totalEncounterXp,
-     });
-
-     await logEntry({
-       type: 'encounter',
-       action: 'completed',
-       encounterName: encounterTitle || currentEncounterName || 'Unnamed Encounter',
-       xpPerChar,
-       totalEncounterXp: lootData.totalEncounterXp,
-       lootItems: lootData.lootEntries.filter(item => item !== 'No loot for these monsters'),
-     });
-
-     setEncounterCompleted(true);
    };
 
   const handleApplySuggestion = (monsters) => {
@@ -503,15 +447,14 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
     setCurrentEncounterName(null);
     setPendingEncounterData(null);
      setLootData({ lootEntries: [], totalEncounterXp: 0 });
-     setEncounterCompleted(false);
-     setCombatStarted(false);
-      setFilter({
-         difficulty: ENCOUNTER_CONFIG.defaultDifficulty,
-        playerLevels: (characters && characters.length > 0)
-               ? characters.map(c => c.level || 1)
-               : [1],
-        environment: '',
-           });
+     setLootTextValue('');
+     setFilter({
+        difficulty: ENCOUNTER_CONFIG.defaultDifficulty,
+       playerLevels: (characters && characters.length > 0)
+              ? characters.map(c => c.level || 1)
+              : [1],
+       environment: '',
+          });
     setSelectedMonsters([]);
     setSearchQuery('');
     setDescription('');
@@ -644,67 +587,86 @@ function EncounterBuilder({ characters, campaignName, onStartCombat }) {
          label="Description"
          minHeight="100px"
         />
-        {selectedMonsters.length > 0 && (
-          <button
-           className="encounter-btn encounter-btn-loot"
-           onClick={handleGenerateLoot}
-           disabled={generatingLoot}
-           title="Generate loot suggestions for selected monsters"
-          >
-            <i className="fa-solid fa-coins"></i>&nbsp; {generatingLoot ? 'Generating...' : 'Generate Loot'}
-          </button>
-        )}
       </div>
 
-        {/* Loot Suggestions + XP */}
-        {lootData.lootEntries.length > 0 && (
+        {/* Loot Suggestions */}
+        {selectedMonsters.length > 0 && (
           <div className="encounter-loot-section">
             <div className="encounter-loot-title">
               <i className="fa-solid fa-gem"></i>&nbsp; Loot Suggestions
+              {(lootData.lootEntries.length > 0 || lootTextValue.length > 0) && (
+                <button
+                 className="encounter-btn encounter-btn-secondary encounter-btn-sm"
+                 onClick={() => { setLootData({ lootEntries: [], totalEncounterXp: 0 }); setLootTextValue(''); }}
+                 title="Clear loot suggestions"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              )}
+            </div>
+            <div className="encounter-loot-actions-row">
               <button
-               className="encounter-btn encounter-btn-secondary encounter-btn-sm"
-               onClick={() => { setLootData({ lootEntries: [], totalEncounterXp: 0 }); setEncounterCompleted(false); }}
-               title="Clear loot suggestions"
+               className="encounter-btn encounter-btn-loot"
+               onClick={handleGenerateLoot}
+               disabled={generatingLoot}
+               title="Generate loot suggestions for selected monsters"
               >
-                <i className="fa-solid fa-xmark"></i>
+                <i className="fa-solid fa-coins"></i>&nbsp; {generatingLoot ? 'Generating...' : 'Generate Loot'}
+              </button>
+              <button
+               className="encounter-btn encounter-btn-join"
+               onClick={handleJoinEncounter}
+               title="Add monsters to initiative and navigate to combat"
+              >
+                  <i className="fa-solid fa-skull"></i>Join Encounter
               </button>
             </div>
-            <ul className="encounter-loot-list">
-              {lootData.lootEntries.map((item, i) => (
-                <li key={i} className="encounter-loot-item">{item}</li>
-               ))}
-            </ul>
+            {(lootData.lootEntries.length > 0 || lootTextValue.length > 0) && (
+              <>
+                <textarea
+                  className="encounter-loot-textarea"
+                  value={lootTextValue || lootData.lootEntries.join('\n')}
+                  onChange={(e) => setLootTextValue(e.target.value)}
+                  placeholder="Loot will appear here..."
+                  rows={6}
+                />
 
-            {lootData.totalEncounterXp > 0 && (
-              <div className="encounter-xp-summary">
-                <span className="encounter-xp-label">
-                  <i className="fa-solid fa-star"></i>&nbsp; Encounter XP: {lootData.totalEncounterXp.toLocaleString()} total &middot; {Math.floor(lootData.totalEncounterXp / (characters && characters.length > 0 ? characters.length : filter.playerLevels.length))} per character
-                </span>
-                  {!combatStarted && !encounterCompleted && selectedMonsters.length > 0 && (
-                    <button
-                    className="encounter-btn encounter-btn-complete"
-                    onClick={handleStartEncounter}
-                    title="Roll initiative and start combat"
-                    disabled={lootData.lootEntries.length === 0}
-                    >
-                        <i className="fa-solid fa-skull"></i>Start Encounter
-                    </button>
-                    )}
-                  {combatStarted && !encounterCompleted && (
-                    <button
-                    className="encounter-btn encounter-btn-complete"
-                    onClick={handleCompleteEncounter}
-                    title="Award XP to party and log loot"
-                    >
-                         <i className="fa-solid fa-trophy"></i>Complete Encounter
-                    </button>
-                    )}
-                {encounterCompleted && (
-                  <span className="encounter-xp-complete">
-                    <i className="fa-solid fa-check-circle"></i> XP Awarded
-                  </span>
-                  )}
-              </div>
+                {lootData.totalEncounterXp > 0 && (
+                  <div className="encounter-xp-summary">
+                    <span className="encounter-xp-label">
+                      <i className="fa-solid fa-star"></i>&nbsp; Encounter XP: {lootData.totalEncounterXp.toLocaleString()} total &middot; {Math.floor(lootData.totalEncounterXp / (characters && characters.length > 0 ? characters.length : filter.playerLevels.length))} per character
+                    </span>
+                    {showAwardLoot && (
+                      <div className="encounter-award-loot-actions">
+                        <button
+                        className="encounter-btn encounter-btn-complete"
+                        onClick={handleAwardLoot}
+                        disabled={awardingLoot}
+                        title="Award loot and XP to party"
+                        >
+                            <i className="fa-solid fa-trophy"></i>{awardingLoot ? 'Awarding...' : 'Award Loot'}
+                        </button>
+                        <button
+                        className="encounter-btn encounter-btn-secondary"
+                        onClick={() => setShowAwardLoot(false)}
+                        title="Cancel"
+                        >
+                            Cancel
+                        </button>
+                      </div>
+                      )}
+                    {!showAwardLoot && lootTextValue.length > 0 && (
+                      <button
+                      className="encounter-btn encounter-btn-loot"
+                      onClick={handlePrepareAwardLoot}
+                      title="Award loot and XP to party"
+                      >
+                          <i className="fa-solid fa-trophy"></i>Award Loot
+                      </button>
+                      )}
+                  </div>
+                )}
+              </>
             )}
           </div>
          )}

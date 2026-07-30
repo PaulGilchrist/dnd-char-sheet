@@ -4,6 +4,7 @@ import { cloneDeep } from 'lodash';
 import { rollD20 } from '../dice/diceRoller.js';
 import { addEntry } from '../ui/logService.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { loadCombatSummary } from './combatData.js';
 
 export function getMonsterSaveBonuses(monster) {
   const map = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
@@ -125,4 +126,85 @@ export async function loadEncounterToInitiative(selectedMonsters, characters, ca
     window.dispatchEvent(new CustomEvent('initiative-rolled'));
 
     return { combatSummary, firstName };
+}
+
+export function getNextUniqueMonsterName(baseName, creatures) {
+    const escaped = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const exactMatch = new RegExp(`^${escaped}$`).test(baseName);
+    const numberedPattern = new RegExp(`^${escaped} (\\d+)$`);
+    let maxNum = 0;
+    let hasExact = false;
+    for (const creature of creatures) {
+        if (exactMatch && creature.name === baseName) {
+            hasExact = true;
+        }
+        const match = creature.name.match(numberedPattern);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+        }
+    }
+    if (hasExact && maxNum === 0) {
+        return `${baseName} 1`;
+    }
+    return `${baseName} ${maxNum + 1}`;
+}
+
+export async function addMonstersToInitiative(selectedMonsters, characters, campaignName) {
+    let combatSummary = await loadCombatSummary(campaignName);
+    if (!combatSummary) {
+        combatSummary = { round: 1, creatures: [] };
+    }
+
+    const npcRollResults = [];
+
+    selectedMonsters.forEach(monster => {
+        const baseName = monster.name || 'Unnamed';
+        const qty = monster.qty || 1;
+        let npcHp = monster.hit_points || 10;
+        const isPhantasmalSummon = ['Bestial Spirit', 'Fey Spirit'].includes(baseName);
+        if (isPhantasmalSummon) {
+            for (const character of characters) {
+                const phantasmalList = getRuntimeValue(character.name, '_phantasmalCreatures_list');
+                if (phantasmalList && Array.isArray(phantasmalList) && phantasmalList.includes(baseName)) {
+                    npcHp = Math.floor(npcHp / 2);
+                    break;
+                }
+            }
+        }
+        for (let i = 0; i < qty; i++) {
+            const name = getNextUniqueMonsterName(baseName, combatSummary.creatures);
+            const rollResult = rollNpcInitiative(monster);
+            combatSummary.creatures.push({
+                name,
+                type: monster.type || 'npc',
+                initiative: String(rollResult.total),
+                targetName: null,
+                ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
+                resistances: monster.damage_resistances || [],
+                immunities: monster.damage_immunities || [],
+                concentration: null,
+                maxHp: npcHp,
+                currentHp: npcHp,
+                saveBonuses: getMonsterSaveBonuses(monster),
+                monsterIndex: monster.index || null,
+            });
+            npcRollResults.push({ name, rollResult });
+        }
+    });
+
+    combatSummary.creatures.sort((a, b) => b.initiative - a.initiative);
+
+    for (const { name, rollResult } of npcRollResults) {
+        logRoll(campaignName, name, rollResult);
+    }
+
+    storage.set('combatSummary', cloneDeep(combatSummary), campaignName);
+
+    const firstName = combatSummary.creatures[0]?.name;
+    storage.set('activeCreatureName', firstName, campaignName);
+
+    window.dispatchEvent(new CustomEvent('initiative-rolled'));
+
+    return combatSummary;
 }
