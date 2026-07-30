@@ -6211,8 +6211,7 @@
       "Invisible"
     ],
     "automation": {
-      "type": "temp_buff",
-      "effect": "invisible",
+      "type": "greater_invisibility",
       "duration": "Concentration, up to 1 minute",
       "action": "action",
       "casting_time": "1 action"

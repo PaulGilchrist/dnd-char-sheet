@@ -44,6 +44,7 @@ import { handle as handleBuffAlly } from './handlers/buffs/buffAllyHandler.js';
 import { handle as handleEncouragingSong } from './handlers/buffs/encouragingSongHandler.js';
 import { handle as handleHaste, applyHaste, isHasteActive } from './handlers/buffs/hasteHandler.js';
 import { handle as handleInvisibility, applyInvisibility, isInvisibilityActive } from './handlers/buffs/invisibilityHandler.js';
+import { handle as handleGreaterInvisibility, applyGreaterInvisibility, isGreaterInvisibilityActive } from './handlers/buffs/greaterInvisibilityHandler.js';
 import { handle as handleRevivification } from './handlers/healing/revivificationHandler.js';
 import { handle as handleBardicInspiration } from './handlers/class-bard/bardicInspirationHandler.js';
 import { handle as handleAutoReroll } from './handlers/combat/autoRerollHandler.js';
@@ -523,6 +524,7 @@ const HANDLER_MAP = {
         slow: handleSlow,
         haste: handleHaste,
         invisibility: handleInvisibility,
+        greater_invisibility: handleGreaterInvisibility,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -541,6 +543,8 @@ export {
     isHasteActive,
     applyInvisibility,
     isInvisibilityActive,
+    applyGreaterInvisibility,
+    isGreaterInvisibilityActive,
     applyPassWithoutTraceEffect,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';

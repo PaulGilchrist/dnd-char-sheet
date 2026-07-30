@@ -7,7 +7,7 @@ import { getCombatSummary } from '../../../services/encounters/combatData.js'
 import { clearAllConcentrations } from '../../../services/combat/concentration/concentrationService.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import { grantCelestialResilience } from '../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js'
-import { endInvisibility } from '../features/invisibilityService.js'
+import { endInvisibility, endGreaterInvisibility } from '../features/invisibilityService.js'
 
 export function clearHuntersMarkConcentration(name, campaignName) {
   const cs = getCombatSummary(campaignName)
@@ -580,6 +580,14 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     setRuntimeValue('campaign', invisKey, null, campaignName)
   }
 
+  // Clear Greater Invisibility buff and condition (not managed by expiration system)
+  const greaterInvisKey = `_activeGreaterInvisibility_${name}`
+  const greaterInvisCaster = getRuntimeValue('campaign', greaterInvisKey, campaignName)
+  if (greaterInvisCaster) {
+    endGreaterInvisibility(name, campaignName, 'target finished a rest')
+    setRuntimeValue('campaign', greaterInvisKey, null, campaignName)
+  }
+
   return { celestialResilienceAllies }
 }
 
@@ -797,6 +805,14 @@ export async function applyLongRest(playerStats, campaignName) {
     if (invisCaster) {
       endInvisibility(name, campaignName, 'target finished a rest')
       setRuntimeValue('campaign', invisKey, null, campaignName)
+    }
+
+    // Clear Greater Invisibility buff and condition (not managed by expiration system)
+    const greaterInvisKey = `_activeGreaterInvisibility_${name}`
+    const greaterInvisCaster = getRuntimeValue('campaign', greaterInvisKey, campaignName)
+    if (greaterInvisCaster) {
+      endGreaterInvisibility(name, campaignName, 'target finished a rest')
+      setRuntimeValue('campaign', greaterInvisKey, null, campaignName)
     }
 
       // Reset Psionic Strike once-per-turn flag on long rest

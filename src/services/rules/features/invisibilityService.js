@@ -3,6 +3,7 @@ import { getActiveBuffs } from '../../automation/common/buffToggle.js';
 import { addEntry } from '../../ui/logService.js';
 
 const INVISIBILITY_BUFF_NAME = 'Invisibility';
+const GREATER_INVISIBILITY_BUFF_NAME = 'GreaterInvisibility';
 
 /**
  * Remove Invisibility buff and invisible condition from a target.
@@ -46,4 +47,45 @@ export function endInvisibility(targetName, campaignName, reason) {
  */
 export function endInvisibilityOnHostileAction(invisibleName, campaignName) {
     endInvisibility(invisibleName, campaignName, 'target made a hostile action (attack roll, dealt damage, or cast a spell)');
+}
+
+/**
+ * Remove GreaterInvisibility buff and invisible condition from a target.
+ */
+export function endGreaterInvisibility(targetName, campaignName, reason) {
+    const key = `_activeGreaterInvisibility_${targetName}`;
+    const casterName = getRuntimeValue('campaign', key, campaignName);
+    if (!casterName) return;
+
+    const activeBuffs = getActiveBuffs(targetName, campaignName);
+    const filtered = activeBuffs.filter(b => b.name !== GREATER_INVISIBILITY_BUFF_NAME);
+    if (filtered.length !== activeBuffs.length) {
+        setRuntimeValue(targetName, 'activeBuffs', filtered, campaignName);
+    }
+
+    const conditions = (() => {
+        const x = getRuntimeValue(targetName, 'activeConditions', campaignName);
+        if (x == null) { console.error('[invisibilityService] Missing array:', x); throw new Error('Expected array, got ' + x); }
+        return x;
+    })();
+    const condFiltered = conditions.filter(c => String(c).toLowerCase() !== 'invisible');
+    if (condFiltered.length !== conditions.length) {
+        setRuntimeValue(targetName, 'activeConditions', condFiltered, campaignName);
+    }
+
+    setRuntimeValue('campaign', key, null, campaignName);
+
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: targetName,
+        abilityName: 'Greater Invisibility',
+        description: `Greater Invisibility ends for ${targetName}: ${reason}.`,
+    }).catch(() => {});
+}
+
+/**
+ * End Greater Invisibility early for the invisible creature if they take a hostile action.
+ */
+export function endGreaterInvisibilityOnHostileAction(invisibleName, campaignName) {
+    endGreaterInvisibility(invisibleName, campaignName, 'target made a hostile action (attack roll, dealt damage, or cast a spell)');
 }

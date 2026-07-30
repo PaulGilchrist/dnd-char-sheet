@@ -114,11 +114,17 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
     for (const effect of casterEffects) {
         if (effect.target) {
-            const invisKey = `_activeInvisibility_${effect.target}`
+            const invisKey = `_activeInvisibility_${effect.target}`;
             if (getRuntimeValue('campaign', invisKey, campaignName) === casterName) {
-                const campaignData = getRuntimeValue('campaign', '', campaignName) || {}
-                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== invisKey))
-                setRuntimeValue('campaign', '', rest, campaignName)
+                const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
+                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== invisKey));
+                setRuntimeValue('campaign', '', rest, campaignName);
+            }
+            const greaterInvisKey = `_activeGreaterInvisibility_${effect.target}`;
+            if (getRuntimeValue('campaign', greaterInvisKey, campaignName) === casterName) {
+                const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
+                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== greaterInvisKey));
+                setRuntimeValue('campaign', '', rest, campaignName);
             }
         }
     }
