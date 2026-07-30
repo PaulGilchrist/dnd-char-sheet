@@ -88,14 +88,21 @@ Read-only inspection only: `git log`, `git show`, `git diff`, `git status`, `git
 
 **Every piece of game state MUST go through the runtime store.** This is the core architecture that makes all players see the same data.
 
-```js
-// READ — preferred
-const [value, setValue] = useSyncedState(campaignName, 'myKey', defaultValue);
-
-// Existing code not yet migrated
-const value = getRuntimeValue(characterKey, 'myKey');
-await setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 ```
+// READ/WRITE — preferred (returns [value, setValue] like useState)
+const [value, setValue] = useSyncedState(characterKey, 'myKey', defaultValue, campaignName);
+
+// READ ONLY — when you don't need a setter
+const value = useRuntimeValue(characterKey, 'myKey', campaignName);
+
+// LEGACY: standalone read/write (still used in services/automation handlers)
+const value = getRuntimeValue(characterKey, 'myKey');
+setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
+```
+
+- `useSyncedState` — React hook, preferred in components. Returns `[value, setValue]` tuple identical to `useState`. The `setValue` function POSTs to the server and broadcasts via SSE.
+- `useRuntimeValue` — React hook, read-only. Use when you need to subscribe to changes but don't need to write.
+- `getRuntimeValue` / `setRuntimeValue` — standalone functions used in service/automation code (non-React context). `setRuntimeValue` is synchronous (returns a Promise from `fetch` but you don't need to await it).
 
 **Goes in runtime store:** HP, SP, conditions, buffs, pipeline state, save prompts, travel state, combat UI state.
 **Stays local (per-client):** Ephemeral UI flags (`isLoading`, `showModal`), DOM refs (`useRef`), display formatting (`theme`, `expandedSections`).
