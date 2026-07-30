@@ -576,6 +576,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
     }
 
+    // Clear Resistance on short rest
+    const resEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredResEffects = resEffects.filter(e => e.effect !== 'resistance_damage_reduction');
+    if (filteredResEffects.length !== resEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredResEffects, campaignName, true)
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP
     const allKeys = getAllStoreKeys();
     for (const key of allKeys) {
@@ -590,6 +597,7 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       }
     }
 
+  setRuntimeValue(name, 'resistanceUsedThisTurn', null, campaignName)
   clearAllExpirationEffects(name, campaignName)
   clearHuntersMarkConcentration(name, campaignName)
   clearAllConcentrations(campaignName)
@@ -795,6 +803,13 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
     }
 
+    // Clear Resistance on long rest
+    const resEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredResEffects = resEffects.filter(e => e.effect !== 'resistance_damage_reduction');
+    if (filteredResEffects.length !== resEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredResEffects, campaignName, true)
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP on long rest
     const longRestAllKeys = getAllStoreKeys();
     for (const key of longRestAllKeys) {
@@ -808,6 +823,8 @@ export async function applyLongRest(playerStats, campaignName) {
         }
       }
     }
+
+    setRuntimeValue(name, 'resistanceUsedThisTurn', null, campaignName)
 
     // Clear Wrath of the Sea badge on long rest
     setRuntimeValue(name, 'wrathOfTheSeaActive', null, campaignName, true)

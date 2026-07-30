@@ -346,12 +346,11 @@ function AOEConditionModal({
     const eligibleTargets = useMemo(() => {
         if (!combatSummary?.creatures) return [];
         return combatSummary.creatures
-            .filter(c => c.name !== playerStats.name)
             .map(c => ({
                 ...c,
                 carefulSpellProtected: isCarefulSpell && isCarefulAlly(c.name),
             }));
-    }, [combatSummary, playerStats.name, isCarefulSpell, isCarefulAlly]);
+    }, [combatSummary, isCarefulSpell, isCarefulAlly]);
 
     const getCreatureTargets = () => {
         return eligibleTargets.map(c => ({

@@ -464,15 +464,14 @@ describe('MassSuggestionModal', () => {
             expect(screen.getByRole('button', { name: /Mass Suggestion \(0\)/ })).toBeDisabled();
         });
 
-        it('renders only non-caster creatures', () => {
+        it('renders the caster as a target when caster is the only creature', () => {
             getCombatSummary.mockReturnValue({
                 creatures: [
                     { name: 'Wizard1', type: 'player', currentHp: 30, maxHp: 30, saveBonuses: { wis: 4 } },
                 ],
             });
             render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.queryByText('Wizard1')).not.toBeInTheDocument();
-            expect(screen.getByText('No targets available.')).toBeInTheDocument();
+            expect(screen.getByText('Wizard1')).toBeInTheDocument();
         });
     });
 

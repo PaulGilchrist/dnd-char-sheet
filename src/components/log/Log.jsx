@@ -148,6 +148,9 @@ function RollEntry({ entry }) {
           {entry.rayOfEnfeebleRoll != null && (
             <span className="log-ray-enfeeblement"> -1d8 [Enfeeblement]: -{entry.rayOfEnfeebleRoll}</span>
           )}
+          {entry.resistanceRoll != null && (
+            <span className="log-resistance"> -1d4 [Resistance]: -{entry.resistanceRoll}</span>
+          )}
         </div>
         {(isSaveDamage || isOverchannelDamage) && entry.finalDamage != null && entry.damageType && (
           <span className="log-final-damage">→ {entry.finalDamage} {entry.damageType} damage</span>

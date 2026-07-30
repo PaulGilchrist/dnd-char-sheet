@@ -281,16 +281,6 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
         );
       },
     },
-    {
-      name: 'Resistance',
-      level: 0,
-      handler: 'handleResistanceConfirm',
-      pendingKey: 'pendingResistance',
-      args: { targetName: 'Goblin A', damageType: 'Fire' },
-      verify: async (automation) => {
-        expect(automation.applyResistanceEffect).toHaveBeenCalled();
-      },
-    },
   ];
 
   for (const config of spellConfigs) {
@@ -324,6 +314,47 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
       expect(result.current[config.pendingKey]).toBeNull();
     });
   }
+
+  it('applies effect and logs entry for Resistance (two-stage flow)', async () => {
+    const { result, onExecute } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Resistance',
+      { level: 0 },
+    );
+
+    const automation = await import('../../services/automation/index.js');
+
+    await act(async () => {
+      await result.current.handleResistanceTargetSelect('Goblin A');
+    });
+
+    expect(result.current.resistanceStage).toBe('type');
+
+    await act(async () => {
+      await result.current.handleResistanceTypeSelect('Fire');
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      targetName: 'Goblin A',
+      targets: ['Goblin A'],
+      spellName: 'Resistance',
+      spellLevel: 0,
+      castingTime: '1 Action',
+      timestamp: expect.any(Number),
+    });
+    expect(automation.applyResistanceEffect).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Resistance' }),
+      expect.any(Object),
+      'TestCampaign',
+      'Goblin A',
+      'Fire'
+    );
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingResistance).toBeNull();
+    expect(result.current.resistanceStage).toBeNull();
+  });
 });
 
 // ── Spell-specific skip handlers ─────────────────────────────────────────────
@@ -341,7 +372,6 @@ describe('useSpellMetamagicFlow — spell skip handlers', () => {
     { name: 'Remove Curse', level: 3, handler: 'handleRemoveCurseSkip', pendingKey: 'pendingRemoveCurse' },
     { name: 'Mage Armor', level: 1, handler: 'handleMageArmorSkip', pendingKey: 'pendingMageArmor' },
     { name: 'Protection from Energy', level: 3, handler: 'handleProtectionFromEnergySkip', pendingKey: 'pendingProtectionFromEnergy' },
-    { name: 'Resistance', level: 0, handler: 'handleResistanceSkip', pendingKey: 'pendingResistance' },
   ];
 
   for (const config of spellConfigs) {
@@ -371,6 +401,30 @@ describe('useSpellMetamagicFlow — spell skip handlers', () => {
       expect(result.current[config.pendingKey]).toBeNull();
     });
   }
+
+  it('logs entry and clears pending for Resistance skip', () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Resistance',
+      { level: 0 },
+    );
+
+    act(() => {
+      result.current.handleResistanceSkip();
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      targetName: null,
+      spellName: 'Resistance',
+      spellLevel: 0,
+      castingTime: '1 Action',
+      timestamp: expect.any(Number),
+    });
+    expect(result.current.pendingResistance).toBeNull();
+    expect(result.current.resistanceStage).toBeNull();
+  });
 });
 
 // ── Magic Missile (unique logic — distribution validation) ───────────────────

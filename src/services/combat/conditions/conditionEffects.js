@@ -418,6 +418,7 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
      strCheckAdvantage: false,
      acPenalty: 0,
     rayOfEnfeebleDamageReduction: false,
+    resistanceDamageReduction: false,
     seeInvisibilityActive: false,
     wardingBondAcBonus: 0,
     cleaveAttack: false,
@@ -764,6 +765,10 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'ray_of_enfeeble_debuff') {
       if (te.strCheckDisadvantage) effects.strCheckDisadvantage = true;
       if (te.rayOfEnfeebleDamageReduction) effects.rayOfEnfeebleDamageReduction = true;
+    }
+    // Handle Resistance — reduce damage of chosen type by 1d4 (once per turn)
+    if (te.effect === 'resistance_damage_reduction') {
+      effects.resistanceDamageReduction = true;
     }
     // Handle Cleave — extra melee attack against second creature within 5 ft
     if (te.effect === 'cleave') {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { applyTypeChoice } from '../../../services/automation/handlers/class-warlock/fiendishResilienceHandler.js';
 import '../CharSheet.css';
 
-function SingleResistanceSelectionModal({ title, icon, action, playerStats, campaignName, onClose }) {
+function SingleResistanceSelectionModal({ title, icon, action, playerStats, campaignName, onClose, onConfirm }) {
     const [selected, setSelected] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
@@ -16,12 +16,16 @@ function SingleResistanceSelectionModal({ title, icon, action, playerStats, camp
 
     const handleApply = async () => {
         if (!selected) return;
+        if (onConfirm) {
+            onConfirm(selected);
+            return;
+        }
         const res = await applyTypeChoice(action, playerStats, campaignName, selected);
         setResult(res);
         setApplied(true);
     };
 
-    if (applied && result) {
+    if (applied && result && !onConfirm) {
         return (
             <div className="sp-overlay" onClick={onClose}>
                 <div className="sp-modal" onClick={e => e.stopPropagation()}>

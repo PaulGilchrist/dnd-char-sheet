@@ -120,15 +120,14 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             return;
         }
         const combatSummary = await getCombatContext(campaignName);
-        const chefName = playerStats.name;
         const allCreatures = [
-            ...(characters || []).filter(c => c.name !== chefName).map(c => ({ name: c.name, type: 'player' })),
-            ...(combatSummary?.creatures || []).filter(c => c.type !== 'player' && c.name !== chefName).map(c => ({ name: c.name, type: 'monster' }))
+            ...(characters || []).map(c => ({ name: c.name, type: 'player' })),
+            ...(combatSummary?.creatures || []).filter(c => c.type !== 'player').map(c => ({ name: c.name, type: 'monster' }))
         ];
         const seen = new Set();
         const targets = allCreatures.filter(c => { if (seen.has(c.name)) return false; seen.add(c.name); return true; });
         setReplenishingMealModal({ targets, maxTargets: current });
-    }, [cannotAct, hasReplenishingMeal, replenishingMeals, replenishingMealMax, campaignName, characters, playerStats.name, setPopupHtml]);
+    }, [cannotAct, hasReplenishingMeal, replenishingMeals, replenishingMealMax, campaignName, characters, setPopupHtml]);
 
     const handleReplenishingMealConfirm = useCallback(async (selectedNames) => {
         if (!replenishingMealModal) return;
@@ -166,15 +165,14 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             return;
         }
         const combatSummary = await getCombatContext(campaignName);
-        const chefName = playerStats.name;
         const allCreatures = [
-            ...(characters || []).filter(c => c.name !== chefName).map(c => ({ name: c.name, type: 'player' })),
-            ...(combatSummary?.creatures || []).filter(c => c.type !== 'player' && c.name !== chefName).map(c => ({ name: c.name, type: 'monster' }))
+            ...(characters || []).map(c => ({ name: c.name, type: 'player' })),
+            ...(combatSummary?.creatures || []).filter(c => c.type !== 'player').map(c => ({ name: c.name, type: 'monster' }))
         ];
         const seen = new Set();
         const targets = allCreatures.filter(c => { if (seen.has(c.name)) return false; seen.add(c.name); return true; });
         setBolsteringTreatsModal({ targets, maxTargets: current });
-    }, [cannotAct, hasBolsteringTreats, chefBolsteringTreats, bolsteringTreatsMax, campaignName, characters, playerStats.name, setPopupHtml]);
+    }, [cannotAct, hasBolsteringTreats, chefBolsteringTreats, bolsteringTreatsMax, campaignName, characters, setPopupHtml]);
 
     const handleBolsteringTreatsConfirm = useCallback(async (selectedNames) => {
         if (!bolsteringTreatsModal) return;

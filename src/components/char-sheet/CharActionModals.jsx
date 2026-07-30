@@ -92,7 +92,6 @@ function buildHealingIllusionTargets(playerStats, characters, combatSummary) {
     const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
     const names = new Set(allCreatures.map(c => c.name));
     const result = Array.from(names)
-        .filter(name => name !== playerStats.name)
         .map(name => {
             const creature = allCreatures.find(c => c.name === name);
             return { name: creature.name, type: creature.type, size: creature.size, currentHp: creature.currentHp, maxHp: creature.maxHp };
@@ -141,7 +140,6 @@ function buildInvokeDuplicityTargets(playerStats, characters, combatSummary) {
     const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
     const names = new Set(allCreatures.map(c => c.name));
     const result = Array.from(names)
-        .filter(name => name !== playerStats.name)
         .map(name => {
             const creature = allCreatures.find(c => c.name === name);
             return { name: creature.name, type: creature.type, currentHp: creature.currentHp, maxHp: creature.maxHp };

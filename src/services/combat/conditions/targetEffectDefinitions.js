@@ -372,6 +372,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'value'],
     defaults: { value: 2 },
   },
+  {
+    effect: 'resistance_damage_reduction',
+    label: 'Resistance',
+    description: 'The creature reduces damage of the chosen type by 1d4 (once per turn).',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

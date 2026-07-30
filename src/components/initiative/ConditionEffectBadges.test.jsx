@@ -34,6 +34,7 @@ const defaultEffects = {
     abilityCheckDisadvantage: false,
     strCheckDisadvantage: false,
     rayOfEnfeebleDamageReduction: false,
+    resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
     riderSaveDisadvantage: false,

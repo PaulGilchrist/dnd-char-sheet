@@ -125,6 +125,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
+                    if (concentrationSpell === 'Resistance') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const filtered = storedEffects.filter(te => !(te.effect === 'resistance_damage_reduction' && te.source === playerStats.name));
+                        if (filtered.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                    }
                 }
             }
 
@@ -210,6 +217,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             setRuntimeValue(playerStats.name, 'piercerPunctureUsedThisTurn', null, campaignName);
             setRuntimeValue(playerStats.name, '_Savage_Attacker_usedRound', null, campaignName);
             setRuntimeValue(playerStats.name, '_Hamstring_usedRound', null, campaignName);
+            setRuntimeValue(playerStats.name, 'resistanceUsedThisTurn', null, campaignName);
 
             // Clear Large Form active state on initiative roll (rest-used flag persists)
             setRuntimeValue(playerStats.name, 'largeFormActive', null, campaignName);

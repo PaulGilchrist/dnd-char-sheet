@@ -1239,6 +1239,8 @@ export function createLogDamageAndShow(deps) {
         let reducedTotal = 0;
         let rayReduction = 0;
         let rayOfEnfeebleRoll = null;
+        let resistanceReduction = 0;
+        let resistanceRoll = null;
 
         if (target) {
             const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName) || null;
@@ -1270,7 +1272,25 @@ export function createLogDamageAndShow(deps) {
                 rayReduction = rayRoll?.total || 0;
                 rayOfEnfeebleRoll = rayRoll?.total ?? null;
             }
-            reducedTotal = Math.max(0, adjustedTotal - rayReduction);
+            const resTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const resEffectOnTarget = resTargetEffects.find(te => te.target === target?.name && te.effect === 'resistance_damage_reduction');
+            if (resEffectOnTarget && damageType && resEffectOnTarget.chosenType?.toLowerCase() === damageType.toLowerCase()) {
+                const alreadyUsed = getRuntimeValue(target?.name, 'resistanceUsedThisTurn', campaignName) === true;
+                if (!alreadyUsed) {
+                    const resRoll = rollExpression('1d4');
+                    resistanceReduction = resRoll?.total || 0;
+                    resistanceRoll = resRoll?.total ?? null;
+                    setRuntimeValue(target?.name, 'resistanceUsedThisTurn', true, campaignName);
+                    addEntry(campaignName, {
+                        type: 'ability_use',
+                        characterName: target?.name,
+                        abilityName: 'Resistance',
+                        description: `${target?.name} reduced damage by ${resistanceReduction} (1d4) via Resistance.`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error("[resistance] Error:", e); });
+                }
+            }
+            reducedTotal = Math.max(0, adjustedTotal - rayReduction - resistanceReduction);
             const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, damageType)) || false;
 
             if (context?.autoDamageSecondaryFormula) {
@@ -1364,6 +1384,8 @@ export function createLogDamageAndShow(deps) {
             gwfDisplayRolls: gwfDisplayRolls,
             rayOfEnfeebleReduction: rayReduction,
             rayOfEnfeebleRoll: rayOfEnfeebleRoll,
+            resistanceReduction,
+            resistanceRoll,
         };
         if (secondaryResult) {
             logEntryData.secondaryName = secondaryResult.name;
@@ -1531,6 +1553,8 @@ export function createLogDamageAndShow(deps) {
             tavernBrawlerRerolls: context?.tavernBrawlerRerolls || null,
             rayOfEnfeebleReduction: rayReduction,
             rayOfEnfeebleRoll: rayOfEnfeebleRoll,
+            resistanceReduction,
+            resistanceRoll,
         };
 
         if (secondaryResult) {

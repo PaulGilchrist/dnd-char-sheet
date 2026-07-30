@@ -1,7 +1,8 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 
 const DAMAGE_TYPES = [
     'Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning',
@@ -12,9 +13,7 @@ const RESISTANCE_CHOOSE_KEY = 'resistanceChosenDamageType';
 const RESISTANCE_USED_KEY = 'resistanceUsedThisTurn';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
-    const playerName = playerStats.name;
-
-    const combatSummary = await getCombatContext(campaignName);
+    const combatSummary = await getCombatSummary(campaignName);
     if (!combatSummary) {
         return {
             type: 'popup',
@@ -28,7 +27,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerName)
         .map(c => c.name);
 
     return {
@@ -49,43 +47,46 @@ export async function applyResistance(action, playerStats, campaignName, targetN
     }
 
     const auto = action.automation || {};
-    const duration = auto.duration || 'Concentration, up to 1 minute';
     const damageType = chosenDamageType.charAt(0).toUpperCase() + chosenDamageType.slice(1).toLowerCase();
 
-    const stored = getRuntimeValue(targetName, 'activeBuffs', campaignName);
-    const activeBuffs = Array.isArray(stored) ? stored : [];
-    const existingBuff = activeBuffs.find(b => b.name === 'Resistance');
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const existingIndex = storedEffects.findIndex(
+        te => te.target === targetName && te.effect === 'resistance_damage_reduction' && te.source === playerStats.name
+    );
 
-    const newBuff = {
-        name: 'Resistance',
-        effect: 'damage_reduction',
-        duration,
-        resistanceTypes: [damageType],
-        sourceCharacter: playerStats.name,
+    const newEffect = {
+        target: targetName,
+        effect: 'resistance_damage_reduction',
+        source: playerStats.name,
+        chosenType: damageType,
+        duration: 'concentration',
     };
 
-    let newBuffs;
-    if (existingBuff) {
-        newBuffs = activeBuffs.filter(b => b.name !== 'Resistance');
-        newBuffs.push(newBuff);
+    let updatedEffects;
+    if (existingIndex >= 0) {
+        updatedEffects = [...storedEffects];
+        updatedEffects[existingIndex] = newEffect;
     } else {
-        newBuffs = [...activeBuffs, newBuff];
+        updatedEffects = [...storedEffects, newEffect];
     }
 
-    setRuntimeValue(targetName, 'activeBuffs', newBuffs, campaignName);
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
     setRuntimeValue(targetName, RESISTANCE_CHOOSE_KEY, damageType, campaignName);
     setRuntimeValue(targetName, RESISTANCE_USED_KEY, false, campaignName);
 
+    const combatSummary = getCombatSummary(campaignName);
+    addConcentration(combatSummary, playerStats.name, 'Resistance', 10);
+
     addExpiration(playerStats.name, targetName, [
-        { type: 'remove_active_buff', buffName: 'Resistance' }
+        { type: 'remove_target_effect', effectKey: 'resistance_damage_reduction', source: playerStats.name }
     ], campaignName);
 
     await addEntry(campaignName, {
-        type: 'ability_use',
+        type: 'spell_effect',
         characterName: playerStats.name,
-        abilityName: action.name,
-        description: `${playerStats.name} cast ${action.name} on ${targetName} for ${damageType} resistance (1d4 reduction).`,
+        spellName: action.name,
         targetName,
+        effects: [`Resistance (${damageType}): reduces damage of chosen type by 1d4, once per turn`],
         timestamp: Date.now(),
     }).catch((e) => { console.error("[resistanceHandler] Error:", e); });
 
@@ -95,7 +96,7 @@ export async function applyResistance(action, playerStats, campaignName, targetN
             type: 'automation_info',
             name: action.name,
             automationType: auto.type,
-            description: `${action.name} applied to ${targetName}. They reduce damage of ${damageType} type by 1d4 (once per turn).`,
+            description: `${action.name} applied to ${targetName}. They reduce damage of ${damageType} type by 1d4 (once per turn, Concentration).`,
             automation: auto,
         },
     };

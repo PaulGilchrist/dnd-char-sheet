@@ -343,7 +343,6 @@ function ElementalAttunementModal({ action, playerStats, campaignName, mapName, 
                 if (!cs) return;
 
                 const targetList = cs.creatures
-                    .filter(c => c.name !== playerStats.name)
                     .map(c => ({
                         name: c.name,
                         type: c.type,

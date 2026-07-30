@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ─────────────────────────────────────────
@@ -16,8 +15,12 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
 }));
 
 // ── Imports ──────────────────────────────────────────────────────
@@ -33,7 +36,8 @@ import {
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as logService from '../../../ui/logService.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
+import * as combatData from '../../../encounters/combatData.js';
+import * as concentrationService from '../../../combat/concentration/concentrationService.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -61,6 +65,15 @@ function makeAction(automation = {}) {
   };
 }
 
+function makeCombatSummary(creatureNames = []) {
+  return {
+    creatures: creatureNames.map((name, i) => ({
+      name,
+      initiative: 20 - i,
+    })),
+  };
+}
+
 // ── Tests ────────────────────────────────────────────────────────
 
 describe('resistanceHandler', () => {
@@ -72,12 +85,9 @@ describe('resistanceHandler', () => {
     it('returns target selection popup when combat context exists', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [
-          { name: 'Goblin', type: 'npc' },
-          { name: 'Orc', type: 'npc' },
-        ],
-      });
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Goblin', 'Orc'])
+      );
 
       const result = await handle(action, ps, campaignName, null);
 
@@ -91,25 +101,34 @@ describe('resistanceHandler', () => {
       ]);
     });
 
-    it('filters out the caster from creature targets', async () => {
+    it('includes the caster in creature targets', async () => {
       const ps = makePlayerStats({ name: 'Cleric' });
       const action = makeAction();
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [
-          { name: 'Cleric', type: 'player' },
-          { name: 'Goblin', type: 'npc' },
-        ],
-      });
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric', 'Goblin'])
+      );
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.creatureTargets).toEqual(['Goblin']);
+      expect(result.payload.creatureTargets).toEqual(['Cleric', 'Goblin']);
+    });
+
+    it('returns creatureTargets with only the caster when caster is the only creature', async () => {
+      const ps = makePlayerStats({ name: 'Cleric' });
+      const action = makeAction();
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric'])
+      );
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.creatureTargets).toEqual(['Cleric']);
     });
 
     it('returns error popup when no combat context', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-      damageUtils.getCombatContext.mockResolvedValue(null);
+      combatData.getCombatSummary.mockReturnValue(null);
 
       const result = await handle(action, ps, campaignName, null);
 
@@ -119,27 +138,16 @@ describe('resistanceHandler', () => {
       expect(result.payload.description).toContain('No combat context found');
       expect(result.payload.description).toContain('Resistance');
     });
-
-    it('returns empty creatureTargets when caster is the only creature', async () => {
-      const ps = makePlayerStats({ name: 'Cleric' });
-      const action = makeAction();
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [
-          { name: 'Cleric', type: 'player' },
-        ],
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.creatureTargets).toEqual([]);
-    });
   });
 
   describe('applyResistance', () => {
-    it('applies damage reduction buff to target with chosen damage type', async () => {
+    it('applies damage reduction effect to target with chosen damage type', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric', 'Goblin'])
+      );
 
       const result = await applyResistance(
         action,
@@ -155,17 +163,19 @@ describe('resistanceHandler', () => {
       expect(result.payload.description).toContain('1d4');
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin',
-        'activeBuffs',
+        'campaign',
+        'targetEffects',
         expect.arrayContaining([
           expect.objectContaining({
-            name: 'Resistance',
-            effect: 'damage_reduction',
-            resistanceTypes: ['Fire'],
-            sourceCharacter: 'Cleric',
+            target: 'Goblin',
+            effect: 'resistance_damage_reduction',
+            source: 'Cleric',
+            chosenType: 'Fire',
+            duration: 'concentration',
           }),
         ]),
-        campaignName
+        campaignName,
+        true
       );
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -187,11 +197,19 @@ describe('resistanceHandler', () => {
         'Goblin',
         expect.arrayContaining([
           expect.objectContaining({
-            type: 'remove_active_buff',
-            buffName: 'Resistance',
+            type: 'remove_target_effect',
+            effectKey: 'resistance_damage_reduction',
+            source: 'Cleric',
           }),
         ]),
         campaignName
+      );
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.objectContaining({ creatures: expect.any(Array) }),
+        'Cleric',
+        'Resistance',
+        10
       );
     });
 
@@ -225,13 +243,16 @@ describe('resistanceHandler', () => {
       expect(result).toBeNull();
     });
 
-    it('replaces existing Resistance buff instead of appending', async () => {
+    it('replaces existing Resistance effect instead of appending', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       useRuntimeState.getRuntimeValue.mockReturnValue([
-        { name: 'Resistance', effect: 'damage_reduction', resistanceTypes: ['Acid'] },
-        { name: 'Shield of Faith', effect: 'ac_bonus', acBonus: 2 },
+        { target: 'Goblin', effect: 'resistance_damage_reduction', source: 'Cleric', chosenType: 'Acid', duration: 'concentration' },
+        { target: 'Goblin', effect: 'shield_of_faith', source: 'Cleric', chosenType: null, duration: 'concentration' },
       ]);
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric', 'Goblin'])
+      );
 
       await applyResistance(
         action,
@@ -242,61 +263,22 @@ describe('resistanceHandler', () => {
       );
 
       const callArgs = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'activeBuffs'
+        (c) => c[1] === 'targetEffects'
       );
-      const buffs = callArgs[2];
+      const effects = callArgs[2];
 
-      expect(buffs.filter((b) => b.name === 'Resistance')).toHaveLength(1);
-      expect(buffs.find((b) => b.name === 'Resistance').resistanceTypes).toEqual(['Cold']);
-      expect(buffs.find((b) => b.name === 'Shield of Faith')).toBeTruthy();
-    });
-
-    it('uses duration from automation when provided, default otherwise', async () => {
-      const ps = makePlayerStats();
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
-
-      // With custom duration
-      await applyResistance(
-        makeAction({ duration: 'Concentration, up to 10 minutes' }),
-        ps,
-        campaignName,
-        'Goblin',
-        'fire'
-      );
-
-      let callArgs = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'activeBuffs'
-      );
-      let buffs = callArgs[2];
-      let resistanceBuff = buffs.find((b) => b.name === 'Resistance');
-
-      expect(resistanceBuff.duration).toBe('Concentration, up to 10 minutes');
-
-      vi.clearAllMocks();
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
-
-      // With default duration
-      await applyResistance(
-        makeAction({ duration: undefined }),
-        ps,
-        campaignName,
-        'Goblin',
-        'fire'
-      );
-
-      callArgs = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'activeBuffs'
-      );
-      buffs = callArgs[2];
-      resistanceBuff = buffs.find((b) => b.name === 'Resistance');
-
-      expect(resistanceBuff.duration).toBe('Concentration, up to 1 minute');
+      expect(effects.filter((e) => e.effect === 'resistance_damage_reduction')).toHaveLength(1);
+      expect(effects.find((e) => e.effect === 'resistance_damage_reduction').chosenType).toBe('Cold');
+      expect(effects.find((e) => e.effect === 'shield_of_faith')).toBeTruthy();
     });
 
     it('calls addEntry with the correct log payload', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric', 'Goblin'])
+      );
 
       await applyResistance(
         action,
@@ -307,19 +289,22 @@ describe('resistanceHandler', () => {
       );
 
       expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
-        type: 'ability_use',
+        type: 'spell_effect',
         characterName: 'Cleric',
-        abilityName: 'Resistance',
-        description: expect.stringContaining('Cleric cast Resistance on Goblin for Fire resistance'),
+        spellName: 'Resistance',
         targetName: 'Goblin',
+        effects: ['Resistance (Fire): reduces damage of chosen type by 1d4, once per turn'],
         timestamp: expect.any(Number),
       });
     });
 
-    it('appends Resistance when no existing buffs array', async () => {
+    it('appends Resistance when no existing effects array', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Cleric', 'Goblin'])
+      );
 
       await applyResistance(
         action,
@@ -330,18 +315,21 @@ describe('resistanceHandler', () => {
       );
 
       const callArgs = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'activeBuffs'
+        (c) => c[1] === 'targetEffects'
       );
-      const buffs = callArgs[2];
+      const effects = callArgs[2];
 
-      expect(buffs).toHaveLength(1);
-      expect(buffs[0].name).toBe('Resistance');
+      expect(effects).toHaveLength(1);
+      expect(effects[0].effect).toBe('resistance_damage_reduction');
     });
 
-    it('uses playerStats.name as sourceCharacter in buff', async () => {
+    it('uses playerStats.name as source in effect', async () => {
       const ps = makePlayerStats({ name: 'Paladin' });
       const action = makeAction();
       useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue(
+        makeCombatSummary(['Paladin', 'Goblin'])
+      );
 
       await applyResistance(
         action,
@@ -352,11 +340,11 @@ describe('resistanceHandler', () => {
       );
 
       const callArgs = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === 'activeBuffs'
+        (c) => c[1] === 'targetEffects'
       );
-      const buffs = callArgs[2];
+      const effects = callArgs[2];
 
-      expect(buffs[0].sourceCharacter).toBe('Paladin');
+      expect(effects[0].source).toBe('Paladin');
     });
   });
 
@@ -379,8 +367,8 @@ describe('resistanceHandler', () => {
   });
 
   describe('setResistanceUsedThisTurn', () => {
-    it('sets the flag', async () => {
-      await setResistanceUsedThisTurn('Goblin', true, campaignName);
+    it('sets the flag', () => {
+      setResistanceUsedThisTurn('Goblin', true, campaignName);
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Goblin',

@@ -272,9 +272,8 @@ function MassSuggestionModal({
 
     const eligibleTargets = useMemo(() => {
         if (!combatSummary?.creatures) return [];
-        return combatSummary.creatures
-            .filter(c => c.name !== playerStats.name);
-    }, [combatSummary, playerStats.name]);
+        return combatSummary.creatures;
+    }, [combatSummary]);
 
     const getCreatureTargets = () => {
         return eligibleTargets.map(c => ({

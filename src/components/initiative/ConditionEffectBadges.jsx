@@ -302,6 +302,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const casterName = rayEffect?.source || 'unknown'
         badges.push({ label: 'Enfeeblement', cls: 'effect-debuff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'ray_of_enfeeble_debuff', tooltip: `Ray of Enfeeblement from ${casterName}: -1d8 to damage rolls, Disadvantage on STR checks` })
     }
+    if (effects.resistanceDamageReduction) {
+        const resEffect = targetEffects?.find(te => te.effect === 'resistance_damage_reduction' && te.target === creatureName)
+        const casterName = resEffect?.source || 'unknown'
+        const chosenType = resEffect?.chosenType || 'unknown'
+        badges.push({ label: 'Resistance', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'resistance_damage_reduction', tooltip: `Resistance from ${casterName}: reduces ${chosenType} damage by 1d4 (once per turn)` })
+    }
     if (effects.blessBonus) {
         const blessEffect = targetEffects?.find(te => te.effect === 'bless_bonus' && te.target === creatureName)
         const casterName = blessEffect?.source || 'unknown'
