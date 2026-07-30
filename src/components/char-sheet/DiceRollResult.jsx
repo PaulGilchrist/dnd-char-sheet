@@ -68,6 +68,9 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
     const finalTotal = (d20Floor10Total !== null ? d20Floor10Total : reliableTalentTotal !== null ? reliableTalentTotal : (wisCheckReplace && (rollType === 'check' || rollType === 'skill') ? wisDisplayTotal : finalDisplayTotal));
     const showFumble = isNatural1 && rollType === 'attack';
 
+    const effectiveAc = targetAc + (coverAcBonus || 0) + (defensiveDuelistBonus || 0) + (baitAndSwitchBonus || 0);
+    const computedHit = isAutoMiss ? false : (targetName && hit !== undefined && targetAc !== undefined ? finalTotal >= effectiveAc : hit);
+
     const critDiceRolls = isCritDamage && rolls ? rolls.map((r, i) => {
         const label = critLabels?.[i] || null;
         return label ? `${r}*2 [${label}]` : `${r}*2`;
@@ -371,11 +374,11 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
             {(isD20 && !isCrit && !isAutoCrit && displayRoll === 20) && <div className="dice-roll-crit">Natural 20!</div>}
             {strokeResult !== null && isD20 && !isCrit && !isAutoCrit && <div className="dice-roll-crit">Natural 20!</div>}
             {showFumble && <div className="dice-roll-crit dice-roll-crit-miss">Critical Miss!</div>}
-               {targetName && hit !== undefined && !isSaveDamageType && rollType === 'attack' && (
-                   <div className={`dice-roll-hit-miss ${hit ? 'hit' : 'miss'}`}>
-                      {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (hit ? `✓ HIT (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
-                   </div>
-                 )}
+               {targetName && computedHit !== undefined && !isSaveDamageType && rollType === 'attack' && (
+                    <div className={`dice-roll-hit-miss ${computedHit ? 'hit' : 'miss'}`}>
+                       {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (computedHit ? `✓ HIT (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
+                    </div>
+                  )}
 
             {unerringStrikeApplied && (
               <div className="dice-roll-reroll-result">
@@ -578,7 +581,7 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
               </div>
             )}
 
-            {bardicInspirationDefense && !bardicInspirationDefenseUsed && hit && (
+            {bardicInspirationDefense && !bardicInspirationDefenseUsed && computedHit && (
               <div className="dice-roll-reroll">
                 <button className="dice-roll-reroll-btn" onClick={handleBardicInspirationDefense} type="button">
                   <i className="fa-solid fa-music"></i> Bardic Inspiration - Defense (d{bardicInspirationDefenseDieSize})
@@ -779,7 +782,7 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
                 </div>
             )}
 
-            {autoDamage && hit && (
+            {autoDamage && computedHit && (
               <div className="dice-roll-reroll">
                 <button className="dice-roll-reroll-btn" onClick={() => onDone?.()} type="button">
                   <i className="fa-solid fa-check"></i> Done
