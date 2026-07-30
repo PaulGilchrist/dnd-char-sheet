@@ -326,6 +326,15 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Movement ────────────────────────────────────────────
   {
+    effect: 'summoned',
+    label: 'Summoned',
+    description: 'This creature was summoned by another creature.',
+    icon: 'fa-hand-sparkles',
+    cls: 'effect-summoned',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'speed_reduction',
     label: 'Speed Reduced',
     description: 'The creature\'s Speed is reduced by N feet.',

@@ -56,6 +56,10 @@ function CreatureCard({
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
     const wrathOfTheSeaActive = creature.type === 'player' && getRuntimeValue(creature.name, 'wrathOfTheSeaActive', campaignName);
     const recklessAttackActive = myTargetEffects.some(te => te.effect === 'reckless_attack');
+    const isPlayerSummoned = creature.type !== 'player' && myTargetEffects.some(te =>
+        te.effect === 'summoned' &&
+        allCreatures.some(c => c.type === 'player' && c.name === te.source)
+    );
 
     const sanctuaryInfo = (() => {
         for (const other of allCreatures) {
@@ -92,7 +96,11 @@ function CreatureCard({
                         imageUrl={npcImage}
                         imagePath={creature.imagePath}
                         campaignName={campaignName}
-                        onClick={() => onNpcClick(creature)}
+                        onClick={() => {
+                            if (isLocalhost || isPlayerSummoned) {
+                                onNpcClick(creature, { allowNonLocalhost: true });
+                            }
+                        }}
                     />
                 )}
             </div>
@@ -112,6 +120,7 @@ function CreatureCard({
                 creature={creature}
                 isLocalhost={isLocalhost}
                 onChange={onHpChange}
+                isPlayerSummoned={isPlayerSummoned}
             />
             <div className='creature-initiative'>Initiative&nbsp;
                 <input
@@ -131,7 +140,7 @@ function CreatureCard({
                 <select
                     value={creature.targetName || ''}
                     onChange={(e) => onTargetChange(creature.name, e.target.value)}
-                    disabled={creature.type !== 'player' && !isLocalhost}
+                    disabled={creature.type !== 'player' && !isLocalhost && !isPlayerSummoned}
                 >
                     <option value="">— No Target —</option>
                     {allCreatures
@@ -277,6 +286,21 @@ function CreatureCard({
                         }}
                     />
                 )}
+                {myTargetEffects.filter(te => te.effect === 'summoned').map(te => (
+                    <CreatureBadge
+                        key={`summoned-${te.source}`}
+                        icon='fa-hand-sparkles'
+                        label={te.source ? `Summoned (${te.source})` : 'Summoned'}
+                        cls='effect-summoned'
+                        tooltip={te.source ? `Summoned by ${te.source}` : 'Summoned creature'}
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            const effects = getRuntimeValue('campaign', 'targetEffects') || [];
+                            const filtered = effects.filter(e => !(e.target === creature.name && e.effect === 'summoned' && e.source === te.source));
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
+                        }}
+                    />
+                ))}
             </div>
         </div>
     )

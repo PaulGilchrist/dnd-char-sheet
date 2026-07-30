@@ -2,14 +2,14 @@
 
 import { HP_STATUS_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 
-function CreatureHp({ creature, isLocalhost, onChange }) {
+function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
     const { currentHp: rawCurrentHp, maxHp: rawMaxHp, type } = creature
     const currentHp = rawCurrentHp ?? 0
     const maxHp = rawMaxHp ?? 1
     const isDead = currentHp <= 0
     const isBloodied = currentHp > 0 && currentHp <= Math.floor(maxHp / 2)
 
-    if (type !== 'player' && !isLocalhost) {
+    if (type !== 'player' && !isLocalhost && !isPlayerSummoned) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">
@@ -21,6 +21,20 @@ function CreatureHp({ creature, isLocalhost, onChange }) {
                         {isBloodied && <span className="status-badge bloodied" title={HP_STATUS_DESCRIPTIONS['BLOODIED']}>BLOODIED</span>}
                         {!isDead && !isBloodied && <span className="status-badge healthy" title={HP_STATUS_DESCRIPTIONS['OK']}>OK</span>}
                     </span>
+                </div>
+            </div>
+        )
+    }
+
+    if (type !== 'player' && !isLocalhost && isPlayerSummoned) {
+        return (
+            <div className="creature-hp">
+                <div className="hp-bar-row">
+                    <HpBar current={currentHp} max={maxHp} />
+                </div>
+                <div className="hp-inline-row">
+                    <span className="hp-label">HP</span>
+                    <span className="hp-max-val">{currentHp}/{maxHp}</span>
                 </div>
             </div>
         )

@@ -645,8 +645,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         setCombatSummary(cloneDeep(combatSummary))
     }
 
-    const handleNpcClick = async (creature) => {
-        if (!isLocalhost) return
+    const handleNpcClick = async (creature, options = {}) => {
+        const { allowNonLocalhost = false } = options
+        if (!isLocalhost && !allowNonLocalhost) return
         const npc = campaignNpcs.find(n => n.name?.toLowerCase() === creature.name?.toLowerCase())
         if (npc) {
             const formatted = npcToMonsterFormat(npc)

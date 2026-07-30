@@ -89,9 +89,9 @@ button.creature-badge:disabled {
 
 /* ── Backward-compatible aliases ────────────────────────── */
 .creature-badge.effect-disadvantage {
-  background-color: rgba(251, 191, 36, 0.2);
-  border-color: rgba(251, 191, 36, 0.5);
-  color: #fbbf24;
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
 }
 
 .creature-badge.effect-target-adv {
@@ -107,9 +107,9 @@ button.creature-badge:disabled {
 }
 
 .creature-badge.effect-speed-zero {
-  background-color: rgba(251, 191, 36, 0.2);
-  border-color: rgba(251, 191, 36, 0.5);
-  color: #fbbf24;
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
 }
 
 .creature-badge.effect-cannot-act {
@@ -152,4 +152,10 @@ button.creature-badge:disabled {
   background-color: rgba(34, 197, 94, 0.2);
   border-color: rgba(34, 197, 94, 0.5);
   color: #22c55e;
+}
+
+.creature-badge.effect-summoned {
+  background-color: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
 }

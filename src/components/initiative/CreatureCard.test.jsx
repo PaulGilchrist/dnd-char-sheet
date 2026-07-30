@@ -332,7 +332,7 @@ describe('CreatureCard', () => {
             render(<CreatureCard {...props} creature={defaultNpcCreature} />);
             const npcAvatar = screen.getByTestId('npc-avatar-Goblin');
             fireEvent.click(npcAvatar);
-            expect(props.onNpcClick).toHaveBeenCalledWith(defaultNpcCreature);
+            expect(props.onNpcClick).toHaveBeenCalledWith(defaultNpcCreature, { allowNonLocalhost: true });
         });
     });
 
