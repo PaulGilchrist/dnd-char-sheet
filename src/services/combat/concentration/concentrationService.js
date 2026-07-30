@@ -142,6 +142,20 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
                 }
             }
         }
+        if (effect.conditions) {
+            for (const cond of effect.conditions) {
+                const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)
+                const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === cond)
+                if (!stillHasCondition) {
+                    const condList = getRuntimeValue(effect.target, 'activeConditions') || []
+                    const filtered = condList.filter(c => utils.getName(c) !== utils.getName(cond))
+                    if (filtered.length !== condList.length) {
+                        setRuntimeValue(effect.target, 'activeConditions', filtered, campaignName)
+                        logConditionEvent(campaignName, 'removed', effect.target, cond, 'Concentration lost by ' + casterName)
+                    }
+                }
+            }
+        }
     }
 
     const expirations = getRuntimeValue(casterName, 'pendingExpirations') || []

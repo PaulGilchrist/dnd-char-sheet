@@ -27,12 +27,37 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  default: {
+    set: vi.fn(),
+  },
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  default: {
+    set: vi.fn(),
+  },
+}));
+
+vi.spyOn(window, 'dispatchEvent').mockImplementation(() => {});
+
 import { handle } from './hypnoticPatternHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import storage from '../../../ui/storage.js';
 
 const campaignName = 'TestCampaign';
 
@@ -186,6 +211,47 @@ describe('hypnoticPatternHandler.handle', () => {
         ]),
         campaignName,
       );
+    });
+  });
+
+  describe('concentration registration', () => {
+    it('registers concentration on combat summary when casting', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      getCombatSummary.mockReturnValue({
+        creatures: [
+          { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+          { name: 'TestCaster', gridX: 5, gridY: 10 },
+        ],
+      });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-conc',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addConcentration).toHaveBeenCalledWith(
+        expect.objectContaining({ creatures: expect.any(Array) }),
+        'TestCaster',
+        'Hypnotic Pattern',
+        expect.any(Number),
+      );
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
+    });
+
+    it('does not register concentration when there is no combat summary', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      getCombatSummary.mockReturnValue(null);
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-no-conc',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addConcentration).not.toHaveBeenCalled();
     });
   });
 

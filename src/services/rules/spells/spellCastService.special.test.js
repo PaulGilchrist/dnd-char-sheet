@@ -255,6 +255,46 @@ describe('executeSpellCast - no-damage spell routing', () => {
   })
 
   // ------------------------------------------------------------------
+  // Hypnotic Pattern — returns hypnoticPattern modal + triggers False Life
+  // ------------------------------------------------------------------
+  describe('hypnotic pattern dual-trigger', () => {
+    it('returns hypnoticPattern modal and triggers False Life', async () => {
+      const falseLife = await import('../features/falseLifeService.js')
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Hypnotic Pattern', dc: { dc_type: 'wis', dc_success: 'none' } })
+      delete spell.damage
+
+      const result = await executeSpellCast(spell, makeMetaCtx(), services)
+
+      expect(result.automationPopup).toEqual({
+        type: 'modal',
+        modalName: 'hypnoticPattern',
+        payload: expect.objectContaining({
+          action: { name: 'Hypnotic Pattern', automation: { type: 'hypnotic_pattern' } },
+          playerStats: services.playerStats,
+          campaignName: 'testCampaign',
+          saveType: 'WIS',
+          saveDc: 17,
+          activeOverlay: null,
+          metamagicCareful: false,
+        }),
+      })
+      expect(falseLife.triggerFalseLife).toHaveBeenCalled()
+    })
+
+    it('adds innate sorcery bonus to save DC', async () => {
+      vi.mocked(await import('../../combat/buffs/buffService.js')).isInnateSorceryActive.mockReturnValue(true)
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Hypnotic Pattern', dc: { dc_type: 'wis', dc_success: 'none' } })
+      delete spell.damage
+
+      const result = await executeSpellCast(spell, makeMetaCtx(), services)
+
+      expect(result.automationPopup.payload.saveDc).toBe(18)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // Automation routing — specific spell names
   // ------------------------------------------------------------------
   describe('automation-routing spells', () => {

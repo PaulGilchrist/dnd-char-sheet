@@ -167,7 +167,7 @@ export function endFriendsOnHostileAction(casterName, campaignName) {
 
     const conditions = (() => {
         const x = getRuntimeValue(activeTarget, 'activeConditions', campaignName);
-        if (x == null) { console.error('[friendsService] Missing array:', x); throw new Error('Expected array, got ' + x); }
+        if (x == null) return [];
         return x;
     })();
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');

@@ -83,7 +83,7 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
 
     const saveAbility = meta.ability || 'con'
     const saveLabel = getAbilityLabel(saveAbility)
-    const conditionLabel = conditionKey.charAt(0).toUpperCase() + conditionKey.slice(1)
+    const conditionLabel = conditionKey === 'speed_zero' ? 'Speed 0' : conditionKey.charAt(0).toUpperCase() + conditionKey.slice(1)
     const saveBonus = getAbilitySaveBonus(playerStats, saveAbility)
     let hasAdvantage = hasSaveAdvantage(conditionEffects, conditionKey, conditionEffects?.restoreBalance)
       || (conditionKey === 'grappled' && (conditionEffects?.strCheckAdvantage || (conditionEffects?.abilityCheckAdvantageAbilities && conditionEffects.abilityCheckAdvantageAbilities.includes('STR'))))

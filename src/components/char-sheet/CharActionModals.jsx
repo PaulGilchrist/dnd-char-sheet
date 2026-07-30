@@ -24,6 +24,7 @@ import SaveAttackHealModal from './modals/shared/SaveAttackHealModal.jsx'
 import SaveAttackAoeModal from './modals/shared/SaveAttackAoeModal.jsx'
 import AOEConditionModal from './modals/shared/AOEConditionModal.jsx'
 import FearModal from './modals/shared/FearModal.jsx'
+import HypnoticPatternModal from './modals/shared/HypnoticPatternModal.jsx'
 import MassSuggestionModal from './modals/shared/MassSuggestionModal.jsx'
 import ElementalAttunementModal from './modals/ElementalAttunementModal.jsx'
 import ElementalBurstModal from './modals/ElementalBurstModal.jsx'
@@ -576,6 +577,12 @@ export default function CharActionModals({
                 <FearModal
                     {...mergedModalState.fearModal}
                     onClose={() => setModalState({ fearModal: null })}
+                />
+            )}
+            {mergedModalState.hypnoticPatternModal && (
+                <HypnoticPatternModal
+                    {...mergedModalState.hypnoticPatternModal}
+                    onClose={() => setModalState({ hypnoticPatternModal: null })}
                 />
             )}
             {mergedModalState.silenceModal && (

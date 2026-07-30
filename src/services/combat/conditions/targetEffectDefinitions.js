@@ -335,6 +335,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'hypnotic_pattern',
+    label: 'Hypnotic Pattern',
+    description: 'The creature is Charmed, Incapacitated, and has Speed 0 by Hypnotic Pattern.',
+    icon: 'fa-eye',
+    cls: 'effect-charm',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'speed_reduction',
     label: 'Speed Reduced',
     description: 'The creature\'s Speed is reduced by N feet.',

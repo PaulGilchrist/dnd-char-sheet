@@ -124,7 +124,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 return {
                     id: `runtime-${key}-${i}`,
                     key,
-                    label: csMatch?.label || key.charAt(0).toUpperCase() + key.slice(1),
+                    label: csMatch?.label || (key === 'speed_zero' ? 'Speed 0' : key.charAt(0).toUpperCase() + key.slice(1)),
                     dc: (meta?.dc ?? csMatch?.dc) || 0,
                     ability: (meta?.ability ?? csMatch?.ability) || 'con',
                 }

@@ -112,20 +112,15 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 
  export async function checkGlobeOfInvulnerability(spell, targetName, playerStats, campaignName) {
     const effectiveSpellLevel = spell.level ?? spell.baseLevel ?? 1;
-    console.error('[GlobeCheck] spell:', spell.name, 'level:', spell.level, 'baseLevel:', spell.baseLevel, 'effectiveSpellLevel:', effectiveSpellLevel, 'targetName:', targetName, 'playerStats.name:', playerStats.name);
     if (effectiveSpellLevel <= 5 && targetName) {
         const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const effects = Array.isArray(storedEffects) ? storedEffects : [];
-        console.error('[GlobeCheck] targetEffects count:', effects.length);
         const globeEffects = effects.filter(te => te.effect === 'globe_barrier');
-        console.error('[GlobeCheck] globe_effects:', globeEffects.map(ge => ({ target: ge.target, source: ge.source })));
         const globeEffect = effects.find(
             te => te.target === targetName && te.effect === 'globe_barrier'
         );
-        console.error('[GlobeCheck] globeEffect found:', globeEffect ? { target: globeEffect.target, source: globeEffect.source } : null);
         if (globeEffect) {
             const attackerProtected = globeEffects.some(ge => ge.target === playerStats.name);
-            console.error('[GlobeCheck] attackerProtected:', attackerProtected);
             if (!attackerProtected) {
                 await addEntry(campaignName, {
                     type: 'automation',
@@ -152,13 +147,11 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
 }
 
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
-    console.error('[executeSpellCast] spell:', spell.name, 'level:', spell.level, 'baseLevel:', spell.baseLevel, 'playerStats.name:', playerStats.name);
     if (getActiveBuffs(playerStats.name, campaignName).some(b => b.blocksSpellcasting)) {
         return;
     }
 
     const globeTargetName = getTargetInfo ? (await getTargetInfo())?.name : null;
-    console.error('[executeSpellCast] globeTargetName:', globeTargetName);
     const globeBlock = await checkGlobeOfInvulnerability(spell, globeTargetName, playerStats, campaignName);
     if (globeBlock) {
         return globeBlock;
@@ -331,6 +324,31 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                     saveType: 'WIS',
                     saveDc: spellSaveDc,
                 },
+            },
+        };
+    }
+
+    // Hypnotic Pattern — multi-target WIS save for all creatures in 20-ft-radius sphere: Charmed + Incapacitated + Speed 0, must show modal before generic automation routing
+    if (fullSpell.name && fullSpell.name.toLowerCase() === 'hypnotic pattern' && fullSpell.dc) {
+        const hypnoticInnateBonus = innateSorceryActive ? 1 : 0;
+        const hypnoticModalPayload = {
+            action: { name: 'Hypnotic Pattern', automation: { type: 'hypnotic_pattern' } },
+            playerStats,
+            campaignName,
+            saveType: 'WIS',
+            saveDc: spellSaveDc + hypnoticInnateBonus,
+            activeOverlay: null,
+            metamagicCareful: metaCtx?.metamagicCareful || false,
+            metamagicHeighten: metaCtx?.metamagicHeighten,
+        };
+        triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
+            console.error('[spellCast] False Life trigger failed:', e);
+        });
+        return {
+            automationPopup: {
+                type: 'modal',
+                modalName: 'hypnoticPattern',
+                payload: hypnoticModalPayload,
             },
         };
     }

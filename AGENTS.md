@@ -81,9 +81,8 @@ Read-only inspection only: `git log`, `git show`, `git diff`, `git status`, `git
 - **Route order matters in Express:** `campaigns-changedata.js` must be mounted after `campaigns-character.js` in `server.js` so `.json` character file routes aren't captured by the `:key` wildcard.
 - **Dual ruleset data paths:** 5e data lives in `/data/`, 2024 data in `/data/2024/`. Shared data (equipment, monsters) is only in `/data/`. See `src/services/ui/dataLoader.js` `getDataPath()`.
 - **GM features are localhost-only:** Encounter builder, map editing, quest/faction/NPC management are enabled on localhost; network clients get read-only view.
-- **10-second debounce:** Change data persists to disk 10 seconds after last modification (not 1 minute). On process exit, data is saved immediately.
 - **5MB JSON body limit:** Image uploads are base64-encoded; Express JSON body parser is configured for 5MB.
-- **Per-campaign change data is gitignored:** `public/campaigns/*/data/character-change-data.json`, `public/campaigns/*/data/campaign-log.json`, `logs/`, `coverage/`.
+
 
 ## Server-First Pattern
 
@@ -104,7 +103,7 @@ await setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 ## Combat & Rules
 
 - **No "out of combat" state** — there are always creatures; always a `combatSummary`. Use `getCombatSummary` as the primary source.
-- **If a map is active**, use position on map; if no map is active, assume all creatures are within range.
+- **Distance checks**, Always use isWithinRange for any range check.
 - **Every automation must log** to the campaign log when triggered with event details. Check for logging in any automation you modify.
 - **Dual ruleset architecture:** `src/services/rules/rulesFactory.js` selects between 5e and 2024 rule modules at runtime. Each character has a `rules` field (`'5e'` or `'2024'`). Both rulesets coexist in one campaign. Every core rules module has two implementations (`abilityCalc.js` / `abilityCalc2024.js`, etc.).
 - **Combat pipeline:** Event-chain architecture (`actionPipeline`). Weapon attacks have 20+ steps, spells have 6 steps. Steps subscribe to events and emit new events. Feature riders (19 modules) are pluggable. Modals can pause/resume the pipeline.
@@ -132,8 +131,4 @@ All targetEffect types (te.effect values) are defined in `src/services/combat/co
 - Use subagents, but only run one subagent at a time so its context can be cleared before starting the next.
 - Never leave dead code.  It just confuses people later.
 - Look for and re-use existing code and avoid duplicating code.
-- If a map is active, use position on map, but if no map is active, assume all creatures are within range.
-- There's no "out of combat" — there are always creatures.  There is always a combatSummary
-- use getCombatSummary as the primary source of all creatures
-- EVERY automation needs to log to the cmapaign log when trigged with details of the event.  If you are working on any automation, check to ensure it is logging, and add logging if it is not.
-- Do not use fallbacks. use console.error messages instead so we do not swallow errors.  fallbacks are only where we have a new variable being populated with a known default value, defined in the rules.
+

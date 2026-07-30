@@ -5,6 +5,9 @@ import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../../services/rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import storage from '../../../ui/storage.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -23,6 +26,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    // Register concentration for this spell
+    const combatSummary = getCombatSummary(campaignName);
+    if (combatSummary) {
+        const dc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+        addConcentration(combatSummary, casterName, 'Hypnotic Pattern', dc);
+        storage.set('combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
 
     storeSpellLastAttack(campaignName, {
         casterName,
@@ -116,6 +128,27 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 { type: 'incapacitated', condition: 'incapacitated' },
                 { type: 'speed_zero', condition: 'speed_zero' },
             ], campaignName);
+
+            // Track Hypnotic Pattern effect with concentration duration for cleanup
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
+            const existingIdx = effects.findIndex(
+                te => te.target === targetName && te.effect === 'hypnotic_pattern'
+            );
+            const hypnoticEffect = {
+                target: targetName,
+                effect: 'hypnotic_pattern',
+                source: casterName,
+                conditions: ['charmed', 'incapacitated', 'speed_zero'],
+                dc: dc,
+                duration: 'concentration',
+            };
+            if (existingIdx >= 0) {
+                effects[existingIdx] = hypnoticEffect;
+            } else {
+                effects.push(hypnoticEffect);
+            }
+            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
             results.push(`${targetName} is Charmed, Incapacitated, and has Speed 0.`);
         }
