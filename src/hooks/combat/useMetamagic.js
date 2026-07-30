@@ -4,8 +4,8 @@ import { getClassFeatures } from '../../services/character/classFeatures.js';
 import utils from '../../services/ui/utils.js';
 import { addEntry } from '../../services/ui/logService.js';
 
-export function spendSorceryPoints(characterName, amount, campaignName) {
-  const current = Number(getRuntimeValue(characterName, 'sorceryPoints') ?? 0);
+export function spendSorceryPoints(characterName, amount, campaignName, fallback = 0) {
+  const current = Number(getRuntimeValue(characterName, 'sorceryPoints') ?? fallback);
   const newValue = Math.max(0, current - amount);
   setRuntimeValue(characterName, 'sorceryPoints', newValue, campaignName);
   window.dispatchEvent(new CustomEvent('sorcery-points-updated'));
