@@ -51,6 +51,9 @@ export default function CharActionSpellPopups({
     actionPendingMageArmor,
     actionHandleMageArmorConfirm,
     actionHandleMageArmorSkip,
+    actionPendingCureWounds,
+    actionHandleCureWoundsConfirm,
+    actionHandleCureWoundsSkip,
     pendingActionMetamagic,
     handleActionMetamagicConfirm,
     handleActionMetamagicSkip,
@@ -214,6 +217,17 @@ export default function CharActionSpellPopups({
                     onSkip={actionHandleHealSkip}
                     description="A surge of positive energy washes through the creature, causing it to regain 70 hit points. This spell also ends blindness, deafness, and any diseases affecting the target."
                     confirmLabel="Cast Heal"
+                    confirmIcon="fa-heart"
+                />
+            )}
+            {actionPendingCureWounds && (
+                <SecondaryTargetModal
+                    title="Cure Wounds"
+                    targets={actionPendingCureWounds.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleCureWoundsConfirm({ targetName })}
+                    onSkip={actionHandleCureWoundsSkip}
+                    description="Choose a creature within touch range. The target regains hit points equal to the roll of your dice plus your spellcasting ability modifier."
+                    confirmLabel="Cast Cure Wounds"
                     confirmIcon="fa-heart"
                 />
             )}

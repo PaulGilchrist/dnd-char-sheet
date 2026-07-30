@@ -699,7 +699,8 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Generic healing: use heal_at_slot_level for any healing spell without a dedicated handler
         if (spell.heal_at_slot_level) {
-            const target = await getTargetInfo();
+            const explicitTarget = metaCtx?.targetName ? { name: metaCtx.targetName } : null;
+            const target = explicitTarget || await getTargetInfo();
             let genericHealResult = null;
             if (target?.name) {
                 if (metaCtx?.slotLevel == null && spell.level == null) {

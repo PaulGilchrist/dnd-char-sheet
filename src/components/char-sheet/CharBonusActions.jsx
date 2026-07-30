@@ -3,6 +3,7 @@ import Popup from '../common/popup.jsx'
 import MetamagicPopup from './popups/MetamagicPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
 import HexAbilityModal from './modals/HexAbilityModal.jsx'
+import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
 
 import { getCategories } from '../../services/character/featureCategories.js'
 import { sanitizeHtml } from '../../services/ui/sanitize.js';
@@ -123,7 +124,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     const { castAction: bonusCastAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, { innateSorceryActive: !!displaySaveDcBonus }, cachedBonusCastPosRef, setModalState);
 
-    const { pendingMetamagic, gateMetamagic, handleConfirm, handleSkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
+    const { pendingMetamagic, pendingHealingWord, gateMetamagic, handleConfirm, handleSkip, handleHealingWordConfirm, handleHealingWordSkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
     const { buildUpcastLevels } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleBonusSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -335,6 +336,18 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                     <HexAbilityModal
                         onAbilitySelected={handleHexAbilitySelected}
                         onCancel={handleHexCancel}
+                    />
+                )}
+
+                {pendingHealingWord && (
+                    <SecondaryTargetModal
+                        title="Healing Word"
+                        targets={pendingHealingWord.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                        onTargetSelected={(targetName) => handleHealingWordConfirm({ targetName })}
+                        onSkip={handleHealingWordSkip}
+                        description="Choose a creature within range. The target regains hit points equal to the roll of your dice plus your spellcasting ability modifier."
+                        confirmLabel="Cast Healing Word"
+                        confirmIcon="fa-heart"
                     />
                 )}
 

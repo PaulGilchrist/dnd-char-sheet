@@ -21,6 +21,7 @@ import {
     applyGreaterInvisibility,
 } from '../../services/automation/index.js'
 import { triggerHeal } from '../../services/rules/features/healService.js'
+import { triggerHealingWord } from '../../services/rules/features/healingWordService.js'
 import { executeHandler } from '../../services/automation/index.js'
 import { useConfirmableFlow } from './useConfirmableFlow.js'
 import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js'
@@ -62,6 +63,8 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingSlow = getPending('slow');
   const pendingGlobe = getPending('globe');
   const pendingRegenerate = getPending('regenerate');
+  const pendingHealingWord = getPending('healingWord');
+  const pendingCureWounds = getPending('cureWounds');
 
   const gateMetamagic = React.useCallback(async (spell, metaCtx = {}) => {
     const isGreaterRestoration = (spell.name || '').toLowerCase() === 'greater restoration';
@@ -248,8 +251,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     if (isHeal) {
       const cs = getCombatSummary(campaignName);
       const creatureTargets = cs?.creatures
-        ?.filter(c => c.name !== playerStats?.name)
-        .map(c => c.name) || [];
+        ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('heal', {
           spell,
@@ -401,6 +403,42 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('regenerate', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || 'Touch',
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
+    const isHealingWord = (spell.name || '').toLowerCase() === 'healing word';
+    if (isHealingWord) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures
+        ?.map(c => c.name) || [];
+      if (creatureTargets.length > 0) {
+        cfSetPending('healingWord', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || '60 feet',
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
+    const isCureWounds = (spell.name || '').toLowerCase() === 'cure wounds';
+    if (isCureWounds) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures
+        ?.map(c => c.name) || [];
+      if (creatureTargets.length > 0) {
+        cfSetPending('cureWounds', {
           spell,
           spellName: spell.name,
           spellLevel: spell.level || 0,
@@ -975,6 +1013,47 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleRegenerateSkip = createSkipHandler('regenerate', (pending) => pending.creatureTargets);
 
+  const handleHealingWordConfirm = createConfirmHandler('healingWord', async (pending, result) => {
+    const targetName = result.targetName;
+    if (!targetName) return;
+    const healResult = await triggerHealingWord(
+      pending.spell,
+      { targetName, slotLevel: pending.spellLevel },
+      playerStats,
+      campaignName,
+      null
+    );
+    if (healResult && setPopupHtml) {
+      const bonusHealDetail = healResult.bonusDetails?.length > 0
+        ? healResult.bonusDetails.map(d => `${d.amount} ${d.name}`).join(', ')
+        : '';
+      const rawTotal = healResult.rawTotal ?? healResult.healAmount;
+      setPopupHtml({
+        type: 'heal',
+        name: pending.spellName,
+        formula: healResult.formula,
+        rolls: healResult.rolls || [],
+        total: rawTotal,
+        targetName: healResult.targetName,
+        finalHeal: healResult.healAmount,
+        bonusHeal: healResult.bonusHeal || 0,
+        bonusHealDetail,
+        healingRerollOriginalRolls: healResult.healingRerollOriginalRolls || null,
+        healingRerollDisplayRolls: healResult.healingRerollDisplayRolls || null,
+      });
+    }
+  }, (pending) => pending.creatureTargets);
+
+  const handleHealingWordSkip = createSkipHandler('healingWord', (pending) => pending.creatureTargets);
+
+  const handleCureWoundsConfirm = createConfirmHandler('cureWounds', async (pending, result) => {
+    const targetName = result.targetName;
+    if (!targetName) return;
+    onExecute(pending.spell, { targetName, slotLevel: pending.spellLevel });
+  }, (pending) => pending.creatureTargets);
+
+  const handleCureWoundsSkip = createSkipHandler('cureWounds', (pending) => pending.creatureTargets);
+
   const handleMagicMissileConfirm = React.useCallback((result) => {
     const pending = pendingMagicMissile;
     if (!pending) return;
@@ -996,5 +1075,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceConfirm, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, pendingHealingWord, pendingCureWounds, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceConfirm, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip };
 }
