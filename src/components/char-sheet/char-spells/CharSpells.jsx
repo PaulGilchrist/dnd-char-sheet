@@ -48,6 +48,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
         },
     });
     const [selectedSpell, setSelectedSpell] = React.useState(null);
+    const [pendingGreaterRestorationTarget, setPendingGreaterRestorationTarget] = React.useState(null);
     const [showHexAbilityModal, setShowHexAbilityModal] = React.useState(false);
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     const [pendingSimpleMetamagic, setPendingSimpleMetamagic] = React.useState(null);
@@ -135,7 +136,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, handleResistanceConfirm, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -455,8 +456,8 @@ return (
                         confirmIcon="fa-heart"
                       />
                     )}
-                    {pendingGreaterRestoration && (() => {
-                      const loadTargetData = async (targetName) => {
+                    {(() => {
+                      const getEffectsForTarget = async (targetName) => {
                         const result = [];
                         const conditions = getRuntimeValue(targetName, 'activeConditions') || [];
                         let csConditions = [];
@@ -470,59 +471,92 @@ return (
                           }
                         } catch { /* ignore */ }
                         const allConditions = [...new Set([...conditions, ...csConditions])];
-                        const RESTORATION_CONDITIONS = [{ id: 'charmed' }, { id: 'petrified' }];
                         const conditionMatches = (c, targetCondition) =>
                           (typeof c === 'string' ? c.toLowerCase() : '').trim() === (typeof targetCondition === 'string' ? targetCondition.toLowerCase() : '').trim();
+                        const RESTORATION_CONDITIONS = ['charmed', 'petrified'];
                         RESTORATION_CONDITIONS
-                          .filter(c => allConditions.some(cond => conditionMatches(cond, c.id)))
+                          .filter(c => allConditions.some(cond => conditionMatches(cond, c)))
                           .forEach(c => {
-                            result.push({ id: c.id, label: `${c.id.charAt(0).toUpperCase() + c.id.slice(1)} condition`, selectionData: { type: 'condition', condition: c.id } });
+                            result.push({ value: `condition:${c}`, label: `${c.charAt(0).toUpperCase() + c.slice(1)} condition` });
                           });
                         const exhaustion = getRuntimeValue(targetName, 'exhaustionLevel') || 0;
                         if (exhaustion > 0) {
-                          result.push({ id: 'exhaustion', label: `Exhaustion level (current: ${exhaustion})`, selectionData: { type: 'exhaustion' } });
+                          result.push({ value: 'exhaustion', label: `Exhaustion level (current: ${exhaustion})` });
                         }
                         const activeBuffs = getRuntimeValue(targetName, 'activeBuffs') || [];
                         const hasCurse = activeBuffs.some(b => b.type === 'cursed' || b.cursed);
                         if (hasCurse) {
-                          result.push({ id: 'curse', label: 'Curse (including attunement to cursed magic item)', selectionData: { type: 'curse' } });
+                          result.push({ value: 'curse', label: 'Curse (including attunement to cursed magic item)' });
                         }
                         const abilityReductions = getRuntimeValue(targetName, 'abilityReductions') || {};
                         if (Object.keys(abilityReductions).length > 0) {
-                          result.push({ id: 'ability_reduction', label: 'Ability score reduction', selectionData: { type: 'ability_reduction' } });
+                          result.push({ value: 'ability_reduction', label: 'Ability score reduction' });
                         }
                         const hpMaxReduction = getRuntimeValue(targetName, 'hpMaxReduction') || 0;
                         if (hpMaxReduction > 0) {
-                          result.push({ id: 'hp_max_reduction', label: 'Hit Point maximum reduction', selectionData: { type: 'hp_max_reduction' } });
+                          result.push({ value: 'hp_max_reduction', label: 'Hit Point maximum reduction' });
                         }
                         return result;
                       };
-                      return (
-                        <TargetWithCheckboxesPopup
-                          spell={{ name: pendingGreaterRestoration.spellName, level: pendingGreaterRestoration.spellLevel || 0 }}
-                          playerStats={playerStats}
-                          campaignName={campaignName}
-                          creatureTargets={pendingGreaterRestoration.creatureTargets}
-                          range={pendingGreaterRestoration.range}
-                          onConfirm={handleGreaterRestorationConfirm}
-                          onSkip={handleGreaterRestorationSkip}
-                          loadTargetData={loadTargetData}
-                          icon="fa-solid fa-hand-holding-medical"
-                          title="Greater Restoration"
-                          school="Abjuration"
-                          defaultLevel={5}
-                          description={
-                            <span>
-                              Choose a creature within <strong>{pendingGreaterRestoration.range}</strong> and select the effect(s) to remove.
-                              This spell can remove one or more of the following from the target:
-                              an exhaustion level, the Charmed or Petrified condition, a curse (including attunement to a cursed magic item),
-                              any reduction to an ability score, or any reduction to the target's Hit Point maximum.
-                            </span>
-                          }
-                          noItemsMessage="No removable effects found on this target"
-                          confirmLabel="Cast Greater Restoration"
-                        />
-                      );
+
+                      const handleTargetSelected = async (targetName) => {
+                        const effects = await getEffectsForTarget(targetName);
+                        setPendingGreaterRestorationTarget({ targetName, effects });
+                      };
+
+                      const handleEffectSelected = (effectValue) => {
+                        const type = effectValue.split(':')[0];
+                        const detail = effectValue.split(':')[1] || null;
+                        const selection = { type };
+                        if (detail) {
+                          selection[type === 'condition' ? 'condition' : type] = detail;
+                        }
+                        handleGreaterRestorationConfirm({ targetName: pendingGreaterRestorationTarget.targetName, selections: [selection] });
+                        setPendingGreaterRestorationTarget(null);
+                      };
+
+                      const handleEffectSkip = () => {
+                        setPendingGreaterRestorationTarget(null);
+                      };
+
+                      const handleNoEffectsDismiss = () => {
+                        handleGreaterRestorationNoEffects();
+                        setPendingGreaterRestorationTarget(null);
+                      };
+
+                      if (pendingGreaterRestoration && !pendingGreaterRestorationTarget) {
+                        return (
+                          <SecondaryTargetModal
+                            title="Greater Restoration"
+                            targets={pendingGreaterRestoration.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                            onTargetSelected={handleTargetSelected}
+                            onSkip={handleGreaterRestorationSkip}
+                            description={`Choose a creature within <strong>${pendingGreaterRestoration.range}</strong>. You'll select which debilitating effect to remove.`}
+                            confirmLabel="Cast Greater Restoration"
+                            confirmIcon="fa-hand-holding-medical"
+                          />
+                        );
+                      }
+
+                      if (pendingGreaterRestorationTarget) {
+                        const hasEffects = pendingGreaterRestorationTarget.effects.length > 0;
+                        return (
+                          <SecondaryTargetModal
+                            title="Greater Restoration"
+                            targets={pendingGreaterRestorationTarget.effects.map(e => ({ value: e.value, label: e.label }))}
+                            onTargetSelected={handleEffectSelected}
+                            onSkip={hasEffects ? handleEffectSkip : handleNoEffectsDismiss}
+                            description={hasEffects
+                              ? `Choose one effect to remove from ${pendingGreaterRestorationTarget.targetName}.`
+                              : `No removable effects found on ${pendingGreaterRestorationTarget.targetName}.`}
+                            confirmLabel="Remove Effect"
+                            confirmIcon="fa-hand-holding-medical"
+                            hideConfirm={!hasEffects}
+                          />
+                        );
+                      }
+
+                      return null;
                     })()}
                     {pendingLesserRestoration && (() => {
                       const loadTargetData = async (targetName) => {

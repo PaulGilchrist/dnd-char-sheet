@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import Popup from '../common/popup.jsx'
 import MetamagicPopup from './popups/MetamagicPopup.jsx'
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
@@ -7,6 +8,8 @@ import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
 import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import utils from '../../services/ui/utils.js'
 
 export default function CharActionSpellPopups({
     playerStats,
@@ -39,6 +42,7 @@ export default function CharActionSpellPopups({
     actionPendingGreaterRestoration,
     actionHandleGreaterRestorationConfirm,
     actionHandleGreaterRestorationSkip,
+    actionHandleGreaterRestorationNoEffects,
     actionPendingRemoveCurse,
     actionHandleRemoveCurseConfirm,
     actionHandleRemoveCurseSkip,
@@ -52,6 +56,75 @@ export default function CharActionSpellPopups({
     handleActionMetamagicConfirm,
     handleActionMetamagicSkip,
 }) {
+    const [greaterRestorationSelectedTarget, setGreaterRestorationSelectedTarget] = useState(null);
+
+    const loadGreaterRestorationEffects = useCallback(async (targetName) => {
+        const result = [];
+        const conditions = getRuntimeValue(targetName, 'activeConditions') || [];
+        let csConditions = [];
+        try {
+            const cs = await getCombatSummary(campaignName);
+            if (cs) {
+                const creature = cs.creatures?.find(c => utils.getName(c.name) === utils.getName(targetName));
+                if (creature && Array.isArray(creature.conditions)) {
+                    csConditions = creature.conditions.map(c => c.key);
+                }
+            }
+        } catch { /* ignore */ }
+        const allConditions = [...new Set([...conditions, ...csConditions])];
+        const conditionMatches = (c, targetCondition) =>
+            (typeof c === 'string' ? c.toLowerCase() : '').trim() === (typeof targetCondition === 'string' ? targetCondition.toLowerCase() : '').trim();
+        const RESTORATION_CONDITIONS = ['charmed', 'petrified'];
+        RESTORATION_CONDITIONS
+            .filter(c => allConditions.some(cond => conditionMatches(cond, c)))
+            .forEach(c => {
+                result.push({ value: `condition:${c}`, label: `${c.charAt(0).toUpperCase() + c.slice(1)} condition` });
+            });
+        const exhaustion = getRuntimeValue(targetName, 'exhaustionLevel') || 0;
+        if (exhaustion > 0) {
+            result.push({ value: 'exhaustion', label: `Exhaustion level (current: ${exhaustion})` });
+        }
+        const activeBuffs = getRuntimeValue(targetName, 'activeBuffs') || [];
+        const hasCurse = activeBuffs.some(b => b.type === 'cursed' || b.cursed);
+        if (hasCurse) {
+            result.push({ value: 'curse', label: 'Curse (including attunement to cursed magic item)' });
+        }
+        const abilityReductions = getRuntimeValue(targetName, 'abilityReductions') || {};
+        if (Object.keys(abilityReductions).length > 0) {
+            result.push({ value: 'ability_reduction', label: 'Ability score reduction' });
+        }
+        const hpMaxReduction = getRuntimeValue(targetName, 'hpMaxReduction') || 0;
+        if (hpMaxReduction > 0) {
+            result.push({ value: 'hp_max_reduction', label: 'Hit Point maximum reduction' });
+        }
+        return result;
+    }, [campaignName]);
+
+    const handleGreaterRestorationTargetSelected = useCallback(async (targetName) => {
+        const effects = await loadGreaterRestorationEffects(targetName);
+        setGreaterRestorationSelectedTarget({ targetName, effects });
+    }, [loadGreaterRestorationEffects]);
+
+    const handleGreaterRestorationEffectSelected = useCallback((effectValue) => {
+        const parts = effectValue.split(':');
+        const type = parts[0];
+        const detail = parts[1] || null;
+        const selection = { type };
+        if (detail) {
+            selection[type === 'condition' ? 'condition' : type] = detail;
+        }
+        actionHandleGreaterRestorationConfirm({ targetName: greaterRestorationSelectedTarget.targetName, selections: [selection] });
+        setGreaterRestorationSelectedTarget(null);
+    }, [greaterRestorationSelectedTarget, actionHandleGreaterRestorationConfirm]);
+
+    const handleGreaterRestorationEffectSkip = useCallback(() => {
+        setGreaterRestorationSelectedTarget(null);
+    }, []);
+
+    const handleNoEffectsDismiss = useCallback(() => {
+        actionHandleGreaterRestorationNoEffects();
+        setGreaterRestorationSelectedTarget(null);
+    }, [actionHandleGreaterRestorationNoEffects]);
     return (
         <>
             {selectedActionSpell && (
@@ -145,17 +218,39 @@ export default function CharActionSpellPopups({
                     confirmIcon="fa-heart"
                 />
             )}
-            {actionPendingGreaterRestoration && (
-                <TargetWithCheckboxesPopup
-                    spell={{ name: actionPendingGreaterRestoration.spellName, level: actionPendingGreaterRestoration.spellLevel || 0 }}
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    creatureTargets={actionPendingGreaterRestoration.creatureTargets}
-                    range={actionPendingGreaterRestoration.range}
-                    onConfirm={actionHandleGreaterRestorationConfirm}
-                    onSkip={actionHandleGreaterRestorationSkip}
-                />
-            )}
+            {(() => {
+                if (actionPendingGreaterRestoration && !greaterRestorationSelectedTarget) {
+                    return (
+                        <SecondaryTargetModal
+                            title="Greater Restoration"
+                            targets={actionPendingGreaterRestoration.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                            onTargetSelected={handleGreaterRestorationTargetSelected}
+                            onSkip={actionHandleGreaterRestorationSkip}
+                            description={`Choose a creature within <strong>${actionPendingGreaterRestoration.range}</strong>. You'll select which debilitating effect to remove.`}
+                            confirmLabel="Cast Greater Restoration"
+                            confirmIcon="fa-hand-holding-medical"
+                        />
+                    );
+                }
+                if (greaterRestorationSelectedTarget) {
+                    const hasEffects = greaterRestorationSelectedTarget.effects.length > 0;
+                    return (
+                        <SecondaryTargetModal
+                            title="Greater Restoration"
+                            targets={greaterRestorationSelectedTarget.effects.map(e => ({ value: e.value, label: e.label }))}
+                            onTargetSelected={handleGreaterRestorationEffectSelected}
+                            onSkip={hasEffects ? handleGreaterRestorationEffectSkip : handleNoEffectsDismiss}
+                            description={hasEffects
+                                ? `Choose one effect to remove from ${greaterRestorationSelectedTarget.targetName}.`
+                                : `No removable effects found on ${greaterRestorationSelectedTarget.targetName}.`}
+                            confirmLabel="Remove Effect"
+                            confirmIcon="fa-hand-holding-medical"
+                            hideConfirm={!hasEffects}
+                        />
+                    );
+                }
+                return null;
+            })()}
             {actionPendingRemoveCurse && (
                 <TargetWithCheckboxesPopup
                     spell={{ name: actionPendingRemoveCurse.spellName, level: actionPendingRemoveCurse.spellLevel || 0 }}

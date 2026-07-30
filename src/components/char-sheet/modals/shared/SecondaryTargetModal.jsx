@@ -5,7 +5,7 @@ function isOptionTarget(target) {
     return 'value' in target;
 }
 
-function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featureDescription, description, confirmLabel, confirmIcon, showHp, showSize }) {
+function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featureDescription, description, confirmLabel, confirmIcon, showHp, showSize, hideConfirm }) {
     const [selected, setSelected] = useState(null);
 
     const iconClass = confirmIcon || 'fa-crosshairs';
@@ -73,14 +73,16 @@ function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featur
                     )}
                 </div>
                 <div className="sp-actions">
-                    <button
-                        className="sp-roll-btn"
-                        onClick={handleConfirm}
-                        disabled={!selected || targets.length === 0}
-                        type="button"
-                    >
-                        <i className={`fa-solid ${iconClass}`}></i> {label}
-                    </button>
+                    {!hideConfirm || targets.length > 0 ? (
+                        <button
+                            className="sp-roll-btn"
+                            onClick={handleConfirm}
+                            disabled={!selected || targets.length === 0}
+                            type="button"
+                        >
+                            <i className={`fa-solid ${iconClass}`}></i> {label}
+                        </button>
+                    ) : null}
                     <button className="sp-dismiss-btn" onClick={onSkip} type="button">
                         Skip
                     </button>

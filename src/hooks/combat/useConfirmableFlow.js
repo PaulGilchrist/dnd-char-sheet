@@ -8,7 +8,7 @@ const ROLLBACK_SPELLS = [
   'shield of faith', 'magic missile'
 ];
 
-function rollbackSpellSlot(playerName, spellName, spellLevel, playerStats, campaignName) {
+export function rollbackSpellSlot(playerName, spellName, spellLevel, playerStats, campaignName) {
   const isWarlock = playerStats.class?.name === 'Warlock';
   const isFreeCast = spellName && ROLLBACK_SPELLS.some(name => (spellName || '').toLowerCase() === name);
 

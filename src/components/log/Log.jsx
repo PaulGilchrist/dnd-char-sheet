@@ -761,6 +761,48 @@ function SummonsEntry({ entry }) {
   );
 }
 
+function SpellEffectEntry({ entry }) {
+  return (
+    <div className="log-entry log-spell-effect">
+      <div className="log-entry-header">
+        <span className="log-icon"><i className="fas fa-hand-holding-medical"></i></span>
+        <span className="log-character">{entry.characterName}</span>
+        <span className="log-name">{entry.spellName}</span>
+        {entry.targetName && <span className="log-target">→ {entry.targetName}</span>}
+        <span className="log-time">{formatTimestamp(entry.timestamp)}</span>
+      </div>
+      <div className="log-spell-effect-details">
+        {entry.effects && entry.effects.length > 0 && (
+          <ul className="log-effects-list">
+            {entry.effects.map((effect, i) => (
+              <li key={i}>{effect}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BuffEntry({ entry }) {
+  const isRemoval = entry.action === 'removed';
+  const iconClass = isRemoval ? 'fa-heart-crack' : 'fa-heart';
+  return (
+    <div className={`log-entry log-buff ${isRemoval ? 'log-buff-removed' : 'log-buff-added'}`}>
+      <div className="log-entry-header">
+        <span className="log-icon"><i className={`fas ${iconClass}`}></i></span>
+        <span className="log-character">{entry.characterName}</span>
+        <span className="log-name">{isRemoval ? 'Effect Removed' : 'Effect Added'}</span>
+        <span className="log-time">{formatTimestamp(entry.timestamp)}</span>
+      </div>
+      <div className="log-buff-details">
+        <span className="log-buff-name">{entry.buffName}</span>
+        {entry.reason && <span className="log-buff-reason"> — {entry.reason}</span>}
+      </div>
+    </div>
+  );
+}
+
 
 export default function Log({ campaignName, characters }) {
   const { logEntries, initialized, addEntry } = useLog(campaignName);
@@ -841,6 +883,8 @@ export default function Log({ campaignName, characters }) {
             {entry.type === 'save_result' && <SaveResultEntry entry={entry}/>}
             {entry.type === 'psionic_sorcery' && <PsionicSorceryEntry entry={entry}/>}
             {entry.type === 'summons' && <SummonsEntry entry={entry}/>}
+            {entry.type === 'spell_effect' && <SpellEffectEntry entry={entry}/>}
+            {entry.type === 'buff' && <BuffEntry entry={entry}/>}
           </div>
         ))}
       </div>

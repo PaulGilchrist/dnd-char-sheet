@@ -1060,3 +1060,51 @@
     background: rgba(168, 85, 247, 0.15);
     text-transform: uppercase;
 }
+
+/* Spell effect entries */
+.log-spell-effect {
+    border-left: 3px solid #2196F3;
+    background: rgba(33, 150, 243, 0.03);
+}
+
+.log-spell-effect-details {
+    padding: 4px 0;
+}
+
+.log-effects-list {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+.log-effects-list li {
+    font-size: 0.88rem;
+    color: var(--color-text);
+    margin: 2px 0;
+}
+
+/* Buff entries */
+.log-buff-added {
+    border-left: 3px solid #4CAF50;
+    background: rgba(76, 175, 80, 0.03);
+}
+
+.log-buff-removed {
+    border-left: 3px solid #f44336;
+    background: rgba(244, 67, 54, 0.03);
+}
+
+.log-buff-details {
+    padding: 4px 0;
+}
+
+.log-buff-name {
+    font-size: 0.88rem;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.log-buff-reason {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}

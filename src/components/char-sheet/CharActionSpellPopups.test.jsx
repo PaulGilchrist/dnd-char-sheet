@@ -124,6 +124,7 @@ function createBaseProps(overrides) {
     actionPendingGreaterRestoration: null,
     actionHandleGreaterRestorationConfirm: vi.fn(),
     actionHandleGreaterRestorationSkip: vi.fn(),
+    actionHandleGreaterRestorationNoEffects: vi.fn(),
     actionPendingRemoveCurse: null,
     actionHandleRemoveCurseConfirm: vi.fn(),
     actionHandleRemoveCurseSkip: vi.fn(),
@@ -280,15 +281,17 @@ describe('CharActionSpellPopups', () => {
     });
   });
 
-  describe('TargetWithCheckboxesPopup', () => {
-    it('renders when actionPendingGreaterRestoration is truthy', () => {
+  describe('Greater Restoration Modal', () => {
+    it('renders SecondaryTargetModal when actionPendingGreaterRestoration is truthy', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps()}
-          actionPendingGreaterRestoration={{ spellName: 'Greater Restoration', spellLevel: 5, creatureTargets: ['Ally'] }}
+          actionPendingGreaterRestoration={{ spellName: 'Greater Restoration', spellLevel: 5, creatureTargets: ['Ally'], range: 'Touch' }}
         />
       );
-      expect(screen.getByTestId('checkbox-popup')).toBeInTheDocument();
+      expect(screen.getByText('Greater Restoration')).toBeInTheDocument();
+      expect(screen.getByText(/Choose a creature within/)).toBeInTheDocument();
+      expect(screen.getByText('Cast Greater Restoration')).toBeInTheDocument();
     });
 
     it('renders when actionPendingRemoveCurse is truthy', () => {
