@@ -311,6 +311,101 @@ function decrementFreeCastResource(playerName, spellName, spellLevel, playerStat
   }
 }
 
+function incrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName) {
+  const arcanums = playerStats?.class?.arcanums || [];
+  if (arcanums.includes(spellName)) {
+    const arcanumLevels = [6, 7, 8, 9];
+    for (const level of arcanumLevels) {
+      const resourceKey = `mysticArcanumLevel${level}`;
+      const count = Number(getRuntimeValue(playerName, resourceKey) ?? 1);
+      if (count < 1) {
+        setRuntimeValue(playerName, resourceKey, count + 1, campaignName);
+        break;
+      }
+    }
+  }
+
+  const allActions = [
+    ...(playerStats?.automation?.actions || []),
+    ...(playerStats?.automation?.bonusActions || []),
+    ...(playerStats?.automation?.specialActions || []),
+  ];
+  for (const entry of allActions) {
+    if (entry.type !== 'free_spell' && entry.type !== 'fey_reinforcements' && entry.type !== 'misty_wanderer' && entry.type !== 'dragon_companion') continue;
+    if (entry.uses_expression && entry.usesMax) {
+      const spellField = Array.isArray(entry.spell) ? entry.spell[0] : entry.spell;
+      const levelMatch = spellField ? spellField.match(/level (\d+)/) : null;
+      const featureLevel = levelMatch ? parseInt(levelMatch[1], 10) : null;
+      if (featureLevel !== null && featureLevel === spellLevel) {
+        const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
+        const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.usesMax);
+        if (count < entry.usesMax) {
+          setRuntimeValue(playerName, freeCastCountKey, count + 1, campaignName);
+        }
+        break;
+      }
+      else if (featureLevel === null) {
+        const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+        if (spells.includes(spellName)) {
+          const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
+          const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.usesMax);
+          if (count < entry.usesMax) {
+            setRuntimeValue(playerName, freeCastCountKey, count + 1, campaignName);
+          }
+          break;
+        }
+      }
+      if (featureLevel !== null) continue;
+    }
+
+    const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+    if (!spells.includes(spellName)) continue;
+
+    if (entry.uses != null && entry.recharge && !entry.uses_expression) {
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
+      const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
+      if (count < entry.uses) {
+        setRuntimeValue(playerName, freeCastCountKey, count + 1, campaignName);
+      }
+      break;
+    }
+
+    if (entry.perSpellTracking) {
+      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
+      setRuntimeValue(playerName, usedKey, false, campaignName);
+      break;
+    }
+  }
+
+  const favoredEnemyCount = getRuntimeValue(playerName, '_Favored_Enemy_freeCastCount');
+  if (favoredEnemyCount != null) {
+    const newCount = Number(favoredEnemyCount);
+    if (newCount >= 0) {
+      setRuntimeValue(playerName, 'favoredEnemyUses', newCount + 1, campaignName);
+    }
+  }
+  const nrFreeCast = getRuntimeValue(playerName, 'naturalRecoveryFreeCast');
+  if (nrFreeCast && Array.isArray(nrFreeCast) && nrFreeCast.includes(spellName)) {
+    setRuntimeValue(playerName, 'naturalRecoveryFreeCast', null, campaignName);
+    setRuntimeValue(playerName, 'naturalRecoveryFreeCastUsed', false, campaignName);
+  }
+  if (getRuntimeValue(playerName, '_Bewitching_Magic_freeCast') && spellName === 'Misty Step') {
+    setRuntimeValue(playerName, '_Bewitching_Magic_freeCast', null, campaignName);
+  }
+
+  const sigSpells = getRuntimeValue(playerName, 'SignatureSpells_selection', campaignName);
+  if (Array.isArray(sigSpells) && sigSpells.includes(spellName) && spellLevel === 3) {
+    const usedKey = `SignatureSpells_${spellName.replace(/\s+/g, '_')}_used`;
+    setRuntimeValue(playerName, usedKey, false, campaignName);
+  }
+
+  const divSpells = getRuntimeValue(playerName, '_Divination_Savant_selection', campaignName);
+  if (Array.isArray(divSpells) && divSpells.includes(spellName)) {
+    const divUsedKey = `_Divination_Savant_${spellName.replace(/\s+/g, '_')}_used`;
+    setRuntimeValue(playerName, divUsedKey, false, campaignName);
+  }
+}
+
 function cleanupBuffsByName(casterName, buffName, campaignName) {
   const cs = getCombatSummary(campaignName);
   if (!cs || !cs.creatures) return;
@@ -509,4 +604,4 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
   return result;
 }
 
-export { isFreeCastAuthorized };
+export { isFreeCastAuthorized, incrementFreeCastResource };

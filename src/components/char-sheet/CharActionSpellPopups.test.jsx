@@ -294,14 +294,16 @@ describe('CharActionSpellPopups', () => {
       expect(screen.getByText('Cast Greater Restoration')).toBeInTheDocument();
     });
 
-    it('renders when actionPendingRemoveCurse is truthy', () => {
+    it('renders SecondaryTargetModal when actionPendingRemoveCurse is truthy', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps()}
           actionPendingRemoveCurse={{ spellName: 'Remove Curse', spellLevel: 3, creatureTargets: ['Ally'] }}
         />
       );
-      expect(screen.getByTestId('checkbox-popup')).toBeInTheDocument();
+      expect(screen.getByText('Remove Curse')).toBeInTheDocument();
+      expect(screen.getByText(/Choose a creature within/)).toBeInTheDocument();
+      expect(screen.getByText('Cast Remove Curse')).toBeInTheDocument();
     });
   });
 

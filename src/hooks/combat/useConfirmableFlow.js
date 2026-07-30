@@ -1,18 +1,20 @@
 import { useState, useCallback, useRef } from 'react'
 import { addEntry } from '../../services/ui/logService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
+import { incrementFreeCastResource } from '../../services/rules/spells/spellPreparationService.js'
 
-const ROLLBACK_SPELLS = [
+const FREE_CAST_SPELLS = [
   'bane', 'bless', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
-  'remove curse', 'mage armor', 'protection from energy', 'resistance',
+  'mage armor', 'protection from energy', 'resistance',
   'shield of faith', 'magic missile'
 ];
 
 export function rollbackSpellSlot(playerName, spellName, spellLevel, playerStats, campaignName) {
   const isWarlock = playerStats.class?.name === 'Warlock';
-  const isFreeCast = spellName && ROLLBACK_SPELLS.some(name => (spellName || '').toLowerCase() === name);
+  const isFreeCast = spellName && FREE_CAST_SPELLS.some(name => (spellName || '').toLowerCase() === name);
 
   if (isFreeCast) {
+    incrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName);
     return;
   }
 

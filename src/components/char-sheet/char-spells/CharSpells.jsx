@@ -11,7 +11,6 @@ import CharSpellSlots from './CharSpellSlots.jsx'
 import MultiTargetPopup from '../popups/MultiTargetPopup.jsx'
 import SecondaryTargetModal from '../modals/shared/SecondaryTargetModal.jsx'
 import MultiTargetCountPopup from '../popups/MultiTargetCountPopup.jsx'
-import TargetWithCheckboxesPopup from '../popups/TargetWithCheckboxesPopup.jsx'
 import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
 import TargetWithTypePopup from '../popups/TargetWithTypePopup.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
@@ -646,45 +645,17 @@ return (
 
                       return null;
                     })()}
-                    {pendingRemoveCurse && (() => {
-                      const loadTargetData = async (targetName) => {
-                        const result = [];
-                        const activeBuffs = getRuntimeValue(targetName, 'activeBuffs') || [];
-                        const cursedBuffs = activeBuffs.filter(b => b.type === 'cursed' || b.cursed);
-                        if (cursedBuffs.length > 0) {
-                          result.push({ id: 'curse', label: `Curse (${cursedBuffs.length} cursed effect(s))`, selectionData: { type: 'curse' } });
-                        }
-                        const attunement = getRuntimeValue(targetName, 'attunement') || [];
-                        if (attunement.length > 0) {
-                          result.push({ id: 'attunement', label: `Attunement (${attunement.length} attuned item(s))`, selectionData: { type: 'attunement' } });
-                        }
-                        return result;
-                      };
-                      return (
-                        <TargetWithCheckboxesPopup
-                          spell={{ name: pendingRemoveCurse.spellName, level: pendingRemoveCurse.spellLevel || 0 }}
-                          playerStats={playerStats}
-                          campaignName={campaignName}
-                          creatureTargets={pendingRemoveCurse.creatureTargets}
-                          range={pendingRemoveCurse.range}
-                          onConfirm={handleRemoveCurseConfirm}
-                          onSkip={handleRemoveCurseSkip}
-                          loadTargetData={loadTargetData}
-                          icon="fa-solid fa-hand-holding-medical"
-                          title="Remove Curse"
-                          school="Abjuration"
-                          defaultLevel={3}
-                          description={
-                            <span>
-                              Choose a creature within <strong>{pendingRemoveCurse.range}</strong>. This spell ends all curses affecting the target
-                              and breaks the target's attunement to any cursed magic items.
-                            </span>
-                          }
-                          noItemsMessage="No curses or attunement found on this target"
-                          confirmLabel="Cast Remove Curse"
-                        />
-                      );
-                    })()}
+                    {pendingRemoveCurse && (
+                      <SecondaryTargetModal
+                        title="Remove Curse"
+                        targets={pendingRemoveCurse.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                        onTargetSelected={(targetName) => handleRemoveCurseConfirm({ targetName })}
+                        onSkip={handleRemoveCurseSkip}
+                        description={`Choose a creature within <strong>${pendingRemoveCurse.range}</strong>. This spell ends all curses affecting the target and breaks the target's attunement to any cursed magic items.`}
+                        confirmLabel="Cast Remove Curse"
+                        confirmIcon="fa-hand-holding-medical"
+                      />
+                    )}
                     {pendingMageArmor && (
                       <SecondaryTargetModal
                         title="Mage Armor"

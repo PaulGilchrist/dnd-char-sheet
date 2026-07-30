@@ -107,9 +107,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isRemoveCurse) {
       const cs = getCombatSummary(campaignName);
-      const creatureTargets = cs?.creatures
-        ?.filter(c => c.name !== playerStats?.name)
-        .map(c => c.name) || [];
+      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('removeCurse', {
           spell,

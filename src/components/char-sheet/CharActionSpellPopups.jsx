@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import Popup from '../common/popup.jsx'
 import MetamagicPopup from './popups/MetamagicPopup.jsx'
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
-import TargetWithCheckboxesPopup from './popups/TargetWithCheckboxesPopup.jsx'
 import MagicMissileTargetPopup from './popups/MagicMissileTargetPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
 import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
@@ -252,14 +251,14 @@ export default function CharActionSpellPopups({
                 return null;
             })()}
             {actionPendingRemoveCurse && (
-                <TargetWithCheckboxesPopup
-                    spell={{ name: actionPendingRemoveCurse.spellName, level: actionPendingRemoveCurse.spellLevel || 0 }}
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    creatureTargets={actionPendingRemoveCurse.creatureTargets}
-                    range={actionPendingRemoveCurse.range}
-                    onConfirm={actionHandleRemoveCurseConfirm}
+                <SecondaryTargetModal
+                    title="Remove Curse"
+                    targets={actionPendingRemoveCurse.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleRemoveCurseConfirm({ targetName })}
                     onSkip={actionHandleRemoveCurseSkip}
+                    description={`Choose a creature within <strong>${actionPendingRemoveCurse.range}</strong>. This spell ends all curses affecting the target and breaks the target's attunement to any cursed magic items.`}
+                    confirmLabel="Cast Remove Curse"
+                    confirmIcon="fa-hand-holding-medical"
                 />
             )}
             {actionPendingMagicMissile && (() => {
