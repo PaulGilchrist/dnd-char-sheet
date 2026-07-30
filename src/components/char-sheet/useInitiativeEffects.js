@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getRuntimeValue, setRuntimeBatch, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeBatch, setRuntimeValue, getAllStoreKeys } from '../../hooks/runtime/useRuntimeState.js';
 import utils from '../../services/ui/utils.js'
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
@@ -177,6 +177,20 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             const filteredRegenEffects = regenEffects.filter(te => te.effect !== 'regenerate');
             if (filteredRegenEffects.length !== regenEffects.length) {
                 setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true);
+            }
+
+            // Set all regenerate targets to full HP on initiative roll
+            const allKeys = getAllStoreKeys();
+            for (const key of allKeys) {
+                if (typeof key !== 'string') continue;
+                const regenActive = getRuntimeValue(key, 'regenerateActive', campaignName);
+                if (regenActive) {
+                    setRuntimeValue(key, 'regenerateActive', false, campaignName);
+                    const storedMaxHp = getRuntimeValue(key, 'hitPoints', campaignName);
+                    if (storedMaxHp != null) {
+                        setRuntimeValue(key, 'currentHitPoints', storedMaxHp, campaignName);
+                    }
+                }
             }
 
             // Clear Trance of Order on initiative roll (new combat)
