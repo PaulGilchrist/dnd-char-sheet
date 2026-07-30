@@ -133,9 +133,7 @@ All targetEffect types (te.effect values) are defined in `src/services/combat/co
 - The GM's manual-add UI (`EffectAdder.jsx`) reads solely from this registry.
 - Use `getEffectDefinition(effectKey)` in handler code to look up a definition before creating a new targetEffect.
 
-## Core Rules
+## CRITICAL CORE RULES
+- **One subagent at a time** to conserve memory.
 - During debugging, all added debug logging must remain in the code until I explicitly say the bug is fixed.
-- Use subagents, but only run one subagent at a time so its context can be cleared before starting the next.
-- Never leave dead code.  It just confuses people later.
 - Look for and re-use existing code and avoid duplicating code.
-
