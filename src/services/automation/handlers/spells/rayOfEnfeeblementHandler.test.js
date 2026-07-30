@@ -141,6 +141,8 @@ describe('rayOfEnfeeblementHandler', () => {
                         target: 'Goblin',
                         effect: 'ray_of_enfeeble_debuff',
                         source: 'Test Wizard',
+                        slotLevel: 2,
+                        duration: 'concentration',
                         strCheckDisadvantage: true,
                         rayOfEnfeebleDamageReduction: true,
                     }),
@@ -156,6 +158,8 @@ describe('rayOfEnfeeblementHandler', () => {
                 target: 'Goblin',
                 effect: 'ray_of_enfeeble_debuff',
                 source: 'Test Wizard',
+                slotLevel: 2,
+                duration: 'concentration',
                 strCheckDisadvantage: true,
                 rayOfEnfeebleDamageReduction: true,
             };
@@ -163,6 +167,8 @@ describe('rayOfEnfeeblementHandler', () => {
                 target: 'Goblin',
                 effect: 'ray_of_enfeeble_debuff',
                 source: 'Other Wizard',
+                slotLevel: 2,
+                duration: 'concentration',
                 strCheckDisadvantage: true,
                 rayOfEnfeebleDamageReduction: true,
             };
@@ -177,6 +183,8 @@ describe('rayOfEnfeeblementHandler', () => {
                 target: 'Goblin',
                 effect: 'ray_of_enfeeble_debuff',
                 source: 'Test Wizard',
+                slotLevel: 2,
+                duration: 'concentration',
                 strCheckDisadvantage: true,
                 rayOfEnfeebleDamageReduction: true,
             });

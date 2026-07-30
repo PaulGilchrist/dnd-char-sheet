@@ -297,6 +297,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const isSelf = casterName === creatureName
         badges.push({ label: displayLabel, cls: isSelf ? 'effect-buff' : 'effect-debuff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'bane_penalty', tooltip: `${displayLabel} from ${casterName}: -1d4 on attack rolls and saving throws` })
     }
+    if (effects.rayOfEnfeebleDamageReduction) {
+        const rayEffect = targetEffects?.find(te => te.effect === 'ray_of_enfeeble_debuff' && te.target === creatureName)
+        const casterName = rayEffect?.source || 'unknown'
+        badges.push({ label: 'Enfeeblement', cls: 'effect-debuff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'ray_of_enfeeble_debuff', tooltip: `Ray of Enfeeblement from ${casterName}: -1d8 to damage rolls, Disadvantage on STR checks` })
+    }
     if (effects.blessBonus) {
         const blessEffect = targetEffects?.find(te => te.effect === 'bless_bonus' && te.target === creatureName)
         const casterName = blessEffect?.source || 'unknown'

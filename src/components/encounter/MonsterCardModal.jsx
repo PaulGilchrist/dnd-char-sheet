@@ -420,12 +420,20 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
 
   const handleAbilityCheck = (abbr, mod) => {
     const fullName = abilityNameMap[abbr] || abbr.toUpperCase();
-    rollAbilityCheck(fullName, mod);
+    const isStr = abbr === 'str';
+    const rayDebuffOnMonster = monsterTargetEffects?.some(te => te.target === monsterName && te.effect === 'ray_of_enfeeble_debuff');
+    const context = isStr && rayDebuffOnMonster ? { forcedMode: 'disadvantage' } : undefined;
+    rollAbilityCheck(fullName, mod, context);
   };
 
   const handleSaveThrow = (ability, mod) => rollSavingThrow(saveAbilityAbbr(ability), mod);
 
-  const handleSkillCheck = (name, mod) => rollSkillCheck(name, mod);
+  const handleSkillCheck = (name, mod) => {
+    const rayDebuffOnMonster = monsterTargetEffects?.some(te => te.target === monsterName && te.effect === 'ray_of_enfeeble_debuff');
+    const isAthletics = name === 'Athletics';
+    const context = isAthletics && rayDebuffOnMonster ? { forcedMode: 'disadvantage' } : undefined;
+    rollSkillCheck(name, mod, context);
+  };
 
   const handleInitiative = (bonus) => rollInitiative(bonus);
 

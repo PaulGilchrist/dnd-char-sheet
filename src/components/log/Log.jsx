@@ -145,6 +145,9 @@ function RollEntry({ entry }) {
               <i className="fa-solid fa-shield-halved"></i> GWF: {entry.gwfOriginalRolls.join(', ')} → {entry.gwfDisplayRolls?.join(', ') || entry.rolls.join(', ')}
             </span>
           )}
+          {entry.rayOfEnfeebleRoll != null && (
+            <span className="log-ray-enfeeblement"> -1d8 [Enfeeblement]: -{entry.rayOfEnfeebleRoll}</span>
+          )}
         </div>
         {(isSaveDamage || isOverchannelDamage) && entry.finalDamage != null && entry.damageType && (
           <span className="log-final-damage">→ {entry.finalDamage} {entry.damageType} damage</span>

@@ -158,10 +158,10 @@ describe('Plain damage edge cases', () => {
     });
 
     describe('ray of enfeeble debuff', () => {
-        it('reduces damage when ray of enfeeble debuff is active from the attacker', async () => {
+        it('reduces damage when ray of enfeeble debuff is active on the attacker', async () => {
             getRuntimeValue.mockImplementation((key) => {
                 if (key === 'campaign') return [
-                    { effect: 'ray_of_enfeeble_debuff', source: 'TestFighter' },
+                    { effect: 'ray_of_enfeeble_debuff', target: 'TestFighter' },
                 ];
                 return null;
             });
@@ -177,7 +177,30 @@ describe('Plain damage edge cases', () => {
 
             expect(rollExpression).toHaveBeenCalledWith('1d8');
             expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                finalDamage: 5,
+                rayOfEnfeebleReduction: 3,
+                rayOfEnfeebleRoll: 3,
+            }));
+        });
+
+        it('does not reduce damage when ray of enfeeble debuff is on a different creature', async () => {
+            getRuntimeValue.mockImplementation((key) => {
+                if (key === 'campaign') return [
+                    { effect: 'ray_of_enfeeble_debuff', target: 'OtherCreature' },
+                ];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 8, damageReduced: false });
+
+            const fn = createFn();
+            await fn('Fire Bolt', '1d10', 8, [8], 0, {
+                targetName: 'Goblin',
+                damageType: 'fire',
+                attackerName: 'TestFighter',
+            });
+
+            expect(rollExpression).not.toHaveBeenCalledWith('1d8');
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                rayOfEnfeebleReduction: 0,
             }));
         });
     });

@@ -3,6 +3,8 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -112,6 +114,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         target: targetName,
         effect: 'ray_of_enfeeble_debuff',
         source: playerStats.name,
+        slotLevel: auto.slotLevel || 2,
+        duration: 'concentration',
         strCheckDisadvantage: true,
         rayOfEnfeebleDamageReduction: true,
     };
@@ -123,6 +127,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
+
+    // Set concentration tracking on the caster
+    const combatSummary = getCombatSummary(campaignName);
+    addConcentration(combatSummary, playerStats.name, 'Ray of Enfeeblement', dc);
 
     // Apply expiration (concentration handles duration; 1 minute = 10 rounds default)
     addExpiration(playerStats.name, targetName, [

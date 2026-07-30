@@ -91,7 +91,23 @@ export function createLogAndShow(deps) {
 
         const combatSummary = await loadCombatSummary(campaignName);
 
+        // Ray of Enfeeblement: STR-based d20 tests have disadvantage (applies to attacker, not just PCs)
+        let rayStrDisadvantage = false;
+        if (rollType === 'check' || rollType === 'skill') {
+            const abilityAbbr = (name || '').substring(0, 3).toUpperCase();
+            if (abilityAbbr === 'STR' || name === 'Strength' || name === 'Athletics') {
+                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const rayDebuffOnAttacker = allTargetEffects.some(te => te.target === characterName && te.effect === 'ray_of_enfeeble_debuff' && te.strCheckDisadvantage);
+                if (rayDebuffOnAttacker) {
+                    rayStrDisadvantage = true;
+                }
+            }
+        }
+
         // Pre-load maneuver cache for skill check / initiative superiority buttons
+        if (rayStrDisadvantage) {
+            forcedMode = 'disadvantage';
+        }
         if (rollType === 'check' || rollType === 'skill' || rollType === 'initiative') {
             await getManeuversForRules('2024');
         }

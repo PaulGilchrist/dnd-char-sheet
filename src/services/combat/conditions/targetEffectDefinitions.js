@@ -267,7 +267,7 @@ const TARGET_EFFECT_DEFINITIONS = [
   {
     effect: 'ray_of_enfeeble_debuff',
     label: 'Ray of Enfeeblement',
-    description: 'Strength check Disadvantage and damage dealt is halved.',
+    description: 'Disadvantage on Strength-based d20 tests and -1d8 to all damage rolls (Concentration, up to 1 minute).',
     icon: 'fa-hand-fist',
     cls: 'effect-disadvantage',
     group: 'Spells',

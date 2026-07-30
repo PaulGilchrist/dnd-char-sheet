@@ -177,9 +177,9 @@ describe('MonsterCardModal interaction / game rules', () => {
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
     const mods = document.querySelectorAll('.mc-ability-mod');
     expect(mods.length).toBe(6);
-    // STR has modifier -1
+    // STR has modifier -1 — context is undefined when no ray debuff on monster
     fireEvent.click(mods[0]);
-    expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1);
+    expect(rollAbilityCheck).toHaveBeenCalledWith('Strength', -1, undefined);
   });
 
   it('clicking skill dice link calls rollSkillCheck', () => {

@@ -1237,6 +1237,8 @@ export function createLogDamageAndShow(deps) {
         let secondaryFinalDamage = 0;
         let secondaryApplyResultData = null;
         let reducedTotal = 0;
+        let rayReduction = 0;
+        let rayOfEnfeebleRoll = null;
 
         if (target) {
             const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName) || null;
@@ -1260,12 +1262,13 @@ export function createLogDamageAndShow(deps) {
                     setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
                 }
             }
-            let rayReduction = 0;
+            const attacker = attackerName || characterName;
             const rayTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const rayDebuffActive = rayTargetEffects.some(te => te.effect === 'ray_of_enfeeble_debuff' && te.source === (attackerName || characterName));
-            if (rayDebuffActive) {
+            const rayDebuffOnAttacker = rayTargetEffects.some(te => te.target === attacker && te.effect === 'ray_of_enfeeble_debuff');
+            if (rayDebuffOnAttacker) {
                 const rayRoll = rollExpression('1d8');
                 rayReduction = rayRoll?.total || 0;
+                rayOfEnfeebleRoll = rayRoll?.total ?? null;
             }
             reducedTotal = Math.max(0, adjustedTotal - rayReduction);
             const ignoreResistance = (context?.playerStats && hasIgnoreResistance(context.playerStats, damageType)) || false;
@@ -1359,6 +1362,8 @@ export function createLogDamageAndShow(deps) {
             gwfApplied: gwfDisplayRolls !== gwfBaseRolls,
             gwfOriginalRolls: gwfDisplayRolls !== gwfBaseRolls ? gwfBaseRolls : null,
             gwfDisplayRolls: gwfDisplayRolls,
+            rayOfEnfeebleReduction: rayReduction,
+            rayOfEnfeebleRoll: rayOfEnfeebleRoll,
         };
         if (secondaryResult) {
             logEntryData.secondaryName = secondaryResult.name;
@@ -1524,6 +1529,8 @@ export function createLogDamageAndShow(deps) {
             gwfOriginalRolls: gwfDisplayRolls !== gwfBaseRolls ? gwfBaseRolls : null,
             gwfDisplayRolls: gwfDisplayRolls,
             tavernBrawlerRerolls: context?.tavernBrawlerRerolls || null,
+            rayOfEnfeebleReduction: rayReduction,
+            rayOfEnfeebleRoll: rayOfEnfeebleRoll,
         };
 
         if (secondaryResult) {

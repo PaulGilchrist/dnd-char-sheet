@@ -75,6 +75,14 @@ function clearBlessEffects(campaignName, casterName) {
     }
 }
 
+function clearRayOfEnfeeblementEffects(campaignName, casterName) {
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filtered = storedEffects.filter(te => !(te.effect === 'ray_of_enfeeble_debuff' && te.source === casterName));
+    if (filtered.length !== storedEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+    }
+}
+
 function addConcentration(combatSummary, creatureName, spellName, dc, target = null) {
     const creature = combatSummary.creatures.find(c => c.name === creatureName)
     if (!creature) return
@@ -167,6 +175,8 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
     }
 
     cleanupBuffsByName(casterName, spellName, campaignName)
+
+    clearRayOfEnfeeblementEffects(campaignName, casterName)
 }
 
 function cleanupBuffsByName(casterName, buffName, campaignName) {
@@ -189,6 +199,7 @@ export {
     clearBaneEffects,
     clearBladeWardEffects,
     clearBlessEffects,
+    clearRayOfEnfeeblementEffects,
     addConcentration,
     buildConcentrationPopup,
     cleanupConcentrationEffects,
