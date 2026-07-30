@@ -13,9 +13,12 @@ export function buildSaveDc(auto, playerStats) {
         return 8 + abilityBonus + prof;
      }
     if (auto.saveDc === 'spell_save_dc') {
+        if (playerStats.spellAbilities?.saveDc != null) {
+            return playerStats.spellAbilities.saveDc;
+        }
         const prof = playerStats.proficiency || 0;
-        const chaBonus = getAbilityModifier(playerStats.abilities, 'CHA');
-        return 8 + chaBonus + prof;
+        const spellMod = playerStats.spellAbilities?.modifier ?? getAbilityModifier(playerStats.abilities, 'CHA');
+        return 8 + spellMod + prof;
     }
     if (typeof auto.saveDc === 'number') return auto.saveDc;
     return 10;

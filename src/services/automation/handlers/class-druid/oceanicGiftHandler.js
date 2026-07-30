@@ -1,6 +1,7 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { loadCombatSummary } from '../../../encounters/combatData.js';
+import { buildSaveDc } from '../../common/savePrompt.js';
 
 const OCEANIC_GIFT_ALLIES_KEY = 'oceanicGiftAllies';
 
@@ -29,9 +30,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         ? combatSummary.creatures.filter(c => c.name !== playerName && c.type === 'player')
         : [];
 
-    const wisMod = playerStats.abilities?.find(a => a.name === 'Wisdom')?.bonus || 1;
-    const prof = playerStats.proficiency || 0;
-    const spellSaveDc = 8 + wisMod + prof;
+    const spellSaveDc = buildSaveDc(auto, playerStats);
 
     return {
         type: 'modal',
@@ -42,7 +41,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             campaignName,
             creatureTargets: allyTargets,
             spellSaveDc,
-            wisMod,
+            wisMod: playerStats.abilities?.find(a => a.name === 'Wisdom')?.bonus || 1,
             doubleEmanation: !!auto?.doubleEmanation,
             cost,
         },

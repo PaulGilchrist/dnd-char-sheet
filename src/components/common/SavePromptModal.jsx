@@ -138,6 +138,16 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     } catch { /* ignore */ }
 
+    if (!character) {
+      const combatSummary = getCombatSummary(campaignName);
+      const creature = combatSummary?.creatures?.find(
+        c => utils.getName(c.name) === utils.getName(current.targetName)
+      );
+      if (creature) {
+        saveBonus = creature.saveBonuses?.[current.saveType?.toLowerCase()] ?? 0;
+      }
+    }
+
     const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
     const auraBonus = aura.bonus;
 

@@ -2,9 +2,8 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { createSaveListener } from '../../common/savePrompt.js';
+import { createSaveListener, buildSaveDc } from '../../common/savePrompt.js';
 import { findLastAttack } from '../../common/damageRollback.js';
-import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
 async function findRecentSuccessfulSave(playerStats, campaignName, rangeFt, isSelf) {
@@ -98,9 +97,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const saveAbility = 'WIS';
-    const prof = playerStats.proficiency || 0;
-    const chaBonus = getAbilityModifier(playerStats.abilities, 'CHA');
-    const saveDc = 8 + chaBonus + prof;
+    const saveDc = buildSaveDc(auto, playerStats);
 
     const { promptId } = createSaveListener(campaignName, {
         targetName,
