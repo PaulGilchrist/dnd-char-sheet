@@ -81,6 +81,24 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             timestamp: Date.now(),
         }).catch((e) => { console.error("[powerWordStun] Error:", e); });
 
+        // Register repeat save target effect so CON save badge appears in initiative UI
+        const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+        const existingEffects = Array.isArray(targetEffects) ? [...targetEffects] : [];
+        const filteredEffects = existingEffects.filter(
+            te => !(te.target === targetName && te.effect === 'power_word_stun_repeat_save')
+        );
+        filteredEffects.push({
+            target: targetName,
+            effect: 'power_word_stun_repeat_save',
+            source: casterName,
+            saveType: 'CON',
+            saveDc: dc,
+            saveAbility: 'CON',
+            condition: 'stunned',
+            dc: dc,
+        });
+        setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
+
         description = `${targetName} has ${targetCurrentHp} HP (150 or fewer). ${targetName} is Stunned.`;
         actionsTaken.push('stunned');
     } else {

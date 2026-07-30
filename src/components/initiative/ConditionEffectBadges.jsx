@@ -206,11 +206,16 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.targetAttackDisadvantageCount > 0) {
         badges.push({ label: 'Attack Disadv', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'target_effect', effectType: 'slasher_enhanced_critical' })
     }
-    if (effects.attackAdvantageCount > 0 || effects.targetAdvantageCount > 0) {
-        const reasons = [(effects.attackAdvantageReasons || []), (effects.targetAdvantageReasons || [])].flat()
-        const reasonText = reasons.length > 0 ? reasons.join(', ') : 'Advantage on attack rolls'
-        const advSource = reasons.find(r => r === 'Vow of Enmity') || effects.attackAdvantageReasons?.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'vow_of_enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
-        badges.push({ label: 'Adv', cls: 'effect-buff', icon: 'fa-arrow-up', removable: true, removeAction: advSource ? (advSource.effect === 'vow_of_enmity' ? 'vow_of_enmity' : 'remove_buff') : 'target_effect', tooltip: `Advantage on attack rolls${reasonText !== 'Advantage on attack rolls' ? ' (' + reasonText + ')' : ''}` })
+    if (effects.attackAdvantageCount > 0) {
+        const reasons = effects.attackAdvantageReasons || []
+        const reasonText = reasons.length > 0 ? reasons.join(', ') : ''
+        const advSource = reasons.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'vow_of_enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
+        badges.push({ label: 'Adv', cls: 'effect-buff', icon: 'fa-arrow-up', removable: true, removeAction: advSource ? (advSource.effect === 'vow_of_enmity' ? 'vow_of_enmity' : 'remove_buff') : 'target_effect', tooltip: `Advantage on attack rolls${reasonText ? ' (' + reasonText + ')' : ''}` })
+    }
+    if (effects.targetAdvantageCount > 0) {
+        const reasons = effects.targetAdvantageReasons || []
+        const reasonText = reasons.length > 0 ? ` (${reasons.join(', ')})` : ''
+        badges.push({ label: 'Adv vs', cls: 'effect-debuff', icon: 'fa-arrow-up', tooltip: `Attackers have advantage on attack rolls against this creature${reasonText}` })
     }
     if (effects.saveAdvantageCount > 0) {
         const reasons = (effects.saveAdvantageReasons || []).length > 0 ? effects.saveAdvantageReasons.join(', ') : 'Advantage on saving throws'

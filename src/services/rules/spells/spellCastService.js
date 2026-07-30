@@ -439,7 +439,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Power Word Stun — no save, HP threshold check: ≤150 HP = Stunned (with repeat CON save), >150 HP = Speed 0
         if (spell.name && spell.name.toLowerCase() === 'power word stun') {
-            await triggerPowerWordStun(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            const pwsResult = await triggerPowerWordStun(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            if (pwsResult) {
+                return { automationPopup: pwsResult };
+            }
             return;
         }
 

@@ -753,6 +753,13 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const info = REPEAT_SAVE_INFO[repeatSaveKey]
             const conditionToRemove = info?.label?.toLowerCase().replace(/['s]\s*|_/g, ' ').trim().replace(/\s+/g, ' ') || repeatSaveKey.replace(/_repeat_save$/, '')
             const filteredConds = conditions.filter(c => String(c).toLowerCase() !== conditionToRemove)
+            // Power Word Stun: also remove speed_zero when repeat save succeeds
+            if (repeatSaveKey === 'power_word_stun_repeat_save') {
+                const speedZeroFiltered = filteredConds.filter(c => String(c).toLowerCase() !== 'speed_zero')
+                if (speedZeroFiltered.length !== filteredConds.length) {
+                    setRuntimeValue(rsCreatureName, 'activeConditions', speedZeroFiltered, rsCampaignName)
+                }
+            }
             if (filteredConds.length !== conditions.length) {
                 setRuntimeValue(rsCreatureName, 'activeConditions', filteredConds, rsCampaignName)
             }

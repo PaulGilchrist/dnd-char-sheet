@@ -117,11 +117,11 @@
     "Shocking Grasp",
     "Lesser Restoration",
     "Power Word Fortify",
-    "Power Word Heal",
     "Ray of Enfeeblement",
     "Regenerate",
     "Remove Curse",
-    "Resistance"
+    "Resistance",
+    "Power Word Stun"
   ],
   "magicInitiateInstances": [
     {
