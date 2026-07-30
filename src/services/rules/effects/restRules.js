@@ -1,5 +1,6 @@
 import { getLevelAfterLongRest } from '../../combat/conditions/exhaustionRules.js'
-import { getRuntimeValue, setRuntimeBatch, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { setRuntimeBatch, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { clearAllExpirationEffects } from './expirations.js'
 import { rollD20 } from '../../../services/dice/diceRoller.js'
 import * as storageService from '../../../services/ui/storage.js'
@@ -7,6 +8,7 @@ import { getCombatSummary } from '../../../services/encounters/combatData.js'
 import { clearAllConcentrations } from '../../../services/combat/concentration/concentrationService.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import { grantCelestialResilience } from '../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js'
+import { setTempHp } from '../../../services/automation/handlers/buffs/tempHpService.js'
 import { endInvisibility, endGreaterInvisibility } from '../features/invisibilityService.js'
 
 export function clearHuntersMarkConcentration(name, campaignName) {
@@ -429,9 +431,8 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
          const warlockLevel = playerStats.level
          const chaMod = (playerStats.abilities || []).find(a => a.name === 'Charisma')?.bonus || 0
          const selfTempHp = warlockLevel + chaMod
-         if (selfTempHp > 0) {
-            const existingTempHp = Number(getRuntimeValue(name, 'tempHp', campaignName) || 0)
-            updates.tempHp = Math.max(existingTempHp, selfTempHp)
+          if (selfTempHp > 0) {
+             updates.tempHp = setTempHp(name, selfTempHp, campaignName)
            addEntry(campaignName, {
             type: 'ability_use',
             characterName: name,
@@ -885,10 +886,9 @@ export async function applyLongRest(playerStats, campaignName) {
             const warlockLevel = playerStats.level
             const chaMod = (playerStats.abilities || []).find(a => a.name === 'Charisma')?.bonus || 0
             const selfTempHp = warlockLevel + chaMod
-            if (selfTempHp > 0) {
-              const existingTempHp = Number(getRuntimeValue(name, 'tempHp', campaignName) || 0)
-              setRuntimeValue(name, 'tempHp', Math.max(existingTempHp, selfTempHp), campaignName, true)
-              addEntry(campaignName, {
+             if (selfTempHp > 0) {
+               setTempHp(name, selfTempHp, campaignName)
+               addEntry(campaignName, {
                 type: 'ability_use',
                 characterName: name,
                 abilityName: 'Celestial Resilience',

@@ -59,7 +59,7 @@ describe('InspiringSmiteModal', () => {
 
     it('calls onSkip when overlay is clicked', () => {
         render(<InspiringSmiteModal {...baseProps} />);
-        const overlay = document.querySelector('.inspiring-smite-overlay');
+        const overlay = document.querySelector('.sp-overlay');
         fireEvent.click(overlay);
         expect(mockOnSkip).toHaveBeenCalledTimes(1);
     });
@@ -72,8 +72,7 @@ describe('InspiringSmiteModal', () => {
 
     it('allows selecting targets with checkboxes', () => {
         render(<InspiringSmiteModal {...baseProps} />);
-        const checkbox = screen.getByLabelText('Ally1').closest('.inspiring-smite-target-header')?.querySelector('input')
-            || screen.getAllByRole('checkbox')[0];
+        const checkbox = screen.getAllByRole('checkbox')[0];
         fireEvent.click(checkbox);
         const confirmBtn = screen.getByRole('button', { name: /Inspire \(1\)/ });
         expect(confirmBtn).not.toBeDisabled();

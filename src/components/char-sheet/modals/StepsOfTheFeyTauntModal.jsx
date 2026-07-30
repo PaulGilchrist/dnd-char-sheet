@@ -4,6 +4,7 @@ import { createSaveListener } from '../../../services/automation/common/saveProm
 import { addEntry } from '../../../services/ui/logService.js';
 import { addExpiration } from '../../../services/rules/effects/expirations.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from '../../../services/automation/handlers/buffs/tempHpService.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
 import { getCombatContext } from '../../../services/rules/combat/damageUtils.js';
 import '../CharSheet.css';
@@ -61,9 +62,7 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
     const applyRefreshingStep = async () => {
         await decrementCount();
         const tempHpRoll = Math.floor(Math.random() * 10) + 1;
-        const existingTempHp = Number(getRuntimeValue(playerName, 'tempHp', campaignName) ?? 0);
-        const newTempHp = Math.max(existingTempHp, tempHpRoll);
-        await setRuntimeValue(playerName, 'tempHp', newTempHp, campaignName);
+        setTempHp(playerName, tempHpRoll, campaignName);
 
         const remaining = newCount - 1;
         const description = `${featureName}: Cast Misty Step without expending a spell slot (${remaining} remaining).<br/><br/><b>Refreshing Step:</b> Gained ${tempHpRoll} Temporary Hit Points.`;

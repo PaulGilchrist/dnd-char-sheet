@@ -54,13 +54,13 @@ export default function InspiringSmiteModal({
     }, [selected, allocations, onConfirm]);
 
     return (
-        <div className="inspiring-smite-overlay" onClick={onSkip}>
-            <div className="inspiring-smite-modal" onClick={e => e.stopPropagation()}>
-                <div className="inspiring-smite-header">
+        <div className="sp-overlay" onClick={onSkip}>
+            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-header">
                     <i className="fa-solid fa-hand-holding-heart"></i> Inspiring Smite
                 </div>
-                <div className="inspiring-smite-body">
-                    <p className="inspiring-smite-note">
+                <div className="sp-body">
+                    <p className="sp-note">
                         <b>Rolled {roll}: {tempHp} total temp HP</b> to distribute among chosen allies however you like.
                     </p>
                     <div className="inspiring-smite-pool-bar">
@@ -74,7 +74,7 @@ export default function InspiringSmiteModal({
                             </span>
                         )}
                     </div>
-                    <div className="inspiring-smite-target-list">
+                    <div className="secondary-target-list">
                         {creatureTargets.map((target, i) => {
                             const name = target.name;
                             const isSelected = selected.includes(name);
@@ -82,15 +82,15 @@ export default function InspiringSmiteModal({
                             return (
                                 <div
                                     key={i}
-                                    className={`inspiring-smite-target-row ${isSelected ? 'inspiring-smite-selected' : ''}`}
+                                    className={`secondary-target-row ${isSelected ? 'secondary-target-selected' : ''}`}
                                 >
-                                    <label className="inspiring-smite-target-header">
+                                    <label>
                                         <input
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() => toggleTarget(name)}
                                         />
-                                        <span className="inspiring-smite-target-name">
+                                        <span className="secondary-target-name">
                                             <strong>{name}</strong>
                                         </span>
                                     </label>
@@ -125,7 +125,7 @@ export default function InspiringSmiteModal({
                             );
                         })}
                         {creatureTargets.length === 0 && (
-                            <p className="inspiring-smite-note">No targets available.</p>
+                            <p className="sp-note">No targets available.</p>
                         )}
                     </div>
                     {remaining > 0 && totalAllocated > 0 && (
@@ -134,16 +134,16 @@ export default function InspiringSmiteModal({
                         </div>
                     )}
                 </div>
-                <div className="inspiring-smite-actions">
+                <div className="sp-actions">
                     <button
-                        className="inspiring-smite-confirm-btn"
+                        className="sp-roll-btn"
                         onClick={handleConfirm}
                         disabled={selected.length === 0}
                         type="button"
                     >
                         <i className="fa-solid fa-hand-holding-heart"></i> Inspire ({selected.length})
                     </button>
-                    <button className="inspiring-smite-dismiss-btn" onClick={onSkip} type="button">
+                    <button className="sp-dismiss-btn" onClick={onSkip} type="button">
                         Skip
                     </button>
                 </div>

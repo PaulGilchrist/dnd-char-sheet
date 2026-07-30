@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
+  getRuntimeValue: vi.fn(() => 0),
 }));
 
 vi.mock('../../../dice/diceRoller.js', () => ({

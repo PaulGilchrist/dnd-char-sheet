@@ -1082,6 +1082,16 @@
     margin: 2px 0;
 }
 
+/* Temporary HP entries */
+.log-temp-hp {
+    border-left: 3px solid #00b4d8;
+    background: rgba(0, 180, 216, 0.03);
+}
+
+.log-temp-hp .log-icon {
+    color: #00b4d8;
+}
+
 /* Buff entries */
 .log-buff-added {
     border-left: 3px solid #4CAF50;

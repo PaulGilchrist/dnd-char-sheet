@@ -1,4 +1,4 @@
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from '../buffs/tempHpService.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { addEntry } from '../../../ui/logService.js';
 import { loadMapData } from '../../../maps/mapsService.js';
@@ -22,8 +22,7 @@ export async function grantCelestialResilience(playerStats, campaignName, source
     const selfTempHp = evaluateAutoExpression(auto.tempHpExpression || 'warlock level + CHA modifier', playerStats);
     if (typeof selfTempHp !== 'number' || selfTempHp <= 0) return null;
 
-    const existingTempHp = Number(getRuntimeValue(playerStats.name, 'tempHp', campaignName) || 0);
-    await setRuntimeValue(playerStats.name, 'tempHp', Math.max(existingTempHp, selfTempHp), campaignName);
+    await setTempHp(playerStats.name, selfTempHp, campaignName);
 
     const result = {
         selfTempHp,
@@ -141,7 +140,7 @@ export async function confirmCelestialResilience(action, playerStats, campaignNa
     const allyTempHp = evaluateAutoExpression(auto?.allyTempHpExpression || 'floor(warlock level / 2) + CHA modifier', playerStats);
 
     for (const targetName of selectedTargets) {
-        await setRuntimeValue(targetName, 'tempHp', allyTempHp, campaignName);
+        await setTempHp(targetName, allyTempHp, campaignName);
     }
 
     await addEntry(campaignName, {

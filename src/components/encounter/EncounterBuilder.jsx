@@ -14,6 +14,7 @@ import { formatEncounterName } from '../../services/encounters/encountersService
 import { addMonstersToInitiative } from '../../services/encounters/encounterToInitiative.js';
 import { calculateXPThreshold, calculateDifficultyMultiplier } from '../../services/encounters/encounterGenerator.js';
 import { ENCOUNTER_CONFIG } from '../../config/encounterConfig.js';
+import { addEntry } from '../../services/ui/logService.js';
 import './EncounterBuilder.css';
 
 const difficultyLabels = ['Easy', 'Medium', 'Hard', 'Deadly'];
@@ -347,7 +348,7 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
        };
 
    const logEntry = async (entry) => {
-     try { await logService.addEntry(campaignName, entry); } catch { /* ignore */ }
+     try { await addEntry(campaignName, entry); } catch { /* ignore */ }
    };
 
   const handleApplySuggestion = (monsters) => {

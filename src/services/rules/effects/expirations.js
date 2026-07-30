@@ -1,4 +1,6 @@
-import { getRuntimeValue, setRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { setRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from '../../automation/handlers/buffs/tempHpService.js';
 import { getAllyList } from '../../../hooks/useAllySelection.js';
 import { evaluateAutoExpression } from '../../combat/automation/automationExpressions.js';
 import utils from '../../ui/utils.js';
@@ -340,9 +342,7 @@ async function applyHeroismTempHp(activeName, playerStats, effect, campaignName)
     const tempHpAmount = Number(heroismBuff.tempHpAmount) || 0;
     if (tempHpAmount <= 0) return;
 
-    const existingTempHp = Number(getRuntimeValue(activeName, 'tempHp') || 0);
-    const newTempHp = Math.max(existingTempHp, tempHpAmount);
-    await setRuntimeValue(activeName, 'tempHp', newTempHp, campaignName);
+    setTempHp(activeName, tempHpAmount, campaignName);
 }
 
 async function applyUmbralSightTurnStart(activeName, playerStats, effect, campaignName) {

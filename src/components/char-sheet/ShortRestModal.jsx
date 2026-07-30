@@ -1,6 +1,7 @@
 
 import React from 'react'
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { rollDice } from '../../services/dice/diceRoller.js'
 import { getHitDieSize, computeHitDieRecovery, SHORT_REST_RESOURCES, getShortRestResourceLabels, applyShortRest } from '../../services/rules/effects/restRules.js'
 import { getClassFeatures } from '../../services/character/classFeatures.js'
@@ -212,8 +213,7 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
         for (const allyName of selectedAllies) {
             const ally = creatureTargets.find(a => a.name === allyName);
             if (!ally) continue;
-            const existingTempHp = Number(getRuntimeValue(ally.name, 'tempHp') || 0);
-            setRuntimeValue(ally.name, 'tempHp', Math.max(existingTempHp, allyTempHp), campaignName);
+            setTempHp(ally.name, allyTempHp, campaignName);
         }
         addEntry(campaignName, {
             type: 'ability_use',

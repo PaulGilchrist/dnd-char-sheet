@@ -1213,7 +1213,7 @@ export default function CharActionModals({
             {mergedModalState.powerWordFortifyModal && (
                 <PowerWordFortifyModal
                     creatureTargets={mergedModalState.powerWordFortifyModal.creatureTargets}
-                    maxTargets={mergedModalState.powerWordFortifyModal.maxTargets}
+                    totalTempHp={mergedModalState.powerWordFortifyModal.totalTempHp}
                     onConfirm={handlePowerWordFortifyConfirm}
                     onSkip={() => setModalState({ powerWordFortifyModal: null })}
                 />

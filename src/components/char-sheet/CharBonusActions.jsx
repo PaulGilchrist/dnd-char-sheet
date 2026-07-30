@@ -12,6 +12,7 @@ import { hasAutomation } from '../../services/combat/automation/automationServic
 import { addEntry } from '../../services/ui/logService.js'
 
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js'
 import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js'
 import { getCurrentCombatRound } from '../../services/encounters/combatData.js'
@@ -79,8 +80,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
         const current = Number(getRuntimeValue(playerStats.name, usesKey, campaignName) ?? 0);
         if (current <= 0) return;
         const tempHpAmount = playerStats.proficiency || 0;
-        const existingTempHp = Number(getRuntimeValue(playerStats.name, 'tempHp') || 0);
-        setRuntimeValue(playerStats.name, 'tempHp', Math.max(existingTempHp, tempHpAmount), campaignName);
+        setTempHp(playerStats.name, tempHpAmount, campaignName);
         setRuntimeValue(playerStats.name, usesKey, current - 1, campaignName);
         addEntry(campaignName, {
             type: 'ability_use',

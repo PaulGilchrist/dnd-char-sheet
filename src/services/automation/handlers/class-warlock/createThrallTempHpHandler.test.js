@@ -163,7 +163,7 @@ describe('createThrallTempHpHandler', () => {
             }));
         });
 
-        it('should accumulate temp HP on existing value', async () => {
+        it('should keep higher existing temp HP instead of accumulating', async () => {
             damageUtils.getCombatContext.mockResolvedValue({
                 creatures: [{ name: 'Aberrant Spirit' }],
             });
@@ -175,7 +175,7 @@ describe('createThrallTempHpHandler', () => {
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Aberrant Spirit',
                 '_Aberrant_Spirit_tempHp',
-                8,
+                5,
                 'campaign'
             );
         });

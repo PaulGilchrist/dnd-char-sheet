@@ -1,4 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from '../buffs/tempHpService.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
@@ -2155,7 +2156,7 @@ export async function executeRallyChoice(action, playerStats, campaignName, chos
     const dieValue = action.dieValue;
     const maneuverName = action.maneuverName || 'Rally';
 
-    setRuntimeValue(chosenName, 'tempHp', totalHp, campaignName);
+    setTempHp(chosenName, totalHp, campaignName);
 
     await addExpiration(playerStats.name, chosenName, [
         { type: 'rally_clear' }

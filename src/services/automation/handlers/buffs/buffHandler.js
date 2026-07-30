@@ -6,6 +6,7 @@ import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { getCombatSummary, loadCombatSummary } from '../../../encounters/combatData.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from './tempHpService.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 
@@ -236,7 +237,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             amount = 3 * (playerStats.level || 1);
         }
         if (typeof amount === 'number' && amount > 0) {
-            setRuntimeValue(playerStats.name, 'tempHp', amount, campaignName);
+            setTempHp(playerStats.name, amount, campaignName);
         }
     }
 
@@ -336,7 +337,7 @@ async function handleBonusActionDash(action, playerStats, campaignName, _mapName
     if (auto?.bonusEffect === 'temp_hp' && auto?.bonusExpression) {
         const tempHpAmount = evaluateAutoExpression(auto.bonusExpression, playerStats);
         if (typeof tempHpAmount === 'number' && tempHpAmount > 0) {
-            setRuntimeValue(playerName, 'tempHp', tempHpAmount, campaignName);
+            setTempHp(playerName, tempHpAmount, campaignName);
         }
     }
 

@@ -1,7 +1,7 @@
 
 import { applyLongRest } from '../../services/rules/effects/restRules.js'
 import { hasTranceTrait } from '../../services/rules/effects/tranceRules.js'
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { addEntry } from '../../services/ui/logService.js'
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
 import React from 'react'
@@ -16,8 +16,7 @@ function LongRestButton({ playerStats, campaignName, onLongRest }) {
     for (const allyName of selectedAllies) {
       const ally = creatureTargets.find(a => a.name === allyName);
       if (!ally) continue;
-      const existingTempHp = Number(getRuntimeValue(ally.name, 'tempHp') || 0);
-      setRuntimeValue(ally.name, 'tempHp', Math.max(existingTempHp, allyTempHp), campaignName);
+      setTempHp(ally.name, allyTempHp, campaignName);
     }
     addEntry(campaignName, {
       type: 'ability_use',

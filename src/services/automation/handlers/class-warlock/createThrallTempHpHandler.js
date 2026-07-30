@@ -1,4 +1,4 @@
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHpOnKey } from '../buffs/tempHpService.js';
 import { addEntry } from '../../../ui/logService.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
@@ -75,10 +75,7 @@ export async function handle(action, playerStats, campaignName) {
 
     // Apply temp HP to the companion
     const tempHpKey = `_${companion.name.replace(/\s+/g, '_')}_tempHp`;
-    const currentTempHp = Number(getRuntimeValue(companion.name, tempHpKey, campaignName) ?? 0);
-    const newTempHp = currentTempHp + tempHp;
-
-    await setRuntimeValue(companion.name, tempHpKey, newTempHp, campaignName);
+    setTempHpOnKey(companion.name, tempHpKey, tempHp, campaignName);
 
     await addEntry(campaignName, {
         type: 'ability_use',

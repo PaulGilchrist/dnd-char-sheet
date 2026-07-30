@@ -1,4 +1,4 @@
-import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from './tempHpService.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -30,7 +30,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const amount = result.total;
 
-    setRuntimeValue(playerName, 'tempHp', amount, campaignName);
+    setTempHp(playerName, amount, campaignName);
 
     return {
         type: 'popup',

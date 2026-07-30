@@ -1,4 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from './tempHpService.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -70,7 +71,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         };
     }
 
-    setRuntimeValue(playerName, 'tempHp', amount, campaignName);
+    setTempHp(playerName, amount, campaignName);
 
     let description = `Gained ${amount} temporary hit points from ${action.name}.`;
     if (auto.ongoingHealingExpression) {
@@ -163,9 +164,7 @@ export async function confirmBolsteringPerformance(action, playerStats, campaign
     const finalTargets = (selectedTargets || []).slice(0, auto?.targets || 6);
 
     for (const targetName of finalTargets) {
-        const existingTempHp = Number(getRuntimeValue(targetName, 'tempHp') || 0);
-        const newTotal = Math.max(existingTempHp, tempHp);
-        setRuntimeValue(targetName, 'tempHp', newTotal, campaignName);
+        setTempHp(targetName, tempHp, campaignName);
     }
 
     const targetList = finalTargets.length > 0 ? finalTargets.join(', ') : 'no targets selected';
@@ -250,9 +249,7 @@ export async function confirmMantleOfInspiration(action, playerStats, campaignNa
     const finalTargets = (selectedTargets || []).slice(0, Math.max(1, getAbilityModifier(playerStats, 'Charisma')));
 
     for (const targetName of finalTargets) {
-        const existingTempHp = Number(getRuntimeValue(targetName, 'tempHp') || 0);
-        const newTotal = Math.max(existingTempHp, tempHp);
-        setRuntimeValue(targetName, 'tempHp', newTotal, campaignName);
+        setTempHp(targetName, tempHp, campaignName);
         setRuntimeValue(targetName, 'inspiringMovementNoOA', true, campaignName);
         addExpiration(playerName, targetName, [
             { type: 'inspiring_movement_no_oa' }
@@ -292,9 +289,7 @@ export function grantTempHpOnRage(action, playerStats, campaignName) {
     const amount = evaluateAutoExpression(tempHpExpression, playerStats);
     if (typeof amount !== 'number' || amount <= 0) return false;
 
-    const existing = getRuntimeValue(playerStats.name, 'tempHp') || 0;
-    const newTotal = Math.max(existing, amount);
-    setRuntimeValue(playerStats.name, 'tempHp', newTotal, campaignName);
+    setTempHp(playerStats.name, amount, campaignName);
 
     return true;
 }
@@ -376,9 +371,7 @@ export async function confirmVitalityOfTheTree(action, playerStats, campaignName
     const finalTargets = (selectedTargets || []).slice(0, maxTargets || 999);
 
     for (const targetName of finalTargets) {
-        const existingTempHp = Number(getRuntimeValue(targetName, 'tempHp') || 0);
-        const newTotal = Math.max(existingTempHp, tempHp);
-        setRuntimeValue(targetName, 'tempHp', newTotal, campaignName);
+        setTempHp(targetName, tempHp, campaignName);
     }
 
     const targetList = finalTargets.length > 0 ? finalTargets.join(', ') : 'no targets selected';
@@ -446,9 +439,7 @@ async function handleBolsteringTreats(action, playerStats, campaignName, _mapNam
 
     await setRuntimeValue(playerName, treatUsesKey, currentTreats - 1, campaignName);
 
-    const existingTempHp = Number(getRuntimeValue(playerName, 'tempHp') || 0);
-    const newTotal = Math.max(existingTempHp, tempHpAmount);
-    setRuntimeValue(playerName, 'tempHp', newTotal, campaignName);
+    setTempHp(playerName, tempHpAmount, campaignName);
 
     const description = `${action.name}: Ate a bolstering treat, gaining ${tempHpAmount} temporary hit points. (${currentTreats - 1} treat${currentTreats - 1 !== 1 ? 's' : ''} remaining).`;
 

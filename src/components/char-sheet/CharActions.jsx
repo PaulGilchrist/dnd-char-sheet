@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js'
-import { useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { getCategories } from '../../services/character/featureCategories.js'
 import { getActionSpellNames } from '../../services/ui/spellSectionUtils.js'
 import { formatRange, signFormatter, getAttackSpellLevel } from '../../services/ui/formatUtils.js'
@@ -13,7 +14,6 @@ import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js'
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { computeFeatRangeEffects } from '../../services/character/featRangeService.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js'
-import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { toggleBuff } from '../../services/automation/common/buffToggle.js';
 import { addExpiration } from '../../services/rules/effects/expirations.js';
 import { addEntry } from '../../services/ui/logService.js';
@@ -397,8 +397,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                 targets: allyTargets,
                 confirmLabel: evtConfirmLabel || 'Grant Temp HP',
                 onTargetSelected: async (targetName) => {
-                    const existing = getRuntimeValue(targetName, 'tempHp', evtCampaignName) || 0;
-                    setRuntimeValue(targetName, 'tempHp', Math.max(existing, tempHp), evtCampaignName);
+                    setTempHp(targetName, tempHp, evtCampaignName);
                     addEntry(evtCampaignName, {
                         type: 'roll',
                         characterName: attackerName,
@@ -411,8 +410,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     setModalState({ secondaryTargetModal: null });
                 },
                 onSkip: () => {
-                    const existing = getRuntimeValue(attackerName, 'tempHp', evtCampaignName) || 0;
-                    setRuntimeValue(attackerName, 'tempHp', Math.max(existing, tempHp), evtCampaignName);
+                    setTempHp(attackerName, tempHp, evtCampaignName);
                     addEntry(evtCampaignName, {
                         type: 'roll',
                         characterName: attackerName,
@@ -773,15 +771,15 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         setModalState({ prayerOfHealingModal: null });
     }, [setPopupHtml, mergedModalState.prayerOfHealingModal, setModalState]);
 
-    const handlePowerWordFortifyConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.powerWordFortifyModal) return;
-        const { action, playerStats, campaignName } = modalState.powerWordFortifyModal;
-        const result = await confirmPowerWordFortify(action, playerStats, campaignName, targetNames, modalState.powerWordFortifyModal.totalTempHp, modalState.powerWordFortifyModal.tempHpExpression);
+    const handlePowerWordFortifyConfirm = React.useCallback(async (distribution) => {
+        if (!distribution || !mergedModalState.powerWordFortifyModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.powerWordFortifyModal;
+        const result = await confirmPowerWordFortify(action, playerStats, campaignName, distribution, mergedModalState.powerWordFortifyModal.totalTempHp, mergedModalState.powerWordFortifyModal.tempHpExpression);
         if (result?.payload) {
             setPopupHtml(result.payload);
         }
         setModalState({ powerWordFortifyModal: null });
-    }, [setPopupHtml, modalState.powerWordFortifyModal, setModalState]);
+    }, [setPopupHtml, mergedModalState.powerWordFortifyModal, setModalState]);
 
     const handleMassHealingWordConfirm = React.useCallback(async (targetNames) => {
         if (!targetNames || !mergedModalState.massHealingWordModal) return;
@@ -901,8 +899,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
 
         for (const targetName of targetNames) {
             const amount = distribution[targetName];
-            const existing = Number(getRuntimeValue(targetName, 'tempHp', cn) || 0);
-            setRuntimeValue(targetName, 'tempHp', Math.max(existing, amount), cn);
+            setTempHp(targetName, amount, cn);
         }
 
         setRuntimeValue(playerName, 'channelDivinityCharges', channelDivinityCharges - 1, cn);

@@ -358,11 +358,12 @@ function EncounterEntry({ entry }) {
 function HpChangeEntry({ entry }) {
   const isDamage = entry.delta < 0;
   const isNpc = !!entry.threshold;
+  const isTemp = entry.isTempHp;
   return (
-    <div className={`log-entry log-hp-change ${isDamage ? 'log-hp-damage' : 'log-healing'}`}>
+    <div className={`log-entry log-hp-change ${isDamage ? 'log-hp-damage' : isTemp ? 'log-temp-hp' : 'log-healing'}`}>
       <div className="log-entry-header">
         <span className="log-icon">
-          <i className={`fas ${isDamage ? 'fa-heart-crack' : 'fa-heart'}`}></i>
+          <i className={`fas ${isDamage ? 'fa-heart-crack' : isTemp ? 'fa-shield' : 'fa-heart'}`}></i>
         </span>
         <span className="log-character">{entry.targetName}</span>
         <span className="log-name">
@@ -376,7 +377,7 @@ function HpChangeEntry({ entry }) {
              ) : (
                 <>
                   {entry.isUnconscious && 'Knocked Unconscious — '}
-                  {isDamage ? 'Takes Damage' : (entry.sourceName ? `Healed (${entry.sourceName})` : 'Healed')}
+                  {isDamage ? 'Takes Damage' : (isTemp ? 'Temporary Hit Points' : (entry.sourceName ? `Healed (${entry.sourceName})` : 'Healed'))}
                   {entry.note && !isDamage && <span className="log-dice-formula">{entry.note}</span>}
                   {entry.maximizeHealingDice && !isDamage && ' — Dice maximized by Supreme Healing'}
                 </>
@@ -404,7 +405,7 @@ function HpChangeEntry({ entry }) {
             ) : (
               <span className="log-hp-delta">{entry.delta > 0 ? '+' : ''}{entry.delta} HP</span>
             )}
-            <span className="log-hp-current"> {entry.currentHp}/{entry.maxHp} remaining</span>
+            {!isTemp && <span className="log-hp-current"> {entry.currentHp}/{entry.maxHp} remaining</span>}
             {entry.rollInfo && !isDamage && <span className="log-roll-info"> ({entry.rollInfo})</span>}
             {entry.formula && !isDamage && <span className="log-dice-formula">{entry.formula}</span>}
             {entry.bonusDetails && entry.bonusDetails.length > 0 && !isDamage && (

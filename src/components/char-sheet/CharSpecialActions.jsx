@@ -9,7 +9,8 @@ import { renderMarkdownInline, sanitizeHtml } from '../../services/ui/sanitize.j
 import { loadFightingStyles } from '../../services/ui/dataLoader.js';
 import { executeHandler } from '../../services/automation/index.js';
 import { isInteractiveAutomation } from '../../services/combat/automation/automationService.js';
-import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js';
 import { applyChoice } from '../../services/automation/handlers/class-ranger/defensiveTacticsHandler.js';
 import { applyChoice as applyHunterPreyChoice } from '../../services/automation/handlers/class-ranger/hunterPreyHandler.js';
 import TeleportModal from './modals/TeleportModal.jsx';
@@ -541,7 +542,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
 
         for (const targetName of selectedTargets) {
-            await setRuntimeValue(targetName, 'tempHp', allyTempHp, modalCampaign);
+            await setTempHp(targetName, allyTempHp, modalCampaign);
         }
 
         await addEntry(modalCampaign, {

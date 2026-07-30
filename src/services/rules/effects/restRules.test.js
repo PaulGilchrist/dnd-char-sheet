@@ -418,7 +418,7 @@ describe('restRules', () => {
       })
       await applyLongRest(celestialStats, CAMPAIGN)
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Hero', 'tempHp', 10, CAMPAIGN, true,
+        'Test Hero', 'tempHp', 10, CAMPAIGN,
       )
 
       // Celestial Resilience logs ability_use on long rest
