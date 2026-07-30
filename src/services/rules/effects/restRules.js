@@ -1,5 +1,5 @@
 import { getLevelAfterLongRest } from '../../combat/conditions/exhaustionRules.js'
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js'
 import { setRuntimeBatch, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { clearAllExpirationEffects } from './expirations.js'
 import { rollD20 } from '../../../services/dice/diceRoller.js'
@@ -569,6 +569,27 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true)
     }
 
+    // Clear Regenerate on short rest
+    const regenEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredRegenEffects = regenEffects.filter(e => e.effect !== 'regenerate');
+    if (filteredRegenEffects.length !== regenEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
+    }
+
+    // Clear regenerateActive flag from all targets and set them to full HP
+    const allKeys = getAllStoreKeys();
+    for (const key of allKeys) {
+      if (typeof key !== 'string') continue;
+      const regenActive = getRuntimeValue(key, 'regenerateActive', campaignName);
+      if (regenActive) {
+        setRuntimeValue(key, 'regenerateActive', false, campaignName);
+        const storedMaxHp = getRuntimeValue(key, 'hitPoints', campaignName);
+        if (storedMaxHp != null) {
+          setRuntimeValue(key, 'currentHitPoints', storedMaxHp, campaignName);
+        }
+      }
+    }
+
   clearAllExpirationEffects(name, campaignName)
   clearHuntersMarkConcentration(name, campaignName)
   clearAllConcentrations(campaignName)
@@ -765,6 +786,27 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredBlurEffects = blurEffects.filter(e => e.effect !== 'blur');
     if (filteredBlurEffects.length !== blurEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredBlurEffects, campaignName, true)
+    }
+
+    // Clear Regenerate on long rest
+    const regenEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredRegenEffects = regenEffects.filter(e => e.effect !== 'regenerate');
+    if (filteredRegenEffects.length !== regenEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
+    }
+
+    // Clear regenerateActive flag from all targets and set them to full HP on long rest
+    const longRestAllKeys = getAllStoreKeys();
+    for (const key of longRestAllKeys) {
+      if (typeof key !== 'string') continue;
+      const regenActive = getRuntimeValue(key, 'regenerateActive', campaignName);
+      if (regenActive) {
+        setRuntimeValue(key, 'regenerateActive', false, campaignName);
+        const storedMaxHp = getRuntimeValue(key, 'hitPoints', campaignName);
+        if (storedMaxHp != null) {
+          setRuntimeValue(key, 'currentHitPoints', storedMaxHp, campaignName);
+        }
+      }
     }
 
     // Clear Wrath of the Sea badge on long rest

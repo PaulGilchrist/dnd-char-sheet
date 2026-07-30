@@ -17,6 +17,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   }),
   setRuntimeBatch: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getAllStoreKeys: vi.fn(() => []),
 }))
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({

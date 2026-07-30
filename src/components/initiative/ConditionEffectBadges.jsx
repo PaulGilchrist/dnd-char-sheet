@@ -323,6 +323,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Globe of Invulnerability', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'globe_barrier', tooltip: `Protected by Globe of Invulnerability from ${casterName} — spells of 5th level or lower blocked` })
     }
 
+    const regenEffect = targetEffects?.find(te => te.effect === 'regenerate' && te.target === creatureName)
+    if (regenEffect) {
+        const casterName = regenEffect.source || 'unknown'
+        badges.push({ label: 'Regenerate', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: isLocalhost, removeAction: 'target_effect', effectType: 'regenerate', tooltip: `Regenerate from ${casterName}: 4d8+15 initial heal, 1 HP per turn, full HP on expiration` })
+    }
+
     const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
     targetEffects?.forEach(te => {
         if (repeatSaveTypes.includes(te.effect) && te.target === creatureName) {

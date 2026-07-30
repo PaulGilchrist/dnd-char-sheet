@@ -356,9 +356,21 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                   }
               }
               expireStaleEffects(campaignName, newActiveName)
-              const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-              applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-            }, [activeCreatureName, campaignName, characters])
+              const lastApplied = lastAppliedTurnStartCreatureRef.current
+              if (lastApplied !== newActiveName) {
+                  lastAppliedTurnStartCreatureRef.current = newActiveName
+                  setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
+                  storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
+                  const cs = combatSummaryRef.current
+                  if (cs && cs.lastAppliedTurnStartCreature !== newActiveName) {
+                      cs.lastAppliedTurnStartCreature = newActiveName
+                      setCombatSummary(cloneDeep(cs))
+                  }
+                  const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
+                  applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                  setTurnStartTick(t => t + 1)
+              }
+             }, [activeCreatureName, campaignName, characters])
 
     const handlePreviousCreature = React.useCallback(() => {
           if (isPrevDisabled) return
@@ -377,10 +389,22 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                storage.set('activeCreatureName', newActiveName, campaignName)
               setActiveCreatureName(newActiveName)
              }
-               expireStaleEffects(campaignName, newActiveName)
-              const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-              applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-             }, [activeCreatureName, campaignName, isPrevDisabled, characters])
+                expireStaleEffects(campaignName, newActiveName)
+               const lastApplied = lastAppliedTurnStartCreatureRef.current
+               if (lastApplied !== newActiveName) {
+                   lastAppliedTurnStartCreatureRef.current = newActiveName
+                   setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
+                   storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
+                   const cs = combatSummaryRef.current
+                   if (cs && cs.lastAppliedTurnStartCreature !== newActiveName) {
+                       cs.lastAppliedTurnStartCreature = newActiveName
+                       setCombatSummary(cloneDeep(cs))
+                   }
+                   const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
+                   applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                   setTurnStartTick(t => t + 1)
+               }
+              }, [activeCreatureName, campaignName, isPrevDisabled, characters])
 
     React.useEffect(() => {
         let cancelled = false

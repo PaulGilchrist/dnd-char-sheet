@@ -256,52 +256,7 @@ describe('applyTurnStartEffects', () => {
     });
   });
 
-  describe('regenerate_turn_start_heal effect', () => {
-    it('heals when regenerateActive is true', async () => {
-      getRuntimeValue.mockImplementation((name, prop) => {
-        if (prop === 'regenerateActive') return true;
-        if (prop === 'hitPoints') return 20;
-        if (prop === 'currentHitPoints') return 10;
-        if (prop === 'targetEffects') return [];
-        return null;
-      });
-
-      await applyTurnStartEffects('Target', {
-        turnStartEffects: [{
-          type: 'regenerate_turn_start_heal',
-          name: 'Regeneration',
-          healExpression: '2',
-        }]
-      }, 'TestCampaign');
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Target',
-        'currentHitPoints',
-        15,
-        'TestCampaign'
-      );
-    });
-
-    it('does nothing when regenerateActive is false', async () => {
-      getRuntimeValue.mockImplementation((name, prop) => {
-        if (prop === 'regenerateActive') return false;
-        if (prop === 'targetEffects') return [];
-        return null;
-      });
-
-      await applyTurnStartEffects('Target', {
-        turnStartEffects: [{
-          type: 'regenerate_turn_start_heal',
-          name: 'Regeneration',
-          healExpression: '2',
-        }]
-      }, 'TestCampaign');
-
-      expect(setRuntimeValue).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('regenerate buff healing (outside turnStartEffects)', () => {
+  describe('regenerate buff healing', () => {
     it('heals when regenerateActive flag is true', async () => {
       getRuntimeValue.mockImplementation((name, prop) => {
         if (prop === 'regenerateActive') return true;

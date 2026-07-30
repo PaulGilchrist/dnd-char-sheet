@@ -30,6 +30,10 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
     addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
 vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
@@ -40,6 +44,7 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -65,6 +70,7 @@ function makeAction(overrides = {}) {
 describe('rayOfEnfeeblementHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        getCombatSummary.mockReturnValue({ creatures: [] });
     });
 
     describe('handle — failed save', () => {

@@ -172,6 +172,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredGlobeEffects, campaignName, true);
             }
 
+            // Clear Regenerate on initiative roll (new combat)
+            const regenEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredRegenEffects = regenEffects.filter(te => te.effect !== 'regenerate');
+            if (filteredRegenEffects.length !== regenEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true);
+            }
+
             // Clear Trance of Order on initiative roll (new combat)
             setRuntimeValue(playerStats.name, 'tranceOfOrderActive', null, campaignName);
 

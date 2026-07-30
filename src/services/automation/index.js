@@ -11,6 +11,7 @@ import { handle as handleCondition } from './handlers/buffs/conditionHandler.js'
 import { handle as handleTelekineticShove } from './handlers/feats/telekineticShoveHandler.js';
 import { handle as handleSorcery } from './handlers/resources/sorceryHandler.js';
 import { handle as handleSpellCast } from './handlers/spells/spellCastHandler.js';
+import { handle as handleRegenerate, applyRegenerateEffect } from './handlers/spells/regenerateHandler.js';
 import { handle as handleInitiative } from './handlers/combat/initiativeHandler.js';
 
 import { handle as handleResourcePool } from './handlers/resources/resourcePoolHandler.js';
@@ -525,6 +526,7 @@ const HANDLER_MAP = {
         haste: handleHaste,
         invisibility: handleInvisibility,
         greater_invisibility: handleGreaterInvisibility,
+        regenerate: handleRegenerate,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -546,6 +548,7 @@ export {
     applyGreaterInvisibility,
     isGreaterInvisibilityActive,
     applyPassWithoutTraceEffect,
+    applyRegenerateEffect,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';

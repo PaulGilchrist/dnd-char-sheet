@@ -344,6 +344,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'regenerate',
+    label: 'Regenerate',
+    description: 'Target regains 4d8 + 15 HP initially, then 1 HP per turn. When the effect ends, the target is restored to full HP.',
+    icon: 'fa-heart-pulse',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'speed_reduction',
     label: 'Speed Reduced',
     description: 'The creature\'s Speed is reduced by N feet.',
