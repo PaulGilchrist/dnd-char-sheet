@@ -742,6 +742,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     const handleRepeatSave = async (data) => {
         const { repeatSaveKey, creatureName: rsCreatureName, campaignName: rsCampaignName, success, ...rollData } = data
+        const rollDataWithSuccess = { ...rollData, success }
         if (success) {
             const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
             const effects = getRuntimeValue('campaign', 'targetEffects', rsCampaignName) || []
@@ -764,7 +765,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 setRuntimeValue(rsCreatureName, 'activeConditions', filteredConds, rsCampaignName)
             }
         }
-        setConditionPopup(rollData)
+        setConditionPopup(rollDataWithSuccess)
     }
 
     const handleRollConcentrationSave = async (creatureName) => {

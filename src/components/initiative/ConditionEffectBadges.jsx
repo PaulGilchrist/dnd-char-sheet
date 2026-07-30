@@ -3,11 +3,13 @@ import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntime
 import { EFFECT_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 import { rollD20 } from '../../services/dice/diceRoller.js'
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js'
+import utils from '../../services/ui/utils.js'
 import { addEntry } from '../../services/ui/logService.js'
 import { hasSaveAdvantage } from '../../services/combat/conditions/conditionEffects.js'
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
 import CreatureBadge from '../common/CreatureBadge.jsx'
+import { getMonsterData } from '../../services/npcs/monsterUtils.js'
 
 const REPEAT_SAVE_INFO = {
   slow_repeat_save: { label: 'Slow', icon: 'fa-clock', saveType: 'WIS' },
@@ -55,9 +57,36 @@ async function handleRepeatSaveSave(badge, creatureName, campaignName, playerSta
         te => te.target === creatureName && te.effect === effectKey
     )
     const dc = effect?.dc || 15
-    const saveType = info.saveType || (effect?.saveType || 'CON').toLowerCase()
+    const saveType = String(info.saveType || effect?.saveType || 'CON').toLowerCase()
     const saveLabel = saveType.charAt(0).toUpperCase() + saveType.slice(1)
-    const saveBonus = getAbilitySaveBonus(playerStats, saveType)
+    const saveTypeUpper = saveType.toUpperCase()
+
+    let saveBonus = 0
+    const resolvedStats = playerStats ? (playerStats.computedStats || playerStats) : null
+    if (resolvedStats) {
+        saveBonus = getAbilitySaveBonus(resolvedStats, saveType)
+    } else {
+        const combatSummary = getCombatSummary(campaignName)
+        const creature = combatSummary?.creatures?.find(c => c.name === creatureName)
+        if (creature) {
+            if (creature.type === 'player') {
+                const character = characters?.find(c => utils.getName(c.name) === utils.getName(creatureName))
+                if (character) {
+                    saveBonus = getAbilitySaveBonus(character.computedStats || character, saveType)
+                }
+            } else {
+                try {
+                    const monster = await getMonsterData(creatureName)
+                    const st = monster?.saving_throws
+                    if (st && (st[saveType] || st[saveTypeUpper])) {
+                        saveBonus = (st[saveType] || st[saveTypeUpper]).modifier
+                    } else if (monster?.ability_score_modifiers && (monster.ability_score_modifiers[saveType] !== undefined || monster.ability_score_modifiers[saveTypeUpper] !== undefined)) {
+                        saveBonus = monster.ability_score_modifiers[saveType] ?? monster.ability_score_modifiers[saveTypeUpper]
+                    }
+                } catch { /* ignore */ }
+            }
+        }
+    }
     const hasAdv = hasSaveAdvantage({}, effectKey)
 
     let roll1, roll2, finalRoll
@@ -147,7 +176,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     const condKeys = (conditions || []).map(c => c.key)
     const effects = computeConditionEffects(condKeys, [], targetEffects, false, false, false, false, null, false, false, false, false, false, false, false, false, false, false, false, false)
     const activeBuffs = creatureName && campaignName ? (getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []) : []
-    const resolvedPlayerStats = playerStats || (characters?.length ? characters.find(c => c.name === creatureName) : null)
+    const resolvedPlayerStats = playerStats || (characters?.length ? characters.find(c => {
+        const name = typeof c === 'string' ? c : c.name;
+        return name && utils.getName(name) === utils.getName(creatureName);
+    }) : null)
     if (Array.isArray(activeBuffs)) {
         for (const buff of activeBuffs) {
             if (buff.effect === 'advantage_attacks_and_saves') {
