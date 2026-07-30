@@ -279,12 +279,6 @@ vi.mock('../../services/encounters/encounterToInitiative.js', () => ({
   loadEncounterToInitiative: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../services/items/lootGenerator.js', () => ({
-  generateLootSuggestions: vi.fn(() =>
-    Promise.resolve({ lootEntries: ['Gold coins (50)', 'Silver ring'], totalEncounterXp: 200 })
-  ),
-}));
-
 vi.mock('../../services/encounters/encounterGenerator.js', () => ({
   calculateXPThreshold: vi.fn(() => 100),
   calculateDifficultyMultiplier: vi.fn((count, partySize) => {
@@ -838,112 +832,11 @@ describe('EncounterBuilder interactions', () => {
     });
   });
 
-  describe('loot generation', () => {
-    it('shows Generate Loot button when monsters are selected', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      expect(screen.getByText('Generate Loot')).toBeInTheDocument();
-    });
-
-    it('hides Generate Loot button when no monsters are selected', async () => {
-      await mount();
-      expect(screen.queryByText('Generate Loot')).not.toBeInTheDocument();
-    });
-
-    it('shows loot suggestions after generating loot', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const generateLootBtn = screen.getByText('Generate Loot');
-      fireEvent.click(generateLootBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('Loot Suggestions')).toBeInTheDocument();
-      });
-    });
-
-    it('disables Generate Loot button while generating', async () => {
-      const { generateLootSuggestions } = await import('../../services/items/lootGenerator.js');
-      generateLootSuggestions.mockReturnValue(new Promise(() => {}));
-
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const generateLootBtn = screen.getByText('Generate Loot');
-      fireEvent.click(generateLootBtn);
-
-      expect(generateLootBtn.disabled).toBe(true);
-      expect(generateLootBtn).toHaveTextContent('Generating...');
-    });
-  });
-
   describe('join encounter flow', () => {
-    it('shows Join Encounter button when loot is generated and monsters selected', async () => {
-      // Manually set up mocks to avoid beforeEach clearing the implementation
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      const { generateLootSuggestions } = await import('../../services/items/lootGenerator.js');
-      generateLootSuggestions.mockResolvedValue({ lootEntries: ['Gold coins (50)', 'Silver ring'], totalEncounterXp: 200 });
-
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const generateLootBtn = screen.getByText('Generate Loot');
-      fireEvent.click(generateLootBtn);
-
-      // Wait for loot section to appear
-      await waitFor(() => {
-        expect(screen.getByText('Loot Suggestions')).toBeInTheDocument();
-      }, { timeout: 3000 });
-
-      expect(screen.getByText(/Join/i)).toBeInTheDocument();
-    });
-
     it('shows Join Encounter button as soon as monsters are selected', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
-
-      expect(screen.getByText('Join Encounter')).toBeInTheDocument();
-    });
-
-    it('shows Award Loot button when loot text is populated', async () => {
-      localStorage.clear();
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const generateLootBtn = screen.getByText('Generate Loot');
-      fireEvent.click(generateLootBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('Loot Suggestions')).toBeInTheDocument();
-      }, { timeout: 3000 });
 
       expect(screen.getByText('Join Encounter')).toBeInTheDocument();
     });

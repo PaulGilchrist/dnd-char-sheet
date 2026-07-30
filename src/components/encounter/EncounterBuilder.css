@@ -746,72 +746,11 @@
   margin-bottom: 16px;
 }
 
-/* ============ Loot Suggestions ============ */
-.encounter-builder .encounter-loot-section {
+/* ============ Join Encounter Section ============ */
+.encounter-builder .encounter-join-section {
   margin-bottom: 16px;
-  padding: 12px;
-  background: var(--background-color-card);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-}
-
-.encounter-builder .encounter-loot-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 8px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.encounter-builder .encounter-loot-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.encounter-builder .encounter-loot-item {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--border-color-light);
-}
-
-.encounter-builder .encounter-loot-item:last-child {
-  border-bottom: none;
-}
-
-.encounter-builder .encounter-loot-textarea {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  line-height: 1.5;
-  background: var(--background-color-input);
-  color: var(--color-text);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  resize: vertical;
-  box-sizing: border-box;
-  margin-bottom: 8px;
-}
-
-.encounter-builder .encounter-loot-textarea:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
-.encounter-builder .encounter-loot-actions-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.encounter-builder .encounter-award-loot-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
+  justify-content: center;
 }
 
 .encounter-builder .encounter-btn-join {
@@ -831,21 +770,6 @@
   background: rgba(239, 83, 80, 0.35) !important;
 }
 
-.encounter-builder .encounter-btn-loot {
-  background: rgba(255, 193, 7, 0.15);
-  color: var(--color-warning);
-  border-color: var(--color-warning);
-}
-
-.encounter-builder .encounter-btn-loot:hover:not(:disabled) {
-  background: rgba(255, 193, 7, 0.25);
-}
-
-.encounter-builder .encounter-btn-loot:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Encounter list description preview */
 .encounter-builder .encounter-list-description {
   margin-top: 4px;
@@ -863,45 +787,7 @@
   font-size: 0.85rem;
 }
 
-    .encounter-builder .encounter-xp-summary {
-     margin-top: 12px;
-     padding: 10px 12px;
-     background: rgba(255, 193, 7, 0.08);
-     border: 1px solid rgba(255, 193, 7, 0.25);
-     border-radius: 6px;
-     display: flex;
-     align-items: center;
-     justify-content: space-between;
-     gap: 12px;
-     flex-wrap: wrap;
-    }
-
-    .encounter-builder .encounter-xp-label {
-     font-size: 0.88rem;
-     color: var(--color-warning);
-     display: flex;
-     align-items: center;
-     gap: 6px;
-    }
-
-    .encounter-builder .encounter-btn-complete {
-     display: inline-flex !important;
-     align-items: center !important;
-     justify-content: center !important;
-     gap: 6px !important;
-     background: rgba(255, 193, 7, 0.2) !important;
-     color: var(--color-warning) !important;
-     border-color: var(--color-warning) !important;
-     padding: 6px 14px !important;
-     font-size: 0.85rem !important;
-     white-space: nowrap !important;
-    }
-
-    .encounter-builder .encounter-btn-complete:hover {
-     background: rgba(255, 193, 7, 0.35) !important;
-    }
-
-  .encounter-builder .encounter-list-description p {
+.encounter-builder .encounter-list-description p {
   margin: 0;
   line-height: 1.4;
 }

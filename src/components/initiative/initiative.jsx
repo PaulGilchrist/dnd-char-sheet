@@ -8,6 +8,8 @@ import storage from '../../services/ui/storage.js'
 import { clearDeathSavePrompt } from '../../services/combat/conditions/savePromptService.js'
 import { getMonsterImageUrl, getMonsterData } from '../../services/npcs/monsterUtils.js'
 import { getAbilityLabel, CONDITIONS } from '../../services/combat/conditions/conditionUtils.js'
+import { generateLootFromCombatSummary } from '../../services/items/lootGenerator.js'
+import * as logService from '../../services/ui/logService.js'
 
 // INITIATIVE RESET (initiative component): When advancing to a new round or rolling
 // initiative from the initiative panel, reset once-per-turn trackers for player creatures
@@ -110,6 +112,12 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     const [turnStartTick, setTurnStartTick] = React.useState(0)
     const [runtimeStateTick, setRuntimeStateTick] = React.useState(0)
+
+    const [lootData, setLootData] = React.useState({ lootEntries: [], totalEncounterXp: 0 })
+    const [generatingLoot, setGeneratingLoot] = React.useState(false)
+    const [lootTextValue, setLootTextValue] = React.useState('')
+    const [showAwardLoot, setShowAwardLoot] = React.useState(false)
+    const [awardingLoot, setAwardingLoot] = React.useState(false)
 
     const displayCreatures = React.useMemo(() => {
         if (!combatSummary || !combatSummary.creatures) return []
@@ -811,6 +819,79 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         cleanupConcentrationEffects(creatureName, spell, campaignName)
     }
 
+    const handleGenerateLoot = async () => {
+        setGeneratingLoot(true)
+        try {
+            const lootResult = await generateLootFromCombatSummary(
+                combatSummaryRef.current || combatSummary,
+                characters,
+                campaignName
+            )
+            setLootData(lootResult || { lootEntries: [], totalEncounterXp: 0 })
+            setLootTextValue(lootResult.lootEntries.join('\n'))
+        } catch (error) {
+            console.error('Failed to generate loot:', error)
+        } finally {
+            setGeneratingLoot(false)
+        }
+    }
+
+    const handleAwardLoot = async () => {
+        if (awardingLoot) return
+        setAwardingLoot(true)
+        try {
+            const numChars = characters && characters.length > 0 ? characters.length : 1
+            const xpPerChar = Math.floor(lootData.totalEncounterXp / numChars)
+
+            const lootItems = lootTextValue
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+
+            if (lootItems.length > 0 && lootItems.some(item => item !== 'No loot for these monsters')) {
+                await logService.addEntry(campaignName, {
+                    type: 'loot',
+                    encounterName: 'Combat',
+                    lootItems: lootItems.filter(item => item !== 'No loot for these monsters'),
+                    xpPerChar,
+                    totalEncounterXp: lootData.totalEncounterXp,
+                })
+            }
+
+            await logEntry({
+                type: 'encounter',
+                action: 'loot_awarded',
+                encounterName: 'Combat',
+                xpPerChar,
+                totalEncounterXp: lootData.totalEncounterXp,
+                lootItems,
+            })
+
+            for (const charData of (characters || [])) {
+                const currentXp = getRuntimeValue(charData.name, 'xp') || 0
+                setRuntimeValue(charData.name, 'xp', currentXp + xpPerChar, campaignName)
+            }
+
+            setShowAwardLoot(false)
+            setLootTextValue('')
+            setLootData({ lootEntries: [], totalEncounterXp: 0 })
+        } catch (error) {
+            console.error('Failed to award loot:', error)
+        } finally {
+            setAwardingLoot(false)
+        }
+    }
+
+    const handleClearLoot = () => {
+        setLootData({ lootEntries: [], totalEncounterXp: 0 })
+        setLootTextValue('')
+        setShowAwardLoot(false)
+    }
+
+    const logEntry = async (entry) => {
+        try { await logService.addEntry(campaignName, entry); } catch { /* ignore */ }
+    }
+
     const handleAutoBreakCondition = (creatureName, condition) => {
         if (!isLocalhost || !combatSummary) return
         const conditionKey = String(condition.key || condition).toLowerCase()
@@ -902,6 +983,74 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                   <button onClick={handleAddNpc}>+ NPC</button>
                   <button onClick={handlePreviousCreature} disabled={isPrevDisabled}>← Prev</button>
                   <button onClick={handleNextCreature}>Next →</button>
+              </div>
+              <div className='initiative-loot-section'>
+                  <div className='initiative-loot-header'>
+                      <i className="fa-solid fa-gem"></i>&nbsp; Loot
+                      {(lootData.lootEntries.length > 0 || lootTextValue.length > 0) && (
+                        <button
+                          className='initiative-btn initiative-btn-secondary'
+                          onClick={handleClearLoot}
+                          title="Clear loot suggestions"
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      )}
+                  </div>
+                  <button
+                    className='initiative-btn initiative-btn-loot'
+                    onClick={handleGenerateLoot}
+                    disabled={generatingLoot}
+                    title="Generate loot from defeated monsters in combat"
+                  >
+                    <i className="fa-solid fa-coins"></i>&nbsp; {generatingLoot ? 'Generating...' : 'Generate Loot'}
+                  </button>
+                  {(lootData.lootEntries.length > 0 || lootTextValue.length > 0) && (
+                    <>
+                      <textarea
+                        className='initiative-loot-textarea'
+                        value={lootTextValue || lootData.lootEntries.join('\n')}
+                        onChange={(e) => setLootTextValue(e.target.value)}
+                        placeholder="Loot will appear here..."
+                        rows={6}
+                      />
+                      {lootData.totalEncounterXp > 0 && (
+                        <div className='initiative-xp-summary'>
+                          <span className='initiative-xp-label'>
+                            <i className="fa-solid fa-star"></i>&nbsp; Encounter XP: {lootData.totalEncounterXp.toLocaleString()} total &middot; {Math.floor(lootData.totalEncounterXp / (characters && characters.length > 0 ? characters.length : 1))} per character
+                          </span>
+                          {showAwardLoot && (
+                            <div className='initiative-award-loot-actions'>
+                              <button
+                                className='initiative-btn initiative-btn-complete'
+                                onClick={handleAwardLoot}
+                                disabled={awardingLoot}
+                                title="Award loot and XP to party"
+                              >
+                                <i className="fa-solid fa-trophy"></i>{awardingLoot ? 'Awarding...' : 'Award Loot'}
+                              </button>
+                              <button
+                                className='initiative-btn initiative-btn-secondary'
+                                onClick={() => setShowAwardLoot(false)}
+                                title="Cancel"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                          {!showAwardLoot && lootTextValue.length > 0 && (
+                            <button
+                              className='initiative-btn initiative-btn-loot'
+                              onClick={() => setShowAwardLoot(true)}
+                              title="Award loot and XP to party"
+                            >
+                              <i className="fa-solid fa-trophy"></i>Award Loot
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
               </div>
             {viewingMonster && (
                 <MonsterCardModal

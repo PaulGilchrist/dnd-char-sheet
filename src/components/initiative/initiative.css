@@ -1005,3 +1005,126 @@
     font-size: 0.85em;
 }
 
+/* ============ Loot Section ============ */
+.initiative .initiative-loot-section {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--background-color-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.initiative .initiative-loot-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.initiative .initiative-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--background-color-button-secondary);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.initiative .initiative-btn:hover {
+    background: var(--background-color-button-secondary-hover);
+}
+
+.initiative .initiative-btn-secondary {
+    background: var(--background-color-button-secondary);
+    color: var(--color-text);
+    border-color: var(--border-color);
+}
+
+.initiative .initiative-btn-secondary:hover {
+    background: var(--background-color-button-secondary-hover);
+}
+
+.initiative .initiative-btn-loot {
+    background: rgba(255, 193, 7, 0.15);
+    color: var(--color-warning);
+    border-color: var(--color-warning);
+}
+
+.initiative .initiative-btn-loot:hover:not(:disabled) {
+    background: rgba(255, 193, 7, 0.25);
+}
+
+.initiative .initiative-btn-loot:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.initiative .initiative-loot-textarea {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    line-height: 1.5;
+    background: var(--background-color-input);
+    color: var(--color-text);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+}
+
+.initiative .initiative-loot-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.initiative .initiative-xp-summary {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.25);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.initiative .initiative-xp-label {
+    font-size: 0.88rem;
+    color: var(--color-warning);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.initiative .initiative-award-loot-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.initiative .initiative-btn-complete {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    background: rgba(255, 193, 7, 0.2) !important;
+    color: var(--color-warning) !important;
+    border-color: var(--color-warning) !important;
+    padding: 6px 14px !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+}
+
+.initiative .initiative-btn-complete:hover {
+    background: rgba(255, 193, 7, 0.35) !important;
+}
+
