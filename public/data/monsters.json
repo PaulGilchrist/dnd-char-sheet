@@ -338,6 +338,305 @@
     ]
   },
   {
+    "index": "aberrant-spirit-beholderkin",
+    "name": "Aberrant Spirit (Beholderkin)",
+    "size": "Medium",
+    "type": "aberration",
+    "subtype": "beholderkin",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d8+15",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 15,
+      "int": 16,
+      "wis": 10,
+      "cha": 6
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 2,
+      "int": 3,
+      "wis": 0,
+      "cha": -2
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -2
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Deep Speech, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "psychic"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Eye Ray",
+        "description": "Ranged Spell Attack: +spell attack modifier, range 150 ft. Hit: 1d8+3+spell level Psychic damage.",
+        "attack_bonus": null,
+        "reach": null,
+        "damage_dice_primary": "1d8+3+spell level",
+        "damage_type_primary": "psychic",
+        "damage_dice_secondary": null,
+        "damage_type_secondary": null,
+        "range": "150 ft."
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Beholderkin. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "aberrant-spirit-mind-flayer",
+    "name": "Aberrant Spirit (Mind Flayer)",
+    "size": "Medium",
+    "type": "aberration",
+    "subtype": "mind flayer",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d8+15",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 15,
+      "int": 16,
+      "wis": 10,
+      "cha": 6
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 2,
+      "int": 3,
+      "wis": 0,
+      "cha": -2
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -2
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Deep Speech, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "psychic"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Psychic Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Psychic damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+3+spell level",
+        "damage_type_primary": "psychic"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Whispering Aura",
+        "description": "At the start of the spirit's turn, if it doesn't have the Incapacitated condition, each creature (other than the caster) within 5 ft. of the spirit must succeed on a WIS saving throw (DC = your spell save DC) or take 2d6 Psychic damage."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Mind Flayer. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "aberrant-spirit-slaad",
+    "name": "Aberrant Spirit (Slaad)",
+    "size": "Medium",
+    "type": "aberration",
+    "subtype": "slaad",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d8+15",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 15,
+      "int": 16,
+      "wis": 10,
+      "cha": 6
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 2,
+      "int": 3,
+      "wis": 0,
+      "cha": -2
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -2
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Deep Speech, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "psychic"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Claw",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+3+spell level Slashing damage, and the target can't regain Hit Points until the start of the spirit's next turn.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+3+spell level",
+        "damage_type_primary": "slashing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Regeneration",
+        "description": "The spirit regains 5 Hit Points at the start of its turn if it has at least 1 Hit Point."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Slaad. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "aboleth",
     "name": "Aboleth",
     "size": "Large",
@@ -4200,6 +4499,336 @@
     ]
   },
   {
+    "index": "animate-objects-huge",
+    "name": "Animated Object (Huge)",
+    "size": "Huge",
+    "type": "construct",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 15,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "4d10+20",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 10,
+      "int": 3,
+      "wis": 3,
+      "cha": 1
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 0,
+      "int": -4,
+      "wis": -4,
+      "cha": -5
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 0
+      },
+      "int": {
+        "modifier": -4
+      },
+      "wis": {
+        "modifier": -4
+      },
+      "cha": {
+        "modifier": -5
+      }
+    },
+    "skills": {},
+    "senses": {
+      "blindsight": 30,
+      "passive_perception": 6
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "forest",
+      "grassland",
+      "mountain",
+      "swamp",
+      "coastal",
+      "desert",
+      "hill",
+      "arctic",
+      "underwater"
+    ],
+    "immunities": [
+      "poison",
+      "psychic",
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d12+3+spellcasting modifier Force damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "2d12+3+spellcasting modifier",
+        "damage_type_primary": "force"
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An object animated by the Animate Objects spell. Huge size."
+  },
+  {
+    "index": "animate-objects-large",
+    "name": "Animated Object (Large)",
+    "size": "Large",
+    "type": "construct",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 15,
+    "armor_class_details": null,
+    "hit_points": 20,
+    "hit_dice": "2d10+8",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 10,
+      "int": 3,
+      "wis": 3,
+      "cha": 1
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 0,
+      "int": -4,
+      "wis": -4,
+      "cha": -5
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 0
+      },
+      "int": {
+        "modifier": -4
+      },
+      "wis": {
+        "modifier": -4
+      },
+      "cha": {
+        "modifier": -5
+      }
+    },
+    "skills": {},
+    "senses": {
+      "blindsight": 30,
+      "passive_perception": 6
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "forest",
+      "grassland",
+      "mountain",
+      "swamp",
+      "coastal",
+      "desert",
+      "hill",
+      "arctic",
+      "underwater"
+    ],
+    "immunities": [
+      "poison",
+      "psychic",
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d6+3+spellcasting modifier Force damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "2d6+3+spellcasting modifier",
+        "damage_type_primary": "force"
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An object animated by the Animate Objects spell. Large size."
+  },
+  {
+    "index": "animate-objects-medium",
+    "name": "Animated Object (Medium)",
+    "size": "Medium",
+    "type": "construct",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 15,
+    "armor_class_details": null,
+    "hit_points": 10,
+    "hit_dice": "1d10+4",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 10,
+      "con": 10,
+      "int": 3,
+      "wis": 3,
+      "cha": 1
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 0,
+      "con": 0,
+      "int": -4,
+      "wis": -4,
+      "cha": -5
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 0
+      },
+      "int": {
+        "modifier": -4
+      },
+      "wis": {
+        "modifier": -4
+      },
+      "cha": {
+        "modifier": -5
+      }
+    },
+    "skills": {},
+    "senses": {
+      "blindsight": 30,
+      "passive_perception": 6
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "forest",
+      "grassland",
+      "mountain",
+      "swamp",
+      "coastal",
+      "desert",
+      "hill",
+      "arctic",
+      "underwater"
+    ],
+    "immunities": [
+      "poison",
+      "psychic",
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d4+3 Force damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d4+3",
+        "damage_type_primary": "force"
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An object animated by the Animate Objects spell. Medium size."
+  },
+  {
     "index": "animated-rug-of-smothering",
     "name": "Animated Rug of Smothering",
     "size": "Large",
@@ -7321,6 +7950,311 @@
     ]
   },
   {
+    "index": "bestial-spirit-air",
+    "name": "Bestial Spirit (Air)",
+    "size": "Small",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 20,
+    "hit_dice": "3d8+9",
+    "speed": {
+      "fly": "60 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 11,
+      "con": 16,
+      "int": 4,
+      "wis": 14,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 3,
+      "int": -3,
+      "wis": 2,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "forest",
+      "grassland",
+      "mountain",
+      "coastal"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Rend",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "piercing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Flyby",
+        "description": "The spirit doesn't provoke Opportunity Attacks when it flies out of an enemy's reach."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Air variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "bestial-spirit-land",
+    "name": "Bestial Spirit (Land)",
+    "size": "Small",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 30,
+    "hit_dice": "4d8+12",
+    "speed": {
+      "walk": "30 ft.",
+      "climb": "30 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 11,
+      "con": 16,
+      "int": 4,
+      "wis": 14,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 3,
+      "int": -3,
+      "wis": 2,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "forest",
+      "grassland",
+      "mountain",
+      "swamp"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Rend",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "piercing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 ft. of the creature and the ally doesn't have the Incapacitated condition."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Land variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "bestial-spirit-water",
+    "name": "Bestial Spirit (Water)",
+    "size": "Small",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 30,
+    "hit_dice": "4d8+12",
+    "speed": {
+      "walk": "30 ft.",
+      "swim": "30 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 11,
+      "con": 16,
+      "int": 4,
+      "wis": 14,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 3,
+      "int": -3,
+      "wis": 2,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "coastal",
+      "underwater",
+      "swamp"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Rend",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "piercing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Pack Tactics",
+        "description": "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 ft. of the creature and the ally doesn't have the Incapacitated condition."
+      },
+      {
+        "name": "Water Breathing",
+        "description": "The spirit can breathe only underwater."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Water variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "black-bear",
     "name": "Black Bear",
     "size": "Medium",
@@ -10075,6 +11009,218 @@
     ]
   },
   {
+    "index": "celestial-spirit-avenger",
+    "name": "Celestial Spirit (Avenger)",
+    "size": "Large",
+    "type": "celestial",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "40 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 14,
+      "con": 16,
+      "int": 10,
+      "wis": 14,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 2,
+      "con": 3,
+      "int": 0,
+      "wis": 2,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "Celestial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "mountain",
+      "grassland"
+    ],
+    "immunities": [
+      "charmed",
+      "frightened"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "radiant"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Radiant Bow",
+        "description": "Ranged Spell Attack: +spell attack modifier, range 600 ft. Hit: 2d6+2+spell level Radiant damage.",
+        "attack_bonus": null,
+        "reach": null,
+        "damage_dice_primary": "2d6+2+spell level",
+        "damage_type_primary": "radiant",
+        "damage_dice_secondary": null,
+        "damage_type_secondary": null,
+        "range": "600 ft."
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A celestial spirit summoned by Summon Celestial. Avenger variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "celestial-spirit-defender",
+    "name": "Celestial Spirit (Defender)",
+    "size": "Large",
+    "type": "celestial",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "40 ft."
+    },
+    "ability_scores": {
+      "str": 16,
+      "dex": 14,
+      "con": 16,
+      "int": 10,
+      "wis": 14,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 3,
+      "dex": 2,
+      "con": 3,
+      "int": 0,
+      "wis": 2,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 3
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "Celestial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "mountain",
+      "grassland"
+    ],
+    "immunities": [
+      "charmed",
+      "frightened"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "radiant"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Radiant Mace",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+3+spell level Radiant damage, and the spirit can choose itself or another creature it can see within 10 ft. of the target. The chosen creature gains 1d10 Temporary Hit Points.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+3+spell level",
+        "damage_type_primary": "radiant"
+      }
+    ],
+    "traits": [],
+    "reactions": [
+      {
+        "name": "Healing Touch",
+        "description": "The spirit touches another creature. The target regains Hit Points equal to 2d8+spell level.",
+        "attack_bonus": null,
+        "reach": null,
+        "damage_dice_primary": "2d8+spell level",
+        "damage_type_primary": "healing"
+      }
+    ],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A celestial spirit summoned by Summon Celestial. Defender variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "centaur",
     "name": "Centaur",
     "size": "Large",
@@ -11692,6 +12838,328 @@
     "environments": [
       "forest"
     ]
+  },
+  {
+    "index": "construct-spirit-clay",
+    "name": "Construct Spirit (Clay)",
+    "size": "Medium",
+    "type": "construct",
+    "subtype": "clay",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 10,
+      "con": 18,
+      "int": 14,
+      "wis": 11,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 4,
+      "int": 2,
+      "wis": 0,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 4
+      },
+      "int": {
+        "modifier": 2
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark"
+    ],
+    "immunities": [
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [
+      "poison"
+    ],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [],
+    "reactions": [
+      {
+        "name": "Berserk Lashing",
+        "description": "Trigger: The spirit takes damage from a creature. Response: The spirit makes a Slam attack against that creature if possible, or the spirit moves up to half its Speed toward that creature without provoking Opportunity Attacks.",
+        "attack_bonus": null,
+        "reach": null,
+        "damage_dice_primary": null,
+        "damage_type_primary": null
+      }
+    ],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A construct spirit summoned by Summon Construct. Clay variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "construct-spirit-metal",
+    "name": "Construct Spirit (Metal)",
+    "size": "Medium",
+    "type": "construct",
+    "subtype": "metal",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 10,
+      "con": 18,
+      "int": 14,
+      "wis": 11,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 4,
+      "int": 2,
+      "wis": 0,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 4
+      },
+      "int": {
+        "modifier": 2
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark"
+    ],
+    "immunities": [
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [
+      "poison"
+    ],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Heated Body",
+        "description": "A creature that hits the spirit with a melee attack or that starts its turn in a grapple with the spirit takes 1d10 Fire damage."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A construct spirit summoned by Summon Construct. Metal variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "construct-spirit-stone",
+    "name": "Construct Spirit (Stone)",
+    "size": "Medium",
+    "type": "construct",
+    "subtype": "stone",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 10,
+      "con": 18,
+      "int": 14,
+      "wis": 11,
+      "cha": 5
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 0,
+      "con": 4,
+      "int": 2,
+      "wis": 0,
+      "cha": -3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 0
+      },
+      "con": {
+        "modifier": 4
+      },
+      "int": {
+        "modifier": 2
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark"
+    ],
+    "immunities": [
+      "charmed",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [
+      "poison"
+    ],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+4+spell level",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Stony Lethargy",
+        "description": "When a creature starts its turn within 10 ft. of the spirit, the spirit can target it with magical energy if the spirit can see it. WIS Saving Throw: DC = your spell save DC. Failure: Until the start of its next turn, the target can't make Opportunity Attacks, and its Speed is halved."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A construct spirit summoned by Summon Construct. Stone variant. Uses spell attack modifier and caster's Proficiency Bonus."
   },
   {
     "index": "copper-dragon-wyrmling",
@@ -14952,6 +16420,121 @@
     ]
   },
   {
+    "index": "draconic-spirit",
+    "name": "Draconic Spirit",
+    "size": "Large",
+    "type": "dragon",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 14,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d12+18",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "60 ft.",
+      "swim": "30 ft."
+    },
+    "ability_scores": {
+      "str": 19,
+      "dex": 14,
+      "con": 17,
+      "int": 10,
+      "wis": 14,
+      "cha": 14
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 2,
+      "con": 3,
+      "int": 0,
+      "wis": 2,
+      "cha": 2
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 2
+      }
+    },
+    "skills": {},
+    "senses": {
+      "blindsight": 30,
+      "passive_perception": 12
+    },
+    "languages": "Draconic, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "mountain",
+      "coastal",
+      "grassland"
+    ],
+    "immunities": [
+      "charmed",
+      "frightened",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "acid",
+      "cold",
+      "fire",
+      "lightning",
+      "poison"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Rend",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 10 ft. Hit: 1d6+4+spell level Piercing damage.",
+        "attack_bonus": null,
+        "reach": "10 ft.",
+        "damage_dice_primary": "1d6+4+spell level",
+        "damage_type_primary": "piercing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Shared Resistances",
+        "description": "When you summon the spirit, choose one of its Resistances. You have Resistance to the chosen damage type until the spell ends."
+      },
+      {
+        "name": "Breath Weapon",
+        "description": "DEX Saving Throw: DC = your spell save DC, each creature in a 30-foot Cone. Failure: 2d6 damage of a type this spirit has Resistance to (your choice when you cast the spell). Success: Half damage."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A draconic spirit summoned by Draconic Spirit. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "draft-horse",
     "name": "Draft Horse",
     "size": "Large",
@@ -17170,6 +18753,430 @@
     ]
   },
   {
+    "index": "elemental-spirit-air",
+    "name": "Elemental Spirit (Air)",
+    "size": "Medium",
+    "type": "elemental",
+    "subtype": "air",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d8+24",
+    "speed": {
+      "fly": "40 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 15,
+      "con": 17,
+      "int": 4,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 2,
+      "con": 3,
+      "int": -3,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Primordial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "mountain",
+      "coastal"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned",
+      "exhaustion",
+      "paralyzed",
+      "petrified"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "lightning",
+      "thunder"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Lightning damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+4+spell level",
+        "damage_type_primary": "lightning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Amorphous Form",
+        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An elemental spirit summoned by Summon Elemental. Air variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "elemental-spirit-earth",
+    "name": "Elemental Spirit (Earth)",
+    "size": "Medium",
+    "type": "elemental",
+    "subtype": "earth",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d8+24",
+    "speed": {
+      "walk": "40 ft.",
+      "burrow": "40 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 15,
+      "con": 17,
+      "int": 4,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 2,
+      "con": 3,
+      "int": -3,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Primordial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "mountain"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "piercing",
+      "slashing"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Bludgeoning damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+4+spell level",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Amorphous Form",
+        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An elemental spirit summoned by Summon Elemental. Earth variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "elemental-spirit-fire",
+    "name": "Elemental Spirit (Fire)",
+    "size": "Medium",
+    "type": "elemental",
+    "subtype": "fire",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d8+24",
+    "speed": {
+      "fly": "40 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 15,
+      "con": 17,
+      "int": 4,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 2,
+      "con": 3,
+      "int": -3,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Primordial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "desert",
+      "mountain"
+    ],
+    "immunities": [
+      "fire",
+      "poison",
+      "poisoned",
+      "exhaustion",
+      "paralyzed",
+      "petrified"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "acid"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Fire damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+4+spell level",
+        "damage_type_primary": "fire"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Amorphous Form",
+        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An elemental spirit summoned by Summon Elemental. Fire variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "elemental-spirit-water",
+    "name": "Elemental Spirit (Water)",
+    "size": "Medium",
+    "type": "elemental",
+    "subtype": "water",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d8+24",
+    "speed": {
+      "walk": "40 ft.",
+      "swim": "40 ft."
+    },
+    "ability_scores": {
+      "str": 18,
+      "dex": 15,
+      "con": 17,
+      "int": 4,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 4,
+      "dex": 2,
+      "con": 3,
+      "int": -3,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 4
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 3
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Primordial, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "coastal",
+      "underwater",
+      "swamp"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "acid"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Slam",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Cold damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d10+4+spell level",
+        "damage_type_primary": "cold"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Amorphous Form",
+        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An elemental spirit summoned by Summon Elemental. Water variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "elephant",
     "name": "Elephant",
     "size": "Huge",
@@ -18304,6 +20311,103 @@
     ]
   },
   {
+    "index": "fey-spirit",
+    "name": "Fey Spirit",
+    "size": "Small",
+    "type": "fey",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 12,
+    "armor_class_details": null,
+    "hit_points": 30,
+    "hit_dice": "4d8+12",
+    "speed": {
+      "walk": "30 ft.",
+      "fly": "30 ft."
+    },
+    "ability_scores": {
+      "str": 13,
+      "dex": 16,
+      "con": 14,
+      "int": 14,
+      "wis": 11,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": 2,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 2
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Sylvan, understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "forest",
+      "grassland",
+      "swamp"
+    ],
+    "immunities": [
+      "charmed"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Fey Blade",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d6+3+spell level Force damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "2d6+3+spell level",
+        "damage_type_primary": "force"
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A fey spirit summoned by Summon Fey or Fey Spirit. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "fiend-cultist",
     "name": "Fiend Cultist",
     "size": "Medium",
@@ -18405,6 +20509,327 @@
       "urban",
       "underdark"
     ]
+  },
+  {
+    "index": "fiendish-spirit-demon",
+    "name": "Fiendish Spirit (Demon)",
+    "size": "Large",
+    "type": "fiend",
+    "subtype": "demon",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 12,
+    "armor_class_details": null,
+    "hit_points": 50,
+    "hit_dice": "6d10+24",
+    "speed": {
+      "walk": "40 ft.",
+      "climb": "40 ft."
+    },
+    "ability_scores": {
+      "str": 13,
+      "dex": 16,
+      "con": 15,
+      "int": 10,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": 0,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "coastal"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "fire"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Bite",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d12+3+spell level Necrotic damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d12+3+spell level",
+        "damage_type_primary": "necrotic"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Death Throes",
+        "description": "When the spirit drops to 0 Hit Points or the spell ends, the spirit explodes. DEX Saving Throw: DC = your spell save DC, each creature in a 70-foot Emanation originating from the spirit. Failure: 2d10+spell level Fire damage. Success: Half damage."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Demon variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "fiendish-spirit-devil",
+    "name": "Fiendish Spirit (Devil)",
+    "size": "Large",
+    "type": "fiend",
+    "subtype": "devil",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 12,
+    "armor_class_details": null,
+    "hit_points": 40,
+    "hit_dice": "5d10+15",
+    "speed": {
+      "walk": "40 ft.",
+      "fly": "60 ft."
+    },
+    "ability_scores": {
+      "str": 13,
+      "dex": 16,
+      "con": 15,
+      "int": 10,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": 0,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "coastal"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "fire"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Fiery Strike",
+        "description": "Melee or Ranged Spell Attack: +spell attack modifier, reach 5 ft. or range 150 ft. Hit: 2d6+3+spell level Fire damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "2d6+3+spell level",
+        "damage_type_primary": "fire",
+        "damage_dice_secondary": null,
+        "damage_type_secondary": null,
+        "range": "150 ft."
+      }
+    ],
+    "traits": [
+      {
+        "name": "Devil's Sight",
+        "description": "Magical Darkness doesn't impede the spirit's Darkvision."
+      },
+      {
+        "name": "Magic Resistance",
+        "description": "The spirit has Advantage on saving throws against spells and other magical effects."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Devil variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "fiendish-spirit-yugoloth",
+    "name": "Fiendish Spirit (Yugoloth)",
+    "size": "Large",
+    "type": "fiend",
+    "subtype": "yugoloth",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 12,
+    "armor_class_details": null,
+    "hit_points": 60,
+    "hit_dice": "7d10+28",
+    "speed": {
+      "walk": "40 ft."
+    },
+    "ability_scores": {
+      "str": 13,
+      "dex": 16,
+      "con": 15,
+      "int": 10,
+      "wis": 10,
+      "cha": 16
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": 0,
+      "wis": 0,
+      "cha": 3
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": 0
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": 3
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "urban",
+      "underdark",
+      "coastal"
+    ],
+    "immunities": [
+      "poison",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [
+      "fire"
+    ],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Claws",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Slashing damage. Immediately after the attack hits or misses, the spirit can teleport up to 30 ft. to an unoccupied space it can see.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+3+spell level",
+        "damage_type_primary": "slashing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Magic Resistance",
+        "description": "The spirit has Advantage on saving throws against spells and other magical effects."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Yugoloth variant. Uses spell attack modifier and caster's Proficiency Bonus."
   },
   {
     "index": "fire-elemental",
@@ -44333,6 +46758,315 @@
     ]
   },
   {
+    "index": "primal-companion-beast-of-the-land",
+    "name": "Primal Companion (Beast of the Land)",
+    "size": "Medium",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 35,
+    "hit_dice": "6d8+18",
+    "speed": {
+      "walk": "40 ft.",
+      "climb": "40 ft."
+    },
+    "ability_scores": {
+      "str": 14,
+      "dex": 14,
+      "con": 15,
+      "int": 8,
+      "wis": 14,
+      "cha": 11
+    },
+    "ability_score_modifiers": {
+      "str": 2,
+      "dex": 2,
+      "con": 2,
+      "int": -1,
+      "wis": 2,
+      "cha": 0
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 2
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": -1
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 0
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "forest",
+      "grassland",
+      "mountain",
+      "swamp"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Beast's Strike",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+2+WIS modifier Bludgeoning, Piercing, or Slashing damage (your choice). If the beast moved at least 20 feet straight toward the target before the hit, the target takes an extra 1d6 damage of the same type, and the target has the Prone condition if it is a Large or smaller creature.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+2+WIS modifier",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Primal Bond",
+        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature."
+  },
+  {
+    "index": "primal-companion-beast-of-the-sea",
+    "name": "Primal Companion (Beast of the Sea)",
+    "size": "Medium",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 35,
+    "hit_dice": "6d8+18",
+    "speed": {
+      "walk": "5 ft.",
+      "swim": "60 ft."
+    },
+    "ability_scores": {
+      "str": 14,
+      "dex": 14,
+      "con": 15,
+      "int": 8,
+      "wis": 14,
+      "cha": 11
+    },
+    "ability_score_modifiers": {
+      "str": 2,
+      "dex": 2,
+      "con": 2,
+      "int": -1,
+      "wis": 2,
+      "cha": 0
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 2
+      },
+      "dex": {
+        "modifier": 2
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": -1
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 0
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 90,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "coastal",
+      "underwater",
+      "swamp"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Beast's Strike",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d6+2+WIS modifier Bludgeoning or Piercing damage (your choice), and the target has the Grappled condition (escape DC = 8 + Proficiency Bonus + WIS modifier).",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d6+2+WIS modifier",
+        "damage_type_primary": "bludgeoning"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Amphibious",
+        "description": "The beast can breathe air and water."
+      },
+      {
+        "name": "Primal Bond",
+        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature. Sea variant."
+  },
+  {
+    "index": "primal-companion-beast-of-the-sky",
+    "name": "Primal Companion (Beast of the Sky)",
+    "size": "Small",
+    "type": "beast",
+    "subtype": "",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 13,
+    "armor_class_details": null,
+    "hit_points": 28,
+    "hit_dice": "6d6+12",
+    "speed": {
+      "walk": "10 ft.",
+      "fly": "60 ft."
+    },
+    "ability_scores": {
+      "str": 6,
+      "dex": 16,
+      "con": 13,
+      "int": 8,
+      "wis": 14,
+      "cha": 11
+    },
+    "ability_score_modifiers": {
+      "str": -2,
+      "dex": 3,
+      "con": 1,
+      "int": -1,
+      "wis": 2,
+      "cha": 0
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": -2
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 1
+      },
+      "int": {
+        "modifier": -1
+      },
+      "wis": {
+        "modifier": 2
+      },
+      "cha": {
+        "modifier": 0
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 12
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "mountain",
+      "grassland",
+      "coastal"
+    ],
+    "immunities": [],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Beast's Strike",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d4+3+WIS modifier Slashing damage.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d4+3+WIS modifier",
+        "damage_type_primary": "slashing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Flyby",
+        "description": "The beast doesn't provoke Opportunity Attacks when it flies out of an enemy's reach."
+      },
+      {
+        "name": "Primal Bond",
+        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature. Sky variant."
+  },
+  {
     "index": "primeval-owlbear",
     "name": "Primeval Owlbear",
     "size": "Huge",
@@ -56612,6 +59346,319 @@
     "description": "An abominable horror from deep beneath the earth, an umber hulk burrows into cave complexes, dungeons, or Underdark settlements in search of food. Those lucky enough to survive an umber hulk attack often remember precious little of the incident, thanks to the umber hulk's mind-scrambling gaze.<br/><br/><b>Devious Delvers.</b> Umber hulks can burrow through solid rock, forming new tunnels in their wake. The steel-hard chitin of its body can withstand the cave-ins, tunnel collapses, and rock falls that commonly follow it.<br/>Burrowing into the wall of a cavern or passageway, an umber hulk lies in wait for creatures to pass by on the other side, its hair-like feelers sensing any movement around it. When it explodes out in a shower of earth and rock, its unsuspecting quarry turns to face the oncoming threat-and is entranced by the umber hulk's bewildering eyes, forced to stand helpless as its mandibles snap shut.<br/><br/><b>Mind Scrambler.</b> Many survivors of an umber hulk encounter recollect little about the attack, because the monster's confusing gaze scrambles their memory of the event. Those who have fought and killed umber hulks recognize the signs. For other denizens of the Underdark, grisly tales of vanished explorers and wanton destruction speak of an unknown foe. Umber hulks take on supernatural status in these harrowing stories, many of which convey the same warning: once an umber hulk has been spotted, it is already too late to escape it."
   },
   {
+    "index": "undead-spirit-ghostly",
+    "name": "Undead Spirit (Ghostly)",
+    "size": "Medium",
+    "type": "undead",
+    "subtype": "ghostly",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 30,
+    "hit_dice": "4d8+12",
+    "speed": {
+      "fly": "40 ft."
+    },
+    "ability_scores": {
+      "str": 12,
+      "dex": 16,
+      "con": 15,
+      "int": 4,
+      "wis": 10,
+      "cha": 9
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": -3,
+      "wis": 0,
+      "cha": -1
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -1
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "necrotic",
+      "poison",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Deathly Touch",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Necrotic damage, and the target has the Frightened condition until the end of the spirit's next turn.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d8+3+spell level",
+        "damage_type_primary": "necrotic"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Incorporeal Passage",
+        "description": "The spirit can move through other creatures and objects as if they were Difficult Terrain. If it ends its turn inside an object, it is shunted to the nearest unoccupied space and takes 1d10 Force damage for every 5 ft. traveled."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An undead spirit summoned by Summon Undead. Ghostly variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "undead-spirit-putrid",
+    "name": "Undead Spirit (Putrid)",
+    "size": "Medium",
+    "type": "undead",
+    "subtype": "putrid",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 30,
+    "hit_dice": "4d8+12",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 12,
+      "dex": 16,
+      "con": 15,
+      "int": 4,
+      "wis": 10,
+      "cha": 9
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": -3,
+      "wis": 0,
+      "cha": -1
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -1
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "necrotic",
+      "poison",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Rotting Claw",
+        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d6+3+spell level Slashing damage. If the target has the Poisoned condition, it has the Paralyzed condition until the end of the spirit's next turn.",
+        "attack_bonus": null,
+        "reach": "5 ft.",
+        "damage_dice_primary": "1d6+3+spell level",
+        "damage_type_primary": "slashing"
+      }
+    ],
+    "traits": [
+      {
+        "name": "Festering Aura",
+        "description": "CON Saving Throw: DC = your spell save DC, any creature (other than the caster) that starts its turn within a 5-foot Emanation originating from the spirit. Failure: The creature has the Poisoned condition until the start of its next turn."
+      }
+    ],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An undead spirit summoned by Summon Undead. Putrid variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
+    "index": "undead-spirit-skeletal",
+    "name": "Undead Spirit (Skeletal)",
+    "size": "Medium",
+    "type": "undead",
+    "subtype": "skeletal",
+    "alignment": "unaligned",
+    "initiative": null,
+    "initiative_details": null,
+    "armor_class": 11,
+    "armor_class_details": null,
+    "hit_points": 20,
+    "hit_dice": "3d8+6",
+    "speed": {
+      "walk": "30 ft."
+    },
+    "ability_scores": {
+      "str": 12,
+      "dex": 16,
+      "con": 15,
+      "int": 4,
+      "wis": 10,
+      "cha": 9
+    },
+    "ability_score_modifiers": {
+      "str": 1,
+      "dex": 3,
+      "con": 2,
+      "int": -3,
+      "wis": 0,
+      "cha": -1
+    },
+    "saving_throws": {
+      "str": {
+        "modifier": 1
+      },
+      "dex": {
+        "modifier": 3
+      },
+      "con": {
+        "modifier": 2
+      },
+      "int": {
+        "modifier": -3
+      },
+      "wis": {
+        "modifier": 0
+      },
+      "cha": {
+        "modifier": -1
+      }
+    },
+    "skills": {},
+    "senses": {
+      "darkvision": 60,
+      "passive_perception": 10
+    },
+    "languages": "understands your languages",
+    "challenge_rating": "None",
+    "xp": 0,
+    "proficiency_bonus": null,
+    "legendary_resistance": null,
+    "equipment": [],
+    "habitat": "",
+    "treasure": "",
+    "environments": [
+      "underdark",
+      "urban"
+    ],
+    "immunities": [
+      "necrotic",
+      "poison",
+      "exhaustion",
+      "frightened",
+      "paralyzed",
+      "poisoned"
+    ],
+    "damage_immunities": [],
+    "damage_resistances": [],
+    "damage_vulnerabilities": [],
+    "condition_immunities": [],
+    "actions": [
+      {
+        "name": "Crave Bolt",
+        "description": "Ranged Spell Attack: +spell attack modifier, range 150 ft. Hit: 2d4+3+spell level Necrotic damage.",
+        "attack_bonus": null,
+        "reach": null,
+        "damage_dice_primary": "2d4+3+spell level",
+        "damage_type_primary": "necrotic",
+        "damage_dice_secondary": null,
+        "damage_type_secondary": null,
+        "range": "150 ft."
+      }
+    ],
+    "traits": [],
+    "reactions": [],
+    "legendary_actions": [],
+    "lair_actions": [],
+    "regional_effects": {},
+    "book": "2024 Player's Handbook",
+    "page": null,
+    "description": "An undead spirit summoned by Summon Undead. Skeletal variant. Uses spell attack modifier and caster's Proficiency Bonus."
+  },
+  {
     "index": "unicorn",
     "name": "Unicorn",
     "size": "Large",
@@ -62966,3052 +66013,5 @@
       "underdark"
     ],
     "description": "From somewhere in the darkness, a gurgling moan is heard. A form lurches into view, dragging one foot as it raises bloated arms and broken hands. The zombie advances, driven to kill anyone too slow to escape its grasp.<br/><br/><b>Dark Servants.</b> Sinister necromantic magic infuses the remains of the dead, causing them to rise as zombies that do their creator's bidding without fear or hesitation. They move with a jerky, uneven gait, clad in the moldering apparel they wore when put to rest, and carrying the stench of decay.<br/>Most zombies are made from humanoid remains, though the flesh and bones of any formerly living creature can be imbued with a semblance of life. Necromantic magic, usually from spells, animates a zombie. Some zombies rise spontaneously when dark magic saturates an area. Once turned into a zombie, a creature can't be restored to life except by powerful magic, such as a resurrection spell.<br/>A zombie retains no vestiges of its former self, its mind devoid of thought and imagination. A zombie left without orders simply stands in place and rots unless something comes along that it can kill. The magic animating a zombie imbues it with evil, so left without purpose, it attacks any living creature it encounters.<br/><br/><b>Hideous Forms.</b> Zombies appear as they did in life, showing the wounds that killed them. However, the magic that creates these vile creatures often takes time to run its course. Dead warriors might rise from a battlefield, eviscerated and bloated after days in the sun. The muddy cadaver of a peasant could claw its way from the ground, riddled with maggots and worms. A zombie might wash ashore or rise from a marsh, swollen and reeking after weeks in the water.<br/><br/><b>Mindless Soldiers.</b> Zombies take the most direct route to any foe, unable to comprehend obstacles, tactics, or dangerous terrain. A zombie might stumble into a fast-flowing river to reach foes on a far shore, clawing at the surface as it is battered against rocks and destroyed. To reach a foe below it, a zombie might step out of an open window. Zombies stumble through roaring infernos, into pools of acid, and across fields littered with caltrops without hesitation.<br/>A zombie can follow simple orders and distinguish friends from foes, but its ability to reason is limited to shambling in whatever direction it is pointed, pummeling any enemy in its path. A zombie armed with a weapon uses it, but the zombie won't retrieve a dropped weapon or other tool until told to do so.<br/><br/><b>Undead Nature.</b> A zombie doesn't require air, food, drink, or sleep."
-  },
-  {
-    "index": "aberrant-spirit-beholderkin",
-    "name": "Aberrant Spirit (Beholderkin)",
-    "size": "Medium",
-    "type": "aberration",
-    "subtype": "beholderkin",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d8+15",
-    "speed": {
-      "walk": "30 ft.",
-      "fly": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 15,
-      "int": 16,
-      "wis": 10,
-      "cha": 6
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 2,
-      "int": 3,
-      "wis": 0,
-      "cha": -2
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -2
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "psychic"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Eye Ray",
-        "description": "Ranged Spell Attack: +spell attack modifier, range 150 ft. Hit: 1d8+3+spell level Psychic damage.",
-        "attack_bonus": null,
-        "reach": null,
-        "damage_dice_primary": "1d8+3+spell level",
-        "damage_type_primary": "psychic",
-        "damage_dice_secondary": null,
-        "damage_type_secondary": null,
-        "range": "150 ft."
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Beholderkin. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "aberrant-spirit-mind-flayer",
-    "name": "Aberrant Spirit (Mind Flayer)",
-    "size": "Medium",
-    "type": "aberration",
-    "subtype": "mind flayer",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d8+15",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 15,
-      "int": 16,
-      "wis": 10,
-      "cha": 6
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 2,
-      "int": 3,
-      "wis": 0,
-      "cha": -2
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -2
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "psychic"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Psychic Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Psychic damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+3+spell level",
-        "damage_type_primary": "psychic"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Whispering Aura",
-        "description": "At the start of the spirit's turn, if it doesn't have the Incapacitated condition, each creature (other than the caster) within 5 ft. of the spirit must succeed on a WIS saving throw (DC = your spell save DC) or take 2d6 Psychic damage."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Mind Flayer. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "aberrant-spirit-slaad",
-    "name": "Aberrant Spirit (Slaad)",
-    "size": "Medium",
-    "type": "aberration",
-    "subtype": "slaad",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d8+15",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 15,
-      "int": 16,
-      "wis": 10,
-      "cha": 6
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 2,
-      "int": 3,
-      "wis": 0,
-      "cha": -2
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -2
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "psychic"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Claw",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+3+spell level Slashing damage, and the target can't regain Hit Points until the start of the spirit's next turn.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+3+spell level",
-        "damage_type_primary": "slashing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Regeneration",
-        "description": "The spirit regains 5 Hit Points at the start of its turn if it has at least 1 Hit Point."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An aberrant spirit summoned by Summon Aberration. Resembles a Slaad. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "bestial-spirit-air",
-    "name": "Bestial Spirit (Air)",
-    "size": "Small",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 20,
-    "hit_dice": "3d8+9",
-    "speed": {
-      "fly": "60 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 11,
-      "con": 16,
-      "int": 4,
-      "wis": 14,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 3,
-      "int": -3,
-      "wis": 2,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "forest",
-      "grassland",
-      "mountain",
-      "coastal"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "piercing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Flyby",
-        "description": "The spirit doesn't provoke Opportunity Attacks when it flies out of an enemy's reach."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Air variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "bestial-spirit-land",
-    "name": "Bestial Spirit (Land)",
-    "size": "Small",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 30,
-    "hit_dice": "4d8+12",
-    "speed": {
-      "walk": "30 ft.",
-      "climb": "30 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 11,
-      "con": 16,
-      "int": 4,
-      "wis": 14,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 3,
-      "int": -3,
-      "wis": 2,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "forest",
-      "grassland",
-      "mountain",
-      "swamp"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "piercing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Pack Tactics",
-        "description": "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 ft. of the creature and the ally doesn't have the Incapacitated condition."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Land variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "bestial-spirit-water",
-    "name": "Bestial Spirit (Water)",
-    "size": "Small",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 30,
-    "hit_dice": "4d8+12",
-    "speed": {
-      "walk": "30 ft.",
-      "swim": "30 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 11,
-      "con": 16,
-      "int": 4,
-      "wis": 14,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 3,
-      "int": -3,
-      "wis": 2,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "coastal",
-      "underwater",
-      "swamp"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "piercing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Pack Tactics",
-        "description": "The spirit has Advantage on an attack roll against a creature if at least one of the spirit's allies is within 5 ft. of the creature and the ally doesn't have the Incapacitated condition."
-      },
-      {
-        "name": "Water Breathing",
-        "description": "The spirit can breathe only underwater."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A bestial spirit summoned by Summon Beast or Bestial Spirit. Water variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "celestial-spirit-avenger",
-    "name": "Celestial Spirit (Avenger)",
-    "size": "Large",
-    "type": "celestial",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "30 ft.",
-      "fly": "40 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 14,
-      "con": 16,
-      "int": 10,
-      "wis": 14,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 2,
-      "con": 3,
-      "int": 0,
-      "wis": 2,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "Celestial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "mountain",
-      "grassland"
-    ],
-    "immunities": [
-      "charmed",
-      "frightened"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "radiant"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Radiant Bow",
-        "description": "Ranged Spell Attack: +spell attack modifier, range 600 ft. Hit: 2d6+2+spell level Radiant damage.",
-        "attack_bonus": null,
-        "reach": null,
-        "damage_dice_primary": "2d6+2+spell level",
-        "damage_type_primary": "radiant",
-        "damage_dice_secondary": null,
-        "damage_type_secondary": null,
-        "range": "600 ft."
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A celestial spirit summoned by Summon Celestial. Avenger variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "celestial-spirit-defender",
-    "name": "Celestial Spirit (Defender)",
-    "size": "Large",
-    "type": "celestial",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "30 ft.",
-      "fly": "40 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 14,
-      "con": 16,
-      "int": 10,
-      "wis": 14,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 2,
-      "con": 3,
-      "int": 0,
-      "wis": 2,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "Celestial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "mountain",
-      "grassland"
-    ],
-    "immunities": [
-      "charmed",
-      "frightened"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "radiant"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Radiant Mace",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+3+spell level Radiant damage, and the spirit can choose itself or another creature it can see within 10 ft. of the target. The chosen creature gains 1d10 Temporary Hit Points.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+3+spell level",
-        "damage_type_primary": "radiant"
-      }
-    ],
-    "traits": [],
-    "reactions": [
-      {
-        "name": "Healing Touch",
-        "description": "The spirit touches another creature. The target regains Hit Points equal to 2d8+spell level.",
-        "attack_bonus": null,
-        "reach": null,
-        "damage_dice_primary": "2d8+spell level",
-        "damage_type_primary": "healing"
-      }
-    ],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A celestial spirit summoned by Summon Celestial. Defender variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "construct-spirit-clay",
-    "name": "Construct Spirit (Clay)",
-    "size": "Medium",
-    "type": "construct",
-    "subtype": "clay",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 10,
-      "con": 18,
-      "int": 14,
-      "wis": 11,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 4,
-      "int": 2,
-      "wis": 0,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 4
-      },
-      "int": {
-        "modifier": 2
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark"
-    ],
-    "immunities": [
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [
-      "poison"
-    ],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [],
-    "reactions": [
-      {
-        "name": "Berserk Lashing",
-        "description": "Trigger: The spirit takes damage from a creature. Response: The spirit makes a Slam attack against that creature if possible, or the spirit moves up to half its Speed toward that creature without provoking Opportunity Attacks.",
-        "attack_bonus": null,
-        "reach": null,
-        "damage_dice_primary": null,
-        "damage_type_primary": null
-      }
-    ],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A construct spirit summoned by Summon Construct. Clay variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "construct-spirit-metal",
-    "name": "Construct Spirit (Metal)",
-    "size": "Medium",
-    "type": "construct",
-    "subtype": "metal",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 10,
-      "con": 18,
-      "int": 14,
-      "wis": 11,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 4,
-      "int": 2,
-      "wis": 0,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 4
-      },
-      "int": {
-        "modifier": 2
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark"
-    ],
-    "immunities": [
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [
-      "poison"
-    ],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Heated Body",
-        "description": "A creature that hits the spirit with a melee attack or that starts its turn in a grapple with the spirit takes 1d10 Fire damage."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A construct spirit summoned by Summon Construct. Metal variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "construct-spirit-stone",
-    "name": "Construct Spirit (Stone)",
-    "size": "Medium",
-    "type": "construct",
-    "subtype": "stone",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 10,
-      "con": 18,
-      "int": 14,
-      "wis": 11,
-      "cha": 5
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 0,
-      "con": 4,
-      "int": 2,
-      "wis": 0,
-      "cha": -3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 4
-      },
-      "int": {
-        "modifier": 2
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark"
-    ],
-    "immunities": [
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [
-      "poison"
-    ],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Bludgeoning damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Stony Lethargy",
-        "description": "When a creature starts its turn within 10 ft. of the spirit, the spirit can target it with magical energy if the spirit can see it. WIS Saving Throw: DC = your spell save DC. Failure: Until the start of its next turn, the target can't make Opportunity Attacks, and its Speed is halved."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A construct spirit summoned by Summon Construct. Stone variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "draconic-spirit",
-    "name": "Draconic Spirit",
-    "size": "Large",
-    "type": "dragon",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 14,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d12+18",
-    "speed": {
-      "walk": "30 ft.",
-      "fly": "60 ft.",
-      "swim": "30 ft."
-    },
-    "ability_scores": {
-      "str": 19,
-      "dex": 14,
-      "con": 17,
-      "int": 10,
-      "wis": 14,
-      "cha": 14
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 2,
-      "con": 3,
-      "int": 0,
-      "wis": 2,
-      "cha": 2
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 2
-      }
-    },
-    "skills": {},
-    "senses": {
-      "blindsight": 30,
-      "passive_perception": 12
-    },
-    "languages": "Draconic, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "mountain",
-      "coastal",
-      "grassland"
-    ],
-    "immunities": [
-      "charmed",
-      "frightened",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "acid",
-      "cold",
-      "fire",
-      "lightning",
-      "poison"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 10 ft. Hit: 1d6+4+spell level Piercing damage.",
-        "attack_bonus": null,
-        "reach": "10 ft.",
-        "damage_dice_primary": "1d6+4+spell level",
-        "damage_type_primary": "piercing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Shared Resistances",
-        "description": "When you summon the spirit, choose one of its Resistances. You have Resistance to the chosen damage type until the spell ends."
-      },
-      {
-        "name": "Breath Weapon",
-        "description": "DEX Saving Throw: DC = your spell save DC, each creature in a 30-foot Cone. Failure: 2d6 damage of a type this spirit has Resistance to (your choice when you cast the spell). Success: Half damage."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A draconic spirit summoned by Draconic Spirit. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "elemental-spirit-air",
-    "name": "Elemental Spirit (Air)",
-    "size": "Medium",
-    "type": "elemental",
-    "subtype": "air",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d8+24",
-    "speed": {
-      "fly": "40 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 15,
-      "con": 17,
-      "int": 4,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 2,
-      "con": 3,
-      "int": -3,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "mountain",
-      "coastal"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned",
-      "exhaustion",
-      "paralyzed",
-      "petrified"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "lightning",
-      "thunder"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Lightning damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+4+spell level",
-        "damage_type_primary": "lightning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Amorphous Form",
-        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An elemental spirit summoned by Summon Elemental. Air variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "elemental-spirit-earth",
-    "name": "Elemental Spirit (Earth)",
-    "size": "Medium",
-    "type": "elemental",
-    "subtype": "earth",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d8+24",
-    "speed": {
-      "walk": "40 ft.",
-      "burrow": "40 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 15,
-      "con": 17,
-      "int": 4,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 2,
-      "con": 3,
-      "int": -3,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "mountain"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "piercing",
-      "slashing"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Bludgeoning damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+4+spell level",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Amorphous Form",
-        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An elemental spirit summoned by Summon Elemental. Earth variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "elemental-spirit-fire",
-    "name": "Elemental Spirit (Fire)",
-    "size": "Medium",
-    "type": "elemental",
-    "subtype": "fire",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d8+24",
-    "speed": {
-      "fly": "40 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 15,
-      "con": 17,
-      "int": 4,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 2,
-      "con": 3,
-      "int": -3,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "desert",
-      "mountain"
-    ],
-    "immunities": [
-      "fire",
-      "poison",
-      "poisoned",
-      "exhaustion",
-      "paralyzed",
-      "petrified"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "acid"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Fire damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+4+spell level",
-        "damage_type_primary": "fire"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Amorphous Form",
-        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An elemental spirit summoned by Summon Elemental. Fire variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "elemental-spirit-water",
-    "name": "Elemental Spirit (Water)",
-    "size": "Medium",
-    "type": "elemental",
-    "subtype": "water",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d8+24",
-    "speed": {
-      "walk": "40 ft.",
-      "swim": "40 ft."
-    },
-    "ability_scores": {
-      "str": 18,
-      "dex": 15,
-      "con": 17,
-      "int": 4,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 4,
-      "dex": 2,
-      "con": 3,
-      "int": -3,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 4
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 3
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "coastal",
-      "underwater",
-      "swamp"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "acid"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d10+4+spell level Cold damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d10+4+spell level",
-        "damage_type_primary": "cold"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Amorphous Form",
-        "description": "The spirit can move through a space as narrow as 1 inch wide without it counting as Difficult Terrain."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An elemental spirit summoned by Summon Elemental. Water variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "fey-spirit",
-    "name": "Fey Spirit",
-    "size": "Small",
-    "type": "fey",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 12,
-    "armor_class_details": null,
-    "hit_points": 30,
-    "hit_dice": "4d8+12",
-    "speed": {
-      "walk": "30 ft.",
-      "fly": "30 ft."
-    },
-    "ability_scores": {
-      "str": 13,
-      "dex": 16,
-      "con": 14,
-      "int": 14,
-      "wis": 11,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": 2,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 2
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Sylvan, understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "forest",
-      "grassland",
-      "swamp"
-    ],
-    "immunities": [
-      "charmed"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Fey Blade",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d6+3+spell level Force damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "2d6+3+spell level",
-        "damage_type_primary": "force"
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A fey spirit summoned by Summon Fey or Fey Spirit. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "fiendish-spirit-demon",
-    "name": "Fiendish Spirit (Demon)",
-    "size": "Large",
-    "type": "fiend",
-    "subtype": "demon",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 12,
-    "armor_class_details": null,
-    "hit_points": 50,
-    "hit_dice": "6d10+24",
-    "speed": {
-      "walk": "40 ft.",
-      "climb": "40 ft."
-    },
-    "ability_scores": {
-      "str": 13,
-      "dex": 16,
-      "con": 15,
-      "int": 10,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": 0,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "coastal"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "fire"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Bite",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d12+3+spell level Necrotic damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d12+3+spell level",
-        "damage_type_primary": "necrotic"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Death Throes",
-        "description": "When the spirit drops to 0 Hit Points or the spell ends, the spirit explodes. DEX Saving Throw: DC = your spell save DC, each creature in a 70-foot Emanation originating from the spirit. Failure: 2d10+spell level Fire damage. Success: Half damage."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Demon variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "fiendish-spirit-devil",
-    "name": "Fiendish Spirit (Devil)",
-    "size": "Large",
-    "type": "fiend",
-    "subtype": "devil",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 12,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "5d10+15",
-    "speed": {
-      "walk": "40 ft.",
-      "fly": "60 ft."
-    },
-    "ability_scores": {
-      "str": 13,
-      "dex": 16,
-      "con": 15,
-      "int": 10,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": 0,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "coastal"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "fire"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Fiery Strike",
-        "description": "Melee or Ranged Spell Attack: +spell attack modifier, reach 5 ft. or range 150 ft. Hit: 2d6+3+spell level Fire damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "2d6+3+spell level",
-        "damage_type_primary": "fire",
-        "damage_dice_secondary": null,
-        "damage_type_secondary": null,
-        "range": "150 ft."
-      }
-    ],
-    "traits": [
-      {
-        "name": "Devil's Sight",
-        "description": "Magical Darkness doesn't impede the spirit's Darkvision."
-      },
-      {
-        "name": "Magic Resistance",
-        "description": "The spirit has Advantage on saving throws against spells and other magical effects."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Devil variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "fiendish-spirit-yugoloth",
-    "name": "Fiendish Spirit (Yugoloth)",
-    "size": "Large",
-    "type": "fiend",
-    "subtype": "yugoloth",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 12,
-    "armor_class_details": null,
-    "hit_points": 60,
-    "hit_dice": "7d10+28",
-    "speed": {
-      "walk": "40 ft."
-    },
-    "ability_scores": {
-      "str": 13,
-      "dex": 16,
-      "con": 15,
-      "int": 10,
-      "wis": 10,
-      "cha": 16
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": 0,
-      "wis": 0,
-      "cha": 3
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": 0
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": 3
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "coastal"
-    ],
-    "immunities": [
-      "poison",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [
-      "fire"
-    ],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Claws",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Slashing damage. Immediately after the attack hits or misses, the spirit can teleport up to 30 ft. to an unoccupied space it can see.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+3+spell level",
-        "damage_type_primary": "slashing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Magic Resistance",
-        "description": "The spirit has Advantage on saving throws against spells and other magical effects."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A fiendish spirit summoned by Summon Fiend or Fiendish Spirit. Yugoloth variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "undead-spirit-ghostly",
-    "name": "Undead Spirit (Ghostly)",
-    "size": "Medium",
-    "type": "undead",
-    "subtype": "ghostly",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 30,
-    "hit_dice": "4d8+12",
-    "speed": {
-      "fly": "40 ft."
-    },
-    "ability_scores": {
-      "str": 12,
-      "dex": 16,
-      "con": 15,
-      "int": 4,
-      "wis": 10,
-      "cha": 9
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": -3,
-      "wis": 0,
-      "cha": -1
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -1
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "necrotic",
-      "poison",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Deathly Touch",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+3+spell level Necrotic damage, and the target has the Frightened condition until the end of the spirit's next turn.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+3+spell level",
-        "damage_type_primary": "necrotic"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Incorporeal Passage",
-        "description": "The spirit can move through other creatures and objects as if they were Difficult Terrain. If it ends its turn inside an object, it is shunted to the nearest unoccupied space and takes 1d10 Force damage for every 5 ft. traveled."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An undead spirit summoned by Summon Undead. Ghostly variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "undead-spirit-putrid",
-    "name": "Undead Spirit (Putrid)",
-    "size": "Medium",
-    "type": "undead",
-    "subtype": "putrid",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 30,
-    "hit_dice": "4d8+12",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 12,
-      "dex": 16,
-      "con": 15,
-      "int": 4,
-      "wis": 10,
-      "cha": 9
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": -3,
-      "wis": 0,
-      "cha": -1
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -1
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "necrotic",
-      "poison",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Rotting Claw",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d6+3+spell level Slashing damage. If the target has the Poisoned condition, it has the Paralyzed condition until the end of the spirit's next turn.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d6+3+spell level",
-        "damage_type_primary": "slashing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Festering Aura",
-        "description": "CON Saving Throw: DC = your spell save DC, any creature (other than the caster) that starts its turn within a 5-foot Emanation originating from the spirit. Failure: The creature has the Poisoned condition until the start of its next turn."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An undead spirit summoned by Summon Undead. Putrid variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "undead-spirit-skeletal",
-    "name": "Undead Spirit (Skeletal)",
-    "size": "Medium",
-    "type": "undead",
-    "subtype": "skeletal",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 11,
-    "armor_class_details": null,
-    "hit_points": 20,
-    "hit_dice": "3d8+6",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 12,
-      "dex": 16,
-      "con": 15,
-      "int": 4,
-      "wis": 10,
-      "cha": 9
-    },
-    "ability_score_modifiers": {
-      "str": 1,
-      "dex": 3,
-      "con": 2,
-      "int": -3,
-      "wis": 0,
-      "cha": -1
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 1
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": -3
-      },
-      "wis": {
-        "modifier": 0
-      },
-      "cha": {
-        "modifier": -1
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 10
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "underdark",
-      "urban"
-    ],
-    "immunities": [
-      "necrotic",
-      "poison",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Crave Bolt",
-        "description": "Ranged Spell Attack: +spell attack modifier, range 150 ft. Hit: 2d4+3+spell level Necrotic damage.",
-        "attack_bonus": null,
-        "reach": null,
-        "damage_dice_primary": "2d4+3+spell level",
-        "damage_type_primary": "necrotic",
-        "damage_dice_secondary": null,
-        "damage_type_secondary": null,
-        "range": "150 ft."
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An undead spirit summoned by Summon Undead. Skeletal variant. Uses spell attack modifier and caster's Proficiency Bonus."
-  },
-  {
-    "index": "primal-companion-beast-of-the-land",
-    "name": "Primal Companion (Beast of the Land)",
-    "size": "Medium",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 35,
-    "hit_dice": "6d8+18",
-    "speed": {
-      "walk": "40 ft.",
-      "climb": "40 ft."
-    },
-    "ability_scores": {
-      "str": 14,
-      "dex": 14,
-      "con": 15,
-      "int": 8,
-      "wis": 14,
-      "cha": 11
-    },
-    "ability_score_modifiers": {
-      "str": 2,
-      "dex": 2,
-      "con": 2,
-      "int": -1,
-      "wis": 2,
-      "cha": 0
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 2
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": -1
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 0
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "forest",
-      "grassland",
-      "mountain",
-      "swamp"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Beast's Strike",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+2+WIS modifier Bludgeoning, Piercing, or Slashing damage (your choice). If the beast moved at least 20 feet straight toward the target before the hit, the target takes an extra 1d6 damage of the same type, and the target has the Prone condition if it is a Large or smaller creature.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d8+2+WIS modifier",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Primal Bond",
-        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature."
-  },
-  {
-    "index": "primal-companion-beast-of-the-sea",
-    "name": "Primal Companion (Beast of the Sea)",
-    "size": "Medium",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 35,
-    "hit_dice": "6d8+18",
-    "speed": {
-      "walk": "5 ft.",
-      "swim": "60 ft."
-    },
-    "ability_scores": {
-      "str": 14,
-      "dex": 14,
-      "con": 15,
-      "int": 8,
-      "wis": 14,
-      "cha": 11
-    },
-    "ability_score_modifiers": {
-      "str": 2,
-      "dex": 2,
-      "con": 2,
-      "int": -1,
-      "wis": 2,
-      "cha": 0
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 2
-      },
-      "dex": {
-        "modifier": 2
-      },
-      "con": {
-        "modifier": 2
-      },
-      "int": {
-        "modifier": -1
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 0
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 90,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "coastal",
-      "underwater",
-      "swamp"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Beast's Strike",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d6+2+WIS modifier Bludgeoning or Piercing damage (your choice), and the target has the Grappled condition (escape DC = 8 + Proficiency Bonus + WIS modifier).",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d6+2+WIS modifier",
-        "damage_type_primary": "bludgeoning"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Amphibious",
-        "description": "The beast can breathe air and water."
-      },
-      {
-        "name": "Primal Bond",
-        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature. Sea variant."
-  },
-  {
-    "index": "primal-companion-beast-of-the-sky",
-    "name": "Primal Companion (Beast of the Sky)",
-    "size": "Small",
-    "type": "beast",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 13,
-    "armor_class_details": null,
-    "hit_points": 28,
-    "hit_dice": "6d6+12",
-    "speed": {
-      "walk": "10 ft.",
-      "fly": "60 ft."
-    },
-    "ability_scores": {
-      "str": 6,
-      "dex": 16,
-      "con": 13,
-      "int": 8,
-      "wis": 14,
-      "cha": 11
-    },
-    "ability_score_modifiers": {
-      "str": -2,
-      "dex": 3,
-      "con": 1,
-      "int": -1,
-      "wis": 2,
-      "cha": 0
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": -2
-      },
-      "dex": {
-        "modifier": 3
-      },
-      "con": {
-        "modifier": 1
-      },
-      "int": {
-        "modifier": -1
-      },
-      "wis": {
-        "modifier": 2
-      },
-      "cha": {
-        "modifier": 0
-      }
-    },
-    "skills": {},
-    "senses": {
-      "darkvision": 60,
-      "passive_perception": 12
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "mountain",
-      "grassland",
-      "coastal"
-    ],
-    "immunities": [],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Beast's Strike",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d4+3+WIS modifier Slashing damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d4+3+WIS modifier",
-        "damage_type_primary": "slashing"
-      }
-    ],
-    "traits": [
-      {
-        "name": "Flyby",
-        "description": "The beast doesn't provoke Opportunity Attacks when it flies out of an enemy's reach."
-      },
-      {
-        "name": "Primal Bond",
-        "description": "Add your Proficiency Bonus to any ability check or saving throw the beast makes."
-      }
-    ],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "A primal companion summoned by the Beast Master Ranger's Primal Companion feature. Sky variant."
-  },
-  {
-    "index": "animate-objects-medium",
-    "name": "Animated Object (Medium)",
-    "size": "Medium",
-    "type": "construct",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 15,
-    "armor_class_details": null,
-    "hit_points": 10,
-    "hit_dice": "1d10+4",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 10,
-      "int": 3,
-      "wis": 3,
-      "cha": 1
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 0,
-      "int": -4,
-      "wis": -4,
-      "cha": -5
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 0
-      },
-      "int": {
-        "modifier": -4
-      },
-      "wis": {
-        "modifier": -4
-      },
-      "cha": {
-        "modifier": -5
-      }
-    },
-    "skills": {},
-    "senses": {
-      "blindsight": 30,
-      "passive_perception": 6
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "forest",
-      "grassland",
-      "mountain",
-      "swamp",
-      "coastal",
-      "desert",
-      "hill",
-      "arctic",
-      "underwater"
-    ],
-    "immunities": [
-      "poison",
-      "psychic",
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d4+3 Force damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "1d4+3",
-        "damage_type_primary": "force"
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An object animated by the Animate Objects spell. Medium size."
-  },
-  {
-    "index": "animate-objects-large",
-    "name": "Animated Object (Large)",
-    "size": "Large",
-    "type": "construct",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 15,
-    "armor_class_details": null,
-    "hit_points": 20,
-    "hit_dice": "2d10+8",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 10,
-      "int": 3,
-      "wis": 3,
-      "cha": 1
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 0,
-      "int": -4,
-      "wis": -4,
-      "cha": -5
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 0
-      },
-      "int": {
-        "modifier": -4
-      },
-      "wis": {
-        "modifier": -4
-      },
-      "cha": {
-        "modifier": -5
-      }
-    },
-    "skills": {},
-    "senses": {
-      "blindsight": 30,
-      "passive_perception": 6
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "forest",
-      "grassland",
-      "mountain",
-      "swamp",
-      "coastal",
-      "desert",
-      "hill",
-      "arctic",
-      "underwater"
-    ],
-    "immunities": [
-      "poison",
-      "psychic",
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d6+3+spellcasting modifier Force damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "2d6+3+spellcasting modifier",
-        "damage_type_primary": "force"
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An object animated by the Animate Objects spell. Large size."
-  },
-  {
-    "index": "animate-objects-huge",
-    "name": "Animated Object (Huge)",
-    "size": "Huge",
-    "type": "construct",
-    "subtype": "",
-    "alignment": "unaligned",
-    "initiative": null,
-    "initiative_details": null,
-    "armor_class": 15,
-    "armor_class_details": null,
-    "hit_points": 40,
-    "hit_dice": "4d10+20",
-    "speed": {
-      "walk": "30 ft."
-    },
-    "ability_scores": {
-      "str": 16,
-      "dex": 10,
-      "con": 10,
-      "int": 3,
-      "wis": 3,
-      "cha": 1
-    },
-    "ability_score_modifiers": {
-      "str": 3,
-      "dex": 0,
-      "con": 0,
-      "int": -4,
-      "wis": -4,
-      "cha": -5
-    },
-    "saving_throws": {
-      "str": {
-        "modifier": 3
-      },
-      "dex": {
-        "modifier": 0
-      },
-      "con": {
-        "modifier": 0
-      },
-      "int": {
-        "modifier": -4
-      },
-      "wis": {
-        "modifier": -4
-      },
-      "cha": {
-        "modifier": -5
-      }
-    },
-    "skills": {},
-    "senses": {
-      "blindsight": 30,
-      "passive_perception": 6
-    },
-    "languages": "understands your languages",
-    "challenge_rating": "None",
-    "xp": 0,
-    "proficiency_bonus": null,
-    "legendary_resistance": null,
-    "equipment": [],
-    "habitat": "",
-    "treasure": "",
-    "environments": [
-      "urban",
-      "underdark",
-      "forest",
-      "grassland",
-      "mountain",
-      "swamp",
-      "coastal",
-      "desert",
-      "hill",
-      "arctic",
-      "underwater"
-    ],
-    "immunities": [
-      "poison",
-      "psychic",
-      "charmed",
-      "exhaustion",
-      "frightened",
-      "paralyzed",
-      "poisoned"
-    ],
-    "damage_immunities": [],
-    "damage_resistances": [],
-    "damage_vulnerabilities": [],
-    "condition_immunities": [],
-    "actions": [
-      {
-        "name": "Slam",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 2d12+3+spellcasting modifier Force damage.",
-        "attack_bonus": null,
-        "reach": "5 ft.",
-        "damage_dice_primary": "2d12+3+spellcasting modifier",
-        "damage_type_primary": "force"
-      }
-    ],
-    "traits": [],
-    "reactions": [],
-    "legendary_actions": [],
-    "lair_actions": [],
-    "regional_effects": {},
-    "book": "2024 Player's Handbook",
-    "page": null,
-    "description": "An object animated by the Animate Objects spell. Huge size."
   }
 ]
