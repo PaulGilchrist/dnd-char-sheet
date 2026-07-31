@@ -560,14 +560,12 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     React.useEffect(() => {
         const handler = (e) => {
-            console.log(`[initiative] concentration-result event: target=${e.detail.targetName} success=${e.detail.success} spell=${e.detail.spellName} combatSummary=${!!combatSummary}`)
             if (!combatSummary) return
             const creature = combatSummary.creatures.find(c =>
                 c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
             )
             if (creature && !e.detail.success) {
                 const concentrationSpell = creature.concentration?.spell
-                console.log(`[initiative] concentration FAILED for ${creature.name}, clearing concentration on spell "${concentrationSpell}"`)
                 creature.concentration = null
                 storage.set('combatSummary', combatSummary, campaignName)
                 setCombatSummary(cloneDeep(combatSummary))

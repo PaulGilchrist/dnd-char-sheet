@@ -224,7 +224,6 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
 
     const circleOfPowerEffect = targetEffects?.find(te => te.effect === 'circle_of_power' && te.target === creatureName)
     if (circleOfPowerEffect) {
-        console.log(`[ConditionEffectBadges] RENDERING Circle of Power badge for ${creatureName} from source ${circleOfPowerEffect.source} (targetEffects prop count=${targetEffects?.length})`)
         const casterName = circleOfPowerEffect.source || 'unknown'
         badges.push({ label: 'Circle of Power', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'circle_of_power', tooltip: `Circle of Power from ${casterName}: Advantage on saving throws, no damage on successful save vs half-damage effects` })
     }

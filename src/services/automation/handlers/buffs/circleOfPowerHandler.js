@@ -42,7 +42,6 @@ export async function applyCircleOfPower(action, playerStats, campaignName, mapN
     const auto = action.automation || {};
     const casterName = playerStats.name;
     const appliedTargets = [];
-    console.log(`[circleOfPower] applyCircleOfPower: caster=${casterName} targets=${JSON.stringify(targetNames)} campaign=${campaignName}`)
 
     for (const targetName of targetNames) {
         // Add activeBuffs entry with circle of power effect
@@ -74,7 +73,6 @@ export async function applyCircleOfPower(action, playerStats, campaignName, mapN
         } else {
             updatedEffects = [...storedEffects, newEffect];
         }
-        console.log(`[circleOfPower] adding targetEffect for ${targetName}: source=${casterName} duration=concentration (total targetEffects=${updatedEffects.length})`)
         setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
 
         // Register expirations: remove buff on initiative roll (concentration expiry)
@@ -113,9 +111,5 @@ export async function applyCircleOfPower(action, playerStats, campaignName, mapN
 
 export function isCircleOfPowerActive(targetName, campaignName) {
     const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const active = storedEffects.some(te => te.effect === 'circle_of_power' && te.target === targetName);
-    if (active) {
-        console.log(`[circleOfPower] isCircleOfPowerActive(${targetName}) = true`);
-    }
-    return active;
+    return storedEffects.some(te => te.effect === 'circle_of_power' && te.target === targetName);
 }

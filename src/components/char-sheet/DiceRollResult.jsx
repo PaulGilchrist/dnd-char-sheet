@@ -241,6 +241,12 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
         if (onReroll) onReroll();
     };
 
+    if (waitingForPlayerSave) {
+        console.debug(`[saveDebug] DiceRollResult RENDER waiting popup`, { name, targetName, saveDc, saveType });
+    } else if (saveResult != null) {
+        console.debug(`[saveDebug] DiceRollResult RENDER save-result popup`, { name, targetName, saveDc, saveResult });
+    }
+
     return (
         <div className="dice-roll-result">
             {type !== 'damage_type_choice' && (

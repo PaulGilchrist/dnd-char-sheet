@@ -6,7 +6,7 @@ import Subscriber from './Subscriber.jsx';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { registerPendingSavePrompt, getPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
+import { getPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getAllyList } from '../../hooks/useAllySelection.js';
 import { normalizeSaveType } from '../../services/rules/combat/applyDamage.js';
@@ -60,7 +60,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       const targetName = dataTargetName || event.key.slice(prefix.length) || null;
       const newPrompt = { targetName, attackerName: eventDataAttackerName || sourceAttackerName, ...restData };
 
-      registerPendingSavePrompt(newPrompt.promptId, { ...newPrompt, campaignName });
+      console.debug(`[saveDebug] SavePromptModal.handleEvent SSE prompt received`, { promptId: newPrompt.promptId, targetName: newPrompt.targetName, sourceName: newPrompt.sourceName, saveType: newPrompt.saveType, saveDc: newPrompt.saveDc, keys: Object.keys(newPrompt) });
       return [...prev, newPrompt];
      });
    }, [campaignName]);
@@ -73,6 +73,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
     getPendingSavePrompt(event.data.promptId);
     getPendingPopupSetter(event.data.promptId);
+    console.debug(`[saveDebug] SavePromptModal.handleClearedEvent SSE cleared received`, { promptId: event.data.promptId, targetFromKey: event.key.slice(prefix.length) });
 
     setPrompts(prev => prev.filter(p => p.promptId !== event.data.promptId));
   }, [campaignName]);
@@ -414,6 +415,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         evasionActive: lastEvasionState,
       },
     }));
+    console.debug(`[saveDebug] SavePromptModal.handleDone dispatched save-result`, { promptId: current.promptId, targetName: current.targetName, success: result.success, roll: result.roll, total: result.total, rawDamage: current.rawDamage, saveType: current.saveType, saveDc: current.saveDc });
 
     clearSavePrompt(campaignName, current.targetName);
     advance();

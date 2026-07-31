@@ -167,10 +167,8 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                     }
 
                     if (concentrationSpell === 'Circle of Power') {
-                        console.log(`[useInitiativeEffects] initiative rolled — cleaning up Circle of Power for caster ${playerStats.name}`)
                         const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                         const filtered = storedEffects.filter(te => !(te.effect === 'circle_of_power' && te.source === playerStats.name));
-                        console.log(`[useInitiativeEffects] circle_of_power targetEffects before=${storedEffects.filter(te => te.effect === 'circle_of_power').length} after=${filtered.filter(te => te.effect === 'circle_of_power').length}`)
                         if (filtered.length !== storedEffects.length) {
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
@@ -180,7 +178,6 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                                 const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
                                 const filteredBuffs = buffs.filter(b => b.name !== 'Circle of Power');
                                 if (filteredBuffs.length !== buffs.length) {
-                                    console.log(`[useInitiativeEffects] removing Circle of Power buff from ${creature.name}`)
                                     setRuntimeValue(creature.name, 'activeBuffs', filteredBuffs, campaignName);
                                 }
                             }
