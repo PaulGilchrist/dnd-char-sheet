@@ -211,12 +211,9 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
   const isAuraOfVitality = (spellName || '').toLowerCase() === 'aura of vitality';
   if (isAuraOfVitality) {
     const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    console.log('[isFreeCastAuthorized] Aura of Vitality check playerName=%s targetEffects=%s', playerName, JSON.stringify(targetEffects));
     if (Array.isArray(targetEffects) && targetEffects.some(te => te.effect === 'aura_of_vitality' && te.target === playerName)) {
-      console.log('[isFreeCastAuthorized] Aura of Vitality free cast ALLOWED for %s', playerName);
       return true;
     }
-    console.log('[isFreeCastAuthorized] Aura of Vitality free cast DENIED for %s (no aura on self)', playerName);
   }
 
   return false;
