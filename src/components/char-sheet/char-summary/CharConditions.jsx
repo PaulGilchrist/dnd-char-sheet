@@ -8,6 +8,7 @@ import { addEntry } from '../../../services/ui/logService.js'
 import { EXHAUSTION_LEVELS, isDeadFromExhaustion, getExhaustionSaveDC } from '../../../services/combat/conditions/exhaustionRules.js'
 import { logConditionSave } from '../../../services/encounters/combatLoggingService.js'
 import { hasSaveAdvantage } from '../../../services/combat/conditions/conditionEffects.js'
+import { isAuraOfPurityActive, getAuraOfPuritySaveAdvantageConditions } from '../../../services/automation/handlers/buffs/auraOfPurityHandler.js'
 import usePopup from '../../../hooks/combat/usePopup.js'
 import Popup from '../../common/popup.jsx'
 import DiceRollResult from '../DiceRollResult.jsx'
@@ -87,6 +88,11 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
     const saveBonus = getAbilitySaveBonus(playerStats, saveAbility)
     let hasAdvantage = hasSaveAdvantage(conditionEffects, conditionKey, conditionEffects?.restoreBalance)
       || (conditionKey === 'grappled' && (conditionEffects?.strCheckAdvantage || (conditionEffects?.abilityCheckAdvantageAbilities && conditionEffects.abilityCheckAdvantageAbilities.includes('STR'))))
+
+    if (isAuraOfPurityActive(playerStats.name, campaignName)
+        && getAuraOfPuritySaveAdvantageConditions(playerStats.name, campaignName).includes(conditionKey)) {
+        hasAdvantage = true
+    }
 
     // Check saveModifiers directly for Powerful Build (same logic as conditionSaveService)
     if (conditionKey === 'grappled') {

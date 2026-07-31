@@ -5,6 +5,7 @@ import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { playerIsImmuneToCondition } from '../automation/automationService.js'
 import { getAuraOfPuritySaveAdvantageConditions, isAuraOfPurityActive } from '../../automation/handlers/buffs/auraOfPurityHandler.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 
 async function getCreatureSaveBonus(creature, abilityAbbr, characters, campaignNpcs, getName) {
     if (creature.type === 'player') {
@@ -27,8 +28,19 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
     const aura = await computeAuraBonus({ targetName: creature.name, characters, campaignName, activeMapName: mapName, allCreatures: getCombatSummary(campaignName)?.creatures })
     const auraBonus = aura.bonus
     const conditionKey = String(condition.key || condition.label || '').toLowerCase()
-    const hasAuraOfPurityAdvantage = isAuraOfPurityActive(creature.name, campaignName)
-        && getAuraOfPuritySaveAdvantageConditions(creature.name, campaignName).includes(conditionKey)
+    const auraOfPurityActive = isAuraOfPurityActive(creature.name, campaignName)
+    const saveAdvConditions = getAuraOfPuritySaveAdvantageConditions(creature.name, campaignName)
+    const hasAuraOfPurityAdvantage = auraOfPurityActive && saveAdvConditions.includes(conditionKey)
+
+    console.debug('[conditionSave] rollConditionSave creature=%s conditionKey=%s auraOfPurityActive=%s saveAdvConditions=%s hasAuraOfPurityAdvantage=%s',
+        creature.name, conditionKey, auraOfPurityActive, saveAdvConditions, hasAuraOfPurityAdvantage)
+
+    if (auraOfPurityActive && !hasAuraOfPurityAdvantage) {
+        const rawStored = getRuntimeValue(creature.name, 'auraOfPuritySaveAdvantageConditions', campaignName)
+        const activeBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []
+        console.debug('[conditionSave] DEBUG creature=%s rawStored=%s activeBuffs=%s',
+            creature.name, JSON.stringify(rawStored), JSON.stringify(activeBuffs.map(b => b.name)))
+    }
 
     let hasPassiveImmunityAdvantage = false
     if (creature.type === 'player') {

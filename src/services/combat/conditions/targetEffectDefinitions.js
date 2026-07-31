@@ -358,6 +358,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'aura_of_purity',
+    label: 'Aura of Purity',
+    description: 'Resistance to Poison damage, Advantage on saving throws against Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, or Stunned condition.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

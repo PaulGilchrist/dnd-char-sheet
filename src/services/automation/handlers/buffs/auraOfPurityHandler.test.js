@@ -1,342 +1,487 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../common/buffToggle.js', () => ({
-  toggleBuff: vi.fn(),
+vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../../rules/effects/expirations.js', () => ({
-  addExpiration: vi.fn(),
+    addExpiration: vi.fn(),
 }));
 
-vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(),
-  setRuntimeValue: vi.fn(),
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+    addConcentration: vi.fn(),
 }));
 
 import {
-  handle,
-  getAuraOfPuritySaveAdvantageConditions,
-  isAuraOfPurityActive,
+    handle,
+    applyAuraOfPurity,
+    getAuraOfPuritySaveAdvantageConditions,
+    isAuraOfPurityActive,
 } from './auraOfPurityHandler.js';
-import * as buffToggle from '../../common/buffToggle.js';
-import * as expirations from '../../../rules/effects/expirations.js';
-import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 
-const CAMPAIGN_NAME = 'TestCampaign';
-const PLAYER_NAME = 'TestHero';
+import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
+import * as expirations from '../../../rules/effects/expirations.js';
+import * as logService from '../../../ui/logService.js';
+import * as combatData from '../../../encounters/combatData.js';
+import * as concentrationService from '../../../combat/concentration/concentrationService.js';
+
+const campaignName = 'TestCampaign';
+const casterName = 'Cleric';
 
 function makePlayerStats(overrides = {}) {
-  return { name: PLAYER_NAME, ...overrides };
+    return {
+        name: casterName,
+        concentrationBonus: 2,
+        ...overrides,
+    };
 }
 
-function makeAction(automation = {}) {
-  return {
-    name: 'Aura of Purity',
-    automation: { type: 'buff', ...automation },
-  };
+function makeCombatSummary(creatureNames = []) {
+    return {
+        creatures: creatureNames.map((name) => ({ name })),
+    };
 }
 
-function resetMocks() {
-  buffToggle.toggleBuff.mockClear();
-  expirations.addExpiration.mockClear();
-  runtimeState.setRuntimeValue.mockClear();
-  runtimeState.getRuntimeValue.mockClear();
-}
-
-describe('auraOfPurityHandler.handle', () => {
-  beforeEach(() => {
-    resetMocks();
-  });
-
-  describe('toggleBuff calls', () => {
-    it('passes playerName, buffName, merged effect object, and campaignName', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        resistanceTypes: ['fire', 'cold'],
-        saveAdvantageConditions: ['frightened'],
-        auraRange: 30,
-      });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
-        ps.name,
-        action.name,
-        {
-          type: 'buff',
-          resistanceTypes: ['fire', 'cold'],
-          saveAdvantageConditions: ['frightened'],
-          auraRange: 30,
-          effect: 'aura_of_purity',
-        },
-        CAMPAIGN_NAME
-      );
+describe('auraOfPurityHandler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    it('overrides any existing effect value to aura_of_purity and defaults missing arrays', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ effect: 'some_other_effect' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+    describe('handle', () => {
+        it('returns popup with all creature targets including caster', async () => {
+            combatData.getCombatSummary.mockReturnValue(
+                makeCombatSummary(['Cleric', 'Ally1', 'Ally2', 'Enemy1'])
+            );
 
-      await handle(action, ps, CAMPAIGN_NAME, null);
+            const action = {
+                name: 'Aura of Purity',
+                automation: { type: 'aura_of_purity' },
+            };
+            const result = await handle(action, makePlayerStats(), campaignName, null);
 
-      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
-        ps.name,
-        action.name,
-        expect.objectContaining({ effect: 'aura_of_purity', resistanceTypes: [] }),
-        CAMPAIGN_NAME
-      );
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    type: 'automation_info',
+                    name: 'Aura of Purity',
+                    creatureTargets: ['Cleric', 'Ally1', 'Ally2', 'Enemy1'],
+                    maxTargets: 5,
+                }),
+            });
+        });
+
+        it('returns error popup when no combat context', async () => {
+            combatData.getCombatSummary.mockReturnValue(null);
+
+            const action = {
+                name: 'Aura of Purity',
+                automation: { type: 'aura_of_purity' },
+            };
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: expect.objectContaining({
+                    type: 'automation_info',
+                    description: expect.stringContaining('No combat context found'),
+                }),
+            });
+        });
     });
 
-    it('passes extra automation properties through to the effect object', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ duration: '1 hour', extraProp: 'value' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+    describe('applyAuraOfPurity', () => {
+        it('returns null when targetNames is empty', async () => {
+            const result = await applyAuraOfPurity(
+                { name: 'Aura of Purity', automation: { type: 'aura_of_purity' } },
+                makePlayerStats(),
+                campaignName,
+                null,
+                []
+            );
 
-      await handle(action, ps, CAMPAIGN_NAME, null);
+            expect(result).toBeNull();
+        });
 
-      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
-        ps.name,
-        action.name,
-        expect.objectContaining({ duration: '1 hour', extraProp: 'value' }),
-        CAMPAIGN_NAME
-      );
+        it('returns null when targetNames is null', async () => {
+            const result = await applyAuraOfPurity(
+                { name: 'Aura of Purity', automation: { type: 'aura_of_purity' } },
+                makePlayerStats(),
+                campaignName,
+                null,
+                null
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('applies aura to a single target', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded', 'charmed'],
+                },
+            };
+
+            const result = await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(result).toBeDefined();
+            expect(result.type).toBe('popup');
+            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'activeBuffs',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        name: 'Aura of Purity',
+                        effect: 'aura_of_purity',
+                        sourceCharacter: casterName,
+                        resistanceTypes: ['Poison'],
+                    }),
+                ]),
+                campaignName
+            );
+        });
+
+        it('applies aura to multiple targets', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1', 'Ally2']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded', 'charmed', 'deafened'],
+                },
+            };
+
+            const result = await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1', 'Ally2']
+            );
+
+            expect(result).toBeDefined();
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('2 target(s)');
+        });
+
+        it('registers targetEffect for badge display', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded'],
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Ally1',
+                        effect: 'aura_of_purity',
+                        source: casterName,
+                        duration: 'concentration',
+                    }),
+                ]),
+                campaignName,
+                true
+            );
+        });
+
+        it('registers save advantage conditions for each target', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded', 'charmed', 'deafened', 'frightened', 'paralyzed', 'poisoned', 'stunned'],
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'auraOfPuritySaveAdvantageConditions',
+                ['blinded', 'charmed', 'deafened', 'frightened', 'paralyzed', 'poisoned', 'stunned'],
+                campaignName
+            );
+        });
+
+        it('registers expiration for buff removal', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded'],
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(expirations.addExpiration).toHaveBeenCalledWith(
+                casterName,
+                'Ally1',
+                [{ type: 'remove_active_buff', buffName: 'Aura of Purity' }],
+                campaignName,
+                undefined,
+                casterName
+            );
+        });
+
+        it('adds concentration for caster', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded'],
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Cleric']
+            );
+
+            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+                expect.any(Object),
+                casterName,
+                'Aura of Purity',
+                10 + 2
+            );
+        });
+
+        it('logs to campaign for each target', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1', 'Ally2']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded', 'charmed'],
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1', 'Ally2']
+            );
+
+            expect(logService.addEntry).toHaveBeenCalledTimes(2);
+            expect(logService.addEntry).toHaveBeenCalledWith(
+                campaignName,
+                expect.objectContaining({
+                    type: 'spell_effect',
+                    characterName: casterName,
+                    spellName: 'Aura of Purity',
+                    targetName: 'Ally1',
+                })
+            );
+        });
+
+        it('uses default resistanceTypes ["Poison"] when not provided', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'Ally1',
+                'activeBuffs',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        resistanceTypes: ['Poison'],
+                    }),
+                ]),
+                campaignName
+            );
+        });
+
+        it('returns popup with correct description', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary(['Cleric', 'Ally1']));
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: {
+                    type: 'aura_of_purity',
+                    resistanceTypes: ['Poison'],
+                    saveAdvantageConditions: ['blinded', 'charmed', 'deafened', 'frightened', 'paralyzed', 'poisoned', 'stunned'],
+                },
+            };
+
+            const result = await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(result.payload.description).toContain('1 target(s)');
+            expect(result.payload.description).toContain('resistance to Poison damage');
+            expect(result.payload.description).toContain('Advantage on saving throws');
+        });
     });
-  });
 
-  describe('expiration registration', () => {
-    it('registers expiration on first activation (wasActive false)', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+    describe('getAuraOfPuritySaveAdvantageConditions', () => {
+        it('returns the stored array when it is a valid array', () => {
+            const conditions = ['frightened', 'poisoned'];
+            useRuntimeState.getRuntimeValue.mockReturnValue(conditions);
 
-      await handle(action, ps, CAMPAIGN_NAME, null);
+            const result = getAuraOfPuritySaveAdvantageConditions(casterName, campaignName);
 
-      expect(expirations.addExpiration).toHaveBeenCalledWith(
-        ps.name,
-        ps.name,
-        [{ type: 'remove_active_buff', buffName: action.name }],
-        CAMPAIGN_NAME
-      );
+            expect(result).toBe(conditions);
+            expect(useRuntimeState.getRuntimeValue).toHaveBeenCalledWith(
+                casterName,
+                'auraOfPuritySaveAdvantageConditions',
+                campaignName
+            );
+        });
+
+        it('returns an empty array for any non-array stored value', () => {
+            const nonArrays = [null, undefined, 'not-an-array', 0, {}, { condition: 'frightened' }, '', true];
+
+            for (const value of nonArrays) {
+                useRuntimeState.getRuntimeValue.mockReturnValue(value);
+                expect(getAuraOfPuritySaveAdvantageConditions(casterName, campaignName)).toEqual([]);
+            }
+        });
+
+        it('returns an empty array when the stored value is an empty array', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+            expect(getAuraOfPuritySaveAdvantageConditions(casterName, campaignName)).toEqual([]);
+        });
     });
 
-    it('does not register expiration on deactivation (wasActive true)', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
+    describe('isAuraOfPurityActive', () => {
+        it('returns true when activeBuffs contains a buff with matching name and effect', () => {
+            useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'activeBuffs') return [{ name: 'Aura of Purity', effect: 'aura_of_purity' }];
+                return null;
+            });
 
-      await handle(action, ps, CAMPAIGN_NAME, null);
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(true);
+        });
 
-      expect(expirations.addExpiration).not.toHaveBeenCalled();
+        it('returns false when activeBuffs is null, undefined, non-array, empty, or has wrong name/effect', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue(null);
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(false);
+
+            useRuntimeState.getRuntimeValue.mockReturnValue(undefined);
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(false);
+
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(false);
+
+            useRuntimeState.getRuntimeValue.mockReturnValue([
+                { name: 'Fire Shield', effect: 'fire_resistance' },
+                { name: 'Aura of Purity', effect: 'fire_shield' },
+                { name: 'Other Aura', effect: 'aura_of_purity' },
+            ]);
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(false);
+        });
+
+        it('returns true when multiple buffs include the matching Aura of Purity buff', () => {
+            useRuntimeState.getRuntimeValue.mockReturnValue([
+                { name: 'Shield', effect: 'shield' },
+                { name: 'Aura of Purity', effect: 'aura_of_purity' },
+                { name: 'mage_armor', effect: 'mage_armor' },
+            ]);
+
+            expect(isAuraOfPurityActive(casterName, campaignName)).toBe(true);
+        });
     });
-  });
-
-  describe('runtime state management', () => {
-    it('sets save advantage conditions when activating the buff', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        saveAdvantageConditions: ['frightened', 'poisoned'],
-      });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        ps.name,
-        'auraOfPuritySaveAdvantageConditions',
-        ['frightened', 'poisoned'],
-        CAMPAIGN_NAME
-      );
-    });
-
-    it('clears save advantage conditions when deactivating the buff', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        saveAdvantageConditions: ['frightened'],
-      });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        ps.name,
-        'auraOfPuritySaveAdvantageConditions',
-        [],
-        CAMPAIGN_NAME
-      );
-    });
-  });
-
-  describe('return value and descriptions', () => {
-    it('returns a popup with automation_info payload and correct description on activation', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({
-        resistanceTypes: ['fire', 'cold'],
-        saveAdvantageConditions: ['frightened'],
-      });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-
-      const result = await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe(action.name);
-      expect(result.payload.automationType).toBe(action.automation.type);
-      expect(result.payload.automation).toEqual(action.automation);
-      expect(result.payload.description).toContain('activated');
-      expect(result.payload.description).toContain('Resistance to fire and cold damage');
-      expect(result.payload.description).toContain('Advantage on saving throws');
-      expect(result.payload.description).toContain('frightened');
-    });
-
-    it('returns a popup with deactivation text when wasActive is true', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: true });
-
-      const result = await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('deactivated');
-    });
-
-    it('omits resistance and save advantage descriptions when arrays are empty or missing', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ resistanceTypes: [], saveAdvantageConditions: [] });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-
-      const result = await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(result.payload.description).not.toContain('Resistance');
-      expect(result.payload.description).not.toContain('Advantage on saving throws');
-    });
-  });
-
-  describe('auraRange', () => {
-    it.each([
-      [0, 30],
-      [null, 30],
-      [undefined, 30],
-      [15, 15],
-      [30, 30],
-      [60, 60],
-    ])('uses auraRange=%p — falls back to 30 for falsy values', async (auraRange, expectedRange) => {
-      const ps = makePlayerStats();
-      const action = makeAction(auraRange != null ? { auraRange } : {});
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-
-      await handle(action, ps, CAMPAIGN_NAME, null);
-
-      expect(buffToggle.toggleBuff).toHaveBeenCalledWith(
-        ps.name,
-        action.name,
-        expect.objectContaining({ auraRange: expectedRange }),
-        CAMPAIGN_NAME
-      );
-    });
-  });
-});
-
-describe('auraOfPurityHandler.getAuraOfPuritySaveAdvantageConditions', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns the stored array when it is a valid array', () => {
-    const conditions = ['frightened', 'poisoned'];
-    runtimeState.getRuntimeValue.mockReturnValue(conditions);
-
-    const result = getAuraOfPuritySaveAdvantageConditions(PLAYER_NAME, CAMPAIGN_NAME);
-
-    expect(result).toBe(conditions);
-    expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
-      PLAYER_NAME,
-      'auraOfPuritySaveAdvantageConditions',
-      CAMPAIGN_NAME
-    );
-  });
-
-  it('returns an empty array for any non-array stored value', () => {
-    const nonArrays = [null, undefined, 'not-an-array', 0, {}, { condition: 'frightened' }, '', true];
-
-    for (const value of nonArrays) {
-      runtimeState.getRuntimeValue.mockReturnValue(value);
-      expect(getAuraOfPuritySaveAdvantageConditions(PLAYER_NAME, CAMPAIGN_NAME)).toEqual([]);
-    }
-  });
-
-  it('returns an empty array when the stored value is an empty array', () => {
-    runtimeState.getRuntimeValue.mockReturnValue([]);
-    expect(getAuraOfPuritySaveAdvantageConditions(PLAYER_NAME, CAMPAIGN_NAME)).toEqual([]);
-  });
-
-  it('uses the playerName and campaignName parameters correctly', () => {
-    runtimeState.getRuntimeValue.mockReturnValue([]);
-    getAuraOfPuritySaveAdvantageConditions('DifferentPlayer', 'OtherCampaign');
-    expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
-      'DifferentPlayer',
-      'auraOfPuritySaveAdvantageConditions',
-      'OtherCampaign'
-    );
-  });
-});
-
-describe('auraOfPurityHandler.isAuraOfPurityActive', () => {
-  beforeEach(() => {
-    runtimeState.getRuntimeValue.mockReset().mockReturnValue([]);
-  });
-
-  it('returns true when activeBuffs contains a buff with matching name and effect', () => {
-    runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'activeBuffs') return [{ name: 'Aura of Purity', effect: 'aura_of_purity' }];
-      return null;
-    });
-
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
-  });
-
-  it('returns false when activeBuffs is null, undefined, non-array, empty, or has wrong name/effect', () => {
-    runtimeState.getRuntimeValue.mockReturnValue(null);
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
-
-    runtimeState.getRuntimeValue.mockReturnValue(undefined);
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
-
-    runtimeState.getRuntimeValue.mockReturnValue([]);
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
-
-    runtimeState.getRuntimeValue.mockReturnValue([
-      { name: 'Fire Shield', effect: 'fire_resistance' },
-      { name: 'Aura of Purity', effect: 'fire_shield' },
-      { name: 'Other Aura', effect: 'aura_of_purity' },
-    ]);
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(false);
-  });
-
-  it('returns true when multiple buffs include the matching Aura of Purity buff', () => {
-    runtimeState.getRuntimeValue.mockReturnValue([
-      { name: 'Shield', effect: 'shield' },
-      { name: 'Aura of Purity', effect: 'aura_of_purity' },
-      { name: 'mage_armor', effect: 'mage_armor' },
-    ]);
-
-    expect(isAuraOfPurityActive(PLAYER_NAME, CAMPAIGN_NAME)).toBe(true);
-  });
-
-  it('uses the playerName and campaignName parameters correctly', () => {
-    runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'activeBuffs') return [{ name: 'Aura of Purity', effect: 'aura_of_purity' }];
-      return null;
-    });
-
-    isAuraOfPurityActive('DifferentPlayer', 'OtherCampaign');
-
-    expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith(
-      'DifferentPlayer',
-      'activeBuffs',
-      'OtherCampaign'
-    );
-  });
 });

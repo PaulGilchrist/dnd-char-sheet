@@ -255,6 +255,11 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(b => b.resistanceTypes || [])
         : [];
 
+    const auraOfPurityResistances = Array.isArray(activeBuffs)
+        ? activeBuffs.filter(b => b.name === 'Aura of Purity' && b.resistanceTypes?.length)
+            .flatMap(b => b.resistanceTypes || [])
+        : [];
+
     const elementalAdeptTypes = (playerStats.automation?.passives || [])
         .filter(p => p.type === 'damage_type_choice' && p.effect === 'elemental_adept')
         .map(p => {
@@ -273,7 +278,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const automationImmunities = playerStats.automationConditionImmunities || [];
     const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;

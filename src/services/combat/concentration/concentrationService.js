@@ -189,6 +189,22 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
         }
     }
 
+    // Clear aura_of_purity buffs and save advantage conditions from all creatures
+    const cs2 = getCombatSummary(campaignName);
+    if (cs2?.creatures) {
+        for (const creature of cs2.creatures) {
+            const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+            const filtered = buffs.filter(b => !(b.name === 'Aura of Purity' && b.sourceCharacter === casterName));
+            if (filtered.length !== buffs.length) {
+                setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+            }
+            const savedConditions = getRuntimeValue(creature.name, 'auraOfPuritySaveAdvantageConditions', campaignName);
+            if (savedConditions && savedConditions.length > 0) {
+                setRuntimeValue(creature.name, 'auraOfPuritySaveAdvantageConditions', [], campaignName);
+            }
+        }
+    }
+
     clearRayOfEnfeeblementEffects(campaignName, casterName)
 }
 

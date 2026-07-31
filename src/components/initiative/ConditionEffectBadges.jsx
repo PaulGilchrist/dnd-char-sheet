@@ -204,6 +204,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Aura of Life', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: isLocalhost, removeAction: 'target_effect', effectType: 'aura_of_life', tooltip: `Aura of Life from ${casterName}: Resistance to Necrotic damage, HP maximum can't be reduced, Regains 1 HP at start of turn if at 0 HP` })
     }
 
+    const auraOfPurityEffect = targetEffects?.find(te => te.effect === 'aura_of_purity' && te.target === creatureName)
+    if (auraOfPurityEffect) {
+        const casterName = auraOfPurityEffect.source || 'unknown'
+        badges.push({ label: 'Aura of Purity', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'aura_of_purity', tooltip: `Aura of Purity from ${casterName}: Resistance to Poison damage, Advantage on saves vs Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, Stunned` })
+    }
+
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':
