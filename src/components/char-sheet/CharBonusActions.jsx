@@ -125,7 +125,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     const { castAction: bonusCastAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, { innateSorceryActive: !!displaySaveDcBonus }, cachedBonusCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingHealingWord, gateMetamagic, handleConfirm, handleSkip, handleHealingWordConfirm, handleHealingWordSkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
+    const { pendingMetamagic, pendingBarkskin, pendingHealingWord, gateMetamagic, handleConfirm, handleSkip, handleBarkskinConfirm, handleBarkskinSkip, handleHealingWordConfirm, handleHealingWordSkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
     const { buildUpcastLevels } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleBonusSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -340,6 +340,18 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                     <HexAbilityModal
                         onAbilitySelected={handleHexAbilitySelected}
                         onCancel={handleHexCancel}
+                    />
+                )}
+
+                {pendingBarkskin && (
+                    <SecondaryTargetModal
+                        title="Barkskin"
+                        targets={pendingBarkskin.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                        onTargetSelected={(targetName) => handleBarkskinConfirm([targetName])}
+                        onSkip={handleBarkskinSkip}
+                        description="Choose a willing creature within range. Target's AC becomes 17."
+                        confirmLabel="Cast Barkskin"
+                        confirmIcon="fa-tree"
                     />
                 )}
 

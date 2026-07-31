@@ -38,6 +38,9 @@ export default function CharActionSpellPopups({
     actionPendingHaste,
     actionHandleHasteConfirm,
     actionHandleHasteSkip,
+    actionPendingBarkskin,
+    actionHandleBarkskinConfirm,
+    actionHandleBarkskinSkip,
     actionPendingHeal,
     actionHandleHealConfirm,
     actionHandleHealSkip,
@@ -221,6 +224,17 @@ export default function CharActionSpellPopups({
                     description="Choose a willing creature within range. Target's speed doubles, gains +2 AC, and gets advantage on DEX saves."
                     confirmLabel="Cast Haste"
                     confirmIcon="fa-bolt"
+                />
+            )}
+            {actionPendingBarkskin && (
+                <SecondaryTargetModal
+                    title="Barkskin"
+                    targets={actionPendingBarkskin.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleBarkskinConfirm([targetName])}
+                    onSkip={actionHandleBarkskinSkip}
+                    description="Choose a willing creature within range. Target's AC becomes 17."
+                    confirmLabel="Cast Barkskin"
+                    confirmIcon="fa-tree"
                 />
             )}
             {actionPendingHeal && (

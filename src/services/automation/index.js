@@ -44,6 +44,7 @@ import { handle as handleWeaponKindMastery, applySelections as applyWeaponKindMa
 import { handle as handleBuffAlly } from './handlers/buffs/buffAllyHandler.js';
 import { handle as handleEncouragingSong } from './handlers/buffs/encouragingSongHandler.js';
 import { handle as handleHaste, applyHaste, isHasteActive } from './handlers/buffs/hasteHandler.js';
+import { handle as handleBarkskin, applyBarkskin as applyBarkskinEffect, isBarkskinActive } from './handlers/buffs/barkskinHandler.js';
 import { handle as handleInvisibility, applyInvisibility, isInvisibilityActive } from './handlers/buffs/invisibilityHandler.js';
 import { handle as handleGreaterInvisibility, applyGreaterInvisibility, isGreaterInvisibilityActive } from './handlers/buffs/greaterInvisibilityHandler.js';
 import { handle as handleRevivification } from './handlers/healing/revivificationHandler.js';
@@ -537,6 +538,7 @@ const HANDLER_MAP = {
         beacon_of_hope: handleBeaconOfHope,
         slow: handleSlow,
         haste: handleHaste,
+        barkskin: handleBarkskin,
         invisibility: handleInvisibility,
         greater_invisibility: handleGreaterInvisibility,
         regenerate: handleRegenerate,
@@ -556,6 +558,8 @@ export {
     getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
     applyHaste,
     isHasteActive,
+    applyBarkskinEffect,
+    isBarkskinActive,
     applyInvisibility,
     isInvisibilityActive,
     applyGreaterInvisibility,

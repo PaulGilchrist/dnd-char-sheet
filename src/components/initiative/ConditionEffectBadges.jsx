@@ -60,6 +60,9 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
             if (buff.effect === 'haste') {
                 effects.hasteActive = true
             }
+            if (buff.effect === 'barkskin') {
+                effects.barkskinActive = true
+            }
         }
     }
     const badges = []
@@ -178,6 +181,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.hasteActive) {
         const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
         badges.push({ label: 'Hasted', cls: 'effect-buff', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
+    }
+    if (effects.barkskinActive) {
+        const barkskinBuff = activeBuffs.find(b => b.effect === 'barkskin')
+        badges.push({ label: 'Barkskin', cls: 'effect-buff', icon: 'fa-tree', removable: true, removeAction: barkskinBuff ? 'remove_buff' : 'target_effect', tooltip: 'Barkskin: AC set to 17' })
     }
     const silenceEffect = targetEffects?.find(te => te.effect === 'silenced' && te.target === creatureName)
     if (silenceEffect) {

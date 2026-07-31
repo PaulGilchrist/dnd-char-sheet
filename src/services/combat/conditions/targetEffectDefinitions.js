@@ -385,6 +385,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'barkskin',
+    label: 'Barkskin',
+    description: 'Target\'s AC becomes 17. Expires on concentration loss, initiative roll, short rest, or long rest.',
+    icon: 'fa-tree',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

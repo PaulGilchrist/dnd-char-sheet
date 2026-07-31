@@ -958,6 +958,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml) }}></div></Popup>;
                     }
                     if (popupHtml.type === 'shield_of_faith_target_selection') return null;
+                    if (popupHtml.type === 'barkskin_target_selection') return null;
                     if (popupHtml.html) {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.html) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
                     }

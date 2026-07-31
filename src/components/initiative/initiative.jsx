@@ -138,10 +138,11 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const currentHp = getRuntimeValue(c.name, 'currentHitPoints') ?? maxHp
             const activeBuffs = getRuntimeValue(c.name, 'activeBuffs') || []
             const shieldOfFaithBonus = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield_of_faith') ? 2 : 0
+            const barkskinActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'barkskin')
             return {
                 ...c,
                 imagePath: character?.imagePath || '',
-                ac: (stats?.armorClass ?? 10) + shieldOfFaithBonus,
+                ac: barkskinActive ? 17 : (stats?.armorClass ?? 10) + shieldOfFaithBonus,
                 resistances: stats?.resistances || [],
                 immunities: stats?.immunities || [],
                 currentHp,

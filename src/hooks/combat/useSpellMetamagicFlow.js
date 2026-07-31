@@ -14,6 +14,7 @@ import {
     applyProtectionFromEnergyHandler,
     applyResistanceEffect,
     applyShieldOfFaithEffect,
+    applyBarkskinEffect,
     applyBaneEffect,
     applyBlessEffect,
     applyBeaconOfHopeEffect,
@@ -61,6 +62,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingBane = getPending('bane');
   const pendingBless = getPending('bless');
   const pendingHaste = getPending('haste');
+  const pendingBarkskin = getPending('barkskin');
   const pendingInvisibility = getPending('invisibility');
   const pendingGreaterInvisibility = getPending('greaterInvisibility');
   const pendingHeal = getPending('heal');
@@ -231,6 +233,24 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
         return;
       }
     }
+
+    const isBarkskin = (spell.name || '').toLowerCase() === 'barkskin';
+    if (isBarkskin) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
+      if (creatureTargets.length > 0) {
+        cfSetPending('barkskin', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || 'Touch',
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
 
     const isInvisibility = (spell.name || '').toLowerCase() === 'invisibility';
     if (isInvisibility) {
@@ -936,6 +956,8 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleSlowSkip = createSkipHandler('slow', (pending) => pending.creatureTargets);
 
+  const handleHasteSkip = createSkipHandler('haste', (pending) => pending.creatureTargets);
+
   const handleHasteConfirm = createConfirmHandler('haste', async (pending, result) => {
     await applyHaste(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'haste' } },
@@ -946,7 +968,39 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     );
   }, (pending) => pending.creatureTargets);
 
-  const handleHasteSkip = createSkipHandler('haste', (pending) => pending.creatureTargets);
+  const handleBarkskinConfirm = React.useCallback(async (result) => {
+    const pending = getPending('barkskin');
+    if (!pending) return;
+
+    cfClearPending('barkskin');
+
+    const targets = pending.creatureTargets;
+    addEntry(campaignName, {
+      type: 'spell',
+      characterName: playerStats.name,
+      targetName: result?.[0] || null,
+      targets: targets,
+      spellName: pending.spellName,
+      spellLevel: pending.spellLevel || 0,
+      castingTime: pending.castingTime,
+      timestamp: Date.now(),
+    }).catch(() => {});
+
+    const popup = await applyBarkskinEffect(
+      { name: pending.spellName, spell: pending.spell, automation: { type: 'barkskin', range: pending.range } },
+      playerStats,
+      campaignName,
+      null,
+      result,
+      characters
+    );
+
+    if (popup && setPopupHtml) {
+      setPopupHtml(popup.payload);
+    }
+  }, [playerStats, campaignName, cfClearPending, getPending, setPopupHtml, characters]);
+
+  const handleBarkskinSkip = createSkipHandler('barkskin', (pending) => pending.creatureTargets);
 
   const handleInvisibilityConfirm = createConfirmHandler('invisibility', async (pending, result) => {
     await applyInvisibility(
@@ -1425,5 +1479,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingBeaconOfHope, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingAntimagicField, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, pendingAnimalFriendship, pendingAuraOfLife, pendingAuraOfPurity, pendingAuraOfVitality, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingBeaconOfHope, pendingSlow, pendingHaste, pendingBarkskin, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingAntimagicField, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, pendingAnimalFriendship, pendingAuraOfLife, pendingAuraOfPurity, pendingAuraOfVitality, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleBarkskinConfirm, handleBarkskinSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip };
 }

@@ -985,6 +985,13 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                         saveAdvantageAbilities: newSaveAdvantageAbilities,
                     }, campaignName);
                 }
+                if (effect.buffName === 'Barkskin') {
+                    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                    const cleanedEffects = storedEffects.filter(te => te.effect !== 'barkskin');
+                    if (cleanedEffects.length !== storedEffects.length) {
+                        setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                    }
+                }
                 break;
             }
 

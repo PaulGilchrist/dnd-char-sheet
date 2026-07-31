@@ -590,6 +590,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredResEffects, campaignName, true)
     }
 
+    // Clear Barkskin on short rest
+    const barkskinEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBarkskinEffects = barkskinEffects.filter(e => e.effect !== 'barkskin');
+    if (filteredBarkskinEffects.length !== barkskinEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP
     const allKeys = getAllStoreKeys();
     for (const key of allKeys) {
@@ -822,6 +829,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredResEffects = resEffects.filter(e => e.effect !== 'resistance_damage_reduction');
     if (filteredResEffects.length !== resEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredResEffects, campaignName, true)
+    }
+
+    // Clear Barkskin on long rest
+    const barkskinEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBarkskinEffects = barkskinEffects.filter(e => e.effect !== 'barkskin');
+    if (filteredBarkskinEffects.length !== barkskinEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
     }
 
     // Clear regenerateActive flag from all targets and set them to full HP on long rest
