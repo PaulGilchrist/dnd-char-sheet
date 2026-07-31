@@ -20,6 +20,14 @@ vi.mock('./services/maps/mapsService.js', () => ({
   loadMaps: vi.fn(),
 }));
 
+vi.mock('./services/ui/storage.js', () => ({
+  __esModule: true,
+  default: {
+    get: vi.fn(() => Promise.resolve(null)),
+    set: vi.fn(() => Promise.resolve()),
+  },
+}));
+
 vi.mock('./components/char-sheet/CharSheet.jsx', async () => {
   const { MockCharSheet } = await import('./test/mockComponents.jsx');
   return { default: MockCharSheet };

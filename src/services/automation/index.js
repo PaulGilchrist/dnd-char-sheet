@@ -165,6 +165,7 @@ import { handle as handleSpellMastery } from './handlers/class-wizard/spellMaste
 import { handle as handleSignatureSpells } from './handlers/class-wizard/signatureSpellsHandler.js';
 import { handle as handleArcaneWard } from './handlers/class-wizard/arcaneWardHandler.js';
 import { handle as handleArcaneWardBonusActionRestore } from './handlers/class-wizard/arcaneWardHandler.js';
+import { handle as handleArcaneVigor } from './handlers/spells/arcaneVigorHandler.js';
 import { handle as handlePortent } from './handlers/class-wizard/portentHandler.js';
 import { handle as handleExpertDivination } from './handlers/class-wizard/expertDivinationHandler.js';
 import { handle as handleThirdEye } from './handlers/class-wizard/thirdEyeHandler.js';
@@ -309,6 +310,7 @@ const HANDLER_MAP = {
     arcane_ward: handleArcaneWard,
     projected_ward: handleArcaneWard,
     arcane_ward_bonus_action: handleArcaneWardBonusActionRestore,
+    arcane_vigor: handleArcaneVigor,
      open_hand_technique: handleOpenHandTechnique,
      quivering_palm: handleQuiveringPalm,
     reaction_save_heal: handleReactionSaveHeal,

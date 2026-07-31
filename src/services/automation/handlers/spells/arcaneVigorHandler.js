@@ -1,0 +1,40 @@
+import { getHitDieSize } from '../../../rules/effects/restRules.js';
+
+export function handle(action, playerStats, campaignName, _mapName) {
+    const slotLevel = action.metaCtx?.slotLevel || action.metaCtx?.modifiedSpell?.level || action.metaCtx?.upcastLevel || 2;
+    const hitDieSize = getHitDieSize(playerStats);
+
+    if (!hitDieSize) {
+        console.error(`[arcaneVigor] Could not determine hit die size for ${playerStats.name}`);
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                automationType: 'arcane_vigor',
+                description: `Error: Could not determine hit die size for ${playerStats.name}.`,
+            },
+        };
+    }
+
+    const spellcastingAbility = playerStats.spellAbilities?.spellcasting_ability || 'INT';
+    const abilityObj = playerStats.abilities?.find(a => a.name === spellcastingAbility);
+    const spellcastingAbilityModifier = abilityObj?.bonus || 0;
+
+    const diceText = action.spell?.heal_at_slot_level?.[String(slotLevel)] || action.action?.heal_at_slot_level?.[String(slotLevel)] || '2 short rest dice';
+    const diceCount = parseInt(diceText, 10) || 2;
+
+    return {
+        type: 'modal',
+        modalName: 'ArcaneVigor',
+        payload: {
+            hitDieSize,
+            spellcastingAbility,
+            spellcastingAbilityModifier,
+            diceCount,
+            slotLevel,
+            playerName: playerStats.name,
+            campaignName,
+        },
+    };
+}

@@ -10,6 +10,7 @@ import Sidebar from './components/sidebar/Sidebar.jsx';
 import Map from './components/map/Map.jsx';
 import MapsManager from './components/maps-manager/MapsManager.jsx';
 import { loadCombatSummary, setCombatSummaryCache } from './services/encounters/combatData.js';
+import storage from './services/ui/storage.js';
 import EncounterBuilder from './components/encounter/EncounterBuilder.jsx';
 import * as mapsService from './services/maps/mapsService.js';
 import useAppData from './hooks/runtime/useAppData.js';
@@ -68,6 +69,7 @@ function App() {
         }));
         const initial = { round: 1, creatures };
         setCombatSummaryCache(initial, name);
+        storage.set('combatSummary', initial, name);
       }
       setCombatSummaryLoaded(true);
       if (loaded.length > 0) {

@@ -1878,6 +1878,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                 rollDamage={rollDamage}
                 getTargetInfo={getTargetInfo}
                 characters={characters}
+                modalState={modalState}
                 setModalState={setModalState}
             />
             {showCleaveTargetSelection && (

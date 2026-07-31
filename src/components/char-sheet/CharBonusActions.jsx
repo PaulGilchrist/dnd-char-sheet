@@ -24,9 +24,10 @@ import { resolveSpellDamageAtLevel, isAutoHitSpell } from '../../services/rules/
 import { useSimpleDamageRoll } from '../../hooks/combat/useSimpleDamageRoll.js';
 import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
 import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
+import ArcaneVigorModal from './ArcaneVigorModal.jsx';
 import './CharActions.css'
 
-function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, conditionAttackMode, cannotAct, mapName, characters, onAttackClick, onResolveSpellDamage, onAutomationAction, getWeaponMastery, rollAttack, rollDamage, getTargetInfo, setModalState }) {
+function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, conditionAttackMode, cannotAct, mapName, characters, onAttackClick, onResolveSpellDamage, onAutomationAction, getWeaponMastery, rollAttack, rollDamage, getTargetInfo, setModalState, modalState }) {
     const { popupHtml, setPopupHtml } = useDiceRollPopup();
     const [selectedBonusSpell, setSelectedBonusSpell] = useState(null);
     const [pendingHexSpell, setPendingHexSpell] = useState(null);
@@ -348,6 +349,14 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                         description="Choose a creature within range. The target regains hit points equal to the roll of your dice plus your spellcasting ability modifier."
                         confirmLabel="Cast Healing Word"
                         confirmIcon="fa-heart"
+                    />
+                )}
+
+                {modalState?.arcaneVigorModal && (
+                    <ArcaneVigorModal
+                        {...modalState.arcaneVigorModal}
+                        onClose={() => setModalState({ arcaneVigorModal: null })}
+                        onComplete={() => setModalState({ arcaneVigorModal: null })}
                     />
                 )}
 

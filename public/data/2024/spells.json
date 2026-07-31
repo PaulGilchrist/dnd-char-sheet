@@ -519,8 +519,18 @@
     "subclasses": [],
     "area_of_effect": null,
     "status_effects": [],
+    "automation": {
+      "type": "arcane_vigor"
+    },
     "heal_at_slot_level": {
-      "2": "2d4 + MOD"
+      "2": "2 short rest dice",
+      "3": "3 short rest dice",
+      "4": "4 short rest dice",
+      "5": "5 short rest dice",
+      "6": "6 short rest dice",
+      "7": "7 short rest dice",
+      "8": "8 short rest dice",
+      "9": "9 short rest dice"
     }
   },
   {

@@ -1,0 +1,89 @@
+.arcane-vigor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.arcane-vigor-modal {
+    background-color: var(--background-color-header-inner);
+    border: 1px solid var(--color-header);
+    border-radius: 10px;
+    color: var(--color-header-inner);
+    padding: 20px;
+    max-width: 450px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.arcane-vigor-modal h3 {
+    margin: 0 0 12px;
+    color: var(--color-header);
+}
+
+.arcane-vigor-modal h4 {
+    margin: 0 0 8px;
+}
+
+.arcane-vigor-description {
+    margin-bottom: 16px;
+    font-size: 0.95em;
+}
+
+.arcane-vigor-section {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.arcane-vigor-section:last-of-type {
+    border-bottom: none;
+}
+
+.arcane-vigor-dice-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.arcane-vigor-roll-log table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 0.9em;
+}
+
+.arcane-vigor-roll-log th,
+.arcane-vigor-roll-log td {
+    padding: 2px 8px;
+    text-align: center;
+}
+
+.arcane-vigor-total {
+    margin-top: 6px;
+    font-size: 0.95em;
+}
+
+.arcane-vigor-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.arcane-vigor-applied {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background-color: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    color: #10b981;
+    font-size: 0.95em;
+}

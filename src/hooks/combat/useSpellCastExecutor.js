@@ -94,6 +94,9 @@ function handleModalResult(popup, setModalState) {
         case 'massSuggestion':
             setModalState({ massSuggestionModal: payload });
             break;
+        case 'ArcaneVigor':
+            setModalState({ arcaneVigorModal: payload });
+            break;
         case 'silenceTargetSelection':
             setModalState({ silenceModal: payload });
             break;

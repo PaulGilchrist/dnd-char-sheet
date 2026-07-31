@@ -2,31 +2,11 @@ import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntime
 
 export function modifyHitPoints(combatSummary, targetName, delta, campaignName) {
   if (!combatSummary || !combatSummary.creatures) {
-    const playerMaxHp = getRuntimeValue(targetName, 'hitPoints');
-    if (playerMaxHp != null) {
-      const oldHp = getRuntimeValue(targetName, 'currentHitPoints') ?? 0;
-      const newHp = Math.min(playerMaxHp, Math.max(0, oldHp + delta));
-      if (newHp !== oldHp) {
-        setRuntimeValue(targetName, 'currentHitPoints', newHp, campaignName);
-      }
-      const actualDelta = newHp - oldHp;
-      return { oldHp, newHp, delta: actualDelta, isPlayer: true, maxHp: playerMaxHp };
-    }
     return null;
   }
 
   const creature = combatSummary.creatures.find(c => c.name === targetName);
   if (!creature) {
-    const playerMaxHp = getRuntimeValue(targetName, 'hitPoints');
-    if (playerMaxHp != null) {
-      const oldHp = getRuntimeValue(targetName, 'currentHitPoints') ?? 0;
-      const newHp = Math.min(playerMaxHp, Math.max(0, oldHp + delta));
-      if (newHp !== oldHp) {
-        setRuntimeValue(targetName, 'currentHitPoints', newHp, campaignName);
-      }
-      const actualDelta = newHp - oldHp;
-      return { oldHp, newHp, delta: actualDelta, isPlayer: true, maxHp: playerMaxHp };
-    }
     return null;
   }
 
