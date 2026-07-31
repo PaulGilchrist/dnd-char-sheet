@@ -349,6 +349,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'aura_of_life',
+    label: 'Aura of Life',
+    description: 'Allies in aura have Resistance to Necrotic damage, HP maximum can\'t be reduced, and regain 1 HP at start of turn if at 0 HP.',
+    icon: 'fa-heart-pulse',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

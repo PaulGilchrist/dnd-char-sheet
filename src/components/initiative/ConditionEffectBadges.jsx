@@ -198,6 +198,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Regenerate', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: isLocalhost, removeAction: 'target_effect', effectType: 'regenerate', tooltip: `Regenerate from ${casterName}: 4d8+15 initial heal, 1 HP per turn, full HP on expiration` })
     }
 
+    const auraOfLifeEffect = targetEffects?.find(te => te.effect === 'aura_of_life' && te.target === creatureName)
+    if (auraOfLifeEffect) {
+        const casterName = auraOfLifeEffect.source || 'unknown'
+        badges.push({ label: 'Aura of Life', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: isLocalhost, removeAction: 'target_effect', effectType: 'aura_of_life', tooltip: `Aura of Life from ${casterName}: Resistance to Necrotic damage, HP maximum can't be reduced, Regains 1 HP at start of turn if at 0 HP` })
+    }
+
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':

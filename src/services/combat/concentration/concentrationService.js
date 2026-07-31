@@ -176,6 +176,19 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
     cleanupBuffsByName(casterName, spellName, campaignName)
 
+    // Clear aura_of_life buffs and HP protection from all creatures
+    const cs = getCombatSummary(campaignName);
+    if (cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+            const filtered = buffs.filter(b => !(b.name === 'Aura of Life' && b.sourceCharacter === casterName));
+            if (filtered.length !== buffs.length) {
+                setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                setRuntimeValue(creature.name, 'auraOfLifeHpMaxProtected', false, campaignName);
+            }
+        }
+    }
+
     clearRayOfEnfeeblementEffects(campaignName, casterName)
 }
 

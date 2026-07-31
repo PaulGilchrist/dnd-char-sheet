@@ -29,7 +29,17 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         return;
     }
 
-    const turnStartEffects = ensureArray(playerStats.turnStartEffects, 'turnStartEffects');
+    const computedTurnStartEffects = ensureArray(playerStats.turnStartEffects, 'turnStartEffects');
+
+    // Merge runtime store turnStartEffects (spell-added effects like Aura of Life, Heroism)
+    const runtimeTurnStartEffects = getRuntimeValue(activeName, 'turnStartEffects', campaignName);
+    const runtimeEffectsArray = Array.isArray(runtimeTurnStartEffects) ? runtimeTurnStartEffects : [];
+    const turnStartEffects = [...computedTurnStartEffects];
+    for (const re of runtimeEffectsArray) {
+        if (!turnStartEffects.some(e => e.type === re.type)) {
+            turnStartEffects.push(re);
+        }
+    }
 
     // Clear Survivor once-per-turn flag at start of the active creature's turn (before processing effects)
     if (activeName) {
@@ -128,6 +138,9 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         }
         if (effect.type === 'vitalityOfTheTree_turn_start') {
             applyVitalityOfTheTreeTurnStart(activeName, playerStats, effect, campaignName);
+        }
+        if (effect.type === 'aura_of_life_turn_start_heal') {
+            applyAuraOfLifeTurnStartHeal(activeName, playerStats, effect, campaignName);
         }
     }
 
@@ -461,6 +474,30 @@ async function applyVitalityOfTheTreeTurnStart(activeName, playerStats, effect, 
         return;
     }
     setRuntimeValue(activeName, 'vitalityOfTheTreeAvailable', true, campaignName);
+}
+
+async function applyAuraOfLifeTurnStartHeal(activeName, playerStats, effect, campaignName) {
+    const auraOfLifeActive = getRuntimeValue(activeName, 'auraOfLifeHpMaxProtected', campaignName);
+    if (!auraOfLifeActive) return;
+
+    const storedCurrentHp = getRuntimeValue(activeName, 'currentHitPoints', campaignName);
+    const storedMaxHp = getRuntimeValue(activeName, 'hitPoints', campaignName);
+    if (storedMaxHp == null) return;
+
+    const currentHp = storedCurrentHp ?? 0;
+    if (currentHp > 0) return;
+
+    const newHp = Math.min(storedMaxHp, currentHp + 1);
+    await setRuntimeValue(activeName, 'currentHitPoints', newHp, campaignName);
+
+    await addEntry(campaignName, {
+        type: 'hp_change',
+        targetName: activeName,
+        delta: 1,
+        isHealing: true,
+        sourceName: null,
+        note: 'Aura of Life (1 HP at start of turn)',
+    }).catch((e) => { console.error('[auraOfLife] Error:', e); });
 }
 
 async function applyRegenerateBuffHeal(activeName, playerStats, campaignName) {
@@ -1153,6 +1190,23 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
             case 'remove_regenerate_buff': {
                 setRuntimeValue(targetName, 'regenerateActive', null, campaignName);
                 setRuntimeValue(targetName, 'regenerateSource', null, campaignName);
+                break;
+            }
+
+            case 'remove_aura_of_life_buff': {
+                const allBuffs = Array.isArray(getRuntimeValue(targetName, 'activeBuffs')) ? getRuntimeValue(targetName, 'activeBuffs') : [];
+                setRuntimeValue(
+                    targetName,
+                    'activeBuffs',
+                    allBuffs.filter(b => b.name !== effect.buffName),
+                    campaignName
+                );
+                setRuntimeValue(targetName, 'auraOfLifeHpMaxProtected', false, campaignName);
+                break;
+            }
+
+            case 'aura_of_life_hp_protection_end': {
+                setRuntimeValue(targetName, 'auraOfLifeHpMaxProtected', false, campaignName);
                 break;
             }
 
