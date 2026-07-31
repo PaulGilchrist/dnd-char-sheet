@@ -299,14 +299,9 @@ describe('conditionEffects', () => {
         expect(result.damageDoubled).toBe(true);
       });
 
-      it('handles repeat save effects (sleep, slow, stinking_cloud, web, power_word_stun)', () => {
-        // Repeat save effects no longer set saveType/conditionToApply in conditionEffects
-        // (badge rendering handles this separately via REPEAT_SAVE_INFO)
-        expect(() => computeConditionEffects([], [], [{ effect: 'sleep_repeat_save' }])).not.toThrow();
-        expect(() => computeConditionEffects([], [], [{ effect: 'slow_repeat_save' }])).not.toThrow();
-        expect(() => computeConditionEffects([], [], [{ effect: 'stinking_cloud_repeat_save' }])).not.toThrow();
-        expect(() => computeConditionEffects([], [], [{ effect: 'web_repeat_save' }])).not.toThrow();
-        expect(() => computeConditionEffects([], [], [{ effect: 'power_word_stun_repeat_save' }])).not.toThrow();
+      it('ignores unknown effect keys without crashing', () => {
+        expect(() => computeConditionEffects([], [], [{ effect: 'unknown_effect' }])).not.toThrow();
+        expect(() => computeConditionEffects([], [], [{ effect: 'speed_zero' }])).not.toThrow();
       });
 
       it('handles Cunning Strike-style save with condition', () => {

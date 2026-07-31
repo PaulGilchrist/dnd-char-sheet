@@ -94,6 +94,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'slow');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'slow'], campaignName);
 
+            // Store condition metadata with DC and ability for recurring WIS save
+            const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+            setRuntimeValue(targetName, 'activeConditionMeta', {
+                ...existingMeta,
+                slow: {
+                    ...(existingMeta.slow || {}),
+                    dc,
+                    ability: 'wis',
+                },
+            }, campaignName);
+
             await addTargetResult(campaignName, {
                 targetName,
                 saveResult: 'failure',
@@ -108,7 +119,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 { type: 'condition', condition: 'slow' },
             ], campaignName);
 
-            // Store target effects for the slow debuffs
+            // Store target effects for the slow debuffs with condition reference for concentration cleanup
             const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const effects = Array.isArray(targetEffects) ? targetEffects : [];
             const noReactionEffect = {
@@ -116,24 +127,28 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 effect: 'no_reactions',
                 source: casterName,
                 duration: 'concentration',
+                condition: 'slow',
             };
             const dexSaveDisadvantageEffect = {
                 target: targetName,
                 effect: 'dex_save_disadvantage',
                 source: casterName,
                 duration: 'concentration',
+                condition: 'slow',
             };
             const actionLimitEffect = {
                 target: targetName,
                 effect: 'action_limit',
                 source: casterName,
                 duration: 'concentration',
+                condition: 'slow',
             };
             const singleAttackEffect = {
                 target: targetName,
                 effect: 'single_attack_limit',
                 source: casterName,
                 duration: 'concentration',
+                condition: 'slow',
             };
             const somaticFailureEffect = {
                 target: targetName,
@@ -141,6 +156,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 source: casterName,
                 chance: 25,
                 duration: 'concentration',
+                condition: 'slow',
             };
 
             // Remove existing slow effects from this caster for this target

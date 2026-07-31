@@ -806,11 +806,11 @@ describe('computeConditionEffects — targetEffects', () => {
     expect(result.hurlThroughHell).toBe(true);
   });
 
-  it('sets powerWordStun fields for power_word_stun_repeat_save', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'power_word_stun_repeat_save' }]);
-    expect(result.saveType).toBe('CON');
-    expect(result.conditionToApply).toBe('stunned');
-    expect(result.powerWordStun).toBe(true);
+  it('ignores unknown effect keys without crashing', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'unknown_repeat_save' }]);
+    expect(result.saveType).toBeNull();
+    expect(result.conditionToApply).toBeNull();
+    expect(result.powerWordStun).toBeUndefined();
   });
 
   it('sets hurlThroughHell fields for incapacitated effect with saveType', () => {

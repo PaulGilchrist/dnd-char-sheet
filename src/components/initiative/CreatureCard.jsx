@@ -38,7 +38,6 @@ function CreatureCard({
     onOpenEffectAdder,
     onRollConcentrationSave,
     onBreakConcentration,
-    onRepeatSave,
     allCreatures,
     campaignName,
     hasTacticalShift,
@@ -181,7 +180,7 @@ function CreatureCard({
                         />
                     )
                 })}
-                <ConditionEffectBadges conditions={creature.conditions?.filter(c => c && typeof c === 'object' && c.key) || []} targetEffects={myTargetEffects} creatureName={creature.name} campaignName={campaignName} allCreatures={allCreatures} hasTacticalShift={hasTacticalShift} hasSpeedyOpportunityDisadvantage={hasSpeedyOpportunityDisadvantage} hasSpeedyDifficultTerrainIgnore={hasSpeedyDifficultTerrainIgnore} isLocalhost={isLocalhost} coronaDisadvantage={coronaDisadvantage} onRepeatSave={onRepeatSave} characters={characters} activeMapName={mapName} />
+                <ConditionEffectBadges conditions={creature.conditions?.filter(c => c && typeof c === 'object' && c.key) || []} targetEffects={myTargetEffects} creatureName={creature.name} campaignName={campaignName} allCreatures={allCreatures} hasTacticalShift={hasTacticalShift} hasSpeedyOpportunityDisadvantage={hasSpeedyOpportunityDisadvantage} hasSpeedyDifficultTerrainIgnore={hasSpeedyDifficultTerrainIgnore} isLocalhost={isLocalhost} coronaDisadvantage={coronaDisadvantage} characters={characters} activeMapName={mapName} />
                 {isLocalhost && (
                     <button
                         className='effect-add-btn'

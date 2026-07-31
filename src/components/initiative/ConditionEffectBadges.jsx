@@ -1,26 +1,7 @@
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { EFFECT_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
-import { rollD20 } from '../../services/dice/diceRoller.js'
-import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js'
-import utils from '../../services/ui/utils.js'
-import { addEntry } from '../../services/ui/logService.js'
-import { hasSaveAdvantage } from '../../services/combat/conditions/conditionEffects.js'
-import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js'
-import { getCombatSummary } from '../../services/encounters/combatData.js'
 import CreatureBadge from '../common/CreatureBadge.jsx'
-import { getMonsterData } from '../../services/npcs/monsterUtils.js'
-
-const REPEAT_SAVE_INFO = {
-  slow_repeat_save: { label: 'Slow', icon: 'fa-clock', saveType: 'WIS' },
-  stinking_cloud_repeat_save: { label: 'Stinking Cloud', icon: 'fa-cloud', saveType: 'CON' },
-  web_repeat_save: { label: 'Web', icon: 'fa-spider-web', saveType: 'DEX' },
-  flesh_to_stone_repeat_save: { label: 'Flesh to Stone', icon: 'fa-skull', saveType: 'CON' },
-  hold_monster_repeat_save: { label: 'Hold Monster', icon: 'fa-hand', saveType: 'WIS' },
-  ottos_dance_repeat_save: { label: "Otto's Dance", icon: 'fa-music', saveType: 'WIS' },
-  power_word_stun_repeat_save: { label: 'Power Word Stun', icon: 'fa-star', saveType: 'CON' },
-  tashas_laughter_repeat_save: { label: "Tasha's Laughter", icon: 'fa-face-laugh-squint', saveType: 'WIS' },
-}
 
 function getEffectDescription(label) {
     if (EFFECT_DESCRIPTIONS[label]) return EFFECT_DESCRIPTIONS[label]
@@ -41,126 +22,6 @@ function removeTargetEffect(targetName, effectType, campaignName) {
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
 }
 
-function removeRepeatSaveEffect(targetName, effectKey, campaignName) {
-    const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
-    const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
-    const filtered = existingEffects.filter(te => !(te.target === targetName && repeatSaveTypes.includes(te.effect)))
-    setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
-}
-
-async function handleRepeatSaveSave(badge, creatureName, campaignName, playerStats, characters, activeMapName, allCreatures, onRepeatSave) {
-    const effectKey = badge.effectType
-    const info = REPEAT_SAVE_INFO[effectKey]
-    if (!info) return
-
-    const effect = getRuntimeValue('campaign', 'targetEffects')?.find(
-        te => te.target === creatureName && te.effect === effectKey
-    )
-    const dc = effect?.dc || 15
-    const saveType = String(info.saveType || effect?.saveType || 'CON').toLowerCase()
-    const saveLabel = saveType.charAt(0).toUpperCase() + saveType.slice(1)
-    const saveTypeUpper = saveType.toUpperCase()
-
-    let saveBonus = 0
-    const resolvedStats = playerStats ? (playerStats.computedStats || playerStats) : null
-    if (resolvedStats) {
-        saveBonus = getAbilitySaveBonus(resolvedStats, saveType)
-    } else {
-        const combatSummary = getCombatSummary(campaignName)
-        const creature = combatSummary?.creatures?.find(c => c.name === creatureName)
-        if (creature) {
-            if (creature.type === 'player') {
-                const character = characters?.find(c => utils.getName(c.name) === utils.getName(creatureName))
-                if (character) {
-                    saveBonus = getAbilitySaveBonus(character.computedStats || character, saveType)
-                }
-            } else {
-                try {
-                    const monster = await getMonsterData(creatureName)
-                    const st = monster?.saving_throws
-                    if (st && (st[saveType] || st[saveTypeUpper])) {
-                        saveBonus = (st[saveType] || st[saveTypeUpper]).modifier
-                    } else if (monster?.ability_score_modifiers && (monster.ability_score_modifiers[saveType] !== undefined || monster.ability_score_modifiers[saveTypeUpper] !== undefined)) {
-                        saveBonus = monster.ability_score_modifiers[saveType] ?? monster.ability_score_modifiers[saveTypeUpper]
-                    }
-                } catch { /* ignore */ }
-            }
-        }
-    }
-    const hasAdv = hasSaveAdvantage({}, effectKey)
-
-    let roll1, roll2, finalRoll
-    if (hasAdv) {
-        roll1 = rollD20()
-        roll2 = rollD20()
-        finalRoll = Math.max(roll1, roll2)
-    } else {
-        roll1 = rollD20()
-        roll2 = 0
-        finalRoll = roll1
-    }
-
-    const combatSummary = getCombatSummary(campaignName)
-    const aura = await computeAuraBonus({ targetName: creatureName, characters, campaignName, activeMapName, allCreatures: combatSummary?.creatures })
-    const auraBonus = aura.bonus
-    const total = finalRoll + saveBonus + auraBonus
-    const success = total >= dc
-
-    const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined
-
-    addEntry(campaignName, {
-        type: 'roll',
-        characterName: creatureName,
-        rollType: 'save',
-        name: `${info.label} Repeat Save`,
-        rolls: hasAdv ? [roll1, roll2] : [roll1],
-        total,
-        bonus: saveBonus + auraBonus,
-        bonusDetail,
-        dc,
-        success,
-        condition: info.label,
-    }).catch((e) => { console.error("[ConditionEffectBadges] Error:", e); })
-
-    if (onRepeatSave) {
-        onRepeatSave({
-            type: 'd20',
-            rollType: 'condition-save',
-            name: `${saveLabel} (DC ${dc})`,
-            rolls: hasAdv ? [roll1, roll2] : [roll1],
-            bonus: saveBonus + auraBonus,
-            bonusDetail,
-            total,
-            dc,
-            success,
-            forcedMode: hasAdv ? 'advantage' : undefined,
-            repeatSaveKey: effectKey,
-            creatureName,
-            campaignName,
-        })
-    }
-
-    if (success) {
-        removeRepeatSaveEffect(creatureName, effectKey, campaignName)
-        const conditions = getRuntimeValue(creatureName, 'activeConditions') || []
-        const conditionToRemove = effect?.condition || info.label.toLowerCase().replace(/['s]\s*|_/g, ' ').trim().replace(/\s+/g, ' ')
-        const filtered = conditions.filter(c => String(c).toLowerCase() !== conditionToRemove)
-        if (filtered.length !== conditions.length) {
-            setRuntimeValue(creatureName, 'activeConditions', filtered, campaignName)
-        }
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: creatureName,
-            rollType: `save-${effectKey}`,
-            targetName: creatureName,
-            saveDc: dc,
-            saveType: info.saveType,
-            success: true,
-            description: `${creatureName} succeeded on ${info.label} repeat save. Effect ends.`,
-        }).catch((e) => { console.error("[ConditionEffectBadges] Error:", e); })
-    }
-}
-
 const EFFECT_TO_SEMANTIC = {
     'effect-stealth-attack': 'effect-neutral',
     'effect-speed-zero': 'effect-debuff',
@@ -172,14 +33,10 @@ function resolveCls(cls) {
     return EFFECT_TO_SEMANTIC[cls] || cls
 }
 
-function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats, characters, activeMapName, onRepeatSave }) {
+function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName }) {
     const condKeys = (conditions || []).map(c => c.key)
     const effects = computeConditionEffects(condKeys, [], targetEffects, false, false, false, false, null, false, false, false, false, false, false, false, false, false, false, false, false)
     const activeBuffs = creatureName && campaignName ? (getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []) : []
-    const resolvedPlayerStats = playerStats || (characters?.length ? characters.find(c => {
-        const name = typeof c === 'string' ? c : c.name;
-        return name && utils.getName(name) === utils.getName(creatureName);
-    }) : null)
     if (Array.isArray(activeBuffs)) {
         for (const buff of activeBuffs) {
             if (buff.effect === 'advantage_attacks_and_saves') {
@@ -335,26 +192,6 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Regenerate', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: isLocalhost, removeAction: 'target_effect', effectType: 'regenerate', tooltip: `Regenerate from ${casterName}: 4d8+15 initial heal, 1 HP per turn, full HP on expiration` })
     }
 
-    const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
-    targetEffects?.forEach(te => {
-        if (repeatSaveTypes.includes(te.effect) && te.target === creatureName) {
-            const info = REPEAT_SAVE_INFO[te.effect]
-            const dc = te.dc || '?'
-            const canRoll = creatureName && campaignName && (isLocalhost || (resolvedPlayerStats && creatureName === resolvedPlayerStats.name))
-            badges.push({
-                label: `${info.label} DC ${dc}`,
-                cls: 'effect-condition',
-                icon: info.icon,
-                removable: isLocalhost,
-                removeAction: 'remove_repeat_save',
-                effectType: te.effect,
-                tooltip: `${info.label} — Repeat ${info.saveType} save (DC ${dc}) at end of turn`,
-                onClick: canRoll ? () => handleRepeatSaveSave({ effectType: te.effect }, creatureName, campaignName, resolvedPlayerStats, characters, activeMapName, allCreatures, onRepeatSave) : null,
-                disabled: !canRoll,
-            })
-        }
-    })
-
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':
@@ -380,9 +217,6 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
                 break
             case 'taunting_step':
                 removeTargetEffect(creatureName, badge.effectType, campaignName)
-                break
-            case 'remove_repeat_save':
-                removeRepeatSaveEffect(creatureName, badge.effectType, campaignName)
                 break
             case 'stealth_attack':
                 setRuntimeValue(creatureName, 'stealthAttackCost', 0, campaignName)

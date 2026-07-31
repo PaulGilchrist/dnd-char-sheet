@@ -431,7 +431,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
-        // Hold Monster / Hold Person — WIS save, Paralyzed condition with end-of-turn repeat save
+        // Hold Monster / Hold Person — WIS save, Paralyzed condition with end-of-turn save
         if (spell.name && (spell.name.toLowerCase() === 'hold monster' || spell.name.toLowerCase() === 'hold person')) {
             await triggerHoldMonster(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
             return;

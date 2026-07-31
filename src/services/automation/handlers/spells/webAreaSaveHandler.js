@@ -16,7 +16,7 @@ import storage from '../../../ui/storage.js';
  * - Difficult Terrain, Lightly Obscured
  * - Concentration, up to 1 hour
  * - DEX save on entry or start of turn — Restrained on failure
- * - STR save each turn (web_repeat_save badge) — Restrained on failure
+ * - STR save each turn — Restrained on failure
  * - Restrained creature can use Action for STR (Athletics) check vs spell DC to break free
  * - Flammable: 5-ft cube exposed to fire burns in 1 round, 2d4 Fire damage to creatures starting turn in fire
  */

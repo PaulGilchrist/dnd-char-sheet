@@ -154,6 +154,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'restrained'], campaignName);
 
+    // Store condition metadata with DC and ability for recurring STR save
+    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+    setRuntimeValue(targetName, 'activeConditionMeta', {
+        ...existingMeta,
+        restrained: {
+            ...(existingMeta.restrained || {}),
+            dc,
+            ability: 'str',
+        },
+    }, campaignName);
+
     await addTargetResult(campaignName, {
         targetName,
         saveResult: 'failure',

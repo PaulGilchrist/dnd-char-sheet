@@ -349,81 +349,45 @@ describe('powerWordStunHandler.handle - target with unknown HP', () => {
   });
 });
 
-describe('powerWordStunHandler.handle - repeat save target effect registration', () => {
+describe('powerWordStunHandler.handle - condition metadata storage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should register power_word_stun_repeat_save target effect when HP <= 150', async () => {
+  it('should store condition metadata for stunned when HP <= 150', async () => {
     getCombatContext.mockResolvedValue(lowHpCombatContext);
     buildSaveDc.mockReturnValue(15);
     resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
     getRuntimeValue.mockImplementation((_entity, key, _camp) => {
       if (key === 'activeConditions') return [];
-      if (key === 'targetEffects') return [];
+      if (key === 'activeConditionMeta') return {};
       return null;
     });
 
     await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-    const targetEffectCall = setRuntimeValue.mock.calls.find(
-      call => call[0] === 'campaign' && call[1] === 'targetEffects'
+    const metaCall = setRuntimeValue.mock.calls.find(
+      call => call[0] === 'Goblin' && call[1] === 'activeConditionMeta'
     );
-    expect(targetEffectCall).toBeDefined();
-    const effects = targetEffectCall[2];
-    const pwsEffect = effects.find(te => te.effect === 'power_word_stun_repeat_save');
-    expect(pwsEffect).toBeDefined();
-    expect(pwsEffect.target).toBe('Goblin');
-    expect(pwsEffect.source).toBe(casterName);
-    expect(pwsEffect.condition).toBe('stunned');
-    expect(pwsEffect.dc).toBe(15);
-    expect(pwsEffect.saveType).toBe('CON');
+    expect(metaCall).toBeDefined();
+    expect(metaCall[2].stunned).toEqual({ dc: 15, ability: 'con' });
   });
 
-  it('should not register repeat save target effect when HP > 150', async () => {
+  it('should not store condition metadata when HP > 150', async () => {
     getCombatContext.mockResolvedValue(highHpCombatContext);
     buildSaveDc.mockReturnValue(15);
     resolveTarget.mockResolvedValue({ target: { name: 'Dragon' } });
     getRuntimeValue.mockImplementation((_entity, key, _camp) => {
       if (key === 'activeConditions') return [];
-      if (key === 'targetEffects') return [];
       return null;
     });
 
     await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-    const targetEffectCall = setRuntimeValue.mock.calls.find(
-      call => call[0] === 'campaign' && call[1] === 'targetEffects'
+    const metaCall = setRuntimeValue.mock.calls.find(
+      call => call[1] === 'activeConditionMeta'
     );
-    expect(targetEffectCall).toBeUndefined();
-  });
-
-  it('should deduplicate existing power_word_stun_repeat_save from same caster', async () => {
-    const existingEffects = [
-      { target: 'Goblin', effect: 'power_word_stun_repeat_save', source: 'OldCaster', dc: 13 },
-      { target: 'Goblin', effect: 'slow_repeat_save', source: 'Wizard', dc: 15 },
-    ];
-    getCombatContext.mockResolvedValue(lowHpCombatContext);
-    buildSaveDc.mockReturnValue(15);
-    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
-      if (key === 'activeConditions') return [];
-      if (key === 'targetEffects') return existingEffects;
-      return null;
-    });
-
-    await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-    const targetEffectCall = setRuntimeValue.mock.calls.find(
-      call => call[0] === 'campaign' && call[1] === 'targetEffects'
-    );
-    const effects = targetEffectCall[2];
-    const pwsEffects = effects.filter(te => te.effect === 'power_word_stun_repeat_save');
-    expect(pwsEffects.length).toBe(1);
-    expect(pwsEffects[0].source).toBe(casterName);
-    expect(pwsEffects[0].dc).toBe(15);
-    // slow_repeat_save should still be present
-    expect(effects.some(te => te.effect === 'slow_repeat_save')).toBe(true);
+    expect(metaCall).toBeUndefined();
   });
 });
 

@@ -101,6 +101,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'paralyzed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'paralyzed'], campaignName);
 
+    // Store condition metadata with DC and ability for recurring CON save
+    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+    setRuntimeValue(targetName, 'activeConditionMeta', {
+        ...existingMeta,
+        paralyzed: {
+            ...(existingMeta.paralyzed || {}),
+            dc,
+            ability: 'con',
+        },
+    }, campaignName);
+
     await addTargetResult(campaignName, {
         targetName,
         saveResult: 'failure',

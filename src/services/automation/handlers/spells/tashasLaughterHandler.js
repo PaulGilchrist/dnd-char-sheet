@@ -100,6 +100,22 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             );
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'prone', 'incapacitated'], campaignName);
 
+            // Store condition metadata with DC and ability for recurring CON save
+            const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+            setRuntimeValue(targetName, 'activeConditionMeta', {
+                ...existingMeta,
+                prone: {
+                    ...(existingMeta.prone || {}),
+                    dc,
+                    ability: 'con',
+                },
+                incapacitated: {
+                    ...(existingMeta.incapacitated || {}),
+                    dc,
+                    ability: 'con',
+                },
+            }, campaignName);
+
             await addTargetResult(campaignName, {
                 targetName,
                 saveResult: 'failure',

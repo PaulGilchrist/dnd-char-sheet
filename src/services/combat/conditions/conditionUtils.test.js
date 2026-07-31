@@ -46,7 +46,7 @@ describe('CONDITION_SAVE_DC', () => {
 
 describe('CONDITION_SAVE_MAP', () => {
   it('maps each condition to its save ability or null', () => {
-    const conditionsWithSaves = ['charmed', 'frightened', 'cursed', 'paralyzed', 'poisoned', 'stunned', 'grappled', 'restrained']
+    const conditionsWithSaves = ['charmed', 'frightened', 'cursed', 'paralyzed', 'poisoned', 'stunned', 'grappled', 'restrained', 'slow']
     const conditionsWithoutSaves = ['blinded', 'deafened', 'incapacitated', 'petrified', 'prone', 'unconscious']
 
     for (const key of conditionsWithSaves) {
@@ -62,6 +62,7 @@ describe('CONDITION_SAVE_MAP', () => {
   it('maps conditions to the correct ability scores', () => {
     expect(CONDITION_SAVE_MAP.charmed).toBe('wis')
     expect(CONDITION_SAVE_MAP.frightened).toBe('wis')
+    expect(CONDITION_SAVE_MAP.slow).toBe('wis')
     expect(CONDITION_SAVE_MAP.grappled).toBe('str')
     expect(CONDITION_SAVE_MAP.restrained).toBe('str')
     expect(CONDITION_SAVE_MAP.cursed).toBe('con')

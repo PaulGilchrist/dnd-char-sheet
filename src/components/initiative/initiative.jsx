@@ -59,17 +59,6 @@ import CreatureCard from './CreatureCard.jsx'
 import EffectAdder from './EffectAdder.jsx'
 import './initiative.css'
 
-const REPEAT_SAVE_INFO = {
-    slow_repeat_save: { label: 'Slow', icon: 'fa-clock', saveType: 'WIS' },
-    stinking_cloud_repeat_save: { label: 'Stinking Cloud', icon: 'fa-cloud', saveType: 'CON' },
-    web_repeat_save: { label: 'Web', icon: 'fa-spider-web', saveType: 'DEX' },
-    flesh_to_stone_repeat_save: { label: 'Flesh to Stone', icon: 'fa-skull', saveType: 'CON' },
-    hold_monster_repeat_save: { label: 'Hold Monster', icon: 'fa-hand', saveType: 'WIS' },
-    ottos_dance_repeat_save: { label: "Otto's Dance", icon: 'fa-music', saveType: 'WIS' },
-    power_word_stun_repeat_save: { label: 'Power Word Stun', icon: 'fa-star', saveType: 'CON' },
-    tashas_laughter_repeat_save: { label: "Tasha's Laughter", icon: 'fa-face-laugh-squint', saveType: 'WIS' },
-}
-
 function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName }) {
     const [combatSummary, setCombatSummary] = React.useState(null)
     const setCombatSummaryG = useSSEEqualityGuard(setCombatSummary)
@@ -764,34 +753,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         logConditionSave(campaignName, creatureName, r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
     }
 
-    const handleRepeatSave = async (data) => {
-        const { repeatSaveKey, creatureName: rsCreatureName, campaignName: rsCampaignName, success, ...rollData } = data
-        const rollDataWithSuccess = { ...rollData, success }
-        if (success) {
-            const repeatSaveTypes = Object.keys(REPEAT_SAVE_INFO)
-            const effects = getRuntimeValue('campaign', 'targetEffects', rsCampaignName) || []
-            const filtered = effects.filter(te => !(te.target === rsCreatureName && repeatSaveTypes.includes(te.effect)))
-            if (filtered.length !== effects.length) {
-                setRuntimeValue('campaign', 'targetEffects', filtered, rsCampaignName)
-            }
-            const conditions = getRuntimeValue(rsCreatureName, 'activeConditions', rsCampaignName) || []
-            const info = REPEAT_SAVE_INFO[repeatSaveKey]
-            const conditionToRemove = info?.label?.toLowerCase().replace(/['s]\s*|_/g, ' ').trim().replace(/\s+/g, ' ') || repeatSaveKey.replace(/_repeat_save$/, '')
-            const filteredConds = conditions.filter(c => String(c).toLowerCase() !== conditionToRemove)
-            // Power Word Stun: also remove speed_zero when repeat save succeeds
-            if (repeatSaveKey === 'power_word_stun_repeat_save') {
-                const speedZeroFiltered = filteredConds.filter(c => String(c).toLowerCase() !== 'speed_zero')
-                if (speedZeroFiltered.length !== filteredConds.length) {
-                    setRuntimeValue(rsCreatureName, 'activeConditions', speedZeroFiltered, rsCampaignName)
-                }
-            }
-            if (filteredConds.length !== conditions.length) {
-                setRuntimeValue(rsCreatureName, 'activeConditions', filteredConds, rsCampaignName)
-            }
-        }
-        setConditionPopup(rollDataWithSuccess)
-    }
-
     const handleRollConcentrationSave = async (creatureName) => {
         if (!combatSummary) return
         const creature = combatSummary.creatures.find(c => c.name === creatureName)
@@ -1003,7 +964,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                             hasSpeedyOpportunityDisadvantage={hasSpeedyOpportunityDisadvantage}
                             hasSpeedyDifficultTerrainIgnore={hasSpeedyDifficultTerrainIgnore}
                             coronaDisadvantage={coronaDisadvantage}
-                            onRepeatSave={handleRepeatSave}
                             characters={characters}
                             mapName={mapName}
                         />

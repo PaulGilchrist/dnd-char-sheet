@@ -122,6 +122,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     );
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed', 'speed_zero'], campaignName);
 
+    // Store condition metadata with DC and ability for recurring WIS save
+    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+    setRuntimeValue(targetName, 'activeConditionMeta', {
+        ...existingMeta,
+        charmed: {
+            ...(existingMeta.charmed || {}),
+            dc,
+            ability: 'wis',
+        },
+    }, campaignName);
+
     await addTargetResult(campaignName, {
         targetName,
         saveResult: 'failure',

@@ -13,6 +13,7 @@ const CONDITIONS = [
   { key: 'poisoned', label: 'Poisoned' },
   { key: 'prone', label: 'Prone' },
   { key: 'restrained', label: 'Restrained' },
+  { key: 'slow', label: 'Slow' },
   { key: 'stunned', label: 'Stunned' },
   { key: 'unconscious', label: 'Unconscious' },
 ]
@@ -30,6 +31,7 @@ const CONDITION_SAVE_MAP = {
   poisoned: 'con',
   prone: null,
   restrained: 'str',
+  slow: 'wis',
   stunned: 'con',
   unconscious: null,
 }

@@ -143,6 +143,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'poisoned');
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'poisoned'], campaignName);
 
+            // Store condition metadata with DC and ability for recurring CON save
+            const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+            setRuntimeValue(targetName, 'activeConditionMeta', {
+                ...existingMeta,
+                poisoned: {
+                    ...(existingMeta.poisoned || {}),
+                    dc,
+                    ability: 'con',
+                },
+            }, campaignName);
+
             await addTargetResult(campaignName, {
                 targetName,
                 saveResult: 'failure',
