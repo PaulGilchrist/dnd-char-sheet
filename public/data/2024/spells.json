@@ -785,7 +785,6 @@
     "ritual": false,
     "duration": "Concentration, up to 1 minute",
     "concentration": true,
-    "casting_time": "Action",
     "level": 3,
     "attack_type": null,
     "damage": null,

@@ -38,14 +38,16 @@ function breakConcentration(combatSummary, creatureName) {
     return spell
 }
 
-function clearAllConcentrations(campaignName) {
+function clearAllConcentrations(campaignName, restingCreatureName) {
     const cs = getRuntimeValue('campaign', 'combatSummary');
     const creatures = cs?.creatures || [];
     let changed = false;
     for (const creature of creatures) {
-        if (creature.concentration) {
+        if (creature.name === restingCreatureName && creature.concentration) {
+            const spellName = creature.concentration.spell;
             creature.concentration = null;
             changed = true;
+            cleanupConcentrationEffects(creature.name, spellName, campaignName);
         }
     }
     if (changed && cs) {
@@ -114,9 +116,11 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
 async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
+    console.log('[cleanupConcentrationEffects] caster=%s spell=%s targetEffects=%s removing=%s', casterName, spellName, JSON.stringify(targetEffects), JSON.stringify(casterEffects));
 
     if (casterEffects.length > 0) {
         const remaining = targetEffects.filter(te => !(te.source === casterName && te.duration === 'concentration'))
+        console.log('[cleanupConcentrationEffects] remaining after removal=%s', JSON.stringify(remaining));
         setRuntimeValue('campaign', 'targetEffects', remaining, campaignName, true)
 
         for (const effect of casterEffects) {

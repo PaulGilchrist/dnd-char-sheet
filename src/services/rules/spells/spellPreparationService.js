@@ -208,6 +208,17 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
   }
 
+  const isAuraOfVitality = (spellName || '').toLowerCase() === 'aura of vitality';
+  if (isAuraOfVitality) {
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    console.log('[isFreeCastAuthorized] Aura of Vitality check playerName=%s targetEffects=%s', playerName, JSON.stringify(targetEffects));
+    if (Array.isArray(targetEffects) && targetEffects.some(te => te.effect === 'aura_of_vitality' && te.target === playerName)) {
+      console.log('[isFreeCastAuthorized] Aura of Vitality free cast ALLOWED for %s', playerName);
+      return true;
+    }
+    console.log('[isFreeCastAuthorized] Aura of Vitality free cast DENIED for %s (no aura on self)', playerName);
+  }
+
   return false;
 }
 
@@ -514,6 +525,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
   } else if (isFreeCast) {
     decrementFreeCastResource(playerName, spell.name, spell.level, playerStats, campaignName);
     result.freeCastUsed = true;
+    result.metaCtx.freeCastUsed = true;
   } else if (!result.metaCtx._psionicUsed) {
     const baseSlotKey = `spell_slots_level_${spell.level}`;
     let availableSlots = getRuntimeValue(playerName, baseSlotKey);

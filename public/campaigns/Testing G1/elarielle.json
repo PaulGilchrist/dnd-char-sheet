@@ -116,15 +116,13 @@
     "Poison Spray",
     "Shocking Grasp",
     "Stinking Cloud",
-    "Suggestion",
-    "Mass Suggestion",
-    "Web",
-    "Animal Friendship",
-    "Antimagic Field",
-    "Arcane Vigor",
-    "Aura of Life",
-    "Aura of Purity",
-    "Aura of Vitality"
+    "Aura of Vitality",
+    "Beacon of Hope",
+    "Barkskin",
+    "Blindness/Deafness",
+    "Calm Emotions",
+    "Circle of Power",
+    "Compelled Duel"
   ],
   "magicInitiateInstances": [
     {

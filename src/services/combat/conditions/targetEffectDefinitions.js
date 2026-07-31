@@ -367,6 +367,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'aura_of_vitality',
+    label: 'Aura of Vitality',
+    description: 'Target heals for 2d6 HP when the caster casts the spell. Maintains concentration, allowing free casts once per turn to heal another creature.',
+    icon: 'fa-heart-pulse',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

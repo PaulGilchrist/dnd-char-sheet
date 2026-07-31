@@ -186,6 +186,7 @@ import { applyBlessEffect } from '../../services/rules/features/blessService.js'
 import { handle as handleHolyAura } from './handlers/buffs/holyAuraHandler.js';
 import { handle as handleAuraOfLife, applyAuraOfLife as applyAuraOfLifeEffect, isAuraOfLifeActive } from './handlers/buffs/auraOfLifeHandler.js';
 import { handle as handleAuraOfPurity, applyAuraOfPurity as applyAuraOfPurityEffect, isAuraOfPurityActive } from './handlers/buffs/auraOfPurityHandler.js';
+import { handle as handleAuraOfVitality, applyAuraOfVitality as applyAuraOfVitalityEffect, isAuraOfVitalityActive } from './handlers/buffs/auraOfVitalityHandler.js';
 import { handle as handleBladeWard } from './handlers/buffs/bladeWardHandler.js';
 import { handle as handleShield } from './handlers/shieldHandler.js';
 import { handle as handleShieldOfFaith, applyShieldOfFaith as applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus } from './handlers/shieldOfFaithHandler.js';
@@ -474,6 +475,7 @@ const HANDLER_MAP = {
         aura_of_purity: handleAuraOfPurity,
         holy_aura: handleHolyAura,
         aura_of_life: handleAuraOfLife,
+        aura_of_vitality: handleAuraOfVitality,
         blade_ward: handleBladeWard,
         shield: handleShield,
         shield_of_faith: handleShieldOfFaith,
@@ -561,6 +563,8 @@ export {
     isAuraOfLifeActive,
     applyAuraOfPurityEffect,
     isAuraOfPurityActive,
+    applyAuraOfVitalityEffect,
+    isAuraOfVitalityActive,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';

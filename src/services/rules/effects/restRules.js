@@ -600,7 +600,7 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
   setRuntimeValue(name, 'resistanceUsedThisTurn', null, campaignName)
   clearAllExpirationEffects(name, campaignName)
   clearHuntersMarkConcentration(name, campaignName)
-  clearAllConcentrations(campaignName)
+  clearAllConcentrations(campaignName, name)
 
   // Clear Invisibility buff and condition (not managed by expiration system)
   const invisKey = `_activeInvisibility_${name}`
@@ -857,7 +857,7 @@ export async function applyLongRest(playerStats, campaignName) {
 
     clearAllExpirationEffects(name, campaignName)
     clearHuntersMarkConcentration(name, campaignName)
-    clearAllConcentrations(campaignName)
+  clearAllConcentrations(campaignName, name)
 
     // Clear Invisibility buff and condition (not managed by expiration system)
     const invisKey = `_activeInvisibility_${name}`
