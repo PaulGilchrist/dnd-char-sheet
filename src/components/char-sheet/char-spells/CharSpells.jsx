@@ -137,7 +137,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip, pendingRegenerate, handleRegenerateConfirm, handleRegenerateSkip, pendingHealingWord, handleHealingWordConfirm, handleHealingWordSkip, pendingCureWounds, handleCureWoundsConfirm, handleCureWoundsSkip, pendingStinkingCloud, handleStinkingCloudConfirm, handleStinkingCloudSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip, pendingRegenerate, handleRegenerateConfirm, handleRegenerateSkip, pendingHealingWord, handleHealingWordConfirm, handleHealingWordSkip, pendingCureWounds, handleCureWoundsConfirm, handleCureWoundsSkip, pendingStinkingCloud, handleStinkingCloudConfirm, handleStinkingCloudSkip, pendingWeb, handleWebConfirm, handleWebSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -422,6 +422,17 @@ return (
                         confirmLabel="Cast Stinking Cloud"
                         onConfirm={handleStinkingCloudConfirm}
                         onSkip={handleStinkingCloudSkip}
+                      />
+                    )}
+                    {pendingWeb && (
+                      <CreatureSelectionModal
+                        title="Web"
+                        icon="fa-spider-web"
+                        targets={pendingWeb.creatureTargets}
+                        description="A 20-foot cube of sticky webbing appears at a point within range. Each creature in the area must make a DEX save or become Restrained. The webs are difficult terrain and lightly obscured. Concentration, up to 1 hour. STR save each turn or remain Restrained. Restrained creatures can use action for STR (Athletics) check vs DC to break free."
+                        confirmLabel="Cast Web"
+                        onConfirm={handleWebConfirm}
+                        onSkip={handleWebSkip}
                       />
                     )}
                     {pendingHaste && (

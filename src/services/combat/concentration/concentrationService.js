@@ -115,51 +115,51 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
 
-    if (casterEffects.length === 0) return
+    if (casterEffects.length > 0) {
+        const remaining = targetEffects.filter(te => !(te.source === casterName && te.duration === 'concentration'))
+        setRuntimeValue('campaign', 'targetEffects', remaining, campaignName, true)
 
-    const remaining = targetEffects.filter(te => !(te.source === casterName && te.duration === 'concentration'))
-    setRuntimeValue('campaign', 'targetEffects', remaining, campaignName, true)
-
-    for (const effect of casterEffects) {
-        if (effect.target) {
-            const invisKey = `_activeInvisibility_${effect.target}`;
-            if (getRuntimeValue('campaign', invisKey, campaignName) === casterName) {
-                const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
-                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== invisKey));
-                setRuntimeValue('campaign', '', rest, campaignName);
-            }
-            const greaterInvisKey = `_activeGreaterInvisibility_${effect.target}`;
-            if (getRuntimeValue('campaign', greaterInvisKey, campaignName) === casterName) {
-                const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
-                const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== greaterInvisKey));
-                setRuntimeValue('campaign', '', rest, campaignName);
-            }
-        }
-    }
-
-    for (const effect of casterEffects) {
-        if (effect.condition) {
-            const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)
-            const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === effect.condition)
-            if (!stillHasCondition) {
-                const condList = getRuntimeValue(effect.target, 'activeConditions') || []
-                const filtered = condList.filter(c => utils.getName(c) !== utils.getName(effect.condition))
-                if (filtered.length !== condList.length) {
-                    setRuntimeValue(effect.target, 'activeConditions', filtered, campaignName)
-                    logConditionEvent(campaignName, 'removed', effect.target, effect.condition, 'Concentration lost by ' + casterName)
+        for (const effect of casterEffects) {
+            if (effect.target) {
+                const invisKey = `_activeInvisibility_${effect.target}`;
+                if (getRuntimeValue('campaign', invisKey, campaignName) === casterName) {
+                    const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
+                    const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== invisKey));
+                    setRuntimeValue('campaign', '', rest, campaignName);
+                }
+                const greaterInvisKey = `_activeGreaterInvisibility_${effect.target}`;
+                if (getRuntimeValue('campaign', greaterInvisKey, campaignName) === casterName) {
+                    const campaignData = getRuntimeValue('campaign', '', campaignName) || {};
+                    const rest = Object.fromEntries(Object.entries(campaignData).filter(([k]) => k !== greaterInvisKey));
+                    setRuntimeValue('campaign', '', rest, campaignName);
                 }
             }
         }
-        if (effect.conditions) {
-            for (const cond of effect.conditions) {
+
+        for (const effect of casterEffects) {
+            if (effect.condition) {
                 const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)
-                const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === cond)
+                const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === effect.condition)
                 if (!stillHasCondition) {
                     const condList = getRuntimeValue(effect.target, 'activeConditions') || []
-                    const filtered = condList.filter(c => utils.getName(c) !== utils.getName(cond))
+                    const filtered = condList.filter(c => utils.getName(c) !== utils.getName(effect.condition))
                     if (filtered.length !== condList.length) {
                         setRuntimeValue(effect.target, 'activeConditions', filtered, campaignName)
-                        logConditionEvent(campaignName, 'removed', effect.target, cond, 'Concentration lost by ' + casterName)
+                        logConditionEvent(campaignName, 'removed', effect.target, effect.condition, 'Concentration lost by ' + casterName)
+                    }
+                }
+            }
+            if (effect.conditions) {
+                for (const cond of effect.conditions) {
+                    const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)
+                    const stillHasCondition = remainingEffectsForTarget.some(te => te.condition === cond)
+                    if (!stillHasCondition) {
+                        const condList = getRuntimeValue(effect.target, 'activeConditions') || []
+                        const filtered = condList.filter(c => utils.getName(c) !== utils.getName(cond))
+                        if (filtered.length !== condList.length) {
+                            setRuntimeValue(effect.target, 'activeConditions', filtered, campaignName)
+                            logConditionEvent(campaignName, 'removed', effect.target, cond, 'Concentration lost by ' + casterName)
+                        }
                     }
                 }
             }

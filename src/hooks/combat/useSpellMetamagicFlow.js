@@ -66,6 +66,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingHealingWord = getPending('healingWord');
   const pendingCureWounds = getPending('cureWounds');
   const pendingStinkingCloud = getPending('stinkingCloud');
+  const pendingWeb = getPending('web');
 
   const [resistanceStage, setResistanceStage] = React.useState(null);
   const [resistanceSelectedTargets, setResistanceSelectedTargets] = React.useState([]);
@@ -411,6 +412,23 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
           spellLevel: spell.level || 0,
           castingTime: spell.casting_time,
           range: spell.range || '90 feet',
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
+    const isWeb = (spell.name || '').toLowerCase() === 'web';
+    if (isWeb) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
+      if (creatureTargets.length > 0) {
+        cfSetPending('web', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || '60 feet',
           creatureTargets,
         });
         return;
@@ -1066,6 +1084,18 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleStinkingCloudSkip = createSkipHandler('stinkingCloud', (pending) => pending.creatureTargets);
 
+  const handleWebConfirm = createConfirmHandler('web', async (pending, result) => {
+    const action = {
+      name: pending.spellName,
+      spell: pending.spell,
+      automation: { type: 'web_area_save', saveType: 'DEX', saveDc: playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2) },
+      metaCtx: { targets: result },
+    };
+    await executeHandler(action, playerStats, campaignName, null);
+  }, (pending) => pending.creatureTargets);
+
+  const handleWebSkip = createSkipHandler('web', (pending) => pending.creatureTargets);
+
   const handleRegenerateConfirm = React.useCallback(async (result) => {
     const pending = getPending('regenerate');
     if (!pending) return;
@@ -1151,5 +1181,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip };
 }

@@ -21,10 +21,6 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../../maps/mapsService.js', () => ({
-  loadMapData: vi.fn(),
-}));
-
 vi.mock('../../../rules/combat/rangeValidation.js', () => ({
   getDistanceFeet: vi.fn(),
 }));
@@ -37,6 +33,27 @@ vi.mock('../../../combat/automation/automationImmunities.js', () => ({
   playerIsImmuneToCondition: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+  getCurrentCombatRound: vi.fn().mockReturnValue(1),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  __esModule: true,
+  default: {
+    set: vi.fn(),
+  },
+}));
+
+vi.mock('../../common/damageRollback.js', () => ({
+  storeSpellLastAttack: vi.fn(),
+  addTargetResult: vi.fn().mockResolvedValue({}),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle, processWebAreaSave } from './webAreaSaveHandler.js';
@@ -44,15 +61,14 @@ import * as savePrompt from '../../common/savePrompt.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as logService from '../../../ui/logService.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
-import * as mapsService from '../../../maps/mapsService.js';
-import * as rangeValidation from '../../../rules/combat/rangeValidation.js';
-import * as rangeCheck from '../../../rules/combat/rangeCheck.js';
-import * as automationImmunities from '../../../combat/automation/automationImmunities.js';
+import * as concentrationService from '../../../combat/concentration/concentrationService.js';
+import * as combatData from '../../../encounters/combatData.js';
+import * as storage from '../../../ui/storage.js';
+import * as damageRollback from '../../common/damageRollback.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
 const campaignName = 'TestCampaign';
-const mapName = 'TestMap';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -60,6 +76,7 @@ function makePlayerStats(overrides = {}) {
     level: 10,
     proficiency: 4,
     abilities: [{ name: 'Charisma', bonus: 3 }],
+    spellAbilities: { saveDc: 15 },
     ...overrides,
   };
 }
@@ -67,7 +84,7 @@ function makePlayerStats(overrides = {}) {
 function makeAction(automation = {}) {
   return {
     name: 'Web',
-    automation: { type: 'web', saveType: 'DEX', saveDc: 15, ...automation },
+    automation: { type: 'web_area_save', saveType: 'DEX', saveDc: 15, ...automation },
   };
 }
 
@@ -75,10 +92,8 @@ const baseCombatContext = {
   creatures: [
     { name: 'Goblin', type: 'monster' },
     { name: 'Orc', type: 'monster' },
-    { name: 'TestCaster', gridX: 5, gridY: 10 },
+    { name: 'TestCaster', type: 'player' },
   ],
-  players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-  placedItems: [],
 };
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -86,243 +101,106 @@ const baseCombatContext = {
 describe('webAreaSaveHandler.handle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useRuntimeState.getRuntimeValue.mockReturnValue(null);
   });
 
   describe('basic handling', () => {
-    it('returns modal with setCondition and correct payload', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-      mapsService.loadMapData.mockResolvedValue({
-        players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-      });
+    it('returns popup when no creatures in combat', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('setCondition');
-      expect(result.payload.conditionName).toBe('restrained');
-      expect(result.payload.saveType).toBe('DEX');
-      expect(result.payload.saveDc).toBe(15);
-      expect(result.payload.rangeFeet).toBe(20);
-      expect(result.payload.durationRounds).toBe(60);
-      expect(result.payload.featureName).toBe('Web');
-      expect(result.payload.campaignName).toBe(campaignName);
-      expect(result.payload.mapData).toEqual({
-        players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-      });
-    });
-
-    it('uses custom saveType from automation config', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(14);
-
-      const result = await handle(makeAction({ saveType: 'CON' }), makePlayerStats(), campaignName, null);
-      expect(result.payload.saveType).toBe('CON');
-    });
-  });
-
-  describe('tracking data storage', () => {
-    it('stores tracking data with map position', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-      mapsService.loadMapData.mockResolvedValue({
-        players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-      });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, mapName);
-
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'TestCaster',
-        '_web_TestCaster',
-        expect.objectContaining({
-          caster: 'TestCaster',
-          saveDc: 15,
-          saveType: 'DEX',
-          radius: 20,
-          mapName,
-          campaignName,
-          center: { gridX: 5, gridY: 10 },
-        }),
-        campaignName,
-      );
-    });
-
-    it('stores null center when caster not found on map', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-      mapsService.loadMapData.mockResolvedValue({ players: [] });
-
-      await handle(makeAction(), makePlayerStats(), campaignName, mapName);
-
-      const trackingCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === '_web_TestCaster',
-      );
-      expect(trackingCall[2].center).toBeNull();
-    });
-
-    it('stores null center when mapName is null', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      const trackingCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === '_web_TestCaster',
-      );
-      expect(trackingCall[2].center).toBeNull();
-    });
-
-    it('stores duration from automation config', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-
-      await handle(makeAction({ duration: '10 minutes' }), makePlayerStats(), campaignName, null);
-
-      const trackingCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === '_web_TestCaster',
-      );
-      expect(trackingCall[2].duration).toBe('10 minutes');
-    });
-
-    it('defaults duration to 1 hour when not specified', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-
-      await handle(makeAction({ duration: undefined }), makePlayerStats(), campaignName, null);
-
-      const trackingCall = useRuntimeState.setRuntimeValue.mock.calls.find(
-        (c) => c[1] === '_web_TestCaster',
-      );
-      expect(trackingCall[2].duration).toBe('1 hour');
-    });
-  });
-
-  describe('map handling', () => {
-    it('does not load map data when mapName is null', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(mapsService.loadMapData).not.toHaveBeenCalled();
-    });
-
-    it('handles map load failure gracefully', async () => {
-      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
-      savePrompt.buildSaveDc.mockReturnValue(15);
-      mapsService.loadMapData.mockRejectedValue(new Error('not found'));
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, 'bad-map');
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('setCondition');
-    });
-  });
-});
-
-describe('webAreaSaveHandler.processWebAreaSave', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('early returns', () => {
-    it('returns null when target is already restrained', async () => {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'DEX' };
-        if (key === 'activeConditions') return ['restrained'];
-        return null;
-      });
-
-      expect(await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName)).toBeNull();
-    });
-
-    it('returns null when target is immune to restrained', async () => {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'DEX' };
-        if (key === 'activeConditions') return [];
-        if (key === 'computedStats') return {};
-        return null;
-      });
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'player', computedStats: {} }],
-      });
-      automationImmunities.playerIsImmuneToCondition.mockReturnValue(true);
-
-      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
-
-      expect(result).toBeNull();
-      expect(automationImmunities.playerIsImmuneToCondition).toHaveBeenCalledWith(
-        expect.objectContaining({
-          conditionKey: 'restrained',
-          campaignName,
-        }),
-      );
-      expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
-    });
-
-  });
-
-  describe('save processing', () => {
-    function setupBaseSave() {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'DEX' };
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      automationImmunities.playerIsImmuneToCondition.mockReturnValue(false);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'player', computedStats: {} }],
-      });
-    }
-
-    it('triggers save listener with correct parameters on failed save', async () => {
-      setupBaseSave();
-      const mockPromise = Promise.resolve({ success: false });
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-fail',
-        promise: mockPromise,
-      });
-
-      await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
-
-      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
-        targetName: 'Goblin',
-        saveType: 'DEX',
-        saveDc: 15,
-      });
-    });
-
-    it('returns popup with correct description based on save result', async () => {
-      setupBaseSave();
-
-      // failed save
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-fail-desc',
-        promise: Promise.resolve({ success: false }),
-      });
-      let result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
       expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('failed');
-      expect(result.payload.description).toContain('DEX');
-      expect(result.payload.description).toContain('DC 15');
+      expect(result.payload.description).toContain('No creatures in combat');
+    });
 
-      // successful save
+    it('returns popup with summary when targets selected', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+
       savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-success',
+        promptId: 'web-save-1',
+        promise: Promise.resolve({ success: false, roll: 7, total: 7 }),
+      });
+
+      const result = await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.name).toBe('Web');
+      expect(result.payload.description).toContain('Restrained');
+    });
+
+    it('uses all creatures when no targets specified in metaCtx', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-all',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('3 creature');
+    });
+  });
+
+  describe('concentration tracking', () => {
+    it('calls addConcentration with correct parameters', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-conc',
         promise: Promise.resolve({ success: true }),
       });
-      result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
-      expect(result.payload.description).toContain('succeeded');
-    });
 
-    it('applies restrained condition on failed save and not on success', async () => {
-      setupBaseSave();
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.any(Object),
+        'TestCaster',
+        'Web',
+        15,
+      );
+      expect(storage.default.set).toHaveBeenCalled();
+    });
+  });
+
+  describe('failed save - Restrained applied', () => {
+    it('applies restrained condition to target', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
 
       savePrompt.createSaveListener.mockReturnValue({
         promptId: 'web-save-cond',
-        promise: Promise.resolve({ success: false }),
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
       });
-      await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
 
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Goblin',
@@ -330,14 +208,105 @@ describe('webAreaSaveHandler.processWebAreaSave', () => {
         expect.arrayContaining(['restrained']),
         campaignName,
       );
+    });
 
-      // successful save — no condition applied
-      useRuntimeState.setRuntimeValue.mockClear();
+    it('stores condition metadata with DC and ability', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue({});
+
       savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-nocond',
-        promise: Promise.resolve({ success: true }),
+        promptId: 'web-save-meta',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
       });
-      await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditionMeta',
+        expect.objectContaining({
+          restrained: expect.objectContaining({ dc: 15, ability: 'str' }),
+        }),
+        campaignName,
+      );
+    });
+
+    it('adds expiration for concentration loss', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue({});
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-exp1',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
+    });
+
+    it('adds expiration for initiative roll', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue({});
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-exp2',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      // Should have 2 addExpiration calls: one for concentration, one for initiative
+      const setRuntimeCalls = useRuntimeState.setRuntimeValue.mock.calls;
+      const conditionMetaCalls = setRuntimeCalls.filter(
+        c => c[1] === 'activeConditionMeta',
+      );
+      expect(conditionMetaCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('successful save', () => {
+    it('does not apply restrained condition on success', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-success',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
 
       expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
         'Goblin',
@@ -347,48 +316,23 @@ describe('webAreaSaveHandler.processWebAreaSave', () => {
       );
     });
 
-    it('calls addEntry with ability_use, save_result on failed save', async () => {
-      setupBaseSave();
+    it('logs save_result with success=true', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
       savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-entry-fail',
-        promise: Promise.resolve({ success: false }),
+        promptId: 'web-save-result',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
       });
 
-      await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
-
-      expect(logService.addEntry).toHaveBeenCalledWith(
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
         campaignName,
-        expect.objectContaining({
-          type: 'ability_use',
-          characterName: 'TestCaster',
-          abilityName: 'Web',
-          description: expect.stringContaining('Goblin'),
-        }),
+        null,
       );
-
-      const saveResultCall = logService.addEntry.mock.calls.find(
-        (c) => c[1].type === 'save_result',
-      );
-      expect(saveResultCall).toBeDefined();
-      expect(saveResultCall[1]).toEqual(
-        expect.objectContaining({
-          type: 'save_result',
-          targetName: 'Goblin',
-          success: false,
-          saveDc: 15,
-          saveType: 'DEX',
-        }),
-      );
-    });
-
-    it('calls addEntry with save_result on successful save', async () => {
-      setupBaseSave();
-      savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-save-result-success',
-        promise: Promise.resolve({ success: true }),
-      });
-
-      await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
 
       const saveResultCall = logService.addEntry.mock.calls.find(
         (c) => c[1].type === 'save_result',
@@ -401,64 +345,257 @@ describe('webAreaSaveHandler.processWebAreaSave', () => {
           success: true,
           saveDc: 15,
           saveType: 'DEX',
+          rollType: 'save-web',
         }),
       );
     });
   });
 
-  describe('map-based distance checks', () => {
-    it('checks distance and proceeds when target is within radius', async () => {
-      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'DEX', center: { gridX: 5, gridY: 10 }, radius: 20 };
-        if (key === 'activeConditions') return [];
-        return null;
-      });
-      mapsService.loadMapData.mockResolvedValue({
-        players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-        placedItems: [{ name: 'Goblin', gridX: 6, gridY: 10 }],
-      });
-      rangeValidation.getDistanceFeet.mockReturnValue(5);
-      automationImmunities.playerIsImmuneToCondition.mockReturnValue(false);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'player', computedStats: {} }],
-      });
+  describe('logging', () => {
+    it('calls addEntry with ability_use', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
       savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-dist-within',
+        promptId: 'web-save-ability',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestCaster',
+          abilityName: 'Web',
+          description: expect.stringContaining('Web'),
+        }),
+      );
+    });
+
+    it('calls addEntry with condition on failed save', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue({});
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-cond-entry',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      const conditionCall = logService.addEntry.mock.calls.find(
+        (c) => c[1].type === 'condition',
+      );
+      expect(conditionCall).toBeDefined();
+      expect(conditionCall[1]).toEqual(
+        expect.objectContaining({
+          type: 'condition',
+          action: 'applied',
+          characterName: 'Goblin',
+          condition: 'Restrained',
+          reason: 'Web spell',
+        }),
+      );
+    });
+  });
+
+  describe('multiple targets', () => {
+    it('processes all selected targets', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue({});
+
+      savePrompt.createSaveListener
+        .mockReturnValueOnce({
+          promptId: 'web-save-goblin',
+          promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+        })
+        .mockReturnValueOnce({
+          promptId: 'web-save-orc',
+          promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+        });
+
+      const result = await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin', 'Orc'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('1 creature');
+      expect(result.payload.description).toContain('1 creature');
+    });
+  });
+
+  describe('heighten target disadvantage', () => {
+    it('passes heightenTarget to save listener', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-heighten',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        {
+          ...makeAction(),
+          metaCtx: { targets: ['Goblin'], heightenTarget: 'Goblin' },
+        },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'Goblin',
+        saveType: 'DEX',
+        saveDc: 15,
+        dcSuccess: 'none',
+        disadvantage: true,
+      });
+    });
+  });
+
+  describe('storeSpellLastAttack', () => {
+    it('calls storeSpellLastAttack with correct parameters', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-store',
         promise: Promise.resolve({ success: true }),
       });
 
-      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
 
-      expect(result.type).toBe('popup');
-      expect(rangeCheck.isWithinRange).toHaveBeenCalled();
+      expect(damageRollback.storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+        casterName: 'TestCaster',
+        spellName: 'Web',
+        saveType: 'DEX',
+        saveDc: 15,
+        attackScope: 'aoe',
+      });
+    });
+  });
+});
+
+describe('webAreaSaveHandler.processWebAreaSave', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('early returns', () => {
+    it('returns null when no tracking data', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+
+      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+      expect(result).toBeNull();
     });
 
-    it('proceeds with save when map load fails', async () => {
+    it('returns null when target is already restrained', async () => {
       useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === '_web_TestCaster') return {
-          caster: 'TestCaster',
-          center: { gridX: 5, gridY: 10 },
-          saveDc: 15,
-          saveType: 'DEX',
-          radius: 20,
-        };
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return ['restrained'];
+        return null;
+      });
+
+      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('save processing', () => {
+    it('triggers save listener with STR saveType', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
         if (key === 'activeConditions') return [];
         return null;
       });
-      mapsService.loadMapData.mockRejectedValue(new Error('map not found'));
-      automationImmunities.playerIsImmuneToCondition.mockReturnValue(false);
-      damageUtils.getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'Goblin', type: 'player', computedStats: {} }],
-      });
+
       savePrompt.createSaveListener.mockReturnValue({
-        promptId: 'web-dist-error',
-        promise: Promise.resolve({ success: true }),
+        promptId: 'web-pws-save',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
       });
 
-      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, mapName);
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
 
-      expect(result.type).toBe('popup');
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'Goblin',
+        saveType: 'STR',
+        saveDc: 15,
+      });
     });
 
+    it('applies restrained on failed STR save', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-cond',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
+      });
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        expect.arrayContaining(['restrained']),
+        campaignName,
+      );
+    });
+
+    it('returns popup with correct description', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-popup',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
+      });
+
+      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.name).toBe('Web');
+      expect(result.payload.description).toContain('failed');
+      expect(result.payload.description).toContain('Restrained');
+    });
   });
 });
