@@ -21,7 +21,7 @@ button.creature-badge {
   cursor: pointer;
   color: inherit;
   font-family: inherit;
-  font-size: inherit;
+  font-size: 0.55em;
   font-weight: inherit;
   line-height: inherit;
 }

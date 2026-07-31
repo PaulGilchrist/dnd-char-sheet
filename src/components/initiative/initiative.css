@@ -546,7 +546,7 @@
     border-radius: 4px;
     background-color: rgba(147, 51, 234, 0.2);
     color: inherit;
-    font-size: 0.7em;
+    font-size: 0.55em;
     cursor: pointer;
     opacity: 1;
     transition: opacity 0.15s ease, background-color 0.15s ease;
