@@ -179,6 +179,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredGlobeEffects, campaignName, true);
             }
 
+            // Clear Antimagic Field on initiative roll (new combat)
+            const amfEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredAmfEffects = amfEffects.filter(te => te.effect !== 'antimagic_field');
+            if (filteredAmfEffects.length !== amfEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredAmfEffects, campaignName, true);
+            }
+
             // Clear Regenerate on initiative roll (new combat)
             const regenEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const filteredRegenEffects = regenEffects.filter(te => te.effect !== 'regenerate');

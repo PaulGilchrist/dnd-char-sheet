@@ -204,6 +204,7 @@ import { handle as handleDominatePerson } from './handlers/spells/dominatePerson
 import { handle as handleSleep } from './handlers/spells/sleepHandler.js';
 import { handle as handleSleepShake } from './handlers/spells/sleepShakeHandler.js';
 import { handle as handleGlobeOfInvulnerability } from './handlers/spells/globeOfInvulnerabilityHandler.js';
+import { handle as handleAntimagicField } from './handlers/spells/antimagicFieldHandler.js';
 import { handle as handleGreaseAreaSave } from './handlers/spells/greaseAreaSaveHandler.js';
 import { handle as handleGreaterRestoration, applyGreaterRestoration as applyGreaterRestorationEffect } from './handlers/spells/greaterRestorationHandler.js';
 import { handle as handleLesserRestoration, applyLesserRestoration as applyLesserRestorationEffect } from './handlers/spells/lesserRestorationHandler.js';
@@ -489,6 +490,7 @@ const HANDLER_MAP = {
         dominate_monster: handleDominateMonster,
         dominate_person: handleDominatePerson,
         globe_of_invulnerability: handleGlobeOfInvulnerability,
+        antimagic_field: handleAntimagicField,
         grease_area_save: handleGreaseAreaSave,
         web_area_save: handleWebAreaSave,
         greater_restoration: handleGreaterRestoration,

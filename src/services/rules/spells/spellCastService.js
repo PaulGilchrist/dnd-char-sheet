@@ -158,6 +158,54 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return globeBlock;
     }
 
+    // Antimagic Field — block spell casting when caster or target is affected
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const antimagicEffects = storedEffects.filter(te => te.effect === 'antimagic_field');
+    const casterAffected = antimagicEffects.some(te => te.target === playerStats.name);
+    const targetAffected = globeTargetName ? antimagicEffects.some(te => te.target === globeTargetName) : false;
+
+    if (casterAffected) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: playerStats.name,
+            name: 'Antimagic Field',
+            description: `${spell.name} blocked — caster is within Antimagic Field.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Antimagic Field',
+                    description: `${spell.name} is blocked by Antimagic Field affecting ${playerStats.name}.`,
+                },
+            },
+        };
+    }
+
+    if (targetAffected && globeTargetName) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: playerStats.name,
+            name: 'Antimagic Field',
+            description: `${spell.name} blocked — ${globeTargetName} is within Antimagic Field.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Antimagic Field',
+                    description: `${spell.name} is blocked by Antimagic Field protecting ${globeTargetName}.`,
+                },
+            },
+        };
+    }
+
     // Compute hasInvisible early so it's available for all spell paths
     const magicalAmbush = (function () {
         const passives = playerStats.automation?.passives;

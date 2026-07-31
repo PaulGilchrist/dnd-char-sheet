@@ -471,7 +471,7 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     // Clear Globe of Invulnerability target effects on short rest
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     if (Array.isArray(storedEffects)) {
-      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier');
+      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field');
       setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
     }
 
@@ -663,7 +663,7 @@ export async function applyLongRest(playerStats, campaignName) {
       // Clear Globe of Invulnerability target effects on long rest
       const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
       if (Array.isArray(storedEffects)) {
-        setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier'), campaignName);
+        setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field'), campaignName);
       }
 
       // Clear Awakened Mind target on long rest

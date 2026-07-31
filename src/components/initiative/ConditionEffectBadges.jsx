@@ -186,6 +186,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Globe of Invulnerability', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'globe_barrier', tooltip: `Protected by Globe of Invulnerability from ${casterName} — spells of 5th level or lower blocked` })
     }
 
+    const amfEffect = targetEffects?.find(te => te.effect === 'antimagic_field' && te.target === creatureName)
+    if (amfEffect) {
+        const casterName = amfEffect.source || 'unknown'
+        badges.push({ label: 'Antimagic Field', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'target_effect', effectType: 'antimagic_field', tooltip: `Affected by Antimagic Field from ${casterName} — only weapon attacks allowed` })
+    }
+
     const regenEffect = targetEffects?.find(te => te.effect === 'regenerate' && te.target === creatureName)
     if (regenEffect) {
         const casterName = regenEffect.source || 'unknown'

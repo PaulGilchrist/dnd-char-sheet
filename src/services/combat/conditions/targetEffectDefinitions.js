@@ -201,6 +201,15 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Spells ──────────────────────────────────────────────
   {
+    effect: 'antimagic_field',
+    label: 'Antimagic Field',
+    description: 'Only weapon attacks are allowed. All magic and spells are suppressed within the field. Expires on concentration loss, initiative roll, short rest, or long rest.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'globe_barrier',
     label: 'Globe of Invulnerability',
     description: 'Creatures inside the globe are protected from spells of 5th level or lower from outside the barrier.',

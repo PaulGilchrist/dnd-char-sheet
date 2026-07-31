@@ -235,6 +235,55 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             }
         }
 
+        // Antimagic Field — allow only weapon attacks when either attacker or target is affected
+        const amfStoredEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const amfEffects = amfStoredEffects.filter(te => te.effect === 'antimagic_field');
+        const attackerAffected = amfEffects.some(te => te.target === playerName);
+        const targetAffected = targetName ? amfEffects.some(te => te.target === targetName) : false;
+
+        if ((attackerAffected || targetAffected) && targetName) {
+            const isWeaponAttack = attack.type === 'weapon_attack' || attack.weaponType || attack.isWeaponAttack !== false;
+            if (!isWeaponAttack) {
+                return {
+                    isAutoMiss: true,
+                    rangeReason: 'Antimagic Field blocks non-weapon attacks',
+                    notice: 'Attack blocked by Antimagic Field — only weapon attacks are allowed.',
+                    damageType: attack.damageType || attack.damage_type_primary || '',
+                    resistanceNotice: null,
+                    hunterLoreNotice: null,
+                    targetName,
+                    saveDc: attack.saveDc || 0,
+                    saveType: attack.saveType,
+                    dcSuccess: attack.saveSuccess,
+                    attackerName: playerName,
+                    forcedMode: undefined,
+                    advantageReason: null,
+                    autoDamageFormula: null,
+                    autoDamageName: attack.name,
+                    ramActive: false,
+                    isMelee: false,
+                    isWeaponAttack: false,
+                    criticalRange: '',
+                    hitBonus: 0,
+                    hitBonusFormula: null,
+                    sacredWeaponBonus: 0,
+                    defensiveDuelistBonus: 0,
+                    baitAndSwitchBonus: 0,
+                    strokeOfLuck: false,
+                    boonOfCombatProwess: false,
+                    boonOfFate: false,
+                    isPsychicBlade: attack.isPsychicBlade === true,
+                    playerStats,
+                    grazeDamage: false,
+                    grazeAbilityName: null,
+                    grazeAbilityMod: 0,
+                    weaponType: attack.weaponType,
+                    weaponName: attack.name,
+                    sneakAttackDice: 0,
+                };
+            }
+        }
+
         // Brutal Strike: override to normal when chosen
         const brutalStrikeNoAdvantage = getRuntimeValue(playerStats.name, '_brutalStrikeNoAdvantage', campaignName);
         if (brutalStrikeNoAdvantage) {
