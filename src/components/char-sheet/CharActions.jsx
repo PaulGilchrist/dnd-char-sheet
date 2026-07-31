@@ -1469,6 +1469,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                         const resolvedDamage = spell.heal_at_slot_level ? '' : resolveSpellDamageAtLevel(spell, playerStats.level);
                         const autoHit = isAutoHitSpell(spell);
                         const isSpellAtk = !spell.dc;
+                        const hasAttackType = spell.attack_type != null && spell.attack_type !== '';
                         const attackItem = { ...spell, type: 'Action', hitBonus: playerStats.spellAbilities?.toHit, saveDc: spell.dc ? playerStats.spellAbilities.saveDc : null, saveType: spell.dc?.dc_type, saveSuccess: spell.dc?.dc_success, damage: resolvedDamage, damageType };
                         return <React.Fragment key={spell.name}>
                             <div className='left clickable' onClick={() => handleActionSpellClick(spell.name)}>{spell.name}</div>
@@ -1476,9 +1477,11 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                             <div>{formatRange(spell.range)}</div>
                             {autoHit
                                 ? <div></div>
-                                : isSpellAtk
+                                : isSpellAtk && hasAttackType
                                     ? <div className={"clickable" + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? " stat--penalized" : "") + (cannotAct ? " disabled-attack" : "")} onClick={() => handleSpellAttackClick(attackItem)}>{signFormatter.format(playerStats.spellAbilities?.toHit - exhaustionPenalty)}</div>
-                                    : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc + displaySaveDcBonus} {spell.dc?.dc_type}</div>}
+                                    : isSpellAtk && !hasAttackType
+                                        ? <div></div>
+                                        : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc + displaySaveDcBonus} {spell.dc?.dc_type}</div>}
                             <div className={resolvedDamage ? "clickable" : ""} onClick={() => {
                                 if (cannotAct) return;
                                 if (isSpellAtk && spell.saveDc) { resolveSpellDamage(attackItem); return; }

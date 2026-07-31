@@ -5,6 +5,8 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn((_, key) => {
     if (key === 'activeConditions' || key === 'targetEffects') return []
+    if (key === 'hitPoints') return 100
+    if (key === 'currentHitPoints') return 30
     return undefined
   }),
 }))
@@ -383,6 +385,8 @@ describe('executeSpellCast - utility functions & edge cases', () => {
     await resetMockImplementations()
     mockGetRuntimeValue((_, key) => {
       if (key === 'activeConditions' || key === 'targetEffects') return []
+      if (key === 'hitPoints') return 100
+      if (key === 'currentHitPoints') return 30
       return undefined
     })
   })
@@ -765,6 +769,7 @@ describe('executeSpellCast - utility functions & edge cases', () => {
     it('uses spell.level when metaCtx.slotLevel is null', async () => {
       const services = makeServices({
         getTargetInfo: vi.fn(async () => ({ name: 'Target' })),
+        characters: [{ name: 'Target', type: 'player' }],
       })
       vi.mocked(applyHealing.applyHealingToTarget).mockReturnValue({ actualHeal: 70, oldHp: 30, newHp: 100 })
       vi.mocked(damageUtils.getCombatContext).mockResolvedValue({
@@ -781,6 +786,7 @@ describe('executeSpellCast - utility functions & edge cases', () => {
     it('uses highest slot level when exact level not found in heal_at_slot_level', async () => {
       const services = makeServices({
         getTargetInfo: vi.fn(async () => ({ name: 'Target' })),
+        characters: [{ name: 'Target', type: 'player' }],
       })
       vi.mocked(applyHealing.applyHealingToTarget).mockReturnValue({ actualHeal: 50, oldHp: 50, newHp: 100 })
       vi.mocked(damageUtils.getCombatContext).mockResolvedValue({
@@ -892,6 +898,7 @@ describe('executeSpellCast - utility functions & edge cases', () => {
 
       const services = makeServices({
         getTargetInfo: vi.fn(async () => ({ name: 'Target' })),
+        characters: [{ name: 'Target', type: 'player' }],
       })
 
       const spell = makeSpell({

@@ -491,18 +491,21 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                     const resolvedDamage = spell.heal_at_slot_level ? '' : resolveSpellDamageAtLevel(spell, playerStats.level);
                     const autoHit = isAutoHitSpell(spell);
                     const isSpellAtk = !spell.dc;
+                    const hasAttackType = spell.attack_type != null && spell.attack_type !== '';
                     return <React.Fragment key={spell.name}>
                         <div className='left clickable' onClick={() => setSelectedSpell(spell)}>{spell.name}</div>
                         <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                         <div>{spell.range}</div>
                         {autoHit
                             ? <div></div>
-                            : isSpellAtk
+                            : isSpellAtk && hasAttackType
                                 ? <div className={"clickable" + (cannotAct ? " disabled-attack" : "")} onClick={() => {
                                     const attackItem = { ...spell, type: 'Reaction', hitBonus: playerStats.spellAbilities?.toHit, saveDc: null, saveType: null, saveSuccess: null, damage: resolvedDamage, damageType };
                                     rollAttack(attackItem.name, attackItem.hitBonus, { forcedMode: undefined });
                                 }}>{signFormatter.format(playerStats.spellAbilities?.toHit)}</div>
-                                : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc} {spell.dc?.dc_type}</div>}
+                                : isSpellAtk && !hasAttackType
+                                    ? <div></div>
+                                    : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc} {spell.dc?.dc_type}</div>}
                         <div className={resolvedDamage ? "clickable" : ""} onClick={() => {
                             if (cannotAct) return;
                             reactionCastAction(spell, {});

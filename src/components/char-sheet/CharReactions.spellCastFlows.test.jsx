@@ -247,7 +247,7 @@ describe('CharReactions - Spell Cast Flows', () => {
     const stats = { ...basePlayerStats, spellAbilities: { toHit: 6, saveDc: 15, spells: [
       { name: 'Healing Word', casting_time: '1 reaction', range: '60 feet', prepared: 'Prepared', heal_at_slot_level: { 1: '1d4+1' } },
       { name: 'Shield', casting_time: '1 reaction', range: 'Self', prepared: 'Prepared' },
-      { name: 'Toll the Dead', casting_time: '1 reaction', range: '60 feet', prepared: 'Prepared', level: 0, damage: { damage_at_character_level: { 1: '1d8' } } },
+      { name: 'Toll the Dead', casting_time: '1 reaction', range: '60 feet', prepared: 'Prepared', level: 0, damage: { damage_at_character_level: { 1: '1d8' } }, attack_type: 'ranged' },
       { name: 'Protection from Energy', casting_time: '1 reaction', range: 'Contact', prepared: 'Prepared', dc: { dc_type: 'CON' } },
     ] } };
     render(<CharReactions {...baseProps} playerStats={stats} />);

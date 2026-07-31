@@ -11,6 +11,8 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn((_char, key) => {
     if (key === 'activeConditions' || key === 'targetEffects') return []
+    if (key === 'hitPoints') return 100
+    if (key === 'currentHitPoints') return 20
     return undefined
   }),
 }))
@@ -166,6 +168,8 @@ describe('executeSpellCast - heal spells', () => {
     vi.clearAllMocks()
     vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
       if (key === 'activeConditions' || key === 'targetEffects') return []
+      if (key === 'hitPoints') return 100
+      if (key === 'currentHitPoints') return 30
       return undefined
     })
     vi.mocked(damageUtils.getCombatContext).mockResolvedValue(null)
@@ -176,7 +180,7 @@ describe('executeSpellCast - heal spells', () => {
     it('falls through to generic heal_at_slot_level path in executeSpellCast', async () => {
       mockCombatContext('Target', 30, 100)
       mockHealingResult(70, 30, 100)
-      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }) })
+      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }), characters: [{ name: 'Target', type: 'player' }] })
 
       await executeSpellCast(makeSpell(), { slotLevel: 6 }, services)
 
@@ -187,7 +191,7 @@ describe('executeSpellCast - heal spells', () => {
       vi.mocked(runtime.getRuntimeValue).mockReturnValue(['Blinded', 'Deafened', 'Poisoned', 'Prone'])
       mockCombatContext('Target', 30, 100)
       mockHealingResult(70, 30, 100)
-      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }) })
+      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }), characters: [{ name: 'Target', type: 'player' }] })
 
       await executeSpellCast(makeSpell(), { slotLevel: 6 }, services)
 
@@ -302,7 +306,7 @@ describe('executeSpellCast - heal spells', () => {
     it('applies healing when combat context and target exist', async () => {
       mockCombatContext('Target', 20, 100)
       mockHealingResult(10, 20, 30)
-      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }) })
+      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }), characters: [{ name: 'Target', type: 'player' }] })
 
       const spell = makeSpell({
         name: 'Cure Wounds',
@@ -316,7 +320,7 @@ describe('executeSpellCast - heal spells', () => {
     })
 
     it('does nothing when combat context is null or target is undefined', async () => {
-      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }) })
+      const services = makeServices({ getTargetInfo: async () => ({ name: 'Target' }), characters: [{ name: 'Target', type: 'player' }] })
 
       const spell = makeSpell({
         name: 'Cure Wounds',

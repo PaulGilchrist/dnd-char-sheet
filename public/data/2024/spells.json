@@ -1034,11 +1034,7 @@
     ],
     "subclasses": [],
     "area_of_effect": null,
-    "status_effects": [],
-    "dc": {
-      "dc_type": "WIS",
-      "dc_success": "none"
-    }
+    "status_effects": []
   },
   {
     "index": "befuddlement",
