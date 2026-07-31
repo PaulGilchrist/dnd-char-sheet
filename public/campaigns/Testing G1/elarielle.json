@@ -115,14 +115,16 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Lesser Restoration",
-    "Power Word Fortify",
-    "Ray of Enfeeblement",
-    "Regenerate",
-    "Remove Curse",
-    "Resistance",
-    "Power Word Stun",
-    "Cure Wounds"
+    "Stinking Cloud",
+    "Suggestion",
+    "Mass Suggestion",
+    "Web",
+    "Animal Friendship",
+    "Antimagic Field",
+    "Arcane Vigor",
+    "Aura of Life",
+    "Aura of Purity",
+    "Aura of Vitality"
   ],
   "magicInitiateInstances": [
     {

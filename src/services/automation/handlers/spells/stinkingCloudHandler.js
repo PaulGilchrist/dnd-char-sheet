@@ -5,20 +5,25 @@ import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import storage from '../../../ui/storage.js';
 
 /**
- * Stinking Cloud spell handler for 2024 ruleset.
+ * Stinking Cloud spell handler.
  * Mechanics:
  * - 20-foot-radius Sphere of yellow, nauseating gas, Heavily Obscured
  * - Concentration, up to 1 minute
  * - CON save or Poisoned condition until end of current turn
  * - While Poisoned by Stinking Cloud: can't take Action or Bonus Action
+ * - Expires on concentration loss, initiative roll, short rest, long rest
  * - Strong wind (Gust of Wind) disperses the cloud
  */
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
+    const casterName = playerStats.name;
 
     const cs = await getCombatContext(campaignName);
     if (!cs?.creatures || cs.creatures.length === 0) {
@@ -32,7 +37,20 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const casterName = playerStats.name;
+    // Get selected targets from metaCtx; if none, use all creatures
+    const selectedTargetNames = action.metaCtx?.targets || cs.creatures.map(c => c.name);
+    const targets = cs.creatures.filter(c => selectedTargetNames.includes(c.name));
+
+    if (targets.length === 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No creatures selected for Stinking Cloud.',
+            },
+        };
+    }
 
     storeSpellLastAttack(campaignName, {
         casterName,
@@ -42,18 +60,27 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'aoe',
     });
 
-    const targets = cs.creatures.filter(c => c.name !== casterName);
+    // Register concentration for this spell
+    const combatSummary = getCombatSummary(campaignName);
+    if (combatSummary) {
+        const concentrationDc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+        addConcentration(combatSummary, casterName, 'Stinking Cloud', concentrationDc);
+        storage.set('combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
 
     let affectedCount = 0;
     let savedCount = 0;
+    let immuneCount = 0;
     const results = [];
 
     for (const target of targets) {
         const targetName = target.name;
 
-        // Check for poison immunity
-        if (playerStats.immunities && Array.isArray(playerStats.immunities)) {
-            const hasPoisonImmunity = playerStats.immunities.some(
+        // Check for poison immunity on each target individually
+        const targetImmunities = target.weaknessesAndResistivities?.immunities || [];
+        if (Array.isArray(targetImmunities) && targetImmunities.length > 0) {
+            const hasPoisonImmunity = targetImmunities.some(
                 imm => String(imm).toLowerCase() === 'poison'
             );
             if (hasPoisonImmunity) {
@@ -63,7 +90,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     abilityName: action.name,
                     description: `${targetName} is immune to Stinking Cloud (Poison immunity).`,
                 }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
-                results.push(`${targetName} is immune to Stinking Cloud.`);
+                results.push(`${targetName} is immune.`);
+                immuneCount++;
                 continue;
             }
         }
@@ -124,10 +152,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 appliedDamage: 0,
             });
 
-            // Add expiration for concentration
+            // Add expiration for concentration — Poisoned removed when concentration breaks
             addExpiration(casterName, targetName, [
                 { type: 'condition', condition: 'poisoned' },
             ], campaignName);
+
+            // Also expire poisoned on initiative roll
+            addExpiration(casterName, targetName, [
+                { type: 'condition', condition: 'poisoned' },
+            ], campaignName, undefined, casterName);
 
             addEntry(campaignName, {
                 type: 'condition',
@@ -150,13 +183,34 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 description: `${targetName} failed CON save against Stinking Cloud and is Poisoned.`,
             }).catch((e) => { console.error("[stinkingCloud] Error:", e); });
 
+            // Track Stinking Cloud effect with concentration duration for cleanup
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
+            const stinkingEffect = {
+                target: targetName,
+                effect: 'stinking_cloud',
+                source: casterName,
+                conditions: ['poisoned'],
+                dc: dc,
+                duration: 'concentration',
+            };
+            const existingIdx = effects.findIndex(
+                te => te.target === targetName && te.effect === 'stinking_cloud'
+            );
+            if (existingIdx >= 0) {
+                effects[existingIdx] = stinkingEffect;
+            } else {
+                effects.push(stinkingEffect);
+            }
+            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
+
             results.push(`${targetName} is Poisoned.`);
         }
     }
 
     const summary = affectedCount > 0
-        ? `Stinking Cloud affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Affected creatures are Poisoned (can't take Actions or Bonus Actions) until the end of their current turn.`
-        : `No creatures affected by Stinking Cloud. ${savedCount} creature(s) saved.`;
+        ? `Stinking Cloud affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immuneCount > 0 ? `${immuneCount} creature(s) immune.` : ''} Affected creatures are Poisoned (can't take Actions or Bonus Actions) until the end of their current turn.`
+        : `No creatures affected by Stinking Cloud. ${savedCount} creature(s) saved. ${immuneCount > 0 ? `${immuneCount} creature(s) immune.` : ''}`;
 
     return {
         type: 'popup',

@@ -14,10 +14,6 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
@@ -27,12 +23,29 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  __esModule: true,
+  default: {
+    set: vi.fn(),
+  },
+}));
+
 import { handle } from './stinkingCloudHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 const campaignName = 'TestCampaign';
 
@@ -44,13 +57,14 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-function makeAction(automation = {}) {
+function makeAction(automation = {}, metaCtx = {}) {
   return {
     name: 'Stinking Cloud',
     automation: {
-      type: 'spell',
+      type: 'stinking_cloud',
       ...automation,
     },
+    metaCtx,
   };
 }
 
@@ -65,330 +79,446 @@ const multiTargetCombat = {
   ],
 };
 
-const casterOnlyCombat = {
-  creatures: [{ name: 'TestWizard' }],
-};
-
 describe('stinkingCloudHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     buildSaveDc.mockReturnValue(13);
+    getCombatSummary.mockReturnValue(null);
   });
 
-  describe('handle', () => {
-    describe('combat context validation', () => {
-      it('should return popup when no creatures in combat', async () => {
-        getCombatContext.mockResolvedValue(null);
+  describe('combat context validation', () => {
+    it('should return popup when no creatures in combat', async () => {
+      getCombatContext.mockResolvedValue(null);
 
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.name).toBe('Stinking Cloud');
-        expect(result.payload.description).toContain('No creatures in combat');
-        expect(result.payload.description).toContain('has no effect');
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Stinking Cloud');
+      expect(result.payload.description).toContain('No creatures in combat');
+      expect(result.payload.description).toContain('has no effect');
+    });
+
+    it('should return popup when creatures array is empty', async () => {
+      getCombatContext.mockResolvedValue({ creatures: [] });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No creatures in combat');
+    });
+  });
+
+  describe('target selection', () => {
+    it('should use all creatures when no targets specified in metaCtx', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt',
+        promise: Promise.resolve({ success: true }),
       });
 
-      it('should return popup when creatures array is empty', async () => {
-        getCombatContext.mockResolvedValue({ creatures: [] });
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(createSaveListener).toHaveBeenCalledTimes(2);
+    });
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.description).toContain('No creatures in combat');
+    it('should only process selected targets from metaCtx', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction({}, { targets: ['EnemyGoblin'] }), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledTimes(1);
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'EnemyGoblin',
+        saveType: 'CON',
+        saveDc: 13,
+        dcSuccess: 'none',
+        disadvantage: false,
       });
     });
 
-    describe('target filtering', () => {
-      it('should skip the caster when filtering targets', async () => {
-        getCombatContext.mockResolvedValue(casterOnlyCombat);
+    it('should return popup when selected targets are empty', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
 
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(makeAction({}, { targets: [] }), makePlayerStats(), campaignName, null);
 
-        expect(createSaveListener).not.toHaveBeenCalled();
-        expect(result.payload.description).toContain('No creatures affected');
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No creatures selected');
+    });
+
+    it('should filter to only included creatures', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
       });
 
-      it('should process only non-caster creatures', async () => {
-        getCombatContext.mockResolvedValue({
-          creatures: [
-            { name: 'TestWizard' },
-            { name: 'EnemyGoblin' },
-          ],
-        });
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: true }),
-        });
+      await handle(makeAction({}, { targets: ['EnemyGoblin'] }), makePlayerStats(), campaignName, null);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(createSaveListener).toHaveBeenCalledTimes(1);
+    });
+  });
 
-        expect(createSaveListener).toHaveBeenCalledTimes(1);
-        expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
-          targetName: 'EnemyGoblin',
-          saveType: 'CON',
-          saveDc: 13,
-          dcSuccess: 'none',
-          disadvantage: false,
-        });
+  describe('concentration registration', () => {
+    it('should register concentration when combat summary is available', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const mockCombatSummary = { creatures: [{ name: 'TestWizard' }] };
+      getCombatSummary.mockReturnValue(mockCombatSummary);
+
+      const statsWithSaveDc = makePlayerStats({ spellAbilities: { saveDc: 13 } });
+      await handle(makeAction(), statsWithSaveDc, campaignName, null);
+
+      expect(addConcentration).toHaveBeenCalledWith(
+        mockCombatSummary,
+        'TestWizard',
+        'Stinking Cloud',
+        13
+      );
+    });
+  });
+
+  describe('save success', () => {
+    it('should call createSaveListener with CON save config', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'EnemyGoblin',
+        saveType: 'CON',
+        saveDc: 13,
+        dcSuccess: 'none',
+        disadvantage: false,
       });
     });
 
-    describe('save success', () => {
-      it('should call createSaveListener with CON save config', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: true }),
-        });
-
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
-          targetName: 'EnemyGoblin',
-          saveType: 'CON',
-          saveDc: 13,
-          dcSuccess: 'none',
-          disadvantage: false,
-        });
+    it('should log ability_use and save_result for the caster', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
       });
 
-      it('should log ability_use and save_result for the caster', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: true }),
-        });
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(addEntry).toHaveBeenCalledWith(campaignName, {
-          type: 'ability_use',
-          characterName: 'TestWizard',
-          abilityName: 'Stinking Cloud',
-          description: expect.stringContaining('casts Stinking Cloud'),
-          promptId: 'goblin-prompt',
-        });
-        expect(addEntry).toHaveBeenCalledWith(campaignName, {
-          type: 'save_result',
-          characterName: 'TestWizard',
-          rollType: 'save-stinking-cloud',
-          targetName: 'EnemyGoblin',
-          saveDc: 13,
-          saveType: 'CON',
-          success: true,
-          description: expect.stringContaining('succeeded on CON save'),
-        });
+      expect(addEntry).toHaveBeenCalledWith(campaignName, {
+        type: 'ability_use',
+        characterName: 'TestWizard',
+        abilityName: 'Stinking Cloud',
+        description: expect.stringContaining('casts Stinking Cloud'),
+        promptId: 'goblin-prompt',
       });
-
-      it('should include saved count in popup description', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: true }),
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.payload.description).toContain('1 creature(s) saved');
-        expect(result.payload.description).toContain('No creatures affected');
+      expect(addEntry).toHaveBeenCalledWith(campaignName, {
+        type: 'save_result',
+        characterName: 'TestWizard',
+        rollType: 'save-stinking-cloud',
+        targetName: 'EnemyGoblin',
+        saveDc: 13,
+        saveType: 'CON',
+        success: true,
+        description: expect.stringContaining('succeeded on CON save'),
       });
     });
 
-    describe('save failure', () => {
-      it('should set activeConditions with poisoned on failed save', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        getRuntimeValue.mockReturnValue([]);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
-
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'EnemyGoblin',
-          'activeConditions',
-          ['poisoned'],
-          campaignName,
-        );
+    it('should include saved count in popup description', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
       });
 
-      it('should deduplicate poisoned when target already has it', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        getRuntimeValue.mockReturnValue(['poisoned', 'stunned']);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.payload.description).toContain('1 creature(s) saved');
+      expect(result.payload.description).toContain('No creatures affected');
+    });
+  });
 
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-          'EnemyGoblin',
-          'activeConditions',
-          ['stunned', 'poisoned'],
-          campaignName,
-        );
+  describe('save failure', () => {
+    it('should set activeConditions with poisoned on failed save', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
       });
 
-      it('should add expiration for concentration', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        getRuntimeValue.mockReturnValue([]);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(addExpiration).toHaveBeenCalledWith(
-          'TestWizard',
-          'EnemyGoblin',
-          [{ type: 'condition', condition: 'poisoned' }],
-          campaignName,
-        );
-      });
-
-      it('should include poisoned description in popup', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        getRuntimeValue.mockReturnValue([]);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.payload.description).toContain('Poisoned');
-        expect(result.payload.description).toContain('1 creature(s)');
-        expect(result.payload.description).toContain('end of their current turn');
-      });
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'EnemyGoblin',
+        'activeConditions',
+        ['poisoned'],
+        campaignName,
+      );
     });
 
-    describe('poison immunity', () => {
-      it('should skip targets with poison immunity (case-insensitive)', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
-
-        const immuneStats = makePlayerStats({
-          immunities: ['poison'],
-        });
-
-        const result = await handle(makeAction(), immuneStats, campaignName, null);
-
-        expect(createSaveListener).not.toHaveBeenCalled();
-        expect(result.payload.description).toContain('No creatures affected');
+    it('should deduplicate poisoned when target already has it', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue(['poisoned', 'stunned']);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
       });
 
-      it('should not process any targets when caster is immune', async () => {
-        getCombatContext.mockResolvedValue(multiTargetCombat);
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        const immuneStats = makePlayerStats({
-          immunities: ['poison'],
-        });
-
-        await handle(makeAction(), immuneStats, campaignName, null);
-
-        expect(createSaveListener).not.toHaveBeenCalled();
-      });
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'EnemyGoblin',
+        'activeConditions',
+        ['stunned', 'poisoned'],
+        campaignName,
+      );
     });
 
-    describe('multiple targets', () => {
-      it('should process all non-caster creatures', async () => {
-        getCombatContext.mockResolvedValue(multiTargetCombat);
-
-        let callCount = 0;
-        createSaveListener.mockImplementation(() => {
-          callCount++;
-          return {
-            promptId: `goblin-prompt-${callCount}`,
-            promise: Promise.resolve({ success: callCount === 1 }),
-          };
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(createSaveListener).toHaveBeenCalledTimes(2);
-        expect(result.type).toBe('popup');
+    it('should add expiration for concentration', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
       });
 
-      it('should report mixed save results correctly', async () => {
-        getCombatContext.mockResolvedValue(multiTargetCombat);
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        let callCount = 0;
-        createSaveListener.mockImplementation(() => {
-          callCount++;
-          return {
-            promptId: `goblin-prompt-${callCount}`,
-            promise: Promise.resolve({ success: callCount === 1 }),
-          };
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.payload.description).toContain('1 creature(s)');
-        expect(result.payload.description).toContain('1 creature(s) saved');
-      });
-
-      it('should report all targets affected when all fail saves', async () => {
-        getCombatContext.mockResolvedValue(multiTargetCombat);
-        getRuntimeValue.mockReturnValue([]);
-        createSaveListener.mockReturnValue({
-          promptId: 'multi-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.payload.description).toContain('2 creature(s)');
-        expect(result.payload.description).toContain('Poisoned');
-      });
-
-      it('should report all targets saving', async () => {
-        getCombatContext.mockResolvedValue(multiTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'multi-prompt',
-          promise: Promise.resolve({ success: true }),
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.payload.description).toContain('2 creature(s) saved');
-        expect(result.payload.description).toContain('No creatures affected');
-      });
+      expect(addExpiration).toHaveBeenCalledWith(
+        'TestWizard',
+        'EnemyGoblin',
+        [{ type: 'condition', condition: 'poisoned' }],
+        campaignName,
+      );
     });
 
-    describe('popup payload structure', () => {
-      it('should return popup type with automation_info payload', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
-
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.name).toBe('Stinking Cloud');
+    it('should add expiration for initiative roll', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
       });
 
-      it('should use action.name in the popup', async () => {
-        getCombatContext.mockResolvedValue(singleTargetCombat);
-        createSaveListener.mockReturnValue({
-          promptId: 'goblin-prompt',
-          promise: Promise.resolve({ success: false }),
-        });
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-        const customAction = { name: 'Custom Cloud', automation: { type: 'spell' } };
-        const result = await handle(customAction, makePlayerStats(), campaignName, null);
-
-        expect(result.payload.name).toBe('Custom Cloud');
-      });
+      // Should be called twice: once for concentration, once for initiative
+      expect(addExpiration).toHaveBeenCalledTimes(2);
     });
-});
+
+    it('should track stinking_cloud in targetEffects', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        expect.arrayContaining([
+          expect.objectContaining({
+            target: 'EnemyGoblin',
+            effect: 'stinking_cloud',
+            source: 'TestWizard',
+            conditions: ['poisoned'],
+            duration: 'concentration',
+          }),
+        ]),
+        campaignName,
+      );
+    });
+
+    it('should include poisoned description in popup', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Poisoned');
+      expect(result.payload.description).toContain('1 creature(s)');
+      expect(result.payload.description).toContain('end of their current turn');
+    });
+  });
+
+  describe('target immunity', () => {
+    it('should skip targets with poison immunity from target immunities', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const immuneCombat = {
+        creatures: [{ name: 'EnemyGoblin', weaknessesAndResistivities: { immunities: ['poison'] } }],
+      };
+      getCombatContext.mockResolvedValue(immuneCombat);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).not.toHaveBeenCalled();
+      expect(result.payload.description).toContain('immune');
+    });
+
+    it('should check each target immunity individually', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const mixedCombat = {
+        creatures: [
+          { name: 'EnemyGoblin', weaknessesAndResistivities: { immunities: ['poison'] } },
+          { name: 'EnemyOrc' },
+        ],
+      };
+      getCombatContext.mockResolvedValue(mixedCombat);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      // Only Orc should have a save prompt (Goblin is immune)
+      expect(createSaveListener).toHaveBeenCalledTimes(1);
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'EnemyOrc',
+        saveType: 'CON',
+        saveDc: 13,
+        dcSuccess: 'none',
+        disadvantage: false,
+      });
+      expect(result.payload.description).toContain('1 creature(s)');
+      expect(result.payload.description).toContain('immune');
+    });
+
+    it('should report immune count in popup', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const mixedCombat = {
+        creatures: [
+          { name: 'EnemyGoblin', weaknessesAndResistivities: { immunities: ['poison'] } },
+          { name: 'EnemyOrc' },
+        ],
+      };
+      getCombatContext.mockResolvedValue(mixedCombat);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('1 creature(s) immune');
+    });
+  });
+
+  describe('multiple targets', () => {
+    it('should process all creatures when no targets specified', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+
+      let callCount = 0;
+      createSaveListener.mockImplementation(() => {
+        callCount++;
+        return {
+          promptId: `goblin-prompt-${callCount}`,
+          promise: Promise.resolve({ success: callCount === 1 }),
+        };
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledTimes(2);
+      expect(result.type).toBe('popup');
+    });
+
+    it('should report mixed save results correctly', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+
+      let callCount = 0;
+      createSaveListener.mockImplementation(() => {
+        callCount++;
+        return {
+          promptId: `goblin-prompt-${callCount}`,
+          promise: Promise.resolve({ success: callCount === 1 }),
+        };
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('1 creature(s)');
+      expect(result.payload.description).toContain('1 creature(s) saved');
+    });
+
+    it('should report all targets affected when all fail saves', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'multi-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('2 creature(s)');
+      expect(result.payload.description).toContain('Poisoned');
+    });
+
+    it('should report all targets saving', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'multi-prompt',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('2 creature(s) saved');
+      expect(result.payload.description).toContain('No creatures affected');
+    });
+  });
+
+  describe('popup payload structure', () => {
+    it('should return popup type with automation_info payload', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Stinking Cloud');
+    });
+
+    it('should use action.name in the popup', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const customAction = { name: 'Custom Cloud', automation: { type: 'stinking_cloud' }, metaCtx: {} };
+      const result = await handle(customAction, makePlayerStats(), campaignName, null);
+
+      expect(result.payload.name).toBe('Custom Cloud');
+    });
+  });
 });
