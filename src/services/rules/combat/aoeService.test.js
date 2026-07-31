@@ -13,6 +13,7 @@ vi.mock('./applyDamage.js', () => ({
   rollSaveForCreature: vi.fn(),
   computeDamageAfterSave: vi.fn(),
   applyDamageToTarget: vi.fn(),
+  computeDamageAfterEvasion: vi.fn(),
 }));
 
 vi.mock('../../combat/conditions/savePromptService.js', () => ({ sendSavePrompt: vi.fn() }));
@@ -37,8 +38,8 @@ import {
 import { hitTestOverlay } from '../../../models/SpellOverlay.js';
 import {
   rollSaveForCreature,
-  computeDamageAfterSave,
   applyDamageToTarget,
+  computeDamageAfterEvasion,
 } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
@@ -194,7 +195,7 @@ describe('processAoeNpcs', () => {
   it('processes NPC with successful save and applies damage', () => {
     const npc = createNpcCreature('Orc');
     rollSaveForCreature.mockReturnValue({ success: true, roll: 18, bonus: 3 });
-    computeDamageAfterSave.mockReturnValue(3);
+    computeDamageAfterEvasion.mockReturnValue(3);
     applyDamageToTarget.mockReturnValue({ finalDamage: 3, newHp: 17, damageReduced: false });
 
     const result = processAoeNpcs(
@@ -219,7 +220,7 @@ describe('processAoeNpcs', () => {
   it('processes NPC with failed save taking full damage', () => {
     const npc = createNpcCreature('Goblin');
     rollSaveForCreature.mockReturnValue({ success: false, roll: 5, bonus: 0 });
-    computeDamageAfterSave.mockReturnValue(6);
+    computeDamageAfterEvasion.mockReturnValue(6);
     applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 14, damageReduced: true });
 
     const result = processAoeNpcs(
@@ -235,25 +236,25 @@ describe('processAoeNpcs', () => {
   it('applies half damage on success with dcSuccess "half", no damage with "none"', () => {
     let npc = createNpcCreature('Goblin');
     rollSaveForCreature.mockReturnValue({ success: true, roll: 15, bonus: 2 });
-    computeDamageAfterSave.mockReturnValue(4);
+    computeDamageAfterEvasion.mockReturnValue(4);
     applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 16 });
 
     processAoeNpcs(
       makeCombatSummary([npc]), [{ creature: npc }],
       8, 'Fire', 15, 'dexterity', 'half', 'TestCampaign'
     );
-    expect(computeDamageAfterSave).toHaveBeenCalledWith(8, true, 'half');
+    expect(computeDamageAfterEvasion).toHaveBeenCalledWith(8, true, 'half', false);
 
     npc = createNpcCreature('Goblin2');
     rollSaveForCreature.mockReturnValue({ success: true, roll: 20, bonus: 5 });
-    computeDamageAfterSave.mockReturnValue(0);
+    computeDamageAfterEvasion.mockReturnValue(0);
     applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 20 });
 
     processAoeNpcs(
       makeCombatSummary([npc]), [{ creature: npc }],
       10, 'Fire', 15, 'dexterity', 'none', 'TestCampaign'
     );
-    expect(computeDamageAfterSave).toHaveBeenCalledWith(10, true, 'none');
+    expect(computeDamageAfterEvasion).toHaveBeenCalledWith(10, true, 'none', false);
   });
 
   it('handles multiple NPCs independently with different outcomes', () => {
@@ -263,7 +264,7 @@ describe('processAoeNpcs', () => {
     rollSaveForCreature
       .mockReturnValueOnce({ success: true, roll: 15, bonus: 2 })
       .mockReturnValueOnce({ success: false, roll: 3, bonus: -1 });
-    computeDamageAfterSave
+    computeDamageAfterEvasion
       .mockReturnValueOnce(3)
       .mockReturnValueOnce(8);
     applyDamageToTarget
@@ -285,7 +286,7 @@ describe('processAoeNpcs', () => {
   it('calls applyDamageToTarget with correct parameters', () => {
     const npc = createNpcCreature('Troll');
     rollSaveForCreature.mockReturnValue({ success: false, roll: 7, bonus: 1 });
-    computeDamageAfterSave.mockReturnValue(5);
+    computeDamageAfterEvasion.mockReturnValue(5);
     applyDamageToTarget.mockReturnValue({ finalDamage: 5, newHp: 15 });
 
     processAoeNpcs(
@@ -298,10 +299,10 @@ describe('processAoeNpcs', () => {
     );
   });
 
-  it('uses finalDamage from applyDamageToTarget when it differs from computeDamageAfterSave', () => {
+  it('uses finalDamage from applyDamageToTarget when it differs from computeDamageAfterEvasion', () => {
     const npc = createNpcCreature('Dragon');
     rollSaveForCreature.mockReturnValue({ success: false, roll: 8, bonus: 2 });
-    computeDamageAfterSave.mockReturnValue(5);
+    computeDamageAfterEvasion.mockReturnValue(5);
     applyDamageToTarget.mockReturnValue({ finalDamage: 2, newHp: 18 });
 
     const result = processAoeNpcs(
@@ -312,10 +313,10 @@ describe('processAoeNpcs', () => {
     expect(result[0].finalDamage).toBe(2);
   });
 
-  it('falls back to computeDamageAfterSave when applyDamageToTarget returns null', () => {
+  it('falls back to computeDamageAfterEvasion when applyDamageToTarget returns null', () => {
     const npc = createNpcCreature('Golem');
     rollSaveForCreature.mockReturnValue({ success: true, roll: 20, bonus: 5 });
-    computeDamageAfterSave.mockReturnValue(0);
+    computeDamageAfterEvasion.mockReturnValue(0);
     applyDamageToTarget.mockReturnValue(null);
 
     const result = processAoeNpcs(
@@ -330,7 +331,7 @@ describe('processAoeNpcs', () => {
     const npc = createNpcCreature('Orc');
     npc.saveBonuses = { dexterity: 3 };
     rollSaveForCreature.mockReturnValue({ success: false, roll: 10, bonus: 3 });
-    computeDamageAfterSave.mockReturnValue(6);
+    computeDamageAfterEvasion.mockReturnValue(6);
     applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 14 });
 
     processAoeNpcs(
@@ -338,14 +339,14 @@ describe('processAoeNpcs', () => {
       6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
     );
 
-    expect(rollSaveForCreature).toHaveBeenCalledWith(npc, 'dexterity', 15, false);
+    expect(rollSaveForCreature).toHaveBeenCalledWith(npc, 'dexterity', 15, false, false);
   });
 
   it('handles mixed NPC and player in affected list — only processes NPCs', () => {
     const npc = createNpcCreature('Goblin');
     const player = createPlayerCreature('Hero');
     rollSaveForCreature.mockReturnValue({ success: false, roll: 8, bonus: 1 });
-    computeDamageAfterSave.mockReturnValue(4);
+    computeDamageAfterEvasion.mockReturnValue(4);
     applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 16 });
 
     const result = processAoeNpcs(
@@ -362,7 +363,7 @@ describe('processAoeNpcs', () => {
     getRuntimeValue.mockReturnValue(['Ally']);
 
     rollSaveForCreature.mockReturnValue({ success: false, roll: 5, bonus: 0 });
-    computeDamageAfterSave.mockReturnValue(0);
+    computeDamageAfterEvasion.mockReturnValue(0);
     applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 20 });
 
     const result = processAoeNpcs(
@@ -380,7 +381,7 @@ describe('processAoeNpcs', () => {
     getRuntimeValue.mockReturnValue(['OtherPerson']);
 
     rollSaveForCreature.mockReturnValue({ success: false, roll: 5, bonus: 0 });
-    computeDamageAfterSave.mockReturnValue(6);
+    computeDamageAfterEvasion.mockReturnValue(6);
     applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 14 });
 
     const result = processAoeNpcs(

@@ -800,6 +800,10 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
       effects.saveAdvantageAbilities = [...new Set([...(effects.saveAdvantageAbilities || []), 'WIS'])];
       effects.saveAdvantageReasons.push('Beacon of Hope');
     }
+    if (te.effect === 'circle_of_power') {
+      effects.saveAdvantage.push('against_spell');
+      effects.saveAdvantageReasons.push('Circle of Power');
+    }
     if (te.effect === 'pass_without_trace_bonus') {
       effects.passWithoutTraceBonus = te.bonusExpression || '10';
     }

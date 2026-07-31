@@ -597,6 +597,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
     }
 
+    // Clear Circle of Power on short rest
+    const circleOfPowerEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredCircleOfPowerEffects = circleOfPowerEffects.filter(e => e.effect !== 'circle_of_power');
+    if (filteredCircleOfPowerEffects.length !== circleOfPowerEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredCircleOfPowerEffects, campaignName, true)
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP
     const allKeys = getAllStoreKeys();
     for (const key of allKeys) {
@@ -836,6 +843,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredBarkskinEffects = barkskinEffects.filter(e => e.effect !== 'barkskin');
     if (filteredBarkskinEffects.length !== barkskinEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
+    }
+
+    // Clear Circle of Power on long rest
+    const circleOfPowerEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredCircleOfPowerEffects = circleOfPowerEffects.filter(e => e.effect !== 'circle_of_power');
+    if (filteredCircleOfPowerEffects.length !== circleOfPowerEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredCircleOfPowerEffects, campaignName, true)
     }
 
     // Clear regenerateActive flag from all targets and set them to full HP on long rest

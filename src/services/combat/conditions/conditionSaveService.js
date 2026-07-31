@@ -4,6 +4,7 @@ import { getAbilitySaveBonus } from './conditionUtils.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { playerIsImmuneToCondition } from '../automation/automationService.js'
 import { getAuraOfPuritySaveAdvantageConditions, isAuraOfPurityActive } from '../../automation/handlers/buffs/auraOfPurityHandler.js'
+import { isCircleOfPowerActive } from '../../automation/handlers/buffs/circleOfPowerHandler.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 
@@ -62,7 +63,7 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
             hasPassiveImmunityAdvantage = true
         }
     }
-    const hasAdvantage = hasAuraOfPurityAdvantage || hasPassiveImmunityAdvantage
+    const hasAdvantage = hasAuraOfPurityAdvantage || hasPassiveImmunityAdvantage || isCircleOfPowerActive(creature.name, campaignName)
     if (hasAdvantage) {
         const a = rollD20()
         const b = rollD20()

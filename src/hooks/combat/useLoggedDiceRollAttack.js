@@ -34,6 +34,7 @@ import {
 import { loadManeuvers } from '../../services/ui/dataLoader.js';
 import { getManeuversForRules } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { createSaveListener } from '../../services/automation/common/savePrompt.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -1298,7 +1299,7 @@ export function createLogAndShow(deps) {
                             const ev = c?.computedStats?.evasionEffects;
                             return ev?.some(ef => ef.saveType === normalizedSaveType && ef.shareable && ef.shareRange >= 5);
                         });
-                    const hasEvasion = hasOwnEvasion || hasSharedEvasion;
+                    const hasEvasion = hasOwnEvasion || hasSharedEvasion || isCircleOfPowerActive(applyTarget, campaignName);
                     if (hasEvasion) {
                         logEntry({
                             type: 'roll',

@@ -30,6 +30,7 @@ import { hasBardicInspirationOffense, getBardicInspirationDieSize, getBardicInsp
 import { hasEmpoweredSpell } from '../../services/rules/spells/empoweredSpellService.js';
 import { getChaModifier } from '../../services/rules/spells/metamagicRules.js';
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { registerPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 
 async function handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters) {
@@ -433,7 +434,7 @@ export function createLogDamageAndShow(deps) {
         const isSoulstitchProtected = hasSoulstitchProtection(target.name, characterName, campaignName);
         const targetCharacter = (characters || []).find(c => utils.getName(c.name) === target.name);
         const targetSaveModifiers = targetCharacter?.saveModifiers || targetCharacter?.computedStats?.saveModifiers || [];
-        const advantage = targetSaveModifiers.some(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
+        const advantage = targetSaveModifiers.some(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell') || isCircleOfPowerActive(target.name, campaignName);
         const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage);
         const normalizedSaveType = normalizeSaveType(saveType);
         const targetConditions = getRuntimeValue(target.name, 'activeConditions', campaignName) || [];
@@ -446,7 +447,7 @@ export function createLogDamageAndShow(deps) {
                 const ev = c?.computedStats?.evasionEffects;
                 return ev?.some(ef => ef.saveType === normalizedSaveType && ef.shareable && ef.shareRange >= 5);
             });
-        const hasEvasion = hasOwnEvasion || hasSharedEvasion;
+        const hasEvasion = hasOwnEvasion || hasSharedEvasion || isCircleOfPowerActive(target.name, campaignName);
         let finalDamage = isSoulstitchProtected ? 0 : computeDamageAfterEvasion(adjustedTotal, saveResult.success, dcSuccess, hasEvasion);
 
         if (hasEvasion) {
@@ -1140,7 +1141,8 @@ export function createLogDamageAndShow(deps) {
 
         const targetConditionEffectsForSave = getRuntimeValue(target.name, 'conditionEffects', campaignName) || {};
         const saveAdvantage = !!(targetConditionEffectsForSave.saveAdvantageCount > 0 ||
-            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())));
+            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())) ||
+            isCircleOfPowerActive(target.name, campaignName));
 
         const pendingData = {
             targetName: target.name, rawDamage: adjustedTotal, saveDc, saveType, dcSuccess,

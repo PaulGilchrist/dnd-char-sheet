@@ -1,9 +1,10 @@
 import { hitTestOverlay } from '../../../models/SpellOverlay.js';
-import { rollSaveForCreature, computeDamageAfterSave, applyDamageToTarget } from './applyDamage.js';
+import { rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCoronaSaveDisadvantage } from '../../combat/auras/coronaAuraUtils.js';
+import { isCircleOfPowerActive } from '../../automation/handlers/buffs/circleOfPowerHandler.js';
 
 function hasSoulstitchProtection(targetName, attackerName, campaignName) {
     if (!attackerName) return false;
@@ -53,9 +54,11 @@ export function processAoeNpcs(combatSummary, affected, rawDamage, damageType, s
     if (!disadvantage && heightenTarget && creature.name === heightenTarget) {
       disadvantage = true;
     }
-    const saveResult = rollSaveForCreature(creature, saveType, saveDc, disadvantage);
+    const advantage = isCircleOfPowerActive(creature.name, campaignName);
+    const saveResult = rollSaveForCreature(creature, saveType, saveDc, disadvantage, advantage);
     const isSoulstitchProtected = hasSoulstitchProtection(creature.name, attackerName, campaignName);
-    const finalDamage = isSoulstitchProtected ? 0 : computeDamageAfterSave(rawDamage, saveResult.success, dcSuccess);
+    const hasEvasion = isCircleOfPowerActive(creature.name, campaignName);
+    const finalDamage = isSoulstitchProtected ? 0 : computeDamageAfterEvasion(rawDamage, saveResult.success, dcSuccess, hasEvasion);
     const applyResult = applyDamageToTarget(combatSummary, creature.name, finalDamage, [damageType], campaignName, characters, false, attackerName);
     results.push({
       creatureName: creature.name,

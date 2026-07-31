@@ -165,6 +165,24 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             }
                         }
                     }
+
+                    if (concentrationSpell === 'Circle of Power') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const filtered = storedEffects.filter(te => !(te.effect === 'circle_of_power' && te.source === playerStats.name));
+                        if (filtered.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                        const cs = getCombatSummary(campaignName);
+                        if (cs?.creatures) {
+                            for (const creature of cs.creatures) {
+                                const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+                                const filteredBuffs = buffs.filter(b => b.name !== 'Circle of Power');
+                                if (filteredBuffs.length !== buffs.length) {
+                                    setRuntimeValue(creature.name, 'activeBuffs', filteredBuffs, campaignName);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

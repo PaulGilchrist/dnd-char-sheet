@@ -14,6 +14,7 @@ import { getCombatSummary } from '../../services/encounters/combatData.js';
 import storage from '../../services/ui/storage.js';
 import './savePromptModal.css';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 
 function SavePromptModal({ campaignName, characters, activeMapName }) {
   const [prompts, setPrompts] = useState([]);
@@ -158,7 +159,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     const normalizedSaveType = normalizeSaveType(current.saveType);
     const hasOwnEvasion = !isIncapacitated && ownEvasion?.some(ef => ef.saveType === normalizedSaveType);
     const hasSelectedEvasion = !hasOwnEvasion && !isIncapacitated && selectedAlliesRef.current.has(current.targetName);
-    const hasEvasion = hasOwnEvasion || hasSelectedEvasion;
+    const hasEvasion = hasOwnEvasion || hasSelectedEvasion || isCircleOfPowerActive(current.targetName, campaignName);
     setLastEvasionState(hasEvasion);
 
     let hasAdvantage = false;
@@ -198,6 +199,13 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     if (!hasAdvantage && !current.disadvantage) {
       const targetCharForBeacon = (characters || []).find(c => utils.getName(c.name) === utils.getName(current.targetName));
       if (targetCharForBeacon?.targetEffects?.some(te => te.effect === 'beacon_of_hope') && (current.saveType || '').toUpperCase() === 'WIS') {
+        hasAdvantage = true;
+      }
+    }
+
+    // Circle of Power: blanket advantage on saving throws
+    if (!hasAdvantage && !current.disadvantage) {
+      if (isCircleOfPowerActive(current.targetName, campaignName)) {
         hasAdvantage = true;
       }
     }
@@ -726,7 +734,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                     const ev = c?.computedStats?.evasionEffects;
                     return ev?.some(ef => ef.saveType === normalizedSaveType && ef.shareable && ef.shareRange >= 5);
                   });
-                const hasEvasion = hasOwnEvasion || hasSharedEvasion;
+                const hasEvasion = hasOwnEvasion || hasSharedEvasion || isCircleOfPowerActive(current.targetName, campaignName);
                 return hasEvasion
                   ? <p className="sp-note sp-evasion">Evasion: No damage on success, half damage on failure</p>
                   : <p className="sp-note">Half damage on successful save</p>;

@@ -178,6 +178,7 @@ describe('createSaves (useLoggedDiceRollSaves) - Evasion & Shields', () => {
             }];
             getRuntimeValue.mockReturnValueOnce([])
                 .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
                 .mockReturnValueOnce(['incapacitated'])
                 .mockReturnValueOnce(null);
             rollSaveForCreature.mockReturnValue({ success: true, roll: 18, total: 21, bonus: 3 });
@@ -287,6 +288,8 @@ describe('createSaves (useLoggedDiceRollSaves) - Evasion & Shields', () => {
             getRuntimeValue.mockReturnValueOnce([])
                 .mockReturnValueOnce(null)
                 .mockReturnValueOnce(null)
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
                 .mockReturnValueOnce(true);
             rollSaveForCreature.mockReturnValue({ success: true, roll: 18, total: 21, bonus: 3 });
             const { quickRollPlayerSave } = createFn();

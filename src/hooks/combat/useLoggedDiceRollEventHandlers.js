@@ -15,6 +15,7 @@ import utils from '../../services/ui/utils.js';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 import { getPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
 import storage from '../../services/ui/storage.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 
 export function setupEventListeners(deps) {
     const { characterName, campaignName, logEntry, charactersRef } = deps;
@@ -52,7 +53,7 @@ export function setupEventListeners(deps) {
             const ev = c?.computedStats?.evasionEffects;
             return ev?.some(ef => ef.saveType === normalizedSaveType && ef.shareable && ef.shareRange >= 5);
         });
-    const hasEvasion = e.detail.evasionActive ?? (hasOwnEvasion || hasSharedEvasion);
+    const hasEvasion = e.detail.evasionActive ?? (hasOwnEvasion || hasSharedEvasion || isCircleOfPowerActive(e.detail.targetName, pending.campaignName));
             let finalDamage = isSoulstitchProtected || (isShieldActive && isMagicMissile) ? 0 : computeDamageAfterEvasion(
                 e.detail.rawDamage ?? pending.rawDamage, e.detail.success, e.detail.dcSuccess, hasEvasion
             );

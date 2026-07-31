@@ -5,6 +5,7 @@ import './CharSummary.css'
 import rulesFactory from '../../../services/rules/rulesFactory.js'
 import { parseMagicItemName } from '../../../services/rules/core/attackCalc.js'
 import { isAuraOfLifeActive } from '../../../services/automation/handlers/buffs/auraOfLifeHandler.js'
+import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js'
 import CharGold from './CharGold.jsx'
 import CharHitPoints from './CharHitPoints.jsx'
 import CharClassFeatures from './CharClassFeatures.jsx'
@@ -697,6 +698,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     )}
                     {isAuraOfLifeActive(playerStats.name, campaignName) && (
                         <CreatureBadge icon='fa-heart-pulse' label='Aura of Life' cls='effect-buff' tooltip={'Aura of Life: Resistance to Necrotic damage, HP maximum can\'t be reduced, regain 1 HP at start of turn if at 0 HP'} />
+                    )}
+                    {isCircleOfPowerActive(playerStats.name, campaignName) && (
+                        <CreatureBadge icon='fa-shield-halved' label='Circle of Power' cls='effect-buff' tooltip='Circle of Power: Advantage on saving throws against spells and other magical effects. No damage on a successful save vs half-damage effects.' />
                     )}
                     {isMajestyActiveChar && (
                         <CreatureBadge icon='fa-shield-halved' label={`Majesty DC ${majestyDcChar}`} cls='effect-buff' tooltip={`Unbreakable Majesty (DC ${majestyDcChar})\n\nFirst attack per turn that hits forces attacker to make a CHA save or the attack misses.`} />

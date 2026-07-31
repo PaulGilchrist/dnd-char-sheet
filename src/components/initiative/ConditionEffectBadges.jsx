@@ -222,6 +222,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Aura of Purity', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'aura_of_purity', tooltip: `Aura of Purity from ${casterName}: Resistance to Poison damage, Advantage on saves vs Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, Stunned` })
     }
 
+    const circleOfPowerEffect = targetEffects?.find(te => te.effect === 'circle_of_power' && te.target === creatureName)
+    if (circleOfPowerEffect) {
+        const casterName = circleOfPowerEffect.source || 'unknown'
+        badges.push({ label: 'Circle of Power', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'circle_of_power', tooltip: `Circle of Power from ${casterName}: Advantage on saving throws, no damage on successful save vs half-damage effects` })
+    }
+
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':

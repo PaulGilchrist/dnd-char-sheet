@@ -12,6 +12,7 @@ import storage from '../../services/ui/storage.js';
 import { MELEE_REACH_FEET } from '../../services/combat/baseCombatActions.js';
 import { hasIgnoreResistance, evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 import utils from '../../services/ui/utils.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 
 export function createSaves(deps) {
     const { characterName, campaignName, setPopupHtml, logEntry, logAndShow, pendingSaves, charactersRef } = deps;
@@ -195,7 +196,8 @@ export function createSaves(deps) {
         const isDexSave = saveType.toUpperCase() === 'DEX';
         const dodgeAdvantage = isDodging && isDexSave;
         const beaconWisAdvantage = targetEffects.some(te => te.effect === 'beacon_of_hope') && saveType.toUpperCase() === 'WIS';
-        const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage || beaconWisAdvantage);
+        const circleOfPowerAdvantage = isCircleOfPowerActive(pending.targetName, campaignName);
+        const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage || beaconWisAdvantage || circleOfPowerAdvantage);
         saveResult.total += baneSavePenalty + blessSaveBonus + baneAttackerBonus;
 
         const normalizedSaveType = normalizeSaveType(saveType);
@@ -211,7 +213,7 @@ export function createSaves(deps) {
                 const ev = c?.computedStats?.evasionEffects;
                 return ev?.some(ef => ef.saveType === normalizedSaveType && ef.shareable && ef.shareRange >= 5);
             });
-        const hasEvasion = hasOwnEvasion || hasSelectedEvasion || hasSharedEvasion;
+        const hasEvasion = hasOwnEvasion || hasSelectedEvasion || hasSharedEvasion || isCircleOfPowerActive(pending.targetName, campaignName);
         let finalDamage = computeDamageAfterEvasion(pending.rawDamage, saveResult.success, pending.dcSuccess, hasEvasion);
 
         if (hasEvasion) {
@@ -219,7 +221,7 @@ export function createSaves(deps) {
                 type: 'roll',
                 characterName: pending.targetName,
                 rollType: 'evasion',
-                name: hasOwnEvasion ? 'Evasion' : hasSelectedEvasion ? 'Evasion' : 'Leading Evasion',
+                name: hasOwnEvasion ? 'Evasion' : hasSelectedEvasion ? 'Evasion' : circleOfPowerAdvantage ? 'Circle of Power' : 'Leading Evasion',
                 targetName: pending.targetName,
                 saveType,
                 saveDc: pending.saveDc,

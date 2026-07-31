@@ -238,6 +238,8 @@ describe('createSaves (useLoggedDiceRollSaves) - Core', () => {
             getRuntimeValue.mockReturnValueOnce([])
                 .mockReturnValueOnce(null)
                 .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
+                .mockReturnValueOnce([])
                 .mockReturnValueOnce(20);
             const { quickRollPlayerSave } = createFn();
             await quickRollPlayerSave('prompt-1', 'Ally', 'DEX', 15);

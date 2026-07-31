@@ -377,6 +377,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'circle_of_power',
+    label: 'Circle of Power',
+    description: 'Advantage on saving throws against spells and other magical effects. No damage on a successful save vs half-damage effects.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'aura_of_vitality',
     label: 'Aura of Vitality',
     description: 'Target heals for 2d6 HP when the caster casts the spell. Maintains concentration, allowing free casts once per turn to heal another creature.',
