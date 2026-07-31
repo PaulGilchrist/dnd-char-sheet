@@ -8,6 +8,7 @@ import FontOfMagicModal from './modals/FontOfMagicModal.jsx'
 import ResourcePoolModal from './modals/ResourcePoolModal.jsx'
 import WildCompanionModal from './modals/WildCompanionModal.jsx'
 import SetConditionModal from './modals/shared/SetConditionModal.jsx'
+import BlindnessDeafnessModal from './modals/BlindnessDeafnessModal.jsx'
 import EyebiteEffectModal from './modals/EyebiteEffectModal.jsx'
 import AttackRiderModal from './modals/shared/AttackRiderModal.jsx'
 import StealthAttackModal from './modals/shared/StealthAttackModal.jsx'
@@ -307,6 +308,13 @@ export default function CharActionModals({
                     {...mergedModalState.setConditionModal}
                     characters={characters}
                     onClose={() => setModalState({ setConditionModal: null })}
+                />
+            )}
+            {mergedModalState.blindnessDeafnessModal && (
+                <BlindnessDeafnessModal
+                    {...mergedModalState.blindnessDeafnessModal}
+                    characters={characters}
+                    onClose={() => setModalState({ blindnessDeafnessModal: null })}
                 />
             )}
             {mergedModalState.eyebiteEffectModal && (

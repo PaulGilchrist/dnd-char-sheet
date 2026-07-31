@@ -302,7 +302,7 @@ describe('stinkingCloudHandler', () => {
       );
     });
 
-    it('should add expiration for initiative roll', async () => {
+    it('should add expiration for concentration', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
       getRuntimeValue.mockReturnValue([]);
       createSaveListener.mockReturnValue({
@@ -312,8 +312,8 @@ describe('stinkingCloudHandler', () => {
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      // Should be called twice: once for concentration, once for initiative
-      expect(addExpiration).toHaveBeenCalledTimes(2);
+      // Should be called once: for concentration expiration
+      expect(addExpiration).toHaveBeenCalledTimes(1);
     });
 
     it('should track stinking_cloud in targetEffects', async () => {

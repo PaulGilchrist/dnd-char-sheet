@@ -192,6 +192,7 @@ import { handle as handleBladeWard } from './handlers/buffs/bladeWardHandler.js'
 import { handle as handleShield } from './handlers/shieldHandler.js';
 import { handle as handleShieldOfFaith, applyShieldOfFaith as applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus } from './handlers/shieldOfFaithHandler.js';
 import { handle as handleCounterSpell } from './handlers/spells/counterSpellHandler.js';
+import { handle as handleBlindnessDeafness } from './handlers/spells/blindnessDeafnessHandler.js';
 import { handle as handleEyebite } from './handlers/spells/eyebiteHandler.js';
 import { handle as handleFalseLife } from './handlers/buffs/falseLifeHandler.js';
 import { handle as handleFear } from './handlers/spells/fearHandler.js';
@@ -483,6 +484,7 @@ const HANDLER_MAP = {
         shield: handleShield,
         shield_of_faith: handleShieldOfFaith,
         reaction_counterspell: handleCounterSpell,
+        blindness_deafness: handleBlindnessDeafness,
         eyebite: handleEyebite,
         false_life: handleFalseLife,
         fear: handleFear,

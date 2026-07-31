@@ -97,6 +97,9 @@ function handleModalResult(popup, setModalState) {
         case 'ArcaneVigor':
             setModalState({ arcaneVigorModal: payload });
             break;
+        case 'blindnessDeafness':
+            setModalState({ blindnessDeafnessModal: payload });
+            break;
         case 'silenceTargetSelection':
             setModalState({ silenceModal: payload });
             break;

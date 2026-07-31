@@ -168,10 +168,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 { type: 'condition', condition: 'poisoned' },
             ], campaignName);
 
-            // Also expire poisoned on initiative roll
-            addExpiration(casterName, targetName, [
-                { type: 'condition', condition: 'poisoned' },
-            ], campaignName, undefined, casterName);
+            // Note: initiative-rolled event has nothing to do with turn/round expiration.
+            // It fires once at the start of a new combat to reset once-per-combat trackers.
+            // Turn/round-based expiration is handled by expireStaleEffects in the initiative component.
 
             addEntry(campaignName, {
                 type: 'condition',

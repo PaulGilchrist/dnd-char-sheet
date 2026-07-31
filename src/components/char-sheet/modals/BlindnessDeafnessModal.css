@@ -1,0 +1,37 @@
+.blindness-deafness-effects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.blindness-deafness-effect-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 12px;
+    background: var(--background-color-surface);
+    border: 1px solid var(--border-color-light);
+    border-radius: 6px;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.95em;
+    transition: border-color 0.15s ease;
+}
+
+.blindness-deafness-effect-btn:hover {
+    border-color: var(--color-header);
+}
+
+.blindness-deafness-effect-selected {
+    border-color: var(--color-header);
+    background: var(--background-color-header-inner);
+    color: var(--color-header-inner);
+}
+
+.blindness-deafness-effect-desc {
+    font-size: 0.85em;
+    opacity: 0.7;
+}

@@ -1405,6 +1405,12 @@
     "dc": {
       "dc_type": "CON",
       "dc_success": "none"
+    },
+    "automation": {
+      "type": "blindness_deafness",
+      "saveDc": "spell_save_dc",
+      "saveType": "CON",
+      "range": "120 feet"
     }
   },
   {

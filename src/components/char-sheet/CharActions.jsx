@@ -1083,6 +1083,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     case 'resourcePool': setModalState({ resourcePoolModal: result.payload }); break;
                     case 'wildCompanion': setModalState({ wildCompanionModal: result.payload }); break;
                     case 'setCondition': setModalState({ setConditionModal: result.payload }); break;
+                    case 'blindnessDeafness': setModalState({ blindnessDeafnessModal: result.payload }); break;
                     case 'eyebiteEffect': setModalState({ eyebiteEffectModal: result.payload }); break;
                     case 'attackRider': setModalState({ attackRiderModal: result.payload }); break;
                     case 'openHandTechnique': setModalState({ openHandTechniqueModal: result.payload }); break;
