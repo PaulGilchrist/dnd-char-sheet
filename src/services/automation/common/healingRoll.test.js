@@ -15,6 +15,7 @@ vi.mock('../../dice/diceRoller.js', () => ({
 
 vi.mock('../../combat/automation/automationService.js', () => ({
     hasHealingMaximization: vi.fn(),
+    hasHealingMaximizationForTarget: vi.fn(),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -39,7 +40,7 @@ vi.mock('../../ui/logService.js', () => ({
 const { rollExpression, rollExpressionMaximized } = await import(
     '../../dice/diceRoller.js'
 );
-const { hasHealingMaximization } = await import(
+const { hasHealingMaximization, hasHealingMaximizationForTarget } = await import(
     '../../combat/automation/automationService.js'
 );
 const { getRuntimeValue, setRuntimeValue } = await import(
@@ -76,7 +77,7 @@ function makeAuto(overrides = {}) {
 // ── Helpers ───────────────────────────────────────────────────────
 
 function defaultMocks() {
-    hasHealingMaximization.mockReturnValue(false);
+    hasHealingMaximizationForTarget.mockReturnValue(false);
     getCombatContext.mockResolvedValue(null);
 }
 
@@ -104,7 +105,7 @@ describe('rollHealingForAction', () => {
         });
 
         it('returns null when dice roll returns null', async () => {
-            hasHealingMaximization.mockReturnValue(false);
+            hasHealingMaximizationForTarget.mockReturnValue(false);
             rollExpression.mockReturnValue(null);
 
             const result = await rollHealingForAction(makeAuto(), makePlayerStats(), campaignName);
@@ -113,7 +114,7 @@ describe('rollHealingForAction', () => {
         });
 
         it('returns null when maximized dice roll returns null', async () => {
-            hasHealingMaximization.mockReturnValue(true);
+            hasHealingMaximizationForTarget.mockReturnValue(true);
             rollExpressionMaximized.mockReturnValue(null);
 
             const result = await rollHealingForAction(makeAuto(), makePlayerStats(), campaignName);
@@ -124,7 +125,7 @@ describe('rollHealingForAction', () => {
 
     describe('dice rolling', () => {
         it('returns correct result object from rollExpression in normal mode', async () => {
-            hasHealingMaximization.mockReturnValue(false);
+            hasHealingMaximizationForTarget.mockReturnValue(false);
             const mockResult = { total: 7, rolls: [3, 4] };
             rollExpression.mockReturnValue(mockResult);
 
@@ -140,7 +141,7 @@ describe('rollHealingForAction', () => {
         });
 
         it('calls rollExpressionMaximized when healing maximization is active', async () => {
-            hasHealingMaximization.mockReturnValue(true);
+            hasHealingMaximizationForTarget.mockReturnValue(true);
             const mockResult = { total: 16, rolls: [8, 8] };
             rollExpressionMaximized.mockReturnValue(mockResult);
 
@@ -150,7 +151,7 @@ describe('rollHealingForAction', () => {
                 campaignName,
             );
 
-            expect(hasHealingMaximization).toHaveBeenCalledWith(makePlayerStats());
+            expect(hasHealingMaximizationForTarget).toHaveBeenCalledWith(makePlayerStats(), null, campaignName);
             expect(rollExpressionMaximized).toHaveBeenCalledWith('2d8');
             expect(rollExpression).not.toHaveBeenCalled();
             expect(result).toEqual({
@@ -163,7 +164,7 @@ describe('rollHealingForAction', () => {
 
     describe('target resolution', () => {
         it('uses player name as target when isSelf is true', async () => {
-            hasHealingMaximization.mockReturnValue(false);
+            hasHealingMaximizationForTarget.mockReturnValue(false);
             rollExpression.mockReturnValue({ total: 5, rolls: [5] });
 
             await rollHealingForAction(
@@ -177,7 +178,7 @@ describe('rollHealingForAction', () => {
         });
 
         it('uses combat context to find target via getTargetFromAttacker', async () => {
-            hasHealingMaximization.mockReturnValue(false);
+            hasHealingMaximizationForTarget.mockReturnValue(false);
             rollExpression.mockReturnValue({ total: 6, rolls: [2, 4] });
             const cs = { creatures: [{ name: 'Goblin' }] };
             getCombatContext.mockResolvedValue(cs);

@@ -37,6 +37,7 @@ vi.mock('../../combat/automation/automationService.js', () => ({
     resolveHealingBonusesWithDetails: vi.fn(() => ({ totalBonus: 0, details: [] })),
     markFortifiedHealthUsed: vi.fn(),
     hasHealingMaximization: vi.fn(() => false),
+    hasHealingMaximizationForTarget: vi.fn(() => false),
 }));
 
 import { rollExpression, rollExpressionMaximized } from '../../dice/diceRoller.js';

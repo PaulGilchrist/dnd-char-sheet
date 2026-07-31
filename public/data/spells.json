@@ -749,7 +749,11 @@
       "Lore",
       "Life",
       "Devotion"
-    ]
+    ],
+    "automation": {
+      "type": "beacon_of_hope",
+      "range": "30 feet"
+    }
   },
   {
     "index": "beast-bond",

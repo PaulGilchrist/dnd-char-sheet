@@ -28,6 +28,7 @@ vi.mock('../../dice/diceRoller.js', () => ({
 vi.mock('../../combat/automation/automationService.js', () => ({
     resolveHealingBonusesWithDetails: vi.fn(() => ({ totalBonus: 0, details: [] })),
     hasHealingMaximization: vi.fn(() => false),
+    hasHealingMaximizationForTarget: vi.fn(() => false),
     markFortifiedHealthUsed: vi.fn(),
 }));
 

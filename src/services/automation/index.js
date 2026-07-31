@@ -222,6 +222,8 @@ import { handle as handleSuggestion } from './handlers/spells/suggestionHandler.
 import { handle as handleSilence } from './handlers/spells/silenceHandler.js';
 import { handle as handleBane } from './handlers/spells/baneHandler.js';
 import { handle as handleBless } from './handlers/spells/blessHandler.js';
+import { handle as handleBeaconOfHope } from './handlers/spells/beaconOfHopeHandler.js';
+import { applyBeaconOfHopeEffect } from './handlers/spells/beaconOfHopeHandler.js';
 import { handle as handleSlow } from './handlers/spells/slowHandler.js';
 import { handle as handleResilientSphere } from './handlers/spells/resilientSphereHandler.js';
 import { handle as handlePowerWordStun } from './handlers/spells/powerWordStunHandler.js';
@@ -532,6 +534,7 @@ const HANDLER_MAP = {
         silence: handleSilence,
         bane: handleBane,
         bless: handleBless,
+        beacon_of_hope: handleBeaconOfHope,
         slow: handleSlow,
         haste: handleHaste,
         invisibility: handleInvisibility,
@@ -559,6 +562,7 @@ export {
     isGreaterInvisibilityActive,
     applyPassWithoutTraceEffect,
     applyRegenerateEffect,
+    applyBeaconOfHopeEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,
     applyAuraOfPurityEffect,

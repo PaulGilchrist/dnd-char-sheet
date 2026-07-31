@@ -35,6 +35,7 @@ vi.mock('../../../combat/automation/automationService.js', () => ({
     resolveHealingBonusesWithDetails: vi.fn(() => ({ totalBonus: 0, details: [] })),
     markFortifiedHealthUsed: vi.fn(),
     hasHealingMaximization: vi.fn(),
+    hasHealingMaximizationForTarget: vi.fn(() => false),
 }));
 
 vi.mock('../../../rules/combat/rangeValidation.js', () => ({

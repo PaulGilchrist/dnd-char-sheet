@@ -1,5 +1,5 @@
 import { rollExpression, rollExpressionMaximized } from '../../dice/diceRoller.js';
-import { hasHealingMaximization } from '../../combat/automation/automationService.js';
+import { hasHealingMaximizationForTarget } from '../../combat/automation/automationService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext, getTargetFromAttacker } from '../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../rules/combat/applyHealing.js';
@@ -10,7 +10,8 @@ export function rollHealingForAction(auto, playerStats, campaignName, isSelf = f
     const formula = auto.healExpression || '';
     if (!formula) return Promise.resolve(null);
 
-    const maximize = hasHealingMaximization(playerStats);
+    const targetName = isSelf ? playerStats.name : null;
+    const maximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
     const result = maximize ? rollExpressionMaximized(formula) : rollExpression(formula);
     if (!result) return Promise.resolve(null);
 

@@ -4,7 +4,7 @@ import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
 import { incrementFreeCastResource } from '../../services/rules/spells/spellPreparationService.js'
 
 const FREE_CAST_SPELLS = [
-  'bane', 'bless', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
+  'bane', 'bless', 'beacon of hope', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
   'mage armor', 'protection from energy', 'resistance',
   'shield of faith', 'magic missile'
 ];

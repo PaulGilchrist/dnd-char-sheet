@@ -199,6 +199,14 @@ export function hasHealingMaximization(playerStats) {
     return hasPassiveEffect(playerStats, 'passive_rule', 'maximize_healing_dice');
 }
 
+export function hasHealingMaximizationForTarget(caster, targetName, campaignName) {
+    if (hasHealingMaximization(caster)) return true;
+    if (!targetName) return false;
+    const effects = getRuntimeValue('campaign', 'targetEffects', campaignName);
+    if (!Array.isArray(effects)) return false;
+    return effects.some(te => te.effect === 'beacon_of_hope' && te.target === targetName);
+}
+
 export function hasRerollHealingOnes(playerStats) {
     return hasPassiveEffect(playerStats, 'passive_rule', 'reroll_healing_ones');
 }

@@ -115,14 +115,13 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Stinking Cloud",
-    "Aura of Vitality",
     "Beacon of Hope",
     "Barkskin",
     "Blindness/Deafness",
     "Calm Emotions",
     "Circle of Power",
-    "Compelled Duel"
+    "Compelled Duel",
+    "Cure Wounds"
   ],
   "magicInitiateInstances": [
     {

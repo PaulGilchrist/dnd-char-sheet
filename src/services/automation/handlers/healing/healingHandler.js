@@ -2,7 +2,7 @@ import { rollExpression, rollExpressionMaximized } from '../../../dice/diceRolle
 import { getClassFeatures } from '../../../character/classFeatures.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { applyHealingDirectly, logHealingToSSE } from '../../common/healingRoll.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getHitDieSize, computeHitDieRecovery } from '../../../rules/effects/restRules.js';
 import { resolveDiceExpression, evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
@@ -83,7 +83,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             };
         }
 
-        const maximize = hasHealingMaximization(playerStats);
+        const maximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
         const rerollOnes = hasRerollHealingOnes(playerStats);
         const rollResult = maximize
             ? rollExpressionMaximized(`1d${hitDieSize}`)
@@ -140,8 +140,16 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
         const wisdom = playerStats.abilities?.find(a => a.name === 'Wisdom');
         const wisModifier = wisdom?.bonus || 0;
 
-        const maximize = hasHealingMaximization(playerStats);
         const rerollOnes = hasRerollHealingOnes(playerStats);
+        let targetName;
+        if (isSelf) {
+            targetName = playerStats.name;
+           } else {
+            const targetInfo = await resolveTarget(campaignName, playerStats.name);
+            targetName = targetInfo?.target?.name || playerStats.name;
+          }
+
+        const maximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
         const rollResult = maximize ? rollExpressionMaximized(`1d${martialArtsDie}`) : rerollOnes ? rollExpression(`1d${martialArtsDie}`, { rerollOnes: true }) : rollExpression(`1d${martialArtsDie}`);
         if (!rollResult) {
             console.error(`[healingHandler] ${action.name}: monk rollExpression returned null for 1d${martialArtsDie}`);
@@ -151,14 +159,6 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
         const baseHeal = rollResult.total + wisModifier;
         const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName);
         const healAmount = baseHeal + bonusHeal;
-
-        let targetName;
-        if (isSelf) {
-            targetName = playerStats.name;
-           } else {
-            const targetInfo = await resolveTarget(campaignName, playerStats.name);
-            targetName = targetInfo?.target?.name || playerStats.name;
-          }
 
         const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, isSelf ? playerStats.name : targetName, healAmount, campaignName);
 
@@ -271,7 +271,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             resolvedExpression = `1d${hitDieSize}`;
         }
 
-        const maximize = hasHealingMaximization(playerStats);
+        const maximize = hasHealingMaximizationForTarget(playerStats, playerStats.name, campaignName);
         const rerollOnes = hasRerollHealingOnes(playerStats);
         const evaluated = evaluateAutoExpression(resolvedExpression, playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel);
         let rollResult;
@@ -370,7 +370,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
 
             if (auto.healExpression) {
                 const resolvedExpression = resolveDiceExpression(auto.healExpression, playerStats, slotLevel);
-                const maximize = hasHealingMaximization(playerStats);
+                const maximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
                 const rerollOnes = hasRerollHealingOnes(playerStats);
                 const evaluated = evaluateAutoExpression(resolvedExpression, playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel);
                 let rollResult;

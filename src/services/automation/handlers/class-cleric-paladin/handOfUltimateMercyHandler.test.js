@@ -32,6 +32,7 @@ vi.mock('../../common/targetResolver.js', () => ({
 
 vi.mock('../../../combat/automation/automationService.js', () => ({
   hasHealingMaximization: vi.fn().mockReturnValue(false),
+  hasHealingMaximizationForTarget: vi.fn().mockReturnValue(false),
   resolveDiceExpression: vi.fn((expr) => expr),
 }));
 

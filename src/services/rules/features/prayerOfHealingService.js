@@ -5,7 +5,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 import { addEntry } from '../../ui/logService.js';
 import { getDistanceFeet, rangeToFeet } from '../combat/rangeValidation.js';
 import { isDistanceInRange } from '../combat/rangeCheck.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasHealingMaximizationForTarget, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
 
 const PRAYER_OF_HEALING_NAME = 'Prayer of Healing';
 
@@ -136,7 +136,8 @@ export async function triggerPrayerOfHealing(spell, metaCtx, playerStats, campai
         const maxHp = target.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        const targetMaximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
+        const rollResult = targetMaximize || maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
         if (!rollResult) continue;
 
         const targetHealAmount = rollResult.total + bonusHeal;

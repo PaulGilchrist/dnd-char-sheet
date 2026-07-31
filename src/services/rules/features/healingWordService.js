@@ -3,7 +3,7 @@ import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.j
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
 
 const HEALING_WORD_NAME = 'Healing Word';
 
@@ -45,7 +45,7 @@ export async function triggerHealingWord(spell, metaCtx, playerStats, campaignNa
     const targetName = metaCtx?.targetName || (getTargetFromAttacker(combatSummary, playerStats.name)?.name);
     if (!targetName) return null;
 
-    const maximize = hasHealingMaximization(playerStats);
+    const maximize = hasHealingMaximizationForTarget(playerStats, targetName, campaignName);
     const rerollOnes = hasRerollHealingOnes(playerStats);
     const result = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
     let displayRolls = result?.rolls || null;

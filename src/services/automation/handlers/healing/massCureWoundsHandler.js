@@ -3,7 +3,7 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasHealingMaximizationForTarget, markFortifiedHealthUsed } from '../../../combat/automation/automationService.js';
 
 const MASS_CURE_WOUNDS_NAME = 'Mass Cure Wounds';
 
@@ -108,7 +108,7 @@ export async function confirmMassCureWounds(action, playerStats, campaignName, s
         const maxHp = combatSummary?.creatures?.find(c => c.name === targetName)?.maxHp || playerStats.hitPoints || 0;
         const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
-        const rollResult = maximize ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
+        const rollResult = (maximize || hasHealingMaximizationForTarget(playerStats, targetName, campaignName)) ? rollExpressionMaximized(healExpression) : rollExpression(healExpression);
         if (!rollResult) continue;
 
         const targetHealAmount = rollResult.total + bonusHeal;

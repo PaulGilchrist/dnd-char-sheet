@@ -45,6 +45,7 @@ import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceSe
 import { triggerSlow } from '../features/slowService.js';
 import { triggerBaneSpell } from '../features/baneService.js';
 import { triggerBlessSpell } from '../features/blessService.js';
+import { triggerBeaconOfHope } from '../features/beaconOfHopeService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
@@ -60,7 +61,7 @@ import { onAbjurationSpellCast } from '../../automation/handlers/class-wizard/ar
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
 import { getPsychicSpellsConfig } from '../../automation/handlers/class-warlock/psychicSpellsHandler.js';
-import { resolveHealingBonusesWithDetails, hasHealingMaximization, hasRerollHealingOnes } from '../../combat/automation/automationService.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes } from '../../combat/automation/automationService.js';
 
 function applyHexEffects(spell, playerStats, campaignName, targetName, ability) {
     if (spell.name !== 'Hex') return;
@@ -519,6 +520,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
+        // Beacon of Hope — multi-target, advantage on WIS and death saves, maximized healing
+        if (spell.name && spell.name.toLowerCase() === 'beacon of hope') {
+            await triggerBeaconOfHope(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
         // Mass Suggestion — multi-target WIS save, applies Charmed condition to failed targets
         if (spell.name && spell.name.toLowerCase() === 'mass suggestion') {
             await triggerMassSuggestion(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
@@ -809,7 +816,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                         }
                     } else {
                         let resolvedExpression = expression.replace(/\bMOD\b/g, String(spellCastingMod));
-                        const maximize = hasHealingMaximization(playerStats);
+                        const maximize = hasHealingMaximizationForTarget(playerStats, target.name, campaignName);
                         const rerollOnes = hasRerollHealingOnes(playerStats);
                         const result = maximize ? rollExpressionMaximized(resolvedExpression) : rollExpression(resolvedExpression);
                         let displayRolls = result?.rolls || null;
@@ -1576,7 +1583,7 @@ async function applyRegenerateSpell(spell, target, caster, campaignName) {
     let result = null;
     // Apply initial healing
     if (expression) {
-        const maximize = hasHealingMaximization(caster);
+        const maximize = hasHealingMaximizationForTarget(caster, targetName, campaignName);
         const rerollOnes = hasRerollHealingOnes(caster);
         result = maximize ? rollExpressionMaximized(expression) : rollExpression(expression);
         if (result && rerollOnes && !maximize) {

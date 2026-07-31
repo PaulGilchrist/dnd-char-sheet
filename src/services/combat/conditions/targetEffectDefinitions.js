@@ -237,6 +237,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'beacon_of_hope',
+    label: 'Beacon of Hope',
+    description: 'Advantage on Wisdom saving throws and death saving throws; any healing restores maximum hit points. Expires on concentration loss, initiative roll, short rest, or long rest.',
+    icon: 'fa-heart-pulse',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'foresight',
     label: 'Foresight',
     description: 'Advantage on d20 tests; attack rolls against the creature have Disadvantage (unless attacker has Blindsight or Truesight).',

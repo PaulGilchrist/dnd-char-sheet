@@ -26,6 +26,7 @@ vi.mock('../../../combat/automation/automationService.js', () => ({
   resolveHealingBonusesWithDetails: vi.fn(),
   markFortifiedHealthUsed: vi.fn(),
   hasHealingMaximization: vi.fn(),
+  hasHealingMaximizationForTarget: vi.fn(),
   hasRerollHealingOnes: vi.fn(),
 }));
 
@@ -86,6 +87,7 @@ describe('healingHandler', () => {
     automationService.resolveHealingBonuses.mockReturnValue(0);
     automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 0, details: [] });
     automationService.hasHealingMaximization.mockReturnValue(false);
+    automationService.hasHealingMaximizationForTarget.mockReturnValue(false);
     automationService.hasRerollHealingOnes.mockReturnValue(false);
     healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 15, maxHp: 20, actualHeal: 5 });
     classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 6 });
@@ -396,7 +398,7 @@ describe('healingHandler', () => {
 
   describe('maximization and reroll behavior', () => {
     it('should use rollExpressionMaximized when hasHealingMaximization', async () => {
-      automationService.hasHealingMaximization.mockReturnValue(true);
+      automationService.hasHealingMaximizationForTarget.mockReturnValue(true);
       diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
 
       const ps = makePlayerStats();
@@ -989,7 +991,7 @@ describe('healingHandler', () => {
       const action = makeBattleMedicAction();
       targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
       runtimeState.getRuntimeValue.mockReturnValue(1);
-      automationService.hasHealingMaximization.mockReturnValue(true);
+      automationService.hasHealingMaximizationForTarget.mockReturnValue(true);
       diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
       healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 11, maxHp: 20, actualHeal: 11 });
 

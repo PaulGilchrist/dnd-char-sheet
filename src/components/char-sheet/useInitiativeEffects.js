@@ -193,6 +193,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true);
             }
 
+            // Clear Beacon of Hope on initiative roll (new combat)
+            const beaconEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredBeaconEffects = beaconEffects.filter(te => te.effect !== 'beacon_of_hope');
+            if (filteredBeaconEffects.length !== beaconEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredBeaconEffects, campaignName, true);
+            }
+
             // Set all regenerate targets to full HP on initiative roll
             const allKeys = getAllStoreKeys();
             for (const key of allKeys) {

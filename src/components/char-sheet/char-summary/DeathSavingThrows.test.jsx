@@ -23,6 +23,7 @@ vi.mock('../../../services/combat/conditions/deathSaveRules.js', () => ({
 
 vi.mock('../../../services/combat/conditions/conditionEffects.js', () => ({
   hasSaveModifier: vi.fn(() => false),
+  hasBeaconOfHope: vi.fn(() => false),
 }));
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({

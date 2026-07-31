@@ -29,6 +29,9 @@ export default function CharActionSpellPopups({
     actionPendingBless,
     actionHandleBlessConfirm,
     actionHandleBlessSkip,
+    actionPendingBeaconOfHope,
+    actionHandleBeaconOfHopeConfirm,
+    actionHandleBeaconOfHopeSkip,
     actionPendingPassWithoutTrace,
     actionHandlePassWithoutTraceConfirm,
     actionHandlePassWithoutTraceSkip,
@@ -185,6 +188,17 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Bless"
                     onConfirm={actionHandleBlessConfirm}
                     onSkip={actionHandleBlessSkip}
+                />
+            )}
+            {actionPendingBeaconOfHope && (
+                <CreatureSelectionModal
+                    title="Beacon of Hope"
+                    icon="fa-heart-pulse"
+                    targets={actionPendingBeaconOfHope.creatureTargets}
+                    description="This spell bestows hope and vitality. Choose any number of creatures within range. For the duration, each target has advantage on wisdom saving throws and death saving throws, and regains the maximum number of hit points possible from any healing."
+                    confirmLabel="Cast Beacon of Hope"
+                    onConfirm={actionHandleBeaconOfHopeConfirm}
+                    onSkip={actionHandleBeaconOfHopeSkip}
                 />
             )}
             {actionPendingPassWithoutTrace && (

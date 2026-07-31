@@ -194,7 +194,8 @@ export function createSaves(deps) {
         const isDodging = Array.isArray(targetActiveBuffs) && targetActiveBuffs.some(b => b.effect === 'dodge');
         const isDexSave = saveType.toUpperCase() === 'DEX';
         const dodgeAdvantage = isDodging && isDexSave;
-        const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage);
+        const beaconWisAdvantage = targetEffects.some(te => te.effect === 'beacon_of_hope') && saveType.toUpperCase() === 'WIS';
+        const saveResult = rollSaveForCreature(target, saveType, saveDc, disadvantage, advantage || dodgeAdvantage || beaconWisAdvantage);
         saveResult.total += baneSavePenalty + blessSaveBonus + baneAttackerBonus;
 
         const normalizedSaveType = normalizeSaveType(saveType);

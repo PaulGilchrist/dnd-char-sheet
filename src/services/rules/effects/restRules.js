@@ -576,6 +576,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
     }
 
+    // Clear Beacon of Hope on short rest
+    const beaconEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBeaconEffects = beaconEffects.filter(e => e.effect !== 'beacon_of_hope');
+    if (filteredBeaconEffects.length !== beaconEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBeaconEffects, campaignName, true)
+    }
+
     // Clear Resistance on short rest
     const resEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredResEffects = resEffects.filter(e => e.effect !== 'resistance_damage_reduction');
@@ -801,6 +808,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredRegenEffects = regenEffects.filter(e => e.effect !== 'regenerate');
     if (filteredRegenEffects.length !== regenEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredRegenEffects, campaignName, true)
+    }
+
+    // Clear Beacon of Hope on long rest
+    const beaconEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredBeaconEffects = beaconEffects.filter(e => e.effect !== 'beacon_of_hope');
+    if (filteredBeaconEffects.length !== beaconEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredBeaconEffects, campaignName, true)
     }
 
     // Clear Resistance on long rest

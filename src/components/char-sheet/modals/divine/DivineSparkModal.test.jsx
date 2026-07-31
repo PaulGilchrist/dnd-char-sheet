@@ -12,7 +12,8 @@ vi.mock('../../../../services/dice/diceRoller.js', () => ({
 }));
 
 vi.mock('../../../../services/combat/automation/automationService.js', () => ({
-  hasHealingMaximization: vi.fn(() => false),
+    hasHealingMaximization: vi.fn(() => false),
+    hasHealingMaximizationForTarget: vi.fn(() => false),
 }));
 
 vi.mock('../../../../services/ui/logService.js', () => ({

@@ -170,6 +170,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const casterName = blessEffect?.source || 'unknown'
         badges.push({ label: 'Bless', cls: 'effect-buff', icon: 'fa-hands', removable: true, removeAction: 'target_effect', effectType: 'bless_bonus', tooltip: `Bless from ${casterName}: +1d4 on attack rolls and saving throws` })
     }
+    if (effects.beaconOfHope) {
+        const beaconEffect = targetEffects?.find(te => te.effect === 'beacon_of_hope' && te.target === creatureName)
+        const casterName = beaconEffect?.source || 'unknown'
+        badges.push({ label: 'Beacon of Hope', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: true, removeAction: 'target_effect', effectType: 'beacon_of_hope', tooltip: `Beacon of Hope from ${casterName}: Advantage on WIS saves, death saves, and maximized healing` })
+    }
     if (effects.hasteActive) {
         const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
         badges.push({ label: 'Hasted', cls: 'effect-buff', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })

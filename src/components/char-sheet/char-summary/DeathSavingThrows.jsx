@@ -2,7 +2,7 @@ import React from 'react'
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { clearDeathSavePrompt } from '../../../services/combat/conditions/savePromptService.js'
 import * as deathSaveRules from '../../../services/combat/conditions/deathSaveRules.js'
-import { hasSaveModifier } from '../../../services/combat/conditions/conditionEffects.js'
+import { hasSaveModifier, hasBeaconOfHope } from '../../../services/combat/conditions/conditionEffects.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import './CharSummary.css'
 
@@ -48,7 +48,7 @@ function DeathSavingThrows({ playerStats, campaignName, isLocalhost }) {
 
     const isStable = deathSaveRules.isStable(saves)
     const isDeadState = deathSaveRules.isDead(failures)
-    const hasAdvantage = hasSaveModifier(playerStats?.saveModifiers, 'death_saving_throws')
+    const hasAdvantage = hasSaveModifier(playerStats?.saveModifiers, 'death_saving_throws') || hasBeaconOfHope(playerStats.name, campaignName)
 
     const logEntry = (entry) => {
         addEntry(campaignName, entry).catch((e) => { console.error("[DeathSavingThrows] Error:", e); })

@@ -184,12 +184,20 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     }
 
-    // Dodge: advantage on Dexterity saving throws only
+      // Dodge: advantage on Dexterity saving throws only
     if (!hasAdvantage && !current.disadvantage) {
       const targetActiveBuffs = getRuntimeValue(current?.targetName, 'activeBuffs', campaignName) || [];
       const isDodgeActive = Array.isArray(targetActiveBuffs) && targetActiveBuffs.some(b => b.effect === 'dodge');
       const isDexSave = (current.saveType || '').toUpperCase() === 'DEX';
       if (isDodgeActive && isDexSave) {
+        hasAdvantage = true;
+      }
+    }
+
+    // Beacon of Hope: advantage on Wisdom saving throws
+    if (!hasAdvantage && !current.disadvantage) {
+      const targetCharForBeacon = (characters || []).find(c => utils.getName(c.name) === utils.getName(current.targetName));
+      if (targetCharForBeacon?.targetEffects?.some(te => te.effect === 'beacon_of_hope') && (current.saveType || '').toUpperCase() === 'WIS') {
         hasAdvantage = true;
       }
     }

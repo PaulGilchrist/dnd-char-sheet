@@ -1,3 +1,5 @@
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
 const CONDITIONS_THAT_CANNOT_ACT = new Set([
    'incapacitated', 'paralyzed', 'petrified', 'stunned', 'unconscious',
  ])
@@ -793,6 +795,11 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'bless_bonus') {
       effects.blessBonus = true;
     }
+    if (te.effect === 'beacon_of_hope') {
+      effects.beaconOfHope = true;
+      effects.saveAdvantageAbilities = [...new Set([...(effects.saveAdvantageAbilities || []), 'WIS'])];
+      effects.saveAdvantageReasons.push('Beacon of Hope');
+    }
     if (te.effect === 'pass_without_trace_bonus') {
       effects.passWithoutTraceBonus = te.bonusExpression || '10';
     }
@@ -869,6 +876,12 @@ export function hasSaveModifier(modifiers, target, abilityName) {
     }
     return true;
   });
+}
+
+export function hasBeaconOfHope(targetName, campaignName) {
+  if (!targetName) return false;
+  const effects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+  return effects.some(te => te.effect === 'beacon_of_hope' && te.target === targetName);
 }
 
 export {
