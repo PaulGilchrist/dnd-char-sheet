@@ -968,9 +968,9 @@ These steps are written for people who are **not** computer experts. Just follow
 When the app starts, you'll see a message like this:
 
 ```
-Server running at:
-* Local:   http://localhost
-* Network: http://192.168.0.187
+Open browser and connect to one of the following:
+* Dungeon Master:    http://localhost
+* Player's:          http://192.168.0.187
 ```
 
 **What do these links mean?**

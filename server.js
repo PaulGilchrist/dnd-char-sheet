@@ -57,9 +57,9 @@ app.listen(PORT, () => {
     const portStr = PORT === 80 ? '' : `:${PORT}`;
     const trailingSlash = PORT === 80 ? '' : '/';
 
-    console.error(`Server running at:`);
-    console.error(`  Local:   http://localhost${portStr}${trailingSlash}`);
-    console.error(`  Network: http://${lanIP}${portStr}${trailingSlash}`);
+    console.error(`Open browser and connect to one of the following:`);
+    console.error(`  Dungeon Master:   http://localhost${portStr}${trailingSlash}`);
+    console.error(`  Player's:         http://${lanIP}${portStr}${trailingSlash}`);
 
     // Load character change data from disk at startup
     readFile();
