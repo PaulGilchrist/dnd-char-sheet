@@ -27,6 +27,7 @@ import AOEConditionModal from './modals/shared/AOEConditionModal.jsx'
 import FearModal from './modals/shared/FearModal.jsx'
 import HypnoticPatternModal from './modals/shared/HypnoticPatternModal.jsx'
 import MassSuggestionModal from './modals/shared/MassSuggestionModal.jsx'
+import CalmEmotionsModal from './modals/shared/CalmEmotionsModal.jsx'
 import ElementalAttunementModal from './modals/ElementalAttunementModal.jsx'
 import ElementalBurstModal from './modals/ElementalBurstModal.jsx'
 import DivineSparkModal from './modals/divine/DivineSparkModal.jsx'
@@ -601,6 +602,12 @@ export default function CharActionModals({
                 <MassSuggestionModal
                     {...mergedModalState.massSuggestionModal}
                     onClose={() => setModalState({ massSuggestionModal: null })}
+                />
+            )}
+            {mergedModalState.calmEmotionsModal && (
+                <CalmEmotionsModal
+                    {...mergedModalState.calmEmotionsModal}
+                    onClose={() => setModalState({ calmEmotionsModal: null })}
                 />
             )}
             {mergedModalState.elementalAttunementModal && (

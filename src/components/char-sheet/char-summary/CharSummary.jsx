@@ -275,8 +275,13 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(ci => ci.immunities || [])
         : [];
 
+    const calmEmotionsImmunities = Array.isArray(activeBuffs)
+        ? (activeBuffs.find(b => b.name === 'Calm Emotions')?.conditionImmunity || [])
+            .map(c => String(c).toLowerCase())
+        : [];
+
     const automationImmunities = playerStats.automationConditionImmunities || [];
-    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities])];
+    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities])];
 
     const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances])];
 

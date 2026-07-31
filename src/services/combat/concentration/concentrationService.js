@@ -138,6 +138,33 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
             }
         }
 
+        // Calm Emotions: restore suppressed conditions for immunity-mode effects
+        for (const effect of casterEffects) {
+            if (effect.effect === 'calm_emotions' && effect.mode === 'immunity' && Array.isArray(effect.suppressedConditions) && effect.suppressedConditions.length > 0 && effect.target) {
+                const storedConditions = getRuntimeValue(effect.target, 'activeConditions') || [];
+                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+                const lowerConditions = conditions.map(c => String(c).toLowerCase());
+                for (const suppressedCond of effect.suppressedConditions) {
+                    const lowerSuppressed = String(suppressedCond).toLowerCase();
+                    if (!lowerConditions.includes(lowerSuppressed)) {
+                        setRuntimeValue(effect.target, 'activeConditions', [...conditions, suppressedCond], campaignName);
+                    }
+                }
+            }
+        }
+
+        // Remove "Calm Emotions" activeBuffs from all creatures
+        const cs = getCombatSummary(campaignName);
+        if (cs?.creatures) {
+            for (const creature of cs.creatures) {
+                const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+                const filtered = buffs.filter(b => b.name !== 'Calm Emotions');
+                if (filtered.length !== buffs.length) {
+                    setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                }
+            }
+        }
+
         for (const effect of casterEffects) {
             if (effect.condition) {
                 const remainingEffectsForTarget = remaining.filter(te => te.target === effect.target)

@@ -221,6 +221,7 @@ import { handle as handleHypnoticPatternShake, handleConfirm as handleHypnoticPa
 import { handle as handleHypnoticPattern } from './handlers/spells/hypnoticPatternHandler.js';
 import { handle as handleMassSuggestion } from './handlers/spells/massSuggestionHandler.js';
 import { handle as handleSuggestion } from './handlers/spells/suggestionHandler.js';
+import { handle as handleCalmEmotions } from './handlers/spells/calmEmotionsHandler.js';
 import { handle as handleSilence } from './handlers/spells/silenceHandler.js';
 import { handle as handleBane } from './handlers/spells/baneHandler.js';
 import { handle as handleBless } from './handlers/spells/blessHandler.js';
@@ -518,6 +519,7 @@ const HANDLER_MAP = {
         hypnotic_pattern_shake_confirm: handleHypnoticPatternShakeConfirm,
         mass_suggestion: handleMassSuggestion,
         suggestion: handleSuggestion,
+        calm_emotions: handleCalmEmotions,
         resilient_sphere: handleResilientSphere,
         power_word_stun: handlePowerWordStun,
         warding_bond: handleWardingBond,

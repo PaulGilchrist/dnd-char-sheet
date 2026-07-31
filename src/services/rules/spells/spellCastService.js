@@ -378,6 +378,30 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         };
     }
 
+    // Calm Emotions — multi-target CHA save for all creatures in 20-ft-radius sphere: per-creature choice (Grant Immunity to Charmed/Frightened or Apply Charmed), must show modal before generic automation routing
+    if (fullSpell.name && fullSpell.name.toLowerCase() === 'calm emotions' && fullSpell.dc) {
+        const calmEmotionsModalPayload = {
+            action: { name: 'Calm Emotions', automation: { type: 'calm_emotions' } },
+            playerStats,
+            campaignName,
+            saveType: 'CHA',
+            saveDc: spellSaveDc,
+            activeOverlay: null,
+            metamagicCareful: metaCtx?.metamagicCareful || false,
+            metamagicHeighten: metaCtx?.metamagicHeighten,
+        };
+        triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
+            console.error('[spellCast] False Life trigger failed:', e);
+        });
+        return {
+            automationPopup: {
+                type: 'modal',
+                modalName: 'calmEmotions',
+                payload: calmEmotionsModalPayload,
+            },
+        };
+    }
+
     // Hypnotic Pattern — multi-target WIS save for all creatures in 20-ft-radius sphere: Charmed + Incapacitated + Speed 0, must show modal before generic automation routing
     if (fullSpell.name && fullSpell.name.toLowerCase() === 'hypnotic pattern' && fullSpell.dc) {
         const hypnoticInnateBonus = innateSorceryActive ? 1 : 0;

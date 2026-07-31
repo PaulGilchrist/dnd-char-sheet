@@ -394,6 +394,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'calm_emotions',
+    label: 'Calm Emotions',
+    description: 'Suppresses charmed/frightened conditions and grants immunity to Charmed and Frightened, or applies the Charmed condition (concentration).',
+    icon: 'fa-hand-holding-heart',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

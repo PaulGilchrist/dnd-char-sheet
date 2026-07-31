@@ -132,6 +132,39 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
+                    if (concentrationSpell === 'Calm Emotions') {
+                        // Restore suppressed conditions from calm_emotions effects
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const calmEffects = storedEffects.filter(te => te.effect === 'calm_emotions' && te.source === playerStats.name);
+                        for (const effect of calmEffects) {
+                            if (effect.mode === 'immunity' && Array.isArray(effect.suppressedConditions) && effect.suppressedConditions.length > 0 && effect.target) {
+                                const storedConditions = getRuntimeValue(effect.target, 'activeConditions') || [];
+                                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+                                const lowerConditions = conditions.map(c => String(c).toLowerCase());
+                                for (const suppressedCond of effect.suppressedConditions) {
+                                    const lowerSuppressed = String(suppressedCond).toLowerCase();
+                                    if (!lowerConditions.includes(lowerSuppressed)) {
+                                        setRuntimeValue(effect.target, 'activeConditions', [...conditions, suppressedCond], campaignName);
+                                    }
+                                }
+                            }
+                        }
+                        const cleanedEffects = storedEffects.filter(te => !(te.effect === 'calm_emotions' && te.source === playerStats.name));
+                        if (cleanedEffects.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName, true);
+                        }
+                        // Remove "Calm Emotions" activeBuffs from all creatures
+                        const cs = getCombatSummary(campaignName);
+                        if (cs?.creatures) {
+                            for (const creature of cs.creatures) {
+                                const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+                                const filtered = buffs.filter(b => b.name !== 'Calm Emotions');
+                                if (filtered.length !== buffs.length) {
+                                    setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

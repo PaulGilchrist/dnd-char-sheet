@@ -91,6 +91,9 @@ function handleModalResult(popup, setModalState) {
         case 'hypnoticPattern':
             setModalState({ hypnoticPatternModal: payload });
             break;
+        case 'calmEmotions':
+            setModalState({ calmEmotionsModal: payload });
+            break;
         case 'massSuggestion':
             setModalState({ massSuggestionModal: payload });
             break;
