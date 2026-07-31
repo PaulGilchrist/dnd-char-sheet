@@ -1162,7 +1162,6 @@ export function createLogDamageAndShow(deps) {
         pendingSaves[promptId] = pendingData;
         registerPendingSavePrompt(promptId, pendingData);
         registerPendingPopupSetter(promptId, setPopupHtml);
-        console.debug(`[saveDebug] handlePlayerSaveDamage registered prompt "${promptId}" target="${target.name}" name="${name}" saveType=${saveType} saveDc=${saveDc} dcSuccess=${dcSuccess} rawDamage=${adjustedTotal} isCantrip=${context?.isCantrip}`);
 
         sendSavePrompt(campaignName, {
             promptId,
@@ -1222,7 +1221,6 @@ export function createLogDamageAndShow(deps) {
             autoRerollBonus: autoRerollBonus,
             autoRerollCondition: targetConditionEffects.autoRerollCondition,
         });
-        console.debug(`[saveDebug] handlePlayerSaveDamage SET waiting popup "${promptId}" target="${target.name}"`, { popupState: { waitingForPlayerSave: true } });
 
         handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters);
 

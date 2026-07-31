@@ -25,9 +25,7 @@ export function setupEventListeners(deps) {
         window.__pendingResultHandlersInstalled = true;
 
         window.addEventListener('save-result', async (e) => {
-            console.debug(`[saveDebug] EVENT save-result received`, { promptId: e.detail?.promptId, targetName: e.detail?.targetName, success: e.detail?.success, roll: e.detail?.roll, total: e.detail?.total, saveType: e.detail?.saveType, saveDc: e.detail?.saveDc, keys: Object.keys(e.detail || {}) });
             const pending = getPendingSavePrompt(e.detail.promptId);
-            console.debug(`[saveDebug] EVENT save-result pending=${pending ? 'FOUND' : 'null'}`, pending ? { name: pending.name, targetName: pending.targetName, rawDamage: pending.rawDamage, campaignName: pending.campaignName } : null);
             const prompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
             const filteredPrompts = prompts.filter(id => id !== e.detail.promptId);
             if (filteredPrompts.length !== prompts.length) {
@@ -119,8 +117,6 @@ export function setupEventListeners(deps) {
 
             const isIntercepted = applyResult?.intercepted;
             const appliedDamage = isIntercepted ? (applyResult.damageDealt ?? 0) : (applyResult?.finalDamage ?? 0);
-
-            console.debug(`[saveDebug] EVENT save-result applyDamageToTarget returned`, { targetName: pendingTargetName, finalDamage, appliedDamage, applyResultKeys: applyResult ? Object.keys(applyResult) : null });
 
             if (appliedDamage > 0) {
                 endInvisibilityOnHostileAction(attacker, pending.campaignName);
@@ -326,7 +322,6 @@ export function setupEventListeners(deps) {
             // But first, check if a spell handler/modal already owns lastAttack (spell-save) — skip if so
             const checkLastAttack = await getRuntimeValue('campaign', 'lastAttack', pending.campaignName);
             if (checkLastAttack?.rollType === 'spell-save' && (pending.name || pending.sourceName) === checkLastAttack.attackName) {
-                console.debug(`[saveDebug] EVENT save-result EARLY RETURN: lastAttack is spell-save from same attack, skipping popup update`, { rollType: checkLastAttack.rollType, attackName: checkLastAttack.attackName, pendingName: pending.name || pending.sourceName });
                 return;
             }
             const saveLastAttackData = {
@@ -353,7 +348,6 @@ export function setupEventListeners(deps) {
                 timestamp: Date.now(),
             };
             setRuntimeValue('campaign', 'lastAttack', saveLastAttackData, pending.campaignName);
-            console.debug(`[saveDebug] EVENT save-result lastAttack set, proceeding to popup build`);
 
             const popupData = {
                 type: 'save-damage',
@@ -388,9 +382,7 @@ export function setupEventListeners(deps) {
                 popupData.secondaryFinalDamage = secondaryResult.finalDamage;
             }
             const setPopupHtml = getPendingPopupSetter(e.detail.promptId);
-            console.debug(`[saveDebug] EVENT save-result setPopupHtml=${setPopupHtml ? 'FOUND' : 'null'}`);
             if (setPopupHtml) {
-                console.debug(`[saveDebug] EVENT save-result UPDATING popup "${e.detail.promptId}"`, { type: popupData.type, name: popupData.name, targetName: popupData.targetName, finalDamage: popupData.finalDamage });
                 setPopupHtml(popupData);
             }
         });

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cloneDeep } from 'lodash';
 import { isCampaignKey } from './services/automation/common/campaignKeys.js';
-import { peekPendingSavePrompt } from './services/combat/auras/pendingSaveRegistry.js';
 import './App.css';
 import CharSheet from './components/char-sheet/CharSheet.jsx';
 import Initiative from './components/initiative/initiative.jsx';
@@ -420,18 +419,6 @@ function App() {
     const prefix = `change-${campaignName}-`;
     if (!event.key.startsWith(prefix)) return;
     const storeKey = event.key.slice(prefix.length);
-    if (storeKey.startsWith('saveResult-') || storeKey.startsWith('savePrompt-') || storeKey.startsWith('savePromptCleared-')) {
-      console.debug(`[saveDebug] App.handleRuntimeEvent SSE change received`, { key: event.key, storeKey, data: event.data });
-    }
-    if (storeKey.startsWith('saveResult-') && event.data?.promptId) {
-      const pending = peekPendingSavePrompt(event.data.promptId);
-      if (pending) {
-        console.debug(`[saveDebug] App.handleRuntimeEvent SSE saveResult: re-dispatching save-result for "${event.data.promptId}" with merged pending data`, { pendingKeys: Object.keys(pending) });
-        window.dispatchEvent(new CustomEvent('save-result', { detail: { ...pending, ...event.data } }));
-      } else {
-        console.debug(`[saveDebug] App.handleRuntimeEvent SSE saveResult: no pending prompt "${event.data.promptId}", skipping re-dispatch`);
-      }
-    }
     if (event.data && typeof event.data === 'object' && 'biPrompt' in event.data) {
       pendingPromptIdRef.current = event.data.biPrompt?.promptId || null;
       return;

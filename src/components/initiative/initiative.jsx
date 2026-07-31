@@ -62,7 +62,7 @@ import './initiative.css'
 function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName }) {
     const [combatSummary, setCombatSummary] = React.useState(null)
     const setCombatSummaryG = useSSEEqualityGuard(setCombatSummary)
-    const [numOfNpc, setNumOfNpc] = React.useState(4)
+    const [numOfNpc, setNumOfNpc] = React.useState(0)
     const [activeCreatureName, setActiveCreatureName] = React.useState(null)
     const activeCreatureNameRef = React.useRef(null)
     const lastAppliedTurnStartCreatureRef = React.useRef(null)
