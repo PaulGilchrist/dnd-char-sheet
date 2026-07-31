@@ -1,5 +1,6 @@
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -8,6 +9,7 @@ import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollba
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
+import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
 
 /**
  * Web spell handler for 2024 ruleset.
@@ -203,7 +205,6 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
 
     if (mapName) {
         try {
-            const { isWithinRange } = await import('../../../rules/combat/rangeCheck.js');
             const inArea = await isWithinRange(casterName, targetName, tracking.radius);
             if (!inArea) return null;
         } catch {
@@ -215,9 +216,7 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
     const isAlreadyRestrained = existingConditions.some(c => String(c).toLowerCase() === 'restrained');
     if (isAlreadyRestrained) return null;
 
-    const { playerIsImmuneToCondition } = await import('../../../combat/automation/automationImmunities.js');
-    const { getCombatContext: getCtx } = await import('../../../rules/combat/damageUtils.js');
-    const targetCharacter = (await getCtx(campaignName))?.creatures?.find(c => c.name === targetName);
+    const targetCharacter = getCombatContext(campaignName)?.creatures?.find(c => c.name === targetName);
     if (targetCharacter?.type === 'player') {
         const targetStats = {
             computedStats: getRuntimeValue(targetName, 'computedStats', campaignName),

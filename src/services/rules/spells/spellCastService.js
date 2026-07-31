@@ -31,6 +31,7 @@ import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
 import { triggerCharmPerson } from '../features/charmPersonService.js';
 import { triggerCharmMonster } from '../features/charmMonsterService.js';
+import { triggerAnimalFriendship } from '../features/animalFriendshipService.js';
 import { triggerDominateBeast } from '../features/dominateBeastService.js';
 import { triggerDominateMonster } from '../features/dominateMonsterService.js';
 import { triggerDominatePerson } from '../features/dominatePersonService.js';
@@ -535,6 +536,15 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
             if (charmMonsterResult) {
                 return { automationPopup: charmMonsterResult };
+            }
+            return;
+        }
+
+        // Animal Friendship — multi-target beast charm with upcasting
+        if (spell.name && spell.name.toLowerCase() === 'animal friendship') {
+            const animalFriendshipResult = await triggerAnimalFriendship(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            if (animalFriendshipResult) {
+                return { automationPopup: animalFriendshipResult };
             }
             return;
         }

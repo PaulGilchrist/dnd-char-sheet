@@ -197,6 +197,7 @@ import { handle as handleHoldMonster } from './handlers/spells/holdMonsterHandle
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
 import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandler.js';
 import { handle as handleCharmMonster } from './handlers/spells/charmMonsterHandler.js';
+import { handle as handleAnimalFriendship } from './handlers/spells/animalFriendshipHandler.js';
 import { handle as handleDominateBeast } from './handlers/spells/dominateBeastHandler.js';
 import { handle as handleDominateMonster } from './handlers/spells/dominateMonsterHandler.js';
 import { handle as handleDominatePerson } from './handlers/spells/dominatePersonHandler.js';
@@ -483,6 +484,7 @@ const HANDLER_MAP = {
         friends: handleFriends,
         charm_person: handleCharmPerson,
         charm_monster: handleCharmMonster,
+        animal_friendship: handleAnimalFriendship,
         dominate_beast: handleDominateBeast,
         dominate_monster: handleDominateMonster,
         dominate_person: handleDominatePerson,

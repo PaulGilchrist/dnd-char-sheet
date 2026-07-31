@@ -3,6 +3,7 @@ import { getCurrentSorceryPoints, getMaxSorceryPoints, spendSorceryPoints, logMe
 import { addEntry } from '../../services/ui/logService.js'
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
+import { getMonsterData } from '../../services/npcs/monsterUtils.js'
 import { isPsionicSpell, hasPsionicSorcery } from '../../services/rules/spells/metamagicRules.js'
 import { confirmRemoveCurse } from '../../services/rules/features/removeCurseService.js'
 import {
@@ -67,6 +68,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingCureWounds = getPending('cureWounds');
   const pendingStinkingCloud = getPending('stinkingCloud');
   const pendingWeb = getPending('web');
+  const pendingAnimalFriendship = getPending('animalFriendship');
 
   const [resistanceStage, setResistanceStage] = React.useState(null);
   const [resistanceSelectedTargets, setResistanceSelectedTargets] = React.useState([]);
@@ -430,6 +432,38 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
           castingTime: spell.casting_time,
           range: spell.range || '60 feet',
           creatureTargets,
+        });
+        return;
+      }
+    }
+
+    const isAnimalFriendship = (spell.name || '').toLowerCase() === 'animal friendship';
+    if (isAnimalFriendship) {
+      const cs = getCombatSummary(campaignName);
+      const allCreatureNames = cs?.creatures?.map(c => c.name) || [];
+      const beastTargets = [];
+      for (const creatureName of allCreatureNames) {
+        const csCheck = getCombatSummary(campaignName);
+        const creature = csCheck?.creatures?.find(c => c.name === creatureName);
+        if (creature?.type === 'player') continue;
+        try {
+          const monsterData = await getMonsterData(creatureName, null);
+          if (monsterData?.type && monsterData.type.toLowerCase() === 'beast') {
+            beastTargets.push(creatureName);
+          }
+        } catch {
+          // Not a known monster, skip
+        }
+      }
+      if (beastTargets.length > 0) {
+        cfSetPending('animalFriendship', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || '30 feet',
+          rangeFt: 30,
+          creatureTargets: beastTargets,
         });
         return;
       }
@@ -1096,6 +1130,20 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handleWebSkip = createSkipHandler('web', (pending) => pending.creatureTargets);
 
+  const handleAnimalFriendshipConfirm = createConfirmHandler('animalFriendship', async (pending, result) => {
+    const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName);
+    const preparedResult = await prepareSpellCast(pending.spell, { targetNames: result }, {
+      playerName: playerStats.name,
+      playerStats,
+      campaignName,
+      isUpcast: false,
+      freeCastAuthorized,
+    });
+    onExecute(preparedResult.modifiedSpell, preparedResult.metaCtx);
+  }, (pending) => pending.creatureTargets);
+
+  const handleAnimalFriendshipSkip = createSkipHandler('animalFriendship', (pending) => pending.creatureTargets);
+
   const handleRegenerateConfirm = React.useCallback(async (result) => {
     const pending = getPending('regenerate');
     if (!pending) return;
@@ -1181,5 +1229,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingSlow, pendingHaste, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, pendingAnimalFriendship, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip };
 }
