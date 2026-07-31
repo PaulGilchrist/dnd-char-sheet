@@ -114,11 +114,15 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
 }
 
 async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
+    console.log(`[cleanupConcentrationEffects] called: caster=${casterName} spell="${spellName}" campaign=${campaignName}`)
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
+    const circleEffects = targetEffects.filter(te => te.effect === 'circle_of_power' && te.source === casterName)
+    console.log(`[cleanupConcentrationEffects] targetEffects count=${targetEffects.length}, circle_of_power from ${casterName}: ${circleEffects.length}`, JSON.stringify(circleEffects))
     const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
 
     if (casterEffects.length > 0) {
         const remaining = targetEffects.filter(te => !(te.source === casterName && te.duration === 'concentration'))
+        console.log(`[cleanupConcentrationEffects] removing ${casterEffects.length} concentration effects for ${casterName}`, JSON.stringify(casterEffects.map(te => te.effect)))
         setRuntimeValue('campaign', 'targetEffects', remaining, campaignName, true)
 
         for (const effect of casterEffects) {
@@ -239,12 +243,17 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
 function cleanupBuffsByName(casterName, buffName, campaignName) {
     const cs = getCombatSummary(campaignName)
-    if (!cs || !cs.creatures) return
+    if (!cs || !cs.creatures) {
+        console.log(`[cleanupBuffsByName] NO combatSummary or creatures — SKIPPING buff cleanup for "${buffName}" (caster=${casterName})`)
+        return
+    }
+    console.log(`[cleanupBuffsByName] clearing buff "${buffName}" from ${cs.creatures.length} creatures (caster=${casterName})`)
     for (const creature of cs.creatures) {
         const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []
         if (!Array.isArray(buffs)) continue
         const filtered = buffs.filter(b => b.name !== buffName)
         if (filtered.length !== buffs.length) {
+            console.log(`[cleanupBuffsByName] removing "${buffName}" buff from ${creature.name} (had ${buffs.length}, now ${filtered.length})`)
             setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName)
         }
     }

@@ -16,6 +16,7 @@ import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupR
 import { getPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
 import storage from '../../services/ui/storage.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js';
 
 export function setupEventListeners(deps) {
     const { characterName, campaignName, logEntry, charactersRef } = deps;
@@ -424,10 +425,13 @@ export function setupEventListeners(deps) {
                     c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
                 );
                 if (creature && !e.detail.success) {
+                    console.log(`[useLoggedDiceRollEventHandlers] concentration-result FAILURE for ${creature.name}, clearing concentration on "${creature.concentration?.spell}" and running cleanupConcentrationEffects`);
+                    const concentrationSpell = creature.concentration?.spell;
                     creature.concentration = null;
                     setRuntimeValue(e.detail.targetName, 'mantleOfMajestyActive', null, campaignName);
                     storage.set('combatSummary', combatSummary, campaignName);
                     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+                    cleanupConcentrationEffects(creature.name, concentrationSpell, campaignName);
                 }
             }
         });

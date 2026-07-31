@@ -54,7 +54,14 @@ import utils from '../../services/ui/utils.js';
 import storage from '../../services/ui/storage.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
+vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(() => false),
+}));
+vi.mock('../../services/combat/concentration/concentrationService.js', () => ({
+    cleanupConcentrationEffects: vi.fn(),
+}));
 import { setupEventListeners } from './useLoggedDiceRollEventHandlers.js';
+import { cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js';
 
 describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
     const deps = { characterName: 'TestWizard', campaignName: 'test-campaign', logEntry: vi.fn(), charactersRef: { current: [] } };
@@ -80,6 +87,7 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
         addExpiration.mockReset();
         addExpiration.mockReturnValue(undefined);
+        cleanupConcentrationEffects.mockReset();
         storage.set.mockReset();
         storage.set.mockReturnValue(undefined);
         hasIgnoreResistance.mockReset();
@@ -500,6 +508,23 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
             storage.set.mockReturnValue(undefined);
             window.dispatchEvent(new CustomEvent('concentration-result', { detail: { targetName: 'TestWizard', roll: 5, total: 8, saveBonus: 3, bonusDetail: '+3', spellName: 'Fireball', dc: 15, success: false } }));
             expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'mantleOfMajestyActive', null, 'test-campaign');
+        });
+
+        it('runs cleanupConcentrationEffects on failed save', async () => {
+            setup();
+            getCombatSummary.mockReturnValue({ creatures: [{ name: 'TestWizard', concentration: { spell: 'Fireball' } }] });
+            storage.set.mockReturnValue(undefined);
+            window.dispatchEvent(new CustomEvent('concentration-result', { detail: { targetName: 'TestWizard', roll: 5, total: 8, saveBonus: 3, bonusDetail: '+3', spellName: 'Fireball', dc: 15, success: false } }));
+            expect(cleanupConcentrationEffects).toHaveBeenCalledWith('TestWizard', 'Fireball', 'test-campaign');
+        });
+
+        it('does not run cleanupConcentrationEffects on successful save', async () => {
+            setup();
+            cleanupConcentrationEffects.mockClear();
+            getCombatSummary.mockReturnValue({ creatures: [{ name: 'TestWizard', concentration: { spell: 'Fireball' } }] });
+            storage.set.mockReturnValue(undefined);
+            window.dispatchEvent(new CustomEvent('concentration-result', { detail: { targetName: 'TestWizard', roll: 18, total: 21, saveBonus: 3, bonusDetail: '+3', spellName: 'Fireball', dc: 15, success: true } }));
+            expect(cleanupConcentrationEffects).not.toHaveBeenCalled();
         });
 
         it('does not clear concentration when save succeeds', async () => {
