@@ -47,6 +47,7 @@ import { handle as handleHaste, applyHaste, isHasteActive } from './handlers/buf
 import { handle as handleBarkskin, applyBarkskin as applyBarkskinEffect, isBarkskinActive } from './handlers/buffs/barkskinHandler.js';
 import { handle as handleInvisibility, applyInvisibility, isInvisibilityActive } from './handlers/buffs/invisibilityHandler.js';
 import { handle as handleGreaterInvisibility, applyGreaterInvisibility, isGreaterInvisibilityActive } from './handlers/buffs/greaterInvisibilityHandler.js';
+import { handle as handleDeathWard, applyDeathWard as applyDeathWardEffect, isDeathWardActive } from './handlers/buffs/deathWardHandler.js';
 import { handle as handleRevivification } from './handlers/healing/revivificationHandler.js';
 import { handle as handleBardicInspiration } from './handlers/class-bard/bardicInspirationHandler.js';
 import { handle as handleAutoReroll } from './handlers/combat/autoRerollHandler.js';
@@ -290,6 +291,7 @@ const HANDLER_MAP = {
     initiative_action: handleInitiative,
     bonus_action_attack: handleBonusActionAttack,
     buff_ally: handleBuffAlly,
+    death_ward: handleDeathWard,
     zealous_presence: handleZealousPresence,
     resource_pool: handleResourcePool,
     natural_recovery: handleNaturalRecovery,
@@ -567,6 +569,7 @@ export {
     applyLongstriderEffect, applyMageArmorEffect, applyProtectionFromEnergyHandler, applyProtectionFromPoisonHandler,
     applyRemoveCurseEffect, applyBoonOfEnergyResistance, applyWeaponMasteryChoice, applyWeaponKindMastery, applyResistanceEffect,
     applyStoneSkinHandler, isProtectionFromEvilAndGoodActive, isCreatureWarded, isProtectionFromPoisonActive,
+    applyDeathWardEffect, isDeathWardActive,
     isStoneSkinActive, getStoneSkinDamageTypes, isRayOfEnfeeblementActive, getResistanceDamageType,
     isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel,
     isResistanceUsedThisTurn, applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus,

@@ -643,6 +643,7 @@ describe('applyDamageToTarget', () => {
       const npc = { name: 'Orc', type: 'monster', maxHp: 40, currentHp: 30, conditions: [], template: [], concentration: null };
       const cs = makeCombatSummary([npc]);
       await applyDamageToTarget(cs, 'Orc', 15, ['Slashing'], 'TestCampaign', [createMinimalCharacter('Orc')]);
+      console.log('ORC TEST fetch calls:', JSON.stringify(global.fetch.mock.calls));
       const orcCall = global.fetch.mock.calls.find(c => c[0].includes('/log'));
       const orcBody = JSON.parse(orcCall?.[1]?.body || '{}');
       expect(orcBody.threshold).toBe('bloodied');

@@ -6,6 +6,7 @@ import rulesFactory from '../../../services/rules/rulesFactory.js'
 import { parseMagicItemName } from '../../../services/rules/core/attackCalc.js'
 import { isAuraOfLifeActive } from '../../../services/automation/handlers/buffs/auraOfLifeHandler.js'
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js'
+import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js'
 import CharGold from './CharGold.jsx'
 import CharHitPoints from './CharHitPoints.jsx'
 import CharClassFeatures from './CharClassFeatures.jsx'
@@ -722,6 +723,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     )}
                     {huntersMarkOnCreature && markCreature && (
                         <CreatureBadge icon='fa-crosshairs' label="Hunter's Mark" cls='effect-neutral' tooltip={`Marked by ${markCreature?.name}`} />
+                    )}
+                    {isDeathWardActive(playerStats.name, campaignName) && (
+                        <CreatureBadge icon='fa-shield-halved' label='Death Ward' cls='effect-buff' tooltip='Death Ward: Protected from death. First time target would drop to 0 HP, drops to 1 HP instead. Spell ends.' />
                     )}
                 </div>
               </div>

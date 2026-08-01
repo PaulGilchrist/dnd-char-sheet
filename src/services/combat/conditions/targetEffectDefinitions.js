@@ -339,6 +339,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'death_ward',
+    label: 'Death Ward',
+    description: 'The first time the target would drop to 0 HP, it instead drops to 1 HP. The spell ends.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'speed_reduction',
     label: 'Speed Reduced',
     description: 'The creature\'s Speed is reduced by N feet.',

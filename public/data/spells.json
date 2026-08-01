@@ -2458,7 +2458,14 @@
     ],
     "subclasses": [
       "Life"
-    ]
+    ],
+    "automation": {
+      "type": "death_ward",
+      "target": "willing_creature",
+      "duration": "8 hours",
+      "casting_time": "1 action",
+      "range": "Touch"
+    }
   },
   {
     "index": "delayed-blast-fireball",

@@ -301,6 +301,24 @@ function CreatureCard({
                         }}
                     />
                 ))}
+                {(() => {
+                    const buffs = getRuntimeValue(creature.name, 'activeBuffs') || [];
+                    const deathWardBuff = Array.isArray(buffs) ? buffs.find(b => b.name === 'Death Ward' && b.effect === 'death_ward') : null;
+                    if (!deathWardBuff) return null;
+                    return (
+                        <CreatureBadge
+                            icon='fa-shield-halved'
+                            label='Death Ward'
+                            cls='effect-buff'
+                            tooltip={`Death Ward: Protected from death by ${deathWardBuff.sourceCharacter || 'unknown'}. First time target would drop to 0 HP, drops to 1 HP instead.`}
+                            removable={isLocalhost}
+                            onRemove={() => {
+                                const filtered = buffs.filter(b => !(b.name === 'Death Ward' && b.effect === 'death_ward'));
+                                setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                            }}
+                        />
+                    );
+                })()}
             </div>
         </div>
     )

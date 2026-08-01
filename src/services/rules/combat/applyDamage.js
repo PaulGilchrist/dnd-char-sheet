@@ -16,6 +16,7 @@ import { checkUndyingSentinel } from '../../rules/features/undyingSentinelServic
 import { checkBoonOfRecoveryLastStand } from '../../rules/features/boonOfRecoveryService.js';
 import { checkRelentlessEndurance } from '../../rules/features/relentlessEnduranceService.js';
 import { checkRelentlessRage } from '../../rules/features/relentlessRageService.js';
+import { checkDeathWard } from '../../rules/features/deathWardService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
 
@@ -389,11 +390,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
      creature.concentration.dc = Math.max(10, Math.floor(dcDamage / 2));
    }
 
-       checkDarkOnesBlessing(characters, creature, finalDamage, isPlayer, wasAlive, isNowUnconscious, campaignName, attackerName);
-
-    if (!suppressHpLog) {
-        logDamageApplication(creature, finalDamage, oldHp, newHp, campaignName);
-    }
+        checkDarkOnesBlessing(characters, creature, finalDamage, isPlayer, wasAlive, isNowUnconscious, campaignName, attackerName);
 
   let npcConcentrationBroken = false;
   let combatSummaryChanged = false;
@@ -424,6 +421,13 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
       const relentlessRageResult = checkRelentlessRage(creature, playerComputed, campaignName);
       if (relentlessRageResult.intercepted) {
         return { ...relentlessRageResult, damageDealt: finalDamage, oldHp, interceptedFeature: 'Relentless Rage' };
+      }
+
+      // Check for Death Ward (4th level abjuration spell)
+      const deathWardResult = checkDeathWard(creature, playerComputed, campaignName);
+      console.log('[applyDamage] Death Ward result for', creature.name, ':', JSON.stringify(deathWardResult));
+      if (deathWardResult.intercepted) {
+        return { ...deathWardResult, damageDealt: finalDamage, oldHp, interceptedFeature: 'Death Ward' };
       }
 
       const promptId = utils.guid();
@@ -530,6 +534,11 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
   }
 
   window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+
+  if (!suppressHpLog) {
+    console.log('[applyDamage] logDamageApplication called for', creature.name, 'oldHp=', oldHp, 'newHp=', newHp);
+    logDamageApplication(creature, finalDamage, oldHp, newHp, campaignName);
+  }
 
   return { finalDamage, oldHp, newHp, damageReduced: finalDamage < rawDamage, damageReducedByFeature: damageReducedByFeature, resistanceDetails };
 }
