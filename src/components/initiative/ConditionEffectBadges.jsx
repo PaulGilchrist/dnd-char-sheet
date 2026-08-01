@@ -150,6 +150,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (tauntingStepEffect) {
         badges.push({ label: 'Taunted', cls: 'effect-debuff', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })
     }
+    const compelledDuelEffect = targetEffects?.find(te => te.effect === 'compelled_duel' && te.target === creatureName)
+    if (compelledDuelEffect) {
+        badges.push({ label: 'Compelled Duel', cls: 'effect-debuff', icon: 'fa-hand-fist', removable: true, removeAction: 'target_effect', effectType: 'compelled_duel', tooltip: `Disadvantage on attack rolls vs creatures other than ${compelledDuelEffect.source || 'you'} (Concentration, up to 1 minute)` })
+    }
     if (effects.banePenalty) {
         const baneEffect = targetEffects?.find(te => te.effect === 'bane_penalty' && te.target === creatureName)
         const casterName = baneEffect?.source || 'unknown'

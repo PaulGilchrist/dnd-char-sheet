@@ -18,6 +18,7 @@ vi.mock('../../dice/diceRoller.js', () => ({
 
 vi.mock('../../automation/index.js', () => ({
   executeHandler: vi.fn(),
+  checkCompelledDuelAttackExpiry: vi.fn(),
 }))
 
 vi.mock('../combat/rangeValidation.js', () => ({
@@ -65,6 +66,7 @@ vi.mock('../features/ottoDanceService.js', () => ({ triggerOttoDance: vi.fn(asyn
 vi.mock('../features/resilientSphereService.js', () => ({ triggerResilientSphere: vi.fn(async () => {}) }))
 vi.mock('../features/foresightService.js', () => ({ triggerForesight: vi.fn(async () => {}) }))
 vi.mock('../features/rayOfEnfeeblementService.js', () => ({ triggerRayOfEnfeeblement: vi.fn(async () => {}) }))
+vi.mock('../features/compelledDuelService.js', () => ({ triggerCompelledDuel: vi.fn(async () => {}) }))
 vi.mock('../features/globeOfInvulnerabilityService.js', () => ({ triggerGlobeOfInvulnerability: vi.fn(async () => {}) }))
 vi.mock('../features/heroismService.js', () => ({ triggerHeroism: vi.fn(async () => {}) }))
 vi.mock('../features/holyAuraService.js', () => ({ triggerHolyAura: vi.fn(async () => {}) }))
@@ -208,6 +210,7 @@ describe('executeSpellCast - no-damage spell routing', () => {
     it.each([
       { service: '../features/friendsService.js', name: 'triggerFriends', spellName: 'Friends' },
       { service: '../features/rayOfEnfeeblementService.js', name: 'triggerRayOfEnfeeblement', spellName: 'Ray of Enfeeblement' },
+      { service: '../features/compelledDuelService.js', name: 'triggerCompelledDuel', spellName: 'Compelled Duel' },
     ])('passes target name and spell save DC to $name', async ({ service, name, spellName }) => {
       const mod = await import(service)
       const services = makeServices({

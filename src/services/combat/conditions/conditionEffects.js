@@ -643,8 +643,8 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'multiattack_defense') {
       effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
     }
-    if (te.effect === 'taunting_step') {
-      effects.tauntingStepSource = te.source;
+    if (te.effect === 'taunting_step' || te.effect === 'compelled_duel') {
+      effects.attacksOtherDisadvantageSource = te.source;
     }
     if (te.noOpportunityAttacks) {
       effects.riderCannotOpportunityAttack = true;
@@ -838,7 +838,7 @@ function combineAttackModes(attackerEffects, targetEffects, attackRange, targetN
   if (targetEffects.targetAdvantageIfWithin5ft && attackRange <= 5) adv++
   if (targetEffects.targetDisadvantageIfBeyond5ft && attackRange > 5) dis++
 
-  if (attackerEffects.tauntingStepSource && targetName && targetName !== attackerEffects.tauntingStepSource) {
+  if (attackerEffects.attacksOtherDisadvantageSource && targetName && targetName !== attackerEffects.attacksOtherDisadvantageSource) {
     dis++
   }
 

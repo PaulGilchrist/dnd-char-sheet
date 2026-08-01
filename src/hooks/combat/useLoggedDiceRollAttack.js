@@ -35,6 +35,7 @@ import { loadManeuvers } from '../../services/ui/dataLoader.js';
 import { getManeuversForRules } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { createSaveListener } from '../../services/automation/common/savePrompt.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { checkCompelledDuelAttackExpiry } from '../../services/automation/handlers/spells/compelledDuelHandler.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -151,6 +152,35 @@ export function createLogAndShow(deps) {
             }
         } else {
             target = combatSummary ? getTargetFromAttacker(combatSummary, utils.getName(characterName)) : null;
+        }
+
+        // Compelled Duel: the caster attacking a creature other than the duel target ends the effect
+        if (rollType === 'attack' && target) {
+            const duelPopup = checkCompelledDuelAttackExpiry(characterName, target.name, campaignName);
+            if (duelPopup) {
+                setPopupHtml(duelPopup);
+            }
+        }
+
+        // Compelled Duel / Taunting Step: the effected creature has disadvantage on attacks against
+        // creatures other than the effect source (advantage + this disadvantage cancel out).
+        if (rollType === 'attack' && target) {
+            const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const sourceGatedEffects = allTargetEffects.filter(te =>
+                (te.effect === 'compelled_duel' || te.effect === 'taunting_step') &&
+                te.target === utils.getName(characterName) &&
+                te.source && te.source !== target.name
+            );
+            if (sourceGatedEffects.length > 0) {
+                if (forcedMode === 'advantage') {
+                    forcedMode = 'normal';
+                } else if (forcedMode === 'normal') {
+                    forcedMode = 'disadvantage';
+                }
+                if (context) {
+                    context.forcedMode = forcedMode;
+                }
+            }
         }
 
         // Sundering Blow: add +5 to hit bonus for next attack against the target

@@ -292,6 +292,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'compelled_duel',
+    label: 'Compelled Duel',
+    description: 'Disadvantage on attack rolls against creatures other than the source (Concentration, up to 1 minute).',
+    icon: 'fa-hand-fist',
+    cls: 'effect-disadvantage',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'pass_without_trace_bonus',
     label: 'Pass Without Trace',
     description: 'The creature gains a +10 bonus to Dexterity (Stealth) checks.',

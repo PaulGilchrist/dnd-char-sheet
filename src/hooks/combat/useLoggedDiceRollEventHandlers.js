@@ -26,10 +26,19 @@ export function setupEventListeners(deps) {
 
         window.addEventListener('save-result', async (e) => {
             const pending = getPendingSavePrompt(e.detail.promptId);
-            const prompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts') || [];
+            const listenerPrompts = getRuntimeValue('campaign', 'pendingSaveListenerPrompts');
+            const prompts = Array.isArray(listenerPrompts) ? listenerPrompts : [];
             const filteredPrompts = prompts.filter(id => id !== e.detail.promptId);
             if (filteredPrompts.length !== prompts.length) {
-                setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, pending?.campaignName);
+                // createSaveListener prompts are not in the pendingSaveRegistry — read campaignName from the runtime store.
+                const pendingSavesStore = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
+                const saveCampaignName = pending?.campaignName || pendingSavesStore[e.detail.promptId]?.campaignName || campaignName;
+                setRuntimeValue('campaign', 'pendingSaveListenerPrompts', filteredPrompts, saveCampaignName);
+            }
+
+            if (!pending) {
+                // createSaveListener resolves its own save via its internal promise — nothing more to do here.
+                return;
             }
 
             if (!pending) {

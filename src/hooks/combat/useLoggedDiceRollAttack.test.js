@@ -464,4 +464,64 @@ describe('createLogAndShow (useLoggedDiceRollAttack)', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
     });
+
+    describe('compelled duel / taunting step target gating', () => {
+        function mockTargetEffects(effects) {
+            getRuntimeValue.mockImplementation((name, prop) => {
+                if (name === 'campaign' && prop === 'targetEffects') return effects;
+                return null;
+            });
+        }
+
+        it('imposes disadvantage when attacking a creature other than the source', async () => {
+            mockTargetEffects([{ target: 'TestFighter', effect: 'compelled_duel', source: 'Elarielle' }]);
+            rollD20.mockReturnValueOnce(9).mockReturnValueOnce(3);
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                mode: 'disadvantage',
+                rolls: [9, 3],
+                total: 3,
+            }));
+        });
+
+        it('does not impose disadvantage when attacking the source', async () => {
+            getTargetFromAttacker.mockReturnValue({ name: 'Elarielle', ac: 12 });
+            mockTargetEffects([{ target: 'TestFighter', effect: 'compelled_duel', source: 'Elarielle' }]);
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Elarielle' });
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                mode: 'normal',
+            }));
+        });
+
+        it('cancels an existing advantage when attacking a creature other than the source', async () => {
+            mockTargetEffects([{ target: 'TestFighter', effect: 'compelled_duel', source: 'Elarielle' }]);
+            rollD20.mockReturnValueOnce(9).mockReturnValueOnce(3);
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin', forcedMode: 'advantage' });
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                mode: 'normal',
+                total: 9,
+            }));
+        });
+
+        it('imposes disadvantage from taunting step on attacks against other creatures', async () => {
+            mockTargetEffects([{ target: 'TestFighter', effect: 'taunting_step', source: 'Elarielle' }]);
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                mode: 'disadvantage',
+            }));
+        });
+
+        it('does not gate when the effect is on a different creature', async () => {
+            mockTargetEffects([{ target: 'SomebodyElse', effect: 'compelled_duel', source: 'Elarielle' }]);
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                mode: 'normal',
+            }));
+        });
+    });
 });

@@ -125,6 +125,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
+                    if (concentrationSpell === 'Compelled Duel') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const filtered = storedEffects.filter(te => !(te.effect === 'compelled_duel' && te.source === playerStats.name));
+                        if (filtered.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                    }
                     if (concentrationSpell === 'Resistance') {
                         const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                         const filtered = storedEffects.filter(te => !(te.effect === 'resistance_damage_reduction' && te.source === playerStats.name));

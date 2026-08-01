@@ -36,6 +36,8 @@ import { triggerDominateBeast } from '../features/dominateBeastService.js';
 import { triggerDominateMonster } from '../features/dominateMonsterService.js';
 import { triggerDominatePerson } from '../features/dominatePersonService.js';
 import { triggerRayOfEnfeeblement } from '../features/rayOfEnfeeblementService.js';
+import { triggerCompelledDuel } from '../features/compelledDuelService.js';
+import { checkCompelledDuelAttackExpiry } from '../../automation/index.js';
 import { triggerViciousMockeryForGeneric } from '../features/viciousMockeryService.js';
 import { endInvisibilityOnHostileAction } from '../features/invisibilityService.js';
 import { triggerGlobeOfInvulnerability } from '../features/globeOfInvulnerabilityService.js';
@@ -641,6 +643,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Dominate Monster — single creature target WIS save or Charmed (concentration)
         if (spell.name && spell.name.toLowerCase() === 'dominate monster') {
             const dominateMonsterTarget = await getTargetInfo();
+            checkCompelledDuelAttackExpiry(playerStats.name, dominateMonsterTarget?.name, campaignName);
             const dominateMonsterResult = await triggerDominateMonster(spell, { ...metaCtx, spellSaveDc, targetName: dominateMonsterTarget?.name }, playerStats, campaignName, mapName);
             if (dominateMonsterResult) {
                 return { automationPopup: dominateMonsterResult };
@@ -651,6 +654,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Dominate Person — single humanoid target WIS save or Charmed (concentration)
         if (spell.name && spell.name.toLowerCase() === 'dominate person') {
             const dominatePersonTarget = await getTargetInfo();
+            checkCompelledDuelAttackExpiry(playerStats.name, dominatePersonTarget?.name, campaignName);
             const dominatePersonResult = await triggerDominatePerson(spell, { ...metaCtx, spellSaveDc, targetName: dominatePersonTarget?.name }, playerStats, campaignName, mapName);
             if (dominatePersonResult) {
                 return { automationPopup: dominatePersonResult };
@@ -661,7 +665,18 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Ray of Enfeeblement (2024) — CON save: success = target has Disadvantage on next attack; failure = STR check disadvantage + 1d8 damage reduction
         if (spell.name && spell.name.toLowerCase() === 'ray of enfeeblement') {
             const rayTarget = await getTargetInfo();
+            checkCompelledDuelAttackExpiry(playerStats.name, rayTarget?.name, campaignName);
             await triggerRayOfEnfeeblement(spell, { ...metaCtx, spellSaveDc, targetName: rayTarget?.name }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Compelled Duel — WIS save: on failure the target has Disadvantage on attack rolls against creatures other than the caster (Concentration)
+        if (spell.name && spell.name.toLowerCase() === 'compelled duel') {
+            const duelTarget = await getTargetInfo();
+            const duelResult = await triggerCompelledDuel(spell, { ...metaCtx, spellSaveDc, targetName: duelTarget?.name }, playerStats, campaignName, mapName);
+            if (duelResult) {
+                return { automationPopup: duelResult };
+            }
             return;
         }
 

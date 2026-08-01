@@ -133,6 +133,23 @@ describe('setupEventListeners (useLoggedDiceRollEventHandlers)', () => {
             expect(applyDamageToTarget).not.toHaveBeenCalled();
         });
 
+        it('cleans up createSaveListener prompt with a valid campaignName but does not process damage', async () => {
+            setup();
+            // createSaveListener registers into pendingSavePrompts (runtime store) but NOT the pendingSaveRegistry Map
+            const pid = 'listener-p1';
+            testPendingSaves = { [pid]: { promptId: pid, targetName: 'Goblin', campaignName: 'test-campaign', saveType: 'WIS', saveDc: 15 } };
+            getRuntimeValue.mockImplementation((charName, prop) => {
+                if (charName === 'campaign' && prop === 'pendingSavePrompts') return testPendingSaves;
+                if (charName === 'campaign' && prop === 'pendingSaveListenerPrompts') return [pid];
+                return null;
+            });
+            window.dispatchEvent(new CustomEvent('save-result', { detail: { promptId: pid, targetName: 'Goblin', success: false, roll: 8, total: 11, saveBonus: 3 } }));
+            await flushPromises();
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'pendingSaveListenerPrompts', [], 'test-campaign');
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            expect(deps.logEntry).not.toHaveBeenCalled();
+        });
+
         it('skips damage when soulstitch protected', async () => {
             setup();
             hasSoulstitchProtection.mockReturnValue(true);

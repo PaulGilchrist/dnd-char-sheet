@@ -17,6 +17,7 @@ import { checkBoonOfRecoveryLastStand } from '../../rules/features/boonOfRecover
 import { checkRelentlessEndurance } from '../../rules/features/relentlessEnduranceService.js';
 import { checkRelentlessRage } from '../../rules/features/relentlessRageService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
+import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
 
 // Tracks which multi-attack sequences have already triggered Relentless Endurance.
 // Prevents follow-up hits in the same sequence from re-killing the character.
@@ -356,6 +357,17 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
      }
 
       checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
+
+      // Compelled Duel: the effect ends if the target takes damage from anyone other than the caster
+      if (attackerName && attackerName !== creature.name) {
+        const duelEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+          te => te.effect === 'compelled_duel' && te.target === creature.name && te.source !== attackerName
+        );
+        if (duelEffects.length > 0) {
+          endCompelledDuel(duelEffects[0].source, creature.name, campaignName,
+            `${attackerName} damaged ${creature.name}, breaking the duel.`);
+        }
+      }
      }
 
      // Clean up Avenging Angel Frightful Aura tracking list when a creature takes damage

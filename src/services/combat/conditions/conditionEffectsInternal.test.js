@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import {
   computeConditionEffects,
   saveModifierApplies,
+  combineAttackModes,
 } from './conditionEffects.js';
 
 // ---------------------------------------------------------------------------
@@ -701,6 +702,16 @@ describe('computeConditionEffects — targetEffects', () => {
     expect(result.attackDisadvantageCount).toBe(1);
   });
 
+  it('sets attacksOtherDisadvantageSource for compelled_duel', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'compelled_duel', source: 'Paladin' }]);
+    expect(result.attacksOtherDisadvantageSource).toBe('Paladin');
+  });
+
+  it('sets attacksOtherDisadvantageSource for taunting_step', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'taunting_step', source: 'Paladin' }]);
+    expect(result.attacksOtherDisadvantageSource).toBe('Paladin');
+  });
+
   it('increments attackAdvantageCount for next_attack_advantage without vexTarget', () => {
     const result = computeConditionEffects([], [], [{ effect: 'next_attack_advantage' }]);
     expect(result.attackAdvantageCount).toBe(1);
@@ -1107,5 +1118,34 @@ describe('computeConditionEffects — applied modifier effects', () => {
     const result = computeConditionEffects([], modifiers);
     expect(result.saveDisadvantageAbilities).toEqual(['CON', 'WIS']);
     expect(result.saveDisadvantageCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// combineAttackModes — attacks-other source gating (Compelled Duel / Steps of the Fey)
+// ---------------------------------------------------------------------------
+
+describe('combineAttackModes — attacks-other source gating', () => {
+  const baseEffects = () => ({ attackAdvantageCount: 0, attackDisadvantageCount: 0, restoreBalance: false });
+  const emptyTarget = { targetAdvantageCount: 0, targetDisadvantageCount: 0 };
+
+  it('applies disadvantage when attacking a creature other than the source', () => {
+    const attacker = { ...baseEffects(), attacksOtherDisadvantageSource: 'Paladin' };
+    expect(combineAttackModes(attacker, emptyTarget, 5, 'Goblin')).toBe('disadvantage');
+  });
+
+  it('does not apply disadvantage when attacking the source', () => {
+    const attacker = { ...baseEffects(), attacksOtherDisadvantageSource: 'Paladin' };
+    expect(combineAttackModes(attacker, emptyTarget, 5, 'Paladin')).toBe('normal');
+  });
+
+  it('does not apply disadvantage when targetName is unknown', () => {
+    const attacker = { ...baseEffects(), attacksOtherDisadvantageSource: 'Paladin' };
+    expect(combineAttackModes(attacker, emptyTarget, 5)).toBe('normal');
+  });
+
+  it('combines with other disadvantage sources', () => {
+    const attacker = { ...baseEffects(), attackDisadvantageCount: 1, attacksOtherDisadvantageSource: 'Paladin' };
+    expect(combineAttackModes(attacker, emptyTarget, 5, 'Goblin')).toBe('disadvantage');
   });
 });

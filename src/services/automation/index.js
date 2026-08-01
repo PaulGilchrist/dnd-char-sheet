@@ -240,6 +240,7 @@ import { applyPassWithoutTraceEffect } from '../../services/rules/features/passW
 import { handle as handleProtectionFromEvilAndGood, isProtectionFromEvilAndGoodActive, isCreatureWarded } from './handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { handle as handleResistance, applyResistance as applyResistanceEffect, getResistanceDamageType, isResistanceUsedThisTurn } from './handlers/buffs/resistanceHandler.js';
 import { handle as handleRayOfEnfeeblement, isRayOfEnfeeblementActive } from './handlers/spells/rayOfEnfeeblementHandler.js';
+import { handle as handleCompelledDuel, isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel } from './handlers/spells/compelledDuelHandler.js';
 import { handle as handleViciousMockery } from './handlers/spells/viciousMockeryHandler.js';
 import { handle as handleSentinelGuardian } from './handlers/combat/sentinelGuardianHandler.js';
 import { handle as handleSentinelHalt } from './handlers/combat/sentinelHaltHandler.js';
@@ -537,6 +538,7 @@ const HANDLER_MAP = {
         boon_of_energy_resistance: handleBoonOfEnergyResistance,
         modify_d20_roll: handleBoonOfFate,
         ray_of_enfeeblement: handleRayOfEnfeeblement,
+        compelled_duel: handleCompelledDuel,
         vicious_mockery: handleViciousMockery,
         silence: handleSilence,
         bane: handleBane,
@@ -560,6 +562,7 @@ export {
     applyRemoveCurseEffect, applyBoonOfEnergyResistance, applyWeaponMasteryChoice, applyWeaponKindMastery, applyResistanceEffect,
     applyStoneSkinHandler, isProtectionFromEvilAndGoodActive, isCreatureWarded, isProtectionFromPoisonActive,
     isStoneSkinActive, getStoneSkinDamageTypes, isRayOfEnfeeblementActive, getResistanceDamageType,
+    isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel,
     isResistanceUsedThisTurn, applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus,
     getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
     applyHaste,
