@@ -115,13 +115,13 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Beacon of Hope",
-    "Barkskin",
-    "Blindness/Deafness",
-    "Calm Emotions",
-    "Circle of Power",
-    "Compelled Duel",
-    "Cure Wounds"
+    "Cure Wounds",
+    "Compulsion",
+    "Crown of Madness",
+    "Death Ward",
+    "Enhance Ability",
+    "Expeditious Retreat",
+    "Eyebite"
   ],
   "magicInitiateInstances": [
     {

@@ -31,6 +31,7 @@ import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
 import { triggerCharmPerson } from '../features/charmPersonService.js';
 import { triggerCharmMonster } from '../features/charmMonsterService.js';
+import { triggerCompulsion } from '../features/compulsionService.js';
 import { triggerAnimalFriendship } from '../features/animalFriendshipService.js';
 import { triggerDominateBeast } from '../features/dominateBeastService.js';
 import { triggerDominateMonster } from '../features/dominateMonsterService.js';
@@ -617,6 +618,16 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
             if (charmMonsterResult) {
                 return { automationPopup: charmMonsterResult };
+            }
+            return;
+        }
+
+        // Compulsion — multi-target WIS save or Charmed (concentration)
+        if (spell.name && spell.name.toLowerCase() === 'compulsion') {
+            const compulsionTarget = await getTargetInfo();
+            const compulsionResult = await triggerCompulsion(spell, { ...metaCtx, spellSaveDc, targetName: compulsionTarget?.name }, playerStats, campaignName, mapName);
+            if (compulsionResult) {
+                return { automationPopup: compulsionResult };
             }
             return;
         }

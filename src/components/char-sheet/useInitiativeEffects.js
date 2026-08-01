@@ -190,6 +190,14 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             }
                         }
                     }
+
+                    if (concentrationSpell === 'Compulsion') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const filtered = storedEffects.filter(te => !(te.effect === 'compulsion' && te.source === playerStats.name));
+                        if (filtered.length !== storedEffects.length) {
+                            setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                    }
                 }
             }
 
