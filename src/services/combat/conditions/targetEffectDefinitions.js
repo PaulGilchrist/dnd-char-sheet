@@ -304,7 +304,7 @@ const TARGET_EFFECT_DEFINITIONS = [
     effect: 'pass_without_trace_bonus',
     label: 'Pass Without Trace',
     description: 'The creature gains a +10 bonus to Dexterity (Stealth) checks.',
-    icon: 'fa-footprints',
+    icon: 'fa-wind',
     cls: 'effect-target-adv',
     group: 'Spells',
     fields: ['source', 'value'],
