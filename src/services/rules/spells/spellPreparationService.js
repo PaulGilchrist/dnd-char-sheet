@@ -216,6 +216,17 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
   }
 
+  // Eyebite concentration recast — free cast when already concentrating on Eyebite
+  if (spellName === 'Eyebite') {
+    const cs = getCombatSummary(campaignName);
+    if (cs) {
+      const creature = cs.creatures.find(c => c.name === playerName);
+      if (creature && creature.concentration && creature.concentration.spell === 'Eyebite') {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -467,6 +478,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
 
   let shouldSetConcentration = false;
   let oldConcentrationSpell = null;
+  let isEyebiteRecast = false;
 
   if (!isWgbSpell && spell.concentration) {
     const cs = getCombatSummary(campaignName);
@@ -479,6 +491,8 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
         shouldSetConcentration = true;
       } else if (!creature?.concentration) {
         shouldSetConcentration = true;
+      } else if (spell.name === 'Eyebite' && creature.concentration.spell === spell.name) {
+        isEyebiteRecast = true;
       }
     }
   }
@@ -510,6 +524,8 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
   // Resource consumption
   if (isWgbSpell && spell.name === 'Spiritual Weapon') {
     cleanupBuffsByName(playerName, 'Shield of Faith', campaignName);
+  } else if (isEyebiteRecast) {
+    // Recasting Eyebite while already concentrating on it — no slot consumed, no buff updated
   } else if (isUpcast && !isFreeCast && !result.metaCtx._psionicUsed && effectiveSpellLevel !== spell.level) {
     const slotKey = `spell_slots_level_${effectiveSpellLevel}`;
     const currentSlots = getRuntimeValue(playerName, slotKey);
@@ -575,6 +591,11 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
     const existingBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName) || [];
     const newBuffs = Array.isArray(existingBuffs) ? [...existingBuffs, { name: 'Hex', effect: 'hex_concentration', duration: 'concentration' }] : [{ name: 'Hex', effect: 'hex_concentration', duration: 'concentration' }];
     setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
+  }
+
+  if (shouldSetConcentration && spell.name === 'Eyebite') {
+    const existingBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName) || [];
+    setRuntimeValue(playerName, 'activeBuffs', [...existingBuffs, { name: 'Eyebite', effect: 'eyebite_concentration', duration: 'concentration' }], campaignName);
   }
 
   // Build modified spell

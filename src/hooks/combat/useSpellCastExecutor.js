@@ -106,6 +106,9 @@ function handleModalResult(popup, setModalState) {
         case 'silenceTargetSelection':
             setModalState({ silenceModal: payload });
             break;
+        case 'eyebiteEffect':
+            setModalState({ eyebiteEffectModal: payload });
+            break;
         case 'wildMagicSurge':
             setModalState({ wildMagicSurgeModal: payload });
             break;

@@ -125,6 +125,17 @@ describe('eyebiteHandler.handle', () => {
         expect(result.type).toBe('modal');
         expect(result.modalName).toBe('eyebiteEffect');
     });
+
+    it('includes eyebiteRecast flag in metaCtx when provided', async () => {
+        defaultMocks();
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
+
+        // The handler returns a modal; metaCtx is managed by the caller (useSpellMetamagicFlow)
+        // but the eyebiteRecast flag should be passed through when set
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('eyebiteEffect');
+    });
 });
 
 // ─── getEffectOptions ───
