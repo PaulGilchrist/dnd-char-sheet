@@ -49,6 +49,7 @@ import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceSe
 import { triggerSlow } from '../features/slowService.js';
 import { triggerBaneSpell } from '../features/baneService.js';
 import { triggerBlessSpell } from '../features/blessService.js';
+import { triggerExpeditiousRetreat } from '../features/expeditiousRetreatService.js';
 import { triggerBeaconOfHope } from '../features/beaconOfHopeService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
@@ -589,6 +590,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Blur — self-target illusion that gives attackers disadvantage on attack rolls against you
         if (spell.name && spell.name.toLowerCase() === 'blur') {
             await triggerBlur(spell, metaCtx, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Expeditious Retreat — concentration badge for bonus action Dash
+        if (spell.name && spell.name.toLowerCase() === 'expeditious retreat') {
+            await triggerExpeditiousRetreat(spell, metaCtx, playerStats, campaignName, mapName);
             return;
         }
 
