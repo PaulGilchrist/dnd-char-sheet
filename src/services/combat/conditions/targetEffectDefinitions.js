@@ -331,15 +331,6 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
-    effect: 'hypnotic_pattern',
-    label: 'Hypnotic Pattern',
-    description: 'The creature is Charmed, Incapacitated, and has Speed 0 by Hypnotic Pattern.',
-    icon: 'fa-eye',
-    cls: 'effect-charm',
-    group: 'Spells',
-    fields: ['source'],
-  },
-  {
     effect: 'regenerate',
     label: 'Regenerate',
     description: 'Target regains 4d8 + 15 HP initially, then 1 HP per turn. When the effect ends, the target is restored to full HP.',

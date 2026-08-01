@@ -129,27 +129,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 { type: 'speed_zero', condition: 'speed_zero' },
             ], campaignName);
 
-            // Track Hypnotic Pattern effect with concentration duration for cleanup
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
-            const existingIdx = effects.findIndex(
-                te => te.target === targetName && te.effect === 'hypnotic_pattern'
-            );
-            const hypnoticEffect = {
-                target: targetName,
-                effect: 'hypnotic_pattern',
-                source: casterName,
-                conditions: ['charmed', 'incapacitated', 'speed_zero'],
-                dc: dc,
-                duration: 'concentration',
-            };
-            if (existingIdx >= 0) {
-                effects[existingIdx] = hypnoticEffect;
-            } else {
-                effects.push(hypnoticEffect);
-            }
-            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
-
             results.push(`${targetName} is Charmed, Incapacitated, and has Speed 0.`);
         }
     }

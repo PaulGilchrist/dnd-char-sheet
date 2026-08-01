@@ -51,28 +51,6 @@ function HypnoticPatternModal({
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed', 'incapacitated', 'speed_zero'], campaignName);
     }, []);
 
-    const trackHypnoticEffect = useCallback((casterName, targetName, dc, campaignName) => {
-        const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-        const effects = Array.isArray(targetEffects) ? targetEffects : [];
-        const existingIdx = effects.findIndex(
-            te => te.target === targetName && te.effect === 'hypnotic_pattern'
-        );
-        const hypnoticEffect = {
-            target: targetName,
-            effect: 'hypnotic_pattern',
-            source: casterName,
-            conditions: ['charmed', 'incapacitated', 'speed_zero'],
-            dc: dc,
-            duration: 'concentration',
-        };
-        if (existingIdx >= 0) {
-            effects[existingIdx] = hypnoticEffect;
-        } else {
-            effects.push(hypnoticEffect);
-        }
-        setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
-    }, []);
-
     const resolveAllSaves = useCallback(async (selectedNames) => {
         const combatSummary = getCombatSummary(campaignName);
         if (!combatSummary) return { results: [], prompts: [] };
@@ -141,7 +119,6 @@ function HypnoticPatternModal({
                         { type: 'incapacitated', condition: 'incapacitated' },
                         { type: 'speed_zero', condition: 'speed_zero' },
                     ], campaignName);
-                    trackHypnoticEffect(casterName, targetName, saveDc, campaignName);
 
                     await addEntry(campaignName, {
                         type: 'condition',
@@ -285,7 +262,7 @@ function HypnoticPatternModal({
         persistAndNotify(getCombatSummary(campaignName), campaignName);
 
         return { results, prompts };
-    }, [campaignName, playerStats.name, action.name, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, applyHypnoticConditionsToTarget, trackHypnoticEffect]);
+    }, [campaignName, playerStats.name, action.name, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, applyHypnoticConditionsToTarget]);
 
     const handleSaveResult = useCallback(async (event) => {
         const detail = event.detail;
@@ -305,7 +282,6 @@ function HypnoticPatternModal({
                 { type: 'incapacitated', condition: 'incapacitated' },
                 { type: 'speed_zero', condition: 'speed_zero' },
             ], campaignName);
-            trackHypnoticEffect(casterName, targetName, saveDc, campaignName);
 
             await addEntry(campaignName, {
                 type: 'condition',
@@ -373,7 +349,7 @@ function HypnoticPatternModal({
             }
             return updated;
         });
-    }, [campaignName, saveDc, saveType, pendingPrompts, applyHypnoticConditionsToTarget, trackHypnoticEffect, playerStats.name, onClose]);
+    }, [campaignName, saveDc, saveType, pendingPrompts, applyHypnoticConditionsToTarget, playerStats.name, onClose]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;
