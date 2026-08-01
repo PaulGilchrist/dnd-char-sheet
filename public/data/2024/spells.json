@@ -4402,7 +4402,11 @@
     ],
     "subclasses": [],
     "area_of_effect": null,
-    "status_effects": []
+    "status_effects": [],
+    "automation": {
+      "type": "enhance_ability",
+      "range": "Touch"
+    }
   },
   {
     "index": "enlarge-reduce",

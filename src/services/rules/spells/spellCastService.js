@@ -787,6 +787,21 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
+        // Enhance Ability — target gains Advantage on ability checks of the chosen ability (Concentration)
+        if (spell.name && spell.name.toLowerCase() === 'enhance ability') {
+            const action = {
+                name: spell.name,
+                spell: spell,
+                automation: spell.automation || { type: 'enhance_ability', range: 'Touch' },
+                metaCtx,
+            };
+            const enhanceResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
+            if (enhanceResult) {
+                return { automationPopup: enhanceResult };
+            }
+            return;
+        }
+
         if (spell.dc && spell.status_effects && spell.status_effects.length > 0 && !fullSpell.area_of_effect) {
             const target = await getTargetInfo();
             const context = {

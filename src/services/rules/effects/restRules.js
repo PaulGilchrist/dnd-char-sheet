@@ -597,6 +597,13 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
       setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
     }
 
+    // Clear Enhance Ability on short rest
+    const enhanceAbilityEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredEnhanceAbilityEffects = enhanceAbilityEffects.filter(e => e.effect !== 'enhance_ability');
+    if (filteredEnhanceAbilityEffects.length !== enhanceAbilityEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredEnhanceAbilityEffects, campaignName, true)
+    }
+
     // Clear Circle of Power on short rest
     const circleOfPowerEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredCircleOfPowerEffects = circleOfPowerEffects.filter(e => e.effect !== 'circle_of_power');
@@ -843,6 +850,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredBarkskinEffects = barkskinEffects.filter(e => e.effect !== 'barkskin');
     if (filteredBarkskinEffects.length !== barkskinEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredBarkskinEffects, campaignName, true)
+    }
+
+    // Clear Enhance Ability on long rest
+    const enhanceAbilityEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredEnhanceAbilityEffects = enhanceAbilityEffects.filter(e => e.effect !== 'enhance_ability');
+    if (filteredEnhanceAbilityEffects.length !== enhanceAbilityEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredEnhanceAbilityEffects, campaignName, true)
     }
 
     // Clear Circle of Power on long rest

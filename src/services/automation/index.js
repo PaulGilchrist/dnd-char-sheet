@@ -250,6 +250,7 @@ import { handle as handleViciousMockery } from './handlers/spells/viciousMockery
 import { handle as handleSentinelGuardian } from './handlers/combat/sentinelGuardianHandler.js';
 import { handle as handleSentinelHalt } from './handlers/combat/sentinelHaltHandler.js';
 import { handle as handleWebAreaSave } from './handlers/spells/webAreaSaveHandler.js';
+import { handle as handleEnhanceAbility, applyEnhanceAbility as applyEnhanceAbilityEffect } from './handlers/spells/enhanceAbilityHandler.js';
 import { handle as handleSavant } from './handlers/class-wizard/SavantHandler.js';
 
 const SAVANT_SCHOOLS = {
@@ -516,6 +517,7 @@ const HANDLER_MAP = {
         antimagic_field: handleAntimagicField,
         grease_area_save: handleGreaseAreaSave,
         web_area_save: handleWebAreaSave,
+        enhance_ability: handleEnhanceAbility,
         greater_restoration: handleGreaterRestoration,
         lesser_restoration: handleLesserRestoration,
         remove_curse: handleRemoveCurse,
@@ -584,6 +586,7 @@ export {
     isGreaterInvisibilityActive,
     applyPassWithoutTraceEffect,
     applyRegenerateEffect,
+    applyEnhanceAbilityEffect,
     applyBeaconOfHopeEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,

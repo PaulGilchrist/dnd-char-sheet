@@ -310,6 +310,16 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'value'],
     defaults: { value: 10 },
   },
+  {
+    effect: 'enhance_ability',
+    label: 'Enhance Ability',
+    description: 'The creature has Advantage on ability checks using the chosen ability (Concentration, up to 1 hour).',
+    icon: 'fa-hand',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['ability', 'source'],
+    defaults: { ability: 'STR' },
+  },
   // ── Movement ────────────────────────────────────────────
   {
     effect: 'summoned',

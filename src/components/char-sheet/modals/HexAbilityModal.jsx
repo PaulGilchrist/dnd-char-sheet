@@ -1,8 +1,15 @@
 import React from 'react';
 import './HexAbilityModal.css';
 
-function HexAbilityModal({ onAbilitySelected, onCancel }) {
-  const abilities = [
+function HexAbilityModal({
+  onAbilitySelected,
+  onCancel,
+  abilities,
+  title,
+  prompt,
+  icon = 'fa-eye',
+}) {
+  const defaultAbilities = [
     { key: 'STR', label: 'Strength' },
     { key: 'DEX', label: 'Dexterity' },
     { key: 'CON', label: 'Constitution' },
@@ -10,17 +17,20 @@ function HexAbilityModal({ onAbilitySelected, onCancel }) {
     { key: 'WIS', label: 'Wisdom' },
     { key: 'CHA', label: 'Charisma' },
   ];
+  const abilityOptions = abilities || defaultAbilities;
+  const modalTitle = title || 'Hex — Choose Ability';
+  const modalPrompt = prompt || 'Choose an ability check for the target to have disadvantage on:';
 
   return (
     <div className="sp-overlay" onClick={onCancel}>
       <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="sp-header">
-          <i className="fa-solid fa-eye"></i> Hex — Choose Ability
+          <i className={`fa-solid ${icon}`}></i> {modalTitle}
         </div>
         <div className="sp-body">
-          <p>Choose an ability check for the target to have disadvantage on:</p>
+          <p>{modalPrompt}</p>
           <div className="hex-ability-buttons">
-            {abilities.map(({ key, label }) => (
+            {abilityOptions.map(({ key, label }) => (
               <button
                 key={key}
                 className="hex-ability-btn"

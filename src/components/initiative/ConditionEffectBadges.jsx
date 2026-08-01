@@ -127,6 +127,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
       const abilityNames = effects.abilityCheckDisadvantageAbilities.map(a => a.substring(0, 3).toLowerCase()).join(', ')
       badges.push({ label: `Check Disadv (${abilityNames})`, cls: 'effect-debuff', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'hex_ability_check_disadvantage' })
     }
+    if (effects.abilityCheckAdvantageAbilities?.length > 0) {
+      const abilityNames = effects.abilityCheckAdvantageAbilities.map(a => a.substring(0, 3).toLowerCase()).join(', ')
+      badges.push({ label: `Check Adv (${abilityNames})`, cls: 'effect-buff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'enhance_ability' })
+    }
     if (effects.riderAttackBonus > 0) badges.push({ label: `+${effects.riderAttackBonus} to hit`, cls: 'effect-debuff', icon: 'fa-bullseye', removable: true, removeAction: 'target_effect', effectType: 'next_attack_bonus' })
     if (effects.riderCannotOpportunityAttack) badges.push({ label: 'No OA', cls: 'effect-debuff', icon: 'fa-ban', removable: true, removeAction: 'target_effect', effectType: 'no_opportunity_attacks' })
     const noOA = getRuntimeValue(creatureName, 'inspiringMovementNoOA', campaignName) || hasTacticalShift

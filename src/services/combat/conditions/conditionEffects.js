@@ -748,6 +748,18 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
         effects.abilityCheckDisadvantageAbilities.push(te.ability);
       }
     }
+    // Handle Enhance Ability — target has Advantage on ability checks of chosen ability
+    if (te.effect === 'enhance_ability') {
+      if (!effects.abilityCheckAdvantageAbilities) {
+        effects.abilityCheckAdvantageAbilities = [];
+      }
+      if (te.ability) {
+        const ability = String(te.ability).toUpperCase();
+        if (!effects.abilityCheckAdvantageAbilities.includes(ability)) {
+          effects.abilityCheckAdvantageAbilities.push(ability);
+        }
+      }
+    }
     // Handle Eldritch Hex — target has Disadvantage on saves of chosen ability
     if (te.effect === 'hex_save_disadvantage') {
       if (!effects.saveDisadvantage.includes(te.ability?.toLowerCase())) {
