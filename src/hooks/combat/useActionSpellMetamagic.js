@@ -244,35 +244,7 @@ export function useActionSpellMetamagic({
         if (cannotAct) return;
         const spell = playerStats.spellAbilities?.spells?.find(s => s.name === attack.name);
         if (!spell) {
-            const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, attack.name, attack.spellLevel || 0, playerStats, campaignName);
-            const metaCtx = {};
-            const result = await prepareSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, metaCtx, {
-                playerName: playerStats.name,
-                playerStats,
-                campaignName,
-                isUpcast: false,
-                freeCastAuthorized,
-            });
-            const castResult = await executeSpellCast({ name: attack.name, level: attack.spellLevel || 0, baseLevel: 0 }, result.metaCtx, {
-                rollAttack,
-                rollDamage,
-                playerStats,
-                getTargetInfo: async () => {
-                    const cs = await buildCtx(attack);
-                    return cs?.targetName ? { name: cs.targetName } : null;
-                },
-                campaignName,
-                mapName,
-                characters,
-            });
-            if (castResult?.automationPopup) {
-                const popup = castResult.automationPopup;
-                if (popup.type === 'modal' && setModalState) {
-                    // handled by useSpellCastExecutor pattern
-                } else {
-                    setPopupHtml(popup.payload);
-                }
-            }
+            handleAttackClick(attack);
             return;
         }
         if (!isBonusSorcerer) {

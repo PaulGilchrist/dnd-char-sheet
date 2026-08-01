@@ -11,6 +11,7 @@ import { buildAttackContext, buildAttackContextSync } from '../../services/autom
 import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
+import { useActionSpellMetamagic } from '../../hooks/combat/useActionSpellMetamagic.js';
 
 const _syncedStore = new Map();
 
@@ -233,6 +234,19 @@ describe('CharActions handlers', () => {
       expect(endFriendsOnHostileAction).toHaveBeenCalledWith('TestCharacter', undefined);
       expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestCharacter', undefined);
       expect(buildAttackContext).toHaveBeenCalled();
+    });
+
+    it('rolls the weapon attack when its hit bonus is clicked instead of casting it as a spell', async () => {
+      renderWithDiceRollContext(createStats({
+        attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }]
+      }));
+
+      const hitEl = screen.getByText('+5');
+      await act(async () => { fireEvent.click(hitEl); });
+
+      expect(buildAttackContext).toHaveBeenCalled();
+      const spellAttackClick = vi.mocked(useActionSpellMetamagic).mock.results.at(-1)?.value.handleSpellAttackClick;
+      expect(spellAttackClick).not.toHaveBeenCalled();
     });
 
     it('does nothing when cannotAct is true', async () => {
