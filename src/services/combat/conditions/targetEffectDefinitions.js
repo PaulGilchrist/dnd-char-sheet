@@ -421,6 +421,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     group: 'Spells',
     fields: ['source'],
   },
+  {
+    effect: 'crown_of_madness',
+    label: 'Crown of Madness',
+    description: 'The creature is Charmed. On each of its turns, it must use its action to make a melee attack against a creature chosen by the caster before moving.',
+    icon: 'fa-crown',
+    cls: 'effect-charm',
+    group: 'Spells',
+    fields: ['source'],
+  },
 ]
 
 /**

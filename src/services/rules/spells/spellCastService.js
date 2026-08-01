@@ -32,6 +32,7 @@ import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsSe
 import { triggerCharmPerson } from '../features/charmPersonService.js';
 import { triggerCharmMonster } from '../features/charmMonsterService.js';
 import { triggerCompulsion } from '../features/compulsionService.js';
+import { triggerCrownOfMadness } from '../features/crownOfMadnessService.js';
 import { triggerAnimalFriendship } from '../features/animalFriendshipService.js';
 import { triggerDominateBeast } from '../features/dominateBeastService.js';
 import { triggerDominateMonster } from '../features/dominateMonsterService.js';
@@ -628,6 +629,16 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const compulsionResult = await triggerCompulsion(spell, { ...metaCtx, spellSaveDc, targetName: compulsionTarget?.name }, playerStats, campaignName, mapName);
             if (compulsionResult) {
                 return { automationPopup: compulsionResult };
+            }
+            return;
+        }
+
+        // Crown of Madness — single humanoid target WIS save or Charmed (concentration)
+        if (spell.name && spell.name.toLowerCase() === 'crown of madness') {
+            const crownTarget = await getTargetInfo();
+            const crownResult = await triggerCrownOfMadness(spell, { ...metaCtx, spellSaveDc, targetName: crownTarget?.name }, playerStats, campaignName, mapName);
+            if (crownResult) {
+                return { automationPopup: crownResult };
             }
             return;
         }

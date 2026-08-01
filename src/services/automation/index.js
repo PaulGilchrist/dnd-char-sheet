@@ -205,6 +205,8 @@ import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandle
 import { handle as handleCharmMonster } from './handlers/spells/charmMonsterHandler.js';
 import { handle as handleCompulsion } from './handlers/spells/compulsionHandler.js';
 import { applyCompulsionEffect } from '../../services/rules/features/compulsionService.js';
+import { handle as handleCrownOfMadness } from './handlers/spells/crownOfMadnessHandler.js';
+import { triggerCrownOfMadness } from '../../services/rules/features/crownOfMadnessService.js';
 import { handle as handleAnimalFriendship } from './handlers/spells/animalFriendshipHandler.js';
 import { handle as handleDominateBeast } from './handlers/spells/dominateBeastHandler.js';
 import { handle as handleDominateMonster } from './handlers/spells/dominateMonsterHandler.js';
@@ -503,6 +505,7 @@ const HANDLER_MAP = {
         charm_person: handleCharmPerson,
         charm_monster: handleCharmMonster,
         compulsion: handleCompulsion,
+        crown_of_madness: handleCrownOfMadness,
         animal_friendship: handleAnimalFriendship,
         dominate_beast: handleDominateBeast,
         dominate_monster: handleDominateMonster,
@@ -588,6 +591,7 @@ export {
     applyAuraOfVitalityEffect,
     isAuraOfVitalityActive,
     applyCompulsionEffect,
+    triggerCrownOfMadness,
 };
 export { confirmMassHeal } from './handlers/healing/massHealHandler.js';
 export { confirmMassCureWounds } from './handlers/healing/massCureWoundsHandler.js';
