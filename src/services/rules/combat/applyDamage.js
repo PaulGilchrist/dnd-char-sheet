@@ -537,7 +537,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
   window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
   if (!suppressHpLog) {
-    console.log('[applyDamage] logDamageApplication called for', creature.name, 'oldHp=', oldHp, 'newHp=', newHp);
     logDamageApplication(creature, finalDamage, oldHp, newHp, campaignName);
   }
 

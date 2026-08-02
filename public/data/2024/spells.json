@@ -9357,6 +9357,12 @@
     "dc": {
       "dc_type": "CON",
       "dc_success": "half"
+    },
+    "automation": {
+      "type": "freezing_sphere",
+      "saveType": "CON",
+      "range": "300 feet",
+      "casting_time": "1 action"
     }
   },
   {

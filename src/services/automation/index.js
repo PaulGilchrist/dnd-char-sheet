@@ -236,6 +236,7 @@ import { handle as handleBeaconOfHope } from './handlers/spells/beaconOfHopeHand
 import { applyBeaconOfHopeEffect } from './handlers/spells/beaconOfHopeHandler.js';
 import { handle as handleSlow } from './handlers/spells/slowHandler.js';
 import { handle as handleResilientSphere } from './handlers/spells/resilientSphereHandler.js';
+import { handle as handleFreezingSphere } from './handlers/spells/freezingSphereHandler.js';
 import { handle as handlePowerWordStun } from './handlers/spells/powerWordStunHandler.js';
 import { handle as handleWardingBond, getWardingBondTarget, getWardingBondSource, isWardingBondActive } from './handlers/spells/wardingBondHandler.js';
 import { handle as handleOttoDance } from './handlers/spells/ottosDanceHandler.js';
@@ -536,6 +537,7 @@ const HANDLER_MAP = {
         suggestion: handleSuggestion,
         calm_emotions: handleCalmEmotions,
         resilient_sphere: handleResilientSphere,
+        freezing_sphere: handleFreezingSphere,
         power_word_stun: handlePowerWordStun,
         warding_bond: handleWardingBond,
         ottos_dance: handleOttoDance,
