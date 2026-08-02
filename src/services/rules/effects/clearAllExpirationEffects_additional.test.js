@@ -345,7 +345,7 @@ describe('clearExpirationEffects — additional effect types', () => {
   });
 
   describe('remove_heroes_feast_buff effect type', () => {
-    it('removes the buff and reduces HP max increase', () => {
+    it('removes the buff and reduces currentHitPoints', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_heroes_feast_buff', buffName: 'HeroesFeast', hpKey: 'heroesFeastHpMaxIncrease' }], appliedRound: 1 },
       ];
@@ -354,7 +354,6 @@ describe('clearExpirationEffects — additional effect types', () => {
           { name: 'HeroesFeast', duration: 3 },
           { name: 'OtherBuff', duration: 2 },
         ];
-        if (name === 'Human' && key === 'hitPoints') return 30;
         if (name === 'Human' && key === 'heroesFeastHpMaxIncrease') return 5;
         if (name === 'Human' && key === 'currentHitPoints') return 25;
         if (key === KEY && name === 'Goblin') return myList;
@@ -369,12 +368,6 @@ describe('clearExpirationEffects — additional effect types', () => {
         'Human',
         'activeBuffs',
         [{ name: 'OtherBuff', duration: 2 }],
-        'MyCampaign',
-      );
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Human',
-        'hitPoints',
-        25,
         'MyCampaign',
       );
       expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -397,7 +390,6 @@ describe('clearExpirationEffects — additional effect types', () => {
       ];
       getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'Human' && key === 'activeBuffs') return [{ name: 'HeroesFeast', duration: 3 }];
-        if (name === 'Human' && key === 'hitPoints') return 30;
         if (name === 'Human' && key === 'heroesFeastHpMaxIncrease') return 0;
         if (name === 'Human' && key === 'currentHitPoints') return 25;
         if (key === KEY && name === 'Goblin') return myList;
@@ -414,7 +406,6 @@ describe('clearExpirationEffects — additional effect types', () => {
         [],
         'MyCampaign',
       );
-      // HP should not be modified when increase is 0
       expect(setRuntimeValue).not.toHaveBeenCalledWith('Human', 'hitPoints', expect.anything(), 'MyCampaign');
     });
 
@@ -424,7 +415,6 @@ describe('clearExpirationEffects — additional effect types', () => {
       ];
       getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'Human' && key === 'activeBuffs') return [{ name: 'HeroesFeast', duration: 3 }];
-        if (name === 'Human' && key === 'hitPoints') return 30;
         if (name === 'Human' && key === 'heroesFeastHpMaxIncrease') return 5;
         if (key === KEY && name === 'Goblin') return myList;
         if (key === KEY) return [];
@@ -438,12 +428,6 @@ describe('clearExpirationEffects — additional effect types', () => {
         'Human',
         'activeBuffs',
         [],
-        'MyCampaign',
-      );
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Human',
-        'hitPoints',
-        25,
         'MyCampaign',
       );
     });

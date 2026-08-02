@@ -1148,15 +1148,10 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 );
                 const currentIncrease = Number(getRuntimeValue(targetName, effect.hpKey || 'heroesFeastHpMaxIncrease', campaignName)) || 0;
                 if (currentIncrease > 0) {
-                    let baseHp = getRuntimeValue(targetName, 'hitPoints', campaignName);
-                    if (typeof baseHp === 'number' && baseHp > 0) {
-                        baseHp = Math.max(0, baseHp - currentIncrease);
-                        setRuntimeValue(targetName, 'hitPoints', baseHp, campaignName);
-                    }
                     const storedCurrentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
                     if (storedCurrentHp != null) {
                         const currentHp = Number(storedCurrentHp);
-                        const newCurrentHp = Math.max(0, Math.min(baseHp, currentHp - currentIncrease));
+                        const newCurrentHp = Math.max(0, currentHp - currentIncrease);
                         setRuntimeValue(targetName, 'currentHitPoints', newCurrentHp, campaignName);
                     }
                     setRuntimeValue(targetName, effect.hpKey || 'heroesFeastHpMaxIncrease', 0, campaignName);

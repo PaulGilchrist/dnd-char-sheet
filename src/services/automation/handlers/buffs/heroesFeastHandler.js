@@ -40,9 +40,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerStats.name)
-        .map(c => c.name);
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
 
     return {
         type: 'popup',
@@ -73,15 +71,10 @@ export async function applyHeroesFeast(action, playerStats, campaignName, mapNam
         const newIncrease = currentIncrease + hpIncrease;
         setRuntimeValue(targetName, HEROES_FEAST_HP_KEY, newIncrease, campaignName);
 
-        const baseHp = getRuntimeValue(targetName, 'hitPoints', campaignName);
-        const newBaseHp = baseHp + hpIncrease;
-        setRuntimeValue(targetName, 'hitPoints', newBaseHp, campaignName);
-
         const storedCurrentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
         if (storedCurrentHp != null) {
             const currentHp = Number(storedCurrentHp);
-            const newCurrentHp = Math.min(newBaseHp, currentHp + hpIncrease);
-            setRuntimeValue(targetName, 'currentHitPoints', newCurrentHp, campaignName);
+            setRuntimeValue(targetName, 'currentHitPoints', Math.min(currentHp + hpIncrease, currentHp + hpIncrease), campaignName);
         }
 
         addExpiration(playerStats.name, targetName, [

@@ -524,6 +524,27 @@ describe('CharSummary - Aura Sources', () => {
         expect(screen.getByText(/Cold/)).toBeInTheDocument();
         expect(screen.getByText(/Poison/)).toBeInTheDocument();
     });
+
+    it('shows Heroes Feast poison resistance', () => {
+        getActiveBuffs.mockReturnValue([
+            { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
+        ]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Resistances:/)).toBeInTheDocument();
+        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
+        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
+        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
+    });
+
+    it('shows Heroes Feast condition immunities', () => {
+        getActiveBuffs.mockReturnValue([
+            { name: "Heroes' Feast", effect: 'heroes_feast', resistanceTypes: ['poison'], conditionImmunity: ['Frightened', 'Poisoned'] }
+        ]);
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Immunities:/)).toBeInTheDocument();
+        expect(screen.getByText(/Poisoned/)).toBeInTheDocument();
+        expect(screen.getByText(/Frightened/)).toBeInTheDocument();
+    });
 });
 
 // ---------------------------------------------------------------------------

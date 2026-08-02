@@ -267,6 +267,16 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(b => b.resistanceTypes || [])
         : [];
 
+    const heroesFeastResistances = Array.isArray(activeBuffs)
+        ? activeBuffs.filter(b => b.name === "Heroes' Feast" && b.resistanceTypes?.length)
+            .flatMap(b => b.resistanceTypes || [])
+        : [];
+
+    const heroesFeastConditionImmunities = Array.isArray(activeBuffs)
+        ? (activeBuffs.find(b => b.name === "Heroes' Feast")?.conditionImmunity || [])
+            .map(c => String(c).toLowerCase())
+        : [];
+
     const elementalAdeptTypes = (playerStats.automation?.passives || [])
         .filter(p => p.type === 'damage_type_choice' && p.effect === 'elemental_adept')
         .map(p => {
@@ -293,9 +303,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
         : [];
 
     const automationImmunities = playerStats.automationConditionImmunities || [];
-    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities])];
+    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;
@@ -736,6 +746,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     )}
                     {isDeathWardActive(playerStats.name, campaignName) && (
                         <CreatureBadge icon='fa-shield-halved' label='Death Ward' cls='effect-buff' tooltip='Death Ward: Protected from death. First time target would drop to 0 HP, drops to 1 HP instead. Spell ends.' />
+                    )}
+                    {heroesFeastResistances.length > 0 && (
+                        <CreatureBadge icon='fa-champagne-glasses' label="Heroes' Feast" cls='effect-buff' tooltip={`Heroes' Feast: Resistance to ${heroesFeastResistances.join(', ')}, Immune to ${heroesFeastConditionImmunities.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}, HP maximum increased by 2d10. Lasts 24 hours.`} />
                     )}
                 </div>
               </div>

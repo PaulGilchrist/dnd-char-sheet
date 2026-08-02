@@ -79,14 +79,14 @@ describe("heroesFeastHandler", () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('heroes_feast_target_selection');
-      expect(result.payload.creatureTargets).toEqual(['Goblin1', 'Goblin2']);
+      expect(result.payload.creatureTargets).toEqual(['TestHero', 'Goblin1', 'Goblin2']);
       expect(result.payload.maxTargets).toBe(12);
       expect(result.payload.hpIncrease).toBe(11);
       expect(result.payload.duration).toBe('24 hours');
       expect(result.payload.automation).toEqual(action.automation);
     });
 
-    it('should return empty creatureTargets when player is the only creature', async () => {
+    it('should include the player when they are the only creature', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       damageUtils.getCombatContext.mockResolvedValue({
@@ -96,7 +96,7 @@ describe("heroesFeastHandler", () => {
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.creatureTargets).toEqual([]);
+      expect(result.payload.creatureTargets).toEqual(['TestHero']);
       expect(result.payload.maxTargets).toBe(12);
     });
 
@@ -182,7 +182,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)   // heroesFeastHpMaxIncrease for target
-        .mockReturnValueOnce(50)  // hitPoints for target
         .mockReturnValueOnce(30); // currentHitPoints for target
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
 
@@ -204,12 +203,6 @@ describe("heroesFeastHandler", () => {
       );
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Goblin1',
-        'hitPoints',
-        65,
-        campaignName
-      );
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin1',
         'currentHitPoints',
         45,
         campaignName
@@ -221,7 +214,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(10)  // existing heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)  // hitPoints
         .mockReturnValueOnce(40); // currentHitPoints
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
 
@@ -233,21 +225,14 @@ describe("heroesFeastHandler", () => {
         25,
         campaignName
       );
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin1',
-        'hitPoints',
-        65,
-        campaignName
-      );
     });
 
-    it('should cap currentHitPoints at new baseHp when healing would exceed it', async () => {
+    it('should cap currentHitPoints at currentHp + hpIncrease when healing would exceed it', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)   // heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)  // hitPoints
-        .mockReturnValueOnce(60); // currentHitPoints above new base
+        .mockReturnValueOnce(60); // currentHitPoints above new max
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
 
       await applyHeroesFeast(action, ps, campaignName, null, ['Goblin1']);
@@ -255,7 +240,7 @@ describe("heroesFeastHandler", () => {
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Goblin1',
         'currentHitPoints',
-        65,
+        75,
         campaignName
       );
     });
@@ -265,7 +250,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)   // heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)  // hitPoints
         .mockReturnValueOnce(null); // currentHitPoints is null
 
       await applyHeroesFeast(action, ps, campaignName, null, ['Goblin1']);
@@ -281,7 +265,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)
-        .mockReturnValueOnce(50)
         .mockReturnValueOnce(30);
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
 
@@ -306,7 +289,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)       // heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)      // hitPoints
         .mockReturnValueOnce(30)      // currentHitPoints
         .mockReturnValueOnce([]);     // activeBuffs (empty)
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
@@ -345,7 +327,6 @@ describe("heroesFeastHandler", () => {
       ];
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)       // heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)      // hitPoints
         .mockReturnValueOnce(30)      // currentHitPoints
         .mockReturnValueOnce(existingBuffs); // activeBuffs already has it
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
@@ -374,7 +355,6 @@ describe("heroesFeastHandler", () => {
 
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)
-        .mockReturnValueOnce(50)
         .mockReturnValueOnce(30)
         .mockReturnValueOnce(undefined);
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
@@ -394,7 +374,6 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)
-        .mockReturnValueOnce(50)
         .mockReturnValueOnce(30);
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
 
@@ -424,11 +403,9 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)    // target1 heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)   // target1 hitPoints
         .mockReturnValueOnce(30)   // target1 currentHitPoints
         .mockReturnValueOnce([])   // target1 activeBuffs
         .mockReturnValueOnce(0)    // target2 heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(40)   // target2 hitPoints
         .mockReturnValueOnce(20)   // target2 currentHitPoints
         .mockReturnValueOnce([]);  // target2 activeBuffs
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);
@@ -456,11 +433,9 @@ describe("heroesFeastHandler", () => {
       const action = makeAction();
       runtimeState.getRuntimeValue
         .mockReturnValueOnce(0)   // target1 heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(50)  // target1 hitPoints
         .mockReturnValueOnce(30)  // target1 currentHitPoints
         .mockReturnValueOnce([])  // target1 activeBuffs
         .mockReturnValueOnce(0)   // target2 heroesFeastHpMaxIncrease
-        .mockReturnValueOnce(40)  // target2 hitPoints
         .mockReturnValueOnce(20)  // target2 currentHitPoints
         .mockReturnValueOnce([]); // target2 activeBuffs
       automationExpressions.evaluateAutoExpression.mockReturnValue(15);

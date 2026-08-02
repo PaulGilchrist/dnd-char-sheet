@@ -11,7 +11,6 @@ import CharSpellSlots from './CharSpellSlots.jsx'
 import MultiTargetPopup from '../popups/MultiTargetPopup.jsx'
 import SecondaryTargetModal from '../modals/shared/SecondaryTargetModal.jsx'
 import SingleResistanceSelectionModal from '../modals/SingleResistanceSelectionModal.jsx'
-import MultiTargetCountPopup from '../popups/MultiTargetCountPopup.jsx'
 import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
 import TargetWithTypePopup from '../popups/TargetWithTypePopup.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
@@ -343,15 +342,13 @@ return (
                       />
                     )}
                     {pendingHeroesFeast && (
-                      <MultiTargetCountPopup
-                        spell={{ name: pendingHeroesFeast.spellName, level: pendingHeroesFeast.spellLevel || 0 }}
-                        playerStats={playerStats}
-                        campaignName={campaignName}
-                        range={pendingHeroesFeast.range}
-                        rangeFt={pendingHeroesFeast.rangeFt}
-                        creatureTargets={pendingHeroesFeast.creatureTargets}
+                      <CreatureSelectionModal
+                        title="Heroes' Feast"
+                        icon="fa-champagne-glasses"
+                        targets={pendingHeroesFeast.creatureTargets}
                         maxTargets={pendingHeroesFeast.maxTargets}
-                        attackerPos={pendingHeroesFeast.attackerPos}
+                        description="You conjure a feast that benefits up to twelve creatures. Each target gains resistance to Poison damage, immunity to the Frightened and Poisoned conditions, and their Hit Point maximum increases by 2d10. These benefits last 24 hours."
+                        confirmLabel="Cast Heroes' Feast"
                         onConfirm={handleHeroesFeastConfirm}
                         onSkip={handleHeroesFeastSkip}
                       />

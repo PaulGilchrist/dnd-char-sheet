@@ -113,7 +113,15 @@ router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
 
     // value may be the full store object { targetEffects: [...], hitPoints: 123, ... }
     // or just the property value directly. Extract the property if value[key] exists.
-    const propertyValue = (value && typeof value === 'object' && key in value) ? value[key] : value;
+    let propertyValue;
+    if (value && typeof value === 'object' && key in value) {
+        propertyValue = value[key];
+    } else if (value && typeof value === 'object' && 'value' in value && Object.keys(value).length === 1 && typeof value.value === 'object') {
+        // Client sent { value: fullStoreObject } — unwrap it directly
+        propertyValue = value.value;
+    } else {
+        propertyValue = value;
+    }
     characterChangeData.get(campaign)[key] = propertyValue;
     markDirty(campaign);
 
