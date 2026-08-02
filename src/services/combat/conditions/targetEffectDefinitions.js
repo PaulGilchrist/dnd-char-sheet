@@ -221,6 +221,15 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Spells ──────────────────────────────────────────────
   {
+    effect: 'holy_aura',
+    label: 'Holy Aura',
+    description: 'Allies gain Advantage on saving throws. Other creatures have Disadvantage on attack rolls against them. Fiends/Undead that hit an affected creature with a melee attack must succeed on a CON save or be Blinded until the end of their next turn. Concentration, up to 1 minute.',
+    icon: 'fa-sun',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'antimagic_field',
     label: 'Antimagic Field',
     description: 'Only weapon attacks are allowed. All magic and spells are suppressed within the field. Expires on concentration loss, initiative roll, short rest, or long rest.',

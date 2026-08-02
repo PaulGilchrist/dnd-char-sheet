@@ -430,9 +430,9 @@ describe('saveModifierApplies — condition-based boolean checks', () => {
     expect(saveModifierApplies({ target: 'saving_throw', condition: 'elder_champion_active' }, ...fnArgs, null, false, false, false, false, false)).toBe(false);
   });
 
-  it('returns isHolyAuraActive when condition is holy_aura_active', () => {
-    expect(saveModifierApplies({ target: 'attack_roll', condition: 'holy_aura_active' }, ...fnArgs, null, false, false, false, true, false)).toBe(true);
-    expect(saveModifierApplies({ target: 'attack_roll', condition: 'holy_aura_active' }, ...fnArgs, null, false, false, false, false, false)).toBe(false);
+  it('returns true when attackerName is in holyAuraTargets for holy_aura_active', () => {
+    expect(saveModifierApplies({ target: 'attack_roll', condition: 'holy_aura_active' }, ...fnArgs, 'Player', false, false, false, ['Player', 'Ally'], false, false, false, false)).toBe(true);
+    expect(saveModifierApplies({ target: 'attack_roll', condition: 'holy_aura_active' }, ...fnArgs, 'Player', false, false, false, ['Ally', 'Enemy'], false, false, false, false)).toBe(false);
   });
 
   it('returns isProtectionFromPoisonActive when condition is protection_from_poison_active', () => {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkHolyAuraDamage } from './holyAuraDamageService.js';
 import { rollD20 } from '../../dice/diceRoller.js';
 import { addEntry } from '../../ui/logService.js';
-import { isHolyAuraActive, getHolyAuraTargets } from '../../automation/handlers/buffs/holyAuraHandler.js';
+import { getHolyAuraTargets } from '../../automation/handlers/buffs/holyAuraHandler.js';
 
 vi.mock('../../dice/diceRoller.js', () => ({
     rollD20: vi.fn(),
@@ -14,7 +14,6 @@ vi.mock('../../ui/logService.js', () => ({
 }));
 
 vi.mock('../../automation/handlers/buffs/holyAuraHandler.js', () => ({
-    isHolyAuraActive: vi.fn(),
     getHolyAuraTargets: vi.fn(),
 }));
 
@@ -48,6 +47,15 @@ describe('holyAuraDamageService', () => {
         };
     }
 
+    function setupTargetEffectsMocks(holyAuraTargets, saveDc, attackerConditions) {
+        getRuntimeValue.mockImplementation((name, key) => {
+            if (key === 'targetEffects') return holyAuraTargets;
+            if (key === 'holyAuraSaveDc') return saveDc;
+            if (key === 'activeConditions') return attackerConditions;
+            return null;
+        });
+    }
+
     describe('guard conditions', () => {
         it('does nothing when attackerName is falsy', () => {
             checkHolyAuraDamage(
@@ -58,7 +66,7 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(isHolyAuraActive).not.toHaveBeenCalled();
+            expect(getRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects');
             expect(setRuntimeValue).not.toHaveBeenCalled();
             expect(addEntry).not.toHaveBeenCalled();
         });
@@ -72,7 +80,7 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(isHolyAuraActive).not.toHaveBeenCalled();
+            expect(getRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects');
         });
 
         it('does nothing when wardDamage is 0', () => {
@@ -84,7 +92,7 @@ describe('holyAuraDamageService', () => {
                 0,
             );
 
-            expect(isHolyAuraActive).not.toHaveBeenCalled();
+            expect(getRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects');
         });
 
         it('does nothing when wardDamage is negative', () => {
@@ -96,13 +104,13 @@ describe('holyAuraDamageService', () => {
                 -1,
             );
 
-            expect(isHolyAuraActive).not.toHaveBeenCalled();
+            expect(getRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects');
         });
     });
 
     describe('Holy Aura activation check', () => {
-        it('does nothing when Holy Aura is not active for the attacker', () => {
-            isHolyAuraActive.mockReturnValue(false);
+        it('does nothing when no holy_aura targetEffects exist', () => {
+            setupTargetEffectsMocks([], 15, []);
 
             checkHolyAuraDamage(
                 { name: 'Goblin' },
@@ -112,29 +120,36 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(isHolyAuraActive).toHaveBeenCalledWith('Warlock', campaignName);
             expect(getHolyAuraTargets).not.toHaveBeenCalled();
+        });
+
+        it('finds caster from targetEffects on the creature', () => {
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
+
+            checkHolyAuraDamage(
+                { name: 'Goblin' },
+                'Warlock',
+                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                campaignName,
+                5,
+            );
+
+            expect(getHolyAuraTargets).toHaveBeenCalledWith('Paladin', campaignName);
         });
     });
 
     describe('target protection check', () => {
-        it('protects creature when target list is empty (all protected)', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-
-            checkHolyAuraDamage(
-                { name: 'Goblin' },
-                'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
-                campaignName,
-                5,
-            );
-
-            expect(getHolyAuraTargets).toHaveBeenCalledWith('Warlock', campaignName);
-        });
-
         it('protects creature when creature.name is in the target list', () => {
-            isHolyAuraActive.mockReturnValue(true);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             getHolyAuraTargets.mockReturnValue(['Goblin', 'Orc']);
 
             checkHolyAuraDamage(
@@ -145,11 +160,15 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(getHolyAuraTargets).toHaveBeenCalledWith('Warlock', campaignName);
+            expect(getHolyAuraTargets).toHaveBeenCalledWith('Paladin', campaignName);
         });
 
-        it('does NOT protect creature when not in target list and list is non-empty', () => {
-            isHolyAuraActive.mockReturnValue(true);
+        it('does NOT protect creature when not in target list', () => {
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             getHolyAuraTargets.mockReturnValue(['Orc', 'Demon']);
 
             checkHolyAuraDamage(
@@ -160,17 +179,39 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(getHolyAuraTargets).toHaveBeenCalledWith('Warlock', campaignName);
+            expect(getHolyAuraTargets).toHaveBeenCalledWith('Paladin', campaignName);
             expect(rollD20).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('does NOT protect creature when target list is empty', () => {
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue([]);
+
+            checkHolyAuraDamage(
+                { name: 'Goblin' },
+                'Warlock',
+                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                campaignName,
+                5,
+            );
+
+            expect(getHolyAuraTargets).toHaveBeenCalledWith('Paladin', campaignName);
+            expect(rollD20).not.toHaveBeenCalled();
         });
     });
 
     describe('attacker creature lookup', () => {
         it('does nothing when attacker is not found in combatSummary', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
 
             checkHolyAuraDamage(
                 { name: 'Goblin' },
@@ -186,13 +227,11 @@ describe('holyAuraDamageService', () => {
 
     describe('Fiend/Undead detection', () => {
         function setupFiendUndeadMocks() {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             rollD20.mockReturnValue(5);
         }
 
@@ -253,13 +292,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('does NOT trigger for non-fiend/undead type', () => {
-            isHolyAuraActive.mockReturnValue(true);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             getHolyAuraTargets.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -275,13 +313,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('does NOT trigger for non-fiend/undead template', () => {
-            isHolyAuraActive.mockReturnValue(true);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             getHolyAuraTargets.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -296,13 +333,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('handles missing type gracefully (treated as non-fiend/undead)', () => {
-            isHolyAuraActive.mockReturnValue(true);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
             getHolyAuraTargets.mockReturnValue(['Goblin']);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -333,13 +369,12 @@ describe('holyAuraDamageService', () => {
 
     describe('CON save resolution', () => {
         it('reads holyAuraSaveDc from runtime store', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(10);
 
             checkHolyAuraDamage(
@@ -350,13 +385,16 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(getRuntimeValue).toHaveBeenCalledWith('Warlock', 'holyAuraSaveDc', campaignName);
+            expect(getRuntimeValue).toHaveBeenCalledWith('Paladin', 'holyAuraSaveDc', campaignName);
         });
 
         it('does nothing when holyAuraSaveDc is falsy', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockReturnValue(null);
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                null,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
 
             checkHolyAuraDamage(
                 { name: 'Goblin' },
@@ -375,13 +413,12 @@ describe('holyAuraDamageService', () => {
         const fiendWarlock = { name: 'Warlock', type: 'Fiend', ability_score_modifiers: { CON: 3 } };
 
         it('adds Blinded condition when save fails', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
             // saveTotal = 5 + 3 = 8 < 15
 
@@ -402,13 +439,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('logs a condition entry when Blinded is added', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -430,15 +466,14 @@ describe('holyAuraDamageService', () => {
         });
 
         it('does NOT add Blinded when save succeeds', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 10;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
-            rollD20.mockReturnValue(8);
-            // saveTotal = 8 + 3 = 11 >= 10
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
+            rollD20.mockReturnValue(12);
+            // saveTotal = 12 + 3 = 15 >= 15
 
             checkHolyAuraDamage(
                 { name: 'Goblin' },
@@ -449,17 +484,25 @@ describe('holyAuraDamageService', () => {
             );
 
             expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'save_result',
+                characterName: 'Warlock',
+                roll: 12,
+                modifier: 3,
+                total: 15,
+                success: true,
+                description: 'Holy Aura CON save vs DC 15',
+                timestamp: expect.any(Number),
+            });
         });
 
         it('does NOT add duplicate Blinded condition when already present', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return ['Blinded'];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                ['blinded']
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -471,17 +514,25 @@ describe('holyAuraDamageService', () => {
             );
 
             expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'save_result',
+                characterName: 'Warlock',
+                roll: 5,
+                modifier: 3,
+                total: 8,
+                success: false,
+                description: 'Holy Aura CON save vs DC 15',
+                timestamp: expect.any(Number),
+            });
         });
 
         it('uses CON modifier from ability_score_modifiers', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(10);
             // saveTotal = 10 + 3 = 13 < 15
 
@@ -502,13 +553,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('uses 0 as CON bonus when ability_score_modifiers is missing', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(14);
             // saveTotal = 14 + 0 = 14 < 15
 
@@ -529,13 +579,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('handles undefined ability_score_modifiers gracefully', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(14);
 
             checkHolyAuraDamage(
@@ -555,13 +604,12 @@ describe('holyAuraDamageService', () => {
         });
 
         it('treats existing blinded condition case-insensitively', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return ['BLINDED', 'Frightened'];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                ['Blinded']
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -573,17 +621,25 @@ describe('holyAuraDamageService', () => {
             );
 
             expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'save_result',
+                characterName: 'Warlock',
+                roll: 5,
+                modifier: 3,
+                total: 8,
+                success: false,
+                description: 'Holy Aura CON save vs DC 15',
+                timestamp: expect.any(Number),
+            });
         });
 
         it('adds blinded alongside existing non-blinded conditions', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return ['Frightened'];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(
@@ -597,7 +653,7 @@ describe('holyAuraDamageService', () => {
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Warlock',
                 'activeConditions',
-                ['Frightened', 'blinded'],
+                ['blinded'],
                 campaignName,
             );
         });
@@ -605,9 +661,6 @@ describe('holyAuraDamageService', () => {
 
     describe('wardDamage parameter', () => {
         it('does nothing when wardDamage is 0 even with all conditions met', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
@@ -616,17 +669,16 @@ describe('holyAuraDamageService', () => {
                 0,
             );
 
-            expect(isHolyAuraActive).not.toHaveBeenCalled();
+            expect(getRuntimeValue).not.toHaveBeenCalledWith('campaign', 'targetEffects');
         });
 
         it('triggers when wardDamage is positive', () => {
-            isHolyAuraActive.mockReturnValue(true);
-            getHolyAuraTargets.mockReturnValue([]);
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (prop === 'holyAuraSaveDc') return 15;
-                if (prop === 'activeConditions') return [];
-                return null;
-            });
+            setupTargetEffectsMocks(
+                [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
+                15,
+                []
+            );
+            getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
             checkHolyAuraDamage(

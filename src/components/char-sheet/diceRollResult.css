@@ -371,3 +371,26 @@
 .dice-roll-heal-multi-target strong {
     color: #4CAF50;
 }
+
+.dice-roll-holy-aura-save {
+    text-align: center;
+    padding: 10px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.95em;
+}
+
+.dice-roll-holy-aura-save i {
+    margin-right: 4px;
+}
+
+.dice-roll-holy-aura-save strong {
+    color: #FFD700;
+}
+
+.dice-roll-save-effect {
+    display: block;
+    margin-top: 4px;
+    color: #f44336;
+    font-weight: bold;
+}

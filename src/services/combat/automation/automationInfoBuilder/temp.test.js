@@ -340,7 +340,7 @@ describe('tempHandlers – holy_aura', () => {
         const result = tempHandlers.holy_aura(makeFeature({ type: 'holy_aura' }), BASE_STATS)
         expect(result).toMatchObject({
             type: 'holy_aura', name: 'Test Feature', hasAutomation: true,
-            duration: '1_minute', auraRange: 30, casting_time: '1 action',
+            duration: 'Concentration, up to 1 minute', auraRange: 30, casting_time: '1 action',
         })
     })
 

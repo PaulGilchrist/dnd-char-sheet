@@ -265,6 +265,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Heroism', cls: 'effect-buff', icon: 'fa-dragon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'heroism', tooltip: `Heroism from ${casterName}: Immune to Frightened, gains temp HP at start of each turn (Concentration, up to 1 minute)` })
     }
 
+    const holyAuraEffect = targetEffects?.find(te => te.effect === 'holy_aura' && te.target === creatureName)
+    if (holyAuraEffect) {
+        const casterName = holyAuraEffect.source || 'unknown'
+        badges.push({ label: 'Holy Aura', cls: 'effect-buff', icon: 'fa-sun', removable: isLocalhost, removeAction: 'target_effect', effectType: 'holy_aura', tooltip: `Holy Aura from ${casterName}: Advantage on saving throws, other creatures have Disadvantage on attack rolls against you. Fiends/Undead that hit an affected creature must succeed on CON save or be Blinded` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

@@ -1,47 +1,58 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { rollD20 } from '../../dice/diceRoller.js';
 import { addEntry } from '../../ui/logService.js';
-import { isHolyAuraActive, getHolyAuraTargets } from '../../automation/handlers/buffs/holyAuraHandler.js';
+import { getHolyAuraTargets } from '../../automation/handlers/buffs/holyAuraHandler.js';
 
 export function checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage) {
     if (attackerName && attackerName !== creature.name && wardDamage > 0) {
-        const casterName = attackerName;
-        if (isHolyAuraActive(casterName, campaignName)) {
-            const holyAuraTargets = getHolyAuraTargets(casterName, campaignName);
-            const isTargetProtected = holyAuraTargets.includes(creature.name) || holyAuraTargets.length === 0;
-            if (isTargetProtected) {
-                const attackerCreature = combatSummary.creatures.find(c => c.name === attackerName);
-                if (attackerCreature) {
-                    const attackerType = (attackerCreature.type || '').toLowerCase();
-                    const attackerTemplate = (() => { const raw = attackerCreature.template; if (raw == null || !Array.isArray(raw)) { console.error('[applyDamage] attacker template is not an array'); throw new Error('attacker template must be an array'); } return raw; })().map(t => t.toLowerCase());
-                    const isFiendOrUndead = attackerType === 'fiend' || attackerType === 'undead' ||
-                        attackerTemplate.includes('fiend') || attackerTemplate.includes('undead');
-                    if (isFiendOrUndead) {
-                        const conSaveDc = getRuntimeValue(casterName, 'holyAuraSaveDc', campaignName);
-                        if (conSaveDc) {
-                            const saveRoll = rollD20();
-                            const conBonus = attackerCreature.ability_score_modifiers?.CON ?? attackerCreature.ability_score_modifiers?.constitution ?? 0;
-                            const saveTotal = saveRoll + conBonus;
-                            if (saveTotal < conSaveDc) {
-                                const rawAttackerConditions = getRuntimeValue(attackerName, 'activeConditions');
-                                const attackerConditions = rawAttackerConditions || [];
-                                const existingBlinded = attackerConditions.find(c => String(c).toLowerCase() === 'blinded');
-                                if (!existingBlinded) {
-                                    setRuntimeValue(attackerName, 'activeConditions', [...attackerConditions, 'blinded'], campaignName);
-                                    addEntry(campaignName, {
-                                        type: 'condition',
-                                        action: 'added',
-                                        characterName: attackerName,
-                                        condition: 'Blinded',
-                                        reason: 'Holy Aura (Fiend/Undead melee hit)',
-                                        timestamp: Date.now(),
-                                    }).catch((e) => { console.error("[holyAura] Error:", e); });
-                                }
-                            }
-                        }
-                    }
-                }
+        const targetEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+            te => te.effect === 'holy_aura' && te.target === creature.name
+        );
+        if (targetEffects.length === 0) return null;
+        const casterName = targetEffects[0].source;
+        const holyAuraTargets = getHolyAuraTargets(casterName, campaignName);
+        const isTargetProtected = holyAuraTargets.includes(creature.name);
+        if (!isTargetProtected) return null;
+        const attackerCreature = combatSummary.creatures.find(c => c.name === attackerName);
+        if (!attackerCreature) return null;
+        const attackerType = (attackerCreature.type || '').toLowerCase();
+        const attackerTemplate = (attackerCreature.template || []).map(t => t.toLowerCase());
+        const isFiendOrUndead = attackerType === 'fiend' || attackerType === 'undead' ||
+            attackerTemplate.includes('fiend') || attackerTemplate.includes('undead');
+        if (!isFiendOrUndead) return null;
+        const conSaveDc = getRuntimeValue(casterName, 'holyAuraSaveDc', campaignName);
+        if (!conSaveDc) return null;
+        const saveRoll = rollD20();
+        const conBonus = attackerCreature.ability_score_modifiers?.CON ?? attackerCreature.ability_score_modifiers?.constitution ?? 0;
+        const saveTotal = saveRoll + conBonus;
+        addEntry(campaignName, {
+            type: 'save_result',
+            characterName: attackerName,
+            roll: saveRoll,
+            modifier: conBonus,
+            total: saveTotal,
+            success: saveTotal >= conSaveDc,
+            description: `Holy Aura CON save vs DC ${conSaveDc}`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[holyAura] Error logging save:", e); });
+        const saveResult = { roll: saveRoll, modifier: conBonus, total: saveTotal, success: saveTotal >= conSaveDc, dc: conSaveDc };
+        if (saveTotal < conSaveDc) {
+            const rawAttackerConditions = getRuntimeValue(attackerName, 'activeConditions');
+            const attackerConditions = rawAttackerConditions || [];
+            const existingBlinded = attackerConditions.find(c => String(c).toLowerCase() === 'blinded');
+            if (!existingBlinded) {
+                setRuntimeValue(attackerName, 'activeConditions', [...attackerConditions, 'blinded'], campaignName);
+                addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'added',
+                    characterName: attackerName,
+                    condition: 'Blinded',
+                    reason: 'Holy Aura (Fiend/Undead melee hit)',
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error("[holyAura] Error:", e); });
             }
         }
+        return saveResult;
     }
+    return null;
 }

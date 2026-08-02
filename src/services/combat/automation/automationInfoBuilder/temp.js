@@ -178,7 +178,7 @@ export const tempHandlers = {
         return {
             type: 'holy_aura',
             name: feature.name,
-            duration: auto.duration || '1_minute',
+            duration: auto.duration || 'Concentration, up to 1 minute',
             auraRange: auto.auraRange || 30,
             casting_time: auto.casting_time || '1 action',
             hasAutomation: true

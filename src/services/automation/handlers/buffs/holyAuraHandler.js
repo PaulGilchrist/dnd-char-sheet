@@ -1,44 +1,103 @@
-import { toggleBuff } from '../../common/buffToggle.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import { addEntry } from '../../../ui/logService.js';
 
 const HOLY_AURA_TARGETS_KEY = 'holyAuraTargets';
+const HOLY_AURA_BUFF_NAME = 'Holy Aura';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
-    const auto = action.automation;
-    const playerName = playerStats.name;
-    const auraRange = auto.auraRange || 30;
-
-    const { wasActive } = toggleBuff(
-        playerName,
-        action.name,
-        {
-            ...auto,
-            effect: 'holy_aura',
-            auraRange,
-        },
-        campaignName
-    );
-
-    if (!wasActive) {
-        addExpiration(playerName, playerName, [
-            { type: 'remove_active_buff', buffName: action.name }
-        ], campaignName);
-
-        setRuntimeValue(
-            playerName,
-            HOLY_AURA_TARGETS_KEY,
-            [],
-            campaignName
-        );
-    } else {
-        setRuntimeValue(
-            playerName,
-            HOLY_AURA_TARGETS_KEY,
-            [],
-            campaignName
-        );
+    const combatSummary = await getCombatSummary(campaignName);
+    if (!combatSummary) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `No combat context found. Cannot apply ${action.name}.`,
+            },
+        };
     }
+
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'holy_aura_target_selection',
+            name: action.name,
+            creatureTargets,
+            automation: action.automation || {},
+        },
+    };
+}
+
+export async function applyHolyAura(action, playerStats, campaignName, mapName, targetNames) {
+    if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
+        return null;
+    }
+
+    const auto = action.automation || {};
+    const casterName = playerStats.name;
+    const appliedTargets = [];
+    const spellSaveDc = playerStats.spellAbilities?.saveDc || 8 + playerStats.proficiency;
+
+    setRuntimeValue(casterName, 'holyAuraSaveDc', spellSaveDc, campaignName);
+
+    for (const targetName of targetNames) {
+        const buffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
+        const existingAura = buffs.some(b => b.name === HOLY_AURA_BUFF_NAME);
+        if (!existingAura) {
+            buffs.push({
+                name: HOLY_AURA_BUFF_NAME,
+                effect: 'holy_aura',
+                duration: 'Concentration, up to 1 minute',
+                sourceCharacter: casterName,
+                auraRange: auto.auraRange || 30,
+            });
+            setRuntimeValue(targetName, 'activeBuffs', buffs, campaignName);
+        }
+
+        // Register targetEffect for badge display on CreatureCard
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+        const existingTeIndex = storedEffects.findIndex(te => te.target === targetName && te.effect === 'holy_aura' && te.source === casterName);
+        const newEffect = {
+            target: targetName,
+            effect: 'holy_aura',
+            source: casterName,
+            duration: 'concentration',
+        };
+        let updatedEffects;
+        if (existingTeIndex >= 0) {
+            updatedEffects = [...storedEffects];
+            updatedEffects[existingTeIndex] = newEffect;
+        } else {
+            updatedEffects = [...storedEffects, newEffect];
+        }
+        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName, true);
+
+        addExpiration(casterName, targetName, [
+            { type: 'remove_active_buff', buffName: HOLY_AURA_BUFF_NAME }
+        ], campaignName, undefined, casterName);
+
+        appliedTargets.push(targetName);
+
+        await addEntry(campaignName, {
+            type: 'spell_effect',
+            characterName: casterName,
+            spellName: action.name,
+            targetName,
+            effects: ['Advantage on all saving throws', 'Other creatures have Disadvantage on attack rolls against them'],
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[holyAura] Error:', e); });
+    }
+
+    const combatSummary = getCombatSummary(campaignName);
+    addConcentration(combatSummary, casterName, 'Holy Aura', spellSaveDc);
+
+    const targetList = appliedTargets.join(', ');
+    setRuntimeValue(casterName, HOLY_AURA_TARGETS_KEY, appliedTargets, campaignName);
 
     return {
         type: 'popup',
@@ -46,10 +105,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             type: 'automation_info',
             name: action.name,
             automationType: auto.type,
-            description: wasActive
-                ? `${action.name} deactivated`
-                : `${action.name} activated`,
+            description: `<b>${targetList}</b> gained Advantage on saving throws and other creatures have Disadvantage on attack rolls against them. Fiends and Undead that hit an affected creature with a melee attack must succeed on a CON saving throw or be Blinded until the end of their next turn.`,
             automation: auto,
+            targetCount: appliedTargets.length,
+            targetNames: appliedTargets,
         },
     };
 }
@@ -59,9 +118,7 @@ export function getHolyAuraTargets(playerName, campaignName) {
     return Array.isArray(stored) ? stored : [];
 }
 
-export function isHolyAuraActive(playerName, campaignName) {
-    const activeBuffs = Array.isArray(getRuntimeValue(playerName, 'activeBuffs', campaignName))
-        ? getRuntimeValue(playerName, 'activeBuffs', campaignName)
-        : [];
-    return activeBuffs.some(b => b.name === 'Holy Aura' && b.effect === 'holy_aura');
+export function isHolyAuraActive(targetName, playerName, campaignName) {
+    const targets = getHolyAuraTargets(playerName, campaignName);
+    return targets.includes(targetName);
 }

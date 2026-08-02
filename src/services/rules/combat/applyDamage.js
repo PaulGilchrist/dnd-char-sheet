@@ -119,6 +119,7 @@ export async function applyDamageToTarget(combatSummary, targetName, rawDamage, 
 
   const existingAttack = getRuntimeValue('campaign', 'lastAttack') || null;
   const isSecondary = existingAttack?.primaryDamage != null;
+  let holyAuraSaveResult = null;
   const newLastAttack = {
     ...existingAttack,
     attackerName: attackerName || existingAttack?.attackerName || null,
@@ -355,9 +356,9 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             // The stealthAttackCost will be cleared at start of next turn
           }
         }
-     }
+      }
 
-      checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
+      holyAuraSaveResult = checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
 
       // Compelled Duel: the effect ends if the target takes damage from anyone other than the caster
       if (attackerName && attackerName !== creature.name) {
@@ -540,7 +541,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
     logDamageApplication(creature, finalDamage, oldHp, newHp, campaignName);
   }
 
-  return { finalDamage, oldHp, newHp, damageReduced: finalDamage < rawDamage, damageReducedByFeature: damageReducedByFeature, resistanceDetails };
+  return { finalDamage, oldHp, newHp, damageReduced: finalDamage < rawDamage, damageReducedByFeature: damageReducedByFeature, resistanceDetails, holyAuraSaveResult };
 }
 
 function logDamageApplication(creature, damage, oldHp, newHp, campaignName) {

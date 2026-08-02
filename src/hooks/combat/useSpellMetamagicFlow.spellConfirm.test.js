@@ -8,7 +8,6 @@ import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
 import { isPsionicSpell, hasPsionicSorcery } from '../../services/rules/spells/metamagicRules.js';
 import { confirmRemoveCurse } from '../../services/rules/features/removeCurseService.js';
-import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js';
 import { spendSorceryPoints } from './useMetamagic.js';
 
 const flushMicrotasks = () => new Promise(r => setTimeout(r, 0));
@@ -51,6 +50,9 @@ vi.mock('../../services/automation/index.js', () => ({
   applyShieldOfFaithEffect: vi.fn(),
   applyProtectionFromEnergyHandler: vi.fn(),
   applyResistanceEffect: vi.fn(),
+  executeHandler: vi.fn(),
+  confirmGreaterRestoration: vi.fn(),
+  applyHolyAuraEffect: vi.fn(),
 }));
 
 vi.mock('../../services/rules/features/greaterRestorationService.js', () => ({
@@ -230,9 +232,21 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
       level: 5,
       handler: 'handleGreaterRestorationConfirm',
       pendingKey: 'pendingGreaterRestoration',
-      args: { targetName: 'Goblin A' },
-      verify: () => {
-        expect(confirmGreaterRestoration).toHaveBeenCalled();
+      args: { targets: ['Goblin A'] },
+      verify: async (_automation) => {
+        // Greater Restoration uses confirmGreaterRestoration from greaterRestorationService, not automation/index
+        const { confirmGreaterRestoration: cgMock } = await import('../../services/rules/features/greaterRestorationService.js');
+        expect(cgMock).toHaveBeenCalled();
+      },
+    },
+    {
+      name: 'Holy Aura',
+      level: 8,
+      handler: 'handleHolyAuraConfirm',
+      pendingKey: 'pendingHolyAura',
+      args: { targets: ['Goblin A', 'Goblin B'] },
+      verify: async (_automation) => {
+        // Holy Aura uses executeHandler directly — just verify the flow completes
       },
     },
     {
@@ -368,6 +382,7 @@ describe('useSpellMetamagicFlow — spell skip handlers', () => {
     { name: 'Aid', level: 2, handler: 'handleAidSkip', pendingKey: 'pendingAid' },
     { name: "Heroes' Feast", level: 6, handler: 'handleHeroesFeastSkip', pendingKey: 'pendingHeroesFeast' },
     { name: 'Greater Restoration', level: 5, handler: 'handleGreaterRestorationSkip', pendingKey: 'pendingGreaterRestoration' },
+    { name: 'Holy Aura', level: 8, handler: 'handleHolyAuraSkip', pendingKey: 'pendingHolyAura' },
     { name: 'Lesser Restoration', level: 2, handler: 'handleLesserRestorationSkip', pendingKey: 'pendingLesserRestoration' },
     { name: 'Remove Curse', level: 3, handler: 'handleRemoveCurseSkip', pendingKey: 'pendingRemoveCurse' },
     { name: 'Mage Armor', level: 1, handler: 'handleMageArmorSkip', pendingKey: 'pendingMageArmor' },

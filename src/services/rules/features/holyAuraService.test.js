@@ -25,7 +25,7 @@ describe('holyAuraService', () => {
             spellAbilities: { saveDc: 15, modifier: 4, spellCastingAbility: 'Charisma', toHit: 9 },
             proficiency: 4,
         };
-        const baseSpell = { name: 'Holy Aura', level: 9 };
+        const baseSpell = { name: 'Holy Aura', level: 8 };
 
         function callTrigger(spell = baseSpell, metaCtx = {}, stats = basePlayerStats) {
             return triggerHolyAura(spell, metaCtx, stats, campaignName, mapName);
@@ -50,7 +50,7 @@ describe('holyAuraService', () => {
 
         describe('action passed to executeHandler', () => {
             it.each([
-                ['defaults', {}, '1_minute', '1 action'],
+                ['defaults', {}, 'Concentration, up to 1 minute', '1 action'],
                 ['custom duration and casting_time', { duration: '10_minutes', casting_time: '1 reaction' }, '10_minutes', '1 reaction'],
             ])('includes automation type holy_aura with auraRange 30 and %s', async (_label, spellOverrides, expectedDuration, expectedCastingTime) => {
                 executeHandler.mockResolvedValue({ success: true });
@@ -58,7 +58,7 @@ describe('holyAuraService', () => {
                 expect(executeHandler).toHaveBeenCalledWith(
                     expect.objectContaining({
                         name: 'Holy Aura',
-                        spell: expect.objectContaining({ name: 'Holy Aura', level: 9, ...spellOverrides }),
+                        spell: expect.objectContaining({ name: 'Holy Aura', level: 8, ...spellOverrides }),
                         automation: expect.objectContaining({
                             type: 'holy_aura',
                             auraRange: 30,
@@ -66,6 +66,24 @@ describe('holyAuraService', () => {
                             casting_time: expectedCastingTime,
                         }),
                     }),
+                    basePlayerStats, campaignName, mapName,
+                );
+            });
+
+            it('includes spellSlotLevel from spell.level', async () => {
+                executeHandler.mockResolvedValue({ success: true });
+                await callTrigger({ ...baseSpell, level: 8 });
+                expect(executeHandler).toHaveBeenCalledWith(
+                    expect.objectContaining({ spellSlotLevel: 8 }),
+                    basePlayerStats, campaignName, mapName,
+                );
+            });
+
+            it('includes spellSlotLevel from metaCtx.slotLevel when provided', async () => {
+                executeHandler.mockResolvedValue({ success: true });
+                await callTrigger(baseSpell, { slotLevel: 9 });
+                expect(executeHandler).toHaveBeenCalledWith(
+                    expect.objectContaining({ spellSlotLevel: 9 }),
                     basePlayerStats, campaignName, mapName,
                 );
             });

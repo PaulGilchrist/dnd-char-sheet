@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './diceRollResult.css';
 
-function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, targetName, targetAc, hit, resistanceNotice, hunterLoreNotice, forcedMode, advantageReason, isAutoMiss, rangeReason, coverReason, isAutoCrit, isCrit, isNatural1, dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, onQuickRoll, autoDamage, coverLevel, coverAcBonus, autoReroll, autoRerollBonus, autoRerollCondition, strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus, reliableTalent, onReroll, tacticalMind, tacticalMindBonus, darkOnesLuck, onDarkOnesLuck, strokeOfLuck, onStrokeOfLuck, defensiveDuelistBonus, baitAndSwitchBonus, isPotentCantrip, luckyAdvantage, luckyDisadvantage, onLuckyAdvantage, onLuckyDisadvantage, secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType, secondaryFinalDamage, secondarySaveResult, availableSuperiorityManeuvers, onSuperiorityManeuver, onTacticalMind, gwfApplied, gwfOriginalRolls, gwfDisplayRolls, elementalAdeptBonus, types, baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls, finalHeal, healReduced, bonusHeal, bonusHealDetail, psiBolsteredKnack, onPsiBolsteredKnack, psiBolsteredKnackDieSize, bardicInspiration, bardicInspirationDie, onBardicInspiration, luckyRerolled, luckyRerollValue, bardicInspirationDefense, bardicInspirationDefenseDieSize, bardicInspirationDefenseTargetName: _bardicInspirationDefenseTargetName, bardicInspirationOffense, bardicInspirationOffenseDieSize, onBardicInspirationDefense, onBardicInspirationOffense, unerringStrikeApplied, onDone, interceptedFeature, empoweredSpell, _empoweredSpellChaMod, spellName, onEmpoweredSpell, d20Floor10, autoRerollForAttack, healingRerollOriginalRolls, healingRerollDisplayRolls, piercerPuncture, onPuncture,     critLabels, savageAttacker, onSavageAttacker, tavernBrawlerRerolls, rayOfEnfeebleReduction, rayOfEnfeebleRoll, resistanceReduction, resistanceRoll }) {
+function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, targetName, targetAc, hit, resistanceNotice, hunterLoreNotice, forcedMode, advantageReason, isAutoMiss, rangeReason, coverReason, isAutoCrit, isCrit, isNatural1, dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, onQuickRoll, autoDamage, coverLevel, coverAcBonus, autoReroll, autoRerollBonus, autoRerollCondition, strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus, reliableTalent, onReroll, tacticalMind, tacticalMindBonus, darkOnesLuck, onDarkOnesLuck, strokeOfLuck, onStrokeOfLuck, defensiveDuelistBonus, baitAndSwitchBonus, isPotentCantrip, luckyAdvantage, luckyDisadvantage, onLuckyAdvantage, onLuckyDisadvantage, secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType, secondaryFinalDamage, secondarySaveResult, availableSuperiorityManeuvers, onSuperiorityManeuver, onTacticalMind, gwfApplied, gwfOriginalRolls, gwfDisplayRolls, elementalAdeptBonus, types, baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls, finalHeal, healReduced, bonusHeal, bonusHealDetail, psiBolsteredKnack, onPsiBolsteredKnack, psiBolsteredKnackDieSize, bardicInspiration, bardicInspirationDie, onBardicInspiration, luckyRerolled, luckyRerollValue, bardicInspirationDefense, bardicInspirationDefenseDieSize, bardicInspirationDefenseTargetName: _bardicInspirationDefenseTargetName, bardicInspirationOffense, bardicInspirationOffenseDieSize, onBardicInspirationDefense, onBardicInspirationOffense, unerringStrikeApplied, onDone, interceptedFeature, empoweredSpell, _empoweredSpellChaMod, spellName, onEmpoweredSpell, d20Floor10, autoRerollForAttack, healingRerollOriginalRolls, healingRerollDisplayRolls, piercerPuncture, onPuncture,     critLabels, savageAttacker, onSavageAttacker, tavernBrawlerRerolls,         rayOfEnfeebleReduction, rayOfEnfeebleRoll, resistanceReduction, resistanceRoll, holyAuraSaveResult }) {
     const isD20 = type === 'd20';
     const [mode, setMode] = useState(forcedMode || 'normal');
     const [rerollUsed, setRerollUsed] = useState(false);
@@ -789,9 +789,23 @@ function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, f
 
             {autoDamage && computedHit && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => onDone?.()} type="button">
+                <button className="dice-roll-reroll-btn" onClick={() => onDone?.(computedHit)} type="button">
                   <i className="fa-solid fa-check"></i> Done
                 </button>
+              </div>
+            )}
+
+            {holyAuraSaveResult && (
+              <div className="dice-roll-holy-aura-save">
+                <i className="fa-solid fa-shield-halved"></i>
+                <strong>— Holy Aura Save:</strong>
+                <span className="dice-roll-breakdown">
+                  d20 {holyAuraSaveResult.roll} + {holyAuraSaveResult.modifier} = {holyAuraSaveResult.total} vs DC {holyAuraSaveResult.dc}
+                </span>
+                <span className={`dice-roll-save-result ${holyAuraSaveResult.success ? 'save-success' : 'save-failure'}`}>
+                  {holyAuraSaveResult.success ? 'SAVE SUCCESSFUL' : 'SAVE FAILED'}
+                </span>
+                {!holyAuraSaveResult.success && <span className="dice-roll-save-effect">Fiend/Undead blinded!</span>}
               </div>
             )}
 

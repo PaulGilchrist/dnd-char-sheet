@@ -7,12 +7,13 @@ export async function triggerHolyAura(spell, metaCtx, playerStats, campaignName,
         name: 'Holy Aura',
         automation: {
             type: 'holy_aura',
-            duration: spell.duration || '1_minute',
+            duration: spell.duration || 'Concentration, up to 1 minute',
             auraRange: 30,
             casting_time: spell.casting_time || '1 action',
         },
         spell,
         dc: spellSaveDc,
+        spellSlotLevel: metaCtx?.slotLevel || spell.level || 8,
     };
 
     setRuntimeValue(playerStats.name, 'holyAuraSaveDc', spellSaveDc, campaignName);

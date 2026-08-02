@@ -14,9 +14,9 @@ function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, set
     hasBoonBeenUsedRef.current = !!used;
   }
 
-  const handleDone = useCallback(() => {
-    const hit = missToHitApplied || popupHtml?.hit;
-    if (popupHtml?.autoDamage && hit) {
+  const handleDone = useCallback((computedHit) => {
+    const actualHit = computedHit !== undefined ? computedHit : (missToHitApplied || popupHtml?.hit);
+    if (popupHtml?.autoDamage && actualHit) {
       window.dispatchEvent(new CustomEvent('dice-roll-done', {
         detail: { autoDamage: popupHtml.autoDamage, isCrit: popupHtml.isCrit, hit: true },
       }));
@@ -79,9 +79,9 @@ function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, set
         <DiceRollResult
           {...popupHtml}
           hit={missToHitApplied || popupHtml?.hit}
-          autoDamage={popupHtml?.autoDamage && (missToHitApplied || popupHtml?.hit) ? popupHtml.autoDamage : undefined}
+          autoDamage={popupHtml?.autoDamage}
           onBardicInspirationDefense={popupHtml?.bardicInspirationDefense ? handleBardicInspirationDefense : undefined}
-          onDone={popupHtml?.autoDamage && (popupHtml?.hit || missToHitApplied) ? handleDone : undefined}
+          onDone={popupHtml?.autoDamage ? handleDone : undefined}
           onStrokeOfLuck={popupHtml?.strokeOfLuck || (popupHtml?.autoRerollForAttack && !missToHitApplied && !hasBoonBeenUsedRef.current) ? handleMissToHit : undefined}
           {...callbacks}
         />

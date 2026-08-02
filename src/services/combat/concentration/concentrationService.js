@@ -244,6 +244,30 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
     // Clean up Heroism buff and effects when concentration breaks
     removeHeroismBuff(casterName, campaignName)
+
+    // Clean up Holy Aura buffs and targets when concentration breaks
+    cleanupHolyAuraEffects(casterName, campaignName)
+}
+
+function cleanupHolyAuraEffects(casterName, campaignName) {
+    const cs = getCombatSummary(campaignName);
+    if (cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+            const filtered = buffs.filter(b => !(b.name === 'Holy Aura' && b.sourceCharacter === casterName));
+            if (filtered.length !== buffs.length) {
+                setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+            }
+        }
+    }
+    // Clean up targetEffects for Holy Aura badges
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const filteredEffects = storedEffects.filter(te => !(te.effect === 'holy_aura' && te.source === casterName));
+    if (filteredEffects.length !== storedEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
+    }
+    setRuntimeValue(casterName, 'holyAuraTargets', [], campaignName);
+    setRuntimeValue(casterName, 'holyAuraSaveDc', null, campaignName);
 }
 
 function cleanupFleshToStoneEffects(casterName, campaignName) {

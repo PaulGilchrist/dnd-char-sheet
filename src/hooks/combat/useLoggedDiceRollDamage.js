@@ -28,6 +28,7 @@ import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/el
 import { registerPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
 import { hasBardicInspirationOffense, getBardicInspirationDieSize, getBardicInspirationDieSizeFromClass } from '../../services/combat/auras/bardicInspirationState.js';
 import { hasEmpoweredSpell } from '../../services/rules/spells/empoweredSpellService.js';
+import { getHolyAuraTargets } from '../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { getChaModifier } from '../../services/rules/spells/metamagicRules.js';
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
@@ -978,10 +979,10 @@ export function createLogDamageAndShow(deps) {
         const isElderChampionActive = getRuntimeValue(target.name, 'elderChampionActive', campaignName) === true;
         const effectiveAttackerName = attackerName || characterName;
         const isElderChampionAttackerActive = effectiveAttackerName !== target.name && getRuntimeValue(effectiveAttackerName, 'elderChampionActive', campaignName) === true;
-        const isHolyAuraActive = Array.isArray(targetBuffs) && targetBuffs.some(b => b.name === 'Holy Aura' && b.effect === 'holy_aura');
+        const holyAuraTargets = getHolyAuraTargets(target.name, campaignName);
         const isProtectionFromPoisonActive = Array.isArray(targetBuffs) && targetBuffs.some(b => b.name === 'Protection from Poison' && b.effect === 'protection_from_poison');
         const combatContext = getCombatSummary(campaignName);
-        const targetConditionEffects = computeConditionEffects(targetConditions, targetSaveModifiers, targetEffects, isRaging, shapeShiftActive, false, false, combatContext, seeInvisibilityActive, target.name, isLivingLegendActive, isElderChampionActive, isElderChampionAttackerActive, isHolyAuraActive, isProtectionFromPoisonActive, false);
+        const targetConditionEffects = computeConditionEffects(targetConditions, targetSaveModifiers, targetEffects, isRaging, shapeShiftActive, false, false, combatContext, seeInvisibilityActive, target.name, isLivingLegendActive, isElderChampionActive, isElderChampionAttackerActive, holyAuraTargets, isProtectionFromPoisonActive, false);
         const restoreBalance = targetConditionEffects.restoreBalance;
         const fanaticalFocusUsed = getRuntimeValue(target.name, 'fanaticalFocusUsed', campaignName);
         const indomitableUses = Number(getRuntimeValue(target.name, 'indomitableUses', campaignName) ?? 0);
@@ -1139,9 +1140,8 @@ export function createLogDamageAndShow(deps) {
             saveDisadvantage = disadvantageSources > 1;
         }
 
-        const targetConditionEffectsForSave = getRuntimeValue(target.name, 'conditionEffects', campaignName) || {};
-        const saveAdvantage = !!(targetConditionEffectsForSave.saveAdvantageCount > 0 ||
-            (targetConditionEffectsForSave.saveAdvantageAbilities && targetConditionEffectsForSave.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())) ||
+        const saveAdvantage = !!(targetConditionEffects.saveAdvantageCount > 0 ||
+            (targetConditionEffects.saveAdvantageAbilities && targetConditionEffects.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())) ||
             isCircleOfPowerActive(target.name, campaignName));
 
         const pendingData = {
@@ -1580,6 +1580,9 @@ export function createLogDamageAndShow(deps) {
             popupData.damageReduced = applyResult.damageReduced;
             if (isIntercepted) {
                 popupData.interceptedFeature = applyResult.interceptedFeature;
+            }
+            if (applyResult.holyAuraSaveResult) {
+                popupData.holyAuraSaveResult = applyResult.holyAuraSaveResult;
             }
         }
 

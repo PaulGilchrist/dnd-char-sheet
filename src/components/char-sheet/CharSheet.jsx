@@ -25,6 +25,7 @@ import { isDistanceInRange } from '../../services/rules/combat/rangeCheck.js';
 import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 import { EXHAUSTION_LEVELS } from '../../services/combat/conditions/exhaustionRules.js';
 import { isCreatureWarded } from '../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
+import { getHolyAuraTargets } from '../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 import { executeEmpoweredReroll } from '../../services/rules/spells/empoweredSpellService.js';
@@ -342,7 +343,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     const seeInvisibilityActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'see_invisibility');
     const isLivingLegendActive = getRuntimeValue(playerStats?.name, 'livingLegendActive', campaignName) === true;
     const isElderChampionActive = getRuntimeValue(playerStats?.name, 'elderChampionActive', campaignName) === true;
-    const isHolyAuraActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.name === 'Holy Aura' && b.effect === 'holy_aura');
+    const isHolyAuraActive = getHolyAuraTargets(playerStats?.name, campaignName);
     const isProtectionFromPoisonActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.name === 'Protection from Poison' && b.effect === 'protection_from_poison');
     const isTranceOfOrderActive = getRuntimeValue(playerStats?.name, 'tranceOfOrderActive', campaignName) === true;
     const combatContext = getCombatSummary(campaignName);

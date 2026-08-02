@@ -185,7 +185,7 @@ import { handle as handleFiendishLegacy } from './handlers/class-other/fiendishL
 import { handle as handleAid, applyAid as applyAidEffect } from './handlers/healing/aidHandler.js';
 import { applyBaneEffect } from '../../services/rules/features/baneService.js';
 import { applyBlessEffect } from '../../services/rules/features/blessService.js';
-import { handle as handleHolyAura } from './handlers/buffs/holyAuraHandler.js';
+import { handle as handleHolyAura, applyHolyAura as applyHolyAuraEffect } from './handlers/buffs/holyAuraHandler.js';
 import { handle as handleAuraOfLife, applyAuraOfLife as applyAuraOfLifeEffect, isAuraOfLifeActive } from './handlers/buffs/auraOfLifeHandler.js';
 import { handle as handleAuraOfPurity, applyAuraOfPurity as applyAuraOfPurityEffect, isAuraOfPurityActive } from './handlers/buffs/auraOfPurityHandler.js';
 import { handle as handleAuraOfVitality, applyAuraOfVitality as applyAuraOfVitalityEffect, isAuraOfVitalityActive } from './handlers/buffs/auraOfVitalityHandler.js';
@@ -593,6 +593,7 @@ export {
     applyHeroism,
     isHeroismActive,
     applyBeaconOfHopeEffect,
+    applyHolyAuraEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,
     applyAuraOfPurityEffect,
