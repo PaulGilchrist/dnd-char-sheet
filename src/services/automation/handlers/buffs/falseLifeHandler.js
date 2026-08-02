@@ -1,5 +1,6 @@
 import { setTempHp } from './tempHpService.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
+import { addEntry } from '../../../ui/logService.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -31,6 +32,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const amount = result.total;
 
     setTempHp(playerName, amount, campaignName);
+
+    await addEntry(campaignName, {
+        type: 'hp_change',
+        targetName: playerName,
+        delta: amount,
+        isTempHp: true,
+        sourceName: playerName,
+        note: `False Life (${tempHpExpression})`,
+        timestamp: Date.now(),
+    }).catch(() => {});
 
     return {
         type: 'popup',

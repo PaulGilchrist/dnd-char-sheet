@@ -228,12 +228,10 @@ describe('executeSpellCast - no-damage spell routing', () => {
     })
   })
 
+  // Fear — returns fear modal
   // ------------------------------------------------------------------
-  // Fear — returns fear modal + triggers False Life
-  // ------------------------------------------------------------------
-  describe('fear dual-trigger', () => {
-    it('returns fear modal and triggers False Life', async () => {
-      const falseLife = await import('../features/falseLifeService.js')
+  describe('fear modal', () => {
+    it('returns fear modal', async () => {
       const services = makeServices()
       const spell = makeSpell({ name: 'Fear', dc: { dc_type: 'wis', dc_success: 'half' } })
       delete spell.damage
@@ -253,16 +251,13 @@ describe('executeSpellCast - no-damage spell routing', () => {
           metamagicCareful: false,
         }),
       })
-      expect(falseLife.triggerFalseLife).toHaveBeenCalled()
     })
   })
 
+  // Hypnotic Pattern — returns hypnoticPattern modal
   // ------------------------------------------------------------------
-  // Hypnotic Pattern — returns hypnoticPattern modal + triggers False Life
-  // ------------------------------------------------------------------
-  describe('hypnotic pattern dual-trigger', () => {
-    it('returns hypnoticPattern modal and triggers False Life', async () => {
-      const falseLife = await import('../features/falseLifeService.js')
+  describe('hypnotic pattern modal', () => {
+    it('returns hypnoticPattern modal', async () => {
       const services = makeServices()
       const spell = makeSpell({ name: 'Hypnotic Pattern', dc: { dc_type: 'wis', dc_success: 'none' } })
       delete spell.damage
@@ -282,7 +277,6 @@ describe('executeSpellCast - no-damage spell routing', () => {
           metamagicCareful: false,
         }),
       })
-      expect(falseLife.triggerFalseLife).toHaveBeenCalled()
     })
 
     it('adds innate sorcery bonus to save DC', async () => {

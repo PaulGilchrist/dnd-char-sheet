@@ -12,11 +12,16 @@ vi.mock('../../../dice/diceRoller.js', () => ({
   rollExpression: vi.fn(),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+  addEntry: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle } from './falseLifeHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as diceRoller from '../../../dice/diceRoller.js';
+import * as logService from '../../../ui/logService.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -135,6 +140,63 @@ describe('falseLifeHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('campaign logging', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      diceRoller.rollExpression.mockReturnValue(successRoll(10, '2d4+4'));
+    });
+
+    it('logs hp_change entry with isTempHp true on success', async () => {
+      const ps = makePlayerStats({ name: 'Gandalf' });
+
+      await handle(makeAction(), ps, CAMPAIGN_NAME, null);
+
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        CAMPAIGN_NAME,
+        expect.objectContaining({
+          type: 'hp_change',
+          targetName: 'Gandalf',
+          delta: 10,
+          isTempHp: true,
+          sourceName: 'Gandalf',
+          note: 'False Life (2d4+4)',
+        })
+      );
+    });
+
+    it('logs upcast formula when using higher level slot', async () => {
+      const ps = makePlayerStats({ name: 'Wizard' });
+      diceRoller.rollExpression.mockReturnValue(successRoll(15, '2d4 + 14'));
+
+      await handle(
+        makeAction({
+          spell: { heal_at_slot_level: { 3: '2d4 + 14' } },
+          spellSlotLevel: 3,
+        }),
+        ps,
+        CAMPAIGN_NAME,
+        null
+      );
+
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        CAMPAIGN_NAME,
+        expect.objectContaining({
+          type: 'hp_change',
+          delta: 15,
+          note: 'False Life (2d4 + 14)',
+        })
+      );
+    });
+
+    it('does not log when roll fails', async () => {
+      diceRoller.rollExpression.mockReturnValue(null);
+
+      await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
+
+      expect(logService.addEntry).not.toHaveBeenCalled();
     });
   });
 

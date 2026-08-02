@@ -395,9 +395,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             metamagicCareful: metaCtx?.metamagicCareful || false,
             metamagicHeighten: metaCtx?.metamagicHeighten,
         };
-        triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
-            console.error('[spellCast] False Life trigger failed:', e);
-        });
         return {
             automationPopup: {
                 type: 'modal',
@@ -420,9 +417,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             metamagicCareful: metaCtx?.metamagicCareful || false,
             metamagicHeighten: metaCtx?.metamagicHeighten,
         };
-        triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
-            console.error('[spellCast] False Life trigger failed:', e);
-        });
         return {
             automationPopup: {
                 type: 'modal',
@@ -469,9 +463,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 metamagicCareful: metaCtx?.metamagicCareful || false,
                 metamagicHeighten: metaCtx?.metamagicHeighten,
             };
-            triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
-                console.error('[spellCast] False Life trigger failed:', e);
-            });
             return {
                 automationPopup: {
                     type: 'modal',
@@ -729,10 +720,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const aoeRadius = aoeMatch ? parseInt(aoeMatch[1], 10) : 20;
             const slotLevel = metaCtx?.slotLevel || spell.level || 2;
 
-            triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
-                console.error('[spellCast] False Life trigger failed:', e);
-            });
-
             const combatSummary = getCombatSummary(campaignName) || { creatures: [], players: [] };
             const allCreatures = [
                 ...combatSummary.players?.map(p => ({ name: p.name, type: 'player' })) || [],
@@ -842,6 +829,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Prayer of Healing — up to 5 creatures within range each regain 2d8 + modifier HP
         if (spell.name && spell.name.toLowerCase() === 'prayer of healing') {
             await triggerPrayerOfHealing(spell, metaCtx, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // False Life — self-target temp HP, handled by dedicated service
+        if (spell.name && spell.name.toLowerCase() === 'false life') {
+            await triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName);
             return;
         }
 
@@ -957,10 +950,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
             return genericHealResult;
         }
-
-        triggerFalseLife(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
-            console.error('[spellCast] False Life trigger failed:', e);
-        });
 
         triggerHealingWord(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
             console.error('[spellCast] Healing Word trigger failed:', e);

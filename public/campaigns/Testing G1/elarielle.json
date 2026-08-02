@@ -115,13 +115,14 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Cure Wounds",
-    "Compulsion",
-    "Crown of Madness",
-    "Death Ward",
-    "Enhance Ability",
-    "Expeditious Retreat",
-    "Eyebite"
+    "False Life",
+    "Feign Death",
+    "Flesh to Stone",
+    "Foresight",
+    "Grease",
+    "Heroes' Feast",
+    "Heroism",
+    "Holy Aura"
   ],
   "magicInitiateInstances": [
     {
