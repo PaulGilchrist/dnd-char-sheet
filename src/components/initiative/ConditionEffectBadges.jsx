@@ -265,6 +265,14 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Heroism', cls: 'effect-buff', icon: 'fa-dragon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'heroism', tooltip: `Heroism from ${casterName}: Immune to Frightened, gains temp HP at start of each turn (Concentration, up to 1 minute)` })
     }
 
+    // Deduplicate badges by label, keeping the first occurrence
+    const seenLabels = new Set()
+    const uniqueBadges = badges.filter(b => {
+        if (seenLabels.has(b.label)) return false
+        seenLabels.add(b.label)
+        return true
+    })
+
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':
@@ -325,7 +333,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
 
     return (
         <>
-            {badges.map((b, i) => (
+            {uniqueBadges.map((b, i) => (
                 <CreatureBadge
                     key={`${b.label}-${i}`}
                     icon={b.icon}
