@@ -23,7 +23,6 @@ import { triggerHoldMonster } from '../features/holdMonsterService.js';
 import { triggerHypnoticPattern } from '../features/hypnoticPatternService.js';
 import { triggerMassSuggestion } from '../features/massSuggestionService.js';
 import { triggerSuggestion } from '../features/suggestionService.js';
-import { triggerForesight } from '../features/foresightService.js';
 import { triggerBlur } from '../features/blurService.js';
 import { triggerResilientSphere } from '../features/resilientSphereService.js';
 import { triggerOttoDance } from '../features/ottoDanceService.js';
@@ -560,14 +559,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Otiluke's Resilient Sphere / Resilient Sphere — DEX save, encloses target in an immovable sphere
         if (spell.name && (spell.name.toLowerCase() === "otiluke's resilient sphere" || spell.name.toLowerCase() === 'resilient sphere')) {
             await triggerResilientSphere(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
-            return;
-        }
-
-        // Foresight — buffs target with advantage on D20 tests and disadvantage on attacks against it
-        if (spell.name && spell.name.toLowerCase() === 'foresight') {
-            const target = await getTargetInfo();
-            const foresightMetaCtx = { ...metaCtx, targetName: target?.name };
-            await triggerForesight(spell, foresightMetaCtx, playerStats, campaignName, mapName);
             return;
         }
 

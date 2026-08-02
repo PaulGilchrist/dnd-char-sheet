@@ -137,6 +137,33 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Saves & Checks ──────────────────────────────────────
   {
+    effect: 'advantage_abilities',
+    label: 'Adv Check',
+    description: 'Advantage on all ability checks.',
+    icon: 'fa-hand',
+    cls: 'effect-buff',
+    group: 'Saves & Checks',
+    fields: ['source'],
+  },
+  {
+    effect: 'advantage_attacks',
+    label: 'Adv',
+    description: 'Advantage on attack rolls.',
+    icon: 'fa-arrow-up',
+    cls: 'effect-buff',
+    group: 'Saves & Checks',
+    fields: ['source'],
+  },
+  {
+    effect: 'advantage_saves',
+    label: 'Adv Save',
+    description: 'Advantage on saving throws.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Saves & Checks',
+    fields: ['source'],
+  },
+  {
     effect: 'bane_penalty',
     label: 'Bane (-1d4)',
     description: 'The creature suffers -1d4 on attack rolls and saving throws (Bane).',

@@ -129,7 +129,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     }
     if (effects.abilityCheckAdvantageAbilities?.length > 0) {
       const abilityNames = effects.abilityCheckAdvantageAbilities.map(a => a.substring(0, 3).toLowerCase()).join(', ')
-      badges.push({ label: `Check Adv (${abilityNames})`, cls: 'effect-buff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'enhance_ability' })
+      badges.push({ label: `Adv Check (${abilityNames})`, cls: 'effect-buff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'enhance_ability' })
+    }
+    if (effects.abilityCheckAdvantage && !effects.abilityCheckAdvantageAbilities) {
+      const reasons = effects.abilityCheckAdvantageReasons || []
+      const reasonText = reasons.length > 0 ? ` (${reasons.join(', ')})` : ''
+      badges.push({ label: 'Adv Check', cls: 'effect-buff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'advantage_abilities', tooltip: `Advantage on all ability checks${reasonText ? ' (' + reasonText + ')' : ''}` })
     }
     if (effects.riderAttackBonus > 0) badges.push({ label: `+${effects.riderAttackBonus} to hit`, cls: 'effect-debuff', icon: 'fa-bullseye', removable: true, removeAction: 'target_effect', effectType: 'next_attack_bonus' })
     if (effects.riderCannotOpportunityAttack) badges.push({ label: 'No OA', cls: 'effect-debuff', icon: 'fa-ban', removable: true, removeAction: 'target_effect', effectType: 'no_opportunity_attacks' })

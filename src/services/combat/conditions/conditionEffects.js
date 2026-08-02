@@ -350,6 +350,7 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     abilityCheckAdvantageAbilities: null,
     abilityCheckDisadvantageAbilities: null,
     abilityCheckAdvantage: false,
+    abilityCheckAdvantageReasons: [],
     abilityCheckAdvantageSkill: null,
     autoFailSaves: [],
     saveDisadvantage: [],
@@ -726,6 +727,7 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
       effects.saveAdvantageCount = (effects.saveAdvantageCount || 0) + 1;
       effects.saveAdvantageReasons.push('Foresight');
       effects.abilityCheckAdvantage = true;
+      effects.abilityCheckAdvantageReasons = ['Foresight'];
       if (!attackerHasBlindsightOrTruesight(attackerSenses)) {
         effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
       }
@@ -755,6 +757,36 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
         if (!effects.abilityCheckAdvantageAbilities.includes(ability)) {
           effects.abilityCheckAdvantageAbilities.push(ability);
         }
+      }
+    }
+    // Handle Adv Check (advantage_abilities) — target has Advantage on all ability checks
+    if (te.effect === 'advantage_abilities') {
+      effects.abilityCheckAdvantage = true;
+      if (!effects.abilityCheckAdvantageReasons) {
+        effects.abilityCheckAdvantageReasons = [];
+      }
+      if (te.source && !effects.abilityCheckAdvantageReasons.includes(te.source)) {
+        effects.abilityCheckAdvantageReasons.push(te.source);
+      }
+    }
+    // Handle Adv (advantage_attacks) — target has Advantage on attack rolls
+    if (te.effect === 'advantage_attacks') {
+      effects.attackAdvantageCount = (effects.attackAdvantageCount || 0) + 1;
+      if (!effects.attackAdvantageReasons) {
+        effects.attackAdvantageReasons = [];
+      }
+      if (te.source && !effects.attackAdvantageReasons.includes(te.source)) {
+        effects.attackAdvantageReasons.push(te.source);
+      }
+    }
+    // Handle Adv Save (advantage_saves) — target has Advantage on saving throws
+    if (te.effect === 'advantage_saves') {
+      effects.saveAdvantageCount = (effects.saveAdvantageCount || 0) + 1;
+      if (!effects.saveAdvantageReasons) {
+        effects.saveAdvantageReasons = [];
+      }
+      if (te.source && !effects.saveAdvantageReasons.includes(te.source)) {
+        effects.saveAdvantageReasons.push(te.source);
       }
     }
     // Handle Eldritch Hex — target has Disadvantage on saves of chosen ability

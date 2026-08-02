@@ -866,6 +866,13 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue('campaign', 'targetEffects', filteredCircleOfPowerEffects, campaignName, true)
     }
 
+    // Clear Foresight on long rest
+    const foresightEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredForesightEffects = foresightEffects.filter(e => e.effect !== 'foresight' && e.effect !== 'advantage_attacks' && e.effect !== 'advantage_saves' && e.effect !== 'advantage_abilities');
+    if (filteredForesightEffects.length !== foresightEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredForesightEffects, campaignName, true)
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP on long rest
     const longRestAllKeys = getAllStoreKeys();
     for (const key of longRestAllKeys) {

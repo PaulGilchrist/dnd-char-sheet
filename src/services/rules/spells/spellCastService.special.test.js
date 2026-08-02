@@ -183,7 +183,6 @@ describe('executeSpellCast - no-damage spell routing', () => {
   // ------------------------------------------------------------------
   describe('target-name passing spells', () => {
     it.each([
-      { service: '../features/foresightService.js', name: 'triggerForesight', spellName: 'Foresight' },
       { service: '../features/heroismService.js', name: 'triggerHeroism', spellName: 'Heroism' },
     ])('passes target name to $name', async ({ service, name, spellName }) => {
       const mod = await import(service)

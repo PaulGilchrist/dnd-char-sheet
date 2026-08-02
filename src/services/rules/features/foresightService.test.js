@@ -155,10 +155,14 @@ describe('foresightService', () => {
                 await callTrigger({ name: 'Foresight' }, { targetName: 'Fighter' });
 
                 const newEffects = mockSetRuntimeValue.mock.calls[1][2];
-                expect(newEffects).toHaveLength(2);
+                expect(newEffects).toHaveLength(5);
                 expect(newEffects[0]).toEqual(existingEffects[1]);
+                expect(newEffects[1].effect).toBe('foresight');
                 expect(newEffects[1].target).toBe('Fighter');
                 expect(newEffects[1].source).toBe('Wizard');
+                expect(newEffects[2].effect).toBe('advantage_attacks');
+                expect(newEffects[3].effect).toBe('advantage_saves');
+                expect(newEffects[4].effect).toBe('advantage_abilities');
             });
 
             it('preserves unrelated targetEffects', async () => {
@@ -172,8 +176,9 @@ describe('foresightService', () => {
                 await callTrigger({ name: 'Foresight' }, { targetName: 'Fighter' });
 
                 const newEffects = mockSetRuntimeValue.mock.calls[1][2];
-                expect(newEffects).toHaveLength(2);
+                expect(newEffects).toHaveLength(5);
                 expect(newEffects[0]).toEqual(existingEffects[0]);
+                expect(newEffects[1].effect).toBe('foresight');
                 expect(newEffects[1].target).toBe('Fighter');
             });
 
@@ -185,7 +190,8 @@ describe('foresightService', () => {
                 await callTrigger();
 
                 const newEffects = mockSetRuntimeValue.mock.calls[1][2];
-                expect(newEffects).toHaveLength(1);
+                expect(newEffects).toHaveLength(4);
+                expect(newEffects[0].effect).toBe('foresight');
                 expect(newEffects[0].target).toBe('Wizard');
             });
         });
@@ -202,7 +208,7 @@ describe('foresightService', () => {
                         type: 'automation_info',
                         name: 'Foresight',
                         automationType: 'foresight',
-                        description: '<b>Foresight</b><br/>Fighter has <b>Advantage on D20 Tests</b>, and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.',
+                        description: '<b>Foresight</b><br/>Fighter has <b>Advantage on D20 Tests</b> (attacks, saves, ability checks), and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.',
                     },
                 });
             });

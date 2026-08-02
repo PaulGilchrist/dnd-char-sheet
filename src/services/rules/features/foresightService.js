@@ -35,7 +35,7 @@ export async function triggerForesight(spell, metaCtx, playerStats, campaignName
         throw new Error('Expected array, got ' + rawEffects);
     }
     const effects = Array.isArray(rawEffects) ? rawEffects : [];
-    const filtered = effects.filter(te => !(te.effect === 'foresight' && te.source === playerStats.name));
+    const filtered = effects.filter(te => !(te.effect === 'foresight' && te.source === playerStats.name) && !(te.effect === 'advantage_attacks' && te.source === playerStats.name) && !(te.effect === 'advantage_saves' && te.source === playerStats.name) && !(te.effect === 'advantage_abilities' && te.source === playerStats.name));
 
     const foresightEffect = {
         target: targetName,
@@ -43,7 +43,25 @@ export async function triggerForesight(spell, metaCtx, playerStats, campaignName
         effect: 'foresight',
         duration: '8_hours',
     };
-    filtered.push(foresightEffect);
+    const attackAdvEffect = {
+        target: targetName,
+        source: playerStats.name,
+        effect: 'advantage_attacks',
+        duration: '8_hours',
+    };
+    const saveAdvEffect = {
+        target: targetName,
+        source: playerStats.name,
+        effect: 'advantage_saves',
+        duration: '8_hours',
+    };
+    const checkAdvEffect = {
+        target: targetName,
+        source: playerStats.name,
+        effect: 'advantage_abilities',
+        duration: '8_hours',
+    };
+    filtered.push(foresightEffect, attackAdvEffect, saveAdvEffect, checkAdvEffect);
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
 
     return {
@@ -52,7 +70,7 @@ export async function triggerForesight(spell, metaCtx, playerStats, campaignName
             type: 'automation_info',
             name: 'Foresight',
             automationType: 'foresight',
-            description: `<b>Foresight</b><br/>${targetName} has <b>Advantage on D20 Tests</b>, and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.`,
+            description: `<b>Foresight</b><br/>${targetName} has <b>Advantage on D20 Tests</b> (attacks, saves, ability checks), and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.`,
         },
     };
 }
