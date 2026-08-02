@@ -523,6 +523,14 @@ describe('isResilientSphereActive', () => {
     expect(isResilientSphereActive('TestCharacter', 'test-campaign')).toBe(true)
   })
 
+  it('returns true when targetEffect exists for the target', () => {
+    getRuntimeValue
+      .mockReturnValueOnce(null) // activeBuffs
+      .mockReturnValueOnce([{ target: 'TestCharacter', effect: 'resilient_sphere', source: 'Caster' }]) // campaign targetEffects
+
+    expect(isResilientSphereActive('TestCharacter', 'test-campaign')).toBe(true)
+  })
+
   it('returns false when buff is absent, empty, null, or undefined', () => {
     getRuntimeValue.mockReturnValue([{ effect: 'other_buff' }])
     expect(isResilientSphereActive('OtherCharacter', 'test-campaign')).toBe(false)
@@ -536,6 +544,14 @@ describe('isResilientSphereActive', () => {
     getRuntimeValue.mockReturnValue(undefined)
     expect(isResilientSphereActive('TestCharacter', 'test-campaign')).toBe(false)
   })
+
+  it('returns false when targetEffect is for a different target', () => {
+    getRuntimeValue
+      .mockReturnValueOnce(null) // activeBuffs
+      .mockReturnValueOnce([{ target: 'OtherCreature', effect: 'resilient_sphere', source: 'Caster' }]) // campaign targetEffects
+
+    expect(isResilientSphereActive('TestCharacter', 'test-campaign')).toBe(false)
+  })
 })
 
 describe('getResilientSphereSource', () => {
@@ -544,6 +560,14 @@ describe('getResilientSphereSource', () => {
   it('returns the source character name', () => {
     getRuntimeValue.mockReturnValue([{ effect: 'resilient_sphere', sourceCharacter: 'Ally' }])
     expect(getResilientSphereSource('TestCharacter', 'test-campaign')).toBe('Ally')
+  })
+
+  it('returns source from targetEffect when activeBuffs has no sourceCharacter', () => {
+    getRuntimeValue
+      .mockReturnValueOnce([{ effect: 'resilient_sphere' }]) // no sourceCharacter
+      .mockReturnValueOnce([{ target: 'TestCharacter', effect: 'resilient_sphere', source: 'Caster' }]) // campaign targetEffects
+
+    expect(getResilientSphereSource('TestCharacter', 'test-campaign')).toBe('Caster')
   })
 
   it('returns null when resilient_sphere buff is not active, has no sourceCharacter, or activeBuffs is null', () => {

@@ -439,6 +439,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'resilient_sphere',
+    label: 'Resilient Sphere',
+    description: 'Target is enclosed in a shimmering sphere. Nothing can pass through the barrier (in or out). The sphere is immune to all damage. Target can use action to roll sphere at half speed. Others can pick up and move it. Disintegrate destroys it. Expires on concentration loss, initiative roll, short rest, or long rest.',
+    icon: 'fa-circle',
+    cls: 'effect-debuff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'silenced',
     label: 'Silenced',
     description: 'Deafened and cannot cast spells with Verbal components.',

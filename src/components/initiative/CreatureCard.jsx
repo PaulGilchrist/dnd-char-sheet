@@ -14,6 +14,7 @@ import { isBuffActive } from '../../services/automation/common/buffToggle.js';
 import { CONDITION_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc, clearUnbreakableMajesty } from '../../services/combat/auras/unbreakableMajesty.js'
 import { sendFleshToStoneResult } from '../../services/combat/conditions/savePromptService.js'
+import { isResilientSphereActive, getResilientSphereSource } from '../../services/combat/automation/automationPassives.js'
 
 const SHAPE_LABELS = {
     sphere: 'Sphere',
@@ -355,6 +356,23 @@ function CreatureCard({
                             onRemove={() => {
                                 const filtered = buffs.filter(b => !(b.name === 'Death Ward' && b.effect === 'death_ward'));
                                 setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                            }}
+                        />
+                    );
+                })()}
+                {isResilientSphereActive(creature.name, campaignName) && (() => {
+                    const sourceName = getResilientSphereSource(creature.name, campaignName) || 'Unknown';
+                    return (
+                        <CreatureBadge
+                            icon='fa-circle'
+                            label='Resilient Sphere'
+                            cls='effect-debuff'
+                            tooltip={`Enclosed in Resilient Sphere by ${sourceName}. Nothing passes through the barrier. Expires on concentration loss.`}
+                            removable={isLocalhost}
+                            onRemove={() => {
+                                const effects = getRuntimeValue('campaign', 'targetEffects') || [];
+                                const filtered = effects.filter(e => !(e.target === creature.name && e.effect === 'resilient_sphere'));
+                                setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
                             }}
                         />
                     );

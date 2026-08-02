@@ -6,10 +6,12 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { getAllyList } from '../../../../hooks/useAllySelection.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
+    const casterName = playerStats.name;
 
     const cs = await getCombatContext(campaignName);
     if (!cs?.creatures || cs.creatures.length === 0) {
@@ -23,8 +25,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const casterName = playerStats.name;
-
     storeSpellLastAttack(campaignName, {
         casterName,
         spellName: action.name,
@@ -33,8 +33,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'single',
     });
 
-    const targetInfo = await resolveTarget(campaignName, casterName);
-    const targetName = targetInfo?.target?.name;
+    // 2024 rules: target selected via SecondaryTargetModal (passed through metaCtx)
+    let targetName = action.metaCtx?.resilientSphereTargetName;
+
+    // 5e rules: use existing resolveTarget (reads from combat context targetName)
+    if (!targetName) {
+        const targetInfo = await resolveTarget(campaignName, casterName);
+        targetName = targetInfo?.target?.name;
+    }
 
     if (!targetName) {
         return {
@@ -47,23 +53,35 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'DEX',
-        saveDc: dc,
-        dcSuccess: 'none',
-        disadvantage: !!action.metaCtx?.metamagicHeighten,
-    });
+    // Check if target is an ally — auto-fail save
+    const allyList = getAllyList(casterName);
+    const isAlly = allyList.includes(targetName);
 
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: action.name,
-        description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a DEX save (DC ${dc}) or be enclosed in a Resilient Sphere.`,
-        promptId,
-    }).catch((e) => { console.error("[resilientSphere] Error:", e); });
+    let saveResult;
 
-    const saveResult = await promise;
+    if (isAlly) {
+        // Ally auto-fails the save — no prompt needed
+        saveResult = { success: false, roll: 0, total: 0 };
+    } else {
+        // Normal save prompt for non-allies
+        const { promptId, promise } = createSaveListener(campaignName, {
+            targetName,
+            saveType: 'DEX',
+            saveDc: dc,
+            dcSuccess: 'none',
+            disadvantage: !!action.metaCtx?.metamagicHeighten,
+        });
+
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: casterName,
+            abilityName: action.name,
+            description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a DEX save (DC ${dc}) or be enclosed in a Resilient Sphere.`,
+            promptId,
+        }).catch((e) => { console.error("[resilientSphere] Error:", e); });
+
+        saveResult = await promise;
+    }
 
     if (saveResult.success) {
         await addTargetResult(campaignName, {
@@ -95,7 +113,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    // Failed save: apply the sphere enclosure as an active buff (concentration)
+    // Failed save: apply the sphere enclosure
     const { wasActive } = toggleResilientSphere(
         targetName,
         action.name,
@@ -104,9 +122,20 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         campaignName
     );
 
+    // Add targetEffect for badge rendering (2024 rules)
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const newEffects = [...allTargetEffects, {
+        target: targetName,
+        effect: 'resilient_sphere',
+        source: casterName,
+        duration: 'concentration',
+    }];
+    setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName, true);
+
     if (!wasActive) {
         addExpiration(casterName, targetName, [
-            { type: 'remove_active_buff', buffName: action.name, effect: 'resilient_sphere' }
+            { type: 'remove_active_buff', buffName: action.name, effect: 'resilient_sphere' },
+            { type: 'remove_target_effect', effectKey: 'resilient_sphere', target: targetName, source: casterName }
         ], campaignName);
     }
 
@@ -170,12 +199,24 @@ function toggleResilientSphere(targetName, buffName, casterName, duration, campa
 }
 
 export function isResilientSphereActive(targetName, campaignName) {
+    // Check activeBuffs (works for both 5e and 2024)
     const activeBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
-    return activeBuffs.some(b => b.effect === 'resilient_sphere');
+    if (activeBuffs.some(b => b.effect === 'resilient_sphere')) return true;
+
+    // Check targetEffects (2024 version)
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    if (targetEffects.some(te => te.effect === 'resilient_sphere' && te.target === targetName)) return true;
+
+    return false;
 }
 
 export function getResilientSphereSource(targetName, campaignName) {
     const activeBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
     const buff = activeBuffs.find(b => b.effect === 'resilient_sphere');
-    return buff?.sourceCharacter || null;
+    if (buff?.sourceCharacter) return buff.sourceCharacter;
+
+    // Check targetEffects for 2024 version
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const te = targetEffects.find(te => te.effect === 'resilient_sphere' && te.target === targetName);
+    return te?.source || null;
 }

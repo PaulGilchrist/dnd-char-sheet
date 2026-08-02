@@ -17,6 +17,7 @@ import { getPendingSavePrompt } from '../../services/combat/auras/pendingSaveReg
 import storage from '../../services/ui/storage.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js';
+import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
 
 export function setupEventListeners(deps) {
     const { characterName, campaignName, logEntry, charactersRef } = deps;
@@ -44,6 +45,14 @@ export function setupEventListeners(deps) {
             if (!pending) {
                 return;
             }
+
+            // Resilient Sphere — block save-based attacks when attacker or target is enclosed
+            const rsAttackerSphere = pending.attackerName ? isResilientSphereActive(pending.attackerName, pending.campaignName) : false;
+            const rsTargetSphere = pending.targetName ? isResilientSphereActive(pending.targetName, pending.campaignName) : false;
+            if (rsAttackerSphere || rsTargetSphere) {
+                return;
+            }
+
             const normalizedSaveType = normalizeSaveType(e.detail.saveType || pending.saveType);
             const targetChar = (charactersRef.current || []).find(c => c.name === e.detail.targetName);
             const targetConditions = getRuntimeValue(e.detail.targetName, 'activeConditions', pending.campaignName) || [];

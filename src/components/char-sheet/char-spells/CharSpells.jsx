@@ -53,6 +53,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     const [pendingSimpleMetamagic, setPendingSimpleMetamagic] = React.useState(null);
     const [pendingHexSpell, setPendingHexSpell] = React.useState(null);
+    const [pendingResilientSphere, setPendingResilientSphere] = React.useState(null);
 
     const handleHexAbilitySelected = (ability) => {
       setShowHexAbilityModal(false);
@@ -146,10 +147,20 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
         gateMetamagic(spell, metaCtx);
     }, [gateMetamagic, resolveSpellPositions]);
 
-    const handleDamageRoll = (formula, spellName, spell) => {
+    const handleDamageRoll = async (formula, spellName, spell) => {
       let targetSpell = { ...spell, baseLevel: spell.level };
       if (spellName === "Hunter's Mark" && playerStats.class?.name === 'Ranger' && playerStats.level >= 20) {
         targetSpell = { ...targetSpell, damage: { ...targetSpell.damage, damage_at_slot_level: { ...(targetSpell.damage?.damage_at_slot_level || {}), '1': '1d10', '5': '2d10', '11': '3d10', '17': '4d10' } } };
+      }
+
+      // Otiluke's Resilient Sphere — show target selection modal (2024 rules only)
+      if (spellName && spellName.toLowerCase() === "otiluke's resilient sphere" && is2024) {
+        const cs = getCombatSummary(campaignName);
+        if (cs?.creatures) {
+          const targets = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
+          setPendingResilientSphere({ spell, targets });
+          return;
+        }
       }
 
       if (spellName && spellName.toLowerCase() === 'magic missile') {
@@ -262,6 +273,14 @@ return (
                                     if (spell.name === 'Hex') {
                                         setPendingHexSpell(spell);
                                         setShowHexAbilityModal(true);
+                                    } else if (spell.name && spell.name.toLowerCase() === "otiluke's resilient sphere" && is2024) {
+                                        const cs = getCombatSummary(campaignName);
+                                        if (cs?.creatures) {
+                                            const targets = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
+                                            setPendingResilientSphere({ spell, targets });
+                                        } else {
+                                            handleSpellCast(spell, metaCtx);
+                                        }
                                     } else {
                                         handleSpellCast(spell, metaCtx);
                                     }
@@ -339,6 +358,21 @@ return (
                         description={wordsOfCreationTarget.description}
                         confirmLabel={wordsOfCreationTarget.confirmLabel}
                         confirmIcon={wordsOfCreationTarget.confirmIcon}
+                      />
+                    )}
+                    {pendingResilientSphere && (
+                      <SecondaryTargetModal
+                        title="Otiluke's Resilient Sphere"
+                        targets={pendingResilientSphere.targets}
+                        onTargetSelected={(targetName) => {
+                          setPendingResilientSphere(null);
+                          const modifiedSpell = { ...pendingResilientSphere.spell, baseLevel: pendingResilientSphere.spell.level };
+                          castAction(modifiedSpell, { resilientSphereTargetName: targetName });
+                        }}
+                        onSkip={() => setPendingResilientSphere(null)}
+                        description="Choose a creature within 30 feet. The target must succeed on a DEX saving throw or be enclosed in a shimmering sphere for the duration. Allies automatically fail the save."
+                        confirmLabel="Cast Otiluke's Resilient Sphere"
+                        confirmIcon="fa-circle"
                       />
                     )}
                     {pendingHeroesFeast && (

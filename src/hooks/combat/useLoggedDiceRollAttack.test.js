@@ -70,6 +70,10 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     applyGreatWeaponFightingToDamage: vi.fn((rolls) => rolls),
 }));
 
+vi.mock('../../services/combat/automation/automationPassives.js', () => ({
+    isResilientSphereActive: vi.fn(),
+}));
+
 vi.mock('./loggedDiceRollUtils.js', () => ({
     dispatchUnbreakableMajestySave: vi.fn(),
     hasPotentCantrip: vi.fn(),
@@ -99,6 +103,7 @@ import {
     getShieldOfFaithAcBonus,
     applyMinDamageAdjustment,
 } from './loggedDiceRollUtils.js';
+import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
 import { createLogAndShow } from './useLoggedDiceRollAttack.js';
 import { addEntry } from '../../services/ui/logService.js';
 
@@ -117,6 +122,7 @@ describe('createLogAndShow (useLoggedDiceRollAttack)', () => {
         getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 12 });
         loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
         isUnbreakableMajestyActive.mockReturnValue(false);
+        isResilientSphereActive.mockReturnValue(false);
         hasAttackerTriggeredMajesty.mockReturnValue(false);
         getRuntimeValue.mockReturnValue(null);
         getShieldAcBonus.mockReturnValue(0);

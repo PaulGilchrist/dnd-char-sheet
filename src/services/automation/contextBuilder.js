@@ -16,6 +16,7 @@ import { hasAuraOfProtection } from '../combat/auras/auraOfProtection.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
+import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
 
 export function buildAttackContextSync(attack, playerStats, campaignName, conditionAttackMode, _featRangeEffects) {
     const playerName = playerStats.name;
@@ -273,6 +274,50 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
                     sneakAttackDice: 0,
                 };
             }
+        }
+
+        // Resilient Sphere — block all attacks when attacker or target is enclosed
+        const rsAttackerSphere = isResilientSphereActive(playerName, campaignName);
+        const rsTargetSphere = targetName ? isResilientSphereActive(targetName, campaignName) : false;
+
+        if ((rsAttackerSphere || rsTargetSphere) && targetName) {
+            return {
+                isAutoMiss: true,
+                rangeReason: 'Resilient Sphere blocks attacks — nothing passes through the barrier',
+                notice: 'Attack blocked by Resilient Sphere — nothing can pass through the barrier.',
+                damageType: attack.damageType || attack.damage_type_primary || '',
+                resistanceNotice: null,
+                hunterLoreNotice: null,
+                targetName,
+                saveDc: attack.saveDc || 0,
+                saveType: attack.saveType,
+                dcSuccess: attack.saveSuccess,
+                attackerName: playerName,
+                forcedMode: undefined,
+                advantageReason: null,
+                autoDamageFormula: null,
+                autoDamageName: attack.name,
+                ramActive: false,
+                isMelee: false,
+                isWeaponAttack: false,
+                criticalRange: '',
+                hitBonus: 0,
+                hitBonusFormula: null,
+                sacredWeaponBonus: 0,
+                defensiveDuelistBonus: 0,
+                baitAndSwitchBonus: 0,
+                strokeOfLuck: false,
+                boonOfCombatProwess: false,
+                boonOfFate: false,
+                isPsychicBlade: attack.isPsychicBlade === true,
+                playerStats,
+                grazeDamage: false,
+                grazeAbilityName: null,
+                grazeAbilityMod: 0,
+                weaponType: attack.weaponType,
+                weaponName: attack.name,
+                sneakAttackDice: 0,
+            };
         }
 
         // Brutal Strike: override to normal when chosen

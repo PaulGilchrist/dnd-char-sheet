@@ -8,6 +8,9 @@ export async function triggerResilientSphere(spell, metaCtx, playerStats, campai
     const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
     const slotLevel = metaCtx?.slotLevel || spell.level || 4;
 
+    // For 2024 rules, the target is pre-selected via SecondaryTargetModal
+    const targetName = metaCtx?.resilientSphereTargetName;
+
     const action = {
         name: spell.name,
         automation: {
@@ -17,6 +20,11 @@ export async function triggerResilientSphere(spell, metaCtx, playerStats, campai
         },
         spell,
         spellSlotLevel: slotLevel,
+        metaCtx: {
+            ...metaCtx,
+            // Pass targetName to handler for 2024 rules
+            ...(targetName && { resilientSphereTargetName: targetName }),
+        },
     };
 
     try {

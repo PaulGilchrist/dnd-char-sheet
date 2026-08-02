@@ -36,6 +36,7 @@ import { getManeuversForRules } from '../../services/automation/handlers/class-f
 import { createSaveListener } from '../../services/automation/common/savePrompt.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { checkCompelledDuelAttackExpiry } from '../../services/automation/handlers/spells/compelledDuelHandler.js';
+import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -279,6 +280,18 @@ export function createLogAndShow(deps) {
         const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', ') + ')' : undefined;
 
         let isAutoMiss = context?.isAutoMiss === true;
+
+        // Resilient Sphere — block all attacks when attacker or target is enclosed
+        if (!isAutoMiss && (context?.targetName) && context?.attackerName) {
+            const rsAttackerSphere = isResilientSphereActive(context.attackerName, campaignName);
+            const rsTargetSphere = isResilientSphereActive(context.targetName, campaignName);
+            if (rsAttackerSphere || rsTargetSphere) {
+                isAutoMiss = true;
+                if (!context?.notice) {
+                    context.notice = 'Attack blocked by Resilient Sphere — nothing can pass through the barrier.';
+                }
+            }
+        }
 
         const coverAcBonus = context?.coverAcBonus || 0;
 

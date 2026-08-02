@@ -151,7 +151,7 @@ describe('longstriderHandler', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('1 target(s)');
+      expect(result.payload.description).toContain('Ally1');
       expect(result.payload.description).toContain('+10 feet');
 
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
@@ -205,7 +205,8 @@ describe('longstriderHandler', () => {
       const action = makeAction();
       const result = await applyLongstrider(action, playerStats, campaignName, null, ['Ally1', 'Ally2']);
 
-      expect(result.payload.description).toContain('2 target(s)');
+      expect(result.payload.description).toContain('Ally1');
+      expect(result.payload.description).toContain('Ally2');
 
       const buffsCalls = runtimeState.setRuntimeValue.mock.calls.filter(
         (call) => call[1] === 'activeBuffs'

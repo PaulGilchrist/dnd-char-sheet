@@ -37,6 +37,10 @@ vi.mock('../../common/targetResolver.js', () => ({
   resolveTarget: vi.fn(),
 }));
 
+vi.mock('../../../../hooks/useAllySelection.js', () => ({
+  getAllyList: vi.fn().mockReturnValue(['TestWizard', 'AllyPlayer']),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle, isResilientSphereActive, getResilientSphereSource } from './resilientSphereHandler.js';
@@ -64,19 +68,30 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-function makeAction(automation = {}) {
+function makeAction(automation = {}, metaCtx = {}) {
   return {
     name: 'Resilient Sphere',
     automation: {
       type: 'spell',
       ...automation,
     },
+    metaCtx,
   };
 }
 
 function defaultCombatContext() {
   damageUtils.getCombatContext.mockResolvedValue({
     creatures: [{ name: targetName }],
+  });
+}
+
+function defaultCombatContextWithTypes() {
+  damageUtils.getCombatContext.mockResolvedValue({
+    creatures: [
+      { name: targetName },
+      { name: 'AllyPlayer', type: 'player' },
+      { name: casterName, type: 'player' },
+    ],
   });
 }
 
@@ -262,7 +277,10 @@ describe('resilientSphereHandler', () => {
         expect(expirations.addExpiration).toHaveBeenCalledWith(
           casterName,
           targetName,
-          [{ type: 'remove_active_buff', buffName: 'Resilient Sphere', effect: 'resilient_sphere' }],
+          expect.arrayContaining([
+            { type: 'remove_active_buff', buffName: 'Resilient Sphere', effect: 'resilient_sphere' },
+            { type: 'remove_target_effect', effectKey: 'resilient_sphere', target: targetName, source: casterName },
+          ]),
           campaignName,
         );
       });
@@ -286,6 +304,92 @@ describe('resilientSphereHandler', () => {
             }),
           ]),
           campaignName,
+        );
+      });
+
+      it('creates targetEffect on failure for 2024 rules', async () => {
+        savePrompt.createSaveListener.mockReturnValue({
+          promptId: 'test-prompt-id',
+          promise: Promise.resolve({ success: false }),
+        });
+
+        await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'campaign',
+          'targetEffects',
+          expect.arrayContaining([
+            expect.objectContaining({
+              target: targetName,
+              effect: 'resilient_sphere',
+              source: casterName,
+              duration: 'concentration',
+            }),
+          ]),
+          campaignName,
+          true,
+        );
+      });
+
+      it('adds expiration with targetEffect removal on failure', async () => {
+        savePrompt.createSaveListener.mockReturnValue({
+          promptId: 'test-prompt-id',
+          promise: Promise.resolve({ success: false }),
+        });
+
+        await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+          casterName,
+          targetName,
+          expect.arrayContaining([
+            expect.objectContaining({ type: 'remove_target_effect', effectKey: 'resilient_sphere' }),
+          ]),
+          campaignName,
+        );
+      });
+    });
+
+    describe('ally auto-fail (2024 rules)', () => {
+      beforeEach(() => {
+        defaultCombatContextWithTypes();
+      });
+
+      it('auto-fails save when target is in the ally list', async () => {
+        const action = makeAction({}, { resilientSphereTargetName: 'AllyPlayer' });
+
+        const result = await handle(action, makePlayerStats(), campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('failed DEX save');
+        expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
+      });
+
+      it('does not call resolveTarget when metaCtx provides targetName', async () => {
+        const action = makeAction({}, { resilientSphereTargetName: 'AllyPlayer' });
+
+        await handle(action, makePlayerStats(), campaignName, null);
+
+        expect(targetResolver.resolveTarget).not.toHaveBeenCalled();
+      });
+
+      it('creates targetEffect for ally auto-fail', async () => {
+        const action = makeAction({}, { resilientSphereTargetName: 'AllyPlayer' });
+
+        await handle(action, makePlayerStats(), campaignName, null);
+
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'campaign',
+          'targetEffects',
+          expect.arrayContaining([
+            expect.objectContaining({
+              target: 'AllyPlayer',
+              effect: 'resilient_sphere',
+              source: casterName,
+            }),
+          ]),
+          campaignName,
+          true,
         );
       });
     });
@@ -342,6 +446,18 @@ describe('resilientSphereHandler', () => {
       expect(result).toBe(true);
     });
 
+    it('returns true when targetEffect exists for target', () => {
+      runtimeState.getRuntimeValue
+        .mockReturnValueOnce(null) // activeBuffs is null
+        .mockReturnValueOnce([
+          { target: targetName, effect: 'resilient_sphere', source: casterName },
+        ]);
+
+      const result = isResilientSphereActive(targetName, campaignName);
+
+      expect(result).toBe(true);
+    });
+
     it('returns false when target has different buff, empty array, or null/undefined buffs', () => {
       const testCases = [
         { buffs: [{ name: 'Fire Shield', effect: 'fire_shield' }], expected: false },
@@ -355,6 +471,18 @@ describe('resilientSphereHandler', () => {
         const result = isResilientSphereActive(targetName, campaignName);
         expect(result).toBe(expected);
       }
+    });
+
+    it('returns false when targetEffect is for a different target', () => {
+      runtimeState.getRuntimeValue
+        .mockReturnValueOnce(null) // activeBuffs is null
+        .mockReturnValueOnce([
+          { target: 'OtherCreature', effect: 'resilient_sphere', source: casterName },
+        ]);
+
+      const result = isResilientSphereActive(targetName, campaignName);
+
+      expect(result).toBe(false);
     });
   });
 
@@ -376,6 +504,16 @@ describe('resilientSphereHandler', () => {
         runtimeState.getRuntimeValue.mockReturnValue(buffs);
         expect(getResilientSphereSource(targetName, campaignName)).toBeNull();
       }
+    });
+
+    it('returns source from targetEffect when activeBuffs has no sourceCharacter', () => {
+      runtimeState.getRuntimeValue
+        .mockReturnValueOnce([{ name: 'Resilient Sphere', effect: 'resilient_sphere' }]) // no sourceCharacter
+        .mockReturnValueOnce([
+          { target: targetName, effect: 'resilient_sphere', source: casterName },
+        ]);
+
+      expect(getResilientSphereSource(targetName, campaignName)).toBe(casterName);
     });
   });
 });

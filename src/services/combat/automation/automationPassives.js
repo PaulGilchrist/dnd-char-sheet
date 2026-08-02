@@ -277,14 +277,26 @@ export function getDamageResistances(playerStats) {
 }
 
 export function isResilientSphereActive(targetName, campaignName) {
+    // Check activeBuffs (works for both 5e and 2024)
     const activeBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
-    return activeBuffs.some(b => b.effect === 'resilient_sphere');
+    if (activeBuffs.some(b => b.effect === 'resilient_sphere')) return true;
+
+    // Check targetEffects (2024 version)
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    if (targetEffects.some(te => te.effect === 'resilient_sphere' && te.target === targetName)) return true;
+
+    return false;
 }
 
 export function getResilientSphereSource(targetName, campaignName) {
     const activeBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
     const buff = activeBuffs.find(b => b.effect === 'resilient_sphere');
-    return buff?.sourceCharacter || null;
+    if (buff?.sourceCharacter) return buff.sourceCharacter;
+
+    // Check targetEffects for 2024 version
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const te = targetEffects.find(te => te.effect === 'resilient_sphere' && te.target === targetName);
+    return te?.source || null;
 }
 
 export function hasBlindsight(playerStats) {

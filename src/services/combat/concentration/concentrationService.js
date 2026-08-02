@@ -247,6 +247,13 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
     // Clean up Holy Aura buffs and targets when concentration breaks
     cleanupHolyAuraEffects(casterName, campaignName)
+
+    // Clean up Resilient Sphere targetEffects for this caster
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredSphereEffects = allTargetEffects.filter(te => !(te.effect === 'resilient_sphere' && te.source === casterName));
+    if (filteredSphereEffects.length !== allTargetEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filteredSphereEffects, campaignName, true);
+    }
 }
 
 function cleanupHolyAuraEffects(casterName, campaignName) {
