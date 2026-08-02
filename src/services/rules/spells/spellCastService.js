@@ -766,7 +766,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 spell: spell,
                 automation: { type: 'longstrider' },
             };
-            await executeLongstrider(action, playerStats, campaignName, mapName);
+            const longstriderResult = await executeLongstrider(action, playerStats, campaignName, mapName);
+            if (longstriderResult) {
+                return { automationPopup: longstriderResult };
+            }
             return;
         }
 

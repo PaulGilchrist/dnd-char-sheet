@@ -32,9 +32,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         };
     }
 
-    const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerStats.name)
-        .map(c => c.name);
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
 
     return {
         type: 'popup',
@@ -90,7 +88,9 @@ export async function applyLongstrider(action, playerStats, campaignName, mapNam
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${targetNames.length} target(s) gained +10 feet speed from ${action.name}.`,
+            description: targetNames.length === 1
+                ? `${targetNames[0]} gained +10 feet speed from ${action.name}.`
+                : `${targetNames.join(', ')} gained +10 feet speed from ${action.name}.`,
         },
     };
 }

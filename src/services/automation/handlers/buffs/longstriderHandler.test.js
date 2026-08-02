@@ -68,8 +68,6 @@ function makeCombatContext(overrides = {}) {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────
-
 describe('longstriderHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -85,7 +83,7 @@ describe('longstriderHandler', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('longstrider_target_selection');
       expect(result.payload.name).toBe('Longstrider');
-      expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2']);
+      expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2', 'TestCharacter']);
       expect(result.payload.range).toBe('Touch');
       expect(result.payload.duration).toBe('1 hour');
       expect(result.payload.attackerPos).toBeNull();

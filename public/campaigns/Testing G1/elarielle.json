@@ -115,14 +115,16 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "False Life",
-    "Feign Death",
-    "Flesh to Stone",
-    "Foresight",
-    "Grease",
-    "Heroes' Feast",
-    "Heroism",
-    "Holy Aura"
+    "Longstrider",
+    "Otiluke's Freezing Sphere",
+    "Otiluke's Resilient Sphere",
+    "Protection from Energy",
+    "Protection from Evil and Good",
+    "Protection from Poison",
+    "Stone Skin",
+    "Swift Quiver",
+    "Tasha's Hideous Laughter",
+    "Warding Bond"
   ],
   "magicInitiateInstances": [
     {
