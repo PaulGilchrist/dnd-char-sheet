@@ -262,6 +262,11 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(b => b.resistanceTypes || [])
         : [];
 
+    const feignDeathResistances = Array.isArray(activeBuffs)
+        ? activeBuffs.filter(b => b.name === 'Feign Death' && b.resistanceTypes?.length)
+            .flatMap(b => b.resistanceTypes || [])
+        : [];
+
     const elementalAdeptTypes = (playerStats.automation?.passives || [])
         .filter(p => p.type === 'damage_type_choice' && p.effect === 'elemental_adept')
         .map(p => {
@@ -282,10 +287,15 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .map(c => String(c).toLowerCase())
         : [];
 
-    const automationImmunities = playerStats.automationConditionImmunities || [];
-    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities])];
+    const feignDeathConditionImmunities = Array.isArray(activeBuffs)
+        ? (activeBuffs.find(b => b.name === 'Feign Death')?.conditionImmunity || [])
+            .map(c => String(c).toLowerCase())
+        : [];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances])];
+    const automationImmunities = playerStats.automationConditionImmunities || [];
+    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities])];
+
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;

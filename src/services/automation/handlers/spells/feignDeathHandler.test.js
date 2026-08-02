@@ -12,11 +12,31 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => ({
+    creatures: [
+      { name: 'TestCaster' },
+      { name: 'AllyB' },
+      { name: 'EnemyC' },
+    ],
+  })),
+}));
+
+vi.mock('../../common/targetResolver.js', () => ({
+  resolveMapPositions: vi.fn(() => Promise.resolve({ attackerPos: { x: 0, y: 0 } })),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
-import { handle } from './feignDeathHandler.js';
+import { handle, applyFeignDeath } from './feignDeathHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addEntry } from '../../../ui/logService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -39,314 +59,258 @@ function makeAction(automation = {}) {
   };
 }
 
-function getBuffsCall() {
-  return setRuntimeValue.mock.calls.find(call => call[1] === 'activeBuffs');
+function getBuffsCall(targetName) {
+  return setRuntimeValue.mock.calls.find(
+    call => call[0] === targetName && call[1] === 'activeBuffs'
+  );
 }
 
-function getConditionsCall(index = 0) {
-  const conditionsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'activeConditions');
+function getConditionsCall(targetName, index = 0) {
+  const conditionsCalls = setRuntimeValue.mock.calls.filter(
+    call => call[0] === targetName && call[1] === 'activeConditions'
+  );
   return conditionsCalls[index];
 }
 
 // ── Tests ──────────────────────────────────────────────────────
 
-describe('feignDeathHandler.handle', () => {
+describe('feignDeathHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('activation', () => {
-    it('should return a popup with automation_info type on activation', async () => {
+  describe('handle (target selection modal)', () => {
+    it('should return a modal for target selection', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
 
-      getRuntimeValue.mockReturnValue(null);
+      const result = await handle(action, ps, campaignName, null, []);
 
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('feignDeathTargetSelection');
       expect(result.payload.name).toBe('Feign Death');
-      expect(result.payload.automationType).toBe('feign_death');
-      expect(result.payload.description).toContain('activated');
+      expect(result.payload.creatureTargets).toEqual(['TestCaster', 'AllyB', 'EnemyC']);
+      expect(result.payload.range).toBe('Touch');
+      expect(result.payload.duration).toBe('1 hour');
     });
 
-    it('should apply blinded, incapacitated, and speed_zero conditions on activation', async () => {
+    it('should use spell range when provided', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Feign Death',
+        automation: { type: 'feign_death' },
+        spell: { range: '60 feet' },
+      };
+
+      const result = await handle(action, ps, campaignName, null, []);
+      expect(result.payload.range).toBe('60 feet');
+    });
+
+    it('should use spell duration when provided', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Feign Death',
+        automation: { type: 'feign_death' },
+        spell: { duration: '8 hours' },
+      };
+
+      const result = await handle(action, ps, campaignName, null, []);
+      expect(result.payload.duration).toBe('8 hours');
+    });
+
+    it('should return empty creatureTargets when no combat summary', async () => {
+      vi.mocked(getCombatSummary).mockReturnValue(null);
+
       const ps = makePlayerStats();
       const action = makeAction();
 
-      getRuntimeValue.mockReturnValue([]);
+      const result = await handle(action, ps, campaignName, null, []);
+      expect(result.payload.creatureTargets).toEqual([]);
+    });
+  });
 
-      await handle(action, ps, campaignName, null);
+  describe('applyFeignDeath (activation)', () => {
+    it('should return null when no target names provided', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
 
-      const conditionsCall = getConditionsCall();
+      const result = await applyFeignDeath(action, ps, campaignName, null, []);
+      expect(result).toBeNull();
+    });
+
+    it('should return null when target names is not an array', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+
+      const result = await applyFeignDeath(action, ps, campaignName, null, 'AllyB');
+      expect(result).toBeNull();
+    });
+
+    it('should apply buff with resistanceTypes and conditionImmunity', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      getRuntimeValue.mockReturnValue(null);
+
+      const result = await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
+
+      expect(result).not.toBeNull();
+      expect(result.payload.type).toBe('automation_info');
+
+      const buffCall = getBuffsCall('AllyB');
+      expect(buffCall).toBeDefined();
+      const buff = buffCall[2].find(b => b.name === 'Feign Death');
+      expect(buff).toBeDefined();
+      expect(buff.effect).toBe('feign_death');
+      expect(buff.duration).toBe('1 hour');
+      expect(buff.resistanceTypes).toContain('acid');
+      expect(buff.resistanceTypes).toContain('fire');
+      expect(buff.resistanceTypes).not.toContain('psychic');
+      expect(buff.conditionImmunity).toContain('poisoned');
+      expect(buff.sourceCharacter).toBe('TestCaster');
+    });
+
+    it('should apply blinded, incapacitated, and speed_zero conditions', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      getRuntimeValue.mockReturnValue(null);
+
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
+
+      const conditionsCall = getConditionsCall('AllyB');
       expect(conditionsCall).toBeDefined();
       expect(conditionsCall[2]).toContain('blinded');
       expect(conditionsCall[2]).toContain('incapacitated');
       expect(conditionsCall[2]).toContain('speed_zero');
     });
 
-    it('should register an expiration on activation', async () => {
+    it('should register expiration with expireOnCreatureName for initiative roll', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-
       getRuntimeValue.mockReturnValue(null);
 
-      await handle(action, ps, campaignName, null);
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
 
       expect(addExpiration).toHaveBeenCalledWith(
         'TestCaster',
-        'TestCaster',
+        'AllyB',
         [{ type: 'remove_feign_death_buff', buffName: 'Feign Death' }],
         campaignName,
+        undefined,
+        'AllyB',
       );
     });
 
-    it('should apply damage resistances on activation', async () => {
+    it('should log the ability use to campaign log', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-
       getRuntimeValue.mockReturnValue(null);
 
-      await handle(action, ps, campaignName, null);
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
 
-      const buffCall = getBuffsCall();
-      const buff = buffCall[2].find(b => b.name === 'Feign Death');
-      expect(buff.resistanceTypes).toBeDefined();
-      expect(buff.resistanceTypes.length).toBeGreaterThan(0);
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestCaster',
+        abilityName: 'Feign Death',
+        description: expect.stringContaining('AllyB'),
+      }));
     });
 
-    it('should use custom duration from automation when provided', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction({ duration: '10 minutes' });
-
-      getRuntimeValue.mockReturnValue(null);
-
-      await handle(action, ps, campaignName, null);
-
-      const buffCall = getBuffsCall();
-      const buff = buffCall[2].find(b => b.name === 'Feign Death');
-      expect(buff.duration).toBe('10 minutes');
-    });
-
-    it('should apply conditions without duplicating existing ones', async () => {
+    it('should log "themself" when caster targets self', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
+      getRuntimeValue.mockReturnValue(null);
 
-      getRuntimeValue.mockReturnValueOnce([]).mockReturnValueOnce(['blinded', 'incapacitated']);
+      await applyFeignDeath(action, ps, campaignName, null, ['TestCaster']);
 
-      await handle(action, ps, campaignName, null);
+      expect(addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          description: expect.stringContaining('themself'),
+        })
+      );
+    });
 
-      const conditionsCall = getConditionsCall();
+    it('should use custom duration from spell', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Feign Death',
+        automation: { type: 'feign_death' },
+        spell: { duration: '8 hours' },
+      };
+      getRuntimeValue.mockReturnValue(null);
+
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
+
+      const buffCall = getBuffsCall('AllyB');
+      const buff = buffCall[2].find(b => b.name === 'Feign Death');
+      expect(buff.duration).toBe('8 hours');
+    });
+
+    it('should not duplicate buff if already active', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const existingBuffs = [
+        { name: 'Feign Death', effect: 'feign_death' },
+        { name: 'Other Buff', effect: 'other' },
+      ];
+      getRuntimeValue.mockReturnValue(existingBuffs);
+
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
+
+      const buffCall = getBuffsCall('AllyB');
+      // Should not have called setRuntimeValue for buffs since Feign Death is already active
+      expect(buffCall).toBeUndefined();
+    });
+
+    it('should not duplicate conditions if already present', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce(['blinded', 'incapacitated']);
+
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
+
+      const conditionsCall = getConditionsCall('AllyB');
       expect(conditionsCall[2]).toEqual(['blinded', 'incapacitated', 'speed_zero']);
     });
 
-    it('should remove poisoned condition after applying feign death conditions', async () => {
+    it('should remove poisoned condition if target has it', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-
-      // Call 1: activeBuffs → null (activation path)
-      // Call 2: activeConditions inside applyFeignDeathConditions → ['poisoned', 'blinded']
-      // Call 3: activeConditions for poisoned removal (reads what applyFeignDeathConditions set)
+      // Call 1: activeBuffs for buff check → null
+      // Call 2: activeConditions in applyFeignDeathConditions → ['poisoned', 'blinded']
+      // Call 3: activeConditions in poisoned removal → ['poisoned', 'blinded', 'incapacitated', 'speed_zero']
       getRuntimeValue
         .mockReturnValueOnce(null)
         .mockReturnValueOnce(['poisoned', 'blinded'])
         .mockReturnValueOnce(['poisoned', 'blinded', 'incapacitated', 'speed_zero']);
 
-      await handle(action, ps, campaignName, null);
+      await applyFeignDeath(action, ps, campaignName, null, ['AllyB']);
 
-      // The handler filters poisoned from the conditions read on call 3,
-      // so the second setRuntimeValue for activeConditions should not contain poisoned.
-      const conditionsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'activeConditions');
+      const conditionsCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'activeConditions'
+      );
       expect(conditionsCalls.length).toBeGreaterThanOrEqual(2);
       const lastConditionsCall = conditionsCalls[conditionsCalls.length - 1];
       expect(lastConditionsCall[2]).not.toContain('poisoned');
     });
 
-    it('should skip poisoned removal when target did not have poisoned', async () => {
+    it('should handle multiple targets', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
-
-      getRuntimeValue.mockReturnValueOnce([]).mockReturnValueOnce(['blinded']);
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'activeConditions');
-      expect(conditionsCalls.length).toBe(1);
-    });
-
-    it('should use targetName from automation for buff, conditions, and expiration', async () => {
-      const ps = makePlayerStats({ name: 'CasterA' });
-      const action = makeAction({ targetName: 'AllyB' });
-
       getRuntimeValue.mockReturnValue(null);
 
-      await handle(action, ps, campaignName, null);
+      const result = await applyFeignDeath(action, ps, campaignName, null, ['AllyB', 'EnemyC']);
 
+      expect(result).not.toBeNull();
+      expect(result.payload.description).toContain('AllyB, EnemyC');
+
+      // Should have applied to both targets
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'AllyB',
-        'activeBuffs',
-        expect.any(Array),
-        campaignName,
+        'AllyB', 'activeBuffs', expect.any(Array), campaignName
       );
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'AllyB',
-        'activeConditions',
-        expect.any(Array),
-        campaignName,
+        'EnemyC', 'activeBuffs', expect.any(Array), campaignName
       );
-      expect(addExpiration).toHaveBeenCalledWith(
-        'CasterA',
-        'AllyB',
-        expect.any(Array),
-        campaignName,
-      );
-    });
-
-    it('should set sourceCharacter to the caster name in the buff', async () => {
-      const ps = makePlayerStats({ name: 'CasterA' });
-      const action = makeAction({ targetName: 'AllyB' });
-
-      getRuntimeValue.mockReturnValue(null);
-
-      await handle(action, ps, campaignName, null);
-
-      const buffCall = setRuntimeValue.mock.calls.find(
-        call => call[0] === 'AllyB' && call[1] === 'activeBuffs',
-      );
-      const buff = buffCall[2].find(b => b.name === 'Feign Death');
-      expect(buff.sourceCharacter).toBe('CasterA');
-    });
-  });
-
-  describe('deactivation', () => {
-    it('should return a popup indicating expiration on deactivation', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      const existingBuffs = [
-        { name: 'Feign Death', effect: 'feign_death' },
-        { name: 'Other Buff', effect: 'other' },
-      ];
-      getRuntimeValue.mockReturnValueOnce(existingBuffs);
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('expired');
-    });
-
-    it('should remove only the feign death buff while preserving others', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      const existingBuffs = [
-        { name: 'Feign Death', effect: 'feign_death' },
-        { name: 'Other Buff', effect: 'other' },
-      ];
-      getRuntimeValue.mockReturnValueOnce(existingBuffs);
-
-      await handle(action, ps, campaignName, null);
-
-      const buffsCall = setRuntimeValue.mock.calls.find(call => call[1] === 'activeBuffs');
-      const remainingBuffs = buffsCall[2];
-      expect(remainingBuffs).toHaveLength(1);
-      expect(remainingBuffs[0].name).toBe('Other Buff');
-    });
-
-    it('should remove feign death conditions but preserve unrelated ones on deactivation', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      const existingBuffs = [{ name: 'Feign Death', effect: 'feign_death' }];
-      getRuntimeValue.mockReturnValueOnce(existingBuffs).mockReturnValueOnce([
-        'blinded',
-        'incapacitated',
-        'speed_zero',
-        'poisoned',
-      ]);
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsCall = getConditionsCall();
-      expect(conditionsCall[2]).toEqual(['poisoned']);
-    });
-
-  });
-
-  describe('edge cases', () => {
-    it('should handle activeConditions being undefined or non-array', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce(undefined);
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsCall = getConditionsCall();
-      expect(conditionsCall).toBeDefined();
-      expect(Array.isArray(conditionsCall[2])).toBe(true);
-    });
-
-    it('should handle empty automation object with defaults', async () => {
-      const ps = makePlayerStats();
-      const action = { name: 'Feign Death', automation: {} };
-
-      getRuntimeValue.mockReturnValue(null);
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.name).toBe('Feign Death');
-
-      const buffCall = getBuffsCall();
-      const buff = buffCall[2].find(b => b.name === 'Feign Death');
-      expect(buff.duration).toBe('1 hour');
-    });
-
-    it('should not call setRuntimeValue for conditions when no changes are needed after deactivation', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
-      const existingBuffs = [{ name: 'Feign Death', effect: 'feign_death' }];
-      // Conditions already have no feign death conditions
-      getRuntimeValue.mockReturnValueOnce(existingBuffs).mockReturnValueOnce(['poisoned', 'fatigued']);
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'activeConditions');
-      expect(conditionsCalls.length).toBe(0);
-    });
-
-    it('should use targetName for condition operations when provided', async () => {
-      const ps = makePlayerStats({ name: 'CasterA' });
-      const action = makeAction({ targetName: 'AllyB' });
-
-      getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce(['blinded']);
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'activeConditions');
-      expect(conditionsCalls.length).toBeGreaterThan(0);
-      expect(conditionsCalls[0][0]).toBe('AllyB');
-    });
-
-    it('should use custom action name in popup and buff', async () => {
-      const ps = makePlayerStats({ name: 'CasterA' });
-      const actionName = 'My Custom Feign Death';
-      const action = { name: actionName, automation: { type: 'feign_death' } };
-
-      getRuntimeValue.mockReturnValue(null);
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.name).toBe(actionName);
-      expect(result.payload.description).toContain(actionName);
-
-      const buffCall = getBuffsCall();
-      const buff = buffCall[2].find(b => b.name === actionName);
-      expect(buff).toBeDefined();
     });
   });
 });

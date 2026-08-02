@@ -4,16 +4,10 @@ export async function triggerFeignDeath(spell, metaCtx, playerStats, campaignNam
     const isFeignDeath = (spell.name || '').toLowerCase() === 'feign death';
     if (!isFeignDeath) return null;
 
-    // The target is the player themselves or a willing creature they touched.
-    // metaCtx.targetName is set by the caller (spellCastService) from getTargetInfo().
-    const targetName = metaCtx?.targetName || playerStats.name;
-
     const action = {
         name: 'Feign Death',
         automation: {
             type: 'feign_death',
-            targetName,
-            duration: spell.duration || '1 hour',
         },
         spell,
     };

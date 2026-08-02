@@ -95,10 +95,6 @@ vi.mock('../features/healingWordService.js', () => ({
   triggerHealingWord: vi.fn(async () => {}),
 }))
 
-vi.mock('../features/feignDeathService.js', () => ({
-  triggerFeignDeath: vi.fn(async () => {}),
-}))
-
 vi.mock('../features/fleshToStoneService.js', () => ({
   triggerFleshToStone: vi.fn(async () => {}),
 }))
@@ -302,9 +298,6 @@ async function resetMockImplementations() {
   })
   await m('../features/healingWordService.js', {
     triggerHealingWord: async () => {},
-  })
-  await m('../features/feignDeathService.js', {
-    triggerFeignDeath: async () => {},
   })
   await m('../features/fleshToStoneService.js', {
     triggerFleshToStone: async () => {},

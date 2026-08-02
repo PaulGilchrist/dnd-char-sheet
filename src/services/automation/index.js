@@ -198,7 +198,7 @@ import { handle as handleBlindnessDeafness } from './handlers/spells/blindnessDe
 import { handle as handleEyebite } from './handlers/spells/eyebiteHandler.js';
 import { handle as handleFalseLife } from './handlers/buffs/falseLifeHandler.js';
 import { handle as handleFear } from './handlers/spells/fearHandler.js';
-import { handle as handleFeignDeath } from './handlers/spells/feignDeathHandler.js';
+import { handle as handleFeignDeath, applyFeignDeath } from './handlers/spells/feignDeathHandler.js';
 import { handle as handleFleshToStone } from './handlers/spells/fleshToStoneHandler.js';
 import { handle as handleHoldMonster } from './handlers/spells/holdMonsterHandler.js';
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
@@ -587,6 +587,7 @@ export {
     applyPassWithoutTraceEffect,
     applyRegenerateEffect,
     applyEnhanceAbilityEffect,
+    applyFeignDeath,
     applyBeaconOfHopeEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,

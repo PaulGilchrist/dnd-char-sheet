@@ -17,7 +17,6 @@ import { addExpiration } from '../effects/expirations.js';
 import { triggerFalseLife } from '../features/falseLifeService.js';
 import { triggerHealingWord } from '../features/healingWordService.js';
 import { usesSpellSlot } from '../features/spellUtils.js';
-import { triggerFeignDeath } from '../features/feignDeathService.js';
 import { triggerFleshToStone } from '../features/fleshToStoneService.js';
 import { triggerRemoveCurse } from '../features/removeCurseService.js';
 import { triggerHoldMonster } from '../features/holdMonsterService.js';
@@ -481,13 +480,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return null;
         }
 
-        // Feign Death — buff/condition spell with no damage or save
-        if (spell.name && spell.name.toLowerCase() === 'feign death') {
-            const target = await getTargetInfo();
-            const feignMetaCtx = { ...metaCtx, targetName: target?.name };
-            await triggerFeignDeath(spell, feignMetaCtx, playerStats, campaignName, mapName);
-            return;
-        }
+        // Feign Death — handled by useSpellMetamagicFlow for target selection (no spellCastService case needed)
 
         // See Invisibility — self-target buff that lets you see invisible creatures
         if (spell.name && spell.name.toLowerCase() === 'see invisibility') {

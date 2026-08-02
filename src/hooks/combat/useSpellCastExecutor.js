@@ -112,6 +112,9 @@ function handleModalResult(popup, setModalState) {
         case 'wildMagicSurge':
             setModalState({ wildMagicSurgeModal: payload });
             break;
+        case 'feignDeathTargetSelection':
+            setModalState({ feignDeathModal: payload });
+            break;
         default:
             console.error(`[useSpellCastExecutor] Unknown modalName from spell cast: ${modalName}`);
     }

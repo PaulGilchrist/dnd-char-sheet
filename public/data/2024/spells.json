@@ -4944,7 +4944,12 @@
       "Blinded",
       "Incapacitated",
       "speed_zero"
-    ]
+    ],
+    "automation": {
+      "type": "feign_death",
+      "action": "action",
+      "casting_time": "1 action"
+    }
   },
   {
     "index": "fey-spirit",

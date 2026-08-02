@@ -56,7 +56,6 @@ vi.mock('../features/wildMagicSurgeService.js', () => ({ triggerWildMagicSurge: 
 vi.mock('../features/fearService.js', () => ({ triggerFear: vi.fn(async () => {}) }))
 vi.mock('../features/falseLifeService.js', () => ({ triggerFalseLife: vi.fn(async () => {}) }))
 vi.mock('../features/healingWordService.js', () => ({ triggerHealingWord: vi.fn(async () => {}) }))
-vi.mock('../features/feignDeathService.js', () => ({ triggerFeignDeath: vi.fn(async () => {}) }))
 vi.mock('../features/fleshToStoneService.js', () => ({ triggerFleshToStone: vi.fn(async () => {}) }))
 vi.mock('../features/holdMonsterService.js', () => ({ triggerHoldMonster: vi.fn(async () => {}) }))
 vi.mock('../features/hypnoticPatternService.js', () => ({ triggerHypnoticPattern: vi.fn(async () => {}) }))
@@ -184,7 +183,6 @@ describe('executeSpellCast - no-damage spell routing', () => {
   // ------------------------------------------------------------------
   describe('target-name passing spells', () => {
     it.each([
-      { service: '../features/feignDeathService.js', name: 'triggerFeignDeath', spellName: 'Feign Death' },
       { service: '../features/foresightService.js', name: 'triggerForesight', spellName: 'Foresight' },
       { service: '../features/heroismService.js', name: 'triggerHeroism', spellName: 'Heroism' },
     ])('passes target name to $name', async ({ service, name, spellName }) => {
