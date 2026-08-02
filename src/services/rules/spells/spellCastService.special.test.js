@@ -67,7 +67,7 @@ vi.mock('../features/foresightService.js', () => ({ triggerForesight: vi.fn(asyn
 vi.mock('../features/rayOfEnfeeblementService.js', () => ({ triggerRayOfEnfeeblement: vi.fn(async () => {}) }))
 vi.mock('../features/compelledDuelService.js', () => ({ triggerCompelledDuel: vi.fn(async () => {}) }))
 vi.mock('../features/globeOfInvulnerabilityService.js', () => ({ triggerGlobeOfInvulnerability: vi.fn(async () => {}) }))
-vi.mock('../features/heroismService.js', () => ({ triggerHeroism: vi.fn(async () => {}) }))
+vi.mock('../features/heroismService.js', () => ({ handle: vi.fn(), applyHeroism: vi.fn(), isHeroismActive: vi.fn() }))
 vi.mock('../features/holyAuraService.js', () => ({ triggerHolyAura: vi.fn(async () => {}) }))
 vi.mock('../features/powerWordStunService.js', () => ({ triggerPowerWordStun: vi.fn(async () => {}) }))
 vi.mock('../features/seeInvisibilityService.js', () => ({ triggerSeeInvisibility: vi.fn(async () => {}) }))
@@ -175,28 +175,6 @@ describe('executeSpellCast - no-damage spell routing', () => {
         await executeSpellCast(spell, makeMetaCtx(), services)
         expect(mod[name]).toHaveBeenCalled()
       }
-    })
-  })
-
-  // ------------------------------------------------------------------
-  // Spells that pass target name to their handler
-  // ------------------------------------------------------------------
-  describe('target-name passing spells', () => {
-    it.each([
-      { service: '../features/heroismService.js', name: 'triggerHeroism', spellName: 'Heroism' },
-    ])('passes target name to $name', async ({ service, name, spellName }) => {
-      const mod = await import(service)
-      const services = makeServices({
-        getTargetInfo: async () => ({ name: 'Target' }),
-      })
-      const spell = makeSpell({ name: spellName })
-      delete spell.damage
-      delete spell.dc
-
-      await executeSpellCast(spell, makeMetaCtx(), services)
-
-      const callArg = vi.mocked(mod[name]).mock.calls[0][1]
-      expect(callArg.targetName).toBe('Target')
     })
   })
 

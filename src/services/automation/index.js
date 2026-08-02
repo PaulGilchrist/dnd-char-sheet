@@ -197,6 +197,7 @@ import { handle as handleCounterSpell } from './handlers/spells/counterSpellHand
 import { handle as handleBlindnessDeafness } from './handlers/spells/blindnessDeafnessHandler.js';
 import { handle as handleEyebite } from './handlers/spells/eyebiteHandler.js';
 import { handle as handleFalseLife } from './handlers/buffs/falseLifeHandler.js';
+import { handle as handleHeroism, applyHeroism, isHeroismActive } from '../../services/rules/features/heroismService.js';
 import { handle as handleFear } from './handlers/spells/fearHandler.js';
 import { handle as handleFeignDeath, applyFeignDeath } from './handlers/spells/feignDeathHandler.js';
 import { handle as handleFleshToStone } from './handlers/spells/fleshToStoneHandler.js';
@@ -498,6 +499,7 @@ const HANDLER_MAP = {
         blindness_deafness: handleBlindnessDeafness,
         eyebite: handleEyebite,
         false_life: handleFalseLife,
+        heroism: handleHeroism,
         fear: handleFear,
         feign_death: handleFeignDeath,
         sleep: handleSleep,
@@ -588,6 +590,8 @@ export {
     applyRegenerateEffect,
     applyEnhanceAbilityEffect,
     applyFeignDeath,
+    applyHeroism,
+    isHeroismActive,
     applyBeaconOfHopeEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,

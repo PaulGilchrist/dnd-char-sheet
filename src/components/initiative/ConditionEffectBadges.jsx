@@ -259,6 +259,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Circle of Power', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'circle_of_power', tooltip: `Circle of Power from ${casterName}: Advantage on saving throws, no damage on successful save vs half-damage effects` })
     }
 
+    const heroismEffect = targetEffects?.find(te => te.effect === 'heroism' && te.target === creatureName)
+    if (heroismEffect) {
+        const casterName = heroismEffect.source || 'unknown'
+        badges.push({ label: 'Heroism', cls: 'effect-buff', icon: 'fa-dragon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'heroism', tooltip: `Heroism from ${casterName}: Immune to Frightened, gains temp HP at start of each turn (Concentration, up to 1 minute)` })
+    }
+
     const handleRemoveEffect = (badge) => {
         switch (badge.removeAction) {
             case 'condition':

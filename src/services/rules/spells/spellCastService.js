@@ -41,7 +41,6 @@ import { checkCompelledDuelAttackExpiry } from '../../automation/index.js';
 import { triggerViciousMockeryForGeneric } from '../features/viciousMockeryService.js';
 import { endInvisibilityOnHostileAction } from '../features/invisibilityService.js';
 import { triggerGlobeOfInvulnerability } from '../features/globeOfInvulnerabilityService.js';
-import { triggerHeroism } from '../features/heroismService.js';
 import { triggerHolyAura } from '../features/holyAuraService.js';
 import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
 import { triggerSlow } from '../features/slowService.js';
@@ -742,9 +741,15 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Heroism — grants Frightened immunity and temp HP at start of each turn
         if (spell.name && spell.name.toLowerCase() === 'heroism') {
-            const target = await getTargetInfo();
-            const heroismMetaCtx = { ...metaCtx, targetName: target?.name };
-            await triggerHeroism(spell, heroismMetaCtx, playerStats, campaignName, mapName);
+            const action = {
+                name: spell.name,
+                spell: spell,
+                automation: spell.automation || { type: 'heroism' },
+            };
+            const heroismResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
+            if (heroismResult) {
+                return { automationPopup: heroismResult };
+            }
             return;
         }
 

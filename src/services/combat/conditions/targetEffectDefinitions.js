@@ -348,6 +348,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     defaults: { dc: 15 },
   },
   {
+    effect: 'heroism',
+    label: 'Heroism',
+    description: 'Target is immune to Frightened and gains temp HP at start of each turn. Concentration, up to 1 minute.',
+    icon: 'fa-dragon',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'death_ward',
     label: 'Death Ward',
     description: 'The first time the target would drop to 0 HP, it instead drops to 1 HP. The spell ends.',

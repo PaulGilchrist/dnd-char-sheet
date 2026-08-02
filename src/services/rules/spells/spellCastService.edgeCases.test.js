@@ -136,7 +136,9 @@ vi.mock('../features/globeOfInvulnerabilityService.js', () => ({
 }))
 
 vi.mock('../features/heroismService.js', () => ({
-  triggerHeroism: vi.fn(async () => {}),
+  handle: vi.fn(),
+  applyHeroism: vi.fn(),
+  isHeroismActive: vi.fn(),
 }))
 
 vi.mock('../features/holyAuraService.js', () => ({
@@ -330,7 +332,8 @@ async function resetMockImplementations() {
     triggerGlobeOfInvulnerability: async () => {},
   })
   await m('../features/heroismService.js', {
-    triggerHeroism: async () => {},
+    handle: async () => {},
+    applyHeroism: async () => {},
   })
   await m('../features/holyAuraService.js', {
     triggerHolyAura: async () => {},

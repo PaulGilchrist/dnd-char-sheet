@@ -9,6 +9,7 @@ import utils from '../../ui/utils.js'
 import { logConditionEvent } from '../../encounters/combatLoggingService.js'
 import { addEntry } from '../../ui/logService.js'
 import { clearFleshToStonePrompt } from '../conditions/savePromptService.js'
+import { removeHeroismBuff } from '../../rules/features/heroismService.js'
 
 function hasDragonConstellation(creature, characters) {
     if (!creature || !creature.name) return false;
@@ -240,6 +241,9 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
 
     // Clean up Flesh to Stone recurring save tracking when concentration breaks
     cleanupFleshToStoneEffects(casterName, campaignName)
+
+    // Clean up Heroism buff and effects when concentration breaks
+    removeHeroismBuff(casterName, campaignName)
 }
 
 function cleanupFleshToStoneEffects(casterName, campaignName) {

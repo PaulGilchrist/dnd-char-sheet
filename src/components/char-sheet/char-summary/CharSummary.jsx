@@ -7,6 +7,7 @@ import { parseMagicItemName } from '../../../services/rules/core/attackCalc.js'
 import { isAuraOfLifeActive } from '../../../services/automation/handlers/buffs/auraOfLifeHandler.js'
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js'
 import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js'
+import { isHeroismActive } from '../../../services/automation/index.js'
 import CharGold from './CharGold.jsx'
 import CharHitPoints from './CharHitPoints.jsx'
 import CharClassFeatures from './CharClassFeatures.jsx'
@@ -302,8 +303,13 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .map(c => String(c).toLowerCase())
         : [];
 
+    const heroismConditionImmunities = Array.isArray(activeBuffs)
+        ? (activeBuffs.find(b => b.name === "Heroism")?.conditionImmunity || [])
+            .map(c => String(c).toLowerCase())
+        : [];
+
     const automationImmunities = playerStats.automationConditionImmunities || [];
-    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities])];
+    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities])];
 
     const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances])];
 
@@ -746,6 +752,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     )}
                     {isDeathWardActive(playerStats.name, campaignName) && (
                         <CreatureBadge icon='fa-shield-halved' label='Death Ward' cls='effect-buff' tooltip='Death Ward: Protected from death. First time target would drop to 0 HP, drops to 1 HP instead. Spell ends.' />
+                    )}
+                    {isHeroismActive(playerStats.name, campaignName) && (
+                        <CreatureBadge icon='fa-dragon' label='Heroism' cls='effect-buff' tooltip='Heroism: Immune to Frightened, gains temp HP at start of each turn. Concentration, up to 1 minute.' />
                     )}
                     {heroesFeastResistances.length > 0 && (
                         <CreatureBadge icon='fa-champagne-glasses' label="Heroes' Feast" cls='effect-buff' tooltip={`Heroes' Feast: Resistance to ${heroesFeastResistances.join(', ')}, Immune to ${heroesFeastConditionImmunities.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}, HP maximum increased by 2d10. Lasts 24 hours.`} />
