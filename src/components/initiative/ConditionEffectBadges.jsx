@@ -45,7 +45,7 @@ function resolveCls(cls) {
     return EFFECT_TO_SEMANTIC[cls] || cls
 }
 
-function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName }) {
+function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName, onRollConditionSave }) {
     const condKeys = (conditions || []).map(c => c.key)
     const effects = computeConditionEffects(condKeys, [], targetEffects, false, false, false, false, null, false, false, false, false, false, false, false, false, false, false, false, false)
     const activeBuffs = creatureName && campaignName ? (getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []) : []
@@ -269,6 +269,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (holyAuraEffect) {
         const casterName = holyAuraEffect.source || 'unknown'
         badges.push({ label: 'Holy Aura', cls: 'effect-buff', icon: 'fa-sun', removable: isLocalhost, removeAction: 'target_effect', effectType: 'holy_aura', tooltip: `Holy Aura from ${casterName}: Advantage on saving throws, other creatures have Disadvantage on attack rolls against you. Fiends/Undead that hit an affected creature must succeed on CON save or be Blinded` })
+    }
+
+    const ottoDanceEffect = targetEffects?.find(te => te.effect === 'ottos_irresistible_dance' && te.target === creatureName)
+    if (ottoDanceEffect) {
+        const casterName = ottoDanceEffect.source || 'unknown'
+        const danceDc = ottoDanceEffect.dc || 0
+        badges.push({ label: "Otto's Irresistible Dance", cls: 'effect-debuff', icon: 'fa-music', removable: isLocalhost, removeAction: 'target_effect', effectType: 'ottos_irresistible_dance', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'charmed', label: 'Charmed', dc: danceDc, ability: 'wis' }) : undefined, tooltip: `Otto's Irresistible Dance from ${casterName}: Charmed, Speed 0, Disadvantage on Dexterity saving throws and attack rolls. Click to reroll the WIS save (DC ${danceDc}); a success ends the spell.` })
     }
 
     // Deduplicate badges by label, keeping the first occurrence

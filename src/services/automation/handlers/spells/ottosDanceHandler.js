@@ -147,6 +147,28 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         { type: 'speed_zero', condition: 'speed_zero' },
     ], campaignName);
 
+    // Register the spell badge targetEffect. Its `conditions` array and
+    // `duration: 'concentration'` let concentrationService remove the badge and
+    // both conditions (with a log entry) when concentration breaks.
+    const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
+    const existingIndex = allTargetEffects.findIndex(
+        te => te.target === targetName && te.effect === 'ottos_irresistible_dance' && te.source === casterName
+    );
+    const danceEffect = {
+        target: targetName,
+        effect: 'ottos_irresistible_dance',
+        source: casterName,
+        dc,
+        duration: 'concentration',
+        conditions: ['charmed', 'speed_zero'],
+    };
+    if (existingIndex >= 0) {
+        allTargetEffects[existingIndex] = danceEffect;
+    } else {
+        allTargetEffects.push(danceEffect);
+    }
+    setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
+
     addEntry(campaignName, {
         type: 'save_result',
         characterName: casterName,

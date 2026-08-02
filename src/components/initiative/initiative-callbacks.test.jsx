@@ -9,6 +9,7 @@ import { clearDeathSavePrompt } from '../../services/combat/conditions/savePromp
 import storage from '../../services/ui/storage.js';
 import { logConditionEvent, logConcentrationSave, logConditionSave } from '../../services/encounters/combatLoggingService.js';
 import { removeCondition } from '../../services/combat/conditions/conditionSaveService.js';
+import * as logService from '../../services/ui/logService.js';
 import { breakConcentration } from '../../services/combat/concentration/concentrationService.js';
 
 vi.mock('../../hooks/runtime/useSSEEqualityGuard.js', () => ({ default: (setter) => setter }));
@@ -109,6 +110,10 @@ vi.mock('../../services/combat/concentration/concentrationService.js', () => ({
 vi.mock('../../services/encounters/combatLoggingService.js', () => ({
     logInitiativeRoll: vi.fn(), logConditionEvent: vi.fn(), logConcentrationSave: vi.fn(),
     logConditionSave: vi.fn(), logHpChange: vi.fn(), logNpcThreshold: vi.fn(),
+}));
+vi.mock('../../services/ui/logService.js', () => ({
+    getLog: vi.fn(async () => []),
+    addEntry: vi.fn(async () => ({})),
 }));
 vi.mock('../encounter/MonsterCardModal.jsx', () => ({ default: () => <div data-testid="monster-card-modal" /> }));
 vi.mock('../common/Subscriber.jsx', () => ({ default: () => <div data-testid="subscriber" /> }));
@@ -494,6 +499,35 @@ describe('Initiative - Callback Integration', () => {
 
             const breakBtn = screen.queryByTestId('condition-break-runtime-blinded-0');
             expect(breakBtn).not.toBeInTheDocument();
+        });
+
+        it('should end Otto\'s Irresistible Dance on a successful Charmed reroll', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'Alice' && prop === 'activeConditions') return ['charmed', 'speed_zero'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'Alice' && prop === 'activeBuffs') return [];
+                if (key === 'campaign' && prop === 'targetEffects') return [{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }];
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', conditions: [{ key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' }] }, { name: 'Bob', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                const saveBtn = screen.getByTestId('condition-save-runtime-charmed-0');
+                fireEvent.click(saveBtn);
+            });
+
+            expect(removeCondition).toHaveBeenCalledWith(expect.anything(), 'Alice', expect.objectContaining({ key: 'speed_zero' }), expect.anything(), expect.anything(), expect.anything());
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [], 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'save_result', rollType: 'save-ottos-dance', saveType: 'WIS', success: true }));
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'condition', action: 'removed', condition: 'Charmed, Speed 0' }));
         });
     });
 

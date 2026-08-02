@@ -331,6 +331,32 @@ describe('clearAllExpirationEffects — comprehensive coverage', () => {
         { effect: 'slow', source: 'Slow', target: 'Orc' },
       ]);
     });
+
+    it('clears Otto\'s Irresistible Dance target effects when the character is source or target', () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === KEY && name === 'Goblin') return [];
+        if (key === KEY) return [];
+        if (name === 'campaign' && key === 'targetEffects') return [
+          { effect: 'ottos_irresistible_dance', source: 'Goblin', target: 'Orc', dc: 15 },
+          { effect: 'ottos_irresistible_dance', source: 'Orc', target: 'Goblin', dc: 15 },
+          { effect: 'ottos_irresistible_dance', source: 'Orc', target: 'Human', dc: 15 },
+          { effect: 'slow', source: 'Slow', target: 'Orc' },
+        ];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      clearAllExpirationEffects('Goblin', 'MyCampaign');
+
+      const effectCalls = setRuntimeValue.mock.calls.filter(
+        (c) => c[0] === 'campaign' && c[1] === 'targetEffects',
+      );
+      expect(effectCalls.length).toBeGreaterThan(0);
+      expect(effectCalls[effectCalls.length - 1][2]).toEqual([
+        { effect: 'ottos_irresistible_dance', source: 'Orc', target: 'Human', dc: 15 },
+        { effect: 'slow', source: 'Slow', target: 'Orc' },
+      ]);
+    });
   });
 });
 

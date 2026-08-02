@@ -118,6 +118,25 @@ vi.mock('./Subscriber.jsx', () => {
         React.createElement(
           'button',
           {
+            'data-testid': 'subscriber-trigger-dex',
+            onClick: () =>
+              handleEvent({
+                key: `change-${campaignName}-savePrompt-testTarget`,
+                data: {
+                  promptId: 'test-prompt-dex',
+                  targetName: 'testTarget',
+                  saveType: 'dex',
+                  saveDc: 17,
+                  disadvantage: false,
+                  dcSuccess: 'half',
+                  sourceName: 'Sacred Flame',
+                },
+              }),
+          }
+        ),
+        React.createElement(
+          'button',
+          {
             'data-testid': 'subscriber-trigger-none-dc',
             onClick: () =>
               handleEvent({
@@ -518,6 +537,101 @@ describe('SavePromptModal', () => {
     });
 
     expect(rollD20).toHaveBeenCalledTimes(2);
+  });
+
+  it('rolls two d20s for DEX saves when the target is Charmed', async () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+      if (name === 'testTarget' && key === 'activeConditions') return ['charmed', 'speed_zero'];
+      return null;
+    });
+    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('subscriber-trigger-dex'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+    });
+
+    expect(rollD20).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText(/\(Disadvantage\)/i).length).toBeGreaterThan(0);
+  });
+
+  it('rolls two d20s for DEX saves when the target has Otto\'s Irresistible Dance', async () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [{ target: 'testTarget', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }];
+      return null;
+    });
+    rollD20.mockReturnValueOnce(18).mockReturnValueOnce(5);
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('subscriber-trigger-dex'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+    });
+
+    expect(rollD20).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByText(/\(Disadvantage\)/i).length).toBeGreaterThan(0);
+  });
+
+  it('does not roll with disadvantage for non-DEX saves when the target is Charmed', async () => {
+    vi.mocked(getRuntimeValue).mockImplementation((name, key) => {
+      if (name === 'testTarget' && key === 'activeConditions') return ['charmed'];
+      return null;
+    });
+    rollD20.mockReturnValueOnce(15);
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('subscriber-trigger'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/d20/i)).toBeInTheDocument();
+    });
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
   });
 
   // ── Aura bonus ──

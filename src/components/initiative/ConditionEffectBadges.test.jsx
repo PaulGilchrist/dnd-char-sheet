@@ -136,18 +136,88 @@ describe('ConditionEffectBadges', () => {
             expect(screen.getByText('OA Disadv')).toBeInTheDocument();
         });
 
-        it('should render No Difficult Terrain on Dash badge when hasSpeedyDifficultTerrainIgnore is true', () => {
+        it('should render Otto\'s Irresistible Dance badge when the dance targetEffect is present', () => {
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'charmed' }]}
+                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                />
+            );
+            expect(screen.getByText("Otto's Irresistible Dance")).toBeInTheDocument();
+            expect(screen.getByTitle(/Click to reroll the WIS save \(DC 15\)/)).toBeInTheDocument();
+        });
+
+        it('should not render Otto\'s Irresistible Dance badge for another target', () => {
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[]}
+                    targetEffects={[{ target: 'Bob', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15 }]}
                     creatureName="Alice"
                     campaignName="test"
-                    hasSpeedyDifficultTerrainIgnore={true}
+                    isLocalhost={true}
                 />
             );
-            expect(screen.getByText('No Difficult Terrain on Dash')).toBeInTheDocument();
+            expect(screen.queryByText("Otto's Irresistible Dance")).not.toBeInTheDocument();
+        });
+
+        it('should roll the WIS reroll save when the dance badge is clicked', () => {
+            const onRollConditionSave = vi.fn();
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'charmed' }]}
+                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                    onRollConditionSave={onRollConditionSave}
+                />
+            );
+            fireEvent.click(screen.getByText("Otto's Irresistible Dance"));
+            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' });
+        });
+
+        it('should not make the dance badge clickable without onRollConditionSave', () => {
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'charmed' }]}
+                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15 }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                />
+            );
+            const badge = screen.getByText("Otto's Irresistible Dance");
+            expect(badge.tagName).toBe('SPAN');
+        });
+
+        it('should remove the dance targetEffect when the badge remove button is clicked', () => {
+            const existingEffects = [
+                { target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] },
+                { target: 'Bob', effect: 'regenerate', source: 'Cleric' },
+            ];
+            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
+                return null;
+            });
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[{ key: 'charmed' }]}
+                    targetEffects={existingEffects}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                />
+            );
+            fireEvent.click(screen.getByTitle('Remove effect'));
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [existingEffects[1]], 'test');
         });
 
         it.each([

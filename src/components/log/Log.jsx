@@ -13,6 +13,7 @@ function getRollIconType(rollType) {
     case 'spell_attack': return 'fa-wand-magic-sparkles';
     case 'save': return 'fa-shield-halved';
     case 'condition-save': return 'fa-shield-halved';
+    case 'save-ottos-dance': return 'fa-shield-halved';
     case 'save-damage': return 'fa-shield-halved';
     case 'aoe-damage': return 'fa-wand-magic-sparkles';
     case 'initiative': return 'fa-bolt';

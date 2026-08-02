@@ -33,9 +33,6 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
     const saveAdvConditions = getAuraOfPuritySaveAdvantageConditions(creature.name, campaignName)
     const hasAuraOfPurityAdvantage = auraOfPurityActive && saveAdvConditions.includes(conditionKey)
 
-    console.debug('[conditionSave] rollConditionSave creature=%s conditionKey=%s auraOfPurityActive=%s saveAdvConditions=%s hasAuraOfPurityAdvantage=%s',
-        creature.name, conditionKey, auraOfPurityActive, saveAdvConditions, hasAuraOfPurityAdvantage)
-
     if (auraOfPurityActive && !hasAuraOfPurityAdvantage) {
         const rawStored = getRuntimeValue(creature.name, 'auraOfPuritySaveAdvantageConditions', campaignName)
         const activeBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []

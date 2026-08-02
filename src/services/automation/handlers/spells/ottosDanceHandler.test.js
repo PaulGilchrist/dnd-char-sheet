@@ -277,6 +277,46 @@ describe('ottosDanceHandler.handle', () => {
       );
     });
 
+    it('should register the ottos_irresistible_dance targetEffect on failed save', async () => {
+      setupFailedSave();
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const expectedDanceEffect = {
+        target: 'Goblin',
+        effect: 'ottos_irresistible_dance',
+        source: 'TestCaster',
+        dc: 15,
+        duration: 'concentration',
+        conditions: ['charmed', 'speed_zero'],
+      };
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [expectedDanceEffect],
+        campaignName,
+      );
+    });
+
+    it('should replace an existing dance targetEffect from the same caster on failed save', async () => {
+      const existingEffect = {
+        target: 'Goblin',
+        effect: 'ottos_irresistible_dance',
+        source: 'TestCaster',
+        dc: 12,
+        duration: 'concentration',
+        conditions: ['charmed'],
+      };
+      setupFailedSave([], [existingEffect]);
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [expect.objectContaining({ target: 'Goblin', effect: 'ottos_irresistible_dance', dc: 15 })],
+        campaignName,
+      );
+    });
+
     it('should call addEntry with ability_use on initial cast', async () => {
       setupFailedSave();
       await handle(makeAction(), makePlayerStats(), campaignName, null);

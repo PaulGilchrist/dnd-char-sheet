@@ -764,6 +764,16 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
           abilityName: 'Flesh to Stone',
           description: 'Rest; Flesh to Stone ends.',
       }).catch(() => {});
+
+      // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
+      // Conditions (Charmed, Speed 0) are already removed by the expiration scan above.
+      const ottoTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+      const ottoFilteredEffects = ottoTargetEffects.filter(te =>
+          !(te.effect === 'ottos_irresistible_dance' && (te.source === characterName || te.target === characterName))
+      );
+      if (ottoFilteredEffects.length !== ottoTargetEffects.length) {
+          setRuntimeValue('campaign', 'targetEffects', ottoFilteredEffects, campaignName);
+      }
 }
 
     export function expireStaleEffects(campaignName, overrideActiveName) {

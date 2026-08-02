@@ -412,6 +412,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'ottos_irresistible_dance',
+    label: "Otto's Irresistible Dance",
+    description: 'The target dances comically. It has the Charmed condition, its speed is 0, it has Disadvantage on Dexterity saving throws and attack rolls, and other creatures have Advantage on attack rolls against it. On each of its turns, the target can repeat the WIS save (DC indicated); on a success, the spell ends.',
+    icon: 'fa-music',
+    cls: 'effect-debuff',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+  },
+  {
     effect: 'regenerate',
     label: 'Regenerate',
     description: 'Target regains 4d8 + 15 HP initially, then 1 HP per turn. When the effect ends, the target is restored to full HP.',

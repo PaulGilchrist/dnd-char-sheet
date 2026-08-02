@@ -865,6 +865,40 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         if (success) {
             removeCondition(combatSummary, creatureName, condition, getRuntimeValue, setRuntimeValue, campaignName)
+
+            // Otto's Irresistible Dance: a successful WIS reroll on the Charmed
+            // badge ends the whole spell — remove Speed 0 and the spell badge too.
+            if (String(condition.key).toLowerCase() === 'charmed') {
+                const danceEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'ottos_irresistible_dance' && te.target === creatureName
+                )
+                if (danceEffect) {
+                    removeCondition(combatSummary, creatureName, { key: 'speed_zero' }, getRuntimeValue, setRuntimeValue, campaignName)
+                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+                        te => !(te.target === creatureName && te.effect === 'ottos_irresistible_dance')
+                    )
+                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
+                    logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: danceEffect.source,
+                        rollType: 'save-ottos-dance',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'WIS',
+                        success: true,
+                        description: `${creatureName} succeeded on WIS save against Otto's Irresistible Dance. The spell ends; Charmed and Speed 0 removed.`,
+                    }).catch(() => {})
+                    logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Charmed, Speed 0',
+                        reason: "Otto's Irresistible Dance (successful reroll)",
+                        note: `${creatureName} succeeded on the WIS reroll; Otto's Irresistible Dance ends.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {})
+                }
+            }
         }
 
         storage.set('combatSummary', combatSummary, campaignName)

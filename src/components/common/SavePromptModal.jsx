@@ -16,6 +16,20 @@ import './savePromptModal.css';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 
+// Disadvantage from the save prompt itself (e.g. Heightened metamagic) or from
+// the target's Charmed condition / Otto's Irresistible Dance on DEX saves.
+// Mirrors the DEX save disadvantage granted by 'charmed' in conditionEffects.js.
+function getSaveDisadvantage(current, campaignName) {
+  if (!current) return false;
+  if (current.disadvantage) return true;
+  const saveType = (current.saveType || '').toLowerCase();
+  if (saveType !== 'dex') return false;
+  const targetConditions = getRuntimeValue(current.targetName, 'activeConditions', campaignName) || [];
+  if (targetConditions.some(c => String(c).toLowerCase() === 'charmed')) return true;
+  const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+  return targetEffects.some(te => te.target === current.targetName && te.effect === 'ottos_irresistible_dance');
+}
+
 function SavePromptModal({ campaignName, characters, activeMapName }) {
   const [prompts, setPrompts] = useState([]);
   const [evasionSelection, setEvasionSelection] = useState(null);
@@ -161,10 +175,12 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     const hasEvasion = hasOwnEvasion || hasSelectedEvasion || isCircleOfPowerActive(current.targetName, campaignName);
     setLastEvasionState(hasEvasion);
 
+    const hasDisadvantage = getSaveDisadvantage(current, campaignName);
+
     let hasAdvantage = false;
     if (current.advantage) {
       hasAdvantage = true;
-    } else if (!current.disadvantage && saveModifiers && saveModifiers.length > 0) {
+    } else if (!hasDisadvantage && saveModifiers && saveModifiers.length > 0) {
       const conditionSet = new Set(activeConditions);
       for (const mod of saveModifiers) {
         if (mod.target === 'saving_throw' && mod.effect === 'advantage') {
@@ -185,7 +201,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
 
       // Dodge: advantage on Dexterity saving throws only
-    if (!hasAdvantage && !current.disadvantage) {
+    if (!hasAdvantage && !hasDisadvantage) {
       const targetActiveBuffs = getRuntimeValue(current?.targetName, 'activeBuffs', campaignName) || [];
       const isDodgeActive = Array.isArray(targetActiveBuffs) && targetActiveBuffs.some(b => b.effect === 'dodge');
       const isDexSave = (current.saveType || '').toUpperCase() === 'DEX';
@@ -195,7 +211,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
 
     // Beacon of Hope: advantage on Wisdom saving throws
-    if (!hasAdvantage && !current.disadvantage) {
+    if (!hasAdvantage && !hasDisadvantage) {
       const targetCharForBeacon = (characters || []).find(c => utils.getName(c.name) === utils.getName(current.targetName));
       if (targetCharForBeacon?.targetEffects?.some(te => te.effect === 'beacon_of_hope') && (current.saveType || '').toUpperCase() === 'WIS') {
         hasAdvantage = true;
@@ -203,14 +219,14 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
 
     // Circle of Power: blanket advantage on saving throws
-    if (!hasAdvantage && !current.disadvantage) {
+    if (!hasAdvantage && !hasDisadvantage) {
       if (isCircleOfPowerActive(current.targetName, campaignName)) {
         hasAdvantage = true;
       }
     }
 
     // Source-restricted save advantage (e.g. Holy Nimbus: advantage against Fiends/Undead for allies)
-    if (!hasAdvantage && !current.disadvantage && current.attackerName) {
+    if (!hasAdvantage && !hasDisadvantage && current.attackerName) {
       const targetName = current.targetName;
       const attackerName = current.attackerName;
       const combatSummary = getCombatSummary(campaignName);
@@ -255,8 +271,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
 
     const roll1 = forceRollTo20Ref.current ? 20 : rollD20();
-    const roll2 = current.disadvantage ? rollD20() : roll1;
-    const finalRoll = current.disadvantage ? Math.min(roll1, roll2) : hasAdvantage ? Math.max(roll1, roll2) : roll1;
+    const roll2 = hasDisadvantage ? rollD20() : roll1;
+    const finalRoll = hasDisadvantage ? Math.min(roll1, roll2) : hasAdvantage ? Math.max(roll1, roll2) : roll1;
     let cosmicOmenAppliedBonus = 0;
     let cosmicOmenDetail = '';
     const cosmicOmenPendingRaw = getRuntimeValue('cosmicOmen', 'cosmicOmenPendingBonus');
@@ -326,7 +342,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
     const bonusDetail = bonusDetailParts.filter(Boolean).join(' ') || undefined;
 
-    const rollMode = current.disadvantage ? 'disadvantage' : hasAdvantage ? 'advantage' : 'normal';
+    const rollMode = hasDisadvantage ? 'disadvantage' : hasAdvantage ? 'advantage' : 'normal';
 
     const cs = getCombatSummary(campaignName);
     if (cs) {
@@ -428,6 +444,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
   }, []);
 
   const abilityLabel = current ? (current.saveType || '').toUpperCase() : '';
+  const promptHasDisadvantage = current ? getSaveDisadvantage(current, campaignName) : false;
   const queueCount = prompts.length;
   const hasResult = current?.result != null;
 
@@ -574,8 +591,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     } catch { /* ignore */ }
     const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
     const roll1 = rollD20();
-    const roll2 = current.disadvantage ? rollD20() : roll1;
-    const finalRoll = current.disadvantage ? Math.min(roll1, roll2) : roll1;
+    const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
+    const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
     const total = finalRoll + saveBonus + aura.bonus + rerollBonus;
     const success = total >= current.saveDc;
     submitSaveResult({
@@ -586,7 +603,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       total,
       saveBonus: saveBonus + aura.bonus + rerollBonus,
       rawRolls: [roll1, roll2],
-      mode: current.disadvantage ? 'disadvantage' : 'normal',
+      mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
       bonusDetail: `(+${rerollBonus} Fanatical Focus)`,
       saveType: current.saveType,
       saveDc: current.saveDc,
@@ -623,8 +640,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     } catch { /* ignore */ }
     const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
     const roll1 = rollD20();
-    const roll2 = current.disadvantage ? rollD20() : roll1;
-    const finalRoll = current.disadvantage ? Math.min(roll1, roll2) : roll1;
+    const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
+    const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
     const total = finalRoll + saveBonus + aura.bonus;
     const success = total >= current.saveDc;
     submitSaveResult({
@@ -635,7 +652,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       total,
       saveBonus: saveBonus + aura.bonus,
       rawRolls: [roll1, roll2],
-      mode: current.disadvantage ? 'disadvantage' : 'normal',
+      mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
       bonusDetail: '(-1 Focus Point)',
       saveType: current.saveType,
       saveDc: current.saveDc,
@@ -717,7 +734,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
               )}
             </div>
             <div className="sp-body">
-              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{current.advantage ? <span className="sp-advantage-badge"> (Advantage)</span> : ''}{current.disadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
+              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{current.advantage ? <span className="sp-advantage-badge"> (Advantage)</span> : ''}{promptHasDisadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
               <p className="sp-dc">DC {current.saveDc}</p>
               {current.dcSuccess === 'half' && (() => {
                 const normalizedSaveType = normalizeSaveType(current.saveType);
@@ -768,8 +785,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                       }
                       const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
                       const roll1 = rollD20();
-                      const roll2 = current.disadvantage ? rollD20() : roll1;
-                      const finalRoll = current.disadvantage ? Math.min(roll1, roll2) : roll1;
+                      const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
+                      const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
                       const total = finalRoll + localSaveBonus + aura.bonus;
                       const success = total >= current.saveDc;
                       submitSaveResult({
@@ -780,7 +797,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                         total,
                         saveBonus: localSaveBonus + aura.bonus,
                         rawRolls: [roll1, roll2],
-                        mode: current.disadvantage ? 'disadvantage' : 'normal',
+                        mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
                         saveType: current.saveType,
                         saveDc: current.saveDc,
                         condition: current.condition,

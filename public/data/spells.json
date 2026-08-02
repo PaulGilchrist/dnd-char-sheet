@@ -5903,6 +5903,7 @@
     "subclasses": [],
     "automation": {
       "type": "ottos_dance",
+      "saveDc": "spell_save_dc",
       "saveType": "WIS",
       "range": "30 feet",
       "duration": "Up to 1 minute"
