@@ -70,7 +70,7 @@ export async function triggerForesight(spell, metaCtx, playerStats, campaignName
             type: 'automation_info',
             name: 'Foresight',
             automationType: 'foresight',
-            description: `<b>Foresight</b><br/>${targetName} has <b>Advantage on D20 Tests</b> (attacks, saves, ability checks), and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.`,
+            description: `${targetName} has <b>Advantage on D20 Tests</b> (attacks, saves, ability checks), and other creatures have <b>Disadvantage on attack rolls</b> against them for 8 hours.`,
         },
     };
 }

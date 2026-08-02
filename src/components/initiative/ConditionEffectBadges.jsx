@@ -22,6 +22,18 @@ function removeTargetEffect(targetName, effectType, campaignName) {
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
 }
 
+function removeTargetEffectsByTypes(targetName, effectTypes, campaignName) {
+    const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
+    const filtered = existingEffects.filter(te => !(te.target === targetName && effectTypes.includes(te.effect)))
+    setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
+}
+
+function removeBuffsByTypes(creatureName, buffEffects, campaignName) {
+    const buffs = getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []
+    const filtered = buffs.filter(b => !buffEffects.includes(b.effect))
+    setRuntimeValue(creatureName, 'activeBuffs', filtered, campaignName)
+}
+
 const EFFECT_TO_SEMANTIC = {
     'effect-stealth-attack': 'effect-neutral',
     'effect-speed-zero': 'effect-debuff',
@@ -77,6 +89,12 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
             effects.attackAdvantageReasons.push('Vow of Enmity')
         }
     }
+
+    // Pre-scan for derived badge removal: find which buffs contribute
+    const safeBuffs = Array.isArray(activeBuffs) ? activeBuffs : []
+    const hasVowBuff = safeBuffs.some(b => b.effect === 'vow_of_enmity')
+    const hasAdvAndSavesBuff = safeBuffs.some(b => b.effect === 'advantage_attacks_and_saves')
+
     const stealthAttackCost = creatureName && campaignName ? (getRuntimeValue(creatureName, 'stealthAttackCost', campaignName) ?? 0) : 0
     if (stealthAttackCost > 0) {
         badges.push({ label: 'Stealth Attack', cls: 'effect-neutral', icon: 'fa-eye-slash', removable: true, removeAction: 'stealth_attack' })
@@ -86,14 +104,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label, cls: 'effect-debuff', icon: 'fa-minus', removable: true, removeAction: 'target_effect', effectType: 'speed_reduction' })
     }
     if (effects.noAdvantageAgainst) {
-        const noAdvConditionKeys = ['blinded', 'charmed', 'invisible', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious']
-        const noAdvCondition = conditions.find(c => noAdvConditionKeys.includes(c.key))
-        badges.push({ label: 'No Adv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: noAdvCondition?.key || 'blinded' })
+        badges.push({ label: 'No Adv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'remove_derived', effectTypes: ['blur', 'foresight', 'escape_the_horde', 'protection', 'multiattack_defense'] })
     }
     if (effects.targetDisadvantageCount > 0 && !effects.noAdvantageAgainst) {
-        const disAdvConditionKeys = ['blinded', 'charmed', 'invisible', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious']
-        const disAdvCondition = conditions.find(c => disAdvConditionKeys.includes(c.key))
-        badges.push({ label: 'Disadv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'condition', removeKey: disAdvCondition?.key || 'blinded' })
+        badges.push({ label: 'Disadv vs', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'remove_derived', effectTypes: ['blur', 'foresight', 'escape_the_horde', 'protection', 'multiattack_defense', 'clairvoyant_combatant'] })
     }
     if (effects.targetAttackDisadvantageCount > 0) {
         badges.push({ label: 'Attack Disadv', cls: 'effect-buff', icon: 'fa-arrow-down', removable: true, removeAction: 'target_effect', effectType: 'slasher_enhanced_critical' })
@@ -101,22 +115,28 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.attackAdvantageCount > 0) {
         const reasons = effects.attackAdvantageReasons || []
         const reasonText = reasons.length > 0 ? reasons.join(', ') : ''
-        const advSource = reasons.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'vow_of_enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
-        badges.push({ label: 'Adv', cls: 'effect-buff', icon: 'fa-arrow-up', removable: true, removeAction: advSource ? (advSource.effect === 'vow_of_enmity' ? 'vow_of_enmity' : 'remove_buff') : 'target_effect', tooltip: `Advantage on attack rolls${reasonText ? ' (' + reasonText + ')' : ''}` })
+        const teTypes = ['advantage_attacks', 'foresight', 'next_attack_advantage', 'clairvoyant_combatant']
+        const buffTypes = []
+        if (hasVowBuff || reasons.includes('Vow of Enmity')) buffTypes.push('vow_of_enmity')
+        if (hasAdvAndSavesBuff || reasons.includes('Zealous Presence')) buffTypes.push('advantage_attacks_and_saves')
+        badges.push({ label: 'Adv', cls: 'effect-buff', icon: 'fa-arrow-up', removable: true, removeAction: 'remove_derived', effectTypes: [...teTypes, ...buffTypes], tooltip: `Advantage on attack rolls${reasonText ? ' (' + reasonText + ')' : ''}` })
     }
     if (effects.targetAdvantageCount > 0) {
         const reasons = effects.targetAdvantageReasons || []
         const reasonText = reasons.length > 0 ? ` (${reasons.join(', ')})` : ''
-        badges.push({ label: 'Adv vs', cls: 'effect-debuff', icon: 'fa-arrow-up', tooltip: `Attackers have advantage on attack rolls against this creature${reasonText}` })
+        const teTypes = ['reckless_attack', 'clairvoyant_combatant', 'crusher_enhanced_critical', 'distracting_strike_advantage']
+        badges.push({ label: 'Adv vs', cls: 'effect-debuff', icon: 'fa-arrow-up', removable: true, removeAction: 'remove_derived', effectTypes: teTypes, tooltip: `Attackers have advantage on attack rolls against this creature${reasonText}` })
     }
     if (effects.saveAdvantageCount > 0) {
         const reasons = (effects.saveAdvantageReasons || []).length > 0 ? effects.saveAdvantageReasons.join(', ') : 'Advantage on saving throws'
-        const saveAdvSource = effects.saveAdvantageReasons?.find(r => r === 'Vow of Enmity') || activeBuffs.find(b => b.effect === 'advantage_attacks_and_saves')
-        badges.push({ label: 'Adv Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: saveAdvSource ? (saveAdvSource.effect === 'advantage_attacks_and_saves' ? 'remove_buff' : 'vow_of_enmity') : 'target_effect', tooltip: `Advantage on saving throws${reasons !== 'Advantage on saving throws' ? ' (' + reasons + ')' : ''}` })
+        const teTypes = ['advantage_saves', 'foresight']
+        const buffTypes = []
+        if (hasAdvAndSavesBuff || reasons.includes('Zealous Presence')) buffTypes.push('advantage_attacks_and_saves')
+        if (reasons.includes('Vow of Enmity')) buffTypes.push('vow_of_enmity')
+        badges.push({ label: 'Adv Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'remove_derived', effectTypes: [...teTypes, ...buffTypes], tooltip: `Advantage on saving throws${reasons !== 'Advantage on saving throws' ? ' (' + reasons + ')' : ''}` })
     }
     if (effects.dexSaveAdvantageCount > 0) {
-        const dodgeBuff = activeBuffs.find(b => b.effect === 'dodge')
-        badges.push({ label: 'Adv DEX Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: dodgeBuff ? 'remove_buff' : 'target_effect', tooltip: 'Advantage on Dexterity saving throws' })
+        badges.push({ label: 'Adv DEX Save', cls: 'effect-buff', icon: 'fa-shield-halved', removable: true, removeAction: 'remove_derived', effectTypes: ['dodge'], tooltip: 'Advantage on Dexterity saving throws' })
     }
     if (effects.riderSaveDisadvantage) badges.push({ label: 'Save Disadv', cls: 'effect-debuff', icon: 'fa-shield', removable: true, removeAction: 'target_effect', effectType: 'disadvantage_on_next_save' })
     if (effects.saveDisadvantageCount > 0) {
@@ -192,12 +212,10 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Beacon of Hope', cls: 'effect-buff', icon: 'fa-heart-pulse', removable: true, removeAction: 'target_effect', effectType: 'beacon_of_hope', tooltip: `Beacon of Hope from ${casterName}: Advantage on WIS saves, death saves, and maximized healing` })
     }
     if (effects.hasteActive) {
-        const hasteBuff = activeBuffs.find(b => b.effect === 'haste')
-        badges.push({ label: 'Hasted', cls: 'effect-buff', icon: 'fa-bolt', removable: true, removeAction: hasteBuff ? 'remove_buff' : 'target_effect', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
+        badges.push({ label: 'Hasted', cls: 'effect-buff', icon: 'fa-bolt', removable: true, removeAction: 'remove_haste', tooltip: 'Haste: Speed doubled, +2 AC, Advantage on DEX saves, Extra action (Attack, Dash, Disengage, Hide, Use Object)' })
     }
     if (effects.barkskinActive) {
-        const barkskinBuff = activeBuffs.find(b => b.effect === 'barkskin')
-        badges.push({ label: 'Barkskin', cls: 'effect-buff', icon: 'fa-tree', removable: true, removeAction: barkskinBuff ? 'remove_buff' : 'target_effect', tooltip: 'Barkskin: AC set to 17' })
+        badges.push({ label: 'Barkskin', cls: 'effect-buff', icon: 'fa-tree', removable: true, removeAction: 'remove_barkskin', tooltip: 'Barkskin: AC set to 17' })
     }
     const silenceEffect = targetEffects?.find(te => te.effect === 'silenced' && te.target === creatureName)
     if (silenceEffect) {
@@ -248,6 +266,19 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
                 break
             case 'target_effect':
                 removeTargetEffect(creatureName, badge.effectType, campaignName)
+                break
+            case 'remove_derived':
+                if (badge.effectTypes?.length > 0) {
+                    removeTargetEffectsByTypes(creatureName, badge.effectTypes, campaignName)
+                }
+                break
+            case 'remove_haste':
+                removeTargetEffectsByTypes(creatureName, ['haste'], campaignName)
+                removeBuffsByTypes(creatureName, ['haste'], campaignName)
+                break
+            case 'remove_barkskin':
+                removeTargetEffectsByTypes(creatureName, ['barkskin'], campaignName)
+                removeBuffsByTypes(creatureName, ['barkskin'], campaignName)
                 break
             case 'inspiring_move':
                 setRuntimeValue(creatureName, 'inspiringMovementNoOA', false, campaignName)
