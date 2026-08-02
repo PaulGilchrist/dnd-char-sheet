@@ -12,6 +12,9 @@ import {
   sendConcentrationPrompt,
   sendConcentrationResult,
   clearConcentrationPrompt,
+  sendFleshToStonePrompt,
+  clearFleshToStonePrompt,
+  sendFleshToStoneResult,
 } from './savePromptService.js';
 
 // Suppress unhandled rejection warnings from the service's fire-and-forget
@@ -283,6 +286,100 @@ describe('savePromptService', () => {
 
       mockFetchRejected();
       expect(clearConcentrationPrompt('C', 'T')).toBeUndefined();
+    });
+  });
+
+  describe('sendFleshToStonePrompt', () => {
+    it('posts Flesh to Stone prompt data to the correct endpoint', () => {
+      mockFetchResolved();
+      sendFleshToStonePrompt('Test Campaign', { targetName: 'Goblin', dc: 15, casterName: 'Wizard' });
+
+      expectPostToCampaign(
+        globalThis.fetch,
+        'Test Campaign',
+        'fleshToStonePrompt-Goblin',
+        { targetName: 'Goblin', dc: 15, casterName: 'Wizard' }
+      );
+    });
+
+    it('does not propagate fetch rejections to the caller', () => {
+      mockFetchRejected();
+      expect(sendFleshToStonePrompt('C', { targetName: 'T' })).toBeUndefined();
+    });
+  });
+
+  describe('clearFleshToStonePrompt', () => {
+    it('sends a DELETE request to the correct endpoint with no body', () => {
+      mockFetchResolved();
+      clearFleshToStonePrompt('Test Campaign', 'Goblin');
+
+      const expectedUrl = '/api/campaigns/Test%20Campaign/fleshToStonePrompt-Goblin';
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expectedUrl,
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
+
+      const callArgs = globalThis.fetch.mock.calls[0][1];
+      expect(callArgs.headers).toBeUndefined();
+      expect(callArgs.body).toBeUndefined();
+    });
+
+    it('URL-encodes special characters and does not propagate fetch rejections', () => {
+      mockFetchResolved();
+      clearFleshToStonePrompt('Campaign #1', 'T');
+
+      const expectedUrl = '/api/campaigns/Campaign%20%231/fleshToStonePrompt-T';
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expectedUrl,
+        expect.any(Object)
+      );
+
+      mockFetchRejected();
+      expect(clearFleshToStonePrompt('C', 'T')).toBeUndefined();
+    });
+  });
+
+  describe('sendFleshToStoneResult', () => {
+    it('posts Flesh to Stone result data to the correct endpoint', () => {
+      mockFetchResolved();
+      sendFleshToStoneResult('Test Campaign', 'Goblin', { success: true });
+
+      expectPostToCampaign(
+        globalThis.fetch,
+        'Test Campaign',
+        'fleshToStoneResult-Goblin',
+        { success: true }
+      );
+    });
+
+    it('dispatches a CustomEvent on success', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+      const events = [];
+      const handler = (e) => events.push(e.detail);
+      globalThis.window.addEventListener('flesh-to-stone-result', handler);
+
+      sendFleshToStoneResult('Test Campaign', 'Goblin', { success: false });
+
+      await new Promise(r => setTimeout(r, 10));
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual({
+        campaignName: 'Test Campaign',
+        targetName: 'Goblin',
+        result: { success: false },
+      });
+
+      globalThis.window.removeEventListener('flesh-to-stone-result', handler);
+    });
+
+    it('does not propagate fetch rejections to the caller', () => {
+      mockFetchRejected();
+      expect(sendFleshToStoneResult('C', 'T', {})).toBeUndefined();
     });
   });
 });

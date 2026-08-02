@@ -31,6 +31,10 @@ vi.mock('../../common/targetResolver.js', () => ({
   resolveTarget: vi.fn(),
 }));
 
+vi.mock('../../../combat/conditions/savePromptService.js', () => ({
+  sendFleshToStonePrompt: vi.fn(),
+}));
+
 import { handle } from './fleshToStoneHandler.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
@@ -38,6 +42,7 @@ import { resolveTarget } from '../../common/targetResolver.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { sendFleshToStonePrompt } from '../../../combat/conditions/savePromptService.js';
 
 const campaignName = 'TestCampaign';
 const casterName = 'TestCaster';
@@ -362,6 +367,100 @@ describe('fleshToStoneHandler.handle', () => {
           success: true,
         }),
       );
+    });
+
+    it('does NOT set up recurring save tracking on successful save', async () => {
+      setupSuccessfulSave();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(sendFleshToStonePrompt).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('recurring save tracking', () => {
+    function setupFailedSaveWithTracking() {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'monster' } });
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        if (keyOrProp === 'targetEffects') return [];
+        return null;
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'fts-fail',
+        promise: Promise.resolve({ success: false }),
+      });
+    }
+
+    it('sets up recurring save tracking on failed save', async () => {
+      setupFailedSaveWithTracking();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        '_fleshToStone_Goblin',
+        expect.objectContaining({
+          successes: 0,
+          failures: 0,
+          dc: 15,
+          casterName,
+        }),
+        campaignName,
+      );
+    });
+
+    it('sends Flesh to Stone prompt on failed save', async () => {
+      setupFailedSaveWithTracking();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(sendFleshToStonePrompt).toHaveBeenCalledWith(campaignName, {
+        targetName,
+        dc: 15,
+        casterName,
+      });
+    });
+
+    it('stores CON ability in activeConditionMeta for recurring saves', async () => {
+      setupFailedSaveWithTracking();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName,
+        'activeConditionMeta',
+        expect.objectContaining({
+          restrained: expect.objectContaining({
+            ability: 'con',
+          }),
+        }),
+        campaignName,
+      );
+    });
+
+    it('does NOT set up recurring save tracking for constructs', async () => {
+      const constructContext = {
+        ...baseCombatContext,
+        creatures: [
+          { name: targetName, type: 'construct', currentHp: 5, maxHp: 7 },
+          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+          { name: casterName, gridX: 5, gridY: 10 },
+        ],
+      };
+      getCombatContext.mockResolvedValue(constructContext);
+      buildSaveDc.mockReturnValue(15);
+      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'construct' } });
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(sendFleshToStonePrompt).not.toHaveBeenCalled();
     });
   });
 

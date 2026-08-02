@@ -7,10 +7,13 @@ import CreatureHp from './CreatureHp.jsx'
 import { getAbilityLabel } from '../../services/combat/conditions/conditionUtils.js'
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx'
+
+const FLESH_TO_STONE_PREFIX = '_fleshToStone_';
 import CreatureBadge from '../common/CreatureBadge.jsx'
 import { isBuffActive } from '../../services/automation/common/buffToggle.js';
 import { CONDITION_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc, clearUnbreakableMajesty } from '../../services/combat/auras/unbreakableMajesty.js'
+import { sendFleshToStoneResult } from '../../services/combat/conditions/savePromptService.js'
 
 const SHAPE_LABELS = {
     sphere: 'Sphere',
@@ -50,6 +53,8 @@ function CreatureCard({
     const isUnconscious = creature.currentHp <= 0
     const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
     const myTargetEffects = allTargetEffects.filter(te => te.target === creature.name);
+    const saveTrackingKey = FLESH_TO_STONE_PREFIX + creature.name.replace(/\s+/g, '_');
+    const fleshToStoneData = useRuntimeValue('campaign', saveTrackingKey, campaignName);
     const isMajestyActive = creature.type === 'player' && isUnbreakableMajestyActive(creature.name, campaignName);
     const majestyDc = isMajestyActive ? getUnbreakableMajestySaveDc(creature.name, campaignName) : 0;
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
@@ -202,6 +207,41 @@ function CreatureCard({
                         onRemove={() => onBreakConcentration(creature.name)}
                     />
                 ) : null}
+                {isLocalhost && (() => {
+                    if (!fleshToStoneData) return null;
+                    return (
+                        <div className="flesh-to-stone-prompt">
+                            <span className="flesh-to-stone-label">
+                                <i className="fa-solid fa-dungeon"></i> Flesh to Stone
+                            </span>
+                            <div className="flesh-to-stone-row">
+                                <span className="flesh-to-stone-progress">
+                                    Saves: {fleshToStoneData.successes}/3 | Failures: {fleshToStoneData.failures}/3
+                                </span>
+                            </div>
+                            <div className="flesh-to-stone-row flesh-to-stone-actions">
+                                <button
+                                    className="flesh-to-stone-btn success"
+                                    onClick={() => {
+                                        sendFleshToStoneResult(campaignName, creature.name, { success: true });
+                                    }}
+                                    title="Record successful save"
+                                >
+                                    <i className="fa-solid fa-check"></i> Success
+                                </button>
+                                <button
+                                    className="flesh-to-stone-btn failure"
+                                    onClick={() => {
+                                        sendFleshToStoneResult(campaignName, creature.name, { success: false });
+                                    }}
+                                    title="Record failed save"
+                                >
+                                    <i className="fa-solid fa-xmark"></i> Failure
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
                 {allCreatures?.some(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name) && (() => {
                     const markCreature = allCreatures.find(c => c.concentration?.spell === "Hunter's Mark" && c.concentration?.target === creature.name);
                     return (

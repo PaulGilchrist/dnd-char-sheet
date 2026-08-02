@@ -5,7 +5,7 @@ import utils from '../../services/ui/utils.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js'
 import storage from '../../services/ui/storage.js'
-import { clearDeathSavePrompt } from '../../services/combat/conditions/savePromptService.js'
+import { clearDeathSavePrompt, clearFleshToStonePrompt } from '../../services/combat/conditions/savePromptService.js'
 import { getMonsterImageUrl, getMonsterData } from '../../services/npcs/monsterUtils.js'
 import { getAbilityLabel, CONDITIONS } from '../../services/combat/conditions/conditionUtils.js'
 import { generateLootFromCombatSummary } from '../../services/items/lootGenerator.js'
@@ -593,6 +593,123 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         }
         window.addEventListener('death-save-result', handler)
         return () => window.removeEventListener('death-save-result', handler)
+    }, [combatSummary, campaignName])
+
+    React.useEffect(() => {
+        const handler = async (e) => {
+            const { campaignName: evtCampaign, targetName, result } = e.detail;
+            if (evtCampaign !== campaignName || !combatSummary || !result) return;
+
+            const creature = combatSummary.creatures.find(c => c.name === targetName);
+            if (!creature) return;
+
+            const saveTrackingKey = `_fleshToStone_${targetName.replace(/\s+/g, '_')}`;
+            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
+            if (!saveData) return;
+
+            const { addEntry } = await import('../../services/ui/logService.js');
+
+            if (result.success) {
+                const newSuccesses = saveData.successes + 1;
+                if (newSuccesses >= 3) {
+                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
+                    setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                    clearFleshToStonePrompt(campaignName, targetName);
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-flesh-to-stone',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: true,
+                        description: `${targetName} collected 3 successful saves against Flesh to Stone. The spell ends.`,
+                    }).catch(() => {});
+                    await addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: targetName,
+                        condition: 'Restrained',
+                        reason: 'Flesh to Stone (3 successes)',
+                        note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                } else {
+                    setRuntimeValue('campaign', saveTrackingKey, {
+                        ...saveData,
+                        successes: newSuccesses,
+                    }, campaignName);
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-flesh-to-stone',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: true,
+                        description: `${targetName} succeeded on CON save against Flesh to Stone (${newSuccesses}/3 successes needed).`,
+                    }).catch(() => {});
+                }
+            } else {
+                const newFailures = saveData.failures + 1;
+                if (newFailures >= 3) {
+                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
+                    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'petrified'], campaignName);
+                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                    clearFleshToStonePrompt(campaignName, targetName);
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-flesh-to-stone',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: false,
+                        description: `${targetName} failed 3 CON saves against Flesh to Stone and is turned to stone (Petrified).`,
+                    }).catch(() => {});
+                    await addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: targetName,
+                        condition: 'Restrained',
+                        reason: 'Flesh to Stone (3 failures)',
+                        note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                    await addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'applied',
+                        characterName: targetName,
+                        condition: 'Petrified',
+                        reason: 'Flesh to Stone',
+                        note: `${targetName} is Petrified by Flesh to Stone after failing 3 saves.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                } else {
+                    setRuntimeValue('campaign', saveTrackingKey, {
+                        ...saveData,
+                        failures: newFailures,
+                    }, campaignName);
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-flesh-to-stone',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: false,
+                        description: `${targetName} failed CON save against Flesh to Stone (${newFailures}/3 failures needed).`,
+                    }).catch(() => {});
+                }
+            }
+
+            setCombatSummary(cloneDeep(combatSummary));
+        };
+        window.addEventListener('flesh-to-stone-result', handler);
+        return () => window.removeEventListener('flesh-to-stone-result', handler);
     }, [combatSummary, campaignName])
 
      const handleCreatureHpChange = React.useCallback((creatureName, newValue) => {

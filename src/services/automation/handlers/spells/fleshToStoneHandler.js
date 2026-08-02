@@ -5,6 +5,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { sendFleshToStonePrompt } from '../../../combat/conditions/savePromptService.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -154,16 +155,28 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'restrained'], campaignName);
 
-    // Store condition metadata with DC and ability for recurring STR save
+    // Store condition metadata with DC and ability for recurring CON save
     const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
     setRuntimeValue(targetName, 'activeConditionMeta', {
         ...existingMeta,
         restrained: {
             ...(existingMeta.restrained || {}),
             dc,
-            ability: 'str',
+            ability: 'con',
         },
     }, campaignName);
+
+    // Set up recurring save tracking for end-of-turn saves
+    const saveTrackingKey = `_fleshToStone_${targetName.replace(/\s+/g, '_')}`;
+    setRuntimeValue('campaign', saveTrackingKey, {
+        successes: 0,
+        failures: 0,
+        dc,
+        casterName,
+    }, campaignName);
+
+    // Send prompt to GM to roll recurring saves
+    sendFleshToStonePrompt(campaignName, { targetName, dc, casterName });
 
     await addTargetResult(campaignName, {
         targetName,

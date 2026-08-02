@@ -1,12 +1,14 @@
 import * as concentrationRules from './concentrationRules.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue, setRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js'
 import storage from '../../../services/ui/storage.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
 import { clearExpirationEffects } from '../../rules/effects/expirations.js'
 import utils from '../../ui/utils.js'
 import { logConditionEvent } from '../../encounters/combatLoggingService.js'
+import { addEntry } from '../../ui/logService.js'
+import { clearFleshToStonePrompt } from '../conditions/savePromptService.js'
 
 function hasDragonConstellation(creature, characters) {
     if (!creature || !creature.name) return false;
@@ -235,6 +237,33 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
     }
 
     clearRayOfEnfeeblementEffects(campaignName, casterName)
+
+    // Clean up Flesh to Stone recurring save tracking when concentration breaks
+    cleanupFleshToStoneEffects(casterName, campaignName)
+}
+
+function cleanupFleshToStoneEffects(casterName, campaignName) {
+    const allKeys = getAllStoreKeys();
+    for (const key of allKeys) {
+        if (typeof key !== 'string') continue;
+        const value = getRuntimeValue('campaign', key, campaignName);
+        if (!value || !key.startsWith('_fleshToStone_')) continue;
+        if (value.casterName !== casterName) continue;
+        const targetName = key.replace('_fleshToStone_', '').replace(/_/g, ' ');
+        const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+        const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
+        if (filtered.length !== conditions.length) {
+            setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+        }
+        setRuntimeValue('campaign', key, null, campaignName);
+        clearFleshToStonePrompt(campaignName, targetName);
+    }
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: casterName,
+        abilityName: 'Flesh to Stone',
+        description: 'Concentration broken; Flesh to Stone ends.',
+    }).catch(() => {});
 }
 
 function cleanupBuffsByName(casterName, buffName, campaignName) {

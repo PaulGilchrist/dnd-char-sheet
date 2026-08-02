@@ -739,6 +739,28 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
       // Force cover badge refresh on all clients
       const refreshCount = getRuntimeValue('campaign', 'coverRefresh') || 0;
       setRuntimeValue('campaign', 'coverRefresh', refreshCount + 1, campaignName);
+
+      // Clean up Flesh to Stone recurring save tracking on rest
+      const ftsAllKeys = getAllStoreKeys();
+      for (const ftsKey of ftsAllKeys) {
+          if (typeof ftsKey !== 'string') continue;
+          const ftsValue = getRuntimeValue('campaign', ftsKey, campaignName);
+          if (!ftsValue || !ftsKey.startsWith('_fleshToStone_')) continue;
+          if (ftsValue.casterName !== characterName) continue;
+          const ftsTargetName = ftsKey.replace('_fleshToStone_', '').replace(/_/g, ' ');
+          const ftsConditions = getRuntimeValue(ftsTargetName, 'activeConditions', campaignName) || [];
+          const ftsFiltered = ftsConditions.filter(c => String(c).toLowerCase() !== 'restrained');
+          if (ftsFiltered.length !== ftsConditions.length) {
+              setRuntimeValue(ftsTargetName, 'activeConditions', ftsFiltered, campaignName);
+          }
+          setRuntimeValue('campaign', ftsKey, null, campaignName);
+      }
+      addEntry(campaignName, {
+          type: 'ability_use',
+          characterName: characterName,
+          abilityName: 'Flesh to Stone',
+          description: 'Rest; Flesh to Stone ends.',
+      }).catch(() => {});
 }
 
     export function expireStaleEffects(campaignName, overrideActiveName) {

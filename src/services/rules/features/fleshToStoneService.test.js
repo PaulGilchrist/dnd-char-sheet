@@ -42,7 +42,7 @@ describe('fleshToStoneService', () => {
                 expect(executeHandler).toHaveBeenCalledWith(
                     expect.objectContaining({
                         name: 'Flesh to Stone',
-                        automation: expect.objectContaining({ type: 'flesh_to_stone', saveDc: 15, saveType: 'CON' }),
+                        automation: expect.objectContaining({ type: 'flesh_to_stone', saveDc: 15, saveType: 'CON', saveAbility: 'CON' }),
                         spell: expect.objectContaining({ name: inputName }),
                         spellSlotLevel: 6,
                     }),

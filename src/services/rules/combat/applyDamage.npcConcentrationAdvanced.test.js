@@ -12,6 +12,7 @@ import { addEntry } from '../../ui/logService.js';
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getAllStoreKeys: vi.fn(() => []),
   getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 

@@ -73,3 +73,30 @@ export function clearConcentrationPrompt(campaignName, targetName) {
     method: 'DELETE',
   }).catch((e) => { console.error("[savePromptService] Error:", e); });
 }
+
+export function sendFleshToStonePrompt(campaignName, promptData) {
+  const key = `fleshToStonePrompt-${promptData.targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: promptData }),
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function clearFleshToStonePrompt(campaignName, targetName) {
+  const key = `fleshToStonePrompt-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'DELETE',
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function sendFleshToStoneResult(campaignName, targetName, resultData) {
+  const key = `fleshToStoneResult-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: resultData }),
+  }).then((res) => res.json()).then(() => {
+    window.dispatchEvent(new CustomEvent('flesh-to-stone-result', { detail: { campaignName, targetName, result: resultData } }));
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}

@@ -13,6 +13,7 @@ export async function triggerFleshToStone(spell, metaCtx, playerStats, campaignN
             type: 'flesh_to_stone',
             saveDc: spellSaveDc,
             saveType: 'CON',
+            saveAbility: 'CON',
         },
         spell,
         spellSlotLevel: slotLevel,
