@@ -6195,25 +6195,18 @@
       "dc_type": "DEX",
       "dc_success": "none"
     },
-    "automation": [
-      {
-        "type": "save_attack",
-        "saveType": "DEX",
-        "shape": "square",
-        "range": "60 feet",
-        "conditionInflicted": "Prone",
-        "duration": "1 minute",
-        "dcSuccess": "none"
-      },
-      {
-        "type": "grease_area_save",
-        "saveType": "DEX",
-        "shape": "square",
-        "size": "10-foot",
-        "conditionInflicted": "Prone",
-        "duration": "1 minute"
+    "automation": {
+      "type": "save_only",
+      "saveType": "DEX",
+      "effects": {
+        "fail": [
+          {
+            "type": "prone",
+            "condition": "prone"
+          }
+        ]
       }
-    ]
+    }
   },
   {
     "index": "greater-invisibility",

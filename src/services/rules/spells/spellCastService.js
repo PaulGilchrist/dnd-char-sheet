@@ -1175,6 +1175,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
             if (isConditionOnlyAoe) {
                 const conditionNames = automationEffects.fail.map(e => e.condition || e.type).filter(Boolean);
+                const includeCaster = fullSpell.name && fullSpell.name.toLowerCase() === 'grease';
                 return {
                     automationPopup: {
                         type: 'modal',
@@ -1192,6 +1193,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                             activeOverlay,
                             metamagicCareful: metaCtx?.metamagicCareful || false,
                             metamagicHeighten: hasInvisible || metaCtx?.metamagicHeighten,
+                            includeCaster,
                         },
                     },
                 };

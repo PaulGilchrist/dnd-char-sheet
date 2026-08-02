@@ -26,11 +26,13 @@ function AOEConditionModal({
 }) {
     const [resultsState, setResults] = useState([]);
     const [pendingPrompts, setPendingPrompts] = useState([]);
+    const [showResults, setShowResults] = useState(false);
 
     useEffect(() => {
         return () => {
             setResults([]);
             setPendingPrompts([]);
+            setShowResults(false);
         };
     }, []);
 
@@ -49,6 +51,7 @@ function AOEConditionModal({
         return () => {
             setResults([]);
             setPendingPrompts([]);
+            setShowResults(false);
         };
     }, []);
 
@@ -325,11 +328,11 @@ function AOEConditionModal({
         setPendingPrompts(prev => {
             const updated = prev.filter(p => p.promptId !== detail.promptId);
             if (updated.length === 0) {
-                setTimeout(() => onClose(), 500);
+                setShowResults(true);
             }
             return updated;
         });
-    }, [campaignName, saveDc, saveType, pendingPrompts, effects, conditionLabel, applyConditionsToTarget, playerStats.name, onClose]);
+    }, [campaignName, saveDc, saveType, pendingPrompts, effects, conditionLabel, applyConditionsToTarget, playerStats.name]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;
@@ -374,6 +377,7 @@ function AOEConditionModal({
         const { results: newResults, prompts } = await resolveAllSaves(selectedNames);
         setResults(newResults);
         setPendingPrompts(prompts);
+        setShowResults(true);
     }, [campaignName, playerStats.name, action.name, saveDc, saveType, resolveAllSaves]);
 
     const handleCreatureSelectionSkip = useCallback(() => {
@@ -565,20 +569,67 @@ function AOEConditionModal({
     }
 
     return (
-        <CreatureSelectionModal
-            title={action.name}
-            icon="fa-dice-d20"
-            targets={getCreatureTargets()}
-            description={`Select creatures in the area of effect. Each must make a <strong>${saveType}</strong> saving throw (DC ${saveDc}).`}
-            note={`On a failed save, target becomes <strong>${conditionLabel}</strong>.${metamagicHeighten ? ' Heightened Spell: one target will have disadvantage.' : ''}`}
-            confirmLabel={action.name}
-            confirmIcon="fa-dice-d20"
-            onConfirm={handleCreatureSelectionConfirm}
-            onSkip={handleCreatureSelectionSkip}
-            metamagicHeighten={metamagicHeighten}
-            heightenTarget={heightenTarget}
-            setHeightenTarget={setHeightenTarget}
-        />
+        <>
+            <div style={{ display: showResults ? 'none' : undefined }}>
+                <CreatureSelectionModal
+                    title={action.name}
+                    icon="fa-dice-d20"
+                    targets={getCreatureTargets()}
+                    description={`Select creatures in the area of effect. Each must make a <strong>${saveType}</strong> saving throw (DC ${saveDc}).`}
+                    note={`On a failed save, target becomes <strong>${conditionLabel}</strong>.${metamagicHeighten ? ' Heightened Spell: one target will have disadvantage.' : ''}`}
+                    confirmLabel={action.name}
+                    confirmIcon="fa-dice-d20"
+                    onConfirm={handleCreatureSelectionConfirm}
+                    onSkip={handleCreatureSelectionSkip}
+                    metamagicHeighten={metamagicHeighten}
+                    heightenTarget={heightenTarget}
+                    setHeightenTarget={setHeightenTarget}
+                />
+            </div>
+            {showResults ? (
+                <ResultsSummaryModal
+                    results={resultsState}
+                    conditionLabel={conditionLabel}
+                    onClose={onClose}
+                />
+            ) : null}
+        </>
+    );
+}
+
+function ResultsSummaryModal({ results, conditionLabel, onClose }) {
+    const handleClose = useCallback(() => {
+        onClose();
+    }, [onClose]);
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    return (
+        <div className="sp-overlay" onClick={onClose}>
+            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-header">
+                    <i className="fa-solid fa-dice-d20"></i> Save Results
+                </div>
+                <div className="sp-body">
+                    <p><strong>{successCount}</strong> target{successCount !== 1 ? 's' : ''} saved, <strong>{failCount}</strong> target{failCount !== 1 ? 's' : ''} failed.</p>
+                    <div className="abjure-results-list">
+                        {results.map(r => {
+                            const saveBonusText = r.saveBonus !== 0 ? ' +' + r.saveBonus : '';
+                            return (
+                                <div key={r.targetName} className={`abjure-result ${r.success ? 'abjure-result-success' : 'abjure-result-fail'}`}>
+                                    <strong>{r.targetName}</strong>: {r.success
+                                        ? 'Saved — unaffected (rolled ' + (r.roll ?? 0) + saveBonusText + ' = ' + r.total + ')'
+                                        : 'Failed — ' + conditionLabel + '! (rolled ' + (r.roll ?? 0) + saveBonusText + ' = ' + r.total + ')'}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className="sp-actions">
+                    <button className="sp-dismiss-btn" onClick={handleClose} type="button">Close</button>
+                </div>
+            </div>
+        </div>
     );
 }
 

@@ -30,6 +30,7 @@ function AreaEffectTargetModalBase({
   widthFt,
   attackerGridX,
   attackerGridY,
+  includeCaster = false,
 }) {
   const [selected, setSelected] = useState(new Set());
   const [processing, setProcessing] = useState(false);
@@ -39,7 +40,7 @@ function AreaEffectTargetModalBase({
   const eligibleTargets = useMemo(() => {
     if (!combatSummary?.creatures) return [];
     return combatSummary.creatures.filter(c => {
-      if (c.name === attackerName) return false;
+      if (!includeCaster && c.name === attackerName) return false;
       if (turnUndead) {
         const monster = Array.isArray(monsters) ? monsters.find(m => m.name === c.name) : undefined;
         if (!monster || monster.type.toLowerCase() !== 'undead') return false;
@@ -61,7 +62,7 @@ function AreaEffectTargetModalBase({
       
       return isDistanceInRange(getDistanceFeet(attackerPos, { gridX: targetPos.gridX, gridY: targetPos.gridY }), rangeFeet);
     });
-  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY]);
+  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY, includeCaster]);
 
   const toggleTarget = useCallback((name) => {
     setSelected(prev => {

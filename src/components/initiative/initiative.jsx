@@ -607,8 +607,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
             if (!saveData) return;
 
-            const { addEntry } = await import('../../services/ui/logService.js');
-
             if (result.success) {
                 const newSuccesses = saveData.successes + 1;
                 if (newSuccesses >= 3) {
@@ -620,7 +618,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
                     clearFleshToStonePrompt(campaignName, targetName);
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'save_result',
                         characterName: saveData.casterName,
                         rollType: 'save-flesh-to-stone',
@@ -630,7 +628,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         success: true,
                         description: `${targetName} collected 3 successful saves against Flesh to Stone. The spell ends.`,
                     }).catch(() => {});
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
                         characterName: targetName,
@@ -644,7 +642,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         ...saveData,
                         successes: newSuccesses,
                     }, campaignName);
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'save_result',
                         characterName: saveData.casterName,
                         rollType: 'save-flesh-to-stone',
@@ -666,7 +664,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
                     clearFleshToStonePrompt(campaignName, targetName);
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'save_result',
                         characterName: saveData.casterName,
                         rollType: 'save-flesh-to-stone',
@@ -676,7 +674,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         success: false,
                         description: `${targetName} failed 3 CON saves against Flesh to Stone and is turned to stone (Petrified).`,
                     }).catch(() => {});
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'removed',
                         characterName: targetName,
@@ -685,7 +683,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
                         timestamp: Date.now(),
                     }).catch(() => {});
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'condition',
                         action: 'applied',
                         characterName: targetName,
@@ -699,7 +697,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         ...saveData,
                         failures: newFailures,
                     }, campaignName);
-                    await addEntry(campaignName, {
+                    await logService.addEntry(campaignName, {
                         type: 'save_result',
                         characterName: saveData.casterName,
                         rollType: 'save-flesh-to-stone',
