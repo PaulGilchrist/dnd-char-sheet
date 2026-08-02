@@ -72,15 +72,6 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
         let sunderingBonus = 0;
         if (forcedMode === undefined) {
             const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const goadEffect = storedEffects.find(
-                te => te.effect === 'goad' && te.target === playerName
-            );
-            if (goadEffect) {
-                dis++;
-            }
-        }
-        if (forcedMode === undefined) {
-            const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const sapEffect = storedEffects.find(
                 te => te.effect === 'disadvantage_next_attack' && te.target === playerName
             );

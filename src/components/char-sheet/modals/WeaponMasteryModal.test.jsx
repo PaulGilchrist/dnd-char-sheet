@@ -7,9 +7,9 @@ vi.mock('../../../services/automation/handlers/combat/weaponMasteryHandler.js', 
   MASTERY_EFFECTS: {
     Push: { label: 'Push (10 ft)', description: 'Push the creature up to 10 feet straight away from you.', effect: 'push', value: 10 },
     Topple: { label: 'Topple (Prone)', description: 'Force the creature to make a Constitution saving throw or fall Prone.', effect: 'topple', requiresSave: true, saveAbility: 'CON' },
-    Sap: { label: 'Sap (Disadvantage)', description: 'The creature has Disadvantage on its next attack roll.', effect: 'disadvantage_next_attack' },
-    Slow: { label: 'Slow (Speed -10 ft)', description: 'Reduce the creature\'s Speed by 10 feet.', effect: 'speed_reduction', value: 10 },
-    Vex: { label: 'Vex (Advantage)', description: 'You have Advantage on your next attack roll.', effect: 'next_attack_advantage', value: 5 },
+    Sap: { label: 'Disadvantage on Next Attack', description: 'The creature has Disadvantage on its next attack roll.', effect: 'disadvantage_next_attack' },
+    Slow: { label: 'Speed -10 ft', description: 'Reduce the creature\'s Speed by 10 feet.', effect: 'speed_reduction', value: 10 },
+    Vex: { label: 'Advantage on Next Attack', description: 'You have Advantage on your next attack roll.', effect: 'next_attack_advantage', value: 5 },
     Cleave: { label: 'Cleave (Extra Attack)', description: 'Make a melee attack roll with the weapon against a second creature.', effect: 'cleave' },
     Nick: { label: 'Nick (Extra Attack)', description: 'Make the extra attack of the Light property.', effect: 'nick' },
     Graze: { label: 'Graze (Miss Damage)', description: 'If your attack roll misses, deal damage equal to your ability modifier.', effect: 'graze' },
@@ -93,7 +93,7 @@ describe('WeaponMasteryModal', () => {
 
     it('renders the base mastery label', () => {
       renderModal();
-      expect(screen.getByText(/Vex \(Advantage\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Advantage on Next Attack/)).toBeInTheDocument();
     });
 
     it('renders extra masteries from the extraMasteries prop', () => {
@@ -109,7 +109,7 @@ describe('WeaponMasteryModal', () => {
       props.extraMasteries = ['Vex', 'Push'];
       render(<WeaponMasteryModal {...props} />);
       const labels = document.querySelectorAll('label');
-      const vexLabels = Array.from(labels).filter(l => l.textContent.includes('Vex'));
+      const vexLabels = Array.from(labels).filter(l => l.textContent.includes('Vex') || l.textContent.includes('Advantage on Next Attack'));
       expect(vexLabels).toHaveLength(1);
     });
 
@@ -123,7 +123,7 @@ describe('WeaponMasteryModal', () => {
       props.extraMasteries = [];
       render(<WeaponMasteryModal {...props} />);
       const labels = document.querySelectorAll('label');
-      const vexLabel = Array.from(labels).find(l => l.textContent.includes('Vex'));
+      const vexLabel = Array.from(labels).find(l => l.textContent.includes('Vex') || l.textContent.includes('Advantage on Next Attack'));
       expect(vexLabel.querySelector('.automation-badge')).not.toBeInTheDocument();
     });
 

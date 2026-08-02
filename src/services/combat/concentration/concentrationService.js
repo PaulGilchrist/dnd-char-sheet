@@ -255,6 +255,9 @@ function cleanupFleshToStoneEffects(casterName, campaignName) {
         if (filtered.length !== conditions.length) {
             setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
         }
+        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'flesh_to_stone' && te.source === casterName));
+        setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
         setRuntimeValue('campaign', key, null, campaignName);
         clearFleshToStonePrompt(campaignName, targetName);
     }

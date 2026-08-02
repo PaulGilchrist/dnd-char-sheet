@@ -615,6 +615,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
                     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
                     setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'flesh_to_stone' && te.source === saveData.casterName));
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
                     clearFleshToStonePrompt(campaignName, targetName);
                     await addEntry(campaignName, {
@@ -658,6 +661,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
                     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
                     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'petrified'], campaignName);
+                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'flesh_to_stone' && te.source === saveData.casterName));
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
                     setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
                     clearFleshToStonePrompt(campaignName, targetName);
                     await addEntry(campaignName, {

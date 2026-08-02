@@ -166,6 +166,24 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         },
     }, campaignName);
 
+    // Register flesh_to_stone targetEffect
+    const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
+    const existingIndex = allTargetEffects.findIndex(
+        te => te.target === targetName && te.effect === 'flesh_to_stone' && te.source === casterName
+    );
+    const fleshEffect = {
+        target: targetName,
+        effect: 'flesh_to_stone',
+        source: casterName,
+        dc,
+    };
+    if (existingIndex >= 0) {
+        allTargetEffects[existingIndex] = fleshEffect;
+    } else {
+        allTargetEffects.push(fleshEffect);
+    }
+    setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
+
     // Set up recurring save tracking for end-of-turn saves
     const saveTrackingKey = `_fleshToStone_${targetName.replace(/\s+/g, '_')}`;
     setRuntimeValue('campaign', saveTrackingKey, {

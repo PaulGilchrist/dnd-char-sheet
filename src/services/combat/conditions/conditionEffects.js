@@ -604,7 +604,7 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
         effects.vexAdvantageTargets = [...(effects.vexAdvantageTargets || []), te.vexTarget];
       } else {
         effects.attackAdvantageCount = (effects.attackAdvantageCount || 0) + 1;
-        effects.attackAdvantageReasons.push(te.source || 'next_attack_advantage');
+        effects.attackAdvantageReasons.push(te.source || 'Next Attack Advantage');
       }
     }
     if (te.effect === 'next_attack_bonus') {
@@ -612,19 +612,16 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     }
     if (te.effect === 'distracting_strike_advantage') {
       effects.targetAdvantageCount = (effects.targetAdvantageCount || 0) + 1;
-      effects.targetAdvantageReasons.push(te.source || 'Distracting Strike');
+      effects.targetAdvantageReasons.push(te.source || 'Next Attack Adv vs Target');
     }
     if (te.effect === 'crusher_enhanced_critical') {
       effects.targetAdvantageCount = (effects.targetAdvantageCount || 0) + 1;
-      effects.targetAdvantageReasons.push(te.source || 'Crusher');
-    }
-    if (te.effect === 'disadvantage_next_attack') {
-      effects.attackDisadvantageCount = (effects.attackDisadvantageCount || 0) + 1;
+      effects.targetAdvantageReasons.push(te.source || 'Attack Adv');
     }
     if (te.effect === 'slasher_enhanced_critical') {
       effects.targetAttackDisadvantageCount = (effects.targetAttackDisadvantageCount || 0) + 1;
     }
-    if (te.effect === 'goad') {
+    if (te.effect === 'disadvantage_next_attack') {
       effects.attackDisadvantageCount = (effects.attackDisadvantageCount || 0) + 1;
     }
     if (te.effect === 'reckless_attack') {

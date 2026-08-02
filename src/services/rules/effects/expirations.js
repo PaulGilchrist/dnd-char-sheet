@@ -751,9 +751,12 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
           const ftsConditions = getRuntimeValue(ftsTargetName, 'activeConditions', campaignName) || [];
           const ftsFiltered = ftsConditions.filter(c => String(c).toLowerCase() !== 'restrained');
           if (ftsFiltered.length !== ftsConditions.length) {
-              setRuntimeValue(ftsTargetName, 'activeConditions', ftsFiltered, campaignName);
-          }
-          setRuntimeValue('campaign', ftsKey, null, campaignName);
+               setRuntimeValue(ftsTargetName, 'activeConditions', ftsFiltered, campaignName);
+           }
+           const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+           const ftsCleanedEffects = allTargetEffects.filter(te => !(te.target === ftsTargetName && te.effect === 'flesh_to_stone' && te.source === characterName));
+           setRuntimeValue('campaign', 'targetEffects', ftsCleanedEffects, campaignName);
+           setRuntimeValue('campaign', ftsKey, null, campaignName);
       }
       addEntry(campaignName, {
           type: 'ability_use',

@@ -7,9 +7,9 @@ vi.mock('../../../services/automation/handlers/combat/weaponMasteryHandler.js', 
   MASTERY_EFFECTS: {
     Push: { label: 'Push (10 ft)', description: 'Push the creature up to 10 feet straight away from you if it is Large or smaller.', effect: 'push', value: 10, sizeLimit: 'large_or_smaller' },
     Topple: { label: 'Topple (Prone)', description: 'Force the creature to make a Constitution saving throw or fall Prone.', effect: 'topple', requiresSave: true, saveAbility: 'CON' },
-    Sap: { label: 'Sap (Disadvantage)', description: 'The creature has Disadvantage on its next attack roll before the start of your next turn.', effect: 'disadvantage_next_attack' },
-    Slow: { label: 'Slow (Speed -10 ft)', description: "Reduce the creature's Speed by 10 feet until the start of your next turn.", effect: 'speed_reduction', value: 10 },
-    Vex: { label: 'Vex (Advantage)', description: 'You have Advantage on your next attack roll against that creature before the end of your next turn.', effect: 'next_attack_advantage', value: 5, perTarget: true },
+    Sap: { label: 'Disadvantage on Next Attack', description: 'The creature has Disadvantage on its next attack roll before the start of your next turn.', effect: 'disadvantage_next_attack' },
+    Slow: { label: 'Speed -10 ft', description: "Reduce the creature's Speed by 10 feet until the start of your next turn.", effect: 'speed_reduction', value: 10 },
+    Vex: { label: 'Advantage on Next Attack', description: 'You have Advantage on your next attack roll against that creature before the end of your next turn.', effect: 'next_attack_advantage', value: 5, perTarget: true },
     Cleave: { label: 'Cleave (Extra Attack)', description: 'Make a melee attack roll with the weapon against a second creature within 5 feet of the first.', effect: 'cleave', oncePerTurn: true },
     Nick: { label: 'Nick (Extra Attack)', description: 'Make the extra attack of the Light property as part of the Attack action instead of as a Bonus Action.', effect: 'nick', oncePerTurn: true },
     Graze: { label: 'Graze (Miss Damage)', description: 'If your attack roll misses, deal damage equal to your ability modifier.', effect: 'graze' },
@@ -111,7 +111,7 @@ describe('TacticalMasterModal - mastery options', () => {
 
   it('renders the base mastery label with its MASTERY_EFFECTS label', () => {
     renderModal();
-    expect(screen.getByText(/Vex \(Advantage\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Advantage on Next Attack/)).toBeInTheDocument();
   });
 
   it('renders replace options from the replaceOptions prop', () => {
@@ -127,7 +127,7 @@ describe('TacticalMasterModal - mastery options', () => {
     const radios = document.querySelectorAll('input[name="tacticalMasterOption"]');
     const vexLabels = Array.from(radios).filter((_, i) => {
       const label = radios[i].closest('label');
-      return label.textContent.includes('Vex');
+      return label.textContent.includes('Vex') || label.textContent.includes('Advantage on Next Attack');
     });
     expect(vexLabels).toHaveLength(1);
   });
@@ -156,7 +156,7 @@ describe('TacticalMasterModal - mastery options', () => {
     props.replaceOptions = [];
     render(<TacticalMasterModal {...props} />);
     const labels = document.querySelectorAll('label');
-    const vexLabel = Array.from(labels).find(l => l.textContent.includes('Vex'));
+    const vexLabel = Array.from(labels).find(l => l.textContent.includes('Vex') || l.textContent.includes('Advantage on Next Attack'));
     expect(vexLabel.querySelector('.automation-badge')).not.toBeInTheDocument();
   });
 
@@ -193,7 +193,7 @@ describe('TacticalMasterModal - mastery options', () => {
     renderModal();
     await waitFor(() => {
       const bodyDiv = document.querySelector('.sp-body');
-      expect(bodyDiv.textContent).toContain('Vex (Advantage)');
+      expect(bodyDiv.textContent).toContain('Advantage on Next Attack');
     });
   });
 });
@@ -397,9 +397,9 @@ describe('TacticalMasterModal - all mastery effects', () => {
     render(<TacticalMasterModal {...props} />);
     expect(screen.getByText(/Push \(10 ft\)/)).toBeInTheDocument();
     expect(screen.getByText(/Topple \(Prone\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Sap \(Disadvantage\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Slow \(Speed -10 ft\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Vex \(Advantage\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Disadvantage on Next Attack/)).toBeInTheDocument();
+    expect(screen.getByText(/Speed -10 ft/)).toBeInTheDocument();
+    expect(screen.getByText(/Advantage on Next Attack/)).toBeInTheDocument();
     expect(screen.getByText(/Cleave \(Extra Attack\)/)).toBeInTheDocument();
     expect(screen.getByText(/Nick \(Extra Attack\)/)).toBeInTheDocument();
   });
@@ -424,7 +424,7 @@ describe('TacticalMasterModal - all mastery effects', () => {
 describe('TacticalMasterModal - effect label fallback', () => {
   it('uses MASTERY_EFFECTS label when available', () => {
     renderModal();
-    expect(screen.getByText(/Vex \(Advantage\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Advantage on Next Attack/)).toBeInTheDocument();
   });
 
   it('falls back to mastery name when MASTERY_EFFECTS has no label entry', () => {

@@ -14,18 +14,18 @@ const MASTERY_EFFECTS = {
         saveAbility: 'CON',
     },
     Sap: {
-        label: 'Sap (Disadvantage)',
+        label: 'Disadvantage on Next Attack',
         description: 'The creature has Disadvantage on its next attack roll before the start of your next turn.',
         effect: 'disadvantage_next_attack',
     },
     Slow: {
-        label: 'Slow (Speed -10 ft)',
+        label: 'Speed -10 ft',
         description: 'Reduce the creature\'s Speed by 10 feet until the start of your next turn.',
         effect: 'speed_reduction',
         value: 10,
     },
     Vex: {
-        label: 'Vex (Advantage)',
+        label: 'Advantage on Next Attack',
         description: 'You have Advantage on your next attack roll against that creature before the end of your next turn.',
         effect: 'next_attack_advantage',
         value: 5,

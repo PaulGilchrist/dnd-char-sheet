@@ -390,16 +390,7 @@ describe('contextBuilder: buildAttackContextSync', () => {
   });
 
   describe('goad and sap effects', () => {
-    it('sets forcedMode to disadvantage when goad or sap effect targets attacker', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'goad', target: 'Fighter1' }];
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-      expect(result.forcedMode).toBe('disadvantage');
-
+    it('sets forcedMode to disadvantage when sap effect targets attacker', async () => {
       getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'disadvantage_next_attack', target: 'Fighter1' }];
         if (key === 'activeBuffs') return [];
@@ -409,18 +400,6 @@ describe('contextBuilder: buildAttackContextSync', () => {
       const sapResult = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
       expect(sapResult.forcedMode).toBe('disadvantage');
     });
-
-    it('does not set disadvantage when goad/sap targets another creature', async () => {
-      getRuntimeValue.mockImplementation((name, key) => {
-        if (name === 'campaign' && key === 'targetEffects') return [{ effect: 'goad', target: 'Other' }];
-        if (key === 'activeBuffs') return [];
-        return undefined;
-      });
-
-      const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
-      expect(result.forcedMode).toBeUndefined();
-    });
-
 
   });
 

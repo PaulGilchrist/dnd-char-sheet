@@ -697,11 +697,6 @@ describe('computeConditionEffects — targetEffects', () => {
     expect(result.attackDisadvantageCount).toBe(1);
   });
 
-  it('increments attackDisadvantageCount for goad', () => {
-    const result = computeConditionEffects([], [], [{ effect: 'goad' }]);
-    expect(result.attackDisadvantageCount).toBe(1);
-  });
-
   it('sets attacksOtherDisadvantageSource for compelled_duel', () => {
     const result = computeConditionEffects([], [], [{ effect: 'compelled_duel', source: 'Paladin' }]);
     expect(result.attacksOtherDisadvantageSource).toBe('Paladin');

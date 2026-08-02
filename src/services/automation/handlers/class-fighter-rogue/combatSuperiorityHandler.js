@@ -620,7 +620,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
-                    effect: 'goad',
+                    effect: 'taunting_step',
                     duration: 'until_end_of_user_next_turn',
                 };
                 const updatedEffects = [...storedEffects, newEffect];
@@ -1745,7 +1745,7 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
                 const newEffect = {
                     target: targetName,
                     source: playerStats.name,
-                    effect: 'goad',
+                    effect: 'taunting_step',
                     duration: 'until_end_of_user_next_turn',
                 };
                 const updatedEffects = [...storedEffects, newEffect];
