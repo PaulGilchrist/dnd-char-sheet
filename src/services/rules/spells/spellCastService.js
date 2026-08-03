@@ -8,6 +8,7 @@ import { triggerInspiringSmite } from '../features/inspiringSmiteService.js';
 import { triggerPrimalCompanionSpellShare } from '../features/primalCompanionSpellShareService.js';
 import { triggerWildMagicSurge } from '../features/wildMagicSurgeService.js';
 import { setRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { endSanctuary } from '../../automation/handlers/spells/sanctuaryHandler.js';
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { addEntry } from '../../ui/logService.js';
@@ -1439,8 +1440,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         for (const se of sanctuaryEffects) {
             const wardedCreature = characters?.find(c => c.name === se.target);
             if (wardedCreature) {
-                const { endSanctuary: endSanctuaryFn } = await import('../../automation/handlers/spells/sanctuaryHandler.js');
-                endSanctuaryFn(playerStats.name, se.target, campaignName,
+                endSanctuary(playerStats.name, se.target, campaignName,
                     `${se.target} cast a spell, ending Sanctuary.`);
             }
         }

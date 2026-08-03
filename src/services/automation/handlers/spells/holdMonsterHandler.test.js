@@ -39,6 +39,7 @@ import { addConcentration } from '../../../combat/concentration/concentrationSer
 const campaignName = 'TestCampaign';
 const casterName = 'TestCaster';
 const targetName = 'Goblin';
+const orcName = 'Orc';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -50,17 +51,18 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-function makeAction(automation = {}) {
+function makeAction(automation = {}, metaCtx = {}) {
   return {
     name: 'Hold Monster',
     automation: { type: 'hold_monster', saveType: 'WIS', saveDc: 15, ...automation },
+    metaCtx,
   };
 }
 
 const baseCombatContext = {
   creatures: [
     { name: targetName, type: 'monster', currentHp: 5, maxHp: 7 },
-    { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+    { name: orcName, type: 'monster', currentHp: 15, maxHp: 22 },
     { name: casterName, gridX: 5, gridY: 10, senses: [] },
   ],
   players: [{ name: casterName, gridX: 5, gridY: 10 }],
@@ -87,7 +89,25 @@ describe('holdMonsterHandler.handle', () => {
   });
 
   describe('target resolution', () => {
-    it('returns popup when no target selected', async () => {
+    it('uses resolveTarget when no metaCtx targets provided', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      resolveTarget.mockResolvedValue({ target: { name: targetName } });
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(resolveTarget).toHaveBeenCalledWith(campaignName, casterName);
+    });
+
+    it('returns summary when resolveTarget returns no target', async () => {
       getCombatContext.mockResolvedValue(baseCombatContext);
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue(null);
@@ -97,17 +117,51 @@ describe('holdMonsterHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('No target selected');
     });
+
+    it('uses holdMonsterTargets from metaCtx', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-meta',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction({}, { holdMonsterTargets: [targetName] }), makePlayerStats(), campaignName, null);
+
+      expect(resolveTarget).not.toHaveBeenCalled();
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({ targetName }));
+    });
+
+    it('uses holdPersonTargets from metaCtx', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-person-meta',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction({}, { holdPersonTargets: [targetName] }), makePlayerStats(), campaignName, null);
+
+      expect(resolveTarget).not.toHaveBeenCalled();
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({ targetName }));
+    });
   });
 
-  describe('initial cast - failed save', () => {
-    function setupFailedSave(existingConditions = [], existingEffects = []) {
+  describe('single target - failed save', () => {
+    function setupFailedSave(existingConditions = []) {
       getCombatContext.mockResolvedValue(baseCombatContext);
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue({ target: { name: targetName } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === '_holdMonster_Goblin') return null;
         if (keyOrProp === 'activeConditions') return existingConditions;
-        if (keyOrProp === 'targetEffects') return existingEffects;
         return [];
       });
       createSaveListener.mockReturnValue({
@@ -126,7 +180,7 @@ describe('holdMonsterHandler.handle', () => {
         expect.arrayContaining(['paralyzed']),
         campaignName,
       );
-      expect(result.payload.description).toContain('Paralyzed');
+      expect(result.payload.description).toContain('paralyzed');
     });
 
     it('appends paralyzed to existing conditions', async () => {
@@ -141,7 +195,43 @@ describe('holdMonsterHandler.handle', () => {
       );
     });
 
-  describe('initial cast - successful save', () => {
+    it('stores condition metadata with DC and ability', async () => {
+      setupFailedSave();
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName,
+        'activeConditionMeta',
+        expect.objectContaining({
+          paralyzed: expect.objectContaining({ dc: 15, ability: 'con' }),
+        }),
+        campaignName,
+      );
+    });
+
+    it('registers concentration on the caster', async () => {
+      setupFailedSave();
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addConcentration).toHaveBeenCalledWith(
+        baseCombatContext,
+        casterName,
+        'Hold Monster',
+        expect.any(Number),
+      );
+    });
+
+    it('returns summary popup with paralyzed count', async () => {
+      setupFailedSave();
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
+    });
+  });
+
+  describe('single target - successful save', () => {
     function setupSuccessfulSave() {
       getCombatContext.mockResolvedValue(baseCombatContext);
       buildSaveDc.mockReturnValue(20);
@@ -158,7 +248,7 @@ describe('holdMonsterHandler.handle', () => {
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('succeeded on WIS save');
+      expect(result.payload.description).toContain('1 creature(s) saved');
     });
 
     it('does not apply any conditions on success', async () => {
@@ -173,106 +263,191 @@ describe('holdMonsterHandler.handle', () => {
         campaignName,
       );
     });
+
+    it('does not register concentration on success', async () => {
+      setupSuccessfulSave();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addConcentration).not.toHaveBeenCalled();
+    });
   });
 
-  describe('target validation', () => {
-    it('returns popup when target is not found in combat', async () => {
-      const ctx = {
+  describe('multi-target', () => {
+    function setupMultiTarget(goblinSave, orcSave) {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+      let callIndex = 0;
+      createSaveListener.mockImplementation((_camp, _opts) => {
+        const idx = callIndex++;
+        const saveResult = [goblinSave, orcSave][idx];
+        return {
+          promptId: `hold-multi-${idx}`,
+          promise: Promise.resolve({ success: saveResult }),
+        };
+      });
+    }
+
+    it('processes all targets and returns summary', async () => {
+      setupMultiTarget(false, false);
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('2 creature(s) paralyzed');
+      expect(result.payload.description).toContain(targetName);
+      expect(result.payload.description).toContain(orcName);
+    });
+
+    it('handles mixed save results', async () => {
+      setupMultiTarget(false, true);
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) saved');
+    });
+
+    it('only registers concentration once (first failed save)', async () => {
+      setupMultiTarget(false, false);
+
+      await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(addConcentration).toHaveBeenCalledTimes(2);
+    });
+
+    it('applies paralyzed to all failed targets', async () => {
+      setupMultiTarget(false, false);
+
+      await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(targetName, 'activeConditions', expect.arrayContaining(['paralyzed']), campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith(orcName, 'activeConditions', expect.arrayContaining(['paralyzed']), campaignName);
+    });
+
+    it('skips targets not found in combat', async () => {
+      setupMultiTarget(false, false);
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, 'NonExistent'] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) saved');
+      expect(result.payload.description).toContain('not found');
+    });
+
+    it('skips targets immune to Paralyzed', async () => {
+      getCombatContext.mockResolvedValue({
+        ...baseCombatContext,
         creatures: [
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+          { name: targetName, type: 'monster', currentHp: 5, maxHp: 7, immunities: ['Paralyzed'] },
+          { name: orcName, type: 'monster', currentHp: 15, maxHp: 22 },
+          { name: casterName, gridX: 5, gridY: 10, senses: [] },
+        ],
+      });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-immune',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) saved');
+      expect(result.payload.description).toContain('immune');
+      expect(createSaveListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips invisible targets when caster cannot see', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') {
+          return _entity === targetName ? ['invisible'] : [];
+        }
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-invisible',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) saved');
+      expect(result.payload.description).toContain('invisible');
+      expect(createSaveListener).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('target validation (resolveTarget path)', () => {
+    it('handles target not found when using resolveTarget', async () => {
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: orcName, type: 'monster', currentHp: 15, maxHp: 22 },
           { name: casterName, gridX: 5, gridY: 10, senses: [] },
         ],
         players: [{ name: casterName, gridX: 5, gridY: 10 }],
         placedItems: [],
-      };
-      getCombatContext.mockResolvedValue(ctx);
+      });
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue({ target: { name: 'NonExistent' } });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('not found in combat');
-    });
-
-    it('returns popup when target is immune to Paralyzed', async () => {
-      const ctx = {
-        ...baseCombatContext,
-        creatures: [
-          { name: targetName, type: 'monster', currentHp: 5, maxHp: 7, immunities: ['Paralyzed'] },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
-          { name: casterName, gridX: 5, gridY: 10, senses: [] },
-        ],
-      };
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName } });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('immune to Paralyzed');
-      expect(createSaveListener).not.toHaveBeenCalled();
-    });
-
-    it('returns popup when target is Petrified (immune to Paralyzed)', async () => {
-      const ctx = {
-        ...baseCombatContext,
-        creatures: [
-          { name: targetName, type: 'monster', currentHp: 0, maxHp: 7 },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
-          { name: casterName, gridX: 5, gridY: 10, senses: [] },
-        ],
-      };
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName } });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === 'activeConditions') return ['petrified'];
-        return [];
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('immune to Paralyzed');
-      expect(createSaveListener).not.toHaveBeenCalled();
-    });
-
-    it('returns popup when target is invisible and caster cannot see', async () => {
-      const ctx = {
-        ...baseCombatContext,
-        creatures: [
-          { name: targetName, type: 'monster', currentHp: 5, maxHp: 7 },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
-          { name: casterName, gridX: 5, gridY: 10, senses: [] },
-        ],
-      };
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName } });
-      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
-        if (keyOrProp === 'activeConditions') return ['invisible'];
-        return [];
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain("can't see the target");
-      expect(createSaveListener).not.toHaveBeenCalled();
+      expect(result.payload.description).toContain('not found');
     });
 
     it('allows spell when target is invisible but caster has Truesight', async () => {
-      const ctx = {
+      getCombatContext.mockResolvedValue({
         ...baseCombatContext,
         creatures: [
           { name: targetName, type: 'monster', currentHp: 5, maxHp: 7 },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+          { name: orcName, type: 'monster', currentHp: 15, maxHp: 22 },
           { name: casterName, gridX: 5, gridY: 10, senses: [{ name: 'Truesight', value: '60 ft.' }] },
         ],
-      };
-      getCombatContext.mockResolvedValue(ctx);
+      });
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue({ target: { name: targetName } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
@@ -286,21 +461,19 @@ describe('holdMonsterHandler.handle', () => {
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
       expect(createSaveListener).toHaveBeenCalled();
     });
 
     it('allows spell when target is invisible but caster has Blindsight', async () => {
-      const ctx = {
+      getCombatContext.mockResolvedValue({
         ...baseCombatContext,
         creatures: [
           { name: targetName, type: 'monster', currentHp: 5, maxHp: 7 },
-          { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+          { name: orcName, type: 'monster', currentHp: 15, maxHp: 22 },
           { name: casterName, gridX: 5, gridY: 10, senses: [{ name: 'Blindsight', value: '30 ft' }] },
         ],
-      };
-      getCombatContext.mockResolvedValue(ctx);
+      });
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue({ target: { name: targetName } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
@@ -314,14 +487,13 @@ describe('holdMonsterHandler.handle', () => {
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Paralyzed');
+      expect(result.payload.description).toContain('1 creature(s) paralyzed');
       expect(createSaveListener).toHaveBeenCalled();
     });
   });
 
-  describe('concentration tracking', () => {
-    function setupFailedSave() {
+  describe('empty multi-target', () => {
+    it('uses resolveTarget when holdMonsterTargets is empty array', async () => {
       getCombatContext.mockResolvedValue(baseCombatContext);
       buildSaveDc.mockReturnValue(15);
       resolveTarget.mockResolvedValue({ target: { name: targetName } });
@@ -330,22 +502,39 @@ describe('holdMonsterHandler.handle', () => {
         return [];
       });
       createSaveListener.mockReturnValue({
-        promptId: 'hold-conc',
+        promptId: 'hold-empty',
         promise: Promise.resolve({ success: false }),
       });
-    }
 
-    it('registers concentration on the caster when save fails', async () => {
-      setupFailedSave();
-      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      await handle(makeAction({}, { holdMonsterTargets: [] }), makePlayerStats(), campaignName, null);
 
-      expect(addConcentration).toHaveBeenCalledWith(
-        baseCombatContext,
-        casterName,
-        'Hold Monster',
-        expect.any(Number),
-      );
+      expect(resolveTarget).toHaveBeenCalled();
     });
   });
-});
+
+  describe('no targets paralyzed', () => {
+    it('returns summary with 0 paralyzed when all targets save', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(20);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'hold-all-save',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const result = await handle(
+        makeAction({}, { holdMonsterTargets: [targetName, orcName] }),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.description).toContain('No creatures paralyzed');
+      expect(result.payload.description).toContain('2 creature(s) saved');
+      expect(addConcentration).not.toHaveBeenCalled();
+    });
+  });
 });

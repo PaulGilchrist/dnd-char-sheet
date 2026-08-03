@@ -18,6 +18,7 @@ export async function triggerHoldMonster(spell, metaCtx, playerStats, campaignNa
         },
         spell,
         spellSlotLevel: slotLevel,
+        metaCtx,
     };
 
     try {

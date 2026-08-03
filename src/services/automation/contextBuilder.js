@@ -13,6 +13,8 @@ import { getDuplicityAdvantageAgainst } from '../combat/auras/duplicityAuraUtils
 import { getLionDisadvantageAgainst } from '../combat/auras/lionAuraUtils.js';
 import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { hasAuraOfProtection } from '../combat/auras/auraOfProtection.js';
+import { endSanctuary } from './handlers/spells/sanctuaryHandler.js';
+import { sendSavePrompt } from '../combat/conditions/savePromptService.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
@@ -33,7 +35,6 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
         );
         if (sanctuaryEffects.length > 0) {
             for (const se of sanctuaryEffects) {
-                const { endSanctuary } = await import('./handlers/spells/sanctuaryHandler.js');
                 endSanctuary(playerName, se.target, campaignName,
                     `${playerName} made an attack roll, ending Sanctuary.`);
             }
@@ -1017,10 +1018,9 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                      const casterStats = (await getCombatContext(campaignName))?.creatures?.find(c => c.name === sanctuaryCaster);
                      const sanctuaryDc = casterStats?.automation?.saveModifiers?.[0]?.saveDc || 8;
                      const spellSaveDc = casterStats?.spellAbilities?.saveDc || sanctuaryDc;
-                     const finalDc = spellSaveDc > sanctuaryDc ? spellSaveDc : sanctuaryDc;
+                      const finalDc = spellSaveDc > sanctuaryDc ? spellSaveDc : sanctuaryDc;
 
-                     const { sendSavePrompt } = await import('../combat/conditions/savePromptService.js');
-                     const promptId = utils.guid();
+                      const promptId = utils.guid();
                      const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
                      pendingSaves[promptId] = {
                          promptId,

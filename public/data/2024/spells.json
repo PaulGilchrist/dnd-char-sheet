@@ -7064,6 +7064,13 @@
       "type": "hold_monster",
       "saveType": "WIS",
       "duration": "Concentration, up to 1 minute"
+    },
+    "upcast_at_slot_level": {
+      "5": "1 target",
+      "6": "2 targets",
+      "7": "3 targets",
+      "8": "4 targets",
+      "9": "5 targets"
     }
   },
   {
@@ -7108,6 +7115,16 @@
       "type": "hold_monster",
       "saveType": "WIS",
       "duration": "Concentration, up to 1 minute"
+    },
+    "upcast_at_slot_level": {
+      "2": "1 target",
+      "3": "2 targets",
+      "4": "3 targets",
+      "5": "4 targets",
+      "6": "5 targets",
+      "7": "6 targets",
+      "8": "7 targets",
+      "9": "8 targets"
     }
   },
   {

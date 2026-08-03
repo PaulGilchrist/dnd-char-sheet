@@ -77,11 +77,14 @@ export function useConfirmableFlow(playerStats, campaignName) {
       const isCantrip = (pending.spell?.level === 0);
       if (!isCantrip && pending.spell) {
         const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName);
+        const upcastLevel = pending.spell.upcastLevel;
+        const isUpcast = upcastLevel != null && upcastLevel !== pending.spell.level;
         await prepareSpellCast(pending.spell, {}, {
           playerName: playerStats.name,
           playerStats,
           campaignName,
-          isUpcast: false,
+          isUpcast,
+          upcastLevel,
           freeCastAuthorized,
         });
       }
