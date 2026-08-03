@@ -19,6 +19,7 @@ export async function triggerImprisonment(spell, metaCtx, playerStats, campaignN
         },
         spell,
         spellSlotLevel: slotLevel,
+        metaCtx,
     };
 
     try {

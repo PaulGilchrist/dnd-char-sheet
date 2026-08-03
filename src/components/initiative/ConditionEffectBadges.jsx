@@ -323,6 +323,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Banished', cls: 'effect-debuff', icon: 'fa-door-open', removable: isLocalhost, removeAction: 'target_effect', effectType: 'banishment', tooltip: `Banished by ${casterName}: Incapacitated in demiplane. ${permanent ? 'Permanent banishment - target will not return.' : 'Concentration, up to 1 minute.'}` })
     }
 
+    const imprisonmentEffect = targetEffects?.find(te => te.effect === 'imprisonment' && te.target === creatureName)
+    if (imprisonmentEffect) {
+        const casterName = imprisonmentEffect.source || 'unknown'
+        const prisonType = imprisonmentEffect.prisonType || 'Slumber'
+        badges.push({ label: 'Imprisoned', cls: 'effect-debuff', icon: 'fa-dungeon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'imprisonment', tooltip: `Imprisoned by ${casterName}: ${prisonType}. ${imprisonmentEffect.duration || 'Until dispelled'}` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

@@ -789,9 +789,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return result;
         }
 
-        // Imprisonment — 9th level abjuration: WIS save, apply chosen prison effect (Burial/Chaining/Hedged Prison/Minimus Containment/Slumber), no concentration, until dispelled
+        // Imprisonment — 9th level abjuration: WIS save, apply imprisonment target effect (badge), until dispelled
         if (spell.name && spell.name.toLowerCase() === 'imprisonment') {
-            await triggerImprisonment(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            const result = await triggerImprisonment(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            if (result) {
+                return { automationPopup: result };
+            }
             return;
         }
 
