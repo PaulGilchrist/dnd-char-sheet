@@ -113,7 +113,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     const proneAlready = targetCreature.conditions?.some(c => c.key === 'prone');
                     if (!proneAlready) {
                         const conditionDef = { key: 'prone', label: 'Prone' };
-                        addCondition(cs, targetName, conditionDef, 0, null, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
+                        addCondition(cs, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
                         storage.set('combatSummary', cs, campaignName);
                     }
                 }

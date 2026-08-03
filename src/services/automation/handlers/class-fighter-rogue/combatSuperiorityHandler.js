@@ -12,13 +12,15 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
-function applyConditionToTarget(targetName, conditionKey, campaignName, combatSummary) {
-    if (!combatSummary) return;
-    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    const existing = conditions.find(c => String(c).toLowerCase() === conditionKey.toLowerCase());
-    if (existing) return;
-    setRuntimeValue(targetName, 'activeConditions', [...conditions, conditionKey], campaignName);
+function applyConditionToTarget(targetName, conditionKey, campaignName, combatSummary, saveDc, saveType, playerStats) {
+    if (!combatSummary) {
+        console.error(`[combatSuperiority] Failed to get combatSummary for applying ${conditionKey} to ${targetName}`);
+        return;
+    }
+    const conditionDef = { key: conditionKey, label: conditionKey.charAt(0).toUpperCase() + conditionKey.slice(1) };
+    addCondition(combatSummary, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
 }
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
@@ -591,14 +593,8 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
         if (!success) {
             if (maneuver.effect === 'frightened') {
                 description += ` ${targetName} is Frightened until the end of your next turn.`;
-                const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-                const hasFrightened = conditions.some(c => String(c).toLowerCase() === 'frightened');
-                if (!hasFrightened) {
-                    await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'frightened'], campaignName);
-                }
                 const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'frightened', campaignName, cs);
+                applyConditionToTarget(targetName, 'frightened', campaignName, cs, saveDc, maneuver.saveType, playerStats);
                 await addExpiration(playerStats.name, targetName, [
                     { type: 'condition', condition: 'frightened' },
                 ], campaignName, 2);
@@ -627,14 +623,8 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                 setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'prone') {
                 description += ` ${targetName} fell Prone.`;
-                const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-                const hasProne = conditions.some(c => String(c).toLowerCase() === 'prone');
-                if (!hasProne) {
-                    await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'prone'], campaignName);
-                }
                 const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'prone', campaignName, cs);
+                applyConditionToTarget(targetName, 'prone', campaignName, cs, saveDc, maneuver.saveType, playerStats);
             } else if (maneuver.conditionInflicted) {
                 description += ` ${targetName} gained the ${maneuver.conditionInflicted} condition.`;
             } else {
@@ -1569,15 +1559,13 @@ export async function executeCommandingPresenceReaction(action, playerStats, cam
     if (reactionEffect === 'disadvantage_next_attack') {
         const durationInTurns = reactionDuration === 'until_end_of_next_turn' ? 2 : 1;
         description += ` ${targetName || 'The target'} has Disadvantage on their next attack roll.`;
-        const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-        const hasDisadvantage = conditions.some(c => String(c).toLowerCase() === 'disadvantage');
-        if (!hasDisadvantage && targetName) {
-            await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
-        }
         if (targetName) {
-            const cs = await getCombatContext(campaignName);
-            applyConditionToTarget(targetName, 'disadvantage', campaignName, cs);
+            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+            const hasDisadvantage = conditions.some(c => String(c).toLowerCase() === 'disadvantage');
+            if (!hasDisadvantage) {
+                await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
+            }
             await addExpiration(playerStats.name, targetName, [
                 { type: 'condition', condition: 'disadvantage' },
             ], campaignName, durationInTurns);
@@ -1591,8 +1579,6 @@ export async function executeCommandingPresenceReaction(action, playerStats, cam
             if (!hasDisadvantage) {
                 await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
             }
-            const cs = await getCombatContext(campaignName);
-            applyConditionToTarget(targetName, 'disadvantage', campaignName, cs);
             await addExpiration(playerStats.name, targetName, [
                 { type: 'condition', condition: 'disadvantage' },
             ], campaignName, 2);
@@ -1716,14 +1702,8 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
         if (!success) {
             if (maneuver.effect === 'frightened') {
                 description += ` ${targetName} is Frightened until the end of your next turn.`;
-                const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-                const hasFrightened = conditions.some(c => String(c).toLowerCase() === 'frightened');
-                if (!hasFrightened) {
-                    await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'frightened'], campaignName);
-                }
                 const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'frightened', campaignName, cs);
+                applyConditionToTarget(targetName, 'frightened', campaignName, cs, saveDc, maneuver.saveType, playerStats);
                 await addExpiration(playerStats.name, targetName, [
                     { type: 'condition', condition: 'frightened' },
                 ], campaignName, 2);
@@ -1752,14 +1732,8 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
                 setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
             } else if (maneuver.effect === 'prone') {
                 description += ` ${targetName} fell Prone.`;
-                const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-                const hasProne = conditions.some(c => String(c).toLowerCase() === 'prone');
-                if (!hasProne) {
-                    await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'prone'], campaignName);
-                }
                 const cs = await getCombatContext(campaignName);
-                applyConditionToTarget(targetName, 'prone', campaignName, cs);
+                applyConditionToTarget(targetName, 'prone', campaignName, cs, saveDc, maneuver.saveType, playerStats);
             } else if (maneuver.conditionInflicted) {
                 description += ` ${targetName} gained the ${maneuver.conditionInflicted} condition.`;
             } else {

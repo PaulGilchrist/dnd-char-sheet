@@ -96,7 +96,7 @@ export async function applyTelekineticThrust(action, playerStats, campaignName, 
     }).catch((e) => { console.error("[telekineticThrust] Error:", e); });
 
     if (!success) {
-        await applyThrustEffect(action, playerStats, campaignName, targetName, chosenOption);
+        await applyThrustEffect(action, playerStats, campaignName, targetName, chosenOption, saveDc, saveType);
     }
 
     return {
@@ -111,7 +111,7 @@ export async function applyTelekineticThrust(action, playerStats, campaignName, 
     };
 }
 
-async function applyThrustEffect(action, playerStats, campaignName, targetName, option) {
+async function applyThrustEffect(action, playerStats, campaignName, targetName, option, saveDc, saveType) {
     if (!targetName) return;
 
     const combatContext = await getCombatContext(campaignName);
@@ -124,7 +124,7 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
     if (proneAlready) return;
 
     const conditionDef = { key: 'prone', label: 'Prone' };
-    addCondition(combatContext, targetName, conditionDef, 0, null, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
+    addCondition(combatContext, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
     storage.set('combatSummary', combatContext, campaignName);
 
     const pushValue = option.value || 10;

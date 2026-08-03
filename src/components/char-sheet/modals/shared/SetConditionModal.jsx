@@ -8,6 +8,7 @@ import utils from '../../../../services/ui/utils.js';
 import { sendSavePrompt, sendSaveResult } from '../../../../services/combat/conditions/savePromptService.js';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, logSaveEntry, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
 function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, campaignName, mapData, monsters, channelDivinityCharges, onClose, characters, featureName = 'Abjure Foes', conditionName = 'frightened', additionalCondition = null, saveType = 'WIS', rangeFeet = 60, durationRounds, shape, attackerGridX, attackerGridY, includeCaster = false }) {
     const applyConditionToCreature = useCallback((targetName, saveDcValue, condName, ctx) => {
@@ -27,16 +28,9 @@ function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, c
             return;
         }
 
-        if (creature.type === 'player') {
-            const conditions = getRuntimeValue(creature.name, 'activeConditions') || [];
-            const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
-            setRuntimeValue(creature.name, 'activeConditions', [...filtered, condKey], campaignName);
-        } else {
-            const conditions = getRuntimeValue(creature.name, 'activeConditions') || [];
-            const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
-            setRuntimeValue(creature.name, 'activeConditions', [...filtered, condKey], campaignName);
-        }
-    }, [campaignName, characters]);
+        const conditionDef = { key: condKey, label: condName.charAt(0).toUpperCase() + condName.slice(1) };
+        addCondition(ctx.combatSummary, targetName, conditionDef, saveDcValue, saveType, getRuntimeValue, setRuntimeValue, campaignName, targetStats);
+    }, [campaignName, characters, saveType]);
 
     const addConditionToCreature = useCallback((targetName, saveDcValue, ctx) => {
         applyConditionToCreature(targetName, saveDcValue, conditionName, ctx);

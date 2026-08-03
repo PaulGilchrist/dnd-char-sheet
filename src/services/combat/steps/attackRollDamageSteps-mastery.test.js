@@ -50,13 +50,13 @@ vi.mock('../../dice/diceRoller.js', () => ({
 }));
 
 vi.mock('../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
+  getCombatContext: vi.fn().mockResolvedValue({ creatures: [{ name: 'Orc' }] }),
   getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../encounters/combatData.js', () => ({
   getCurrentCombatRound: vi.fn(() => 1),
-  loadCombatSummary: vi.fn(() => Promise.resolve({ lastAttack: {} })),
+  loadCombatSummary: vi.fn(() => Promise.resolve({ creatures: [{ name: 'Orc' }], lastAttack: {} })),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -68,6 +68,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 vi.mock('../../combat/automation/automationService.js', () => ({
   hasTwoWeaponFighting: vi.fn(() => false),
   collectWeaponMastery: vi.fn(),
+  playerIsImmuneToCondition: vi.fn(() => false),
 }));
 
 vi.mock('../../rules/combat/applyDamage.js', () => ({
@@ -956,6 +957,7 @@ describe('buildAttackRollDamageSteps - cleaveMastery, tacticalMaster, toppleMast
       });
 
       it('applies prone condition on failed save', async () => {
+        vi.mocked(loadCombatSummary).mockResolvedValue({ creatures: [{ name: 'Orc' }] });
         getRuntimeValue.mockImplementation((_characterKey, propertyName, _campaignName) => {
           if (propertyName === 'lastAttack') return { hit: true, targetName: 'Orc', attackName: 'Greataxe' };
           return null;

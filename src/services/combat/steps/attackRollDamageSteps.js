@@ -17,6 +17,7 @@ import { applyMasteryEffect } from '../../automation/handlers/combat/weaponMaste
 import { isWithinRange } from '../../rules/combat/rangeCheck.js';
 import { createSaveListener } from '../../automation/common/savePrompt.js';
 import { resolveDiceExpression } from '../automation/automationExpressions.js';
+import { addCondition } from '../../combat/conditions/conditionSaveService.js';
 
 // DEBUG: temporarily trigger Overwhelming Strike on 10 instead of 20
 const OVERWHELMING_STRIKE_TEST_ROLL = 20;
@@ -1025,11 +1026,8 @@ export function buildAttackRollDamageSteps() {
               }
             }
 
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            if (!conditions.includes('poisoned')) {
-              await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'poisoned'], ctx.campaignName);
-            }
+            const conditionDef = { key: 'poisoned', label: 'Poisoned' };
+            addCondition(cs, targetName, conditionDef, saveDc, 'CON', getRuntimeValue, setRuntimeValue, ctx.campaignName, ctx.playerStats);
 
             const primaryDmg = lastAttack?.primaryDamage || 0;
             const primaryType = lastAttack?.primaryDamageType || 'weapon';
@@ -1321,11 +1319,9 @@ export function buildAttackRollDamageSteps() {
         const result = await promise;
 
         if (result && !result.success) {
-          const storedConditions = getRuntimeValue(toppleTargetName, 'activeConditions') || [];
-          const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-          if (!conditions.includes('prone')) {
-            await setRuntimeValue(toppleTargetName, 'activeConditions', [...conditions, 'prone'], ctx.campaignName);
-          }
+          const cs = await loadCombatSummary(ctx.campaignName);
+          const conditionDef = { key: 'prone', label: 'Prone' };
+          addCondition(cs, toppleTargetName, conditionDef, saveDc, 'CON', getRuntimeValue, setRuntimeValue, ctx.campaignName, ctx.playerStats);
 
           addEntry(ctx.campaignName, {
             type: 'save_result',

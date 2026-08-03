@@ -101,6 +101,10 @@ function removeCondition(combatSummary, creatureName, condition, getRuntimeValue
 }
 
 function addCondition(combatSummary, creatureName, conditionDef, dc, ability, getRuntimeValue, setRuntimeValue, campaignName, playerStats) {
+    if (!combatSummary || !combatSummary.creatures) {
+        console.error(`[addCondition] combatSummary is null/undefined or missing creatures when adding ${conditionDef.key} to ${creatureName}`)
+        return
+    }
     const creature = combatSummary.creatures.find(c => c.name === creatureName)
     if (!creature) return
 

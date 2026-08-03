@@ -208,14 +208,18 @@ describe('SetConditionModal - Side Effects & Edge Cases', () => {
     fireEvent.click(screen.getAllByRole('checkbox')[0]); // Goblin A
     fireEvent.click(screen.getByRole('button', { name: /Abjure Foes \(1 target\)/ }));
 
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(2);
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(4);
     const calls = useRuntimeState.setRuntimeValue.mock.calls;
     expect(calls[0][0]).toBe('Goblin A');
     expect(calls[0][1]).toBe('activeConditions');
     expect(calls[0][2]).toContain('frightened');
     expect(calls[1][0]).toBe('Goblin A');
-    expect(calls[1][1]).toBe('activeConditions');
-    expect(calls[1][2]).toContain('blinded');
+    expect(calls[1][1]).toBe('activeConditionMeta');
+    expect(calls[2][0]).toBe('Goblin A');
+    expect(calls[2][1]).toBe('activeConditions');
+    expect(calls[2][2]).toContain('blinded');
+    expect(calls[3][0]).toBe('Goblin A');
+    expect(calls[3][1]).toBe('activeConditionMeta');
   });
 
   // ── Log condition format validation ──

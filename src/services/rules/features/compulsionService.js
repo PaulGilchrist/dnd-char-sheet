@@ -1,5 +1,10 @@
 import { executeHandler } from '../../automation/index.js';
 import { getCombatContext } from '../combat/damageUtils.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { createSaveListener } from '../../automation/common/savePrompt.js';
+import { addEntry } from '../../ui/logService.js';
+import { addExpiration } from '../effects/expirations.js';
+import { addCondition } from '../../combat/conditions/conditionSaveService.js';
 
 export async function triggerCompulsion(spell, metaCtx, playerStats, campaignName, mapName) {
     const isCompulsion = (spell.name || '').toLowerCase() === 'compulsion';
@@ -89,10 +94,9 @@ export async function applyCompulsionEffect(spell, playerStats, campaignName, ma
         }).catch((e) => { console.error('[compulsionService] Error logging save:', e); });
 
         if (!saveResult.success) {
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
-            setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
+            const cs = await getCombatContext(campaignName);
+            const conditionDef = { key: 'charmed', label: 'Charmed' };
+            addCondition(cs, targetName, conditionDef, spellSaveDc, 'WIS', getRuntimeValue, setRuntimeValue, campaignName, playerStats);
 
             addExpiration(casterName, targetName, [
                 { type: 'charmed', condition: 'charmed' },
@@ -134,8 +138,3 @@ export async function applyCompulsionEffect(spell, playerStats, campaignName, ma
         },
     };
 }
-
-import { createSaveListener } from '../../automation/common/savePrompt.js';
-import { addEntry } from '../../ui/logService.js';
-import { addExpiration } from '../effects/expirations.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';

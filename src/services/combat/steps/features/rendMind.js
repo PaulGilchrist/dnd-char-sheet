@@ -1,6 +1,8 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { createSaveListener } from '../../../automation/common/savePrompt.js';
 import { addEntry } from '../../../ui/logService.js';
+import { addCondition } from '../../conditions/conditionSaveService.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
 export const rendMind = {
   name: 'rendMind',
@@ -30,9 +32,9 @@ export const rendMind = {
       await setRuntimeValue(ps.name, key, true, ctx.campaignName);
       const sr = await promise;
       if (!sr.success) {
-        const conds = getRuntimeValue(ctx.targetName, 'activeConditions') || [];
-        if (!conds.some(c => String(c).toLowerCase() === 'stunned'))
-          await setRuntimeValue(ctx.targetName, 'activeConditions', [...conds, 'stunned'], ctx.campaignName);
+        const cs = await getCombatContext(ctx.campaignName);
+        const conditionDef = { key: 'stunned', label: 'Stunned' };
+        addCondition(cs, ctx.targetName, conditionDef, dc, 'WIS', getRuntimeValue, setRuntimeValue, ctx.campaignName, ps);
       }
       addEntry(ctx.campaignName, { type: 'ability_use', characterName: ps.name, abilityName: 'Rend Mind', description: `Rend Mind triggered on ${ctx.targetName} — ${sr?.success ? 'succeeded' : 'failed'} WIS save (DC ${dc})${sr?.success ? '' : ' — Stunned condition applied'}`, targetName: ctx.targetName }).catch(() => {});
     }

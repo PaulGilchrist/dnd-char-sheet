@@ -2,6 +2,8 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import utils from '../../../../services/ui/utils.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -67,7 +69,8 @@ export async function applyOpenHandTechnique(action, playerStats, campaignName, 
     }
 
     if (chosenOption.effect === 'addled') {
-        await applyOpenHandEffect(action, playerStats, campaignName, targetName, chosenOption);
+        const combatSummary = await getCombatContext(campaignName);
+        await applyOpenHandEffect(action, playerStats, campaignName, targetName, chosenOption, saveDc, combatSummary);
         addEntry(campaignName, {
             type: 'roll',
             name: action.name,
@@ -129,7 +132,8 @@ export async function applyOpenHandTechnique(action, playerStats, campaignName, 
     }).catch((e) => { console.error("[openHandTechnique] Error:", e); });
 
     if (!success) {
-        await applyOpenHandEffect(action, playerStats, campaignName, targetName, chosenOption);
+        const combatSummary = await getCombatContext(campaignName);
+        await applyOpenHandEffect(action, playerStats, campaignName, targetName, chosenOption, saveDc, combatSummary, optionSaveType);
     }
 
     return {
@@ -144,7 +148,7 @@ export async function applyOpenHandTechnique(action, playerStats, campaignName, 
     };
 }
 
-async function applyOpenHandEffect(action, playerStats, campaignName, targetName, option) {
+async function applyOpenHandEffect(action, playerStats, campaignName, targetName, option, saveDc, combatSummary, saveType) {
     if (!targetName) return;
 
     // Push effects are instant — just log, no targetEffect
@@ -175,19 +179,17 @@ async function applyOpenHandEffect(action, playerStats, campaignName, targetName
     setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
 
     if (option.effect === 'prone') {
-        const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const alreadyProne = conditions.some(c => String(c).toLowerCase() === 'prone');
-        if (!alreadyProne) {
-            setRuntimeValue(targetName, 'activeConditions', [...conditions, 'prone'], campaignName);
-        }
+        const targetCharacter = playerStats.name ? (getRuntimeValue('characters', 'characters', campaignName) || []).find(c => utils.getName(c.name) === targetName) : null;
+        const targetStats = targetCharacter?.computedStats || targetCharacter;
+        const conditionDef = { key: 'prone', label: 'Prone' };
+        addCondition(combatSummary, targetName, conditionDef, saveDc, saveType || 'STR', getRuntimeValue, setRuntimeValue, campaignName, targetStats);
     }
 
     if (option.noOpportunityAttacks) {
-        const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-        const alreadyAddled = conditions.some(c => String(c).toLowerCase() === 'addled');
-        if (!alreadyAddled) {
-            setRuntimeValue(targetName, 'activeConditions', [...conditions, 'addled'], campaignName);
-        }
+        const targetCharacter = playerStats.name ? (getRuntimeValue('characters', 'characters', campaignName) || []).find(c => utils.getName(c.name) === targetName) : null;
+        const targetStats = targetCharacter?.computedStats || targetCharacter;
+        const conditionDef = { key: 'addled', label: 'Addled' };
+        addCondition(combatSummary, targetName, conditionDef, saveDc, saveType || 'STR', getRuntimeValue, setRuntimeValue, campaignName, targetStats);
     }
 }
 

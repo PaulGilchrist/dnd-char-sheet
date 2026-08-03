@@ -2,8 +2,10 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 import { rollD20 } from '../../dice/diceRoller.js';
 import { addEntry } from '../../ui/logService.js';
 import { getHolyAuraTargets } from '../../automation/handlers/buffs/holyAuraHandler.js';
+import { addCondition } from '../../combat/conditions/conditionSaveService.js';
+import { loadCombatSummary } from '../../encounters/combatData.js';
 
-export function checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage) {
+export async function checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage) {
     if (attackerName && attackerName !== creature.name && wardDamage > 0) {
         const targetEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
             te => te.effect === 'holy_aura' && te.target === creature.name
@@ -37,20 +39,17 @@ export function checkHolyAuraDamage(creature, attackerName, combatSummary, campa
         }).catch((e) => { console.error("[holyAura] Error logging save:", e); });
         const saveResult = { roll: saveRoll, modifier: conBonus, total: saveTotal, success: saveTotal >= conSaveDc, dc: conSaveDc };
         if (saveTotal < conSaveDc) {
-            const rawAttackerConditions = getRuntimeValue(attackerName, 'activeConditions');
-            const attackerConditions = rawAttackerConditions || [];
-            const existingBlinded = attackerConditions.find(c => String(c).toLowerCase() === 'blinded');
-            if (!existingBlinded) {
-                setRuntimeValue(attackerName, 'activeConditions', [...attackerConditions, 'blinded'], campaignName);
-                addEntry(campaignName, {
-                    type: 'condition',
-                    action: 'added',
-                    characterName: attackerName,
-                    condition: 'Blinded',
-                    reason: 'Holy Aura (Fiend/Undead melee hit)',
-                    timestamp: Date.now(),
-                }).catch((e) => { console.error("[holyAura] Error:", e); });
-            }
+            const cs = await loadCombatSummary(campaignName);
+            const conditionDef = { key: 'blinded', label: 'Blinded' };
+            addCondition(cs, attackerName, conditionDef, conSaveDc, 'CON', getRuntimeValue, setRuntimeValue, campaignName, attackerCreature);
+            addEntry(campaignName, {
+                type: 'condition',
+                action: 'added',
+                characterName: attackerName,
+                condition: 'Blinded',
+                reason: 'Holy Aura (Fiend/Undead melee hit)',
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[holyAura] Error:", e); });
         }
         return saveResult;
     }

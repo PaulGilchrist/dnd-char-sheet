@@ -4,6 +4,7 @@ import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
 import { addEntry } from '../../../ui/logService.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
 import { checkOncePerTurnWithSkip } from '../../../automation/common/oncePerTurn.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
 export const shieldBash = {
   name: 'shieldBash',
@@ -168,11 +169,9 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
     };
     setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
 
-    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    const alreadyProne = conditions.some(c => String(c).toLowerCase() === 'prone');
-    if (!alreadyProne) {
-      setRuntimeValue(targetName, 'activeConditions', [...conditions, 'prone'], campaignName);
-    }
+    const cs = await getCombatContext(campaignName);
+    const conditionDef = { key: 'prone', label: 'Prone' };
+    addCondition(cs, targetName, conditionDef, saveDc, 'STR', getRuntimeValue, setRuntimeValue, campaignName, playerStats);
 
     addEntry(campaignName, {
       type: 'ability_use',

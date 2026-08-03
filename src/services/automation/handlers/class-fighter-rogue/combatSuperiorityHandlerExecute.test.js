@@ -47,11 +47,11 @@ vi.mock('../../../../services/ui/dataLoader.js', () => ({
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
     getCurrentCombatRound: vi.fn(() => 1),
-    getCombatContext: vi.fn().mockResolvedValue(null),
+    getCombatContext: vi.fn().mockResolvedValue({ creatures: [{ name: 'Goblin' }] }),
 }));
 
 vi.mock('../../../../services/rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn().mockResolvedValue(null),
+    getCombatContext: vi.fn().mockResolvedValue({ creatures: [{ name: 'Goblin' }] }),
 }));
 
 vi.mock('../../../../services/automation/common/targetResolver.js', () => ({
@@ -68,6 +68,7 @@ vi.mock('../../../../services/combat/automation/automationService.js', () => ({
         if (expr === '1d6') return 6;
         return expr;
     }),
+    playerIsImmuneToCondition: vi.fn(() => false),
 }));
 
 vi.mock('../../../../services/automation/common/savePrompt.js', () => ({

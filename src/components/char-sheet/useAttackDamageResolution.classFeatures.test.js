@@ -30,6 +30,7 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     collectWeaponMastery: vi.fn(),
     evaluateAutoExpression: vi.fn(),
     hasTwoWeaponFighting: vi.fn(),
+    playerIsImmuneToCondition: vi.fn(() => false),
 }));
 
 vi.mock('../../services/rules/combat/applyDamage.js', () => ({
@@ -306,6 +307,7 @@ describe('useAttackDamageResolution - class features', () => {
             getRuntimeValue.mockReturnValue(null);
         getRuntimeValue.mockImplementation((key, prop) => prop === 'resumeRef' ? {} : null);
             createSaveListener.mockReturnValue({ promise: Promise.resolve({ success: false }) });
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }] });
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
             await tick();
@@ -316,7 +318,7 @@ describe('useAttackDamageResolution - class features', () => {
                 saveDc: 19,
             });
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Goblin', 'activeConditions', ['stunned'], 'test-campaign',
+                'Goblin', 'activeConditions', expect.arrayContaining(['stunned']), 'test-campaign',
             );
             expect(addEntry).toHaveBeenCalled();
         });

@@ -13,7 +13,7 @@ vi.mock('../../../ui/logService.js', () => ({
 }));
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
+  getCombatContext: vi.fn().mockImplementation(() => Promise.resolve({ creatures: [{ name: 'Goblin' }] })),
   getTargetFromAttacker: vi.fn(),
 }));
 

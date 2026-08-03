@@ -7,6 +7,7 @@ import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { playerIsImmuneToCondition } from '../../../combat/automation/automationImmunities.js';
 import { addTargetResult } from '../../common/damageRollback.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
 function getAreaRadius(auto) {
     const size = auto.size || '10-foot';
@@ -150,10 +151,9 @@ export async function processGreaseAreaSave(casterName, targetName, campaignName
         const saveResult = await promise;
 
         if (!saveResult.success) {
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            const filtered = conditions.filter(c => String(c).toLowerCase() !== tracking.condition.toLowerCase());
-            setRuntimeValue(targetName, 'activeConditions', [...filtered, tracking.condition.toLowerCase()], campaignName);
+            const cs = await getCombatContext(campaignName);
+            const conditionDef = { key: tracking.condition.toLowerCase(), label: tracking.condition.charAt(0).toUpperCase() + tracking.condition.slice(1) };
+            addCondition(cs, targetName, conditionDef, tracking.saveDc, tracking.saveType, getRuntimeValue, setRuntimeValue, campaignName, null);
 
             await addTargetResult(campaignName, {
                 targetName,
