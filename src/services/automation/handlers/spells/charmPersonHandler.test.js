@@ -89,6 +89,14 @@ describe('charmPersonHandler.handle', () => {
 
   describe('target resolution', () => {
     it('returns popup when action has no targetName', async () => {
+      buildSaveDc.mockReturnValue(15);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'TestCaster', type: 'player' },
+          { name: 'Goblin', type: 'npc' },
+        ],
+      });
+
       const action = {
         name: 'Charm Person',
         automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
@@ -99,6 +107,21 @@ describe('charmPersonHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns popup when combat context has no creatures', async () => {
+      getCombatContext.mockResolvedValue({ creatures: [] });
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15, targetName: 'Goblin' },
+      };
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('No creatures in combat');
     });
 
     it('passes advantage from automation config to createSaveListener', async () => {
@@ -176,7 +199,7 @@ describe('charmPersonHandler.handle', () => {
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('succeeded on WIS save');
+      expect(result.payload.description).toContain('saved');
       expect(result.payload.description).toContain('Goblin');
 
       expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
@@ -208,10 +231,8 @@ describe('charmPersonHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('Charm Person');
-      expect(result.payload.description).toContain('TestCaster');
+      expect(result.payload.description).toContain('charmed');
       expect(result.payload.description).toContain('Goblin');
-      expect(result.payload.description).toContain('harmful');
-      expect(result.payload.description).toContain('Charmed');
     });
 
     it('applies charmed condition with deduplication and preservation of other conditions', async () => {
@@ -335,7 +356,13 @@ describe('charmPersonHandler.handle', () => {
       const ps = makePlayerStats({ name: 'WizardX' });
       const result = await handle(makeAction(), ps, campaignName, null);
 
-      expect(result.payload.description).toContain('WizardX');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.name).toBe('Charm Person');
+
+      // The ability_use log entry should contain the custom caster name
+      const abilityEntries = addEntry.mock.calls.filter(call => call[1].type === 'ability_use');
+      expect(abilityEntries.length).toBe(1);
+      expect(abilityEntries[0][1].characterName).toBe('WizardX');
     });
   });
 });

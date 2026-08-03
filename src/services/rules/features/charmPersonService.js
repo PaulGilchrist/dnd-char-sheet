@@ -29,10 +29,92 @@ async function isTargetHumanoid(targetName, campaignName) {
     return true;
 }
 
+/**
+ * Determine if a target is not at full health (for save advantage).
+ */
+async function getTargetHealthAdvantage(targetName, campaignName) {
+    const cs = await getCombatContext(campaignName);
+    const targetCreature = cs?.creatures?.find(c => c.name === targetName);
+    const targetIsPlayer = targetCreature?.type === 'player';
+    let currentHp = 0;
+    let maxHp = 0;
+    if (targetIsPlayer) {
+        currentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? 0;
+        maxHp = getRuntimeValue(targetName, 'hitPoints', campaignName) ?? 0;
+    } else {
+        currentHp = targetCreature?.currentHp ?? targetCreature?.hit_points?.current ?? 0;
+        maxHp = targetCreature?.maxHp ?? 0;
+    }
+    return currentHp > 0 && currentHp < maxHp;
+}
+
 export async function triggerCharmPerson(spell, metaCtx, playerStats, campaignName, mapName) {
     const isCharmPerson = (spell.name || '').toLowerCase() === 'charm person';
     if (!isCharmPerson) return null;
 
+    const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+    const slotLevel = metaCtx?.slotLevel || spell.level || 1;
+
+    // Multi-target path: charmPersonTargets array from CreatureSelectionModal
+    const targetNames = metaCtx?.charmPersonTargets;
+    if (targetNames && Array.isArray(targetNames) && targetNames.length > 0) {
+        // Filter to only humanoids
+        const humanoidTargets = [];
+        const nonHumanoidTargets = [];
+        for (const targetName of targetNames) {
+            const humanoid = await isTargetHumanoid(targetName, campaignName);
+            if (humanoid) {
+                humanoidTargets.push(targetName);
+            } else {
+                nonHumanoidTargets.push(targetName);
+            }
+        }
+
+        // Log non-humanoid rejections
+        for (const targetName of nonHumanoidTargets) {
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: 'Charm Person',
+                description: `${playerStats.name} casts Charm Person on ${targetName} but it has no effect — ${targetName} is not a Humanoid.`,
+            }).catch(() => {});
+        }
+
+        if (humanoidTargets.length === 0) {
+            return { type: 'popup', payload: { type: 'automation_info', name: 'Charm Person', description: 'No valid Humanoid targets for Charm Person.' } };
+        }
+
+        // Build a single action with all target names and per-target advantage in metaCtx
+        const targetAdvantages = {};
+        for (const targetName of humanoidTargets) {
+            targetAdvantages[targetName] = await getTargetHealthAdvantage(targetName, campaignName);
+        }
+
+        const action = {
+            name: 'Charm Person',
+            automation: {
+                type: 'charm_person',
+                saveDc: spellSaveDc,
+                advantage: false,
+            },
+            metaCtx: {
+                charmPersonTargets: humanoidTargets,
+                charmPersonAdvantages: targetAdvantages,
+            },
+            spell,
+            spellSlotLevel: slotLevel,
+        };
+
+        try {
+            const result = await executeHandler(action, playerStats, campaignName, mapName);
+            return result;
+        } catch (e) {
+            console.error('[charmPersonService] Failed to execute Charm Person handler:', e);
+            return { type: 'popup', payload: { type: 'automation_info', name: 'Charm Person', description: `Failed to execute Charm Person.` } };
+        }
+    }
+
+    // Single-target path
     let targetName = metaCtx?.targetName;
     if (!targetName) {
         const cs = await getCombatContext(campaignName);
@@ -57,22 +139,7 @@ export async function triggerCharmPerson(spell, metaCtx, playerStats, campaignNa
         return { type: 'popup', payload: { type: 'automation_info', name: 'Charm Person', description: `No effect. ${targetName} is not a Humanoid.` } };
     }
 
-    const cs = await getCombatContext(campaignName);
-    const targetCreature = cs?.creatures?.find(c => c.name === targetName);
-    const targetIsPlayer = targetCreature?.type === 'player';
-    let currentHp = 0;
-    let maxHp = 0;
-    if (targetIsPlayer) {
-        currentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? playerStats.computedStats?.currentHp ?? 0;
-        maxHp = getRuntimeValue(targetName, 'hitPoints', campaignName) ?? playerStats.computedStats?.maxHp ?? 0;
-    } else {
-        currentHp = targetCreature?.currentHp ?? targetCreature?.hit_points?.current ?? 0;
-        maxHp = targetCreature?.maxHp ?? 0;
-    }
-    const targetNotFullHealth = currentHp > 0 && currentHp < maxHp;
-
-    const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
-    const slotLevel = metaCtx?.slotLevel || spell.level || 1;
+    const advantage = await getTargetHealthAdvantage(targetName, campaignName);
 
     const action = {
         name: 'Charm Person',
@@ -80,7 +147,7 @@ export async function triggerCharmPerson(spell, metaCtx, playerStats, campaignNa
             type: 'charm_person',
             saveDc: spellSaveDc,
             targetName: targetName,
-            advantage: targetNotFullHealth,
+            advantage: advantage,
         },
         spell,
         spellSlotLevel: slotLevel,

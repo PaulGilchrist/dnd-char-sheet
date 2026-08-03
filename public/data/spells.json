@@ -1278,7 +1278,61 @@
     ],
     "subclasses": [
       "Lore"
-    ]
+    ],
+    "upcast_at_slot_level": {
+      "1": "1 target",
+      "2": "2 targets",
+      "3": "3 targets",
+      "4": "4 targets",
+      "5": "5 targets",
+      "6": "6 targets",
+      "7": "7 targets",
+      "8": "8 targets",
+      "9": "9 targets"
+    }
+  },
+  {
+    "index": "charm-monster",
+    "name": "Charm Monster",
+    "description": [
+      "You attempt to charm a beast, monstrosity, or humanoid you can see within range. It must make a Wisdom saving throw, and does so with advantage if you or your companions are fighting it. If it fails the saving throw, it is charmed by you until the spell ends or until you or your companions do anything harmful to it. The charmed creature regards you as a friendly acquaintance. When the spell ends, the creature knows it was charmed by you."
+    ],
+    "higher_level": [
+      "When you cast this spell using a spell slot of 5th level or higher, you can target one additional creature for each slot level above 4th. The creatures must be within 30 feet of each other when you target them."
+    ],
+    "range": "30 feet",
+    "components": [
+      "V",
+      "S"
+    ],
+    "ritual": false,
+    "duration": "1 hour",
+    "concentration": false,
+    "casting_time": "1 action",
+    "level": 4,
+    "dc": {
+      "dc_type": "WIS",
+      "dc_success": "none"
+    },
+    "school": "Enchantment",
+    "classes": [
+      "Bard",
+      "Druid",
+      "Sorcerer",
+      "Warlock",
+      "Wizard"
+    ],
+    "subclasses": [
+      "Lore"
+    ],
+    "upcast_at_slot_level": {
+      "4": "1 target",
+      "5": "2 targets",
+      "6": "3 targets",
+      "7": "4 targets",
+      "8": "5 targets",
+      "9": "6 targets"
+    }
   },
   {
     "index": "chill-touch",

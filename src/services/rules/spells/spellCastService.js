@@ -30,8 +30,6 @@ import { triggerBlur } from '../features/blurService.js';
 import { triggerResilientSphere } from '../features/resilientSphereService.js';
 import { triggerOttoDance } from '../features/ottoDanceService.js';
 import { triggerFriends, endFriendsOnHostileAction } from '../features/friendsService.js';
-import { triggerCharmPerson } from '../features/charmPersonService.js';
-import { triggerCharmMonster } from '../features/charmMonsterService.js';
 import { triggerCompulsion } from '../features/compulsionService.js';
 import { triggerCrownOfMadness } from '../features/crownOfMadnessService.js';
 import { triggerAnimalFriendship } from '../features/animalFriendshipService.js';
@@ -461,8 +459,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         'blur',
         'expeditious retreat',
         'friends',
-        'charm person',
-        'charm monster',
         'compulsion',
         'crown of madness',
         'animal friendship',
@@ -639,26 +635,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const friendsResult = await triggerFriends(spell, friendsMetaCtx, playerStats, campaignName, mapName);
             if (friendsResult) {
                 return { automationPopup: friendsResult };
-            }
-            return;
-        }
-
-        // Charm Person — single humanoid target WIS save or Charmed
-        if (spell.name && spell.name.toLowerCase() === 'charm person') {
-            const charmTargetName = metaCtx?.targetName || (await getTargetInfo())?.name;
-            const charmPersonResult = await triggerCharmPerson(spell, { ...metaCtx, spellSaveDc, targetName: charmTargetName }, playerStats, campaignName, mapName);
-            if (charmPersonResult) {
-                return { automationPopup: charmPersonResult };
-            }
-            return;
-        }
-
-        // Charm Monster — single creature target WIS save or Charmed
-        if (spell.name && spell.name.toLowerCase() === 'charm monster') {
-            const charmTargetName = metaCtx?.targetName || (await getTargetInfo())?.name;
-            const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTargetName }, playerStats, campaignName, mapName);
-            if (charmMonsterResult) {
-                return { automationPopup: charmMonsterResult };
             }
             return;
         }
