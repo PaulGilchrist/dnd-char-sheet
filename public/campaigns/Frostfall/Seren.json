@@ -40,7 +40,7 @@
     },
     {
       "name": "Charisma",
-      "baseScore": 10,
+      "baseScore": 11,
       "featIncrease": 0,
       "backgroundIncrease": 1,
       "miscIncrease": 0
@@ -60,8 +60,8 @@
     "Perception"
   ],
   "feats": [
-    "Lucky",
-    "Tough"
+    "Tough",
+    "Lucky"
   ],
   "fightingStyles": [],
   "race": {

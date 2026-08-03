@@ -132,6 +132,7 @@ describe('WizardStepLanguages', () => {
         <WizardStepLanguages
           {...createMockProps()}
           preSelectedLanguages={[]}
+          preSelectedFightingStyles={[]}
         />
       );
       await waitFor(() => {

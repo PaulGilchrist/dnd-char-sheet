@@ -98,23 +98,20 @@
     "Insight"
   ],
   "toolProficiencies": [
-    "Calligrapher's Supplies",
-    "Alchemist's Supplies"
+    "Calligrapher's Supplies"
   ],
   "specialActions": [],
   "spells": [
-    "Invisibility",
-    "Misty Step",
     "Alarm",
     "Magic Missile",
-    "Prestidigitation",
     "Minor Illusion",
     "Fire Bolt",
     "Mage Hand",
     "Feather Fall",
     "Toll the Dead",
     "Mending",
-    "Bane"
+    "Bane",
+    "Find Familiar"
   ],
   "magicInitiateInstances": [
     {

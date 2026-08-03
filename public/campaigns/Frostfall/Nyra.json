@@ -53,9 +53,7 @@
     },
     "divineOrder": "",
     "primalOrder": "",
-    "fightingStyles": [
-      "Defense"
-    ]
+    "fightingStyles": []
   },
   "expertSkills": [],
   "feats": [
@@ -101,24 +99,25 @@
     "magicItems": []
   },
   "languages": [
-    "Common",
-    "Elvish",
-    "Dwarvish",
-    "Gnomish"
+    "Common"
   ],
   "resistances": [],
   "skillProficiencies": [
     "Athletics",
     "Intimidation",
     "Insight",
-    "Investigation",
-    "Stealth"
+    "Religion",
+    "Investigation"
+  ],
+  "toolProficiencies": [
+    "Playing Card Set"
   ],
   "specialActions": [],
   "spells": [
     "Searing Smite",
     "Thunderous Smite"
   ],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",

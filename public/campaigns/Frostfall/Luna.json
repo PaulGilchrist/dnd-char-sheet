@@ -12,7 +12,7 @@
     },
     {
       "name": "Dexterity",
-      "baseScore": 8,
+      "baseScore": 9,
       "featIncrease": 0,
       "backgroundIncrease": 0,
       "miscIncrease": 0
@@ -106,6 +106,9 @@
   "skillProficiencies": [
     "Insight",
     "Religion"
+  ],
+  "toolProficiencies": [
+    "Calligrapher's Supplies"
   ],
   "specialActions": [],
   "spells": [

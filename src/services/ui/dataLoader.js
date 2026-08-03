@@ -155,6 +155,20 @@ export async function loadValidationRules(version = '5e') {
 }
 
 /**
+ * Synchronous access to cached validation rules costs.
+ * Returns null if the data hasn't been loaded yet (first async call pending).
+ * @param {string} version - '5e' or '2024'
+ * @returns {object|null} - Point buy costs object or null
+ */
+export function getCachedPointBuyCosts(version = '5e') {
+  const versionCache = dataCache[version];
+  if (!versionCache) return null;
+  const cached = versionCache['rules-validation'];
+  if (!cached) return null;
+  return cached.point_buy?.costs || null;
+}
+
+/**
  * Finds a specific class by name from the JSON data
  * @param {string} className - The name of the class (e.g., 'Wizard', 'Bard')
  * @param {string} version - '5e' or '2024'

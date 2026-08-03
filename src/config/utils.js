@@ -1,24 +1,15 @@
 import { REQUIRED_FIELDS } from './constants.js';
-import { loadValidationRules } from '../services/ui/dataLoader.js';
+import { loadValidationRules, getCachedPointBuyCosts } from '../services/ui/dataLoader.js';
 
 /**
- * Synchronous point buy costs lookup (5e)
- * These are the standard D&D 5e point buy costs.
+ * Get point buy costs synchronously from the cached JSON data.
+ * Falls back to the standard 5e costs if the cache hasn't been populated yet.
  */
-const POINT_BUY_COSTS_5E = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+const DEFAULT_POINT_BUY_COSTS = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 
-/**
- * Synchronous point buy costs lookup (2024)
- */
-const POINT_BUY_COSTS_2024 = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 6, 14: 7, 15: 9 };
-
-/**
- * Get point buy costs synchronously
- * @param {string} ruleset - '5e' or '2024'
- * @returns {object} - Point buy costs object
- */
 export function getPointBuyCostsSync(ruleset = '5e') {
-  return ruleset === '2024' ? POINT_BUY_COSTS_2024 : POINT_BUY_COSTS_5E;
+  const cached = getCachedPointBuyCosts(ruleset);
+  return cached || DEFAULT_POINT_BUY_COSTS;
 }
 
 /**
@@ -28,7 +19,7 @@ export function getPointBuyCostsSync(ruleset = '5e') {
  */
 export async function getPointBuyCosts(ruleset = '5e') {
   const rules = await loadValidationRules(ruleset);
-  return rules.point_buy?.costs || POINT_BUY_COSTS_5E;
+  return rules.point_buy?.costs || DEFAULT_POINT_BUY_COSTS;
 }
 
 /**
