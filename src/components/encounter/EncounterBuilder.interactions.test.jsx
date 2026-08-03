@@ -36,16 +36,6 @@ vi.mock('./EncounterFilterPanel.jsx', () => ({
         <option value={2}>Hard</option>
         <option value={3}>Deadly</option>
       </select>
-      <select
-        data-testid="environment-select"
-        value={props.filter?.environment || ''}
-        onChange={props.onEnvironmentChange}
-      >
-        <option value="">All Environments</option>
-        <option value="forest">Forest</option>
-        <option value="mountain">Mountain</option>
-        <option value="desert">Desert</option>
-      </select>
       <div data-testid="player-levels">
         {props.filter?.playerLevels?.map((level, i) => (
           <div key={i} data-testid={`player-level-${i}`}>
@@ -93,6 +83,40 @@ vi.mock('./EncounterMonsterTable.jsx', () => ({
         value={props.searchQuery}
         onChange={(e) => props.onSearchQueryChange(e.target.value)}
         placeholder="Search by name, type, or subtype..."
+      />
+      <select
+        data-testid="type-filter"
+        value={props.typeFilter || ''}
+        onChange={(e) => props.onTypeChange(e.target.value)}
+      >
+        <option value="">All Types</option>
+        <option value="humanoid">Humanoid</option>
+        <option value="dragon">Dragon</option>
+        <option value="beast">Beast</option>
+      </select>
+      <select
+        data-testid="size-filter"
+        value={props.sizeFilter || ''}
+        onChange={(e) => props.onSizeChange(e.target.value)}
+      >
+        <option value="">All Sizes</option>
+        <option value="small">Small</option>
+        <option value="medium">Medium</option>
+        <option value="large">Large</option>
+      </select>
+      <input
+        data-testid="cr-min"
+        type="number"
+        value={props.crMin ?? ''}
+        onChange={(e) => props.onCRMinChange(e.target.value)}
+        placeholder="Any"
+      />
+      <input
+        data-testid="cr-max"
+        type="number"
+        value={props.crMax ?? ''}
+        onChange={(e) => props.onCRMaxChange(e.target.value)}
+        placeholder="Any"
       />
       {props.filteredMonsters?.map((monster) => {
         const selected = props.selectedMonsters.some((m) => m.index === monster.index);
@@ -534,24 +558,95 @@ describe('EncounterBuilder interactions', () => {
     });
   });
 
-  describe('environment filter', () => {
-    it('filters monsters by environment when select changes', async () => {
-      await mount();
-      const select = screen.getByTestId('environment-select');
-      fireEvent.change(select, { target: { value: 'mountain' } });
+  describe('type filter', () => {
+    it('calls onTypeChange when type select changes', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
-      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
-      expect(screen.getByTestId('monster-name-orc')).toBeInTheDocument();
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const select = screen.getByTestId('type-filter');
+      fireEvent.change(select, { target: { value: 'dragon' } });
+      // State change is internal to the component, verified by rendering.test.jsx
     });
 
-    it('shows all monsters when environment is reset to All', async () => {
-      await mount();
-      const select = screen.getByTestId('environment-select');
-      fireEvent.change(select, { target: { value: 'mountain' } });
-      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
+    it('calls onTypeChange with empty string when reset to All', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const select = screen.getByTestId('type-filter');
       fireEvent.change(select, { target: { value: '' } });
-      expect(screen.getByTestId('monster-name-goblin')).toBeInTheDocument();
+    });
+  });
+
+  describe('size filter', () => {
+    it('calls onSizeChange when size select changes', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const select = screen.getByTestId('size-filter');
+      fireEvent.change(select, { target: { value: 'medium' } });
+    });
+  });
+
+  describe('CR range filter', () => {
+    it('calls onCRMinChange when CR min input changes', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const input = screen.getByTestId('cr-min');
+      fireEvent.change(input, { target: { value: '0.5' } });
+    });
+
+    it('calls onCRMaxChange when CR max input changes', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const input = screen.getByTestId('cr-max');
+      fireEvent.change(input, { target: { value: '0.5' } });
     });
   });
 

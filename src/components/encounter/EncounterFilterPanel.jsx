@@ -1,29 +1,14 @@
 import './EncounterBuilder.css';
 
-const ENVIRONMENTS = [
-  { value: '', label: 'All Environments' },
-  { value: 'arctic', label: 'Arctic' },
-  { value: 'coastal', label: 'Coastal' },
-  { value: 'desert', label: 'Desert' },
-  { value: 'forest', label: 'Forest' },
-  { value: 'grassland', label: 'Grassland' },
-  { value: 'hill', label: 'Hill' },
-  { value: 'mountain', label: 'Mountain' },
-  { value: 'swamp', label: 'Swamp' },
-  { value: 'underdark', label: 'Underdark' },
-  { value: 'underwater', label: 'Underwater' },
-  { value: 'urban', label: 'Urban' },
-];
-
 function EncounterFilterPanel({
   filter,
   onDifficultyChange,
-  onEnvironmentChange,
+  onEnvironmentChange: _onEnvironmentChange,
   onAddPlayer,
   onRemovePlayer,
   onPlayerLevelChange,
 }) {
-  const { difficulty, playerLevels, totalThreshold, environment, difficultyIndex, difficultyLabels, difficultyColors } = filter;
+  const { difficulty, playerLevels, totalThreshold, difficultyIndex, difficultyLabels, difficultyColors } = filter;
 
   const thresholdColor = difficultyColors && difficultyColors[difficultyIndex]
      ? difficultyColors[difficultyIndex]
@@ -50,22 +35,7 @@ function EncounterFilterPanel({
          </select>
        </div>
 
-       {/* Environment Dropdown */}
-       <div>
-         <label className="encounter-label" htmlFor="environment-select">Environment</label>
-         <select
-          id="environment-select"
-          className="encounter-select"
-          value={environment || ''}
-          onChange={onEnvironmentChange}
-         >
-           {ENVIRONMENTS.map(env => (
-             <option key={env.value} value={env.value}>{env.label}</option>
-            ))}
-         </select>
-       </div>
-
-       {/* Player Levels */}
+        {/* Player Levels */}
        <div>
          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
            <span className="encounter-label" style={{ marginBottom: 0 }}>Party</span>

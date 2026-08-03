@@ -40,7 +40,7 @@
     },
     {
       "name": "Charisma",
-      "baseScore": 9,
+      "baseScore": 10,
       "featIncrease": 0,
       "backgroundIncrease": 1,
       "miscIncrease": 0
@@ -105,12 +105,7 @@
   },
   "languages": [
     "Common",
-    "Thieves' Cant",
-    "Dwarvish",
-    "Elvish",
-    "Abyssal",
-    "Orc",
-    "Giant"
+    "Thieves' Cant"
   ],
   "resistances": [],
   "skillProficiencies": [

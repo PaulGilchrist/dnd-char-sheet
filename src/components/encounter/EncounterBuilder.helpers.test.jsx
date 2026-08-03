@@ -124,16 +124,29 @@ describe('calculateDifficultyIndex', () => {
 
   it('returns 0 when totalThreshold is falsy', () => {
     expect(calculateDifficultyIndex(100, 0)).toBe(0);
-    expect(calculateDifficultyIndex(100, null)).toBe(0);
+    expect(calculateDifficultyIndex(100, '' )).toBe(0);
     expect(calculateDifficultyIndex(100, undefined)).toBe(0);
   });
 });
 
 describe('filterMonsters', () => {
-  function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, totalThreshold, environmentFilter) {
+  function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, totalThreshold, environmentFilter, typeFilter, sizeFilter, crMin, crMax) {
     if (!monsters) return [];
     return monsters.filter(m => {
       if (environmentFilter && m.environments && !m.environments.includes(environmentFilter)) return false;
+      if (typeFilter && m.type && m.type.toLowerCase() !== typeFilter.toLowerCase()) return false;
+      if (sizeFilter && m.size && m.size.toLowerCase() !== sizeFilter.toLowerCase()) return false;
+      const crMinNum = crMin === '' ? null : parseFloat(crMin);
+      const crMaxNum = crMax === '' ? null : parseFloat(crMax);
+      if (crMinNum !== null || crMaxNum !== null) {
+        const cr = _crToNumber(m.challenge_rating);
+        if (!isNaN(cr)) {
+          if (crMinNum !== null && cr < crMinNum) return false;
+          if (crMaxNum !== null && cr > crMaxNum) return false;
+        } else {
+          return false;
+        }
+      }
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
       return m.name.toLowerCase().includes(q)
@@ -142,29 +155,103 @@ describe('filterMonsters', () => {
     });
   }
 
+  function _crToNumber(cr) {
+    if (cr === null || cr === undefined || cr === '' || cr === 'None') return NaN;
+    const str = String(cr).trim().toLowerCase();
+    if (str === 'any') return 999;
+    const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (match) return parseInt(match[1], 10) / parseInt(match[2], 10);
+    const num = parseFloat(str);
+    return isNaN(num) ? NaN : num;
+  }
+
   const monsters = [
-    { index: 'goblin', name: 'Goblin', xp: 50, type: 'humanoid', subtype: 'tribe', environments: ['forest'] },
-    { index: 'orc', name: 'Orc', xp: 100, type: 'humanoid', subtype: 'warrior', environments: ['hill', 'mountain'] },
-    { index: 'dragon', name: 'Young Dragon', xp: 5900, type: 'dragon', environments: ['underground'] },
-    { index: 'slime', name: 'Green Slime', xp: 2000, type: 'ooze', environments: ['underdark', 'cave'] },
+    { index: 'goblin', name: 'Goblin', xp: 50, type: 'humanoid', subtype: 'tribe', environments: ['forest'], challenge_rating: 0.25 },
+    { index: 'orc', name: 'Orc', xp: 100, type: 'humanoid', subtype: 'warrior', environments: ['hill', 'mountain'], challenge_rating: 0.5 },
+    { index: 'dragon', name: 'Young Dragon', xp: 5900, type: 'dragon', environments: ['underground'], challenge_rating: 2 },
+    { index: 'slime', name: 'Green Slime', xp: 2000, type: 'ooze', environments: ['underdark', 'cave'], challenge_rating: 1 },
+    { index: 'tiger', name: 'Tiger', xp: 200, type: 'beast', environments: ['grassland', 'forest'], challenge_rating: 1 },
+    { index: 'flaming-sphere', name: 'Flaming Sphere', xp: 200, type: 'construct', environments: ['desert'], challenge_rating: 1 },
+    { index: 'shadow', name: 'Shadow', xp: 235, type: 'undead', environments: ['underdark'], challenge_rating: 0.5 },
   ];
 
   it('filters by search query matching name, type, or subtype (case-insensitive)', () => {
-    expect(filterMonsters(monsters, 'goblin', [1, 1, 1], 1, 150, '').map(m => m.index)).toEqual(['goblin']);
-    expect(filterMonsters(monsters, 'dragon', [15, 15, 15], 1, 8400, '').map(m => m.index)).toContain('dragon');
-    expect(filterMonsters(monsters, 'tribe', [1, 1, 1], 1, 150, '').map(m => m.index)).toEqual(['goblin']);
-    expect(filterMonsters(monsters, 'GOBLIN', [1, 1, 1], 1, 150, '').map(m => m.index)).toEqual(['goblin']);
+    expect(filterMonsters(monsters, 'goblin', [1, 1, 1], 1, 150, '', '', '', '', '' ).map(m => m.index)).toEqual(['goblin']);
+    expect(filterMonsters(monsters, 'dragon', [15, 15, 15], 1, 8400, '', '', '', '', '' ).map(m => m.index)).toContain('dragon');
+    expect(filterMonsters(monsters, 'tribe', [1, 1, 1], 1, 150, '', '', '', '', '' ).map(m => m.index)).toEqual(['goblin']);
+    expect(filterMonsters(monsters, 'GOBLIN', [1, 1, 1], 1, 150, '', '', '', '', '' ).map(m => m.index)).toEqual(['goblin']);
   });
 
   it('filters by environment only', () => {
-    expect(filterMonsters(monsters, '', [15, 15, 15], 1, 8400, 'underdark').map(m => m.index)).toEqual(['slime']);
-    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '').map(m => m.index)).toEqual(['goblin', 'orc', 'dragon', 'slime']);
-    expect(filterMonsters(monsters, '', [15, 15, 15], 1, 0, '').map(m => m.index)).toEqual(['goblin', 'orc', 'dragon', 'slime']);
+    expect(filterMonsters(monsters, '', [15, 15, 15], 1, 8400, 'underdark', '', '', '', '' ).map(m => m.index)).toEqual(['slime', 'shadow']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', '', '' ).map(m => m.index)).toEqual(['goblin', 'orc', 'dragon', 'slime', 'tiger', 'flaming-sphere', 'shadow']);
+    expect(filterMonsters(monsters, '', [15, 15, 15], 1, 0, '', '', '', '', '' ).map(m => m.index)).toEqual(['goblin', 'orc', 'dragon', 'slime', 'tiger', 'flaming-sphere', 'shadow']);
+  });
+
+  it('filters by type', () => {
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'humanoid', '', '', '' ).map(m => m.index)).toEqual(['goblin', 'orc']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'dragon', '', '', '' ).map(m => m.index)).toEqual(['dragon']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', 'beast', '', '', '' ).map(m => m.index)).toEqual(['tiger']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', '', '' ).filter(m => ['goblin', 'orc'].includes(m.index)).length).toBe(2);
+  });
+
+  it('filters by size', () => {
+    const sizedMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', size: 'small', environments: ['forest'], challenge_rating: 0.25 },
+      { index: 'orc', name: 'Orc', type: 'humanoid', size: 'medium', environments: ['hill'], challenge_rating: 0.5 },
+      { index: 'ogre', name: 'Ogre', type: 'giant', size: 'huge', environments: ['hill'], challenge_rating: 3 },
+    ];
+    expect(filterMonsters(sizedMonsters, '', [1, 1, 1], 1, 150, '', '', 'medium', '', '' ).map(m => m.index)).toEqual(['orc']);
+    expect(filterMonsters(sizedMonsters, '', [1, 1, 1], 1, 150, '', '', 'huge', '', '' ).map(m => m.index)).toEqual(['ogre']);
+    expect(filterMonsters(sizedMonsters, '', [1, 1, 1], 1, 150, '', '', 'small', '', '' ).map(m => m.index)).toEqual(['goblin']);
+  });
+
+  it('filters by CR range', () => {
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', 0, 0.5).map(m => m.index)).toEqual(['goblin', 'orc', 'shadow']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', 1, 2).map(m => m.index)).toContain('dragon');
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', '', 0.5).map(m => m.index)).toEqual(['goblin', 'orc', 'shadow']);
+    expect(filterMonsters(monsters, '', [1, 1, 1], 1, 150, '', '', '', 2, '' ).map(m => m.index)).toEqual(['dragon']);
+  });
+
+  it('filters by CR range with fraction notation', () => {
+    const fractionMonsters = [
+      { index: 'mold', name: 'Mold', type: 'plant', size: 'medium', environments: ['forest'], challenge_rating: '1/8' },
+      { index: 'rat', name: 'Rat', type: 'beast', size: 'tiny', environments: ['forest'], challenge_rating: '1/4' },
+      { index: 'wolf', name: 'Wolf', type: 'beast', size: 'medium', environments: ['forest'], challenge_rating: '1/4' },
+    ];
+    expect(filterMonsters(fractionMonsters, '', [1, 1, 1], 1, 150, '', '', '', 0.125, 0.25).map(m => m.index)).toEqual(['mold', 'rat', 'wolf']);
+  });
+
+  it('excludes monsters with no CR when CR range is specified', () => {
+    const noCRMonsters = [
+      { index: 'cloud', name: 'Cloud', type: 'elemental', size: 'large', environments: ['sky'], challenge_rating: 'None' },
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', size: 'small', environments: ['forest'], challenge_rating: 0.25 },
+    ];
+    expect(filterMonsters(noCRMonsters, '', [1, 1, 1], 1, 150, '', '', '', 0, 1).map(m => m.index)).toEqual(['goblin']);
+  });
+
+  it('combines type and size filters', () => {
+    const combinedMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', size: 'small', environments: ['forest'], challenge_rating: 0.25 },
+      { index: 'orc', name: 'Orc', type: 'humanoid', size: 'medium', environments: ['hill'], challenge_rating: 0.5 },
+      { index: 'ogre', name: 'Ogre', type: 'giant', size: 'huge', environments: ['hill'], challenge_rating: 3 },
+    ];
+    expect(filterMonsters(combinedMonsters, '', [1, 1, 1], 1, 150, '', 'humanoid', 'small', '', '' ).map(m => m.index)).toEqual(['goblin']);
+  });
+
+  it('combines type, size, and CR filters', () => {
+    const combinedMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', size: 'small', environments: ['forest'], challenge_rating: 0.25 },
+      { index: 'orc', name: 'Orc', type: 'humanoid', size: 'medium', environments: ['hill'], challenge_rating: 0.5 },
+      { index: 'ogre', name: 'Ogre', type: 'giant', size: 'huge', environments: ['hill'], challenge_rating: 3 },
+    ];
+    expect(filterMonsters(combinedMonsters, '', [1, 1, 1], 1, 150, '', 'humanoid', '', 0, 0.5).map(m => m.index)).toEqual(['goblin', 'orc']);
+    expect(filterMonsters(combinedMonsters, '', [1, 1, 1], 1, 150, '', '', 'medium', 0, 1).map(m => m.index)).toEqual(['orc']);
   });
 
   it('returns empty array when monsters is null or no monsters match', () => {
-    expect(filterMonsters(null, '', [1], 1, 50, '')).toEqual([]);
-    expect(filterMonsters(monsters, 'unicorn', [1, 1, 1], 1, 150, '')).toEqual([]);
+    expect(filterMonsters(null, '', [1], 1, 50, '', '', '', '', '' )).toEqual([]);
+    expect(filterMonsters(monsters, 'unicorn', [1, 1, 1], 1, 150, '', '', '', '', '' )).toEqual([]);
   });
 });
 
@@ -212,6 +299,11 @@ describe('loadSavedFilter', () => {
     expect(loadSavedFilter()).toEqual({ difficulty: 2, environment: 'forest' });
   });
 
+  it('returns saved filter with new fields', () => {
+    localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 1, environment: 'mountain', type: 'humanoid', size: 'medium', crMin: 0, crMax: 2 }));
+    expect(loadSavedFilter()).toEqual({ difficulty: 1, environment: 'mountain', type: 'humanoid', size: 'medium', crMin: 0, crMax: 2 });
+  });
+
   it('returns null when difficulty is not a number, data is missing, corrupt, or absent', () => {
     localStorage.setItem('encounterFilter-2024', JSON.stringify({ difficulty: 'hard', environment: 'forest' }));
     expect(loadSavedFilter()).toBeNull();
@@ -231,7 +323,14 @@ describe('saveFilter', () => {
   function saveFilter(filter) {
     try {
       const key = 'encounterFilter-2024';
-      localStorage.setItem(key, JSON.stringify({ difficulty: filter.difficulty, environment: filter.environment }));
+      localStorage.setItem(key, JSON.stringify({
+        difficulty: filter.difficulty,
+        environment: filter.environment,
+        type: filter.type,
+        size: filter.size,
+        crMin: filter.crMin,
+        crMax: filter.crMax,
+      }));
     } catch { /* storage full, ignore */ }
   }
 
@@ -243,6 +342,12 @@ describe('saveFilter', () => {
     saveFilter({ difficulty: 0, environment: '' });
     const savedEmpty = JSON.parse(localStorage.getItem('encounterFilter-2024'));
     expect(savedEmpty).toEqual({ difficulty: 0, environment: '' });
+  });
+
+  it('saves new filter fields (type, size, crMin, crMax)', () => {
+    saveFilter({ difficulty: 1, environment: 'forest', type: 'beast', size: 'medium', crMin: 0, crMax: 2 });
+    const saved = JSON.parse(localStorage.getItem('encounterFilter-2024'));
+    expect(saved).toEqual({ difficulty: 1, environment: 'forest', type: 'beast', size: 'medium', crMin: 0, crMax: 2 });
   });
 });
 

@@ -42,22 +42,6 @@ describe('EncounterFilterPanel', () => {
     });
   });
 
-  describe('environment dropdown', () => {
-    it('renders the environment select with the correct value', () => {
-      render(<EncounterFilterPanel {...props} />);
-      const select = document.querySelector('#environment-select');
-      expect(select).toBeInTheDocument();
-      expect(select.value).toBe('forest');
-    });
-
-    it('calls onEnvironmentChange when selection changes', () => {
-      render(<EncounterFilterPanel {...props} />);
-      const select = document.querySelector('#environment-select');
-      fireEvent.change(select, { target: { value: 'desert' } });
-      expect(props.onEnvironmentChange).toHaveBeenCalled();
-    });
-  });
-
   describe('player levels', () => {
     it('renders a row for each player level', () => {
       render(<EncounterFilterPanel {...props} />);

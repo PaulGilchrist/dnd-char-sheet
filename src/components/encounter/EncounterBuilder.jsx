@@ -36,10 +36,33 @@ function calculateMonsterCount(selectedMonsters) {
   return selectedMonsters.reduce((sum, m) => sum + (m.qty || 1), 0);
 }
 
-function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, totalThreshold, environmentFilter) {
+function crToNumber(cr) {
+  if (cr === null || cr === undefined || cr === '' || cr === 'None') return NaN;
+  const str = String(cr).trim().toLowerCase();
+  if (str === 'any') return 999;
+  const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (match) return parseInt(match[1], 10) / parseInt(match[2], 10);
+  const num = parseFloat(str);
+  return isNaN(num) ? NaN : num;
+}
+
+function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, totalThreshold, environmentFilter, typeFilter, sizeFilter, crMin, crMax) {
   if (!monsters) return [];
   return monsters.filter(m => {
     if (environmentFilter && m.environments && !m.environments.includes(environmentFilter)) return false;
+    if (typeFilter && m.type && m.type.toLowerCase() !== typeFilter.toLowerCase()) return false;
+    if (sizeFilter && m.size && m.size.toLowerCase() !== sizeFilter.toLowerCase()) return false;
+    const crMinNum = crMin === '' ? null : parseFloat(crMin);
+    const crMaxNum = crMax === '' ? null : parseFloat(crMax);
+    if (crMinNum !== null || crMaxNum !== null) {
+      const cr = crToNumber(m.challenge_rating);
+      if (!isNaN(cr)) {
+        if (crMinNum !== null && cr < crMinNum) return false;
+        if (crMaxNum !== null && cr > crMaxNum) return false;
+      } else {
+        return false;
+      }
+    }
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return m.name.toLowerCase().includes(q)
@@ -86,7 +109,14 @@ function loadSavedFilter() {
 function saveFilter(filter) {
   try {
     const key = 'encounterFilter-2024';
-    localStorage.setItem(key, JSON.stringify({ difficulty: filter.difficulty, environment: filter.environment }));
+    localStorage.setItem(key, JSON.stringify({
+      difficulty: filter.difficulty,
+      environment: filter.environment,
+      type: filter.type,
+      size: filter.size,
+      crMin: filter.crMin,
+      crMax: filter.crMax,
+    }));
    } catch { /* storage full, ignore */ }
 }
 
@@ -110,6 +140,10 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
        difficulty: saved ? saved.difficulty : ENCOUNTER_CONFIG.defaultDifficulty,
        playerLevels,
        environment: saved ? saved.environment : '',
+       type: saved ? saved.type : '',
+       size: saved ? saved.size : '',
+       crMin: saved && saved.crMin !== undefined ? saved.crMin : '',
+       crMax: saved && saved.crMax !== undefined ? saved.crMax : '',
        };
     });
 
@@ -197,7 +231,7 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
     const filteredMonsters = useMemo(
         () => {
          // Ensure selected monsters always appear in the table, even if they don't match current filters
-        const result = filterMonsters(monsters, searchQuery, filter.playerLevels, filter.difficulty, totalThreshold, filter.environment);
+        const result = filterMonsters(monsters, searchQuery, filter.playerLevels, filter.difficulty, totalThreshold, filter.environment, filter.type, filter.size, filter.crMin, filter.crMax);
         for (const sm of selectedMonsters) {
           if (!result.some(m => m.index === sm.index)) {
             const full = (monsters || []).find(m => m.index === sm.index);
@@ -238,7 +272,7 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
            });
         return result;
         },
-        [monsters, searchQuery, filter.playerLevels, filter.difficulty, totalThreshold, filter.environment, selectedMonsters, sortField, sortDirection]
+        [monsters, searchQuery, filter.playerLevels, filter.difficulty, totalThreshold, filter.environment, filter.type, filter.size, filter.crMin, filter.crMax, selectedMonsters, sortField, sortDirection]
     );
 
   // --- Handlers ---
@@ -359,13 +393,17 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
     setEncounterTitle('Encounter Builder');
     setCurrentEncounterName(null);
     setPendingEncounterData(null);
-      setFilter({
-        difficulty: ENCOUNTER_CONFIG.defaultDifficulty,
-       playerLevels: (characters && characters.length > 0)
-              ? characters.map(c => c.level || 1)
-              : [1],
-       environment: '',
-          });
+       setFilter({
+         difficulty: ENCOUNTER_CONFIG.defaultDifficulty,
+        playerLevels: (characters && characters.length > 0)
+               ? characters.map(c => c.level || 1)
+               : [1],
+        environment: '',
+        type: '',
+        size: '',
+        crMin: '',
+        crMax: '',
+           });
     setSelectedMonsters([]);
     setSearchQuery('');
     setDescription('');
@@ -388,6 +426,22 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
   const handleEnvironmentChange = (e) => {
     setFilter(prev => ({ ...prev, environment: e.target.value }));
    };
+
+  const handleTypeChange = (value) => {
+    setFilter(prev => ({ ...prev, type: value }));
+  };
+
+  const handleSizeChange = (value) => {
+    setFilter(prev => ({ ...prev, size: value }));
+  };
+
+  const handleCRMinChange = (value) => {
+    setFilter(prev => ({ ...prev, crMin: value }));
+  };
+
+  const handleCRMaxChange = (value) => {
+    setFilter(prev => ({ ...prev, crMax: value }));
+  };
 
   const handleAddPlayer = () => {
     setFilter(prev => ({ ...prev, playerLevels: [...prev.playerLevels, 1] }));
@@ -550,21 +604,29 @@ function EncounterBuilder({ characters, campaignName, onJoinEncounter }) {
          />
 
         {/* Monster Selection Table */}
-          <EncounterMonsterTable
-          filteredMonsters={filteredMonsters}
-          selectedMonsters={selectedMonsters}
-          onToggleMonster={handleToggleMonster}
-          onIncreaseQty={handleIncreaseQty}
-          onDecreaseQty={handleDecreaseQty}
-          onRemoveMonster={handleRemoveMonster}
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          onSort={handleSort}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onViewDetails={setViewingMonster}
-          showEnvironment={true}
-          />
+           <EncounterMonsterTable
+           filteredMonsters={filteredMonsters}
+           selectedMonsters={selectedMonsters}
+           onToggleMonster={handleToggleMonster}
+           onIncreaseQty={handleIncreaseQty}
+           onDecreaseQty={handleDecreaseQty}
+           onRemoveMonster={handleRemoveMonster}
+           searchQuery={searchQuery}
+           onSearchQueryChange={setSearchQuery}
+           onSort={handleSort}
+           sortField={sortField}
+           sortDirection={sortDirection}
+           onViewDetails={setViewingMonster}
+           showEnvironment={true}
+           typeFilter={filter.type}
+           onTypeChange={handleTypeChange}
+           sizeFilter={filter.size}
+           onSizeChange={handleSizeChange}
+           crMin={filter.crMin}
+           crMax={filter.crMax}
+           onCRMinChange={handleCRMinChange}
+           onCRMaxChange={handleCRMaxChange}
+           />
 
       {/* Encounter Save/Load Modal */}
       <EncounterModal

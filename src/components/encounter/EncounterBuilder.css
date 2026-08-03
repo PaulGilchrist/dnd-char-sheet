@@ -267,6 +267,64 @@
   border-color: var(--color-primary);
 }
 
+/* ============ Filter Row ============ */
+.encounter-builder .filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  background: var(--background-color-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  align-items: flex-start;
+}
+
+.encounter-builder .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.encounter-builder .filter-group.filter-cr-group {
+  flex: 0;
+  min-width: 80px;
+}
+
+.encounter-builder .filter-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 0;
+}
+
+.encounter-builder .filter-select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background: var(--background-color-input);
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.encounter-builder .filter-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  background: var(--background-color-input);
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.encounter-builder .filter-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
 .encounter-builder .monster-table-wrapper {
   max-height: 700px;
   overflow-y: auto;

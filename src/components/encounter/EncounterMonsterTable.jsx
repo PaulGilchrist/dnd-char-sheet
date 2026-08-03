@@ -1,5 +1,34 @@
 import './EncounterBuilder.css';
 
+const MONSTER_TYPES = [
+  { value: '', label: 'All Types' },
+  { value: 'aberration', label: 'Aberration' },
+  { value: 'beast', label: 'Beast' },
+  { value: 'celestial', label: 'Celestial' },
+  { value: 'construct', label: 'Construct' },
+  { value: 'dragon', label: 'Dragon' },
+  { value: 'elemental', label: 'Elemental' },
+  { value: 'fey', label: 'Fey' },
+  { value: 'fiend', label: 'Fiend' },
+  { value: 'giant', label: 'Giant' },
+  { value: 'humanoid', label: 'Humanoid' },
+  { value: 'monstrosity', label: 'Monstrosity' },
+  { value: 'ooze', label: 'Ooze' },
+  { value: 'plant', label: 'Plant' },
+  { value: 'swarm', label: 'Swarm' },
+  { value: 'undead', label: 'Undead' },
+];
+
+const SIZES = [
+  { value: '', label: 'All Sizes' },
+  { value: 'tiny', label: 'Tiny' },
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' },
+  { value: 'huge', label: 'Huge' },
+  { value: 'gargantuan', label: 'Gargantuan' },
+];
+
 function EncounterMonsterTable({
   filteredMonsters,
   selectedMonsters,
@@ -14,6 +43,14 @@ function EncounterMonsterTable({
   sortDirection,
   onViewDetails,
   showEnvironment,
+  typeFilter,
+  onTypeChange,
+  sizeFilter,
+  onSizeChange,
+  crMin,
+  crMax,
+  onCRMinChange,
+  onCRMaxChange,
 }) {
   const isSelected = (monsterIndex) => {
     return selectedMonsters.some((m) => m.index === monsterIndex);
@@ -37,6 +74,64 @@ function EncounterMonsterTable({
           onChange={(e) => onSearchQueryChange(e.target.value)}
           aria-label="Search monsters"
         />
+      </div>
+
+      {/* Filter Row */}
+      <div className="filter-row">
+        <div className="filter-group">
+          <label className="filter-label" htmlFor="monster-type-filter">Type</label>
+          <select
+            id="monster-type-filter"
+            className="filter-select"
+            value={typeFilter || ''}
+            onChange={(e) => onTypeChange(e.target.value)}
+          >
+            {MONSTER_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label className="filter-label" htmlFor="monster-size-filter">Size</label>
+          <select
+            id="monster-size-filter"
+            className="filter-select"
+            value={sizeFilter || ''}
+            onChange={(e) => onSizeChange(e.target.value)}
+          >
+            {SIZES.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group filter-cr-group">
+          <label className="filter-label" htmlFor="cr-min">CR Min</label>
+          <input
+            id="cr-min"
+            type="number"
+            className="filter-input"
+            placeholder="Any"
+            min="0"
+            step="0.125"
+            value={crMin ?? ''}
+            onChange={(e) => onCRMinChange(e.target.value)}
+            aria-label="Minimum challenge rating"
+          />
+        </div>&nbsp;&nbsp;&nbsp;&nbsp;
+        <div className="filter-group filter-cr-group">
+          <label className="filter-label" htmlFor="cr-max">CR Max</label>
+          <input
+            id="cr-max"
+            type="number"
+            className="filter-input"
+            placeholder="Any"
+            min="0"
+            step="0.125"
+            value={crMax ?? ''}
+            onChange={(e) => onCRMaxChange(e.target.value)}
+            aria-label="Maximum challenge rating"
+          />
+        </div>
       </div>
 
       {/* Monster Table */}
