@@ -121,7 +121,8 @@
     "Charm Person",
     "Banishment",
     "Hold Monster",
-    "Imprisonment"
+    "Imprisonment",
+    "Acid Splash"
   ],
   "magicInitiateInstances": [
     {

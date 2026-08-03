@@ -47,10 +47,11 @@ function makePlayerStats(overrides = {}) {
     };
 }
 
-function makeAction(automation = {}) {
+function makeAction(automation = {}, metaCtx = {}) {
     return {
         name: 'Warding Bond',
         automation: { type: 'warding_bond', ...automation },
+        metaCtx,
     };
 }
 
@@ -61,7 +62,7 @@ describe('wardingBondHandler.handle', () => {
         vi.clearAllMocks();
     });
 
-    it('returns info popup when no target is available', async () => {
+    it('returns info popup when no target is available (no metaCtx, no combat context)', async () => {
         getCombatSummary.mockReturnValue(null);
 
         const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
@@ -71,12 +72,10 @@ describe('wardingBondHandler.handle', () => {
         expect(result.payload.description).toBe('No target selected. Choose a willing creature within range.');
     });
 
-    it('applies warding bond to target and caster when valid target exists', async () => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
+    it('uses metaCtx.wardingBondTargetName when provided', async () => {
         getRuntimeValue.mockReturnValue([]);
 
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+        const result = await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         expect(result.type).toBe('popup');
         expect(result.payload.description).toContain(`Warding Bond activated on ${targetName}`);
@@ -85,14 +84,32 @@ describe('wardingBondHandler.handle', () => {
         expect(result.payload.description).toContain('resistance to all damage');
     });
 
-    it('removes existing warding bond from target and caster before reapplying', async () => {
+    it('falls back to combat context target when no metaCtx', async () => {
         getCombatSummary.mockReturnValue({});
         getTargetFromAttacker.mockReturnValue({ name: targetName });
+        getRuntimeValue.mockReturnValue([]);
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain(`Warding Bond activated on ${targetName}`);
+    });
+
+    it('applies warding bond to target and caster when valid target exists', async () => {
+        getRuntimeValue.mockReturnValue([]);
+
+        const result = await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain(`Warding Bond activated on ${targetName}`);
+    });
+
+    it('removes existing warding bond from target and caster before reapplying', async () => {
         getRuntimeValue.mockReturnValueOnce([{ effect: 'warding_bond' }])
             .mockReturnValueOnce([])
             .mockReturnValueOnce([]);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         const setCalls = setRuntimeValue.mock.calls;
         // First call: remove old bond from target
@@ -115,11 +132,9 @@ describe('wardingBondHandler.handle', () => {
     });
 
     it('stores bondTarget on caster buff and sourceCharacter on target buff', async () => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
         getRuntimeValue.mockReturnValue([]);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         const setCalls = setRuntimeValue.mock.calls;
         expect(setCalls).toHaveLength(2);
@@ -132,12 +147,10 @@ describe('wardingBondHandler.handle', () => {
         expect(casterBuff.effect).toBe('warding_bond');
     });
 
-    it('adds expiration when warding bond is applied', async () => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
+    it('adds expiration with expireOnCreatureName for initiative roll expiry', async () => {
         getRuntimeValue.mockReturnValue([]);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         expect(addExpiration).toHaveBeenCalledWith(
             casterName,
@@ -146,15 +159,15 @@ describe('wardingBondHandler.handle', () => {
                 expect.objectContaining({ type: 'remove_active_buff', buffName: 'Warding Bond' }),
             ]),
             campaignName,
+            undefined,
+            casterName,
         );
     });
 
     it('calls addEntry to log the ability use', async () => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
         getRuntimeValue.mockReturnValue([]);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
             type: 'ability_use',
@@ -169,11 +182,9 @@ describe('wardingBondHandler.handle', () => {
         [{ duration: '1_hour' }, '1_hour'],
         [{}, '1 hour'],
     ])('uses duration %j => "%s"', async (automation, expectedDuration) => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
         getRuntimeValue.mockReturnValue([]);
 
-        await handle(makeAction(automation), makePlayerStats(), campaignName, null);
+        await handle(makeAction(automation, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         const setCalls = setRuntimeValue.mock.calls;
         const targetBuff = setCalls[0][2][0];
@@ -183,11 +194,9 @@ describe('wardingBondHandler.handle', () => {
     });
 
     it('adds AC, save, and resistance bonuses to target buff', async () => {
-        getCombatSummary.mockReturnValue({});
-        getTargetFromAttacker.mockReturnValue({ name: targetName });
         getRuntimeValue.mockReturnValue([]);
 
-        await handle(makeAction(), makePlayerStats(), campaignName, null);
+        await handle(makeAction({}, { wardingBondTargetName: targetName }), makePlayerStats(), campaignName, null);
 
         const setCalls = setRuntimeValue.mock.calls;
         const targetBuff = setCalls[0][2][0];

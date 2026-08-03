@@ -1,7 +1,7 @@
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { applyWardingBond } from './wardingBondService.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
 import { getDistanceFeet } from '../../rules/combat/rangeValidation.js';
 
@@ -194,6 +194,24 @@ describe('wardingBondService', () => {
             expect(addEntry).toHaveBeenCalled();
         });
 
+        it('persists caster HP via setRuntimeValue when caster is a player (not in combatSummary)', () => {
+            setupWardingBond('Paladin');
+            getDistanceFeet.mockReturnValue(30);
+            getRuntimeValue.mockReturnValueOnce([
+                { effect: 'warding_bond', sourceCharacter: 'Paladin' },
+            ])
+            .mockReturnValueOnce(10);
+
+            applyWardingBond(
+                goblin,
+                makeCombatSummary(goblin),
+                campaignName,
+                5,
+            );
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Paladin', 'currentHitPoints', 5, campaignName);
+        });
+
         it('does nothing when caster creature is not found in combatSummary', () => {
             setupWardingBond('UnknownPaladin');
             paladin.currentHp = 10;
@@ -293,6 +311,58 @@ describe('wardingBondService', () => {
 
             expect(paladin.currentHp).toBe(0);
             expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('works when warding bond target is an NPC and caster is a player (not in combatSummary)', () => {
+            const npcAlly = { name: 'NPCAlly', currentHp: 15, maxHp: 15 };
+            getRuntimeValue.mockReturnValueOnce([
+                { effect: 'warding_bond', sourceCharacter: 'Paladin' },
+            ])
+            .mockReturnValueOnce(10)
+            .mockReturnValueOnce(20);
+            getDistanceFeet.mockReturnValue(30);
+
+            applyWardingBond(
+                npcAlly,
+                makeCombatSummary(npcAlly),
+                campaignName,
+                4,
+            );
+
+            // Caster not in combatSummary → reads HP from runtime store
+            expect(setRuntimeValue).toHaveBeenCalledWith('Paladin', 'currentHitPoints', 6, campaignName);
+            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                type: 'hp_change',
+                targetName: 'Paladin',
+                delta: -4,
+                currentHp: 6,
+                maxHp: 20,
+                abilityName: 'Warding Bond',
+            }));
+        });
+
+        it('works when warding bond caster is an NPC (HP read from combatSummary)', () => {
+            const npcCaster = { name: 'NPCCaster', currentHp: 10, maxHp: 10 };
+            const playerTarget = { name: 'Player1' };
+            getRuntimeValue.mockReturnValueOnce([
+                { effect: 'warding_bond', sourceCharacter: 'NPCCaster' },
+            ]);
+            getDistanceFeet.mockReturnValue(30);
+
+            applyWardingBond(
+                playerTarget,
+                makeCombatSummary(npcCaster, playerTarget),
+                campaignName,
+                3,
+            );
+
+            expect(npcCaster.currentHp).toBe(7);
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                targetName: 'NPCCaster',
+                delta: -3,
+                currentHp: 7,
+            }));
         });
     });
 

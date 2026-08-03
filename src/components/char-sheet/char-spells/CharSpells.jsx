@@ -53,6 +53,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const [pendingSimpleMetamagic, setPendingSimpleMetamagic] = React.useState(null);
     const [pendingHexSpell, setPendingHexSpell] = React.useState(null);
     const [pendingResilientSphere, setPendingResilientSphere] = React.useState(null);
+    const [pendingWardingBond, setPendingWardingBond] = React.useState(null);
 
     const handleHexAbilitySelected = (ability) => {
       setShowHexAbilityModal(false);
@@ -158,6 +159,20 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
         if (cs?.creatures) {
           const targets = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
           setPendingResilientSphere({ spell, targets });
+          return;
+        }
+      }
+
+      // Warding Bond — show target selection modal (2024 rules only)
+      if (spellName && spellName.toLowerCase() === 'warding bond' && is2024) {
+        const cs = getCombatSummary(campaignName);
+        if (cs?.creatures) {
+          const casterCreature = cs.creatures.find(c => c.name === playerStats.name);
+          const allCreatures = [...cs.creatures.map(c => ({ name: c.name, type: 'creature' }))];
+          if (!casterCreature || !allCreatures.some(c => c.name === playerStats.name)) {
+            allCreatures.push({ name: playerStats.name, type: 'creature' });
+          }
+          setPendingWardingBond({ spell, targets: allCreatures });
           return;
         }
       }
@@ -280,6 +295,17 @@ return (
                                         } else {
                                             handleSpellCast(spell, metaCtx);
                                         }
+                                    } else if (spell.name && spell.name.toLowerCase() === 'warding bond' && is2024) {
+                                        const cs = getCombatSummary(campaignName);
+                                        if (cs?.creatures) {
+                                            const allCreatures = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
+                                            if (!allCreatures.some(c => c.name === playerStats.name)) {
+                                                allCreatures.push({ name: playerStats.name, type: 'creature' });
+                                            }
+                                            setPendingWardingBond({ spell, targets: allCreatures });
+                                        } else {
+                                            handleSpellCast(spell, metaCtx);
+                                        }
                                     } else {
                                         handleSpellCast(spell, metaCtx);
                                     }
@@ -372,6 +398,21 @@ return (
                         description="Choose a creature within 30 feet. The target must succeed on a DEX saving throw or be enclosed in a shimmering sphere for the duration. Allies automatically fail the save."
                         confirmLabel="Cast Otiluke's Resilient Sphere"
                         confirmIcon="fa-circle"
+                      />
+                    )}
+                    {pendingWardingBond && (
+                      <SecondaryTargetModal
+                        title="Warding Bond"
+                        targets={pendingWardingBond.targets}
+                        onTargetSelected={(targetName) => {
+                          setPendingWardingBond(null);
+                          const modifiedSpell = { ...pendingWardingBond.spell, baseLevel: pendingWardingBond.spell.level };
+                          castAction(modifiedSpell, { wardingBondTargetName: targetName });
+                        }}
+                        onSkip={() => setPendingWardingBond(null)}
+                        description="Choose a willing creature within range (including yourself). You create a mystic connection: the target gains +1 AC, +1 to saving throws, and resistance to all damage while within 60 feet. You take the same damage they take."
+                        confirmLabel="Cast Warding Bond"
+                        confirmIcon="fa-ring"
                       />
                     )}
                     {pendingHeroesFeast && (

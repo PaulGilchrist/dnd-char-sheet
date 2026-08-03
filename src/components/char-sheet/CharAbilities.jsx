@@ -312,19 +312,30 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
 
 
 
-         const getSaveAdvantageSource = () => {
-          if (conditionEffects?.saveAdvantage?.includes('against_spell')) {
-            const saveModifiers = playerStats?.saveModifiers || playerStats?.computedStats?.saveModifiers || [];
-            const spellResistMod = saveModifiers.find(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
-            return spellResistMod?.source || 'Spell Resistance';
+          const getSaveAdvantageSource = () => {
+           const parts = [];
+           if (conditionEffects?.saveAdvantage?.includes('against_spell')) {
+             const saveModifiers = playerStats?.saveModifiers || playerStats?.computedStats?.saveModifiers || [];
+             const spellResistMod = saveModifiers.find(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
+             parts.push(spellResistMod?.source || 'Spell Resistance');
+           }
+           if ((conditionEffects?.saveAdvantageCount || 0) > 0) {
+             const saveModifiers = playerStats?.saveModifiers || playerStats?.computedStats?.saveModifiers || [];
+             const mods = saveModifiers.filter(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition !== 'against_spell');
+             if (mods.length > 0) parts.push(mods.map(m => m.source).join(', '));
+           }
+           if (conditionEffects?.saveBonusExpression) {
+             const expr = conditionEffects.saveBonusExpression;
+             const match = expr.match(/\+\s*(\d+)/g);
+             if (match) {
+               match.forEach(m => {
+                 const val = parseInt(m.replace(/\+\s*/, ''), 10);
+                 if (val > 0) parts.push(`+${val} [Warding Bond]`);
+               });
+             }
+           }
+           return parts.length > 0 ? parts.join(', ') : null;
           }
-          if ((conditionEffects?.saveAdvantageCount || 0) > 0) {
-            const saveModifiers = playerStats?.saveModifiers || playerStats?.computedStats?.saveModifiers || [];
-            const mods = saveModifiers.filter(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition !== 'against_spell');
-            if (mods.length > 0) return mods.map(m => m.source).join(', ');
-          }
-           return null;
-         }
 
          useEffect(() => {
              const handler = (e) => {

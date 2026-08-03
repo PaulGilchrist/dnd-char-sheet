@@ -1253,7 +1253,16 @@ export function createLogAndShow(deps) {
                     }
                 }
 
-                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus;
+                // Warding Bond: +1 flat bonus to saving throws
+                let wardingBondSaveBonus = 0;
+                const targetBuffsForSave = getRuntimeValue(targetName, 'activeBuffs', campaignName);
+                const targetActiveBuffsForSave = Array.isArray(targetBuffsForSave) ? targetBuffsForSave : [];
+                const wardingBondBuffForSave = targetActiveBuffsForSave.find(b => b.effect === 'warding_bond' && b.saveBonus);
+                if (wardingBondBuffForSave) {
+                    wardingBondSaveBonus = wardingBondBuffForSave.saveBonus;
+                }
+
+                saveTotal = effectiveD20ForSave + bonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus + wardingBondSaveBonus;
                 saveSuccess = saveDc != null ? (saveTotal >= saveDc) : null;
 
                 setRuntimeValue(characterName, 'lastSaveRoll', {
@@ -1310,6 +1319,7 @@ export function createLogAndShow(deps) {
                     baneAttackerRoll: baneAttackerRoll,
                     baneAttackerDisplayLabel: baneAttackerDisplayLabel,
                     blessRoll: blessSaveRoll,
+                    wardingBondSaveBonus,
                     isNatural20: effectiveD20ForSave === 20,
                     isNatural1: effectiveD20ForSave === 1,
                     targetName: targetName,

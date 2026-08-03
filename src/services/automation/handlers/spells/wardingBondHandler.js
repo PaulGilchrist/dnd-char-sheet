@@ -14,12 +14,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const casterName = playerStats.name;
 
-    const combatSummary = getCombatSummary(campaignName);
-    let targetName = null;
-    if (combatSummary) {
-        const target = getTargetFromAttacker(combatSummary, casterName);
-        if (target) {
-            targetName = target.name;
+    // 2024 rules: target selected via SecondaryTargetModal (passed through metaCtx)
+    let targetName = action.metaCtx?.wardingBondTargetName;
+
+    // Fallback: use combat context target (for non-2024 or legacy flow)
+    if (!targetName) {
+        const combatSummary = getCombatSummary(campaignName);
+        if (combatSummary) {
+            const target = getTargetFromAttacker(combatSummary, casterName);
+            if (target) {
+                targetName = target.name;
+            }
         }
     }
 
@@ -81,10 +86,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }];
     setRuntimeValue(casterName, 'activeBuffs', newCasterBuffs, campaignName);
 
-    // Add expiration
+    // Add expiration: expires on initiative roll (when caster becomes active), short rest, long rest
     addExpiration(casterName, targetName, [
         { type: 'remove_active_buff', buffName: action.name }
-    ], campaignName);
+    ], campaignName, undefined, casterName);
 
     await addEntry(campaignName, {
         type: 'ability_use',

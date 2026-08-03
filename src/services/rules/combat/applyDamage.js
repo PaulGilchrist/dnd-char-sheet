@@ -284,9 +284,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
     }
 
     if (wardDamage > 0) {
-      if (isPlayer) {
         applyWardingBond(creature, combatSummary, campaignName, wardDamage);
-      }
       if (isPlayer) {
         const rawConditions = getRuntimeValue(creature.name, 'activeConditions');
         const conditions = rawConditions || [];

@@ -1,4 +1,4 @@
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
 import { getDistanceFeet } from '../../rules/combat/rangeValidation.js';
 import { isDistanceInRange } from '../../rules/combat/rangeCheck.js';
@@ -13,21 +13,37 @@ export function applyWardingBond(creature, combatSummary, campaignName, wardDama
         const targetCreature = combatSummary.creatures.find(c => c.name === creature.name);
         const distance = casterCreature && targetCreature ? getDistanceFeet(casterCreature.position, targetCreature.position) : null;
         if (isDistanceInRange(distance, 60)) {
-            if (casterCreature && casterCreature.currentHp > 0) {
+            const casterIsPlayer = !casterCreature || casterCreature.type === 'player' || typeof casterCreature.currentHp === 'undefined';
+            const casterHp = casterIsPlayer
+                ? getRuntimeValue(casterName, 'currentHitPoints', campaignName)
+                : casterCreature.currentHp;
+            if (casterHp > 0) {
                 const sharedDamage = wardDamage;
-                casterCreature.currentHp = Math.max(0, casterCreature.currentHp - sharedDamage);
+                const oldHp = casterHp;
+                const newHp = Math.max(0, casterHp - sharedDamage);
+                if (casterIsPlayer) {
+                    setRuntimeValue(casterName, 'currentHitPoints', newHp, campaignName);
+                } else {
+                    casterCreature.currentHp = newHp;
+                }
+                const casterMaxHp = casterIsPlayer
+                    ? getRuntimeValue(casterName, 'maxHitPoints', campaignName)
+                    : (casterCreature.maxHp || 10);
+                const concentration = casterIsPlayer
+                    ? getRuntimeValue(casterName, 'concentration', campaignName)
+                    : casterCreature.concentration;
                 addEntry(campaignName, {
                     type: 'hp_change',
                     targetName: casterName,
-                    delta: -sharedDamage,
-                    currentHp: casterCreature.currentHp,
-                    maxHp: casterCreature.maxHp,
+                    delta: -(oldHp - newHp),
+                    currentHp: newHp,
+                    maxHp: casterMaxHp,
                     isHealing: false,
-                    isUnconscious: casterCreature.currentHp <= 0,
+                    isUnconscious: newHp <= 0,
                     abilityName: 'Warding Bond',
                 }).catch((e) => { console.error("[wardingBond] Error:", e); });
-                if (casterCreature.concentration && sharedDamage > 0) {
-                    casterCreature.concentration.dc = Math.max(10, Math.floor(sharedDamage / 2));
+                if (concentration && sharedDamage > 0) {
+                    concentration.dc = Math.max(10, Math.floor(sharedDamage / 2));
                 }
             }
         }

@@ -327,7 +327,16 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     }
 
-    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus;
+    // Warding Bond: +1 flat bonus to saving throws
+    let wardingBondSaveBonus = 0;
+    const targetBuffs = getRuntimeValue(current.targetName, 'activeBuffs', campaignName);
+    const targetActiveBuffs = Array.isArray(targetBuffs) ? targetBuffs : [];
+    const wardingBondBuff = targetActiveBuffs.find(b => b.effect === 'warding_bond' && b.saveBonus);
+    if (wardingBondBuff) {
+      wardingBondSaveBonus = wardingBondBuff.saveBonus;
+    }
+
+    const total = finalRoll + saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus + wardingBondSaveBonus;
     const success = total >= current.saveDc;
     const auraBonusStr = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined;
     const bonusDetailParts = [auraBonusStr, cosmicOmenDetail];
@@ -339,6 +348,9 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     }
     if (blessSaveRoll) {
       bonusDetailParts.push(`+${blessSaveRoll} [Bless]`);
+    }
+    if (wardingBondSaveBonus > 0) {
+      bonusDetailParts.push(`+${wardingBondSaveBonus} [Warding Bond]`);
     }
     const bonusDetail = bonusDetailParts.filter(Boolean).join(' ') || undefined;
 
@@ -379,7 +391,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
     setPrompts(prev => prev.map((p, i) =>
       i === 0
-        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll, blessRoll: blessSaveRoll, baneAttackerRoll: baneAttackerRoll } }
+        ? { ...p, result: { success, roll: finalRoll, total, saveBonus: saveBonus + auraBonus + cosmicOmenAppliedBonus + baneSavePenalty + blessSaveBonus + baneAttackerBonus + wardingBondSaveBonus, bonusDetail, rawRolls: [roll1, roll2], mode: rollMode, baneRoll: baneSaveRoll, blessRoll: blessSaveRoll, baneAttackerRoll: baneAttackerRoll } }
         : p
     ));
 

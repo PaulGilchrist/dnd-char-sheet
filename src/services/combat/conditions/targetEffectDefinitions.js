@@ -602,6 +602,17 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'dc'],
   },
 
+  // ── Spells (continued) ─────────────────────────────────
+  {
+    effect: 'warding_bond',
+    label: 'Warding Bond',
+    description: 'AC +1, saves +1, resistance to all damage. Caster takes same damage as target. Expires when concentration broken, on initiative roll, short rest, or long rest.',
+    icon: 'fa-ring',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+
   // ── Movement ────────────────────────────────────────────
   {
     effect: 'ac_penalty',

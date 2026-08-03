@@ -431,7 +431,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         conditionEffects.wardingBondAcBonus = wardingBondAcBonus;
     }
     if (wardingBondSaveBonus > 0) {
-        conditionEffects.saveAdvantageCount = (conditionEffects.saveAdvantageCount || 0) + wardingBondSaveBonus;
+        conditionEffects.saveBonusExpression = (conditionEffects.saveBonusExpression || '0') + ' + ' + wardingBondSaveBonus;
     }
 
     // Shield of Faith: +2 AC for duration (Concentration, up to 10 minutes)

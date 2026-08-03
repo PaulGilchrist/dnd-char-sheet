@@ -277,6 +277,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Holy Aura', cls: 'effect-buff', icon: 'fa-sun', removable: isLocalhost, removeAction: 'target_effect', effectType: 'holy_aura', tooltip: `Holy Aura from ${casterName}: Advantage on saving throws, other creatures have Disadvantage on attack rolls against you. Fiends/Undead that hit an affected creature must succeed on CON save or be Blinded` })
     }
 
+    // Warding Bond: from activeBuffs (not targetEffects)
+    const wardingBondBuff = safeBuffs?.find(b => b.effect === 'warding_bond')
+    if (wardingBondBuff) {
+        const sourceChar = wardingBondBuff.sourceCharacter || 'unknown'
+        badges.push({ label: 'Warding Bond', cls: 'effect-buff', icon: 'fa-ring', removable: isLocalhost, removeAction: 'remove_buff', tooltip: `Warding Bond from ${sourceChar}: AC +1, saves +1, resistance to all damage. Caster takes same damage.` })
+    }
+
     const pfeagEffect = targetEffects?.find(te => {
         const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
         return te.effect === 'protection_from_evil_and_good' && teTarget === creatureName;
@@ -376,7 +383,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
             }
             case 'remove_buff': {
                 const buffs = getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []
-                const filtered = buffs.filter(b => b.effect !== 'advantage_attacks_and_saves' && b.effect !== 'vow_of_enmity' && b.effect !== 'dodge' && b.effect !== 'haste')
+                const filtered = buffs.filter(b => b.effect !== 'advantage_attacks_and_saves' && b.effect !== 'vow_of_enmity' && b.effect !== 'dodge' && b.effect !== 'haste' && b.effect !== 'warding_bond')
                 setRuntimeValue(creatureName, 'activeBuffs', filtered, campaignName)
                 break
             }
