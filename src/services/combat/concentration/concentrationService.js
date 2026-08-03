@@ -55,6 +55,7 @@ function clearAllConcentrations(campaignName, restingCreatureName) {
     }
     if (changed && cs) {
         storage.set('combatSummary', cs, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
     }
 
     // Also clear concentration-duration targetEffects from the resting creature
