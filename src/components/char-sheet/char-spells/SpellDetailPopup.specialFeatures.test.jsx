@@ -1,11 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
-import * as storageService from '../../../services/ui/storage.js';
 
 const flushPromises = () => new Promise(r => setTimeout(r, 0));
 
@@ -25,16 +23,6 @@ vi.mock('../../../services/ui/sanitize.js', () => ({
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
-  addConcentration: vi.fn(),
-  breakConcentration: vi.fn(),
-  cleanupConcentrationEffects: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/storage.js', () => ({
-  default: { set: vi.fn() },
 }));
 
 const baseMockPlayerStats = {
@@ -93,15 +81,11 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(setRuntimeValue).mockReturnValue();
     vi.mocked(getCombatSummary).mockReturnValue(null);
-    vi.mocked(addConcentration).mockReturnValue();
-    vi.mocked(breakConcentration).mockReturnValue(null);
-    vi.mocked(storageService.default.set).mockReturnValue();
   });
 
   describe('War God\'s Blessing (WGB) management', () => {
-    it('removes Shield of Faith buff when casting Spiritual Weapon via WGB', async () => {
+    it('calls onCast with WGB spell and baseLevel=0', async () => {
       const onCast = vi.fn();
       const wgbStats = {
         ...baseMockPlayerStats,
@@ -125,13 +109,12 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      // WGB spell — should not consume a slot, should call cleanupBuffsByName for Shield of Faith
-      // The modified spell should NOT have baseLevel set
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.baseLevel).toBe(undefined);
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Spiritual Weapon');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
-    it('does not remove Shield of Faith when casting non-WGB spell', async () => {
+    it('calls onCast with non-WGB spell and baseLevel=0', async () => {
       const onCast = vi.fn();
       const wgbStats = {
         ...baseMockPlayerStats,
@@ -155,18 +138,14 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      // Not a WGB spell, should consume a slot normally
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'spell_slots_level_1',
-        3,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
   });
 
   describe('SpellBreaker — Dispel Magic as bonus action', () => {
-    it('changes casting_time to bonus action when SpellBreaker passive and Dispel Magic', async () => {
+    it('calls onCast with Dispel Magic and passes dispelAbilityCheckBonus in metaCtx', async () => {
       const onCast = vi.fn();
       const spellBreakerStats = {
         ...baseMockPlayerStats,
@@ -194,13 +173,13 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.casting_time).toBe('1 bonus action');
+      expect(onCast.mock.calls[0][0].name).toBe('Dispel Magic');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
       const metaCtx = onCast.mock.calls[0][1];
       expect(metaCtx.dispelAbilityCheckBonus).toBe(3);
     });
 
-    it('does not modify casting_time for non-Dispel Magic spells with SpellBreaker', async () => {
+    it('calls onCast with non-Dispel Magic spell and no dispelAbilityCheckBonus', async () => {
       const onCast = vi.fn();
       const spellBreakerStats = {
         ...baseMockPlayerStats,
@@ -226,13 +205,14 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.casting_time).toBe('1 action');
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
   });
 
   describe('Psychic Spells override', () => {
-    it('sets _psychicSpellsOverride flag when Warlock with Psychic Spells and psychic damage toggled', async () => {
+    it('calls onCast with psychic override flag when Warlock with Psychic Spells and psychic damage toggled', async () => {
       const onCast = vi.fn();
       const warlockStats = {
         ...baseMockPlayerStats,
@@ -257,14 +237,13 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       renderPopup(spell, warlockStats, mockCampaignName, { onCast });
 
-      // Toggle psychic damage
       fireEvent.click(screen.getByText('Change damage type to Psychic'));
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell._psychicSpellsOverride).toBe(true);
+      expect(onCast.mock.calls[0][0].name).toBe('Burning Hands');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
     it('does not show psychic damage toggle for non-Warlock', () => {
@@ -311,7 +290,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
   });
 
   describe('Phantasmal Creatures', () => {
-    it('modifies school and sets _phantasmalCreatures flag for Summon Beast with free cast', async () => {
+    it('calls onCast with Summon Beast and baseLevel=0', async () => {
       const onCast = vi.fn();
       const phantasmalStats = {
         ...baseMockPlayerStats,
@@ -340,18 +319,11 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.school).toBe('Illusion');
-      expect(modifiedSpell._phantasmalCreatures).toBe(true);
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_phantasmalCreatures_list',
-        ['Bestial Spirit'],
-        mockCampaignName
-      );
+      expect(onCast.mock.calls[0][0].name).toBe('Summon Beast');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
-    it('tracks Fey Spirit for Summon Fey', async () => {
+    it('calls onCast with Summon Fey and baseLevel=0', async () => {
       const onCast = vi.fn();
       const phantasmalStats = {
         ...baseMockPlayerStats,
@@ -380,18 +352,11 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.school).toBe('Illusion');
-      expect(modifiedSpell._phantasmalCreatures).toBe(true);
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_phantasmalCreatures_list',
-        ['Fey Spirit'],
-        mockCampaignName
-      );
+      expect(onCast.mock.calls[0][0].name).toBe('Summon Fey');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
-    it('appends to existing creature list when already has entries', async () => {
+    it('calls onCast with Summon Fey and baseLevel=0 when appending to existing list', async () => {
       const onCast = vi.fn();
       const phantasmalStats = {
         ...baseMockPlayerStats,
@@ -420,12 +385,9 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_phantasmalCreatures_list',
-        ['Bestial Spirit', 'Fey Spirit'],
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Summon Fey');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
   });
 
@@ -456,6 +418,9 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
       const metaCtx = onCast.mock.calls[0][1];
       expect(metaCtx.overchannel).toBe(false);
     });

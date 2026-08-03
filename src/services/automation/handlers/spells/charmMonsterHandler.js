@@ -1,5 +1,5 @@
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
-import { resolveTarget } from '../../common/targetResolver.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 
@@ -49,8 +49,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'single',
     });
 
-    const targetInfo = await resolveTarget(campaignName, casterName);
-    const targetName = targetInfo?.target?.name;
+    const providedTargetName = auto.targetName || action.targetName;
+    const targetName = providedTargetName;
 
     if (!targetName) {
         return {
@@ -62,6 +62,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             },
         };
     }
+
+    const cs = await getCombatContext(campaignName);
+    const creature = cs?.creatures?.find(c => c.name === targetName);
+    const isTargetNpc = creature && creature.type !== 'player';
 
     const { promptId, promise } = createSaveListener(campaignName, {
         targetName,
@@ -82,9 +86,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         promptId,
     }).catch((e) => { console.error("[charmMonster] Error:", e); });
 
-    if (targetInfo?.target?.type === 'npc') {
-        const cs = targetInfo.cs;
-        const creature = cs?.creatures?.find(c => c.name === targetName);
+    if (isTargetNpc) {
         const saveResult = creature
             ? rollSaveForCreature(creature, 'WIS', dc, false, saveAdvantage)
             : (() => {
@@ -135,6 +137,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
     const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
     setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
+
+    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+    setRuntimeValue(targetName, 'activeConditionMeta', {
+        ...existingMeta,
+        charmed: {
+            ...(existingMeta.charmed || {}),
+            dc,
+            ability: 'wis',
+        },
+    }, campaignName);
 
     await addTargetResult(campaignName, {
         targetName,

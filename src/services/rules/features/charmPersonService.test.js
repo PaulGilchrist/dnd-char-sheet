@@ -22,6 +22,13 @@ vi.mock('../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+}));
+
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
 describe('charmPersonService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -263,14 +270,12 @@ describe('charmPersonService', () => {
             expect(executeHandler).toHaveBeenCalled();
         });
 
-        it('sets advantage:true when target is in combat, false otherwise', async () => {
+        it('advantage when NPC target not at full health', async () => {
             executeHandler.mockResolvedValue({ type: 'popup' });
-
-            // Target in combat
             getCombatContext.mockResolvedValue({
                 creatures: [
                     { name: 'Bard', type: 'player' },
-                    { name: 'Goblin', type: 'npc' },
+                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 10 },
                 ],
             });
             getMonsterData.mockResolvedValue({ type: 'Humanoid' });
@@ -286,14 +291,61 @@ describe('charmPersonService', () => {
             vi.clearAllMocks();
             addEntry.mockResolvedValue({});
 
-            // Target not in combat (no creatures at all)
-            getCombatContext.mockResolvedValue({ creatures: [] });
+            // No advantage when NPC at full health
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Bard', type: 'player' },
+                    { name: 'Goblin', type: 'npc', currentHp: 10, maxHp: 10 },
+                ],
+            });
 
-            await callTrigger(baseSpell, { targetName: 'Shopkeeper' }, baseStats);
+            await callTrigger(baseSpell, { targetName: 'Goblin' }, baseStats);
 
             expect(executeHandler).toHaveBeenCalledWith(
                 expect.objectContaining({
                     automation: expect.objectContaining({ advantage: false }),
+                }),
+                baseStats, campaignName, mapName,
+            );
+            vi.clearAllMocks();
+            addEntry.mockResolvedValue({});
+
+            // No advantage when player at full health
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Bard', type: 'player' },
+                    { name: 'Cleric', type: 'player' },
+                ],
+            });
+            getRuntimeValue.mockImplementation((charName, key) => {
+                if (charName === 'Cleric' && key === 'currentHitPoints') return 20;
+                if (charName === 'Cleric' && key === 'hitPoints') return 20;
+                return undefined;
+            });
+
+            await callTrigger(baseSpell, { targetName: 'Cleric' }, baseStats);
+
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    automation: expect.objectContaining({ advantage: false }),
+                }),
+                baseStats, campaignName, mapName,
+            );
+            vi.clearAllMocks();
+            addEntry.mockResolvedValue({});
+
+            // Advantage when player not at full health
+            getRuntimeValue.mockImplementation((charName, key) => {
+                if (charName === 'Cleric' && key === 'currentHitPoints') return 10;
+                if (charName === 'Cleric' && key === 'hitPoints') return 20;
+                return undefined;
+            });
+
+            await callTrigger(baseSpell, { targetName: 'Cleric' }, baseStats);
+
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    automation: expect.objectContaining({ advantage: true }),
                 }),
                 baseStats, campaignName, mapName,
             );

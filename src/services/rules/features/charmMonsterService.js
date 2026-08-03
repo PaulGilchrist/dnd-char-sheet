@@ -1,5 +1,6 @@
 import { executeHandler } from '../../automation/index.js';
 import { getCombatContext } from '../combat/damageUtils.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 export async function triggerCharmMonster(spell, metaCtx, playerStats, campaignName, mapName) {
     const isCharmMonster = (spell.name || '').toLowerCase() === 'charm monster';
@@ -17,9 +18,20 @@ export async function triggerCharmMonster(spell, metaCtx, playerStats, campaignN
         return { type: 'popup', payload: { type: 'automation_info', name: 'Charm Monster', description: 'No target selected for Charm Monster.' } };
     }
 
-    // Check if caster/target are in combat to determine if target gets advantage on save
+    // Check if target is not at full health to determine if target gets advantage on save
     const cs = await getCombatContext(campaignName);
-    const targetInCombat = cs?.creatures?.some(c => c.name === targetName && c.name !== playerStats.name) ?? false;
+    const targetCreature = cs?.creatures?.find(c => c.name === targetName);
+    const targetIsPlayer = targetCreature?.type === 'player';
+    let currentHp = 0;
+    let maxHp = 0;
+    if (targetIsPlayer) {
+        currentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? playerStats.computedStats?.currentHp ?? 0;
+        maxHp = getRuntimeValue(targetName, 'hitPoints', campaignName) ?? playerStats.computedStats?.maxHp ?? 0;
+    } else {
+        currentHp = targetCreature?.currentHp ?? targetCreature?.hit_points?.current ?? 0;
+        maxHp = targetCreature?.maxHp ?? 0;
+    }
+    const targetNotFullHealth = currentHp > 0 && currentHp < maxHp;
 
     const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
     const slotLevel = metaCtx?.slotLevel || spell.level || 4;
@@ -30,7 +42,7 @@ export async function triggerCharmMonster(spell, metaCtx, playerStats, campaignN
             type: 'charm_monster',
             saveDc: spellSaveDc,
             targetName: targetName,
-            advantage: targetInCombat,
+            advantage: targetNotFullHealth,
         },
         spell,
         spellSlotLevel: slotLevel,

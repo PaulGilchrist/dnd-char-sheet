@@ -24,8 +24,8 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
-vi.mock('../../common/targetResolver.js', () => ({
-  resolveTarget: vi.fn(),
+vi.mock('../../../rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn(),
 }));
 
 vi.mock('../../../rules/combat/applyDamage.js', () => ({
@@ -42,7 +42,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 
 import { handle } from './charmPersonHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
-import { resolveTarget } from '../../common/targetResolver.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
@@ -64,18 +64,16 @@ function makePlayerStats(overrides = {}) {
 function makeAction(automation = {}) {
   return {
     name: 'Charm Person',
-    automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15, ...automation },
+    automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15, targetName: 'Goblin', ...automation },
   };
 }
 
 function setupBaseMocks(saveResult = { success: true }, isNpc = false) {
-  resolveTarget.mockResolvedValue({
-    target: { name: 'Goblin', type: isNpc ? 'npc' : 'player' },
-    cs: {
-      creatures: [
-        { name: 'Goblin', type: isNpc ? 'npc' : 'player', saveBonuses: { WIS: 2 } },
-      ],
-    },
+  const targetName = 'Goblin';
+  getCombatContext.mockResolvedValue({
+    creatures: [
+      { name: targetName, type: isNpc ? 'npc' : 'player', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 },
+    ],
   });
   buildSaveDc.mockReturnValue(15);
   createSaveListener.mockReturnValue({
@@ -90,22 +88,16 @@ describe('charmPersonHandler.handle', () => {
   });
 
   describe('target resolution', () => {
-    it('returns popup when no target is selected', async () => {
-      resolveTarget.mockResolvedValue(null);
+    it('returns popup when action has no targetName', async () => {
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
+      };
 
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      const result = await handle(action, makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('No target selected');
-    });
-
-    it('returns popup when target name is missing', async () => {
-      resolveTarget.mockResolvedValue({ target: null });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-      expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('No target selected');
     });
 
@@ -164,10 +156,6 @@ describe('charmPersonHandler.handle', () => {
     });
 
     it('uses fallback roll when creature not found in combat summary', async () => {
-      resolveTarget.mockResolvedValue({
-        target: { name: 'Goblin', type: 'npc' },
-        cs: { creatures: [] },
-      });
       buildSaveDc.mockReturnValue(15);
       createSaveListener.mockReturnValue({
         promptId: 'test-prompt-id',
@@ -318,7 +306,6 @@ describe('charmPersonHandler.handle', () => {
 
   describe('edge cases', () => {
     it('handles missing automation property by defaulting to empty object', async () => {
-      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
       buildSaveDc.mockReturnValue(10);
       createSaveListener.mockReturnValue({
         promptId: 'test-prompt-id',
@@ -336,7 +323,7 @@ describe('charmPersonHandler.handle', () => {
       setupBaseMocks({ success: false });
       getRuntimeValue.mockReturnValue([]);
 
-      const result = await handle({ name: 'My Charm Person', automation: { type: 'charm_person' } }, makePlayerStats(), campaignName, null);
+      const result = await handle({ name: 'My Charm Person', automation: { type: 'charm_person', targetName: 'Goblin' } }, makePlayerStats(), campaignName, null);
 
       expect(result.payload.name).toBe('My Charm Person');
     });

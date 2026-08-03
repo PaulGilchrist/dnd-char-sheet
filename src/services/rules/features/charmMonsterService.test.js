@@ -17,7 +17,7 @@ vi.mock('../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
 }));
@@ -26,6 +26,7 @@ import { triggerCharmMonster } from './charmMonsterService.js';
 import { getCombatContext } from '../combat/damageUtils.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { executeHandler } from '../../automation/index.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const campaignName = 'TestCampaign';
 const mapName = 'TestMap';
@@ -142,12 +143,12 @@ describe('charmMonsterService', () => {
       );
     });
 
-    it('passes advantage when target is in combat', async () => {
+    it('passes advantage when target not at full health (NPC)', async () => {
       const baseStats = makePlayerStats();
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster', type: 'player' },
-          { name: 'Goblin', type: 'monster', saveBonuses: { WIS: 2 } },
+          { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 10, saveBonuses: { WIS: 2 } },
         ],
       });
 
@@ -161,24 +162,67 @@ describe('charmMonsterService', () => {
       );
     });
 
-    it('does not pass advantage when target is not in combat', async () => {
+    it('no advantage when NPC at full health', async () => {
       const baseStats = makePlayerStats();
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster', type: 'player' },
-          { name: 'Goblin', type: 'monster', saveBonuses: { WIS: 0 } },
+          { name: 'Goblin', type: 'monster', currentHp: 10, maxHp: 10, saveBonuses: { WIS: 0 } },
         ],
-      });
-
-      // Target not in combat scenario — combatSummary only has caster
-      getCombatContext.mockResolvedValue({
-        creatures: [{ name: 'TestCaster', type: 'player' }],
       });
 
       await triggerCharmMonster(makeSpell(), { targetName: 'Goblin' }, baseStats, campaignName, mapName);
 
       expect(executeHandler).toHaveBeenCalledWith(
         expect.objectContaining({ automation: expect.objectContaining({ advantage: false }) }),
+        baseStats,
+        campaignName,
+        mapName,
+      );
+    });
+
+    it('no advantage when player at full health', async () => {
+      const baseStats = makePlayerStats();
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'TestCaster', type: 'player' },
+          { name: 'Ally', type: 'player', saveBonuses: { WIS: 3 } },
+        ],
+      });
+      getRuntimeValue.mockImplementation((charName, key) => {
+        if (charName === 'Ally' && key === 'currentHitPoints') return 20;
+        if (charName === 'Ally' && key === 'hitPoints') return 20;
+        return undefined;
+      });
+
+      await triggerCharmMonster(makeSpell(), { targetName: 'Ally' }, baseStats, campaignName, mapName);
+
+      expect(executeHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ automation: expect.objectContaining({ advantage: false }) }),
+        baseStats,
+        campaignName,
+        mapName,
+      );
+    });
+
+    it('passes advantage when player not at full health', async () => {
+      const baseStats = makePlayerStats();
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'TestCaster', type: 'player' },
+          { name: 'Ally', type: 'player', saveBonuses: { WIS: 3 } },
+        ],
+      });
+      getRuntimeValue.mockImplementation((charName, key) => {
+        if (charName === 'Ally' && key === 'currentHitPoints') return 10;
+        if (charName === 'Ally' && key === 'hitPoints') return 20;
+        return undefined;
+      });
+
+      await triggerCharmMonster(makeSpell(), { targetName: 'Ally' }, baseStats, campaignName, mapName);
+
+      expect(executeHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ automation: expect.objectContaining({ advantage: true }) }),
         baseStats,
         campaignName,
         mapName,

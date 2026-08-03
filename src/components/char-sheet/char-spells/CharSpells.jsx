@@ -54,6 +54,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const [pendingHexSpell, setPendingHexSpell] = React.useState(null);
     const [pendingResilientSphere, setPendingResilientSphere] = React.useState(null);
     const [pendingWardingBond, setPendingWardingBond] = React.useState(null);
+    const [pendingCharmPerson, setPendingCharmPerson] = React.useState(null);
 
     const handleHexAbilitySelected = (ability) => {
       setShowHexAbilityModal(false);
@@ -133,6 +134,22 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
         return null;
     }, [playerStats.name, campaignName]);
 
+    const getHumanoidTargets = React.useCallback(async () => {
+        const cs = getCombatSummary(campaignName);
+        if (!cs?.creatures) return [];
+        const nonCasterCreatures = cs.creatures.filter(c => c.name !== playerStats.name);
+        const { getMonsterData: getMonster } = await import('../../../services/npcs/monsterUtils.js');
+        const results = await Promise.all(nonCasterCreatures.map(async (creature) => {
+            if (creature.type === 'player') return creature;
+            try {
+                const monsterData = await getMonster(creature.name, null);
+                if (monsterData?.type && monsterData.type.toLowerCase() === 'humanoid') return creature;
+            } catch { /* default to excluding */ }
+            return null;
+        }));
+        return results.filter(Boolean);
+    }, [campaignName, playerStats.name]);
+
     const { resolvePositions: resolveSpellPositions, cachedPosRef: cachedCastPosRef } = useSpellPositionResolver(campaignName, mapName, playerStats.name);
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
@@ -151,6 +168,15 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
       let targetSpell = { ...spell, baseLevel: spell.level };
       if (spellName === "Hunter's Mark" && playerStats.class?.name === 'Ranger' && playerStats.level >= 20) {
         targetSpell = { ...targetSpell, damage: { ...targetSpell.damage, damage_at_slot_level: { ...(targetSpell.damage?.damage_at_slot_level || {}), '1': '1d10', '5': '2d10', '11': '3d10', '17': '4d10' } } };
+      }
+
+      // Charm Person — show target selection modal (all rulesets)
+      if (spellName && spellName.toLowerCase() === 'charm person') {
+        const humanoidTargets = await getHumanoidTargets();
+        if (humanoidTargets.length > 0) {
+          setPendingCharmPerson({ spell: { ...spell, baseLevel: spell.level }, targets: humanoidTargets.map(c => ({ name: c.name, type: 'creature' })) });
+          return;
+        }
       }
 
       // Otiluke's Resilient Sphere — show target selection modal (2024 rules only)
@@ -287,6 +313,16 @@ return (
                                     if (spell.name === 'Hex') {
                                         setPendingHexSpell(spell);
                                         setShowHexAbilityModal(true);
+                                    } else if (spell.name && spell.name.toLowerCase() === 'charm person') {
+                                        (async () => {
+                                            const humanoidTargets = await getHumanoidTargets();
+                                            if (humanoidTargets.length > 0) {
+                                                const targets = humanoidTargets.map(c => ({ name: c.name, type: 'creature' }));
+                                                setPendingCharmPerson({ spell, targets });
+                                                return;
+                                            }
+                                        })();
+                                        return;
                                     } else if (spell.name && spell.name.toLowerCase() === "otiluke's resilient sphere" && is2024) {
                                         const cs = getCombatSummary(campaignName);
                                         if (cs?.creatures) {
@@ -413,6 +449,21 @@ return (
                         description="Choose a willing creature within range (including yourself). You create a mystic connection: the target gains +1 AC, +1 to saving throws, and resistance to all damage while within 60 feet. You take the same damage they take."
                         confirmLabel="Cast Warding Bond"
                         confirmIcon="fa-ring"
+                      />
+                    )}
+                    {pendingCharmPerson && (
+                      <SecondaryTargetModal
+                        title="Charm Person"
+                        targets={pendingCharmPerson.targets}
+                        onTargetSelected={(targetName) => {
+                          setPendingCharmPerson(null);
+                          const modifiedSpell = { ...pendingCharmPerson.spell, baseLevel: pendingCharmPerson.spell.level };
+                          handleSpellCast(modifiedSpell, { targetName });
+                        }}
+                        onSkip={() => setPendingCharmPerson(null)}
+                        description="One Humanoid you can see within range makes a Wisdom saving throw. It does so with Advantage if you or your allies are fighting it. On a failed save, the target has the Charmed condition until the spell ends or until you or your allies damage it."
+                        confirmLabel="Cast Charm Person"
+                        confirmIcon="fa-face-smile"
                       />
                     )}
                     {pendingHeroesFeast && (

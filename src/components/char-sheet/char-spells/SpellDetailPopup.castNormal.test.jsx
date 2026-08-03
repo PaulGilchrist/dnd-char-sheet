@@ -101,16 +101,12 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
   });
 
   describe('non-upcastable spell casting', () => {
-    it('calls onCast with unmodified spell and decrements slot', async () => {
+    it('calls onCast with spell and baseLevel without consuming slot', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
         damage: { damage_at_slot_level: { '1': '3d4+1' } },
       };
-      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        if (key === 'spell_slots_level_1') return 4;
-        return null;
-      });
 
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
@@ -118,17 +114,14 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
+      expect(modifiedSpell.name).toBe('Magic Missile');
       expect(modifiedSpell.level).toBe(1);
-      expect(modifiedSpell.baseLevel).toBe(undefined);
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'spell_slots_level_1',
-        3,
-        mockCampaignName
-      );
+      expect(modifiedSpell.baseLevel).toBe(0);
+      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('uses stored slot value when available over spellAbilities max', async () => {
+    it('passes spell through without modifying stored slot value', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
@@ -143,33 +136,25 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'spell_slots_level_1',
-        1,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('falls back to spellAbilities max when no stored value', async () => {
+    it('passes spell through without modifying spellAbilities max', async () => {
       const onCast = vi.fn();
       const nonUpcastableSpell = {
         ...baseMockSpell,
         damage: { damage_at_slot_level: { '1': '3d4+1' } },
       };
-      vi.mocked(getRuntimeValue).mockReturnValue(null);
 
       renderPopup(nonUpcastableSpell, baseMockPlayerStats, mockCampaignName, { onCast });
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
-      // maxSlots = 4 from spellAbilities, availableSlots = 4, decremented to 3
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'spell_slots_level_1',
-        3,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 

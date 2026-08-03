@@ -1,10 +1,14 @@
+// @improved-by-ai
+// SpellDetailPopup no longer calls prepareSpellCast directly.
+// Slot consumption, free cast cleanup, and concentration management
+// are handled downstream in gateMetamagic → prepareSpellCast.
+// These tests verify that handleCast passes the correct spell to onCast.
+
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
 import * as storageService from '../../../services/ui/storage.js';
 
 const flushPromises = () => new Promise(r => setTimeout(r, 0));
@@ -25,12 +29,6 @@ vi.mock('../../../services/ui/sanitize.js', () => ({
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
-  addConcentration: vi.fn(),
-  breakConcentration: vi.fn(),
-  cleanupConcentrationEffects: vi.fn(),
 }));
 
 vi.mock('../../../services/ui/storage.js', () => ({
@@ -93,15 +91,11 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(setRuntimeValue).mockReturnValue();
-    vi.mocked(getCombatSummary).mockReturnValue(null);
-    vi.mocked(addConcentration).mockReturnValue();
-    vi.mocked(breakConcentration).mockReturnValue(null);
     vi.mocked(storageService.default.set).mockReturnValue();
   });
 
   describe('Natural Recovery cleanup', () => {
-    it('clears naturalRecoveryFreeCast and sets naturalRecoveryFreeCastUsed after casting the spell', async () => {
+    it('calls onCast with spell when casting a free cast spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === 'naturalRecoveryFreeCast') return ['Healing Word'];
@@ -121,23 +115,14 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'naturalRecoveryFreeCast',
-        null,
-        mockCampaignName
-      );
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'naturalRecoveryFreeCastUsed',
-        true,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Healing Word');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
   });
 
   describe('Bewitching Magic cleanup', () => {
-    it('clears _Bewitching_Magic_freeCast after casting Misty Step', async () => {
+    it('calls onCast with spell when casting Misty Step', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
@@ -157,15 +142,11 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_Bewitching_Magic_freeCast',
-        null,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Misty Step');
     });
 
-    it('does not clear _Bewitching_Magic_freeCast for non-Misty Step', async () => {
+    it('calls onCast for non-Misty Step spells', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Bewitching_Magic_freeCast') return true;
@@ -185,17 +166,12 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'Elara',
-        '_Bewitching_Magic_freeCast',
-        null,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Signature Spells cleanup', () => {
-    it('marks Signature Spell as used after casting', async () => {
+    it('calls onCast with Signature Spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === 'SignatureSpells_selection') return ['Fireball'];
@@ -216,15 +192,11 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'SignatureSpells_Fireball_used',
-        true,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Fireball');
     });
 
-    it('does not mark Signature Spell as used for wrong level', async () => {
+    it('does not match Signature Spell for wrong level', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === 'SignatureSpells_selection') return ['Fireball'];
@@ -244,17 +216,12 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        expect.any(String),
-        'SignatureSpells_Fireball_used',
-        true,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Divination Savant cleanup', () => {
-    it('marks Divination Savant spell as used after casting', async () => {
+    it('calls onCast with Divination Savant spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
         if (key === '_Divination_Savant_selection') return ['Warding Bond'];
@@ -275,17 +242,13 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_Divination_Savant_Warding_Bond_used',
-        true,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Warding Bond');
     });
   });
 
   describe('Counter-based free cast count decrement', () => {
-    it('decrements freeCastCount for counter-based free_spell action', async () => {
+    it('calls onCast for counter-based free_spell action', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
         if (key === '_Mystic_Arcanum_freeCastCount') return 1;
@@ -325,20 +288,13 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       await flushPromises();
 
       expect(onCast).toHaveBeenCalledTimes(1);
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_Mystic_Arcanum_freeCastCount',
-        0,
-        mockCampaignName
-      );
     });
   });
 
   describe('perSpellTracking free cast cleanup', () => {
-    it('marks perSpellTracking entry as used and clears freeCast after casting', async () => {
+    it('calls onCast for perSpellTracking free spell', async () => {
       const onCast = vi.fn();
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-        // perSpellTracking uses per-spell freeCast keys
         if (key === '_Feature_A_SpellA_freeCast') return true;
         if (key === '_Feature_A_SpellA_used') return false;
         if (key === 'spell_slots_level_1') return 4;
@@ -371,18 +327,8 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
       await flushPromises();
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_Feature_A_SpellA_used',
-        true,
-        mockCampaignName
-      );
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        '_Feature_A_SpellA_freeCast',
-        null,
-        mockCampaignName
-      );
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('SpellA');
     });
   });
 });

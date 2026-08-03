@@ -453,7 +453,28 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     // Skip spells with automation.effects — those have AoE/single-target effects handled below
     // Must come before generic healing path so spells like Mass Heal (which has heal_at_slot_level)
     // get routed to their automation handler instead of the single-target generic healer
-    if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success) {
+    // Exclude spells with dedicated service handlers (charm person/monster, friends, etc.)
+    const serviceHandledSpells = new Set([
+        "otto's irresistible dance", 'irresistible dance',
+        "otiluke's resilient sphere", 'resilient sphere',
+        'blur',
+        'expeditious retreat',
+        'friends',
+        'charm person',
+        'charm monster',
+        'compulsion',
+        'crown of madness',
+        'animal friendship',
+        'dominate beast',
+        'dominate monster',
+        'dominate person',
+        'tasha\'s hideous laughter', 'hideous laughter',
+        'sanctuary',
+        'ray of enfeeblement',
+        'hex',
+    ]);
+    const spellNameLower = (spell.name || '').toLowerCase();
+    if (spell.automation?.type && !fullSpell.automation?.effects?.fail && !fullSpell.automation?.effects?.success && !serviceHandledSpells.has(spellNameLower)) {
         const action = {
             name: spell.name,
             spell: spell,
@@ -623,8 +644,8 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Charm Person — single humanoid target WIS save or Charmed
         if (spell.name && spell.name.toLowerCase() === 'charm person') {
-            const charmTarget = await getTargetInfo();
-            const charmPersonResult = await triggerCharmPerson(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
+            const charmTargetName = metaCtx?.targetName || (await getTargetInfo())?.name;
+            const charmPersonResult = await triggerCharmPerson(spell, { ...metaCtx, spellSaveDc, targetName: charmTargetName }, playerStats, campaignName, mapName);
             if (charmPersonResult) {
                 return { automationPopup: charmPersonResult };
             }
@@ -633,8 +654,8 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
         // Charm Monster — single creature target WIS save or Charmed
         if (spell.name && spell.name.toLowerCase() === 'charm monster') {
-            const charmTarget = await getTargetInfo();
-            const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTarget?.name }, playerStats, campaignName, mapName);
+            const charmTargetName = metaCtx?.targetName || (await getTargetInfo())?.name;
+            const charmMonsterResult = await triggerCharmMonster(spell, { ...metaCtx, spellSaveDc, targetName: charmTargetName }, playerStats, campaignName, mapName);
             if (charmMonsterResult) {
                 return { automationPopup: charmMonsterResult };
             }

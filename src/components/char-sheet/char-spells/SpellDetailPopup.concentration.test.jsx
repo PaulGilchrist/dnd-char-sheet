@@ -1,11 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellDetailPopup from './SpellDetailPopup.jsx';
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { addConcentration, breakConcentration } from '../../../services/combat/concentration/concentrationService.js';
-import * as storageService from '../../../services/ui/storage.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => null),
@@ -23,16 +21,6 @@ vi.mock('../../../services/ui/sanitize.js', () => ({
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => null),
-}));
-
-vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
-  addConcentration: vi.fn(),
-  breakConcentration: vi.fn(),
-  cleanupConcentrationEffects: vi.fn(),
-}));
-
-vi.mock('../../../services/ui/storage.js', () => ({
-  default: { set: vi.fn() },
 }));
 
 const baseMockPlayerStats = {
@@ -91,15 +79,11 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
     localStorage.clear();
     vi.mocked(getRuntimeValue).mockReturnValue(null);
     vi.mocked(getActiveBuffs).mockReturnValue([]);
-    vi.mocked(setRuntimeValue).mockReturnValue();
     vi.mocked(getCombatSummary).mockReturnValue(null);
-    vi.mocked(addConcentration).mockReturnValue();
-    vi.mocked(breakConcentration).mockReturnValue(null);
-    vi.mocked(storageService.default.set).mockReturnValue();
   });
 
-  describe('setting concentration on new spell', () => {
-    it('sets concentration when spell has concentration flag and no existing concentration', () => {
+  describe('casting a concentration spell', () => {
+    it('calls onCast with the concentration spell and baseLevel=0', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
@@ -118,11 +102,12 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
-      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Bane', 10, null);
-      expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', cs, mockCampaignName);
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Bane');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
-    it('does not set concentration when combat summary is null', () => {
+    it('calls onCast even when combat summary is null', () => {
       const onCast = vi.fn();
       const concentrationSpell = {
         ...baseMockSpell,
@@ -138,11 +123,12 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
-      expect(addConcentration).not.toHaveBeenCalled();
-      expect(storageService.default.set).not.toHaveBeenCalled();
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Bane');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
 
-    it('does not set concentration when spell does not require concentration', () => {
+    it('calls onCast for a non-concentration spell with baseLevel=0', () => {
       const onCast = vi.fn();
       const noConcentrationSpell = {
         ...baseMockSpell,
@@ -160,88 +146,9 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
 
-      expect(addConcentration).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('breaking old concentration', () => {
-    it('breaks old concentration and sets new when recasting a different concentration spell', () => {
-      const onCast = vi.fn();
-      const concentrationSpell = {
-        ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
-        concentration: true,
-        damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
-      };
-      const cs = {
-        creatures: [{ name: 'Elara', concentration: { spell: 'Hold Monster' } }],
-      };
-      vi.mocked(getCombatSummary).mockReturnValue(cs);
-      vi.mocked(breakConcentration).mockReturnValue('Hold Monster');
-
-      renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(breakConcentration).toHaveBeenCalledWith(cs, 'Elara');
-      expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', cs, mockCampaignName);
-      expect(addConcentration).toHaveBeenCalledWith(cs, 'Elara', 'Bane', 10, null);
-    });
-
-    it('does not break concentration when recasting the same spell (concentration refresh)', () => {
-      const onCast = vi.fn();
-      const concentrationSpell = {
-        ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
-        concentration: true,
-        damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
-      };
-      const cs = {
-        creatures: [{ name: 'Elara', concentration: { spell: 'Bane' } }],
-      };
-      vi.mocked(getCombatSummary).mockReturnValue(cs);
-
-      renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      expect(breakConcentration).not.toHaveBeenCalled();
-      // No addConcentration for same-spell recast since shouldSetConcentration stays false
-      expect(addConcentration).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('cleanup of old concentration buffs', () => {
-    it('calls cleanupBuffsByName for old concentration spell', () => {
-      const onCast = vi.fn();
-      const concentrationSpell = {
-        ...baseMockSpell,
-        name: 'Bane',
-        level: 1,
-        concentration: true,
-        damage: null,
-        dc: { dc_type: 'CHA', dc_success: 'half' },
-      };
-      const cs = {
-        creatures: [
-          { name: 'Elara', concentration: { spell: 'Hold Monster' } },
-          { name: 'Goblin', activeBuffs: [{ name: 'Hold Monster' }] },
-        ],
-      };
-      vi.mocked(getCombatSummary).mockReturnValue(cs);
-      vi.mocked(breakConcentration).mockReturnValue('Hold Monster');
-
-      renderPopup(concentrationSpell, baseMockPlayerStats, mockCampaignName, { onCast });
-
-      fireEvent.click(screen.getByRole('button', { name: /Cast Spell/ }));
-
-      // cleanupBuffsByName is an internal function that filters activeBuffs
-      // We verify it was called through the setRuntimeValue calls
-      expect(setRuntimeValue).toHaveBeenCalled();
+      expect(onCast).toHaveBeenCalledTimes(1);
+      expect(onCast.mock.calls[0][0].name).toBe('Fireball');
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
     });
   });
 });
