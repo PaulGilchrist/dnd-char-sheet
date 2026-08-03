@@ -316,6 +316,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: "Tasha's Hideous Laughter", cls: 'effect-debuff', icon: 'fa-music', removable: isLocalhost, removeAction: 'target_effect', effectType: 'tashas_hideous_laughter', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'prone', label: 'Prone', dc: laughterDc, ability: 'wis' }) : undefined, tooltip: `Tasha's Hideous Laughter from ${casterName}: Prone and Incapacitated. Click to reroll the WIS save (DC ${laughterDc}); a success ends the spell.` })
     }
 
+    const banishmentEffect = targetEffects?.find(te => te.effect === 'banishment' && te.target === creatureName)
+    if (banishmentEffect) {
+        const casterName = banishmentEffect.source || 'unknown'
+        const permanent = banishmentEffect.permanent
+        badges.push({ label: 'Banished', cls: 'effect-debuff', icon: 'fa-door-open', removable: isLocalhost, removeAction: 'target_effect', effectType: 'banishment', tooltip: `Banished by ${casterName}: Incapacitated in demiplane. ${permanent ? 'Permanent banishment - target will not return.' : 'Concentration, up to 1 minute.'}` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

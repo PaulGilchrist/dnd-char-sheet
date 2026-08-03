@@ -8,6 +8,7 @@ import storage from '../../ui/storage.js';
 import { getCurrentCombatRound, getActiveCreatureName, getCombatSummary, loadCombatSummary } from '../../encounters/combatData.js';
 import { addEntry } from '../../ui/logService.js';
 import { isWithinRange } from '../combat/rangeCheck.js';
+import { breakConcentration, cleanupConcentrationEffects } from '../../combat/concentration/concentrationService.js';
 import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
 import { handleConfusionTurnStart } from '../../automation/handlers/spells/confusionTurnStartHandler.js';
 import { processSleetStormAreaSave } from '../../automation/handlers/spells/sleetStormHandler.js';
@@ -1254,6 +1255,19 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                     }),
                     campaignName
                 );
+                break;
+            }
+
+            case 'break_concentration': {
+                const cs = getCombatSummary(campaignName);
+                if (cs) {
+                    const brokenSpell = breakConcentration(cs, targetName);
+                    if (brokenSpell) {
+                        cleanupConcentrationEffects(targetName, brokenSpell, campaignName);
+                        storage.set('combatSummary', cs, campaignName);
+                        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+                    }
+                }
                 break;
             }
 

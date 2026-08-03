@@ -5,6 +5,35 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
+import { rollD20 } from '../../../dice/diceRoller.js';
+import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+
+function dispatchSaveResult(campaignName, promptId, targetName, saveType, saveDc, saveResult) {
+    sendSaveResult(campaignName, targetName, {
+        promptId,
+        success: saveResult.success,
+        roll: saveResult.roll,
+        total: saveResult.total,
+        saveBonus: saveResult.bonus,
+        rawRolls: saveResult.rawRolls,
+    });
+
+    window.dispatchEvent(new CustomEvent('save-result', {
+        detail: {
+            promptId,
+            targetName,
+            saveType,
+            saveDc,
+            success: saveResult.success,
+            roll: saveResult.roll,
+            total: saveResult.total,
+            saveBonus: saveResult.bonus,
+            rawRolls: saveResult.rawRolls,
+        },
+    }));
+}
 
 // Creature types that get permanently banished when the spell lasts 1 minute
 const PERMANENT_BANISHMENT_TYPES = new Set([
@@ -33,6 +62,32 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const casterName = playerStats.name;
 
+    // Get target names from metaCtx (multi-target) or single targetName
+    let targetNames;
+    const banishmentTargets = action.metaCtx?.banishmentTargets;
+    if (banishmentTargets && Array.isArray(banishmentTargets) && banishmentTargets.length > 0) {
+        targetNames = banishmentTargets;
+    } else {
+        const providedTargetName = auto.targetName || action.targetName;
+        if (!providedTargetName) {
+            const targetInfo = await resolveTarget(campaignName, casterName);
+            const targetName = targetInfo?.target?.name;
+            if (!targetName) {
+                return {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: action.name,
+                        description: `No target selected. ${action.name} has no effect.`,
+                    },
+                };
+            }
+            targetNames = [targetName];
+        } else {
+            targetNames = [providedTargetName];
+        }
+    }
+
     storeSpellLastAttack(campaignName, {
         casterName,
         spellName: action.name,
@@ -41,151 +96,167 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'single',
     });
 
-    const targetInfo = await resolveTarget(campaignName, casterName);
-    const targetName = targetInfo?.target?.name;
-
-    if (!targetName) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `No target selected. ${action.name} has no effect.`,
-            },
-        };
+    // Set concentration on the caster
+    const combatSummary = await getCombatContext(campaignName);
+    if (combatSummary) {
+        addConcentration(combatSummary, casterName, action.name, dc);
     }
 
-    const { promptId, promise } = createSaveListener(campaignName, {
-        targetName,
-        saveType: 'CHA',
-        saveDc: dc,
-        dcSuccess: 'none',
-        disadvantage: !!action.metaCtx?.metamagicHeighten,
-    });
+    let banishedCount = 0;
+    let savedCount = 0;
+    const banishedTargets = [];
+    const savedTargets = [];
 
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: casterName,
-        abilityName: action.name,
-        description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a CHA save (DC ${dc}) or be banished.`,
-        promptId,
-    }).catch((e) => { console.error("[banishment] Error:", e); });
+    for (const targetName of targetNames) {
+        const targetCreature = cs.creatures.find(c => c.name === targetName);
+        const isTargetNpc = targetCreature && targetCreature.type !== 'player';
 
-    const saveResult = await promise;
-
-    if (saveResult.success) {
-        await addTargetResult(campaignName, {
+        const { promptId, promise } = createSaveListener(campaignName, {
             targetName,
-            saveResult: 'success',
-            roll: saveResult.roll ?? 0,
-            total: saveResult.total ?? 0,
-            conditions: [],
-            appliedDamage: 0,
-        });
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: casterName,
-            rollType: 'save-banishment',
-            targetName,
-            saveDc: dc,
             saveType: 'CHA',
-            success: true,
-            description: `${targetName} succeeded on CHA save against ${action.name}.`,
+            saveDc: dc,
+            dcSuccess: 'none',
+            disadvantage: !!action.metaCtx?.metamagicHeighten,
+        });
+
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: casterName,
+            abilityName: action.name,
+            description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a CHA save (DC ${dc}) or be banished.`,
+            promptId,
         }).catch((e) => { console.error("[banishment] Error:", e); });
 
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
+        if (isTargetNpc) {
+            const saveResult = targetCreature
+                ? rollSaveForCreature(targetCreature, 'CHA', dc, false, false)
+                : (() => {
+                    const r1 = rollD20();
+                    const r2 = rollD20();
+                    const roll = Math.max(r1, r2);
+                    const total = roll;
+                    const success = total >= dc;
+                    return { roll, total, bonus: 0, success, rawRolls: [r1, r2] };
+                })();
+
+            dispatchSaveResult(campaignName, promptId, targetName, 'CHA', dc, saveResult);
+        }
+
+        const saveResult = await promise;
+
+        if (saveResult.success) {
+            savedCount++;
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
+            addEntry(campaignName, {
+                type: 'save_result',
+                characterName: casterName,
+                rollType: 'save-banishment',
+                targetName,
+                saveDc: dc,
+                saveType: 'CHA',
+                success: true,
                 description: `${targetName} succeeded on CHA save against ${action.name}.`,
-            },
-        };
+            }).catch((e) => { console.error("[banishment] Error:", e); });
+            savedTargets.push(targetName);
+        } else {
+            banishedCount++;
+
+            // Apply Incapacitated condition
+            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+            const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+            setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
+
+            // Store condition metadata
+            const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+            setRuntimeValue(targetName, 'activeConditionMeta', {
+                ...existingMeta,
+                incapacitated: {
+                    ...(existingMeta.incapacitated || {}),
+                    dc,
+                    ability: 'cha',
+                },
+            }, campaignName);
+
+            // Check if target is a creature type that gets permanently banished
+            const creatureType = (targetCreature?.type || '').toLowerCase().replace(/\s+/g, '');
+            const isPermanentType = PERMANENT_BANISHMENT_TYPES.has(creatureType);
+            const permanentNote = isPermanentType
+                ? ' (permanent banishment - target will not return)'
+                : '';
+
+            // Add banishment target effect
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+            const existingBanishment = targetEffects.filter(te => te.effect !== 'banishment' || te.target !== targetName || te.source !== casterName);
+            setRuntimeValue('campaign', 'targetEffects', [
+                ...existingBanishment,
+                {
+                    effect: 'banishment',
+                    target: targetName,
+                    source: casterName,
+                    duration: 'Concentration, up to 1 minute',
+                    permanent: isPermanentType,
+                },
+            ], campaignName);
+
+            await addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'failure',
+                roll: saveResult.roll ?? 0,
+                total: saveResult.total ?? 0,
+                conditions: ['incapacitated'],
+                appliedDamage: 0,
+            });
+
+            // Register expirations: remove condition + remove target effect badge + break concentration
+            addExpiration(casterName, targetName, [
+                { type: 'condition', condition: 'incapacitated' },
+                { type: 'remove_target_effect', effectKey: 'banishment', target: targetName, source: casterName },
+                { type: 'break_concentration', spell: action.name },
+            ], campaignName);
+
+            addEntry(campaignName, {
+                type: 'save_result',
+                characterName: casterName,
+                rollType: 'save-banishment',
+                targetName,
+                saveDc: dc,
+                saveType: 'CHA',
+                success: false,
+                description: `${targetName} failed CHA save against ${action.name} and is banished.${permanentNote}`,
+            }).catch((e) => { console.error("[banishment] Error:", e); });
+
+            addEntry(campaignName, {
+                type: 'condition',
+                action: 'applied',
+                characterName: targetName,
+                condition: 'Incapacitated',
+                reason: action.name,
+                note: `${targetName} is Incapacitated by ${action.name} (banished to demiplane).${permanentNote}`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[banishment] Error:", e); });
+
+            banishedTargets.push(targetName);
+        }
     }
 
-    // Failed save: apply Incapacitated condition and banishment target effect
-    const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
-    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
-
-    // Store condition metadata with DC and ability for recurring CON save
-    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
-    setRuntimeValue(targetName, 'activeConditionMeta', {
-        ...existingMeta,
-        incapacitated: {
-            ...(existingMeta.incapacitated || {}),
-            dc,
-            ability: 'cha',
-        },
-    }, campaignName);
-
-    // Check if target is a creature type that gets permanently banished
-    const targetCreature = cs.creatures.find(c => c.name === targetName);
-    const creatureType = (targetCreature?.type || '').toLowerCase().replace(/\s+/g, '');
-    const isPermanentType = PERMANENT_BANISHMENT_TYPES.has(creatureType);
-    const permanentNote = isPermanentType
-        ? ' (permanent banishment - target will not return)'
-        : '';
-
-    // Add banishment target effect to track the spell visually
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const existingBanishment = targetEffects.filter(te => te.effect !== 'banishment');
-    setRuntimeValue('campaign', 'targetEffects', [
-        ...existingBanishment,
-        {
-            effect: 'banishment',
-            target: targetName,
-            source: casterName,
-            duration: 'Concentration, up to 1 minute',
-            permanent: isPermanentType,
-        },
-    ], campaignName);
-
-    await addTargetResult(campaignName, {
-        targetName,
-        saveResult: 'failure',
-        roll: saveResult.roll ?? 0,
-        total: saveResult.total ?? 0,
-        conditions: ['incapacitated'],
-        appliedDamage: 0,
-    });
-
-    addExpiration(casterName, targetName, [
-        { type: 'condition', condition: 'incapacitated' },
-    ], campaignName);
-
-    addEntry(campaignName, {
-        type: 'save_result',
-        characterName: casterName,
-        rollType: 'save-banishment',
-        targetName,
-        saveDc: dc,
-        saveType: 'CHA',
-        success: false,
-        description: `${targetName} failed CHA save against ${action.name} and is banished.${permanentNote}`,
-    }).catch((e) => { console.error("[banishment] Error:", e); });
-
-    addEntry(campaignName, {
-        type: 'condition',
-        action: 'applied',
-        characterName: targetName,
-        condition: 'Incapacitated',
-        reason: action.name,
-        note: `${targetName} is Incapacitated by ${action.name} (banished to demiplane).${permanentNote}`,
-        timestamp: Date.now(),
-    }).catch((e) => { console.error("[banishment] Error:", e); });
-
-    const popupDesc = isPermanentType
-        ? `${targetName} failed CHA save and is permanently banished to another plane.`
-        : `${targetName} failed CHA save and is banished to a demiplane (Incapacitated).`;
+    const summary = banishedCount > 0
+        ? `${banishedCount} creature(s) banished: ${banishedTargets.join(', ')}. ${savedCount} creature(s) saved: ${savedTargets.join(', ')}.`
+        : `No creatures banished. ${savedCount} creature(s) saved: ${savedTargets.join(', ')}.`;
 
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: popupDesc,
+            description: summary,
         },
     };
 }
