@@ -29,6 +29,9 @@ export default function CharActionSpellPopups({
     actionPendingBless,
     actionHandleBlessConfirm,
     actionHandleBlessSkip,
+    actionPendingFaerieFire,
+    actionHandleFaerieFireConfirm,
+    actionHandleFaerieFireSkip,
     actionPendingBeaconOfHope,
     actionHandleBeaconOfHopeConfirm,
     actionHandleBeaconOfHopeSkip,
@@ -191,6 +194,18 @@ export default function CharActionSpellPopups({
                     confirmLabel="Cast Bless"
                     onConfirm={actionHandleBlessConfirm}
                     onSkip={actionHandleBlessSkip}
+                />
+            )}
+            {actionPendingFaerieFire && (
+                <CreatureSelectionModal
+                    title="Faerie Fire"
+                    icon="fa-fire"
+                    targets={actionPendingFaerieFire.creatureTargets}
+                    description="Each creature in a 20-foot Cube within range must succeed on a Dexterity saving throw or be outlined in light for the duration. Affected creatures shed Dim Light in a 10-foot radius, can't benefit from the Invisible condition, and attack rolls against them have Advantage if the attacker can see them. Concentration, up to 1 minute."
+                    confirmLabel="Cast Faerie Fire"
+                    confirmIcon="fa-fire"
+                    onConfirm={actionHandleFaerieFireConfirm}
+                    onSkip={actionHandleFaerieFireSkip}
                 />
             )}
             {actionPendingBeaconOfHope && (

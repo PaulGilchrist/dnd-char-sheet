@@ -325,11 +325,16 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .map(c => String(c).toLowerCase())
         : [];
 
+    const faerieFireConditionImmunities = Array.isArray(activeBuffs)
+        ? (activeBuffs.find(b => b.name === 'Faerie Fire')?.conditionImmunity || [])
+            .map(c => String(c).toLowerCase())
+        : [];
+
     const automationImmunities = playerStats.automationConditionImmunities || [];
     const resistanceDamageType = getResistanceDamageType(playerStats.name, campaignName);
     const protectionFromEnergyDamageType = getProtectionFromEnergyDamageType(playerStats.name, campaignName);
     const stoneSkinDamageTypes = getStoneSkinDamageTypes(playerStats.name, campaignName) || [];
-    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities])];
+    const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities, ...faerieFireConditionImmunities])];
 
     const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances, ...protectionFromPoisonResistances, ...stoneSkinResistances, ...stoneSkinDamageTypes, ...wardingBondResistances])];
 

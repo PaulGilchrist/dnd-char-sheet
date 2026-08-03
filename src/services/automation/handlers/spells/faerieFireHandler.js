@@ -6,6 +6,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
 import storage from '../../../ui/storage.js';
 /**
  * Faerie Fire spell handler.
@@ -13,7 +14,7 @@ import storage from '../../../ui/storage.js';
  * - 20-foot Cube, 60-foot range
  * - DEX save on cast — failure = affected
  * - Affected creatures shed Dim Light in 10-foot radius
- * - Affected creatures can't benefit from Invisible condition
+ * - Affected creatures can't benefit from Invisible condition and are immune to it for the duration
  * - Attack rolls against affected creatures have Advantage if attacker can see them
  * - Concentration, up to 1 minute
  */
@@ -35,9 +36,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    // Get selected targets from metaCtx — includes ALL creatures (including caster)
-    const selectedTargetNames = action.metaCtx?.targets || cs.creatures.map(c => c.name);
-    const targets = cs.creatures.filter(c => selectedTargetNames.includes(c.name));
+    // Use selected targets from metaCtx (CreatureSelectionModal), otherwise default to all creatures except the caster
+    const selectedTargetNames = action.metaCtx?.targets;
+    const targets = selectedTargetNames
+        ? cs.creatures.filter(c => selectedTargetNames.includes(c.name) && c.name !== casterName)
+        : cs.creatures.filter(c => c.name !== casterName);
 
     if (targets.length === 0) {
         return {
@@ -163,8 +166,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 effect: 'faerie_fire',
                 duration: 'Concentration, up to 1 minute',
                 source: casterName,
+                conditionImmunity: ['invisible'],
             });
             setRuntimeValue(targetName, 'activeBuffs', newBuffs, campaignName);
+
+            // Register expiration so the effect clears on initiative roll, short rest, and long rest
+            addExpiration(casterName, targetName, [
+                { type: 'remove_faerie_fire' },
+            ], campaignName);
 
             // Remove invisible condition — Faerie Fire prevents benefiting from invisibility
             const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
@@ -197,7 +206,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 characterName: targetName,
                 condition: 'Faerie Fire',
                 reason: 'Faerie Fire spell',
-                note: `${targetName} is outlined by Faerie Fire: sheds Dim Light in 10-foot radius, can't benefit from Invisible, and attack rolls against it have Advantage.`,
+                note: `${targetName} is outlined by Faerie Fire: sheds Dim Light in 10-foot radius, is immune to the Invisible condition, and attack rolls against it have Advantage.`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[faerieFire] Error:", e); });
 
@@ -217,7 +226,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const summary = affectedCount > 0
-        ? `Faerie Fire affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immuneCount > 0 ? `${immuneCount} creature(s) immune.` : ''} Affected creatures shed Dim Light in a 10-foot radius, can't benefit from Invisible, and attack rolls against them have Advantage.`
+        ? `Faerie Fire affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immuneCount > 0 ? `${immuneCount} creature(s) immune.` : ''} Affected creatures shed Dim Light in a 10-foot radius, are immune to the Invisible condition, and attack rolls against them have Advantage.`
         : `No creatures affected by Faerie Fire. ${savedCount} creature(s) saved. ${immuneCount > 0 ? `${immuneCount} creature(s) immune.` : ''}`;
 
     return {

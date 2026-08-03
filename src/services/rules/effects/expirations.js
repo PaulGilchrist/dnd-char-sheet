@@ -1064,6 +1064,20 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 break;
             }
 
+            case 'remove_faerie_fire': {
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const cleanedEffects = storedEffects.filter(te => !(te.effect === 'faerie_fire' && te.target === targetName));
+                if (cleanedEffects.length !== storedEffects.length) {
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                }
+                const allBuffs = Array.isArray(getRuntimeValue(targetName, 'activeBuffs')) ? getRuntimeValue(targetName, 'activeBuffs') : [];
+                const filteredBuffs = allBuffs.filter(b => b.name !== 'Faerie Fire');
+                if (filteredBuffs.length !== allBuffs.length) {
+                    setRuntimeValue(targetName, 'activeBuffs', filteredBuffs, campaignName);
+                }
+                break;
+            }
+
             case 'peerless_athlete_end': {
                 setRuntimeValue(targetName, 'peerlessAthleteActive', false, campaignName);
                 const buffs = Array.isArray(getRuntimeValue(targetName, 'activeBuffs')) ? getRuntimeValue(targetName, 'activeBuffs') : [];

@@ -13,6 +13,7 @@ export async function triggerFaerieFire(spell, metaCtx, playerStats, campaignNam
         },
         spell,
         spellSlotLevel: slotLevel,
+        metaCtx: { ...(metaCtx || {}) },
     };
 
     try {
