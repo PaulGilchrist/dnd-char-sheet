@@ -60,7 +60,14 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
             hasPassiveImmunityAdvantage = true
         }
     }
-    const hasAdvantage = hasAuraOfPurityAdvantage || hasPassiveImmunityAdvantage || isCircleOfPowerActive(creature.name, campaignName)
+
+    let hasProtectionFromPoisonAdvantage = false
+    if (conditionKey === 'poisoned') {
+        const activeBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || []
+        hasProtectionFromPoisonAdvantage = activeBuffs.some(b => b.name === 'Protection from Poison' && b.saveAdvantageTypes?.includes('poisoned'))
+    }
+
+    const hasAdvantage = hasAuraOfPurityAdvantage || hasPassiveImmunityAdvantage || isCircleOfPowerActive(creature.name, campaignName) || hasProtectionFromPoisonAdvantage
     if (hasAdvantage) {
         const a = rollD20()
         const b = rollD20()

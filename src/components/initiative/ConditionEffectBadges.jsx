@@ -286,6 +286,15 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Protection from Evil and Good', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'remove_pfeag', effectType: 'protection_from_evil_and_good', tooltip: `Protection from Evil and Good from ${casterName}: Aberrations, Celestials, Elementals, Fey, Fiends, and Undead have Disadvantage on attack rolls against target. Target can't gain Charmed or Frightened conditions from those types.` })
     }
 
+    const pfpEffect = targetEffects?.find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return te.effect === 'protection_from_poison' && teTarget === creatureName;
+    })
+    if (pfpEffect) {
+        const casterName = pfpEffect.source || 'unknown'
+        badges.push({ label: 'Protection from Poison', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'protection_from_poison', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'poisoned', label: 'Poisoned', dc: pfpEffect.dc || 0, ability: 'con' }) : undefined, tooltip: `Protection from Poison from ${casterName}: Resistance to poison damage. Advantage on saving throws against being poisoned. Concentration` })
+    }
+
     const ottoDanceEffect = targetEffects?.find(te => te.effect === 'ottos_irresistible_dance' && te.target === creatureName)
     if (ottoDanceEffect) {
         const casterName = ottoDanceEffect.source || 'unknown'

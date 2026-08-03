@@ -1,16 +1,19 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 function conditionMatches(c, targetCondition) {
     return (typeof c === 'string' ? c.toLowerCase() : '').trim() === (typeof targetCondition === 'string' ? targetCondition.toLowerCase() : '').trim();
 }
 
+const SPELL_NAME = 'Protection from Poison';
+const EFFECT_KEY = 'protection_from_poison';
+
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
 
-    const combatSummary = await getCombatContext(campaignName);
+    const combatSummary = getCombatSummary(campaignName);
     if (!combatSummary) {
         return {
             type: 'popup',
@@ -22,34 +25,20 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerStats.name)
-        .map(c => {
-            const conditions = getRuntimeValue(c.name, 'activeConditions') || [];
-            const hasPoisoned = conditions.some(cond => conditionMatches(String(cond), 'poisoned'));
-            return {
-                name: c.name,
-                hasPoisoned,
-            };
-        });
-
-    const selfConditions = getRuntimeValue(playerStats.name, 'activeConditions') || [];
-    const selfHasPoisoned = selfConditions.some(cond => conditionMatches(String(cond), 'poisoned'));
-
-    const allTargets = [
-        { name: playerStats.name, hasPoisoned: selfHasPoisoned, isSelf: true },
-        ...creatureTargets,
-    ];
+    const casterName = playerStats.name;
+    const allCreatureNames = combatSummary.creatures.map(c => c.name);
+    if (!allCreatureNames.includes(casterName)) {
+        allCreatureNames.unshift(casterName);
+    }
 
     return {
         type: 'popup',
         payload: {
-            type: 'automation_info',
-            name: action.name,
-            description: `Select a target to protect.`,
-            automation: auto,
-            targets: allTargets,
+            type: 'protection_from_poison_target_selection',
+            name: SPELL_NAME,
+            creatureTargets: allCreatureNames,
             range: auto.range || 'Touch',
+            automation: auto,
         },
     };
 }
@@ -60,6 +49,7 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
     }
 
     const targetName = result.targetName;
+    const casterName = playerStats.name;
     const auto = action.automation || {};
     const duration = auto.duration || '1 hour';
 
@@ -71,36 +61,63 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
         setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
     }
 
-    // Add active buff with save advantage for poisoned and poison resistance
+    // Add active buff with poison resistance
     const stored = getRuntimeValue(targetName, 'activeBuffs', campaignName);
     const activeBuffs = Array.isArray(stored) ? stored : [];
-    const existingBuff = activeBuffs.find(b => b.name === action.name);
+    const existingBuff = activeBuffs.find(b => b.name === SPELL_NAME);
 
     const newBuff = {
-        name: action.name,
-        effect: 'protection_from_poison',
+        name: SPELL_NAME,
+        effect: EFFECT_KEY,
         duration,
-        sourceCharacter: playerStats.name,
+        sourceCharacter: casterName,
         resistanceTypes: ['Poison'],
+        saveAdvantageTypes: ['poisoned'],
     };
 
     if (existingBuff) {
-        const newBuffs = activeBuffs.filter(b => b.name !== action.name);
+        const newBuffs = activeBuffs.filter(b => b.name !== SPELL_NAME);
         newBuffs.push(newBuff);
         setRuntimeValue(targetName, 'activeBuffs', newBuffs, campaignName);
     } else {
         setRuntimeValue(targetName, 'activeBuffs', [...activeBuffs, newBuff], campaignName);
     }
 
-    addExpiration(playerStats.name, targetName, [
-        { type: 'remove_active_buff', buffName: action.name }
-    ], campaignName);
+    // Register target effect for badge rendering
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const existingFiltered = storedEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return !(teTarget === targetName && te.effect === EFFECT_KEY && te.source === casterName);
+    });
+    const newEffect = {
+        target: targetName,
+        effect: EFFECT_KEY,
+        source: casterName,
+        duration: 'concentration',
+    };
+    setRuntimeValue('campaign', 'targetEffects', [...existingFiltered, newEffect], campaignName);
 
+    // Register concentration
+    const combatSummary = getCombatSummary(campaignName);
+    if (combatSummary) {
+        const spellSaveDc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+        addConcentration(combatSummary, casterName, SPELL_NAME, spellSaveDc, targetName);
+        setRuntimeValue('campaign', 'combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
+
+    // Register expiration: expires on initiative roll, short rest, long rest
+    addExpiration(casterName, targetName, [
+        { type: 'remove_active_buff', buffName: SPELL_NAME },
+        { type: 'remove_target_effect', effectKey: EFFECT_KEY, source: casterName },
+    ], campaignName, Infinity, targetName);
+
+    // Log to campaign
     await addEntry(campaignName, {
         type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: action.name,
-        description: `${playerStats.name} cast ${action.name} on ${targetName}. Poisoned condition removed. Target has Advantage on saves vs Poisoned and Resistance to Poison damage for ${duration}.`,
+        characterName: casterName,
+        abilityName: SPELL_NAME,
+        description: `${casterName} cast ${SPELL_NAME} on ${targetName}. Poisoned condition removed. Target has Advantage on saving throws vs Poisoned and Resistance to Poison damage. Concentration, up to 1 hour. Expires on concentration loss, initiative roll, short rest, or long rest.`,
         targetName,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[protectionFromPoisonHandler] Error:", e); });
@@ -109,9 +126,9 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
         type: 'popup',
         payload: {
             type: 'automation_info',
-            name: action.name,
+            name: SPELL_NAME,
             automationType: auto.type,
-            description: `${action.name} applied to ${targetName}. Poisoned condition removed. Target has Advantage on saving throws vs Poisoned and Resistance to Poison damage.`,
+            description: `${SPELL_NAME} applied to ${targetName}. Poisoned condition removed. Target has Advantage on saving throws vs Poisoned and Resistance to Poison damage.`,
             automation: auto,
         },
     };
@@ -119,5 +136,5 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
 
 export function isProtectionFromPoisonActive(playerName, campaignName) {
     const activeBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName) || [];
-    return activeBuffs.some(b => b.name === 'Protection from Poison' && b.effect === 'protection_from_poison');
+    return activeBuffs.some(b => b.name === SPELL_NAME && b.effect === EFFECT_KEY);
 }

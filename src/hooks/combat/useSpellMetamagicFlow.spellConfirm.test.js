@@ -49,6 +49,7 @@ vi.mock('../../services/automation/index.js', () => ({
   applyMageArmorEffect: vi.fn(),
   applyShieldOfFaithEffect: vi.fn(),
   applyProtectionFromEnergyHandler: vi.fn(),
+  applyProtectionFromPoisonHandler: vi.fn(),
   applyResistanceEffect: vi.fn(),
   executeHandler: vi.fn(),
   confirmGreaterRestoration: vi.fn(),

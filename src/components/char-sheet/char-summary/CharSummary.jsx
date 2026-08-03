@@ -274,6 +274,11 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(b => b.resistanceTypes || [])
         : [];
 
+    const protectionFromPoisonResistances = Array.isArray(activeBuffs)
+        ? activeBuffs.filter(b => b.name === 'Protection from Poison' && b.resistanceTypes?.length)
+            .flatMap(b => b.resistanceTypes || [])
+        : [];
+
     const heroesFeastConditionImmunities = Array.isArray(activeBuffs)
         ? (activeBuffs.find(b => b.name === "Heroes' Feast")?.conditionImmunity || [])
             .map(c => String(c).toLowerCase())
@@ -314,7 +319,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const protectionFromEnergyDamageType = getProtectionFromEnergyDamageType(playerStats.name, campaignName);
     const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances, ...protectionFromPoisonResistances])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;

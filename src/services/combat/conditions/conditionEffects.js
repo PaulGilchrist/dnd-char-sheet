@@ -479,6 +479,12 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     : saveModifiers;
   applySaveModifiers(effects, activeSaveModifiers, null, null, isRaging, shapeShiftActive, isPeerlessAthlete, isLargeFormActive, combatContext, conditions, attackerName, isLivingLegendActive, isElderChampionActive, isElderChampionAttackerActive, holyAuraTargets, isProtectionFromPoisonActive, isTranceOfOrderActive, hasPowerfulBuild);
 
+  // Protection from Poison: Advantage on saving throws to avoid or end the Poisoned condition
+  if (isProtectionFromPoisonActive && conditionSet.has('poisoned')) {
+    effects.saveAdvantageCount = (effects.saveAdvantageCount || 0) + 1;
+    effects.saveAdvantageReasons = [...(effects.saveAdvantageReasons || []), 'Protection from Poison'];
+  }
+
   for (const key of conditionSet) {
     switch (key) {
         case 'blinded':

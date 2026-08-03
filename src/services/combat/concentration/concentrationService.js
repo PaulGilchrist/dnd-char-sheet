@@ -266,6 +266,22 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
         }
     }
 
+    // Clean up Protection from Poison targetEffects and activeBuffs when concentration breaks
+    const allProtectionFromPoisonEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredProtectionFromPoisonEffects = allProtectionFromPoisonEffects.filter(te => !(te.effect === 'protection_from_poison' && te.source === casterName));
+    if (filteredProtectionFromPoisonEffects.length !== allProtectionFromPoisonEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filteredProtectionFromPoisonEffects, campaignName, true);
+    }
+    if (cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+            const filtered = buffs.filter(b => !(b.name === 'Protection from Poison' && b.sourceCharacter === casterName));
+            if (filtered.length !== buffs.length) {
+                setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+            }
+        }
+    }
+
     // Clean up Holy Aura buffs and targets when concentration breaks
     cleanupHolyAuraEffects(casterName, campaignName)
 
