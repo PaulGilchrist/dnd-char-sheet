@@ -21,7 +21,7 @@ describe('conditionEffects', () => {
 
   describe('CONDITIONS_THAT_SPEED_ZERO', () => {
     it('contains exactly the expected speed-zero conditions', () => {
-      const expected = new Set(['grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero']);
+      const expected = new Set(['grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero', 'forcecaged']);
       expect(CONDITIONS_THAT_SPEED_ZERO).toEqual(expected);
     });
   });

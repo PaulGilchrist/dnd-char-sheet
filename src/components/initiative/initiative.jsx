@@ -716,6 +716,218 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         return () => window.removeEventListener('flesh-to-stone-result', handler);
     }, [combatSummary, campaignName])
 
+    // Handle Prismatic Spray Indigo ray recurring CON saves (Restrained -> Petrified)
+    React.useEffect(() => {
+        const handler = async (e) => {
+            const { campaignName: evtCampaign, targetName, result } = e.detail;
+            if (evtCampaign !== campaignName || !combatSummary || !result) return;
+
+            const creature = combatSummary.creatures.find(c => c.name === targetName);
+            if (!creature) return;
+
+            const saveTrackingKey = `_prismaticSprayIndigo_${targetName.replace(/\s+/g, '_')}`;
+            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
+            if (!saveData) return;
+
+            if (result.success) {
+                const newSuccesses = saveData.successes + 1;
+                if (newSuccesses >= 3) {
+                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
+                    setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_indigo' && te.source === saveData.casterName));
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                    await logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-prismatic-spray-indigo',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: true,
+                        description: `${targetName} collected 3 successful CON saves against Prismatic Spray (Indigo ray). Restrained ends.`,
+                    }).catch(() => {});
+                    await logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: targetName,
+                        condition: 'Restrained',
+                        reason: 'Prismatic Spray Indigo (3 successes)',
+                        note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                } else {
+                    setRuntimeValue('campaign', saveTrackingKey, {
+                        ...saveData,
+                        successes: newSuccesses,
+                    }, campaignName);
+                    await logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-prismatic-spray-indigo',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: true,
+                        description: `${targetName} succeeded on CON save against Prismatic Spray Indigo ray (${newSuccesses}/3 successes needed).`,
+                    }).catch(() => {});
+                }
+            } else {
+                const newFailures = saveData.failures + 1;
+                if (newFailures >= 3) {
+                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
+                    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'petrified'], campaignName);
+                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_indigo' && te.source === saveData.casterName));
+                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                    await logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-prismatic-spray-indigo',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: false,
+                        description: `${targetName} failed 3 CON saves against Prismatic Spray (Indigo ray) and is turned to stone (Petrified).`,
+                    }).catch(() => {});
+                    await logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: targetName,
+                        condition: 'Restrained',
+                        reason: 'Prismatic Spray Indigo (3 failures)',
+                        note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                    await logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'applied',
+                        characterName: targetName,
+                        condition: 'Petrified',
+                        reason: 'Prismatic Spray Indigo',
+                        note: `${targetName} is Petrified by Prismatic Spray after failing 3 saves.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {});
+                } else {
+                    setRuntimeValue('campaign', saveTrackingKey, {
+                        ...saveData,
+                        failures: newFailures,
+                    }, campaignName);
+                    await logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: saveData.casterName,
+                        rollType: 'save-prismatic-spray-indigo',
+                        targetName,
+                        saveDc: saveData.dc,
+                        saveType: 'CON',
+                        success: false,
+                        description: `${targetName} failed CON save against Prismatic Spray Indigo ray (${newFailures}/3 failures needed).`,
+                    }).catch(() => {});
+                }
+            }
+
+            setCombatSummary(cloneDeep(combatSummary));
+        };
+        window.addEventListener('prismatic-spray-indigo-result', handler);
+        return () => window.removeEventListener('prismatic-spray-indigo-result', handler);
+    }, [combatSummary, campaignName])
+
+    // Handle Prismatic Spray Violet ray WIS save for banishment (caster's next turn)
+    React.useEffect(() => {
+        const handler = async (e) => {
+            const { campaignName: evtCampaign, targetName, result } = e.detail;
+            if (evtCampaign !== campaignName || !combatSummary || !result) return;
+
+            const creature = combatSummary.creatures.find(c => c.name === targetName);
+            if (!creature) return;
+
+            const saveTrackingKey = `_prismaticSprayViolet_${targetName.replace(/\s+/g, '_')}`;
+            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
+            if (!saveData) return;
+
+            if (result.success) {
+                const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                const filtered = conditions.filter(c => String(c).toLowerCase() !== 'blinded');
+                setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_violet' && te.source === saveData.casterName));
+                setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                await logService.addEntry(campaignName, {
+                    type: 'save_result',
+                    characterName: saveData.casterName,
+                    rollType: 'save-prismatic-spray-violet',
+                    targetName,
+                    saveDc: saveData.dc,
+                    saveType: 'WIS',
+                    success: true,
+                    description: `${targetName} succeeded on WIS save against Prismatic Spray (Violet ray). Blindness ends.`,
+                }).catch(() => {});
+                await logService.addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'removed',
+                    characterName: targetName,
+                    condition: 'Blinded',
+                    reason: 'Prismatic Spray Violet (WIS save success)',
+                    note: `${targetName} succeeded on WIS save; Blinded condition removed.`,
+                    timestamp: Date.now(),
+                }).catch(() => {});
+            } else {
+                // Banish the creature — remove from combat and apply banishment
+                const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+                const filtered = conditions.filter(c => String(c).toLowerCase() !== 'blinded');
+                setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_violet' && te.source === saveData.casterName));
+                setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
+                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+
+                // Remove creature from combat summary
+                const idx = combatSummary.creatures.findIndex(c => c.name === targetName);
+                if (idx >= 0) {
+                    combatSummary.creatures.splice(idx, 1);
+                    storage.set('combatSummary', combatSummary, campaignName);
+                }
+
+                await logService.addEntry(campaignName, {
+                    type: 'save_result',
+                    characterName: saveData.casterName,
+                    rollType: 'save-prismatic-spray-violet',
+                    targetName,
+                    saveDc: saveData.dc,
+                    saveType: 'WIS',
+                    success: false,
+                    description: `${targetName} failed WIS save against Prismatic Spray (Violet ray) and is banished to another plane of existence.`,
+                }).catch(() => {});
+                await logService.addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'removed',
+                    characterName: targetName,
+                    condition: 'Blinded',
+                    reason: 'Prismatic Spray Violet (banishment)',
+                    note: `${targetName} failed WIS save; Blinded removed, banished to another plane.`,
+                    timestamp: Date.now(),
+                }).catch(() => {});
+                await logService.addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: saveData.casterName,
+                    abilityName: 'Prismatic Spray (Violet ray)',
+                    description: `${targetName} was banished to another plane of existence by the Violet ray of Prismatic Spray.`,
+                    targetName,
+                    timestamp: Date.now(),
+                }).catch(() => {});
+            }
+
+            setCombatSummary(cloneDeep(combatSummary));
+        };
+        window.addEventListener('prismatic-spray-violet-result', handler);
+        return () => window.removeEventListener('prismatic-spray-violet-result', handler);
+    }, [combatSummary, campaignName])
+
      const handleCreatureHpChange = React.useCallback((creatureName, newValue) => {
          if (!combatSummary) return
          const creature = combatSummary.creatures.find(c => c.name === creatureName)

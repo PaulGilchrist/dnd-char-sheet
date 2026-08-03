@@ -19,6 +19,7 @@ import { checkRelentlessRage } from '../../rules/features/relentlessRageService.
 import { checkDeathWard } from '../../rules/features/deathWardService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
+import { endSanctuary } from '../../automation/handlers/spells/sanctuaryHandler.js';
 
 // Tracks which multi-attack sequences have already triggered Relentless Endurance.
 // Prevents follow-up hits in the same sequence from re-killing the character.
@@ -360,17 +361,32 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
 
       holyAuraSaveResult = checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
 
-      // Compelled Duel: the effect ends if the target takes damage from anyone other than the caster
-      if (attackerName && attackerName !== creature.name) {
-        const duelEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
-          te => te.effect === 'compelled_duel' && te.target === creature.name && te.source !== attackerName
-        );
-        if (duelEffects.length > 0) {
-          endCompelledDuel(duelEffects[0].source, creature.name, campaignName,
-            `${attackerName} damaged ${creature.name}, breaking the duel.`);
-        }
+       // Compelled Duel: the effect ends if the target takes damage from anyone other than the caster
+       if (attackerName && attackerName !== creature.name) {
+         const duelEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+           te => te.effect === 'compelled_duel' && te.target === creature.name && te.source !== attackerName
+         );
+         if (duelEffects.length > 0) {
+           endCompelledDuel(duelEffects[0].source, creature.name, campaignName,
+             `${attackerName} damaged ${creature.name}, breaking the duel.`);
+         }
+       }
+
+       // Sanctuary: ends if the warded creature deals damage
+       if (actualDamageTaken > 0 && characters) {
+         const sanctuaryEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+           te => te.effect === 'sanctuary' && te.target === creature.name
+         );
+         if (sanctuaryEffects.length > 0) {
+           const casterName = sanctuaryEffects[0].source;
+           const caster = characters.find(c => c.name === casterName);
+           if (caster) {
+             endSanctuary(casterName, creature.name, campaignName,
+               `${creature.name} dealt damage, ending Sanctuary.`);
+           }
+         }
+       }
       }
-     }
 
      // Clean up Avenging Angel Frightful Aura tracking list when a creature takes damage
      if (wardDamage > 0 && characters?.length) {

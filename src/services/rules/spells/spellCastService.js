@@ -20,6 +20,8 @@ import { usesSpellSlot } from '../features/spellUtils.js';
 import { triggerFleshToStone } from '../features/fleshToStoneService.js';
 import { triggerRemoveCurse } from '../features/removeCurseService.js';
 import { triggerHoldMonster } from '../features/holdMonsterService.js';
+import { triggerBanishment } from '../features/banishmentService.js';
+import { triggerMaze } from '../features/mazeService.js';
 import { triggerHypnoticPattern } from '../features/hypnoticPatternService.js';
 import { triggerMassSuggestion } from '../features/massSuggestionService.js';
 import { triggerSuggestion } from '../features/suggestionService.js';
@@ -51,6 +53,9 @@ import { triggerBeaconOfHope } from '../features/beaconOfHopeService.js';
 import { triggerPowerWordStun } from '../features/powerWordStunService.js';
 import { triggerSeeInvisibility } from '../features/seeInvisibilityService.js';
 import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
+import { triggerSleetStorm } from '../features/sleetStormService.js';
+import { triggerFaerieFire } from '../features/faerieFireService.js';
+import { triggerImprisonment } from '../features/imprisonmentService.js';
 import { triggerMassCureWounds } from '../features/massCureWoundsService.js';
 import { triggerPrayerOfHealing } from '../features/prayerOfHealingService.js';
 import { triggerMassHealingWord } from '../features/massHealingWordService.js';
@@ -423,6 +428,27 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         };
     }
 
+    // Confusion — multi-target WIS save for all creatures in 10-ft-radius sphere: Charmed + Speed 0 + no Bonus Actions/Reactions, must show modal before generic automation routing
+    if (fullSpell.name && fullSpell.name.toLowerCase() === 'confusion' && fullSpell.dc) {
+        const confusionModalPayload = {
+            action: { name: 'Confusion', automation: { type: 'confusion' } },
+            playerStats,
+            campaignName,
+            saveType: 'WIS',
+            saveDc: spellSaveDc,
+            activeOverlay: null,
+            metamagicCareful: metaCtx?.metamagicCareful || false,
+            metamagicHeighten: metaCtx?.metamagicHeighten,
+        };
+        return {
+            automationPopup: {
+                type: 'modal',
+                modalName: 'confusion',
+                payload: confusionModalPayload,
+            },
+        };
+    }
+
     // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
     // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
     // Skip spells with automation.effects — those have AoE/single-target effects handled below
@@ -495,6 +521,18 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Hold Monster / Hold Person — WIS save, Paralyzed condition with end-of-turn save
         if (spell.name && (spell.name.toLowerCase() === 'hold monster' || spell.name.toLowerCase() === 'hold person')) {
             await triggerHoldMonster(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Banishment — CHA save, Incapacitated condition, transports target to demiplane (concentration, up to 1 minute)
+        if (spell.name && spell.name.toLowerCase() === 'banishment') {
+            await triggerBanishment(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Maze — single target banished to demiplane, no save, target can use Study action (DC 20 INT Investigation) to escape, concentration up to 10 minutes
+        if (spell.name && spell.name.toLowerCase() === 'maze') {
+            await triggerMaze(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
             return;
         }
 
@@ -733,9 +771,30 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
+        // Sleet Storm — multi-target DEX save for all creatures in 40-ft-tall 20-ft-radius Cylinder: Prone + lose Concentration with repeating save
+        if (spell.name && spell.name.toLowerCase() === 'sleet storm') {
+            await triggerSleetStorm(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Faerie Fire — multi-target DEX save for all creatures in 20-ft cube: outlined in light, can't benefit from Invisible, attack rolls against them have Advantage
+        if (spell.name && spell.name.toLowerCase() === 'faerie fire') {
+            const ffResult = await triggerFaerieFire(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            if (ffResult) {
+                return { automationPopup: ffResult };
+            }
+            return;
+        }
+
         // Tasha's Hideous Laughter — single target WIS save: Prone + Incapacitated with repeating save (end of turn + on damage)
         if (spell.name && spell.name.toLowerCase() === "tasha's hideous laughter") {
             await triggerTashasHideousLaughter(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Imprisonment — 9th level abjuration: WIS save, apply chosen prison effect (Burial/Chaining/Hedged Prison/Minimus Containment/Slumber), no concentration, until dispelled
+        if (spell.name && spell.name.toLowerCase() === 'imprisonment') {
+            await triggerImprisonment(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
             return;
         }
 
@@ -769,6 +828,20 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             const longstriderResult = await executeLongstrider(action, playerStats, campaignName, mapName);
             if (longstriderResult) {
                 return { automationPopup: longstriderResult };
+            }
+            return;
+        }
+
+        // Spare the Dying — make a creature with 0 HP stable (3 death save successes)
+        if (spell.name && spell.name.toLowerCase() === 'spare the dying') {
+            const action = {
+                name: 'Spare the Dying',
+                spell: spell,
+                automation: spell.automation || { type: 'spare_the_dying' },
+            };
+            const spareResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
+            if (spareResult) {
+                return { automationPopup: spareResult };
             }
             return;
         }
@@ -1343,6 +1416,27 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     // Spell Breaker: set up Dispel Magic slot retention listener (Dispel Magic ability check result)
     if (spell.name === 'Dispel Magic' && metaCtx?.slotLevel > 0) {
         setupSpellBreakerDispelRetention(playerStats.name, metaCtx.slotLevel, campaignName, playerStats);
+    }
+
+    // Sanctuary: ends if the warded creature casts a spell
+    const sanctuaryEffects = (function () {
+        try {
+            return (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+                te => te.effect === 'sanctuary' && te.source === playerStats.name
+            );
+        } catch {
+            return [];
+        }
+    })();
+    if (sanctuaryEffects.length > 0) {
+        for (const se of sanctuaryEffects) {
+            const wardedCreature = characters?.find(c => c.name === se.target);
+            if (wardedCreature) {
+                const { endSanctuary: endSanctuaryFn } = await import('../../automation/handlers/spells/sanctuaryHandler.js');
+                endSanctuaryFn(playerStats.name, se.target, campaignName,
+                    `${se.target} cast a spell, ending Sanctuary.`);
+            }
+        }
     }
 
     return triggerResult;

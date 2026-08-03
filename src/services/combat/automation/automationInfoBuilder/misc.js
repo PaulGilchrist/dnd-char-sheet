@@ -697,6 +697,17 @@ export const miscHandlers = {
         }
     },
 
+    'spare_the_dying': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'spare_the_dying',
+            name: feature.name,
+            range: auto.range || '15 feet',
+            casting_time: auto.casting_time || 'action',
+            hasAutomation: true
+        }
+    },
+
     'protection_from_poison': (feature, _playerStats) => {
         const auto = feature.automation
         return {

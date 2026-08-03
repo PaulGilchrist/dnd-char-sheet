@@ -124,7 +124,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.targetAdvantageCount > 0) {
         const reasons = effects.targetAdvantageReasons || []
         const reasonText = reasons.length > 0 ? ` (${reasons.join(', ')})` : ''
-        const teTypes = ['reckless_attack', 'clairvoyant_combatant', 'crusher_enhanced_critical', 'distracting_strike_advantage']
+        const teTypes = ['reckless_attack', 'clairvoyant_combatant', 'crusher_enhanced_critical', 'distracting_strike_advantage', 'faerie_fire']
         badges.push({ label: 'Adv vs', cls: 'effect-debuff', icon: 'fa-arrow-up', removable: true, removeAction: 'remove_derived', effectTypes: teTypes, tooltip: `Attackers have advantage on attack rolls against this creature${reasonText}` })
     }
     if (effects.saveAdvantageCount > 0) {

@@ -123,6 +123,19 @@ export const saveHandlers = {
         }
     },
 
+    'charm_person': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'charm_person',
+            name: feature.name,
+            saveType: auto.saveType || 'WIS',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, 'WIS', playerStats.proficiency) : auto.saveDc || 10,
+            range: auto.range || '',
+            duration: auto.duration || '',
+            hasAutomation: true,
+        }
+    },
+
     'flesh_to_stone': (feature, playerStats) => {
         const auto = feature.automation
         return {
@@ -145,6 +158,20 @@ export const saveHandlers = {
             saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'WIS', playerStats.proficiency) : auto.saveDc || 10,
             conditionInflicted: 'paralyzed',
             duration: 'Concentration, up to 1 minute',
+            hasAutomation: true,
+        }
+    },
+
+    'banishment': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'banishment',
+            name: feature.name,
+            saveType: auto.saveType || 'CHA',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'CHA', playerStats.proficiency) : auto.saveDc || 10,
+            conditionInflicted: 'incapacitated',
+            duration: 'Concentration, up to 1 minute',
+            range: auto.range || '',
             hasAutomation: true,
         }
     },
@@ -210,6 +237,32 @@ export const saveHandlers = {
         }
     },
 
+    'sleet_storm': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'sleet_storm',
+            name: feature.name,
+            saveType: auto.saveType || 'DEX',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'DEX', playerStats.proficiency) : auto.saveDc || 10,
+            conditionInflicted: 'prone',
+            duration: auto.duration || '',
+            hasAutomation: true,
+        }
+    },
+
+    'confusion': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'confusion',
+            name: feature.name,
+            saveType: auto.saveType || 'WIS',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'WIS', playerStats.proficiency) : auto.saveDc || 10,
+            conditionInflicted: 'charmed',
+            duration: auto.duration || 'Concentration, up to 1 minute',
+            hasAutomation: true,
+        }
+    },
+
     'tashas_laughter': (feature, playerStats) => {
         const auto = feature.automation
         return {
@@ -219,6 +272,48 @@ export const saveHandlers = {
             saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'WIS', playerStats.proficiency) : auto.saveDc || 10,
             conditionInflicted: ['prone', 'incapacitated'],
             duration: auto.duration || '',
+            hasAutomation: true,
+        }
+    },
+
+    'imprisonment': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'imprisonment',
+            name: feature.name,
+            saveType: auto.saveType || 'WIS',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'WIS', playerStats.proficiency) : auto.saveDc || 10,
+            duration: 'Until dispelled',
+            options: auto.options || [],
+            hasAutomation: true,
+        }
+    },
+
+    'prismatic_spray': (feature, playerStats) => {
+        const auto = feature.automation
+        const scaling = resolveScaling(playerStats, auto.scaling)
+        const rawDamage = scaling?.damage || auto.damage || '10d6'
+        const damage = rawDamage
+        return {
+            type: 'prismatic_spray',
+            name: feature.name,
+            saveType: auto.saveType || 'DEX',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'DEX', playerStats.proficiency) : auto.saveDc || 10,
+            damage,
+            hasAutomation: true,
+        }
+    },
+
+    'forcecage': (feature, playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'forcecage',
+            name: feature.name,
+            saveType: auto.saveType || 'CHA',
+            saveDc: (auto.saveDc === 'ability') ? getSaveDc(playerStats, auto.saveAbility || 'CHA', playerStats.proficiency) : auto.saveDc || 10,
+            duration: auto.duration || 'Concentration, up to 1 hour',
+            concentration: !!auto.concentration,
+            ruleset: auto.ruleset || '5e',
             hasAutomation: true,
         }
     },

@@ -5,7 +5,7 @@ const CONDITIONS_THAT_CANNOT_ACT = new Set([
  ])
 
 const CONDITIONS_THAT_SPEED_ZERO = new Set([
-    'grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero',
+    'grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero', 'forcecaged',
 ])
 
 const CONDITION_KEYWORDS = new Set(['charmed', 'frightened', 'poison', 'magic'])
@@ -509,9 +509,13 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
 
         case 'invisible':
           if (!seeInvisibilityActive) {
-            effects.attackAdvantageCount++
-            effects.attackAdvantageReasons.push('Invisible')
-            effects.targetDisadvantageCount++
+            // Faerie Fire prevents benefiting from Invisible — suppress the advantage/disadvantage
+            const hasFaerieFire = targetEffects.some(te => te.effect === 'faerie_fire')
+            if (!hasFaerieFire) {
+              effects.attackAdvantageCount++
+              effects.attackAdvantageReasons.push('Invisible')
+              effects.targetDisadvantageCount++
+            }
           }
           break
 
@@ -580,19 +584,27 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
           effects.targetAdvantageReasons.push('Dazed')
           break
 
-        case 'slow':
-          effects.speedHalved = true;
-          effects.acPenalty = (effects.acPenalty || 0) + 2;
-          effects.slowNoReactions = true;
-          effects.slowActionLimit = true;
-          effects.slowSingleAttackLimit = true;
-          effects.slowSomaticFailure = true;
-          // DEX save disadvantage from Slow
-          if (!effects.saveDisadvantage.includes('dex')) {
-            effects.saveDisadvantage.push('dex');
-          }
-          break;
-        }
+         case 'slow':
+           effects.speedHalved = true;
+           effects.acPenalty = (effects.acPenalty || 0) + 2;
+           effects.slowNoReactions = true;
+           effects.slowActionLimit = true;
+           effects.slowSingleAttackLimit = true;
+           effects.slowSomaticFailure = true;
+           // DEX save disadvantage from Slow
+           if (!effects.saveDisadvantage.includes('dex')) {
+             effects.saveDisadvantage.push('dex');
+           }
+           break;
+
+         case 'forcecaged':
+           // Forcecaged: trapped in cage, can't leave by nonmagical means
+           // Speed is 0 (can't move out of cage)
+           effects.speedZero = true;
+           effects.cannotAct = true;
+           effects.concentrationBroken = true;
+           break;
+         }
     }
 
   for (const te of targetEffects) {
@@ -701,6 +713,27 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'no_opportunity_attacks' && !te.saveType) {
       effects.riderCannotOpportunityAttack = true;
     }
+    // Handle Banishment — incapacitated condition with concentration
+    if (te.effect === 'banishment') {
+      // Banishment grants Incapacitated (handled by condition switch) and tracks the effect
+      // The permanent banishment flag is stored but doesn't change combat mechanics
+    }
+    // Handle Forcecage — tracks trapped creature for escape CHA save
+    if (te.effect === 'forcecage') {
+      // Forcecage prevents nonmagical escape and requires CHA save for teleportation
+      // The DC is stored in te.dc for escape checks
+      // No direct combat stat modification — the effect is tracked for escape attempts
+    }
+    // Handle Prismatic Spray Indigo — Restrained with recurring CON saves (tracked via initiative component)
+    if (te.effect === 'prismatic_spray_indigo') {
+      // The Restrained condition is already applied; this tracks the effect for cleanup
+      // Recurring CON saves are handled by the initiative component
+    }
+    // Handle Prismatic Spray Violet — Blinded with WIS save at caster's next turn (tracked via initiative component)
+    if (te.effect === 'prismatic_spray_violet') {
+      // The Blinded condition is already applied; this tracks the effect for cleanup
+      // WIS save for banishment is handled by the initiative component
+    }
     // Handle Hurl Through Hell — incapacitated condition with save
     if (te.effect === 'incapacitated' && te.saveType) {
       effects.saveType = te.saveType;
@@ -737,6 +770,18 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
       if (!attackerHasBlindsightOrTruesight(attackerSenses)) {
         effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
       }
+    }
+    // Handle Faerie Fire — attack rolls against affected creature have Advantage if attacker can see it, and creature can't benefit from Invisible
+    if (te.effect === 'faerie_fire') {
+      effects.targetAdvantageCount = (effects.targetAdvantageCount || 0) + 1;
+      if (!effects.targetAdvantageReasons) {
+        effects.targetAdvantageReasons = [];
+      }
+      if (te.source && !effects.targetAdvantageReasons.includes(te.source)) {
+        effects.targetAdvantageReasons.push(te.source);
+      }
+      // Prevent benefiting from Invisible — suppress invisible's attackAdvantage when faerie_fire is active
+      effects.noAdvantageAgainstInvisible = true;
     }
     // Handle Hex — target has Disadvantage on ability checks of chosen ability
     if (te.effect === 'hex_ability_check_disadvantage') {

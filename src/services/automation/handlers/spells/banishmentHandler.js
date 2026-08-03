@@ -5,8 +5,15 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
-import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 
+// Creature types that get permanently banished when the spell lasts 1 minute
+const PERMANENT_BANISHMENT_TYPES = new Set([
+    'aberration',
+    'celestial',
+    'elemental',
+    'fey',
+    'fiend',
+]);
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -25,12 +32,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
-    const casterCreature = cs.creatures.find(c => c.name === casterName);
 
     storeSpellLastAttack(campaignName, {
         casterName,
         spellName: action.name,
-        saveType: 'WIS',
+        saveType: 'CHA',
         saveDc: dc,
         attackScope: 'single',
     });
@@ -49,50 +55,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const targetCreature = cs.creatures.find(c => c.name === targetName);
-    if (!targetCreature) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `Target "${targetName}" not found in combat. ${action.name} has no effect.`,
-            },
-        };
-    }
-
-    const targetConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    const targetImmunities = targetCreature?.immunities || [];
-    const allImmunities = [...new Set([...targetImmunities, ...(targetConditions.includes('petrified') ? ['paralyzed'] : [])])];
-    if (allImmunities.some(i => String(i).toLowerCase() === 'paralyzed')) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `${targetName} is immune to Paralyzed. ${action.name} has no effect.`,
-            },
-        };
-    }
-
-    const targetInvisible = targetConditions.some(c => String(c).toLowerCase() === 'invisible');
-    const casterSenses = casterCreature?.senses || [];
-    const hasTruesight = casterSenses.some(s => String(s.name || s.type || '').toLowerCase() === 'truesight');
-    const hasBlindsight = casterSenses.some(s => String(s.name || s.type || '').toLowerCase() === 'blindsight');
-    if (targetInvisible && !hasTruesight && !hasBlindsight) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `${targetName} is invisible. You can't see the target. ${action.name} has no effect.`,
-            },
-        };
-    }
-
     const { promptId, promise } = createSaveListener(campaignName, {
         targetName,
-        saveType: 'WIS',
+        saveType: 'CHA',
         saveDc: dc,
         dcSuccess: 'none',
         disadvantage: !!action.metaCtx?.metamagicHeighten,
@@ -102,9 +67,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         type: 'ability_use',
         characterName: casterName,
         abilityName: action.name,
-        description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a WIS save (DC ${dc}) or become Paralyzed.`,
+        description: `${casterName} casts ${action.name} on ${targetName}! ${targetName} must make a CHA save (DC ${dc}) or be banished.`,
         promptId,
-    }).catch((e) => { console.error("[holdMonster] Error:", e); });
+    }).catch((e) => { console.error("[banishment] Error:", e); });
 
     const saveResult = await promise;
 
@@ -120,86 +85,107 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         addEntry(campaignName, {
             type: 'save_result',
             characterName: casterName,
-            rollType: 'save-hold-monster',
+            rollType: 'save-banishment',
             targetName,
             saveDc: dc,
-            saveType: 'WIS',
+            saveType: 'CHA',
             success: true,
-            description: `${targetName} succeeded on WIS save against ${action.name}.`,
-        }).catch((e) => { console.error("[holdMonster] Error:", e); });
+            description: `${targetName} succeeded on CHA save against ${action.name}.`,
+        }).catch((e) => { console.error("[banishment] Error:", e); });
 
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
                 name: action.name,
-                description: `${targetName} succeeded on WIS save against ${action.name}.`,
+                description: `${targetName} succeeded on CHA save against ${action.name}.`,
             },
         };
     }
 
-    // Failed save: apply Paralyzed condition
+    // Failed save: apply Incapacitated condition and banishment target effect
     const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
     const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'paralyzed');
-    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'paralyzed'], campaignName);
+    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
 
     // Store condition metadata with DC and ability for recurring CON save
     const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
     setRuntimeValue(targetName, 'activeConditionMeta', {
         ...existingMeta,
-        paralyzed: {
-            ...(existingMeta.paralyzed || {}),
+        incapacitated: {
+            ...(existingMeta.incapacitated || {}),
             dc,
-            ability: 'con',
+            ability: 'cha',
         },
     }, campaignName);
+
+    // Check if target is a creature type that gets permanently banished
+    const targetCreature = cs.creatures.find(c => c.name === targetName);
+    const creatureType = (targetCreature?.type || '').toLowerCase().replace(/\s+/g, '');
+    const isPermanentType = PERMANENT_BANISHMENT_TYPES.has(creatureType);
+    const permanentNote = isPermanentType
+        ? ' (permanent banishment - target will not return)'
+        : '';
+
+    // Add banishment target effect to track the spell visually
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const existingBanishment = targetEffects.filter(te => te.effect !== 'banishment');
+    setRuntimeValue('campaign', 'targetEffects', [
+        ...existingBanishment,
+        {
+            effect: 'banishment',
+            target: targetName,
+            source: casterName,
+            duration: 'Concentration, up to 1 minute',
+            permanent: isPermanentType,
+        },
+    ], campaignName);
 
     await addTargetResult(campaignName, {
         targetName,
         saveResult: 'failure',
         roll: saveResult.roll ?? 0,
         total: saveResult.total ?? 0,
-        conditions: ['paralyzed'],
+        conditions: ['incapacitated'],
         appliedDamage: 0,
     });
 
     addExpiration(casterName, targetName, [
-        { type: 'condition', condition: 'paralyzed' },
+        { type: 'condition', condition: 'incapacitated' },
     ], campaignName);
-
-    const concentrationDc = 8 + (playerStats.proficiency || 2) + (playerStats.abilities?.CON?.bonus ?? 0);
-    if (casterCreature) {
-        addConcentration(cs, casterName, action.name, concentrationDc);
-    }
 
     addEntry(campaignName, {
         type: 'save_result',
         characterName: casterName,
-        rollType: 'save-hold-monster',
+        rollType: 'save-banishment',
         targetName,
         saveDc: dc,
-        saveType: 'WIS',
+        saveType: 'CHA',
         success: false,
-        description: `${targetName} failed WIS save against ${action.name} and is Paralyzed.`,
-    }).catch((e) => { console.error("[holdMonster] Error:", e); });
+        description: `${targetName} failed CHA save against ${action.name} and is banished.${permanentNote}`,
+    }).catch((e) => { console.error("[banishment] Error:", e); });
 
     addEntry(campaignName, {
         type: 'condition',
         action: 'applied',
         characterName: targetName,
-        condition: 'Paralyzed',
+        condition: 'Incapacitated',
         reason: action.name,
-        note: `${targetName} is Paralyzed by ${action.name}.`,
+        note: `${targetName} is Incapacitated by ${action.name} (banished to demiplane).${permanentNote}`,
         timestamp: Date.now(),
-    }).catch((e) => { console.error("[holdMonster] Error:", e); });
+    }).catch((e) => { console.error("[banishment] Error:", e); });
+
+    const popupDesc = isPermanentType
+        ? `${targetName} failed CHA save and is permanently banished to another plane.`
+        : `${targetName} failed CHA save and is banished to a demiplane (Incapacitated).`;
 
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${targetName} failed WIS save and is Paralyzed.`,
+            description: popupDesc,
         },
     };
 }

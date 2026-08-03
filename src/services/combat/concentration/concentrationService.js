@@ -254,6 +254,23 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
     if (filteredSphereEffects.length !== allTargetEffects.length) {
         setRuntimeValue('campaign', 'targetEffects', filteredSphereEffects, campaignName, true);
     }
+
+    // Clean up Faerie Fire targetEffects and activeBuffs for this caster
+    const allFaerieEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredFaerieEffects = allFaerieEffects.filter(te => !(te.effect === 'faerie_fire' && te.source === casterName));
+    if (filteredFaerieEffects.length !== allFaerieEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filteredFaerieEffects, campaignName, true);
+    }
+    // Also clean up activeBuffs on targets that had faerie_fire from this caster
+    if (cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+            const filteredBuffs = buffs.filter(b => !(b.name === 'Faerie Fire' && b.source === casterName));
+            if (filteredBuffs.length !== buffs.length) {
+                setRuntimeValue(creature.name, 'activeBuffs', filteredBuffs, campaignName);
+            }
+        }
+    }
 }
 
 function cleanupHolyAuraEffects(casterName, campaignName) {

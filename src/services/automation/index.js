@@ -202,6 +202,8 @@ import { handle as handleFear } from './handlers/spells/fearHandler.js';
 import { handle as handleFeignDeath, applyFeignDeath } from './handlers/spells/feignDeathHandler.js';
 import { handle as handleFleshToStone } from './handlers/spells/fleshToStoneHandler.js';
 import { handle as handleHoldMonster } from './handlers/spells/holdMonsterHandler.js';
+import { handle as handleBanishment } from './handlers/spells/banishmentHandler.js';
+import { handle as handleMaze, handleEscape as handleMazeEscape } from './handlers/spells/mazeHandler.js';
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
 import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandler.js';
 import { handle as handleCharmMonster } from './handlers/spells/charmMonsterHandler.js';
@@ -222,6 +224,7 @@ import { handle as handleGreaterRestoration, applyGreaterRestoration as applyGre
 import { handle as handleLesserRestoration, applyLesserRestoration as applyLesserRestorationEffect } from './handlers/spells/lesserRestorationHandler.js';
 import { handle as handleRemoveCurse, applyRemoveCurse as applyRemoveCurseEffect } from './handlers/spells/removeCurseHandler.js';
 import { handle as handleLongstrider, applyLongstrider as applyLongstriderEffect } from './handlers/buffs/longstriderHandler.js';
+import { handle as handleSpareTheDying, applySpareTheDying as applySpareTheDyingEffect } from './handlers/spells/spareTheDyingHandler.js';
 import { handle as handleMageArmor, applyMageArmor as applyMageArmorEffect } from './handlers/buffs/mageArmorHandler.js';
 import { handle as handleHeroesFeast, applyHeroesFeast as applyHeroesFeastEffect } from './handlers/buffs/heroesFeastHandler.js';
 import { handle as handleHypnoticPatternShake, handleConfirm as handleHypnoticPatternShakeConfirm } from './handlers/spells/hypnoticPatternShake.js';
@@ -241,19 +244,26 @@ import { handle as handlePowerWordStun } from './handlers/spells/powerWordStunHa
 import { handle as handleWardingBond, getWardingBondTarget, getWardingBondSource, isWardingBondActive } from './handlers/spells/wardingBondHandler.js';
 import { handle as handleOttoDance } from './handlers/spells/ottosDanceHandler.js';
 import { handle as handleStinkingCloud } from './handlers/spells/stinkingCloudHandler.js';
+import { handle as handleConfusion } from './handlers/spells/confusionHandler.js';
 import { handle as handleTashasLaughter } from './handlers/spells/tashasLaughterHandler.js';
+import { handle as handleImprisonment } from './handlers/spells/imprisonmentHandler.js';
+import { handle as handlePrismaticSpray } from './handlers/spells/prismaticSprayHandler.js';
 import { handle as handlePassWithoutTrace } from './handlers/buffs/passWithoutTraceHandler.js';
 import { applyPassWithoutTraceEffect } from '../../services/rules/features/passWithoutTraceService.js';
 import { handle as handleProtectionFromEvilAndGood, isProtectionFromEvilAndGoodActive, isCreatureWarded } from './handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { handle as handleResistance, applyResistance as applyResistanceEffect, getResistanceDamageType, isResistanceUsedThisTurn } from './handlers/buffs/resistanceHandler.js';
 import { handle as handleRayOfEnfeeblement, isRayOfEnfeeblementActive } from './handlers/spells/rayOfEnfeeblementHandler.js';
 import { handle as handleCompelledDuel, isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel } from './handlers/spells/compelledDuelHandler.js';
+import { handle as handleSanctuary, isSanctuaryActive, endSanctuary, getSanctuaryTarget } from './handlers/spells/sanctuaryHandler.js';
 import { handle as handleViciousMockery } from './handlers/spells/viciousMockeryHandler.js';
 import { handle as handleSentinelGuardian } from './handlers/combat/sentinelGuardianHandler.js';
 import { handle as handleSentinelHalt } from './handlers/combat/sentinelHaltHandler.js';
 import { handle as handleWebAreaSave } from './handlers/spells/webAreaSaveHandler.js';
 import { handle as handleEnhanceAbility, applyEnhanceAbility as applyEnhanceAbilityEffect } from './handlers/spells/enhanceAbilityHandler.js';
 import { handle as handleSavant } from './handlers/class-wizard/SavantHandler.js';
+import { handle as handleFaerieFire } from './handlers/spells/faerieFireHandler.js';
+import { handle as handleForcecage, handleEscape as handleForcecageEscape } from './handlers/spells/forcecageHandler.js';
+import { handle as handleSleetStorm } from './handlers/spells/sleetStormHandler.js';
 
 const SAVANT_SCHOOLS = {
     abjuration_savant: 'Abjuration',
@@ -507,6 +517,9 @@ const HANDLER_MAP = {
         sleep_shake: handleSleepShake,
         flesh_to_stone: handleFleshToStone,
         hold_monster: handleHoldMonster,
+        banishment: handleBanishment,
+        maze: handleMaze,
+        maze_escape: handleMazeEscape,
         friends: handleFriends,
         charm_person: handleCharmPerson,
         charm_monster: handleCharmMonster,
@@ -520,12 +533,15 @@ const HANDLER_MAP = {
         antimagic_field: handleAntimagicField,
         grease_area_save: handleGreaseAreaSave,
         web_area_save: handleWebAreaSave,
+        sleet_storm_area_save: handleSleetStorm,
         enhance_ability: handleEnhanceAbility,
         greater_restoration: handleGreaterRestoration,
         lesser_restoration: handleLesserRestoration,
         remove_curse: handleRemoveCurse,
         longstrider: handleLongstrider,
         longstrider_apply: applyLongstriderEffect,
+        spare_the_dying: handleSpareTheDying,
+        spare_the_dying_apply: applySpareTheDyingEffect,
         mage_armor: handleMageArmor,
         mage_armor_apply: applyMageArmorEffect,
         heroes_feast: handleHeroesFeast,
@@ -542,7 +558,14 @@ const HANDLER_MAP = {
         warding_bond: handleWardingBond,
         ottos_dance: handleOttoDance,
         stinking_cloud: handleStinkingCloud,
+        sleet_storm: handleSleetStorm,
+        faerie_fire: handleFaerieFire,
+        forcecage: handleForcecage,
+        forcecage_escape: handleForcecageEscape,
+        confusion: handleConfusion,
         tashas_laughter: handleTashasLaughter,
+        imprisonment: handleImprisonment,
+        prismatic_spray: handlePrismaticSpray,
         pass_without_trace: handlePassWithoutTrace,
         protection_from_energy: handleProtectionFromEnergy,
         protection_from_evil_and_good: handleProtectionFromEvilAndGood,
@@ -553,6 +576,7 @@ const HANDLER_MAP = {
         modify_d20_roll: handleBoonOfFate,
         ray_of_enfeeblement: handleRayOfEnfeeblement,
         compelled_duel: handleCompelledDuel,
+        sanctuary: handleSanctuary,
         vicious_mockery: handleViciousMockery,
         silence: handleSilence,
         bane: handleBane,
@@ -578,6 +602,7 @@ export {
     applyDeathWardEffect, isDeathWardActive,
     isStoneSkinActive, getStoneSkinDamageTypes, isRayOfEnfeeblementActive, getResistanceDamageType,
     isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel,
+    isSanctuaryActive, endSanctuary, getSanctuaryTarget,
     isResistanceUsedThisTurn, applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus,
     getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
     applyHaste,

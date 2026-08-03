@@ -185,6 +185,12 @@ export function collectTurnStartEffects(features) {
                     name: feature.name,
                 })
             }
+            if (auto?.type === 'passive_rule' && auto?.effect === 'confusion_turn_start') {
+                effects.push({
+                    type: 'confusion_turn_start',
+                    name: feature.name,
+                })
+            }
             if (auto?.type === 'healing_start_of_turn') {
                 effects.push({
                     type: auto.bloodiedOnly ? 'survivor_turn_start_heal' : 'regenerate_turn_start_heal',
@@ -312,11 +318,14 @@ export function collectAutomationFromFeatures(features, playerStats) {
             switch (info.type) {
             case 'save_attack':
             case 'save_only':
+            case 'charm_person':
             case 'elemental_burst':
             case 'wrath_of_the_sea':
             case 'oceanic_gift':
             case 'flesh_to_stone':
             case 'hold_monster':
+            case 'banishment':
+            case 'maze':
             case 'hypnotic_pattern':
             case 'power_word_stun':
             case 'sleep':
@@ -325,7 +334,12 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'suggestion':
             case 'ottos_dance':
             case 'stinking_cloud':
+            case 'sleet_storm':
+            case 'confusion':
             case 'tashas_laughter':
+            case 'imprisonment':
+            case 'forcecage':
+            case 'prismatic_spray':
             case 'slow':
             case 'healing':
             case 'healing_pool':
@@ -369,7 +383,8 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 result.actions.push(info)
                 break
             case 'clouds_jaunt':
-                if (info.casting_time === '1 bonus action') {
+            case 'sanctuary':
+                if (info.casting_time === '1 bonus action' || info.casting_time === 'bonus_action' || info.casting_time === 'bonus action') {
                     result.bonusActions.push(info)
                 } else {
                     result.actions.push(info)
@@ -772,6 +787,9 @@ export function collectAutomationFromFeatures(features, playerStats) {
             case 'remove_curse':
                 result.actions.push(info)
                 break
+            case 'spare_the_dying':
+                result.actions.push(info)
+                break
             case 'protection_from_poison':
                 if (info.casting_time === '1 bonus_action' || info.casting_time === 'bonus_action' || info.casting_time === '1 bonus action') {
                     result.bonusActions.push(info)
@@ -972,6 +990,12 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 }
                 break;
             case 'web_area_save':
+                result.specialActions.push(info)
+                break;
+            case 'sleet_storm_area_save':
+                result.specialActions.push(info)
+                break;
+            case 'faerie_fire':
                 result.specialActions.push(info)
                 break;
             case 'brew_poison':

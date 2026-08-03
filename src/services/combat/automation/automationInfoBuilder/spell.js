@@ -236,5 +236,17 @@ export const spellHandlers = {
             spell: auto.spell || '',
             hasAutomation: true
         }
+    },
+
+    'sanctuary': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'sanctuary',
+            name: feature.name,
+            range: auto.range || '30 feet',
+            duration: auto.duration || '1 minute',
+            casting_time: auto.casting_time || '1 bonus action',
+            hasAutomation: true
+        }
     }
 }

@@ -4233,7 +4233,16 @@
       "Warlock",
       "Wizard"
     ],
-    "subclasses": []
+    "subclasses": [],
+    "automation": {
+      "type": "forcecage",
+      "saveDc": "ability",
+      "saveAbility": "CHA",
+      "duration": "1 hour",
+      "concentration": false,
+      "ruleset": "5e",
+      "range": "100 feet"
+    }
   },
   {
     "index": "foresight",
