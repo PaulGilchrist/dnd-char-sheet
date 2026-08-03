@@ -250,7 +250,7 @@ import { handle as handleImprisonment } from './handlers/spells/imprisonmentHand
 import { handle as handlePrismaticSpray } from './handlers/spells/prismaticSprayHandler.js';
 import { handle as handlePassWithoutTrace } from './handlers/buffs/passWithoutTraceHandler.js';
 import { applyPassWithoutTraceEffect } from '../../services/rules/features/passWithoutTraceService.js';
-import { handle as handleProtectionFromEvilAndGood, isProtectionFromEvilAndGoodActive, isCreatureWarded } from './handlers/buffs/protectionFromEvilAndGoodHandler.js';
+import { handle as handleProtectionFromEvilAndGood, applyProtectionFromEvilAndGood, isProtectionFromEvilAndGoodActive, isCreatureWarded } from './handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { handle as handleResistance, applyResistance as applyResistanceEffect, getResistanceDamageType, isResistanceUsedThisTurn } from './handlers/buffs/resistanceHandler.js';
 import { handle as handleRayOfEnfeeblement, isRayOfEnfeeblementActive } from './handlers/spells/rayOfEnfeeblementHandler.js';
 import { handle as handleCompelledDuel, isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel } from './handlers/spells/compelledDuelHandler.js';
@@ -596,7 +596,7 @@ const HANDLER_MAP = {
 };
 export {
     applyAidEffect, applyBaneEffect, applyBlessEffect, applyGreaterRestorationEffect, applyHeroesFeastEffect, applyLesserRestorationEffect,
-    applyLongstriderEffect, applyMageArmorEffect, applyProtectionFromEnergyHandler, applyProtectionFromPoisonHandler,
+    applyLongstriderEffect, applyMageArmorEffect, applyProtectionFromEvilAndGood, applyProtectionFromEnergyHandler, applyProtectionFromPoisonHandler,
     applyRemoveCurseEffect, applyBoonOfEnergyResistance, applyWeaponMasteryChoice, applyWeaponKindMastery, applyResistanceEffect,
     applyStoneSkinHandler, isProtectionFromEvilAndGoodActive, isCreatureWarded, isProtectionFromPoisonActive,
     applyDeathWardEffect, isDeathWardActive,

@@ -53,7 +53,10 @@ function CreatureCard({
 }) {
     const isUnconscious = creature.currentHp <= 0
     const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
-    const myTargetEffects = allTargetEffects.filter(te => te.target === creature.name);
+    const myTargetEffects = allTargetEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return teTarget === creature.name;
+    });
     const saveTrackingKey = FLESH_TO_STONE_PREFIX + creature.name.replace(/\s+/g, '_');
     const fleshToStoneData = useRuntimeValue('campaign', saveTrackingKey, campaignName);
     const isMajestyActive = creature.type === 'player' && isUnbreakableMajestyActive(creature.name, campaignName);

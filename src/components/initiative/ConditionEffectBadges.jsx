@@ -18,13 +18,19 @@ function removeConditionByKey(creatureName, conditionKey, campaignName) {
 
 function removeTargetEffect(targetName, effectType, campaignName) {
     const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
-    const filtered = existingEffects.filter(te => !(te.target === targetName && te.effect === effectType))
+    const filtered = existingEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target
+        return !(teTarget === targetName && te.effect === effectType)
+    })
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
 }
 
 function removeTargetEffectsByTypes(targetName, effectTypes, campaignName) {
     const existingEffects = getRuntimeValue('campaign', 'targetEffects') || []
-    const filtered = existingEffects.filter(te => !(te.target === targetName && effectTypes.includes(te.effect)))
+    const filtered = existingEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target
+        return !(teTarget === targetName && effectTypes.includes(te.effect))
+    })
     setRuntimeValue('campaign', 'targetEffects', filtered, campaignName)
 }
 
@@ -271,6 +277,15 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Holy Aura', cls: 'effect-buff', icon: 'fa-sun', removable: isLocalhost, removeAction: 'target_effect', effectType: 'holy_aura', tooltip: `Holy Aura from ${casterName}: Advantage on saving throws, other creatures have Disadvantage on attack rolls against you. Fiends/Undead that hit an affected creature must succeed on CON save or be Blinded` })
     }
 
+    const pfeagEffect = targetEffects?.find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return te.effect === 'protection_from_evil_and_good' && teTarget === creatureName;
+    })
+    if (pfeagEffect) {
+        const casterName = pfeagEffect.source || 'unknown'
+        badges.push({ label: 'Protection from Evil and Good', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'remove_pfeag', effectType: 'protection_from_evil_and_good', tooltip: `Protection from Evil and Good from ${casterName}: Aberrations, Celestials, Elementals, Fey, Fiends, and Undead have Disadvantage on attack rolls against target. Target can't gain Charmed or Frightened conditions from those types.` })
+    }
+
     const ottoDanceEffect = targetEffects?.find(te => te.effect === 'ottos_irresistible_dance' && te.target === creatureName)
     if (ottoDanceEffect) {
         const casterName = ottoDanceEffect.source || 'unknown'
@@ -294,6 +309,14 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
             case 'target_effect':
                 removeTargetEffect(creatureName, badge.effectType, campaignName)
                 break
+            case 'remove_pfeag': {
+                removeTargetEffect(creatureName, 'protection_from_evil_and_good', campaignName)
+                const buffs = getRuntimeValue(creatureName, 'activeBuffs', campaignName) || []
+                const filteredBuffs = buffs.filter(b => !(b.name === 'Protection from Evil and Good' && b.effect === 'protection_from_evil_and_good'))
+                setRuntimeValue(creatureName, 'activeBuffs', filteredBuffs, campaignName)
+                setRuntimeValue(creatureName, 'protectionFromEvilAndGoodWardedTypes', [], campaignName)
+                break
+            }
             case 'remove_derived':
                 if (badge.effectTypes?.length > 0) {
                     removeTargetEffectsByTypes(creatureName, badge.effectTypes, campaignName)

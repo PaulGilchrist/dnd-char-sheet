@@ -230,6 +230,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'dc'],
   },
   {
+    effect: 'protection_from_evil_and_good',
+    label: 'Protection from Evil and Good',
+    description: 'Target is warded against Aberrations, Celestials, Elementals, Fey, Fiends, and Undead. Those creatures have Disadvantage on attack rolls against the target. The target can\'t gain the Charmed or Frightened conditions from them. If already Charmed or Frightened by such a creature, the target has Advantage on new saving throws against the effect. Expires on concentration loss, initiative roll, short rest, or long rest.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source'],
+  },
+  {
     effect: 'maze',
     label: 'Maze',
     description: 'Target is banished to a labyrinthine demiplane. While trapped, the target has the Incapacitated condition. Target can take a Study action to escape: DC 20 Intelligence (Investigation) check. On escape or when the spell ends, target reappears in the space it left or nearest unoccupied space. Concentration, up to 10 minutes.',

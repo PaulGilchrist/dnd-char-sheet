@@ -14,6 +14,7 @@ import { getLionDisadvantageAgainst } from '../combat/auras/lionAuraUtils.js';
 import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { hasAuraOfProtection } from '../combat/auras/auraOfProtection.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
+import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
 import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
@@ -230,6 +231,17 @@ export function buildAttackContextSync(attack, playerStats, campaignName, condit
             const targetBuffs = getRuntimeValue(targetName, 'activeBuffs', campaignName) || [];
             if (Array.isArray(targetBuffs) && targetBuffs.some(b => b.effect === 'dodge')) {
                 dis++;
+            }
+        }
+
+        // Protection from Evil and Good: warded creature types have disadvantage on attack rolls against the target
+        if (targetName && forcedMode === undefined) {
+            if (isProtectionFromEvilAndGoodActive(targetName, campaignName)) {
+                const combatSummary = await getCombatContext(campaignName);
+                const attackerCreature = combatSummary?.creatures?.find(c => c.name === playerName);
+                if (attackerCreature && isCreatureWarded(attackerCreature.type, targetName, campaignName)) {
+                    dis++;
+                }
             }
         }
 

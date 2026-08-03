@@ -471,7 +471,7 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     // Clear Globe of Invulnerability target effects on short rest
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     if (Array.isArray(storedEffects)) {
-      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field');
+      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good');
       setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
     }
 
@@ -688,11 +688,11 @@ export async function applyLongRest(playerStats, campaignName) {
       charData.activeConditions = [];
       charData.activeConditionMeta = {};
 
-      // Clear Globe of Invulnerability target effects on long rest
-      const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-      if (Array.isArray(storedEffects)) {
-        setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field'), campaignName);
-      }
+       // Clear Globe of Invulnerability target effects on long rest
+       const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+       if (Array.isArray(storedEffects)) {
+         setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good'), campaignName);
+       }
 
       // Clear Awakened Mind target on long rest
       charData.awakenedMindTarget = null;

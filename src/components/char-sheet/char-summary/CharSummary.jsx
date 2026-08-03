@@ -440,8 +440,15 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     if (stormbornPassive && flySpeed === null && wrathOfTheSeaActive) {
         hasFlySpeedBuff = true;
     }
-    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
-    const myTargetEffects = allTargetEffects.filter(te => te.target === playerStats.name);
+    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects');
+    const myTargetEffects = React.useMemo(() => {
+        const effects = allTargetEffects || [];
+        const filtered = effects.filter(te => {
+            const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+            return teTarget === playerStats.name;
+        });
+        return filtered;
+    }, [allTargetEffects, playerStats.name]);
     const rawConditions = useRuntimeValue(playerStats.name, 'activeConditions');
     const rawConditionMeta = useRuntimeValue(playerStats.name, 'activeConditionMeta');
     const conditionObjects = React.useMemo(() => {
