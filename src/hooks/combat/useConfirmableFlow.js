@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { addEntry } from '../../services/ui/logService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
-import { incrementFreeCastResource } from '../../services/rules/spells/spellPreparationService.js'
+import { incrementFreeCastResource, isFreeCastAuthorized, prepareSpellCast } from '../../services/rules/spells/spellPreparationService.js'
 
 const FREE_CAST_SPELLS = [
   'bane', 'bless', 'beacon of hope', 'haste', 'aid', "heroes' feast", 'greater restoration', 'lesser restoration',
@@ -73,6 +73,18 @@ export function useConfirmableFlow(playerStats, campaignName) {
         castingTime: pending.castingTime,
         timestamp: Date.now(),
       }).catch(() => {});
+
+      const isCantrip = (pending.spell?.level === 0);
+      if (!isCantrip && pending.spell) {
+        const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName);
+        await prepareSpellCast(pending.spell, {}, {
+          playerName: playerStats.name,
+          playerStats,
+          campaignName,
+          isUpcast: false,
+          freeCastAuthorized,
+        });
+      }
 
       if (applyFn) {
         await applyFn(pending, result);

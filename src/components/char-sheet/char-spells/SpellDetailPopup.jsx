@@ -4,7 +4,7 @@ import { getRuntimeValue, useRuntimeValue } from '../../../hooks/runtime/useRunt
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getOverchannelNecroticDamage } from '../../../services/automation/handlers/class-wizard/overchannelHandler.js';
 import { isPsionicSpell, hasPsionicSorcery } from '../../../services/rules/spells/metamagicRules.js';
-import { isFreeCastAuthorized, prepareSpellCast } from '../../../services/rules/spells/spellPreparationService.js';
+import { isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js';
 
 function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, upcastLevels = [], playerLevel = 1 }) {
   const isCantrip = spell.level === 0;
@@ -96,28 +96,16 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
       metaCtx.dispelAbilityCheckBonus = profBonus;
     }
 
+    const isUpcast = isUpcastable && Number(selectedUpcastLvl) !== spell.level;
+    const upcastLevel = isUpcast ? Number(selectedUpcastLvl) : undefined;
+    const modifiedSpell = isCantrip && cantripAutoLevel ? { ...spell, level: cantripAutoLevel, baseLevel: 0 } : { ...spell, baseLevel: isCantrip ? 0 : undefined };
+
     if (isCantrip) {
-      const modifiedSpell = cantripAutoLevel ? { ...spell, level: cantripAutoLevel, baseLevel: 0 } : { ...spell, baseLevel: 0 };
       onCast(modifiedSpell, metaCtx);
       return;
     }
 
-    const isUpcast = isUpcastable && Number(selectedUpcastLvl) !== spell.level;
-    const upcastLevel = isUpcast ? Number(selectedUpcastLvl) : undefined;
-
-    (async () => {
-      const result = await prepareSpellCast(spell, metaCtx, {
-        playerName: playerStats.name,
-        playerStats,
-        campaignName,
-        isUpcast,
-        upcastLevel,
-        usePsionicPayment,
-        usePsychicDamage,
-        freeCastAuthorized,
-      });
-      onCast(result.modifiedSpell, result.metaCtx);
-    })();
+    onCast({ ...spell, isUpcast, upcastLevel, freeCastAuthorized, usePsionicPayment, usePsychicDamage, overchannel: useOverchannel }, metaCtx);
   };
 
   const isRaging = getActiveBuffs(playerStats.name, campaignName).some(b => b.name === 'Rage');

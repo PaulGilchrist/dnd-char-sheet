@@ -104,7 +104,7 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Bane');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('calls onCast even when combat summary is null', () => {
@@ -125,7 +125,7 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Bane');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('calls onCast for a non-concentration spell with baseLevel=0', () => {
@@ -148,7 +148,7 @@ describe('SpellDetailPopup - handleCast: Concentration management', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Fireball');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
   });
 });

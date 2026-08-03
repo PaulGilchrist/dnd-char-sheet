@@ -147,6 +147,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isForesight) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       // Include the caster in the target list
@@ -168,6 +171,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isProtectionFromEvilAndGood) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       // Include the caster in the target list (willing creature you touch)
@@ -189,6 +195,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isProtectionFromPoison) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       // Include the caster in the target list (willing creature you touch)
@@ -210,6 +219,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isStoneSkin) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -227,6 +239,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isLesserRestoration) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -244,6 +259,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isGreaterRestoration) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -261,6 +279,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isRemoveCurse) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('removeCurse', {
@@ -277,6 +298,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
     if (isAid) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('aid', {
@@ -295,6 +319,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isBane = (spell.name || '').toLowerCase() === 'bane';
     if (isBane) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('bane', {
@@ -313,6 +340,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isBless = (spell.name || '').toLowerCase() === 'bless';
     if (isBless) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('bless', {
@@ -331,7 +361,10 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHolyAura = (spell.name || '').toLowerCase() === 'holy aura';
     if (isHolyAura) {
       const cs = getCombatSummary(campaignName);
-      const creatureTargets = cs?.creatures?.map(c => c.name) || characters.map(c => c.name);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
+      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('holyAura', {
           spell,
@@ -348,6 +381,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isSlow = (spell.name || '').toLowerCase() === 'slow';
     if (isSlow) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -366,6 +402,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHaste = (spell.name || '').toLowerCase() === 'haste';
     if (isHaste) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('haste', {
@@ -383,6 +422,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isEnhanceAbility = (spell.name || '').toLowerCase() === 'enhance ability';
     if (isEnhanceAbility) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       let creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         if (!creatureTargets.includes(playerStats.name)) {
@@ -403,6 +445,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isBarkskin = (spell.name || '').toLowerCase() === 'barkskin';
     if (isBarkskin) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('barkskin', {
@@ -421,6 +466,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isInvisibility = (spell.name || '').toLowerCase() === 'invisibility';
     if (isInvisibility) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('invisibility', {
@@ -438,6 +486,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isGreaterInvisibility = (spell.name || '').toLowerCase() === 'greater invisibility';
     if (isGreaterInvisibility) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('greaterInvisibility', {
@@ -455,6 +506,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isFeignDeath = (spell.name || '').toLowerCase() === 'feign death';
     if (isFeignDeath) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('feignDeath', {
@@ -472,6 +526,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHeal = (spell.name || '').toLowerCase() === 'heal';
     if (isHeal) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -490,6 +547,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isLongstrider = (spell.name || '').toLowerCase() === 'longstrider';
     if (isLongstrider) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('longstrider', {
@@ -507,6 +567,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isSpareTheDying = (spell.name || '').toLowerCase() === 'spare the dying';
     if (isSpareTheDying) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('spareTheDying', {
@@ -524,6 +587,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isPassWithoutTrace = (spell.name || '').toLowerCase() === 'pass without trace';
     if (isPassWithoutTrace) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('passWithoutTrace', {
@@ -541,6 +607,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isBeaconOfHope = (spell.name || '').toLowerCase() === 'beacon of hope';
     if (isBeaconOfHope) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       let creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length === 0 && characters.length > 0) {
         creatureTargets = characters.map(c => c.name);
@@ -561,6 +630,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHeroesFeast = (spell.name || '').toLowerCase() === "heroes' feast";
     if (isHeroesFeast) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -580,6 +652,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isMageArmor = (spell.name || '').toLowerCase() === 'mage armor';
     if (isMageArmor) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -598,6 +673,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isProtectionFromEnergy = (spell.name || '').toLowerCase() === 'protection from energy';
     if (isProtectionFromEnergy) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('protectionFromEnergy', {
@@ -616,6 +694,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isResistance = (spell.name || '').toLowerCase() === 'resistance';
     if (isResistance) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -635,6 +716,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isMagicMissile = (spell.name || '').toLowerCase() === 'magic missile';
     if (isMagicMissile) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -653,6 +737,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isGlobe = (spell.name || '').toLowerCase() === 'globe of invulnerability';
     if (isGlobe) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('globe', {
@@ -670,6 +757,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isAntimagicField = (spell.name || '').toLowerCase() === 'antimagic field';
     if (isAntimagicField) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('antimagicField', {
@@ -687,6 +777,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isStinkingCloud = (spell.name || '').toLowerCase() === 'stinking cloud';
     if (isStinkingCloud) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('stinkingCloud', {
@@ -704,6 +797,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isConfusion = (spell.name || '').toLowerCase() === 'confusion';
     if (isConfusion) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('confusion', {
@@ -723,6 +819,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isWeb = (spell.name || '').toLowerCase() === 'web';
     if (isWeb) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('web', {
@@ -772,6 +871,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isRegenerate = (spell.name || '') === 'Regenerate';
     if (isRegenerate) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('regenerate', {
@@ -789,6 +891,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHealingWord = (spell.name || '').toLowerCase() === 'healing word';
     if (isHealingWord) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -807,6 +912,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isCureWounds = (spell.name || '').toLowerCase() === 'cure wounds';
     if (isCureWounds) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures
         ?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
@@ -825,6 +933,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isAuraOfLife = (spell.name || '').toLowerCase() === 'aura of life';
     if (isAuraOfLife) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('auraOfLife', {
@@ -842,6 +953,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isAuraOfPurity = (spell.name || '').toLowerCase() === 'aura of purity';
     if (isAuraOfPurity) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('auraOfPurity', {
@@ -859,6 +973,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isCircleOfPower = (spell.name || '').toLowerCase() === 'circle of power';
     if (isCircleOfPower) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('circleOfPower', {
@@ -876,6 +993,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isCompulsion = (spell.name || '').toLowerCase() === 'compulsion';
     if (isCompulsion) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('compulsion', {
@@ -893,6 +1013,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isAuraOfVitality = (spell.name || '').toLowerCase() === 'aura of vitality';
     if (isAuraOfVitality) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         // Free cast: use pending state so the existing modal renders
@@ -923,6 +1046,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isDeathWard = (spell.name || '').toLowerCase() === 'death ward';
     if (isDeathWard) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('deathWard', {
@@ -940,6 +1066,9 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     const isHeroism = (spell.name || '').toLowerCase() === 'heroism';
     if (isHeroism) {
       const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+      }
       const creatureTargets = cs?.creatures?.map(c => c.name) || [];
       if (creatureTargets.length > 0) {
         cfSetPending('heroism', {

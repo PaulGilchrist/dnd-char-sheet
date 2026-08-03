@@ -117,7 +117,7 @@ describe('SpellDetailPopup - handleCast: Free cast tracking cleanup', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Healing Word');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
   });
 

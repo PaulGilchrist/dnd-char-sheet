@@ -111,7 +111,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Spiritual Weapon');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('calls onCast with non-WGB spell and baseLevel=0', async () => {
@@ -140,7 +140,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
   });
 
@@ -174,7 +174,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Dispel Magic');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
       const metaCtx = onCast.mock.calls[0][1];
       expect(metaCtx.dispelAbilityCheckBonus).toBe(3);
     });
@@ -207,7 +207,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
   });
 
@@ -243,7 +243,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Burning Hands');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('does not show psychic damage toggle for non-Warlock', () => {
@@ -320,7 +320,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Summon Beast');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('calls onCast with Summon Fey and baseLevel=0', async () => {
@@ -353,7 +353,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Summon Fey');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
 
     it('calls onCast with Summon Fey and baseLevel=0 when appending to existing list', async () => {
@@ -387,7 +387,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Summon Fey');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
     });
   });
 
@@ -420,7 +420,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
 
       expect(onCast).toHaveBeenCalledTimes(1);
       expect(onCast.mock.calls[0][0].name).toBe('Magic Missile');
-      expect(onCast.mock.calls[0][0].baseLevel).toBe(0);
+      expect(onCast.mock.calls[0][0].baseLevel).toBe(undefined);
       const metaCtx = onCast.mock.calls[0][1];
       expect(metaCtx.overchannel).toBe(false);
     });

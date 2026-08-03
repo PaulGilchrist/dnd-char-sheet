@@ -116,7 +116,7 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       const modifiedSpell = onCast.mock.calls[0][0];
       expect(modifiedSpell.name).toBe('Magic Missile');
       expect(modifiedSpell.level).toBe(1);
-      expect(modifiedSpell.baseLevel).toBe(0);
+      expect(modifiedSpell.baseLevel).toBe(undefined);
       // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
       expect(setRuntimeValue).not.toHaveBeenCalled();
     });
@@ -182,14 +182,13 @@ describe('SpellDetailPopup - handleCast: Normal spell casting', () => {
       await flushPromises();
       expect(onCast).toHaveBeenCalledTimes(1);
       const modifiedSpell = onCast.mock.calls[0][0];
-      expect(modifiedSpell.level).toBe(2);
-      expect(modifiedSpell.baseLevel).toBe(1);
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Elara',
-        'spell_slots_level_2',
-        2,
-        mockCampaignName
-      );
+      // SpellDetailPopup passes isUpcast/upcastLevel flags; actual slot consumption happens in gateMetamagic → prepareSpellCast
+      expect(modifiedSpell.name).toBe('Magic Missile');
+      expect(modifiedSpell.level).toBe(1);
+      expect(modifiedSpell.isUpcast).toBe(true);
+      expect(modifiedSpell.upcastLevel).toBe(2);
+      // Slot consumption now happens downstream in gateMetamagic → prepareSpellCast
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
 
     it('uses base level when upcast level is selected but matches spell level', async () => {
