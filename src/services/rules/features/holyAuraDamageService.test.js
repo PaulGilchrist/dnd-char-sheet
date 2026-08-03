@@ -448,9 +448,6 @@ describe('holyAuraDamageService', () => {
                 campaignName,
                 5,
             );
-            console.log('RESULT:', JSON.stringify(result));
-            console.log('SET_RUNTIME_VALUE CALLS:', setRuntimeValue.mock.calls);
-            console.log('ADD_ENTRY CALLS:', addEntry.mock.calls);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Warlock',
@@ -460,7 +457,7 @@ describe('holyAuraDamageService', () => {
             );
         });
 
-        it('logs a condition entry when Blinded is added', () => {
+        it('logs a condition entry when Blinded is added', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -469,7 +466,7 @@ describe('holyAuraDamageService', () => {
             getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
@@ -487,7 +484,7 @@ describe('holyAuraDamageService', () => {
             });
         });
 
-        it('does NOT add Blinded when save succeeds', () => {
+        it('does NOT add Blinded when save succeeds', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -497,7 +494,7 @@ describe('holyAuraDamageService', () => {
             rollD20.mockReturnValue(12);
             // saveTotal = 12 + 3 = 15 >= 15
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
@@ -518,7 +515,7 @@ describe('holyAuraDamageService', () => {
             });
         });
 
-        it('does NOT add duplicate Blinded condition when already present', () => {
+        it('does NOT add duplicate Blinded condition when already present', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -527,7 +524,7 @@ describe('holyAuraDamageService', () => {
             getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
@@ -535,7 +532,13 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(setRuntimeValue).not.toHaveBeenCalled();
+            // setRuntimeValue is called to update activeConditions (filtered + re-added) and activeConditionMeta
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Warlock',
+                'activeConditions',
+                ['blinded'],
+                campaignName,
+            );
             expect(addEntry).toHaveBeenCalledWith(campaignName, {
                 type: 'save_result',
                 characterName: 'Warlock',
@@ -548,7 +551,7 @@ describe('holyAuraDamageService', () => {
             });
         });
 
-        it('uses CON modifier from ability_score_modifiers', () => {
+        it('uses CON modifier from ability_score_modifiers', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -558,7 +561,7 @@ describe('holyAuraDamageService', () => {
             rollD20.mockReturnValue(10);
             // saveTotal = 10 + 3 = 13 < 15
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary({ ...fiendWarlock, ability_score_modifiers: { CON: 3 } }),
@@ -574,7 +577,7 @@ describe('holyAuraDamageService', () => {
             );
         });
 
-        it('uses 0 as CON bonus when ability_score_modifiers is missing', () => {
+        it('uses 0 as CON bonus when ability_score_modifiers is missing', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -584,7 +587,7 @@ describe('holyAuraDamageService', () => {
             rollD20.mockReturnValue(14);
             // saveTotal = 14 + 0 = 14 < 15
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
@@ -600,7 +603,7 @@ describe('holyAuraDamageService', () => {
             );
         });
 
-        it('handles undefined ability_score_modifiers gracefully', () => {
+        it('handles undefined ability_score_modifiers gracefully', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -609,7 +612,7 @@ describe('holyAuraDamageService', () => {
             getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(14);
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary({ name: 'Warlock', type: 'Fiend', ability_score_modifiers: undefined }),
@@ -625,7 +628,7 @@ describe('holyAuraDamageService', () => {
             );
         });
 
-        it('treats existing blinded condition case-insensitively', () => {
+        it('treats existing blinded condition case-insensitively', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -634,7 +637,7 @@ describe('holyAuraDamageService', () => {
             getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
@@ -642,7 +645,13 @@ describe('holyAuraDamageService', () => {
                 5,
             );
 
-            expect(setRuntimeValue).not.toHaveBeenCalled();
+            // setRuntimeValue is called to update activeConditions (filtered case-insensitively + re-added) and activeConditionMeta
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Warlock',
+                'activeConditions',
+                ['blinded'],
+                campaignName,
+            );
             expect(addEntry).toHaveBeenCalledWith(campaignName, {
                 type: 'save_result',
                 characterName: 'Warlock',
@@ -655,7 +664,7 @@ describe('holyAuraDamageService', () => {
             });
         });
 
-        it('adds blinded alongside existing non-blinded conditions', () => {
+        it('adds blinded alongside existing non-blinded conditions', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -664,7 +673,7 @@ describe('holyAuraDamageService', () => {
             getHolyAuraTargets.mockReturnValue(['Goblin']);
             rollD20.mockReturnValue(5);
 
-            checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
