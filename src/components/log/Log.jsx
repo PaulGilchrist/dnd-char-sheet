@@ -17,6 +17,7 @@ function getRollIconType(rollType) {
     case 'save-damage': return 'fa-shield-halved';
     case 'save-banishment': return 'fa-shield-halved';
     case 'save-imprisonment': return 'fa-shield-halved';
+    case 'save-confusion': return 'fa-shield-halved';
     case 'aoe-damage': return 'fa-wand-magic-sparkles';
     case 'initiative': return 'fa-bolt';
     case 'damage': return 'fa-skull';

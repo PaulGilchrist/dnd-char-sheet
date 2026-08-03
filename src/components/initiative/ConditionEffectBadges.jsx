@@ -330,6 +330,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Imprisoned', cls: 'effect-debuff', icon: 'fa-dungeon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'imprisonment', tooltip: `Imprisoned by ${casterName}: ${prisonType}. ${imprisonmentEffect.duration || 'Until dispelled'}` })
     }
 
+    const confusionEffect = targetEffects?.find(te => te.effect === 'confusion' && te.target === creatureName)
+    if (confusionEffect) {
+        const casterName = confusionEffect.source || 'unknown'
+        const confusionDc = confusionEffect.dc || 0
+        badges.push({ label: 'Confused', cls: 'effect-debuff', icon: 'fa-circle-notch', removable: isLocalhost, removeAction: 'target_effect', effectType: 'confusion', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'confused', label: 'Confused', dc: confusionDc, ability: 'wis' }) : undefined, tooltip: `Confused by ${casterName}: can't take Bonus Actions or Reactions. At start of turn rolls 1d10 behavior (1: move random direction; 2-6: does nothing; 7-8: Attack action vs random creature within reach; 9-10: chooses behavior). End of turn, repeats WIS save (DC ${confusionDc}); success ends the spell. Click to roll the WIS save.` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

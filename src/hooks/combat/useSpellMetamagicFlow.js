@@ -2330,13 +2330,17 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleStinkingCloudSkip = createSkipHandler('stinkingCloud', (pending) => pending.creatureTargets);
 
   const handleConfusionConfirm = createConfirmHandler('confusion', async (pending, result) => {
+    const targetNames = Array.isArray(result) ? result : [result];
     const action = {
       name: pending.spellName,
       spell: pending.spell,
       automation: { type: 'confusion', saveDc: pending.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2), saveType: 'WIS' },
-      metaCtx: { targets: result, metamagicHeighten: pending.metamagicHeighten },
+      metaCtx: { targets: targetNames, metamagicHeighten: pending.metamagicHeighten },
     };
-    await executeHandler(action, playerStats, campaignName, null);
+    const popup = await executeHandler(action, playerStats, campaignName, null);
+    if (popup?.payload && setPopupHtml) {
+      setPopupHtml(popup.payload);
+    }
   }, (pending) => pending.creatureTargets);
 
   const handleConfusionSkip = createSkipHandler('confusion', (pending) => pending.creatureTargets);

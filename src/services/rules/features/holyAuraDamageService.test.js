@@ -441,7 +441,7 @@ describe('holyAuraDamageService', () => {
             rollD20.mockReturnValue(5);
             // saveTotal = 5 + 3 = 8 < 15
 
-            const result = await checkHolyAuraDamage(
+            await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),

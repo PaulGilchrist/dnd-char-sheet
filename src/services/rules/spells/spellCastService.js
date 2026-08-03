@@ -22,6 +22,7 @@ import { triggerFleshToStone } from '../features/fleshToStoneService.js';
 import { triggerRemoveCurse } from '../features/removeCurseService.js';
 import { triggerHoldMonster } from '../features/holdMonsterService.js';
 import { triggerBanishment } from '../features/banishmentService.js';
+import { triggerConfusion } from '../features/confusionService.js';
 import { triggerMaze } from '../features/mazeService.js';
 import { triggerHypnoticPattern } from '../features/hypnoticPatternService.js';
 import { triggerMassSuggestion } from '../features/massSuggestionService.js';
@@ -426,25 +427,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         };
     }
 
-    // Confusion — multi-target WIS save for all creatures in 10-ft-radius sphere: Charmed + Speed 0 + no Bonus Actions/Reactions, must show modal before generic automation routing
+    // Confusion — multi-target WIS save for all creatures in 10-ft-radius sphere: Charmed + Speed 0 + no Bonus Actions/Reactions
     if (fullSpell.name && fullSpell.name.toLowerCase() === 'confusion' && fullSpell.dc) {
-        const confusionModalPayload = {
-            action: { name: 'Confusion', automation: { type: 'confusion' } },
-            playerStats,
-            campaignName,
-            saveType: 'WIS',
-            saveDc: spellSaveDc,
-            activeOverlay: null,
-            metamagicCareful: metaCtx?.metamagicCareful || false,
-            metamagicHeighten: metaCtx?.metamagicHeighten,
-        };
-        return {
-            automationPopup: {
-                type: 'modal',
-                modalName: 'confusion',
-                payload: confusionModalPayload,
-            },
-        };
+        await triggerConfusion(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+        return;
     }
 
     // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
@@ -544,6 +530,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Banishment — CHA save, Incapacitated condition, transports target to demiplane (concentration, up to 1 minute)
         if (spell.name && spell.name.toLowerCase() === 'banishment') {
             await triggerBanishment(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return;
+        }
+
+        // Confusion — multi-target WIS save: Charmed + Speed 0 + 1d10 behavior each turn
+        if (spell.name && spell.name.toLowerCase() === 'confusion') {
+            await triggerConfusion(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
             return;
         }
 

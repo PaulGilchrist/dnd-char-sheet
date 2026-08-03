@@ -56,7 +56,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'aoe',
     });
 
-    const targets = cs.creatures.filter(c => c.name !== casterName);
+    // Get target names from metaCtx (CreatureSelectionModal) or fall back to all creatures except caster
+    const selectedTargets = Array.isArray(action.metaCtx?.targets) && action.metaCtx.targets.length > 0
+        ? action.metaCtx.targets
+        : cs.creatures.filter(c => c.name !== casterName).map(c => c.name);
+
+    const targets = selectedTargets.map(name => cs.creatures.find(c => c.name === name)).filter(Boolean);
 
     let affectedCount = 0;
     let savedCount = 0;
@@ -135,9 +140,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[confusion] Error:", e); });
 
+            // Register expirations: remove conditions + remove target effect badge + confusion turn-start behavior
             addExpiration(casterName, targetName, [
                 { type: 'charmed', condition: 'charmed' },
                 { type: 'speed_zero', condition: 'speed_zero' },
+                { type: 'remove_target_effect', effectKey: 'confusion', target: targetName, source: casterName },
+                { type: 'confusion_turn_start', name: 'Confusion' },
             ], campaignName);
 
             // Track Confusion effect with DC for cleanup

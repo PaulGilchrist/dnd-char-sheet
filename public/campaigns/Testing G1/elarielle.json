@@ -115,14 +115,17 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Tasha's Hideous Laughter",
-    "Warding Bond",
-    "Stone Skin",
-    "Charm Person",
-    "Banishment",
-    "Hold Monster",
-    "Imprisonment",
-    "Acid Splash"
+    "Acid Splash",
+    "Confusion",
+    "Conjure Volley",
+    "Faerie Fire",
+    "Forcecage",
+    "Maze",
+    "Prismatic Spray",
+    "Revivify",
+    "Sanctuary",
+    "Sleet Storm",
+    "Spare the Dying"
   ],
   "magicInitiateInstances": [
     {

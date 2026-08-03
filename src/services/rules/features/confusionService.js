@@ -28,6 +28,7 @@ export async function triggerConfusion(spell, metaCtx, playerStats, campaignName
         },
         spell,
         spellSlotLevel: metaCtx?.slotLevel || spell.level,
+        metaCtx,
     };
 
     try {

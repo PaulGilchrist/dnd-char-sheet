@@ -616,6 +616,7 @@ describe('Log', () => {
       ['save-damage', 'fa-shield-halved'],
       ['save-ottos-dance', 'fa-shield-halved'],
       ['save-imprisonment', 'fa-shield-halved'],
+      ['save-confusion', 'fa-shield-halved'],
       ['initiative', 'fa-bolt'],
       ['damage', 'fa-skull'],
       ['attack', 'fa-crosshairs'],

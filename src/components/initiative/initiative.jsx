@@ -1146,6 +1146,41 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     }).catch(() => {})
                 }
             }
+
+            // Confusion: a successful WIS reroll on the Confused badge ends the whole spell —
+            // remove Charmed + Speed 0 and the spell badge.
+            if (String(condition.key).toLowerCase() === 'confused') {
+                const confusionEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'confusion' && te.target === creatureName
+                )
+                if (confusionEffect) {
+                    removeCondition(combatSummary, creatureName, { key: 'charmed' }, getRuntimeValue, setRuntimeValue, campaignName)
+                    removeCondition(combatSummary, creatureName, { key: 'speed_zero' }, getRuntimeValue, setRuntimeValue, campaignName)
+                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+                        te => !(te.target === creatureName && te.effect === 'confusion')
+                    )
+                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
+                    logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: confusionEffect.source,
+                        rollType: 'save-confusion',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'WIS',
+                        success: true,
+                        description: `${creatureName} succeeded on WIS save against Confusion. The spell ends; Charmed and Speed 0 removed.`,
+                    }).catch(() => {})
+                    logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Charmed, Speed 0',
+                        reason: 'Confusion (successful reroll)',
+                        note: `${creatureName} succeeded on the WIS reroll; Confusion ends.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {})
+                }
+            }
         }
 
         storage.set('combatSummary', combatSummary, campaignName)
