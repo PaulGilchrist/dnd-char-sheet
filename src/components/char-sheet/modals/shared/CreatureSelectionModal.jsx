@@ -52,7 +52,7 @@ export default function CreatureSelectionModal({
                 <div className="sp-body">
                     {description && <p dangerouslySetInnerHTML={{ __html: description }} />}
                     {!description && targets.length > 0 && <p>{description || `Choose ${maxTargets ? `up to ${maxTargets}` : 'multiple'} targets:`}</p>}
-                    {note && <p className="sp-note">{note}</p>}
+                    {note && <p className="sp-note" dangerouslySetInnerHTML={{ __html: note }} />}
                     <div className="secondary-target-list">
                         {targets.map((target, i) => {
                             const name = target.name || target;
@@ -95,6 +95,7 @@ export default function CreatureSelectionModal({
                                                 title="Select this target for Heightened Spell disadvantage"
                                             />
                                             Heighten
+                                            <span className="sp-note" style={{ fontSize: '0.8em', marginLeft: '4px' }}>(gives target disadvantage)</span>
                                         </span>
                                     )}
                                 </label>

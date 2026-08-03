@@ -785,10 +785,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             return;
         }
 
-        // Tasha's Hideous Laughter — single target WIS save: Prone + Incapacitated with repeating save (end of turn + on damage)
+        // Tasha's Hideous Laughter — 2024 rules only: multi-target WIS save (1 + slot level - 1), Prone + Incapacitated on fail, concentration spell with targetEffect badge
         if (spell.name && spell.name.toLowerCase() === "tasha's hideous laughter") {
-            await triggerTashasHideousLaughter(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
-            return;
+            const result = await triggerTashasHideousLaughter(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
+            return result;
         }
 
         // Imprisonment — 9th level abjuration: WIS save, apply chosen prison effect (Burial/Chaining/Hedged Prison/Minimus Containment/Slumber), no concentration, until dispelled

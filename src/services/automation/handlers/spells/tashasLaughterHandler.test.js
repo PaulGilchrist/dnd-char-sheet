@@ -20,10 +20,6 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
@@ -126,7 +122,7 @@ describe('tashasLaughterHandler.handle', () => {
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
-      expect(result.payload.description).toContain('No creatures affected');
+      expect(result.payload.description).toContain('No valid targets');
     });
 
     it('should handle all targets saving successfully', async () => {
@@ -161,6 +157,59 @@ describe('tashasLaughterHandler.handle', () => {
       expect(result.payload.description).toContain('creature(s)');
       expect(result.payload.description).toContain('creature(s) saved');
     });
+
+    it('should filter targets when metaCtx.targets is provided', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(14);
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-selected',
+        promise: Promise.resolve({ success: false }),
+      });
+      mockGetRuntimeValue((playerName, key) => {
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      const action = { ...makeAction(), metaCtx: { targets: ['Goblin'] } };
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      // Only Goblin should get a save listener, not Orc
+      expect(savePrompt.createSaveListener).toHaveBeenCalledTimes(1);
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({ targetName: 'Goblin' }),
+      );
+    });
+
+    it('should return early when selected targets are empty after filtering', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(14);
+
+      const action = { ...makeAction(), metaCtx: { targets: [] } };
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
+      expect(result.payload.description).toContain('No valid targets');
+    });
+
+    it('should exclude caster from selected targets', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(14);
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-caster-filtered',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const action = { ...makeAction(), metaCtx: { targets: ['TestCaster', 'Goblin'] } };
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      // Only Goblin should get a save listener; TestCaster is excluded
+      expect(savePrompt.createSaveListener).toHaveBeenCalledTimes(1);
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({ targetName: 'Goblin' }),
+      );
+    });
   });
 
   describe('failed save handling', () => {
@@ -169,6 +218,7 @@ describe('tashasLaughterHandler.handle', () => {
       savePrompt.buildSaveDc.mockReturnValue(15);
       mockGetRuntimeValue((playerName, key) => {
         if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return [];
         return null;
       });
       savePrompt.createSaveListener.mockReturnValue({
@@ -195,6 +245,7 @@ describe('tashasLaughterHandler.handle', () => {
       setupFailedSaveMock();
       mockGetRuntimeValue((playerName, key) => {
         if (key === 'activeConditions') return ['frightened'];
+        if (key === 'targetEffects') return [];
         return null;
       });
 
@@ -225,6 +276,60 @@ describe('tashasLaughterHandler.handle', () => {
       );
     });
 
+    it('should register tashas_hideous_laughter targetEffect on failed save', async () => {
+      setupFailedSaveMock();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        expect.arrayContaining([
+          expect.objectContaining({
+            target: 'Goblin',
+            effect: 'tashas_hideous_laughter',
+            source: 'TestCaster',
+            dc: 15,
+            duration: 'concentration',
+            conditions: ['prone', 'incapacitated'],
+          }),
+        ]),
+        campaignName,
+      );
+    });
+
+    it('should update existing targetEffect if one already exists', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(16);
+      mockGetRuntimeValue((playerName, key) => {
+        if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return [
+          { target: 'Goblin', effect: 'tashas_hideous_laughter', source: 'TestCaster', dc: 14, duration: 'concentration', conditions: ['prone', 'incapacitated'] },
+        ];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-update',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        expect.arrayContaining([
+          expect.objectContaining({
+            target: 'Goblin',
+            effect: 'tashas_hideous_laughter',
+            dc: 16,
+          }),
+        ]),
+        campaignName,
+      );
+    });
+  });
+
   describe('successful save handling', () => {
     function setupSuccessfulSaveMock() {
       damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
@@ -247,5 +352,4 @@ describe('tashasLaughterHandler.handle', () => {
       );
     });
   });
-});
 });

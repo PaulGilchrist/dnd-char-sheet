@@ -115,6 +115,9 @@ function handleModalResult(popup, setModalState) {
         case 'feignDeathTargetSelection':
             setModalState({ feignDeathModal: payload });
             break;
+        case 'tashasLaughter':
+            setModalState({ tashasLaughterModal: payload });
+            break;
         default:
             console.error(`[useSpellCastExecutor] Unknown modalName from spell cast: ${modalName}`);
     }

@@ -107,8 +107,9 @@ describe('MassSuggestionModal', () => {
         });
 
         it('renders the note about charmed condition', () => {
-            render(<MassSuggestionModal {...makeProps()} />);
-            expect(screen.getByText(/On a failed save, target becomes <strong>Charmed<\/strong>/)).toBeInTheDocument();
+            const { container } = render(<MassSuggestionModal {...makeProps()} />);
+            const noteEl = container.querySelector('.sp-note');
+            expect(noteEl).toHaveTextContent(/On a failed save, target becomes.*Charmed/);
             expect(screen.getByText(/Maximum 12 targets/)).toBeInTheDocument();
         });
 

@@ -106,8 +106,9 @@ describe('HypnoticPatternModal', () => {
         });
 
         it('renders the note about charmed, incapacitated, and speed 0 conditions', () => {
-            render(<HypnoticPatternModal {...makeProps()} />);
-            expect(screen.getByText(/On a failed save, target becomes <strong>Charmed<\/strong>/)).toBeInTheDocument();
+            const { container } = render(<HypnoticPatternModal {...makeProps()} />);
+            const noteEl = container.querySelector('.sp-note');
+            expect(noteEl).toHaveTextContent(/On a failed save, target becomes.*Charmed/);
             expect(screen.getByText(/Incapacitated/)).toBeInTheDocument();
             expect(screen.getByText(/Speed 0/)).toBeInTheDocument();
         });

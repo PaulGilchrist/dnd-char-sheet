@@ -76,6 +76,7 @@ import MassCureWoundsModal from './modals/MassCureWoundsModal.jsx'
 import PrayerOfHealingModal from './modals/PrayerOfHealingModal.jsx'
 import PowerWordFortifyModal from './modals/PowerWordFortifyModal.jsx'
 import MassHealingWordModal from './modals/MassHealingWordModal.jsx'
+import TashasLaughterModal from './modals/shared/TashasLaughterModal.jsx'
 import FlurryOfBlowsTargetPopup from './popups/FlurryOfBlowsTargetPopup.jsx'
 import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx'
 import DestructiveStrideModal from './modals/DestructiveStrideModal.jsx'
@@ -590,6 +591,13 @@ export default function CharActionModals({
                 <HypnoticPatternModal
                     {...mergedModalState.hypnoticPatternModal}
                     onClose={() => setModalState({ hypnoticPatternModal: null })}
+                />
+            )}
+            {mergedModalState.tashasLaughterModal && (
+                <TashasLaughterModal
+                    {...mergedModalState.tashasLaughterModal}
+                    onClose={() => setModalState({ tashasLaughterModal: null })}
+                    setPopupHtml={setPopupHtml}
                 />
             )}
             {mergedModalState.silenceModal && (

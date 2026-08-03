@@ -11,7 +11,7 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   const slotDmg = spell.damage?.damage_at_slot_level;
   const healAtSlotLevel = spell.heal_at_slot_level;
   const charDmg = spell.damage?.damage_at_character_level;
-  const isUpcastable = !isCantrip && ((slotDmg && Object.keys(slotDmg).length > 1) || (healAtSlotLevel && Object.keys(healAtSlotLevel).length > 1));
+  const isUpcastable = !isCantrip && ((slotDmg && Object.keys(slotDmg).length > 1) || (healAtSlotLevel && Object.keys(healAtSlotLevel).length > 1) || (spell.upcast_at_slot_level && Object.keys(spell.upcast_at_slot_level).length > 1));
 
   const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
 

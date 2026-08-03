@@ -56,6 +56,13 @@ function clearAllConcentrations(campaignName, restingCreatureName) {
     if (changed && cs) {
         storage.set('combatSummary', cs, campaignName);
     }
+
+    // Also clear concentration-duration targetEffects from the resting creature
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredEffects = allTargetEffects.filter(te => !(te.source === restingCreatureName && te.duration === 'concentration'));
+    if (filteredEffects.length !== allTargetEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
+    }
 }
 
 function clearBaneEffects(campaignName, casterName) {
@@ -317,6 +324,26 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
                 setRuntimeValue(creature.name, 'activeBuffs', filteredBuffs, campaignName);
             }
         }
+    }
+
+    // Clean up Tasha's Hideous Laughter targetEffects and conditions for this caster
+    const allLaughterEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredLaughterEffects = allLaughterEffects.filter(te => !(te.effect === 'tashas_hideous_laughter' && te.source === casterName));
+    if (filteredLaughterEffects.length !== allLaughterEffects.length) {
+        for (const te of allLaughterEffects) {
+            if (te.effect === 'tashas_hideous_laughter' && te.source === casterName && te.target) {
+                const condList = getRuntimeValue(te.target, 'activeConditions', campaignName) || [];
+                const filteredConds = condList.filter(c => {
+                    const lower = String(c).toLowerCase();
+                    return lower !== 'prone' && lower !== 'incapacitated';
+                });
+                if (filteredConds.length !== condList.length) {
+                    setRuntimeValue(te.target, 'activeConditions', filteredConds, campaignName);
+                    logConditionEvent(campaignName, 'removed', te.target, 'Prone, Incapacitated', 'Concentration lost by ' + casterName);
+                }
+            }
+        }
+        setRuntimeValue('campaign', 'targetEffects', filteredLaughterEffects, campaignName, true);
     }
 }
 

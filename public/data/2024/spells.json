@@ -183,6 +183,17 @@
     "dc": {
       "dc_type": "WIS",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "1": "1 target",
+      "2": "2 targets",
+      "3": "3 targets",
+      "4": "4 targets",
+      "5": "5 targets",
+      "6": "6 targets",
+      "7": "7 targets",
+      "8": "8 targets",
+      "9": "9 targets"
     }
   },
   {
@@ -217,6 +228,15 @@
     "dc": {
       "dc_type": "CHA",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "3": "72 hours total duration",
+      "4": "120 hours total duration",
+      "5": "168 hours total duration",
+      "6": "216 hours total duration",
+      "7": "264 hours total duration",
+      "8": "312 hours total duration",
+      "9": "360 hours total duration"
     }
   },
   {
@@ -273,7 +293,15 @@
     ],
     "subclasses": [],
     "area_of_effect": null,
-    "status_effects": []
+    "status_effects": [],
+    "upcast_at_slot_level": {
+      "4": "2 additional targets",
+      "5": "4 additional targets",
+      "6": "6 additional targets",
+      "7": "8 additional targets",
+      "8": "10 additional targets",
+      "9": "12 additional targets"
+    }
   },
   {
     "index": "animate-objects",
@@ -909,6 +937,17 @@
     "dc": {
       "dc_type": "CHA",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "1": "1 target",
+      "2": "2 targets",
+      "3": "3 targets",
+      "4": "4 targets",
+      "5": "5 targets",
+      "6": "6 targets",
+      "7": "7 targets",
+      "8": "8 targets",
+      "9": "9 targets"
     }
   },
   {
@@ -951,6 +990,14 @@
     "automation": {
       "type": "banishment",
       "range": "30 feet"
+    },
+    "upcast_at_slot_level": {
+      "4": "1 target",
+      "5": "2 targets",
+      "6": "3 targets",
+      "7": "4 targets",
+      "8": "5 targets",
+      "9": "6 targets"
     }
   },
   {
@@ -6072,6 +6119,13 @@
     "dc": {
       "dc_type": "WIS",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "5": "Uses stat block for level 5",
+      "6": "Uses stat block for level 6",
+      "7": "Uses stat block for level 7",
+      "8": "Uses stat block for level 8",
+      "9": "Uses stat block for level 9"
     }
   },
   {
@@ -9176,6 +9230,10 @@
     "dc": {
       "dc_type": "INT",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "3": "+2 attack/damage bonus",
+      "6": "+3 attack/damage bonus"
     }
   },
   {
@@ -12501,7 +12559,14 @@
     ],
     "subclasses": [],
     "area_of_effect": null,
-    "status_effects": []
+    "status_effects": [],
+    "upcast_at_slot_level": {
+      "5": "Uses stat block for level 5",
+      "6": "Uses stat block for level 6",
+      "7": "Uses stat block for level 7",
+      "8": "Uses stat block for level 8",
+      "9": "Uses stat block for level 9"
+    }
   },
   {
     "index": "summon-elemental",
@@ -12589,7 +12654,15 @@
     ],
     "subclasses": [],
     "area_of_effect": null,
-    "status_effects": []
+    "status_effects": [],
+    "upcast_at_slot_level": {
+      "4": "Uses stat block for level 4",
+      "5": "Uses stat block for level 5",
+      "6": "Uses stat block for level 6",
+      "7": "Uses stat block for level 7",
+      "8": "Uses stat block for level 8",
+      "9": "Uses stat block for level 9"
+    }
   },
   {
     "index": "summon-fey",
@@ -12920,6 +12993,17 @@
     "dc": {
       "dc_type": "WIS",
       "dc_success": "none"
+    },
+    "upcast_at_slot_level": {
+      "1": "1 target",
+      "2": "2 targets",
+      "3": "3 targets",
+      "4": "4 targets",
+      "5": "5 targets",
+      "6": "6 targets",
+      "7": "7 targets",
+      "8": "8 targets",
+      "9": "9 targets"
     }
   },
   {

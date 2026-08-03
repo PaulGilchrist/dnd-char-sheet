@@ -221,6 +221,15 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Spells ──────────────────────────────────────────────
   {
+    effect: 'tashas_hideous_laughter',
+    label: "Tasha's Hideous Laughter",
+    description: 'Target laughs uncontrollably: Prone and Incapacitated for the duration. Target can\'t end the Prone condition on itself. At the end of each turn and each time it takes damage, target can repeat the WIS save (has Advantage on save triggered by damage). On a success, the spell ends. Concentration, up to 1 minute.',
+    icon: 'fa-music',
+    cls: 'effect-debuff',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+  },
+  {
     effect: 'forcecage',
     label: 'Forcecage',
     description: 'Trapped in an immobile, invisible prison of magical force. Cannot leave by nonmagical means. Must make CHA save (DC indicated) to use teleportation or interplanar travel to exit. Cage extends into the Ethereal Plane, blocking ethereal travel. Can\'t be dispelled by Dispel Magic. Expires on concentration loss, initiative roll, short rest, or long rest.',

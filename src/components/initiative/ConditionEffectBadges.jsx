@@ -302,6 +302,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: "Otto's Irresistible Dance", cls: 'effect-debuff', icon: 'fa-music', removable: isLocalhost, removeAction: 'target_effect', effectType: 'ottos_irresistible_dance', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'charmed', label: 'Charmed', dc: danceDc, ability: 'wis' }) : undefined, tooltip: `Otto's Irresistible Dance from ${casterName}: Charmed, Speed 0, Disadvantage on Dexterity saving throws and attack rolls. Click to reroll the WIS save (DC ${danceDc}); a success ends the spell.` })
     }
 
+    const tashasLaughterEffect = targetEffects?.find(te => te.effect === 'tashas_hideous_laughter' && te.target === creatureName)
+    if (tashasLaughterEffect) {
+        const casterName = tashasLaughterEffect.source || 'unknown'
+        const laughterDc = tashasLaughterEffect.dc || 0
+        badges.push({ label: "Tasha's Hideous Laughter", cls: 'effect-debuff', icon: 'fa-music', removable: isLocalhost, removeAction: 'target_effect', effectType: 'tashas_hideous_laughter', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'prone', label: 'Prone', dc: laughterDc, ability: 'wis' }) : undefined, tooltip: `Tasha's Hideous Laughter from ${casterName}: Prone and Incapacitated. Click to reroll the WIS save (DC ${laughterDc}); a success ends the spell.` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

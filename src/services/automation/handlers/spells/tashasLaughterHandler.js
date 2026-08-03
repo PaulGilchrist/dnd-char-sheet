@@ -13,6 +13,8 @@ import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollba
  * - Successful save ends the spell
  * - Concentration, up to 1 minute
  * - Higher level: one additional creature per slot level above 1
+ * - If metaCtx.targets is provided, only process those targets
+ * - Registers tashas_hideous_laughter targetEffect for concentration tracking
  */
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -32,16 +34,30 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+    const selectedTargets = action.metaCtx?.targets;
+
+    const targets = selectedTargets
+        ? cs.creatures.filter(c => selectedTargets.includes(c.name) && c.name !== casterName)
+        : cs.creatures.filter(c => c.name !== casterName);
+
+    if (targets.length === 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: "No valid targets selected. Tasha's Hideous Laughter has no effect.",
+            },
+        };
+    }
 
     storeSpellLastAttack(campaignName, {
         casterName,
         spellName: action.name,
         saveType: 'WIS',
         saveDc: dc,
-        attackScope: 'aoe',
+        attackScope: 'single',
     });
-
-    const targets = cs.creatures.filter(c => c.name !== casterName);
 
     let affectedCount = 0;
     let savedCount = 0;
@@ -100,19 +116,19 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             );
             setRuntimeValue(targetName, 'activeConditions', [...filtered, 'prone', 'incapacitated'], campaignName);
 
-            // Store condition metadata with DC and ability for recurring CON save
+            // Store condition metadata with DC and ability for recurring WIS save
             const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
             setRuntimeValue(targetName, 'activeConditionMeta', {
                 ...existingMeta,
                 prone: {
                     ...(existingMeta.prone || {}),
                     dc,
-                    ability: 'con',
+                    ability: 'wis',
                 },
                 incapacitated: {
                     ...(existingMeta.incapacitated || {}),
                     dc,
-                    ability: 'con',
+                    ability: 'wis',
                 },
             }, campaignName);
 
@@ -131,6 +147,26 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 { type: 'condition', condition: 'incapacitated' },
                 { type: 'tashas_laughter_expiration' },
             ], campaignName);
+
+            // Register the spell badge targetEffect for concentration tracking
+            const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
+            const existingIndex = allTargetEffects.findIndex(
+                te => te.target === targetName && te.effect === 'tashas_hideous_laughter' && te.source === casterName
+            );
+            const laughterEffect = {
+                target: targetName,
+                effect: 'tashas_hideous_laughter',
+                source: casterName,
+                dc,
+                duration: 'concentration',
+                conditions: ['prone', 'incapacitated'],
+            };
+            if (existingIndex >= 0) {
+                allTargetEffects[existingIndex] = laughterEffect;
+            } else {
+                allTargetEffects.push(laughterEffect);
+            }
+            setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
             addEntry(campaignName, {
                 type: 'condition',

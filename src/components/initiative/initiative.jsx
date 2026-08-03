@@ -1111,6 +1111,41 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     }).catch(() => {})
                 }
             }
+
+            // Tasha's Hideous Laughter: a successful WIS reroll on the Prone/Incapacitated
+            // badge ends the whole spell — remove both conditions and the spell badge.
+            if (String(condition.key).toLowerCase() === 'prone' || String(condition.key).toLowerCase() === 'incapacitated') {
+                const laughterEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'tashas_hideous_laughter' && te.target === creatureName
+                )
+                if (laughterEffect) {
+                    removeCondition(combatSummary, creatureName, { key: 'prone' }, getRuntimeValue, setRuntimeValue, campaignName)
+                    removeCondition(combatSummary, creatureName, { key: 'incapacitated' }, getRuntimeValue, setRuntimeValue, campaignName)
+                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+                        te => !(te.target === creatureName && te.effect === 'tashas_hideous_laughter')
+                    )
+                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
+                    logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: laughterEffect.source,
+                        rollType: 'save-tashas-laughter',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'WIS',
+                        success: true,
+                        description: `${creatureName} succeeded on WIS save against Tasha's Hideous Laughter. The spell ends; Prone and Incapacitated removed.`,
+                    }).catch(() => {})
+                    logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Prone, Incapacitated',
+                        reason: "Tasha's Hideous Laughter (successful reroll)",
+                        note: `${creatureName} succeeded on the WIS reroll; Tasha's Hideous Laughter ends.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {})
+                }
+            }
         }
 
         storage.set('combatSummary', combatSummary, campaignName)
