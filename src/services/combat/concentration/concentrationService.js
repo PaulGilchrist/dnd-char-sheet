@@ -266,6 +266,16 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
         }
     }
 
+    // Clean up Stone Skin runtime values from targets when concentration breaks
+    if (spellName === 'Stone Skin' && cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const ssTypes = getRuntimeValue(creature.name, 'stoneSkinDamageTypes', campaignName);
+            if (ssTypes) {
+                setRuntimeValue(creature.name, 'stoneSkinDamageTypes', null, campaignName);
+            }
+        }
+    }
+
     // Clean up Protection from Poison targetEffects and activeBuffs when concentration breaks
     const allProtectionFromPoisonEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const filteredProtectionFromPoisonEffects = allProtectionFromPoisonEffects.filter(te => !(te.effect === 'protection_from_poison' && te.source === casterName));

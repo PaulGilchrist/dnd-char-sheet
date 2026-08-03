@@ -274,7 +274,6 @@ describe('executeSpellCast - no-damage spell routing', () => {
       'Longstrider',
       'Protection from Energy',
       'Protection from Poison',
-      'Stone Skin',
       'Resistance',
     ]
 

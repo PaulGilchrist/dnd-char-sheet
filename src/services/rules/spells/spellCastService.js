@@ -63,7 +63,6 @@ import { triggerTashasHideousLaughter } from '../features/tashasHideousLaughterS
 import { executeHandler as executeLongstrider } from '../../automation/index.js';
 import { executeHandler as executeProtectionFromEnergy } from '../../automation/index.js';
 import { executeHandler as executeProtectionFromPoison } from '../../automation/index.js';
-import { executeHandler as executeStoneSkin } from '../../automation/index.js';
 import { onAbjurationSpellCast } from '../../automation/handlers/class-wizard/arcaneWardHandler.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
@@ -1043,19 +1042,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                     automation: spell.automation ?? {},
                 };
                 await executeProtectionFromPoison(action, playerStats, campaignName, mapName);
-            }
-        }
-
-        // Stone Skin — apply resistance to Bludgeoning, Piercing, and Slashing damage
-        if (spell.name && spell.name.toLowerCase() === 'stone skin') {
-            const target = await getTargetInfo();
-            if (target) {
-                const action = {
-                    name: 'Stone Skin',
-                    spell: spell,
-                    automation: spell.automation ?? {},
-                };
-                await executeStoneSkin(action, playerStats, campaignName, mapName);
             }
         }
 

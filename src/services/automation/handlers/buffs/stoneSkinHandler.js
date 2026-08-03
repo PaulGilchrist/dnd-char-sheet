@@ -1,13 +1,14 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 const STONE_SKIN_KEY = 'stoneSkinDamageTypes';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
-    const playerName = playerStats.name;
 
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary) {
@@ -22,9 +23,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const creatureTargets = combatSummary.creatures
-        .filter(c => c.name !== playerName)
-        .map(c => c.name);
+    const creatureTargets = combatSummary.creatures.map(c => c.name);
 
     return {
         type: 'popup',
@@ -72,6 +71,10 @@ export async function applyStoneSkin(action, playerStats, campaignName, targetNa
     addExpiration(playerStats.name, targetName, [
         { type: 'remove_active_buff', buffName: action.name }
     ], campaignName);
+
+    const spellSaveDc = playerStats.spellAbilities?.saveDc || 8 + playerStats.proficiency;
+    const combatSummary = getCombatSummary(campaignName);
+    addConcentration(combatSummary, playerStats.name, 'Stone Skin', spellSaveDc, targetName);
 
     await addEntry(campaignName, {
         type: 'ability_use',

@@ -115,17 +115,13 @@
     "Fire Bolt",
     "Poison Spray",
     "Shocking Grasp",
-    "Longstrider",
-    "Otiluke's Freezing Sphere",
-    "Otiluke's Resilient Sphere",
-    "Protection from Energy",
-    "Protection from Evil and Good",
-    "Protection from Poison",
-    "Stone Skin",
-    "Swift Quiver",
     "Tasha's Hideous Laughter",
     "Warding Bond",
-    "Otto's Irresistible Dance"
+    "Stone Skin",
+    "Charm Person",
+    "Banishment",
+    "Hold Monster",
+    "Imprisonment"
   ],
   "magicInitiateInstances": [
     {

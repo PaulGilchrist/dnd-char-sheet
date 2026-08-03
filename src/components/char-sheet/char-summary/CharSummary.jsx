@@ -9,6 +9,7 @@ import { isCircleOfPowerActive } from '../../../services/automation/handlers/buf
 import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js'
 import { getProtectionFromEnergyDamageType } from '../../../services/automation/handlers/buffs/protectionFromEnergyHandler.js'
 import { getResistanceDamageType } from '../../../services/automation/handlers/buffs/resistanceHandler.js'
+import { getStoneSkinDamageTypes } from '../../../services/automation/handlers/buffs/stoneSkinHandler.js'
 import CharGold from './CharGold.jsx'
 import CharHitPoints from './CharHitPoints.jsx'
 import CharClassFeatures from './CharClassFeatures.jsx'
@@ -279,6 +280,11 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
             .flatMap(b => b.resistanceTypes || [])
         : [];
 
+    const stoneSkinResistances = Array.isArray(activeBuffs)
+        ? activeBuffs.filter(b => b.name === 'Stone Skin' && b.resistanceTypes?.length)
+            .flatMap(b => b.resistanceTypes || [])
+        : [];
+
     const heroesFeastConditionImmunities = Array.isArray(activeBuffs)
         ? (activeBuffs.find(b => b.name === "Heroes' Feast")?.conditionImmunity || [])
             .map(c => String(c).toLowerCase())
@@ -317,9 +323,10 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const automationImmunities = playerStats.automationConditionImmunities || [];
     const resistanceDamageType = getResistanceDamageType(playerStats.name, campaignName);
     const protectionFromEnergyDamageType = getProtectionFromEnergyDamageType(playerStats.name, campaignName);
+    const stoneSkinDamageTypes = getStoneSkinDamageTypes(playerStats.name, campaignName) || [];
     const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances, ...protectionFromPoisonResistances])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances, ...protectionFromPoisonResistances, ...stoneSkinResistances, ...stoneSkinDamageTypes])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;

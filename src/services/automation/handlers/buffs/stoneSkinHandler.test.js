@@ -20,6 +20,14 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
 // ── Imports (Vite returns mocked versions) ───────────────────────
 
 import { handle, applyStoneSkin, isStoneSkinActive, getStoneSkinDamageTypes } from './stoneSkinHandler.js';
@@ -28,6 +36,8 @@ import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
+import * as concentrationService from '../../../combat/concentration/concentrationService.js';
+import * as combatData from '../../../encounters/combatData.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -57,6 +67,8 @@ function resetMocks() {
   expirations.addExpiration.mockClear();
   logService.addEntry.mockClear();
   damageUtils.getCombatContext.mockClear();
+  concentrationService.addConcentration.mockClear();
+  combatData.getCombatSummary.mockClear();
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -77,7 +89,7 @@ describe('stoneSkinHandler', () => {
       expect(result.payload.description).toContain('No combat context found');
     });
 
-    it('returns target selection popup with filtered creatures when combat context exists', async () => {
+    it('returns target selection popup with all creatures including caster when combat context exists', async () => {
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'Ally1' },
@@ -90,17 +102,17 @@ describe('stoneSkinHandler', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('stoneSkin_target_selection');
-      expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2']);
+      expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2', 'TestWizard']);
     });
 
-    it('returns empty creatureTargets when only the caster is present', async () => {
+    it('returns all creatures when only the caster is present', async () => {
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [{ name: 'TestWizard' }],
       });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, 'TestMap');
 
-      expect(result.payload.creatureTargets).toEqual([]);
+      expect(result.payload.creatureTargets).toEqual(['TestWizard']);
     });
   });
 
@@ -192,6 +204,23 @@ describe('stoneSkinHandler', () => {
       const buffsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
       const stoneSkinBuff = buffsArg.find((b) => b.name === 'Stone Skin');
       expect(stoneSkinBuff.resistanceTypes).toEqual(['Bludgeoning', 'Piercing', 'Slashing']);
+    });
+
+    it('adds concentration when applied', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'TestWizard' }],
+      });
+
+      await applyStoneSkin(makeAction(), makePlayerStats(), campaignName, 'Ally1');
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.objectContaining({ creatures: [{ name: 'TestWizard' }] }),
+        'TestWizard',
+        'Stone Skin',
+        expect.any(Number),
+        'Ally1',
+      );
     });
   });
 
