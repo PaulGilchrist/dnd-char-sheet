@@ -12,7 +12,6 @@ import MultiTargetPopup from '../popups/MultiTargetPopup.jsx'
 import SecondaryTargetModal from '../modals/shared/SecondaryTargetModal.jsx'
 import SingleResistanceSelectionModal from '../modals/SingleResistanceSelectionModal.jsx'
 import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
-import TargetWithTypePopup from '../popups/TargetWithTypePopup.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
 import { getExcludedSpellNames } from '../../../services/ui/spellSectionUtils.js'
 import MagicMissileTargetPopup from '../popups/MagicMissileTargetPopup.jsx'
@@ -137,7 +136,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
 
     const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingHolyAura, handleHolyAuraConfirm, handleHolyAuraSkip, pendingBeaconOfHope, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingEnhanceAbility, enhanceAbilityStage, handleEnhanceAbilityAbilitySelect, handleEnhanceAbilityConfirm, handleEnhanceAbilitySkip, pendingBarkskin, handleBarkskinConfirm, handleBarkskinSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingFeignDeath, handleFeignDeathConfirm, handleFeignDeathSkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, handleProtectionFromEnergyConfirm, handleProtectionFromEnergySkip, pendingResistance, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip, pendingAntimagicField, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, pendingRegenerate, handleRegenerateConfirm, handleRegenerateSkip, pendingHealingWord, handleHealingWordConfirm, handleHealingWordSkip, pendingCureWounds, handleCureWoundsConfirm, handleCureWoundsSkip, pendingStinkingCloud, handleStinkingCloudConfirm, handleStinkingCloudSkip, pendingWeb, handleWebConfirm, handleWebSkip, pendingAnimalFriendship, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip, pendingAuraOfLife, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, pendingAuraOfPurity, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, pendingCircleOfPower, handleCircleOfPowerConfirm, handleCircleOfPowerSkip, pendingCompulsion, handleCompulsionConfirm, handleCompulsionSkip, pendingAuraOfVitality, handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, pendingForesight, handleForesightConfirm, handleForesightSkip, pendingLongstrider, handleLongstriderConfirm, handleLongstriderSkip, pendingConfusion, pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip, pendingHeroism, handleHeroismConfirm, handleHeroismSkip, cfClearPending } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
+    const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingHolyAura, handleHolyAuraConfirm, handleHolyAuraSkip, pendingBeaconOfHope, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingEnhanceAbility, enhanceAbilityStage, handleEnhanceAbilityAbilitySelect, handleEnhanceAbilityConfirm, handleEnhanceAbilitySkip, pendingBarkskin, handleBarkskinConfirm, handleBarkskinSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingFeignDeath, handleFeignDeathConfirm, handleFeignDeathSkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEnergy, protectionFromEnergyStage, handleProtectionFromEnergyTargetSelect, handleProtectionFromEnergyTypeSelect, handleProtectionFromEnergySkip, pendingResistance, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip, pendingAntimagicField, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, pendingRegenerate, handleRegenerateConfirm, handleRegenerateSkip, pendingHealingWord, handleHealingWordConfirm, handleHealingWordSkip, pendingCureWounds, handleCureWoundsConfirm, handleCureWoundsSkip, pendingStinkingCloud, handleStinkingCloudConfirm, handleStinkingCloudSkip, pendingWeb, handleWebConfirm, handleWebSkip, pendingAnimalFriendship, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip, pendingAuraOfLife, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, pendingAuraOfPurity, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, pendingCircleOfPower, handleCircleOfPowerConfirm, handleCircleOfPowerSkip, pendingCompulsion, handleCompulsionConfirm, handleCompulsionSkip, pendingAuraOfVitality, handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, pendingForesight, handleForesightConfirm, handleForesightSkip, pendingLongstrider, handleLongstriderConfirm, handleLongstriderSkip, pendingConfusion, pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip, pendingHeroism, handleHeroismConfirm, handleHeroismSkip, cfClearPending } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
     const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -962,16 +961,26 @@ return (
                         confirmIcon="fa-shield-halved"
                       />
                     )}
-                    {pendingProtectionFromEnergy && (
-                      <TargetWithTypePopup
-                        spell={{ name: pendingProtectionFromEnergy.spellName, level: pendingProtectionFromEnergy.spellLevel || 0 }}
+                    {pendingProtectionFromEnergy && protectionFromEnergyStage === 'target' && (
+                      <SecondaryTargetModal
+                        title="Protection from Energy"
+                        targets={pendingProtectionFromEnergy.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                        onTargetSelected={handleProtectionFromEnergyTargetSelect}
+                        onSkip={handleProtectionFromEnergySkip}
+                        description={`Choose a creature within <strong>${pendingProtectionFromEnergy.range}</strong>. Then choose a damage type for resistance.`}
+                        confirmLabel="Cast Protection from Energy"
+                        confirmIcon="fa-shield-halved"
+                      />
+                    )}
+                    {pendingProtectionFromEnergy && protectionFromEnergyStage === 'type' && (
+                      <SingleResistanceSelectionModal
+                        title="Choose Damage Type"
+                        icon="fa-shield-halved"
+                        action={{ automation: { damageTypes: pendingProtectionFromEnergy.damageTypes } }}
                         playerStats={playerStats}
                         campaignName={campaignName}
-                        range={pendingProtectionFromEnergy.range}
-                        creatureTargets={pendingProtectionFromEnergy.creatureTargets}
-                        damageTypes={pendingProtectionFromEnergy.damageTypes}
-                        onConfirm={handleProtectionFromEnergyConfirm}
-                        onSkip={handleProtectionFromEnergySkip}
+                        onConfirm={handleProtectionFromEnergyTypeSelect}
+                        onClose={handleProtectionFromEnergySkip}
                       />
                     )}
                     {pendingResistance && resistanceStage === 'target' && (

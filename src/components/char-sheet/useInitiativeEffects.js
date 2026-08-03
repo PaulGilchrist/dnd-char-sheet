@@ -139,6 +139,18 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
                         }
                     }
+                    if (concentrationSpell === 'Protection from Energy') {
+                        // Clear Protection from Energy buffs from ALL creatures
+                        if (cs?.creatures) {
+                            for (const creature of cs.creatures) {
+                                const buffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName) || [];
+                                const filtered = buffs.filter(b => b.name !== 'Protection from Energy');
+                                if (filtered.length !== buffs.length) {
+                                    setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                                }
+                            }
+                        }
+                    }
                     if (concentrationSpell === 'Calm Emotions') {
                         // Restore suppressed conditions from calm_emotions effects
                         const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];

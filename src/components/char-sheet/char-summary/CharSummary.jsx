@@ -7,6 +7,8 @@ import { parseMagicItemName } from '../../../services/rules/core/attackCalc.js'
 import { isAuraOfLifeActive } from '../../../services/automation/handlers/buffs/auraOfLifeHandler.js'
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js'
 import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js'
+import { getProtectionFromEnergyDamageType } from '../../../services/automation/handlers/buffs/protectionFromEnergyHandler.js'
+import { getResistanceDamageType } from '../../../services/automation/handlers/buffs/resistanceHandler.js'
 import CharGold from './CharGold.jsx'
 import CharHitPoints from './CharHitPoints.jsx'
 import CharClassFeatures from './CharClassFeatures.jsx'
@@ -308,9 +310,11 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
         : [];
 
     const automationImmunities = playerStats.automationConditionImmunities || [];
+    const resistanceDamageType = getResistanceDamageType(playerStats.name, campaignName);
+    const protectionFromEnergyDamageType = getProtectionFromEnergyDamageType(playerStats.name, campaignName);
     const allImmunities = [...new Set([...baseImmunities, ...auraImmunities, ...automationImmunities, ...rageConditionalImmunities, ...calmEmotionsImmunities, ...feignDeathConditionImmunities, ...heroesFeastConditionImmunities, ...heroismConditionImmunities])];
 
-    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances])];
+    const allResistances = [...new Set([...baseResistances, ...auraResistances, ...stormbornResistancesActive, ...rageResistances, ...wildHeartResistances, ...rageOfTheGodsResistances, ...superiorDefenseResistances, ...(epitomeResistanceType ? [epitomeResistanceType] : []), ...(fiendishResilienceType ? [fiendishResilienceType] : []), ...(resistanceDamageType ? [resistanceDamageType] : []), ...(protectionFromEnergyDamageType ? [protectionFromEnergyDamageType] : []), ...boonEnergyResistanceTypes, ...elementalAdeptTypes, ...auraOfLifeResistances, ...auraOfPurityResistances, ...feignDeathResistances, ...heroesFeastResistances])];
 
     let flySpeed = null;
     let hasFlySpeedBuff = false;
@@ -754,7 +758,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     )}
 
                     {heroesFeastResistances.length > 0 && (
-                        <CreatureBadge icon='fa-champagne-glasses' label="Heroes' Feast" cls='effect-buff' tooltip={`Heroes' Feast: Resistance to ${heroesFeastResistances.join(', ')}, Immune to ${heroesFeastConditionImmunities.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}, HP maximum increased by 2d10. Lasts 24 hours.`} />
+                         <CreatureBadge icon='fa-champagne-glasses' label="Heroes' Feast" cls='effect-buff' tooltip={`Heroes' Feast: Resistance to ${heroesFeastResistances.join(', ')}, Immune to ${heroesFeastConditionImmunities.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}, HP maximum increased by 2d10. Lasts 24 hours.`} />
                     )}
                 </div>
               </div>

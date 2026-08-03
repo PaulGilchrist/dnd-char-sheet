@@ -282,9 +282,14 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
     {
       name: 'Protection from Energy',
       level: 3,
-      handler: 'handleProtectionFromEnergyConfirm',
+      handler: 'handleProtectionFromEnergyTypeSelect',
       pendingKey: 'pendingProtectionFromEnergy',
-      args: { targetName: 'Goblin A', damageType: 'Fire' },
+      args: 'Fire',
+      preStep: async (result) => {
+        await act(async () => {
+          result.current.handleProtectionFromEnergyTargetSelect('Goblin A');
+        });
+      },
       verify: async (automation) => {
         expect(automation.applyProtectionFromEnergyHandler).toHaveBeenCalledWith(
           expect.objectContaining({ name: 'Protection from Energy' }),
@@ -307,11 +312,19 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
 
       const automation = await import('../../services/automation/index.js');
 
+      if (config.preStep) {
+        await act(async () => {
+          await config.preStep(result);
+        });
+      }
+
       await act(async () => {
         await result.current[config.handler](config.args);
       });
 
-      const expectedTargets = ['Goblin A', 'Goblin B'];
+      const expectedTargets = config.name === 'Protection from Energy'
+        ? ['Goblin A']
+        : ['Goblin A', 'Goblin B'];
 
       expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
         type: 'spell',

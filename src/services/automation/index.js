@@ -621,6 +621,7 @@ export {
     isHeroismActive,
     applyBeaconOfHopeEffect,
     applyHolyAuraEffect,
+    applySpareTheDyingEffect,
     applyAuraOfLifeEffect,
     isAuraOfLifeActive,
     applyAuraOfPurityEffect,

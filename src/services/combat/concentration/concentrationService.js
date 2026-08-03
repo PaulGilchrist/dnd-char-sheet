@@ -245,6 +245,27 @@ async function cleanupConcentrationEffects(casterName, spellName, campaignName) 
     // Clean up Heroism buff and effects when concentration breaks
     removeHeroismBuff(casterName, campaignName)
 
+    // Clean up Resistance runtime values from targets when concentration breaks
+    if (spellName === 'Resistance' && cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const resistanceType = getRuntimeValue(creature.name, 'resistanceChosenDamageType', campaignName);
+            if (resistanceType) {
+                setRuntimeValue(creature.name, 'resistanceChosenDamageType', null, campaignName);
+                setRuntimeValue(creature.name, 'resistanceUsedThisTurn', false, campaignName);
+            }
+        }
+    }
+
+    // Clean up Protection from Energy runtime values from targets when concentration breaks
+    if (spellName === 'Protection from Energy' && cs?.creatures) {
+        for (const creature of cs.creatures) {
+            const pfedType = getRuntimeValue(creature.name, 'protectionFromEnergyDamageType', campaignName);
+            if (pfedType) {
+                setRuntimeValue(creature.name, 'protectionFromEnergyDamageType', null, campaignName);
+            }
+        }
+    }
+
     // Clean up Holy Aura buffs and targets when concentration breaks
     cleanupHolyAuraEffects(casterName, campaignName)
 

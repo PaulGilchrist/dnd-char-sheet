@@ -12,6 +12,14 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
 vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
@@ -31,6 +39,8 @@ import {
 
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
+import * as concentrationService from '../../../combat/concentration/concentrationService.js';
+import * as combatData from '../../../encounters/combatData.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 
@@ -97,7 +107,7 @@ describe('protectionFromEnergyHandler', () => {
       expect(result.payload.description).toContain('No combat context found');
     });
 
-    it('filters out the caster from creature targets', async () => {
+    it('includes the caster in creature targets', async () => {
       const ps = makePlayerStats({ name: 'Wizard' });
       const action = makeAction();
       damageUtils.getCombatContext.mockResolvedValue({
@@ -109,7 +119,7 @@ describe('protectionFromEnergyHandler', () => {
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.creatureTargets).toEqual(['Goblin']);
+      expect(result.payload.creatureTargets).toEqual(['Wizard', 'Goblin']);
     });
 
     it('defaults damageTypes when automation is missing or has no damageTypes', async () => {
@@ -130,7 +140,7 @@ describe('protectionFromEnergyHandler', () => {
       expect(result.payload.damageTypes).toEqual(expectedDamageTypes);
     });
 
-    it('filters out caster and returns empty targets when caster is the only creature', async () => {
+    it('returns all creatures when caster is the only creature', async () => {
       const ps = makePlayerStats({ name: 'Wizard' });
       const action = makeAction();
       damageUtils.getCombatContext.mockResolvedValue({
@@ -139,7 +149,7 @@ describe('protectionFromEnergyHandler', () => {
 
       const result = await handle(action, ps, campaignName, null);
 
-      expect(result.payload.creatureTargets).toEqual([]);
+      expect(result.payload.creatureTargets).toEqual(['Wizard']);
     });
   });
 
@@ -294,6 +304,31 @@ describe('protectionFromEnergyHandler', () => {
         targetName: 'Goblin',
         timestamp: expect.any(Number),
       });
+    });
+
+    it('calls addConcentration for the caster', async () => {
+      const ps = makePlayerStats({ spellAbilities: { saveDc: 13 } });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue({
+        creatures: [{ name: 'Wizard', type: 'player' }],
+      });
+
+      await applyProtectionFromEnergy(
+        action,
+        ps,
+        campaignName,
+        'Goblin',
+        'fire'
+      );
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.objectContaining({ creatures: expect.arrayContaining([expect.objectContaining({ name: 'Wizard' })]) }),
+        'Wizard',
+        'Protection from Energy',
+        13,
+        'Goblin'
+      );
     });
   });
 
