@@ -357,7 +357,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         }
       }
 
-      holyAuraSaveResult = checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
+      holyAuraSaveResult = await checkHolyAuraDamage(creature, attackerName, combatSummary, campaignName, wardDamage);
 
        // Compelled Duel: the effect ends if the target takes damage from anyone other than the caster
        if (attackerName && attackerName !== creature.name) {

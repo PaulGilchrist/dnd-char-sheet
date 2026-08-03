@@ -14,6 +14,7 @@ vi.mock('../../ui/logService.js', () => ({
 }));
 
 vi.mock('../../automation/handlers/buffs/holyAuraHandler.js', () => ({
+    handle: vi.fn(),
     getHolyAuraTargets: vi.fn(),
 }));
 
@@ -22,8 +23,13 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
+vi.mock('../../encounters/combatData.js', () => ({
+    loadCombatSummary: vi.fn(),
+}));
+
 // Re-import after mocking so the module's internal imports are mocked
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { loadCombatSummary } from '../../encounters/combatData.js';
 
 describe('holyAuraDamageService', () => {
     beforeEach(() => {
@@ -55,6 +61,12 @@ describe('holyAuraDamageService', () => {
             return null;
         });
     }
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        loadCombatSummary.mockResolvedValue(null);
+    });
 
     describe('guard conditions', () => {
         it('does nothing when attackerName is falsy', () => {
@@ -109,6 +121,10 @@ describe('holyAuraDamageService', () => {
     });
 
     describe('Holy Aura activation check', () => {
+        beforeEach(() => {
+            loadCombatSummary.mockResolvedValue(makeCombatSummary({ name: 'Warlock', type: 'Fiend' }));
+        });
+
         it('does nothing when no holy_aura targetEffects exist', () => {
             setupTargetEffectsMocks([], 15, []);
 
@@ -411,8 +427,11 @@ describe('holyAuraDamageService', () => {
 
     describe('Blinded condition application', () => {
         const fiendWarlock = { name: 'Warlock', type: 'Fiend', ability_score_modifiers: { CON: 3 } };
+        beforeEach(() => {
+            loadCombatSummary.mockResolvedValue(makeCombatSummary(fiendWarlock));
+        });
 
-        it('adds Blinded condition when save fails', () => {
+        it('adds Blinded condition when save fails', async () => {
             setupTargetEffectsMocks(
                 [{ effect: 'holy_aura', target: 'Goblin', source: 'Paladin' }],
                 15,
@@ -422,13 +441,16 @@ describe('holyAuraDamageService', () => {
             rollD20.mockReturnValue(5);
             // saveTotal = 5 + 3 = 8 < 15
 
-            checkHolyAuraDamage(
+            const result = await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
                 makeCombatSummary(fiendWarlock),
                 campaignName,
                 5,
             );
+            console.log('RESULT:', JSON.stringify(result));
+            console.log('SET_RUNTIME_VALUE CALLS:', setRuntimeValue.mock.calls);
+            console.log('ADD_ENTRY CALLS:', addEntry.mock.calls);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'Warlock',

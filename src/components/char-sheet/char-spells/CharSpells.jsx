@@ -15,14 +15,10 @@ import CreatureSelectionModal from '../modals/shared/CreatureSelectionModal.jsx'
 import HexAbilityModal from '../modals/HexAbilityModal.jsx'
 import { getExcludedSpellNames } from '../../../services/ui/spellSectionUtils.js'
 import MagicMissileTargetPopup from '../popups/MagicMissileTargetPopup.jsx'
-import { getCombatContext, getTargetFromAttacker, getAttackerTargetName } from '../../../services/rules/combat/damageUtils.js';
+import { getTargetFromAttacker } from '../../../services/rules/combat/damageUtils.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
-import { getCurrentSorceryPoints, getMaxSorceryPoints, spendSorceryPoints, logMetamagicUse } from '../../../hooks/combat/useMetamagic.js'
-import { addEntry } from '../../../services/ui/logService.js'
-import { isPsionicSpell, hasPsionicSorcery } from '../../../services/rules/spells/metamagicRules.js';
 import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js'
 import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js'
-import { prepareSpellCast, isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js'
 import UpcastPopup from './UpcastPopup.jsx';
 import { useSpellCastExecutor } from '../../../hooks/combat/useSpellCastExecutor.js';
 import { useSpellPositionResolver } from '../../../hooks/combat/useSpellPositionResolver.js';
@@ -30,7 +26,6 @@ import { isInnateSorceryActive } from '../../../services/combat/buffs/buffServic
 import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import utils from '../../../services/ui/utils.js';
 import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
-import { getMonsterData } from '../../../services/npcs/monsterUtils.js';
 import './CharSpells.css'
 
 const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells, campaignName, exhaustionPenalty = 0, conditionAttackMode, cannotAct, mapName, characters, setModalState }) {
@@ -50,113 +45,14 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const [selectedSpell, setSelectedSpell] = React.useState(null);
     const [pendingGreaterRestorationTarget, setPendingGreaterRestorationTarget] = React.useState(null);
     const [pendingLesserRestorationTarget, setPendingLesserRestorationTarget] = React.useState(null);
-    const [showHexAbilityModal, setShowHexAbilityModal] = React.useState(false);
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
-    const [pendingSimpleMetamagic, setPendingSimpleMetamagic] = React.useState(null);
-    const [pendingHexSpell, setPendingHexSpell] = React.useState(null);
-    const [pendingResilientSphere, setPendingResilientSphere] = React.useState(null);
-    const [pendingWardingBond, setPendingWardingBond] = React.useState(null);
-    const [pendingCharmPerson, setPendingCharmPerson] = React.useState(null);
-
-    const handleHexAbilitySelected = (ability) => {
-      setShowHexAbilityModal(false);
-      const spell = pendingHexSpell;
-      setPendingHexSpell(null);
-      if (spell) {
-        handleSpellCast(spell, { hexAbility: ability });
-      }
-    };
-
-    const handleHexCancel = () => {
-      setShowHexAbilityModal(false);
-    };
-
-    const handleSimpleConfirm = React.useCallback((result) => {
-      const pending = pendingSimpleMetamagic;
-      setPendingSimpleMetamagic(null);
-      if (!pending) return;
-
-      let totalMetamagicCost = result?.totalCost || 0;
-      let psionicCost = 0;
-      if (pending.isPsionic && !result?.options?.includes('Subtle Spell')) {
-        psionicCost = pending.psionicCost;
-      }
-      const totalCost = totalMetamagicCost + psionicCost;
-      if (totalCost > 0) spendSorceryPoints(playerStats.name, totalCost, campaignName, getMaxSorceryPoints(playerStats));
-
-      const metamagicOptions = result?.options || [];
-      if (psionicCost > 0 && !metamagicOptions.includes('Psionic Sorcery')) {
-        metamagicOptions.push('Psionic Sorcery');
-      }
-
-      if (totalCost > 0) {
-        logMetamagicUse(campaignName, playerStats.name, pending.spellName, metamagicOptions, totalCost);
-      }
-
-      const metaCtx = {};
-      if (result?.options) {
-        if (result.options.includes('Heightened Spell')) metaCtx.metamagicHeighten = true;
-        if (result.options.includes('Careful Spell')) metaCtx.metamagicCareful = true;
-        if (result.options.includes('Twinned Spell') && result.twinTarget) metaCtx.metamagicTwinTarget = result.twinTarget;
-        if (result.options.includes('Distant Spell')) metaCtx.metamagicDistant = true;
-      }
-      if (psionicCost > 0) {
-        metaCtx.psionicSpell = true;
-      }
-
-      pending.action(metaCtx);
-    }, [pendingSimpleMetamagic, playerStats, campaignName]);
-
-    const handleSimpleSkip = React.useCallback(() => {
-      const pending = pendingSimpleMetamagic;
-      setPendingSimpleMetamagic(null);
-      if (!pending) return;
-
-      addEntry(campaignName, {
-        type: 'spell',
-        characterName: playerStats.name,
-        spellName: pending.spellName,
-        spellLevel: pending.spellLevel || 0,
-        castingTime: pending.castingTime,
-        metamagic: [],
-        spCost: 0,
-        timestamp: Date.now(),
-      }).catch(() => {});
-
-      pending.action({});
-    }, [pendingSimpleMetamagic, playerStats, campaignName]);
-
-    const getTargetInfo = React.useCallback(async () => {
-        const cs = await getCombatContext(campaignName);
-        if (!cs) return null;
-        const target = getTargetFromAttacker(cs, playerStats.name);
-        if (target) return target;
-        const overlayTargetName = getAttackerTargetName(cs, playerStats.name);
-        if (overlayTargetName) return { name: overlayTargetName };
-        return null;
-    }, [playerStats.name, campaignName]);
-
-    const getHumanoidTargets = React.useCallback(async () => {
-        const cs = getCombatSummary(campaignName);
-        if (!cs?.creatures) return [];
-        const nonCasterCreatures = cs.creatures.filter(c => c.name !== playerStats.name);
-        const results = await Promise.all(nonCasterCreatures.map(async (creature) => {
-            if (creature.type === 'player') return creature;
-            try {
-                const monsterData = await getMonsterData(creature.name, null);
-                if (monsterData?.type && monsterData.type.toLowerCase() === 'humanoid') return creature;
-            } catch { /* default to excluding */ }
-            return null;
-        }));
-        return results.filter(Boolean);
-    }, [campaignName, playerStats.name]);
 
     const { resolvePositions: resolveSpellPositions, cachedPosRef: cachedCastPosRef } = useSpellPositionResolver(campaignName, mapName, playerStats.name);
 
-    const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
+    const { castAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, async () => null, campaignName, mapName, characters, setPopupHtml, {}, cachedCastPosRef, setModalState);
 
     const { pendingMetamagic, pendingMultiTarget, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, pendingHeroesFeast, handleHeroesFeastConfirm, handleHeroesFeastSkip, pendingGreaterRestoration, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip, pendingMageArmor, handleMageArmorConfirm, handleMageArmorSkip, pendingBane, handleBaneConfirm, handleBaneSkip, pendingBless, handleBlessConfirm, handleBlessSkip, pendingHolyAura, handleHolyAuraConfirm, handleHolyAuraSkip, pendingBeaconOfHope, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, pendingSlow, handleSlowConfirm, handleSlowSkip, pendingHaste, handleHasteConfirm, handleHasteSkip, pendingEnhanceAbility, enhanceAbilityStage, handleEnhanceAbilityAbilitySelect, handleEnhanceAbilityConfirm, handleEnhanceAbilitySkip, pendingBarkskin, handleBarkskinConfirm, handleBarkskinSkip, pendingInvisibility, handleInvisibilityConfirm, handleInvisibilitySkip, pendingGreaterInvisibility, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingFeignDeath, handleFeignDeathConfirm, handleFeignDeathSkip, pendingHeal, handleHealConfirm, handleHealSkip, pendingProtectionFromEvilAndGood, handleProtectionFromEvilAndGoodConfirm, handleProtectionFromEvilAndGoodSkip, pendingProtectionFromPoison, handleProtectionFromPoisonConfirm, handleProtectionFromPoisonSkip, pendingStoneSkin, handleStoneSkinConfirm, handleStoneSkinSkip, pendingProtectionFromEnergy, protectionFromEnergyStage, handleProtectionFromEnergyTargetSelect, handleProtectionFromEnergyTypeSelect, handleProtectionFromEnergySkip, pendingResistance, resistanceStage, handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip, pendingRemoveCurse, handleRemoveCurseConfirm, handleRemoveCurseSkip, pendingMagicMissile, handleMagicMissileConfirm, handleMagicMissileSkip, pendingPassWithoutTrace, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, pendingGlobe, handleGlobeConfirm, handleGlobeSkip, pendingAntimagicField, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, pendingRegenerate, handleRegenerateConfirm, handleRegenerateSkip, pendingHealingWord, handleHealingWordConfirm, handleHealingWordSkip, pendingCureWounds, handleCureWoundsConfirm, handleCureWoundsSkip, pendingStinkingCloud, handleStinkingCloudConfirm, handleStinkingCloudSkip, pendingWeb, handleWebConfirm, handleWebSkip, pendingAnimalFriendship, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip, pendingAuraOfLife, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, pendingAuraOfPurity, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, pendingCircleOfPower, handleCircleOfPowerConfirm, handleCircleOfPowerSkip, pendingCompulsion, handleCompulsionConfirm, handleCompulsionSkip, pendingAuraOfVitality, handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, pendingForesight, handleForesightConfirm, handleForesightSkip, pendingLongstrider, handleLongstriderConfirm, handleLongstriderSkip, pendingConfusion, pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip, pendingHeroism, handleHeroismConfirm, handleHeroismSkip, cfClearPending, pendingHoldMonster: flowHoldMonster, pendingHoldPerson: flowHoldPerson, handleHoldMonsterConfirm, handleHoldMonsterSkip, handleHoldPersonConfirm, handleHoldPersonSkip } = useSpellMetamagicFlow(playerStats, campaignName, castAction, setWordsOfCreationTarget, characters, setPopupHtml);
-    const { pendingUpcast, buildUpcastLevels, gateUpcast, handleUpcastConfirm, handleUpcastCancel, getCantripAutoLevel } = useSpellUpcastFlow(playerStats, campaignName);
+    const { pendingUpcast, buildUpcastLevels, handleUpcastConfirm, handleUpcastCancel } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleSpellCast = React.useCallback(async (spell, metaCtx) => {
         setSelectedSpell(null);
@@ -165,110 +61,6 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
         gateMetamagic(spell, metaCtx);
     }, [gateMetamagic, resolveSpellPositions]);
 
-    const handleDamageRoll = async (formula, spellName, spell) => {
-      let targetSpell = { ...spell, baseLevel: spell.level };
-      if (spellName === "Hunter's Mark" && playerStats.class?.name === 'Ranger' && playerStats.level >= 20) {
-        targetSpell = { ...targetSpell, damage: { ...targetSpell.damage, damage_at_slot_level: { ...(targetSpell.damage?.damage_at_slot_level || {}), '1': '1d10', '5': '2d10', '11': '3d10', '17': '4d10' } } };
-      }
-
-      // Charm Person — show target selection modal (all rulesets)
-      if (spellName && spellName.toLowerCase() === 'charm person') {
-        const humanoidTargets = await getHumanoidTargets();
-        if (humanoidTargets.length > 0) {
-          setPendingCharmPerson({ spell: { ...spell, baseLevel: spell.level }, targets: humanoidTargets.map(c => ({ name: c.name, type: 'creature' })) });
-          return;
-        }
-      }
-
-      // Otiluke's Resilient Sphere — show target selection modal (2024 rules only)
-      if (spellName && spellName.toLowerCase() === "otiluke's resilient sphere" && is2024) {
-        const cs = getCombatSummary(campaignName);
-        if (cs?.creatures) {
-          const targets = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
-          setPendingResilientSphere({ spell, targets });
-          return;
-        }
-      }
-
-      // Warding Bond — show target selection modal (2024 rules only)
-      if (spellName && spellName.toLowerCase() === 'warding bond' && is2024) {
-        const cs = getCombatSummary(campaignName);
-        if (cs?.creatures) {
-          const casterCreature = cs.creatures.find(c => c.name === playerStats.name);
-          const allCreatures = [...cs.creatures.map(c => ({ name: c.name, type: 'creature' }))];
-          if (!casterCreature || !allCreatures.some(c => c.name === playerStats.name)) {
-            allCreatures.push({ name: playerStats.name, type: 'creature' });
-          }
-          setPendingWardingBond({ spell, targets: allCreatures });
-          return;
-        }
-      }
-
-      // Hold Monster — show target selection modal (all rulesets)
-      if (spellName && spellName.toLowerCase() === 'hold monster') {
-        handleSpellCast(spell, {});
-        return;
-      }
-
-      // Hold Person — show target selection modal (all rulesets)
-      if (spellName && spellName.toLowerCase() === 'hold person') {
-        handleSpellCast(spell, {});
-        return;
-      }
-
-      if (spellName && spellName.toLowerCase() === 'magic missile') {
-        const mmAfterUpcast = (modifiedSpell) => {
-          gateMetamagic(modifiedSpell);
-        };
-        if (gateUpcast(targetSpell, mmAfterUpcast, false)) {
-          return;
-        }
-        return;
-      }
-
-      if (isSorcerer) {
-        const currentSP = getCurrentSorceryPoints(playerStats.name, getMaxSorceryPoints(playerStats));
-        const spellLevel = targetSpell.level || 0;
-        const isPsionic = isPsionicSpell(playerStats, spellName);
-        const hasPsionic = hasPsionicSorcery(playerStats);
-        setPendingSimpleMetamagic({
-          spellName,
-          spellLevel,
-          action: (metaCtx) => {
-            const totalMetamagicCost = metaCtx?.totalCost || 0;
-            const psionicCost = (isPsionic && !metaCtx?.options?.includes('Subtle Spell')) ? (metaCtx?.psionicCost || 0) : 0;
-            const totalCost = totalMetamagicCost + psionicCost;
-            if (totalCost > 0) spendSorceryPoints(playerStats.name, totalCost, campaignName, getMaxSorceryPoints(playerStats));
-            const castSpell = { ...targetSpell, baseLevel: spell.level };
-            castAction(castSpell, metaCtx);
-          },
-          _currentSP: currentSP,
-          isPsionic: isPsionic && hasPsionic,
-          psionicCost: isPsionic && hasPsionic ? spellLevel : 0,
-        });
-        return;
-      }
-
-      const afterUpcast = (modifiedSpell) => {
-        const castSpell = { ...modifiedSpell, baseLevel: spell.level };
-        castAction(castSpell, {});
-      };
-
-      if (gateUpcast(targetSpell, afterUpcast, false)) {
-        return;
-      }
-
-      if (spell.level === 0) {
-        const autoLevel = getCantripAutoLevel(spell, playerStats.level);
-        if (autoLevel) {
-          const modifiedSpell = { ...spell, level: autoLevel, baseLevel: 0 };
-          castAction(modifiedSpell, {});
-          return;
-        }
-      }
-
-      castAction(targetSpell, {});
-    };
     const [filterPrepared, setFilterPrepared] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const is2024 = playerStats.rules === '2024';
@@ -323,62 +115,14 @@ return (
                                 upcastLevels={buildUpcastLevels(selectedSpell)}
                                 onClose={() => setSelectedSpell(null)}
                                 onCast={(spell, metaCtx) => {
-                                    if (spell.name === 'Hex') {
-                                        setSelectedSpell(null);
-                                        setPendingHexSpell(spell);
-                                        setShowHexAbilityModal(true);
-                                    } else if (spell.name && spell.name.toLowerCase() === 'charm person') {
-                                        setSelectedSpell(null);
-                                        (async () => {
-                                            const humanoidTargets = await getHumanoidTargets();
-                                            if (humanoidTargets.length > 0) {
-                                                const targets = humanoidTargets.map(c => ({ name: c.name, type: 'creature' }));
-                                                setPendingCharmPerson({ spell, targets });
-                                                return;
-                                            }
-                                        })();
-                                        return;
-                                    } else if (spell.name && spell.name.toLowerCase() === "otiluke's resilient sphere" && is2024) {
-                                        setSelectedSpell(null);
-                                        const cs = getCombatSummary(campaignName);
-                                        if (cs?.creatures) {
-                                            const targets = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
-                                            setPendingResilientSphere({ spell, targets });
-                                        } else {
-                                            handleSpellCast(spell, metaCtx);
-                                        }
-                                    } else if (spell.name && spell.name.toLowerCase() === 'warding bond' && is2024) {
-                                        setSelectedSpell(null);
-                                        const cs = getCombatSummary(campaignName);
-                                        if (cs?.creatures) {
-                                            const allCreatures = cs.creatures.map(c => ({ name: c.name, type: 'creature' }));
-                                            if (!allCreatures.some(c => c.name === playerStats.name)) {
-                                                allCreatures.push({ name: playerStats.name, type: 'creature' });
-                                            }
-                                            setPendingWardingBond({ spell, targets: allCreatures });
-                                        } else {
-                                            handleSpellCast(spell, metaCtx);
-                                        }
-                                    } else if (spell.name && spell.name.toLowerCase() === 'hold monster') {
-                                        setSelectedSpell(null);
-                                        handleSpellCast(spell, metaCtx);
-                                        return;
-                                    } else if (spell.name && spell.name.toLowerCase() === 'hold person') {
-                                        setSelectedSpell(null);
-                                        handleSpellCast(spell, metaCtx);
-                                        return;
-                                    } else {
-                                        handleSpellCast(spell, metaCtx);
-                                    }
+                                    // SINGLE ENTRY POINT: Every spell cast MUST go through handleSpellCast → gateMetamagic.
+                                    // gateMetamagic is the only function that calls prepareSpellCast (spells slots, concentration, free casts).
+                                    // NEVER call prepareSpellCast, castAction, or executeSpellCast directly from JSX onClick handlers.
+                                    setSelectedSpell(null);
+                                    handleSpellCast(spell, metaCtx);
                                 }}
                             />
                         </Popup>
-                    )}
-                    {showHexAbilityModal && (
-                      <HexAbilityModal
-                        onAbilitySelected={handleHexAbilitySelected}
-                        onCancel={handleHexCancel}
-                      />
                     )}
                     {pendingUpcast && (
                       <UpcastPopup
@@ -395,15 +139,6 @@ return (
                         campaignName={campaignName}
                         onConfirm={handleConfirm}
                         onSkip={handleSkip}
-                      />
-                    )}
-                    {pendingSimpleMetamagic && (
-                      <MetamagicPopup
-                        spell={{ name: pendingSimpleMetamagic.spellName, level: pendingSimpleMetamagic.spellLevel || 0 }}
-                        playerStats={{ ...playerStats, _metamagicCurrentSP: pendingSimpleMetamagic._currentSP, _isPsionicSpell: pendingSimpleMetamagic.isPsionic, _psionicCost: pendingSimpleMetamagic.psionicCost }}
-                        campaignName={campaignName}
-                        onConfirm={handleSimpleConfirm}
-                        onSkip={handleSimpleSkip}
                       />
                     )}
                     {pendingMagicMissile && (() => {
@@ -444,58 +179,6 @@ return (
                         description={wordsOfCreationTarget.description}
                         confirmLabel={wordsOfCreationTarget.confirmLabel}
                         confirmIcon={wordsOfCreationTarget.confirmIcon}
-                      />
-                    )}
-                    {pendingResilientSphere && (
-                      <SecondaryTargetModal
-                        title="Otiluke's Resilient Sphere"
-                        targets={pendingResilientSphere.targets}
-                        onTargetSelected={async (targetName) => {
-                          setPendingResilientSphere(null);
-                          const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pendingResilientSphere.spell.name, pendingResilientSphere.spell.level, playerStats, campaignName);
-                          const prepared = await prepareSpellCast(pendingResilientSphere.spell, { resilientSphereTargetName: targetName }, {
-                            playerName: playerStats.name,
-                            playerStats,
-                            campaignName,
-                            isUpcast: false,
-                            freeCastAuthorized,
-                          });
-                          castAction(prepared.modifiedSpell, prepared.metaCtx);
-                        }}
-                        onSkip={() => setPendingResilientSphere(null)}
-                        description="Choose a creature within 30 feet. The target must succeed on a DEX saving throw or be enclosed in a shimmering sphere for the duration. Allies automatically fail the save."
-                        confirmLabel="Cast Otiluke's Resilient Sphere"
-                        confirmIcon="fa-circle"
-                      />
-                    )}
-                    {pendingWardingBond && (
-                      <SecondaryTargetModal
-                        title="Warding Bond"
-                        targets={pendingWardingBond.targets}
-                        onTargetSelected={(targetName) => {
-                          setPendingWardingBond(null);
-                          const modifiedSpell = { ...pendingWardingBond.spell, baseLevel: pendingWardingBond.spell.level };
-                          castAction(modifiedSpell, { wardingBondTargetName: targetName });
-                        }}
-                        onSkip={() => setPendingWardingBond(null)}
-                        description="Choose a willing creature within range (including yourself). You create a mystic connection: the target gains +1 AC, +1 to saving throws, and resistance to all damage while within 60 feet. You take the same damage they take."
-                        confirmLabel="Cast Warding Bond"
-                        confirmIcon="fa-ring"
-                      />
-                    )}
-                    {pendingCharmPerson && (
-                      <SecondaryTargetModal
-                        title="Charm Person"
-                        targets={pendingCharmPerson.targets}
-                        onTargetSelected={(targetName) => {
-                          setPendingCharmPerson(null);
-                          const modifiedSpell = { ...pendingCharmPerson.spell, baseLevel: pendingCharmPerson.spell.level };
-                          handleSpellCast(modifiedSpell, { targetName });
-                        }}
-                        onSkip={() => setPendingCharmPerson(null)}
-                        description="One Humanoid you can see within range makes a Wisdom saving throw. It does so with Advantage if you or your allies are fighting it. On a failed save, the target has the Charmed condition until the spell ends or until you or your allies damage it."
-                        confirmLabel="Cast Charm Person"
-                        confirmIcon="fa-face-smile"
                       />
                     )}
                     {flowHoldMonster && (
@@ -1209,20 +892,7 @@ return (
                 <div>
                     <b className={'clickable' + (cannotAct ? ' disabled-attack' : '') + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? ' stat--penalized' : '')} onClick={() => {
                       if (cannotAct) return;
-                       const doAttack = (metaCtx) => {
-                         const innateAdv = isSorcerer && innateSorceryActive && !conditionAttackMode ? 'advantage' : undefined;
-                         rollAttack('Spell Attack', playerStats.spellAbilities.toHit - exhaustionPenalty, { forcedMode: conditionAttackMode !== 'normal' ? conditionAttackMode : innateAdv, ...metaCtx });
-                        };
-                      if (isSorcerer) {
-                        const currentSP = getCurrentSorceryPoints(playerStats.name, getMaxSorceryPoints(playerStats));
-                        setPendingSimpleMetamagic({
-                          spellName: 'Spell Attack',
-                          action: doAttack,
-                          _currentSP: currentSP,
-                        });
-                      } else {
-                        doAttack({});
-                      }
+                      rollAttack('Spell Attack', playerStats.spellAbilities.toHit - exhaustionPenalty, { forcedMode: conditionAttackMode !== 'normal' ? conditionAttackMode : (isSorcerer && innateSorceryActive ? 'advantage' : undefined) });
                     }}>Attack (to hit):</b> <span className={exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? 'stat--penalized' : ''}>+{playerStats.spellAbilities.toHit - exhaustionPenalty}</span><br/>
                     <b>Modifier:</b> <span className={exhaustionPenalty > 0 ? 'stat--penalized' : ''}>+{playerStats.spellAbilities.modifier - exhaustionPenalty}</span><br/>
                       <b>Save DC:</b> {playerStats.spellAbilities.saveDc + (innateSorceryActive ? 1 : 0)}
@@ -1254,7 +924,6 @@ return (
                         let notes = [];
                         if(spell.components) notes.push(spell.components.join('/'));
                         let effect = 'Utility';
-                        let hasEffect = false;
                         if(spell.damage) {
                             const slotDmg = spell.damage.damage_at_slot_level;
                             const charDmg = spell.damage.damage_at_character_level;
@@ -1274,12 +943,10 @@ return (
                                     const saveLabel = spell.dc.dc_success === 'half' ? 'half' : 'negates';
                                     effect += ` (${spell.dc.dc_type} ${saveLabel})`;
                                 }
-                                hasEffect = true;
                             }
                         } else if (spell.dc) {
                             const saveLabel = spell.dc.dc_success === 'half' ? 'half' : spell.dc.dc_success === 'negates' ? 'negates' : '';
                             effect = spell.dc.dc_type + (saveLabel ? ` ${saveLabel}` : '');
-                            hasEffect = true;
                         }
                         return <tr key={spell.name}>
                             <td className='left spell-name clickable' onClick={() => setSelectedSpell(spell)}>{spell.name}</td>
@@ -1288,7 +955,7 @@ return (
                             {!is2024 && (spell.prepared === 'Prepared' || spell.prepared === '') && <td><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></td>}
                             <td>{spell.casting_time ? spell.casting_time.replace(/\bbonus action\b/g, 'BA').replace(/\baction\b/g, ' A').replace(/\breaction\b/g, 'Reaction').replace(/\bminute\b/g, 'min').replace(/\bminutes\b/g, 'min') : ''}</td>
                             <td>{spell.range}</td>
-                            <td className={hasEffect ? 'clickable' : ''} onClick={hasEffect ? () => handleDamageRoll(null, spell.name, spell) : undefined}>{effect}</td>
+                            <td>{effect}</td>
                             <td>{spell.duration ? spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min').replace('up to ','') : ''}</td>
                             <td className='left'>{notes.join(', ').replace('Concentration','Con')}</td>
                         </tr>

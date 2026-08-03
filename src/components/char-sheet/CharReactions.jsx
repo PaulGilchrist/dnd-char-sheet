@@ -508,7 +508,10 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                                     : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc} {spell.dc?.dc_type}</div>}
                         <div className={resolvedDamage ? "clickable" : ""} onClick={() => {
                             if (cannotAct) return;
-                            reactionCastAction(spell, {});
+                            // SINGLE ENTRY POINT for reaction spell casting:
+                            // gateMetamagic is the single entry point (calls prepareSpellCast → spell slots, concentration)
+                            // NEVER call reactionCastAction, castAction, or executeSpellCast directly from JSX onClick handlers.
+                            gateMetamagic(spell, {});
                         }}>{getReactionSpellDamageDisplay(spell)}</div>
                         <div className='left'>{damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility')}</div>
                     </React.Fragment>;

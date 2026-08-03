@@ -25,14 +25,17 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../../services/automation/handlers/class-sorcerer/starryFormHandler.js', () => ({
+    handle: vi.fn(),
     applyConstellationOption: vi.fn(),
 }));
 
 vi.mock('../../services/automation/handlers/class-sorcerer/twinklingConstellationHandler.js', () => ({
+    handle: vi.fn(),
     applyConstellationOption: vi.fn(),
 }));
 
 vi.mock('../../services/automation/handlers/combat/bonusAttacksHandler.js', () => ({
+    handle: vi.fn(),
     applyFlurryOfBlows: vi.fn(),
 }));
 

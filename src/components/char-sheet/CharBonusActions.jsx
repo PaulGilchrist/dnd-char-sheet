@@ -250,9 +250,13 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                                                 : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc + displaySaveDcBonus} {spell.dc?.dc_type}</div>}
                                 <div className={isUtilityConc ? "" : (resolvedDamage ? "clickable" : "")} onClick={() => {
                                     if (cannotAct || isUtilityConc) return;
+                                    // SINGLE ENTRY POINT for bonus action spell casting:
+                                    // - Save DC spells: onResolveSpellDamage handles AoE modals + prepareSpellCast (from parent)
+                                    // - Non-save-DC spells: gateMetamagic is the single entry point (calls prepareSpellCast → spell slots, concentration)
+                                    // NEVER call bonusCastAction, castAction, or executeSpellCast directly from JSX onClick handlers.
                                     if (isSpellAtk && spell.saveDc) { onResolveSpellDamage(attackItem); return; }
-                                    if (isSpellAtk) { bonusCastAction(spell, {}); return; }
-                                    bonusCastAction(spell, {});
+                                    if (isSpellAtk) { gateMetamagic(spell, {}); return; }
+                                    gateMetamagic(spell, {});
                                 }}>{isUtilityConc ? '' : getBonusSpellDamageDisplay(spell)}</div>
                                 <div className='left'>{isUtilityConc ? 'Utility' : (damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility'))}</div>
                                 {is2024Rules && <div></div>}

@@ -247,7 +247,7 @@ describe('CharSpells - Rendering Edge Cases', () => {
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const effectCell = screen.getByText('WIS negates');
-      expect(effectCell).toHaveClass('clickable');
+      expect(effectCell).not.toHaveClass('clickable');
     });
 
     it('renders effect as "Utility" for spells with no damage and no save DC', () => {

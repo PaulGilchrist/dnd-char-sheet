@@ -1485,10 +1485,14 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                                         : <div className="save-dc-display">DC {playerStats.spellAbilities?.saveDc + displaySaveDcBonus} {spell.dc?.dc_type}</div>}
                             <div className={resolvedDamage ? "clickable" : ""} onClick={() => {
                                 if (cannotAct) return;
+                                // SINGLE ENTRY POINT for action spell casting:
+                                // - Save DC spells: resolveSpellDamage (from useActionSpellMetamagic) handles AoE modals + prepareSpellCast
+                                // - Non-save-DC spells: actionGateMetamagic is the single entry point (calls prepareSpellCast → spell slots, concentration)
+                                // NEVER call actionCastAction, castAction, or executeSpellCast directly from JSX onClick handlers.
                                 if (isSpellAtk && spell.saveDc) { resolveSpellDamage(attackItem); return; }
-                                if (isSpellAtk) { actionCastAction(spell, {}); return; }
+                                if (isSpellAtk) { actionGateMetamagic(spell, {}); return; }
                                 if (resolvedDamage) { resolveSpellDamage(attackItem); return; }
-                                actionCastAction(spell, {});
+                                actionGateMetamagic(spell, {});
                             }}>{getSpellDamageDisplay(spell)}</div>
                             <div className='left'>{damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility')}</div>
                             {is2024Rules && <div></div>}
