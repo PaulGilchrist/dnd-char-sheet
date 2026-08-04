@@ -102,7 +102,6 @@ export default function MassHealModal({
                         const hpPercent = hpInfo && hpInfo.maxHp > 0
                             ? `${Math.round((hpInfo.currentHp / hpInfo.maxHp) * 100)}%`
                             : null;
-                        const missingHp = hpInfo ? Math.max(0, hpInfo.maxHp - hpInfo.currentHp) : pool;
                         return (
                             <div
                                 key={i}
@@ -160,7 +159,7 @@ export default function MassHealModal({
                                             type="number"
                                             min="0"
                                             max={pool}
-                                            value={Math.min(amount, missingHp)}
+                                            value={amount}
                                             onChange={(e) => updateAllocation(name, e.target.value)}
                                             style={{
                                                 width: '60px',

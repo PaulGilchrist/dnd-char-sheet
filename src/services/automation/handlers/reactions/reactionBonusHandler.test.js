@@ -306,7 +306,7 @@ describe('reactionBonusHandler', () => {
 
             expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', expect.objectContaining({ bendFateApplied: true }), CAMPAIGN);
             expect(result.payload.description).toContain('Target:');
-            expect(spendSorceryPoints).toHaveBeenCalledWith(HERO_NAME, 1, CAMPAIGN);
+            expect(spendSorceryPoints).toHaveBeenCalledWith(HERO_NAME, 1, CAMPAIGN, 0);
         });
 
         it('should change miss to hit for attack', async () => {
@@ -430,7 +430,7 @@ describe('reactionBonusHandler', () => {
                 'bonus'
             );
 
-            expect(spendSorceryPoints).toHaveBeenCalledWith(HERO_NAME, 1, CAMPAIGN);
+            expect(spendSorceryPoints).toHaveBeenCalledWith(HERO_NAME, 1, CAMPAIGN, 0);
         });
 
         it('should log to campaign log', async () => {

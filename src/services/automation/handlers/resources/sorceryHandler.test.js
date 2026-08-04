@@ -258,6 +258,7 @@ describe('sorceryHandler.handle', () => {
         'Sorcerer',
         3,
         campaignName,
+        6,
       );
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Sorcerer',
@@ -288,6 +289,7 @@ describe('sorceryHandler.handle', () => {
         'Sorcerer',
         1,
         campaignName,
+        6,
       );
       expect(result.payload.description).toContain('0/0 uses remaining');
     });
@@ -318,6 +320,7 @@ describe('sorceryHandler.handle', () => {
         'Arch sorcerer',
         3,
         campaignName,
+        6,
       );
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'Arch sorcerer',
