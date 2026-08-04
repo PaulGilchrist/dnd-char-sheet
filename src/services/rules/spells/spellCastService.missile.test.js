@@ -208,6 +208,7 @@ describe('executeSpellCast - Magic Missile', () => {
         damageFormula: '1d4 + 1',
         saveDC: null,
         concentration: false,
+        description: null,
         timestamp: expect.any(Number),
       })
       expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled()

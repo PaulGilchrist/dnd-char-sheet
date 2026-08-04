@@ -506,6 +506,7 @@ function SpellEntry({ entry }) {
   const hasDamage = entry.damageFormula && entry.damageType;
   const hasSaveDC = entry.saveDC;
   const isConcentration = entry.concentration;
+  const hasDescription = entry.description;
 
   return (
     <div className="log-entry log-spell">
@@ -534,6 +535,9 @@ function SpellEntry({ entry }) {
           </span>
         ) : (
           <span className="log-no-metamagic">No Metamagic</span>
+        )}
+        {hasDescription && (
+          <span className="log-spell-description" dangerouslySetInnerHTML={{ __html: entry.description }} />
         )}
       </div>
     </div>

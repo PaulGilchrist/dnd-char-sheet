@@ -328,6 +328,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     if (spell.name !== 'Hex') {
         const resolvedTarget = await getTargetInfo();
         const resolvedTargetName = resolvedTarget?.name || null;
+        const spellDescription = fullSpell.description ? fullSpell.description.join(' ') : '';
         addEntry(campaignName, {
           type: 'spell',
           characterName: playerStats.name,
@@ -339,6 +340,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
           damageFormula: formula || null,
           saveDC: spell.dc ? spellSaveDc : null,
           concentration: !!spell.concentration,
+          description: spellDescription || null,
           timestamp: Date.now(),
         }).catch(() => {});
     }
@@ -505,6 +507,21 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 return await applyRegenerateSpell(spell, target, playerStats, campaignName);
             }
             return null;
+        }
+
+        // Conjure Volley — 2024 rules only: instant cast with no damage or saves, shows description popup
+        if (spell.name && spell.name.toLowerCase() === 'conjure volley') {
+            const description = fullSpell.description ? fullSpell.description.join(' ') : '';
+            return {
+                automationPopup: {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Conjure Volley',
+                        description: description,
+                    },
+                },
+            };
         }
 
         // Feign Death — handled by useSpellMetamagicFlow for target selection (no spellCastService case needed)
