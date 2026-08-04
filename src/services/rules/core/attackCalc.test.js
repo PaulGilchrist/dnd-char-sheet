@@ -329,7 +329,9 @@ describe('attackCalc', () => {
       });
       const result1 = getAttacks(allEquipment, [], stats1);
       expect(result1[0].damage).toBe('1d8+3');
-      expect(result1[1].damage).toBe('1d4');
+      // Dagger is light, only 1 light weapon → Action with ability bonus (not Bonus Action)
+      expect(result1[1].type).toBe('Action');
+      expect(result1[1].damage).toBe('1d4+3');
 
       const stats2 = makePlayerStats({
         equipped: ['Longsword', 'Shortbow'],
@@ -340,15 +342,17 @@ describe('attackCalc', () => {
       expect(result2.find(a => a.name === 'Shortbow').damage).toBe('1d6+2');
     });
 
-    it('should build off-hand attack when two melee weapons equipped', () => {
+    it('should place non-light melee weapons in CharActions and light melee in Action when <2 light', () => {
       const playerStats = makePlayerStats({
         equipped: ['Longsword', 'Dagger'],
         class: { name: 'Fighter', fightingStyles: [] },
       });
       const result = getAttacks(allEquipment, [], playerStats);
       expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('Longsword');
+      expect(result[0].type).toBe('Action');
       expect(result[1].name).toBe('Dagger');
-      expect(result[1].type).toBe('Bonus Action');
+      expect(result[1].type).toBe('Action');
     });
 
     it('should apply Two-Weapon Fighting bonus when both weapons are light and no shield', () => {
@@ -366,7 +370,12 @@ describe('attackCalc', () => {
         class: { name: 'Fighter', fightingStyles: ['Two-Weapon Fighting'] },
       });
       const result1 = getAttacks(allEquipment, [], stats1);
-      expect(result1[1].damage).toBe('1d4');
+      // Longsword non-light → Action, Dagger light but <2 → Action with ability bonus
+      expect(result1[0].name).toBe('Longsword');
+      expect(result1[0].type).toBe('Action');
+      expect(result1[1].name).toBe('Dagger');
+      expect(result1[1].type).toBe('Action');
+      expect(result1[1].damage).toBe('1d4+3');
 
       const stats2 = makePlayerStats({
         equipped: ['Shortsword', 'Dagger'],
@@ -374,6 +383,11 @@ describe('attackCalc', () => {
       });
       stats2.inventory.equipped = ['Shortsword', 'Dagger', 'Shield'];
       const result2 = getAttacks(allEquipment, [], stats2);
+      // Both light and >= 2 → Shortsword (higher damage) Action, Dagger Bonus Action, no TWF due to shield
+      expect(result2[0].name).toBe('Shortsword');
+      expect(result2[0].type).toBe('Action');
+      expect(result2[1].name).toBe('Dagger');
+      expect(result2[1].type).toBe('Bonus Action');
       expect(result2[1].damage).toBe('1d4');
     });
 

@@ -54,6 +54,12 @@ vi.mock('./attackCalc.js', () => ({
   findEquippedWeapons: (...args) => findEquippedWeaponsStub(...args),
   buildWeaponAttack: (...args) => buildWeaponAttackStub(...args),
   buildMonkAttacks: (...args) => buildMonkAttacksStub(...args),
+  parseDamageDice: (diceStr) => {
+    const match = String(diceStr).match(/(\d+)d(\d+)/);
+    if (!match) return 0;
+    const [, count, sides] = match;
+    return parseInt(count, 10) * (parseInt(sides, 10) + 1) / 2;
+  },
 }));
 
 vi.mock('../../character/classRules2024.js', () => ({
@@ -247,7 +253,7 @@ describe('attackCalc2024', () => {
       );
     });
 
-    it('adds an off-hand bonus action attack when two melee weapons are equipped', () => {
+    it('places all non-light melee weapons in CharActions when <2 light weapons', () => {
       findEquippedWeaponsStub
         .mockReturnValueOnce([])
         .mockReturnValueOnce(['Shortsword', 'Dagger']);
@@ -281,11 +287,12 @@ describe('attackCalc2024', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe('Action');
-      expect(result[1].type).toBe('Bonus Action');
+      expect(result[1].type).toBe('Action');
+      expect(result[0].name).toBe('Shortsword');
       expect(result[1].name).toBe('Dagger');
     });
 
-    it('includes ability bonus in damage for main-hand but not for off-hand by default', () => {
+    it('includes ability bonus in damage for all melee weapons in CharActions', () => {
       findEquippedWeaponsStub
         .mockReturnValueOnce([])
         .mockReturnValueOnce(['Shortsword', 'Dagger']);
@@ -317,10 +324,9 @@ describe('attackCalc2024', () => {
 
       const result = getAttacks(allEquipment, [], playerStats);
 
-      // Main hand: ability bonus is included in damage
+      // Both weapons in Action, both with ability bonus
       expect(result[0].damage).toContain('+2');
-      // Off-hand: stub produces damage without ability bonus when includeAbilityBonusInDamage is false
-      expect(result[1].damage).toBe('1d4');
+      expect(result[1].damage).toContain('+2');
     });
 
     it('provides two unarmed strike attacks for a Monk', () => {
@@ -796,7 +802,7 @@ describe('attackCalc2024', () => {
     it('handles off-hand with Dual Wielder feat bonus action attack', () => {
       findEquippedWeaponsStub
         .mockReturnValueOnce([])
-        .mockReturnValueOnce(['Shortsword', 'Dagger']);
+        .mockReturnValueOnce(['Shortsword', 'Dagger', 'Sickle']);
 
       const allEquipment = [
         {
@@ -811,6 +817,14 @@ describe('attackCalc2024', () => {
           equipment_category: 'Weapon',
           weapon_range: 'Melee',
           damage: { damage_dice: '1d4', damage_type: 'Piercing' },
+          range: { normal: 5 },
+          properties: ['Light'],
+        },
+        {
+          name: 'Sickle',
+          equipment_category: 'Weapon',
+          weapon_range: 'Melee',
+          damage: { damage_dice: '1d4', damage_type: 'Slashing' },
           range: { normal: 5 },
           properties: ['Light'],
         },
@@ -832,15 +846,17 @@ describe('attackCalc2024', () => {
 
       const result = getAttacks(allEquipment, [], playerStats);
 
-      // Main hand + off-hand + Dual Wielder extra = 3
-      expect(result).toHaveLength(3);
-      expect(result[2].name).toBe('Dual Wielder Extra Attack');
+      // Shortsword (non-light) Action + Dagger (light, highest damage) Action + Sickle (light, Bonus Action) + Dual Wielder extra = 4
+      expect(result).toHaveLength(4);
+      expect(result[2].name).toBe('Sickle');
+      expect(result[2].type).toBe('Bonus Action');
+      expect(result[3].name).toBe('Dual Wielder Extra Attack');
     });
 
     it('does not add Dual Wielder extra without the feat', () => {
       findEquippedWeaponsStub
         .mockReturnValueOnce([])
-        .mockReturnValueOnce(['Shortsword', 'Dagger']);
+        .mockReturnValueOnce(['Shortsword', 'Dagger', 'Sickle']);
 
       const allEquipment = [
         {
@@ -858,6 +874,14 @@ describe('attackCalc2024', () => {
           range: { normal: 5 },
           properties: ['Light'],
         },
+        {
+          name: 'Sickle',
+          equipment_category: 'Weapon',
+          weapon_range: 'Melee',
+          damage: { damage_dice: '1d4', damage_type: 'Slashing' },
+          range: { normal: 5 },
+          properties: ['Light'],
+        },
       ];
       const playerStats = defaultPlayerStats({
         level: 1,
@@ -871,14 +895,14 @@ describe('attackCalc2024', () => {
 
       const result = getAttacks(allEquipment, [], playerStats);
 
-      // Main hand + off-hand only = 2
-      expect(result).toHaveLength(2);
+      // Shortsword (non-light) Action + Dagger (light, highest) Action + Sickle (light, Bonus Action) = 3
+      expect(result).toHaveLength(3);
     });
 
     it('includes ability bonus on off-hand for Light Crossbow with Crossbow Expert Dual Wielding passive', () => {
       findEquippedWeaponsStub
         .mockReturnValueOnce([])
-        .mockReturnValueOnce(['Shortsword', 'Hand Crossbow']);
+        .mockReturnValueOnce(['Shortsword', 'Hand Crossbow', 'Dagger']);
 
       const allEquipment = [
         {
@@ -893,6 +917,14 @@ describe('attackCalc2024', () => {
           equipment_category: 'Weapon',
           weapon_range: 'Melee',
           damage: { damage_dice: '1d6', damage_type: 'Piercing' },
+          range: { normal: 5 },
+          properties: ['Light'],
+        },
+        {
+          name: 'Dagger',
+          equipment_category: 'Weapon',
+          weapon_range: 'Melee',
+          damage: { damage_dice: '1d4', damage_type: 'Piercing' },
           range: { normal: 5 },
           properties: ['Light'],
         },
@@ -912,9 +944,12 @@ describe('attackCalc2024', () => {
 
       const result = getAttacks(allEquipment, [], playerStats);
 
-      expect(result).toHaveLength(2);
-      // Off-hand should have ability bonus because of crossbow expert dual wielding
-      expect(result[1].damage).toContain('+2');
+      // Shortsword (non-light) Action + Hand Crossbow (light, highest damage) Action + Dagger (light, Bonus Action with TWF) = 3
+      expect(result).toHaveLength(3);
+      // Dagger in Bonus Action should have ability bonus from two_weapon_fighting passive
+      expect(result[2].name).toBe('Dagger');
+      expect(result[2].type).toBe('Bonus Action');
+      expect(result[2].damage).toContain('+2');
     });
 
     it('returns attack objects with consistent shape for weapon attacks', () => {

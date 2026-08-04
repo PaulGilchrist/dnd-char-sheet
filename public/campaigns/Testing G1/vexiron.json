@@ -93,9 +93,8 @@
     "equipped": [
       "Arrows",
       "Studded Leather",
-      "Crossbow",
-      "hand",
-      "Thieves' Tools"
+      "Thieves' Tools",
+      "Hand Crossbow"
     ],
     "gold": 10,
     "magicItems": []
