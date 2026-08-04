@@ -29,6 +29,7 @@ import { confirmMassCureWounds } from '../../services/automation/handlers/healin
 import { confirmPrayerOfHealing } from '../../services/automation/handlers/healing/prayerOfHealingHandler.js';
 import { confirmPowerWordFortify } from '../../services/automation/handlers/buffs/powerWordFortifyHandler.js';
 import { confirmMassHealingWord } from '../../services/automation/handlers/healing/massHealingWordHandler.js';
+import { confirmClockworkCavalcadeHeal, confirmClockworkCavalcadeDispel, confirmClockworkCavalcadeRepair } from '../../services/automation/handlers/class-sorcerer/clockworkCavalcadeHandler.js';
 import { getClassFeatures } from '../../services/character/classFeatures.js';
 import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js'
 import { executeSpellCast } from '../../services/rules/spells/spellCastService.js'
@@ -751,6 +752,36 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         setModalState({ massHealModal: null });
     }, [setPopupHtml, modalState.massHealModal, setModalState]);
 
+    const handleClockworkCavalcadeHealConfirm = React.useCallback(async (distribution) => {
+        if (!distribution || !mergedModalState.clockworkCavalcadeHealModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeHealModal;
+        const result = await confirmClockworkCavalcadeHeal(action, playerStats, campaignName, distribution, mergedModalState.clockworkCavalcadeHealModal.maxHeal);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+        setModalState({ clockworkCavalcadeHealModal: null });
+    }, [setPopupHtml, mergedModalState.clockworkCavalcadeHealModal, setModalState]);
+
+    const handleClockworkCavalcadeDispelConfirm = React.useCallback(async (targetNames) => {
+        if (!targetNames || !mergedModalState.clockworkCavalcadeDispelModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeDispelModal;
+        const result = await confirmClockworkCavalcadeDispel(action, playerStats, campaignName, targetNames);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+        setModalState({ clockworkCavalcadeDispelModal: null });
+    }, [setPopupHtml, mergedModalState.clockworkCavalcadeDispelModal, setModalState]);
+
+    const handleClockworkCavalcadeRepairConfirm = React.useCallback(async () => {
+        if (!mergedModalState.clockworkCavalcadeRepairModal) return;
+        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeRepairModal;
+        const result = await confirmClockworkCavalcadeRepair(action, playerStats, campaignName);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+        setModalState({ clockworkCavalcadeRepairModal: null });
+    }, [setPopupHtml, mergedModalState.clockworkCavalcadeRepairModal, setModalState]);
+
     const handleMassCureWoundsConfirm = React.useCallback(async (targetNames) => {
         if (!targetNames || !mergedModalState.massCureWoundsModal) return;
         const { action, playerStats, campaignName } = mergedModalState.massCureWoundsModal;
@@ -1205,6 +1236,9 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     case 'zealousPresenceTarget':
                         setModalState({ zealousPresenceModal: result.payload });
                         break;
+                    case 'clockworkCavalcade':
+                        setModalState({ clockworkCavalcadeModal: result.payload });
+                        break;
                     case 'naturesSanctuaryCreatures':
                         setModalState({ naturesSanctuaryCreaturesModal: result.payload });
                         break;
@@ -1559,6 +1593,9 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     handleBrutalStrikeConfirm={handleBrutalStrikeConfirm}
                     handleBrutalStrikeCancel={handleBrutalStrikeCancel}
                     handleMassHealConfirm={handleMassHealConfirm}
+                    handleClockworkCavalcadeHealConfirm={handleClockworkCavalcadeHealConfirm}
+                    handleClockworkCavalcadeDispelConfirm={handleClockworkCavalcadeDispelConfirm}
+                    handleClockworkCavalcadeRepairConfirm={handleClockworkCavalcadeRepairConfirm}
                     handleMassCureWoundsConfirm={handleMassCureWoundsConfirm}
                     handlePrayerOfHealingConfirm={handlePrayerOfHealingConfirm}
                     handlePowerWordFortifyConfirm={handlePowerWordFortifyConfirm}

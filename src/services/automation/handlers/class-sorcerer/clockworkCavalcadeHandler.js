@@ -1,71 +1,177 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { spendSorceryPoints } from '../../../../hooks/combat/useMetamagic.js';
+import { spendSorceryPoints, getCurrentSorceryPoints } from '../../../../hooks/combat/useMetamagic.js';
 import { getClassFeatures } from '../../../character/classFeatures.js';
 import { addEntry } from '../../../ui/logService.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+import { dispelSpellsOnTarget } from './clockworkCavalcadeDispel.js';
 
-function getRuntimeKey(playerName, key) {
-    return playerName.toLowerCase().replace(/\s+/g, '') + '_' + key;
+const USES_KEY = 'clockworkCavalcadeUses';
+const RANGE_FT = 30;
+
+function getFeatureInfo(action) {
+    const auto = action.automation || {};
+    return {
+        featureName: action.name || 'Clockwork Cavalcade',
+        maxHeal: auto.maxHeal || 100,
+        restoreCost: auto.restoreCost || 7,
+    };
 }
 
-export async function handle(action, playerStats, campaignName, _mapName) {
-    const auto = action.automation;
+function getUsesRemaining(playerName, campaignName) {
+    const stored = getRuntimeValue(playerName, USES_KEY, campaignName);
+    return stored != null ? Number(stored) : 1;
+}
+
+function notConsumedPopup(action, reason) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: action.name || 'Clockwork Cavalcade',
+            description: reason,
+            automation: action.automation || {},
+        },
+    };
+}
+
+export async function handle(action, playerStats, campaignName) {
+    const auto = action.automation || {};
     const playerName = playerStats.name;
-    const featureName = action.name || 'Clockwork Cavalcade';
+    const { featureName, maxHeal, restoreCost } = getFeatureInfo(action);
 
-    const maxSP = getClassFeatures(playerStats)?.maxSorceryPoints || 0;
-    const currentSP = playerStats.resources?.sorcery_points?.current ?? maxSP;
+    const usesRemaining = getUsesRemaining(playerName, campaignName);
 
-    const usesKey = getRuntimeKey(playerName, 'clockworkCavalcadeUses');
-
-    let usesRemaining;
-
-    const stored = getRuntimeValue(playerName, usesKey, campaignName);
-    usesRemaining = stored != null ? Number(stored) : 1;
-    const active = usesRemaining > 0;
-
-    if (!active) {
-        if (currentSP >= 7) {
-            spendSorceryPoints(playerName, 7, campaignName);
-            await setRuntimeValue(playerName, usesKey, 1, campaignName);
-            usesRemaining = 1;
-
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerName,
-                abilityName: featureName,
-                description: `${playerName} restored Clockwork Cavalcade by spending 7 Sorcery Points.`,
-            }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
-        } else {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: featureName,
-                    description: `${featureName} has no uses remaining. Recharges on a Long Rest, or you can spend 7 Sorcery Points to restore.`,
-                    automation: auto,
-                },
-            };
+    if (usesRemaining <= 0) {
+        const maxSP = getClassFeatures(playerStats)?.maxSorceryPoints || 0;
+        const currentSP = getCurrentSorceryPoints(playerName, maxSP);
+        if (currentSP < restoreCost) {
+            return notConsumedPopup(action, `${featureName} has no uses remaining (recharges on a Long Rest). You need ${restoreCost} Sorcery Points to restore it, but you only have ${currentSP}.`);
         }
     }
 
-    await setRuntimeValue(playerName, usesKey, usesRemaining - 1, campaignName);
+    const combatSummary = await getCombatContext(campaignName);
+    const creatureTargets = [];
+    if (combatSummary?.creatures) {
+        for (const creature of combatSummary.creatures) {
+            if (await isWithinRange(playerName, creature.name, RANGE_FT)) {
+                creatureTargets.push({
+                    name: creature.name,
+                    type: creature.type,
+                    currentHp: creature.currentHp,
+                    maxHp: creature.maxHp,
+                });
+            }
+        }
+    }
 
-    const description = `Action — 30-foot Cube<br/>`
-        + `• Heal: Up to 100 HP divided among creatures in range<br/>`
-        + `• Repair: Damaged objects repaired instantly<br/>`
-        + `• Dispel: Every spell of level 6 and lower ends<br/>`
-        + `${usesRemaining > 1 ? (usesRemaining - 1) + ' use' + (usesRemaining - 1 > 1 ? 's' : '') + ' remaining' : 'No uses remaining'}.`;
+    return {
+        type: 'modal',
+        modalName: 'clockworkCavalcade',
+        payload: {
+            action,
+            playerStats,
+            featureName,
+            playerName,
+            campaignName,
+            auto,
+            maxHeal,
+            restoreCost,
+            creatureTargets,
+            combatSummary,
+        },
+    };
+}
 
-    addEntry(campaignName, {
-        type: 'summons',
+export async function consumeUse(action, playerStats, campaignName) {
+    const playerName = playerStats.name;
+    const { featureName, restoreCost } = getFeatureInfo(action);
+    const usesRemaining = getUsesRemaining(playerName, campaignName);
+
+    let spentSP = 0;
+    if (usesRemaining <= 0) {
+        const maxSP = getClassFeatures(playerStats)?.maxSorceryPoints || 0;
+        const currentSP = getCurrentSorceryPoints(playerName, maxSP);
+        if (currentSP < restoreCost) {
+            return {
+                ok: false,
+                reason: `${featureName} has no uses remaining. You need ${restoreCost} Sorcery Points to restore it, but you only have ${currentSP}.`,
+            };
+        }
+        spendSorceryPoints(playerName, restoreCost, campaignName, maxSP);
+        spentSP = restoreCost;
+        await setRuntimeValue(playerName, USES_KEY, 1, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: featureName,
+            description: `${playerName} restored ${featureName} by spending ${restoreCost} Sorcery Points.`,
+        }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
+    }
+
+    await setRuntimeValue(playerName, USES_KEY, Math.max(0, usesRemaining - 1), campaignName);
+
+    return {
+        ok: true,
+        spentSP,
+        usesLeft: Math.max(0, usesRemaining - 1),
+    };
+}
+
+export async function confirmClockworkCavalcadeHeal(action, playerStats, campaignName, distribution, maxHeal) {
+    const playerName = playerStats.name;
+    const { featureName } = getFeatureInfo(action);
+    const totalPool = Number(maxHeal) || 100;
+
+    const consumed = await consumeUse(action, playerStats, campaignName);
+    if (!consumed.ok) return notConsumedPopup(action, consumed.reason);
+
+    const combatSummary = await getCombatContext(campaignName);
+    const results = [];
+    let remainingPool = totalPool;
+
+    for (const [targetName, userAmount] of Object.entries(distribution || {})) {
+        const amount = Number(userAmount) || 0;
+        if (amount <= 0) continue;
+        const creature = combatSummary?.creatures?.find(c => c.name === targetName);
+        const maxHp = creature?.maxHp || playerStats.hitPoints || 0;
+        const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
+        const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
+        const missingHp = Math.max(0, maxHp - currentHp);
+        const actualHeal = Math.min(amount, missingHp, remainingPool);
+
+        if (actualHeal > 0) {
+            applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
+            remainingPool -= actualHeal;
+        }
+
+        const newHp = Math.min(maxHp, currentHp + actualHeal);
+        await addEntry(campaignName, {
+            type: 'hp_change',
+            targetName,
+            delta: actualHeal,
+            currentHp: newHp,
+            maxHp,
+            isHealing: true,
+            sourceName: playerName,
+            note: featureName,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
+
+        results.push({ targetName, healAmount: actualHeal });
+    }
+
+    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+
+    const totalHealed = results.reduce((sum, r) => sum + r.healAmount, 0);
+    const targetList = results.map(r => `${r.targetName} (+${r.healAmount} HP)`).join(', ') || 'none';
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
         characterName: playerName,
-        summonName: featureName,
-        description: `<b>${featureName}</b><br/>Action — 30-foot Cube<br/>`
-            + `• Heal: Up to 100 HP divided among creatures in range<br/>`
-            + `• Repair: Damaged objects repaired instantly<br/>`
-            + `• Dispel: Every spell of level 6 and lower ends<br/>`
-            + `${usesRemaining > 1 ? (usesRemaining - 1) + ' use' + (usesRemaining - 1 > 1 ? 's' : '') + ' remaining' : 'No uses remaining'}.`,
-        summonedCreatures: ['spirits of order'],
+        abilityName: featureName,
+        description: `${playerName} used ${featureName} (Heal), restoring ${totalHealed} HP across ${results.length} creature(s): ${targetList}${consumed.spentSP > 0 ? ` (${consumed.spentSP} SP spent to restore the use)` : ''}.`,
     }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
 
     return {
@@ -73,8 +179,96 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         payload: {
             type: 'automation_info',
             name: featureName,
-            description,
-            automation: auto,
+            automationType: action.automation?.type,
+            description: `${featureName} (Heal) restored ${totalHealed} HP across ${results.length} creature(s) in the Cube: ${targetList}.`,
+            automation: action.automation || {},
+        },
+    };
+}
+
+export async function confirmClockworkCavalcadeDispel(action, playerStats, campaignName, selectedTargets) {
+    const playerName = playerStats.name;
+    const { featureName } = getFeatureInfo(action);
+
+    const consumed = await consumeUse(action, playerStats, campaignName);
+    if (!consumed.ok) return notConsumedPopup(action, consumed.reason);
+
+    const targets = Array.isArray(selectedTargets) ? selectedTargets : [];
+    const allRemoved = [];
+
+    for (const targetName of targets) {
+        const removed = await dispelSpellsOnTarget(targetName, campaignName);
+        allRemoved.push(removed);
+
+        for (const condition of removed.conditions) {
+            await addEntry(campaignName, {
+                type: 'condition',
+                action: 'removed',
+                characterName: targetName,
+                condition: typeof condition === 'string' ? condition : condition.key,
+                reason: `${featureName} (Dispel)`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
+        }
+    }
+
+    window.dispatchEvent(new CustomEvent('target-effects-updated'));
+    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+
+    const effectCount = allRemoved.reduce((sum, r) => sum + r.effects.length + r.buffs.length + r.conditions.length, 0);
+    const detailLines = allRemoved
+        .filter(r => r.effects.length > 0 || r.buffs.length > 0 || r.conditions.length > 0)
+        .map(r => {
+            const parts = [];
+            if (r.effects.length > 0) parts.push(`${r.effects.length} spell effect(s)`);
+            if (r.buffs.length > 0) parts.push(`${r.buffs.length} buff(s)`);
+            if (r.conditions.length > 0) parts.push(`${r.conditions.length} condition(s)`);
+            return `${r.target}: ${parts.join(', ')}`;
+        });
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: featureName,
+        description: `${playerName} used ${featureName} (Dispel) on ${targets.length} creature(s), ending ${effectCount} spell effect(s) of level 6 or lower.${consumed.spentSP > 0 ? ` (${consumed.spentSP} SP spent to restore the use)` : ''}`,
+    }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: featureName,
+            automationType: action.automation?.type,
+            description: effectCount === 0
+                ? `${featureName} (Dispel): No spells of level 6 or lower were found on the selected creature(s).`
+                : `${featureName} (Dispel) ended ${effectCount} spell effect(s) of level 6 or lower on ${targets.length} creature(s): ${detailLines.join('; ') || 'none'}.`,
+            automation: action.automation || {},
+        },
+    };
+}
+
+export async function confirmClockworkCavalcadeRepair(action, playerStats, campaignName) {
+    const playerName = playerStats.name;
+    const { featureName } = getFeatureInfo(action);
+
+    const consumed = await consumeUse(action, playerStats, campaignName);
+    if (!consumed.ok) return notConsumedPopup(action, consumed.reason);
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: featureName,
+        description: `${playerName} used ${featureName} (Repair). Damaged objects within the 30-foot Cube are repaired instantly.${consumed.spentSP > 0 ? ` (${consumed.spentSP} SP spent to restore the use)` : ''}`,
+    }).catch((e) => { console.error("[clockworkCavalcade] Error:", e); });
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: featureName,
+            automationType: action.automation?.type,
+            description: `${featureName} (Repair) — damaged objects in the 30-foot Cube are repaired instantly.`,
+            automation: action.automation || {},
         },
     };
 }

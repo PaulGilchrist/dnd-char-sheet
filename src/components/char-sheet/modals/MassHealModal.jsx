@@ -9,6 +9,11 @@ export default function MassHealModal({
     onSkip,
     campaignName,
     combatSummary,
+    title = 'Mass Heal',
+    description = null,
+    icon = 'fa-tree',
+    confirmLabel = 'Heal',
+    confirmIcon = 'fa-tree',
 }) {
     const [selected, setSelected] = useState([]);
     const [allocations, setAllocations] = useState({});
@@ -73,11 +78,11 @@ export default function MassHealModal({
         <div className="sp-overlay" onClick={onSkip}>
             <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
                 <div className="sp-header">
-                    <i className="fa-solid fa-tree"></i> Mass Heal
+                    <i className={`fa-solid ${icon}`}></i> {title}
                 </div>
                 <div className="sp-body">
-                    <p>Choose up to {maxTargets} allies to heal. Divide <b>{pool} HP</b> among them however you like.
-                    Healed creatures are also cured of blinded, deafened, and poisoned conditions.</p>
+                    <p dangerouslySetInnerHTML={{ __html: description || `Choose up to ${maxTargets} allies to heal. Divide <b>${pool} HP</b> among them however you like.
+                    Healed creatures are also cured of blinded, deafened, and poisoned conditions.` }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '12px', fontSize: '0.9em', color: 'var(--color-header)' }}>
                         <span>Pool: {pool} HP</span>
                         <span style={{ color: '#999' }}>
@@ -202,7 +207,7 @@ export default function MassHealModal({
                         type="button"
                         style={{ opacity: selected.length === 0 ? 0.5 : 1 }}
                     >
-                        <i className="fa-solid fa-tree"></i> Heal ({selected.length})
+                        <i className={`fa-solid ${confirmIcon}`}></i> {confirmLabel} ({selected.length})
                     </button>
                     <button className="sp-dismiss-btn" onClick={onSkip} type="button">
                         Skip

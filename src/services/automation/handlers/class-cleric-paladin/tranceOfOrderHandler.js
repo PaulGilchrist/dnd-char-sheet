@@ -20,7 +20,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     if (!active) {
         if (currentSP >= 5) {
-            spendSorceryPoints(playerName, 5, campaignName);
+            spendSorceryPoints(playerName, 5, campaignName, maxSP);
 
             addEntry(campaignName, {
                 type: 'ability_use',

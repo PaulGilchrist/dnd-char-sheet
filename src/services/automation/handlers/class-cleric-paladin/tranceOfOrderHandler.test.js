@@ -112,7 +112,7 @@ describe('Trance of Order Handler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('activated');
             expect(result.payload.description).toContain('5 SP');
-            expect(metamagic.spendSorceryPoints).toHaveBeenCalledWith(playerName, 5, campaignName);
+            expect(metamagic.spendSorceryPoints).toHaveBeenCalledWith(playerName, 5, campaignName, 10);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 playerName,
                 activeKey,

@@ -110,7 +110,7 @@ export async function applyWarpingImplosion(action, playerStats, campaignName, t
                 },
             };
         }
-        spendSorceryPoints(playerName, auto.restoreCost || 5, campaignName);
+        spendSorceryPoints(playerName, auto.restoreCost || 5, campaignName, maxSP);
     } else {
         // Use normal use
         const usesKey = auto.resourceKey || (featureName.toLowerCase().replace(/\s+/g, '') + 'Uses');

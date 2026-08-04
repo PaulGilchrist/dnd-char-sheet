@@ -46,18 +46,18 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Merchant",
   "class": {
     "name": "Sorcerer",
     "subclass": {
-      "name": "Aberrant Sorcery",
-      "type": ""
+      "name": "Clockwork Sorcery"
     },
     "divineOrder": "",
     "primalOrder": ""
   },
   "expertSkills": [],
-  "feats": [],
+  "feats": [
+    "Lucky"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Elf",
@@ -97,7 +97,12 @@
     "Insight",
     "Investigation",
     "Perception",
-    "Survival"
+    "Survival",
+    "Animal Handling",
+    "Persuasion"
+  ],
+  "toolProficiencies": [
+    "Navigator's Tools"
   ],
   "specialActions": [],
   "spells": [
@@ -113,8 +118,10 @@
     "Misty Step",
     "Fireball"
   ],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Merchant",
   "imagePath": "images/Selthara.png"
 }

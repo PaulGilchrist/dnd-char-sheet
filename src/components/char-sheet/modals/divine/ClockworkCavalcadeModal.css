@@ -1,0 +1,24 @@
+.clockwork-cavalcade-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    color: var(--color-header);
+}
+
+.clockwork-cavalcade-option > i {
+    margin-top: 3px;
+    opacity: 0.85;
+}
+
+.clockwork-cavalcade-option .secondary-target-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.clockwork-cavalcade-option .secondary-target-hp {
+    margin-left: 0;
+    font-size: 0.85em;
+}

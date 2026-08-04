@@ -26,7 +26,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     if (!active) {
         if (currentSP >= (auto.restoreCost || 3)) {
-            spendSorceryPoints(playerName, auto.restoreCost || 3, campaignName);
+            spendSorceryPoints(playerName, auto.restoreCost || 3, campaignName, maxSP);
             await setRuntimeValue(playerName, usesKey, usesMax, campaignName);
 
             await addEntry(campaignName, {

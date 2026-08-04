@@ -71,6 +71,7 @@ import VitalityOfTheTreeModal from './modals/VitalityOfTheTreeModal.jsx'
 import InspiringSmiteModal from './modals/InspiringSmiteModal.jsx'
 import RecklessAttackModal from './modals/shared/RecklessAttackModal.jsx'
 import MassHealModal from './modals/MassHealModal.jsx'
+import ClockworkCavalcadeModal from './modals/divine/ClockworkCavalcadeModal.jsx'
 import SilenceModal from './modals/SilenceModal.jsx'
 import MassCureWoundsModal from './modals/MassCureWoundsModal.jsx'
 import PrayerOfHealingModal from './modals/PrayerOfHealingModal.jsx'
@@ -227,6 +228,9 @@ export default function CharActionModals({
     handleBrutalStrikeConfirm,
     handleBrutalStrikeCancel,
     handleMassHealConfirm,
+    handleClockworkCavalcadeHealConfirm,
+    handleClockworkCavalcadeDispelConfirm,
+    handleClockworkCavalcadeRepairConfirm,
     handleMassCureWoundsConfirm,
     handlePrayerOfHealingConfirm,
     handlePowerWordFortifyConfirm,
@@ -246,6 +250,19 @@ export default function CharActionModals({
             if (cs) setCombatSummary(cs);
         });
     }, [campaignName]);
+
+    const handleClockworkCavalcadeChoice = React.useCallback((choice) => {
+        const choiceModal = mergedModalState.clockworkCavalcadeModal;
+        if (!choiceModal) return;
+        setModalState({ clockworkCavalcadeModal: null });
+        if (choice === 'heal') {
+            setModalState({ clockworkCavalcadeHealModal: choiceModal });
+        } else if (choice === 'dispel') {
+            setModalState({ clockworkCavalcadeDispelModal: choiceModal });
+        } else if (choice === 'repair') {
+            setModalState({ clockworkCavalcadeRepairModal: choiceModal });
+        }
+    }, [mergedModalState.clockworkCavalcadeModal, setModalState]);
 
     return (
         <>
@@ -1214,6 +1231,60 @@ export default function CharActionModals({
                     campaignName={mergedModalState.massHealModal.campaignName}
                     combatSummary={mergedModalState.massHealModal.combatSummary}
                 />
+            )}
+            {mergedModalState.clockworkCavalcadeModal && (
+                <ClockworkCavalcadeModal
+                    onChoose={handleClockworkCavalcadeChoice}
+                    onClose={() => setModalState({ clockworkCavalcadeModal: null })}
+                />
+            )}
+            {mergedModalState.clockworkCavalcadeHealModal && (
+                <MassHealModal
+                    creatureTargets={mergedModalState.clockworkCavalcadeHealModal.creatureTargets}
+                    maxTargets={mergedModalState.clockworkCavalcadeHealModal.creatureTargets.length}
+                    pool={mergedModalState.clockworkCavalcadeHealModal.maxHeal}
+                    onConfirm={handleClockworkCavalcadeHealConfirm}
+                    onSkip={() => setModalState({ clockworkCavalcadeHealModal: null })}
+                    campaignName={mergedModalState.clockworkCavalcadeHealModal.campaignName}
+                    combatSummary={mergedModalState.clockworkCavalcadeHealModal.combatSummary}
+                    title="Clockwork Cavalcade: Heal"
+                    description="Choose any number of creatures in the Cube. Divide <b>100 HP</b> among them however you like."
+                    icon="fa-heart"
+                    confirmLabel="Heal"
+                    confirmIcon="fa-heart"
+                />
+            )}
+            {mergedModalState.clockworkCavalcadeDispelModal && (
+                <CreatureSelectionModal
+                    title="Clockwork Cavalcade: Dispel"
+                    description="Every spell of level 6 and lower ends on creatures and objects of your choice in the Cube."
+                    targets={mergedModalState.clockworkCavalcadeDispelModal.creatureTargets}
+                    confirmLabel="Dispel"
+                    confirmIcon="fa-wand-magic-sparkles"
+                    icon="fa-wand-magic-sparkles"
+                    onConfirm={handleClockworkCavalcadeDispelConfirm}
+                    onSkip={() => setModalState({ clockworkCavalcadeDispelModal: null })}
+                />
+            )}
+            {mergedModalState.clockworkCavalcadeRepairModal && (
+                <div className="sp-overlay" onClick={() => setModalState({ clockworkCavalcadeRepairModal: null })}>
+                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                        <div className="sp-header">
+                            <i className="fa-solid fa-hammer"></i> Clockwork Cavalcade: Repair
+                        </div>
+                        <div className="sp-body">
+                            <p>Damaged objects within the Cube are repaired instantly. This effect does not restore Hit Points to creatures.</p>
+                        </div>
+                        <div className="sp-actions">
+                            <button className="sp-confirm-btn" onClick={handleClockworkCavalcadeRepairConfirm} type="button">
+                                <i className="fa-solid fa-hammer"></i> Repair
+                            </button>
+                            <button className="sp-dismiss-btn" onClick={() => setModalState({ clockworkCavalcadeRepairModal: null })} type="button">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
             {mergedModalState.massCureWoundsModal && (
                 <MassCureWoundsModal

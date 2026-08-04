@@ -288,7 +288,7 @@ export async function applyBendFateChoice(action, playerStats, campaignName, d4R
     return applyD20Modifier(action, playerName, campaignName, d4Value, lastAttack, mode, {
         featureName: action.name || 'Bend Fate',
         logDescription: `${playerName} used ${action.name || 'Bend Fate'}`,
-        onSpent: () => spendSorceryPoints(playerName, 1, campaignName),
+        onSpent: () => spendSorceryPoints(playerName, 1, campaignName, getClassFeatures(playerStats)?.maxSorceryPoints || 0),
     });
 }
 

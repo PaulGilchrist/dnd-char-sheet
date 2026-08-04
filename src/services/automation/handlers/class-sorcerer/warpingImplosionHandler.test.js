@@ -246,7 +246,8 @@ describe('warpingImplosionHandler', () => {
             expect(metamagic.spendSorceryPoints).toHaveBeenCalledWith(
                 'TestHero',
                 5,
-                'TestCampaign'
+                'TestCampaign',
+                0
             );
         });
 
@@ -451,7 +452,8 @@ describe('warpingImplosionHandler', () => {
             expect(metamagic.spendSorceryPoints).toHaveBeenCalledWith(
                 'TestHero',
                 5,
-                'TestCampaign'
+                'TestCampaign',
+                0
             );
         });
 

@@ -243,6 +243,7 @@ describe('dragonWingsHandler', () => {
                     playerName,
                     3,
                     campaignName,
+                    10,
                 );
                 expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                     playerName,
@@ -264,6 +265,7 @@ describe('dragonWingsHandler', () => {
                     playerName,
                     5,
                     campaignName,
+                    10,
                 );
             });
 
