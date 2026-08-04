@@ -12,6 +12,7 @@ import { handle as handleTelekineticShove } from './handlers/feats/telekineticSh
 import { handle as handleSorcery } from './handlers/resources/sorceryHandler.js';
 import { handle as handleSpellCast } from './handlers/spells/spellCastHandler.js';
 import { handle as handleRegenerate, applyRegenerateEffect } from './handlers/spells/regenerateHandler.js';
+import { handle as handleAnimateDead, confirmAnimateDead as handleAnimateDeadConfirm } from './handlers/spells/animateDeadHandler.js';
 import { handle as handleInitiative } from './handlers/combat/initiativeHandler.js';
 
 import { handle as handleResourcePool } from './handlers/resources/resourcePoolHandler.js';
@@ -589,6 +590,8 @@ const HANDLER_MAP = {
         invisibility: handleInvisibility,
         greater_invisibility: handleGreaterInvisibility,
         regenerate: handleRegenerate,
+        animate_dead: handleAnimateDead,
+        animate_dead_confirm: handleAnimateDeadConfirm,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -641,6 +644,7 @@ export { confirmMassHealingWord } from './handlers/healing/massHealingWordHandle
 export { confirmPowerWordFortify } from './handlers/buffs/powerWordFortifyHandler.js';
 export { confirmSearingVengeance, skipSearingVengeance } from './handlers/class-warlock/searingVengeanceHandler.js';
 export { confirmCelestialResilience, skipCelestialResilience } from './handlers/class-warlock/celestialResilienceHandler.js';
+export { confirmAnimateDead } from './handlers/spells/animateDeadHandler.js';
 export async function executeHandler(action, playerStats, campaignName, mapName, characters) {
     if (!action?.automation) {
         return null;

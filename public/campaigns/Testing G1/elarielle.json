@@ -116,17 +116,9 @@
     "Poison Spray",
     "Shocking Grasp",
     "Acid Splash",
-    "Confusion",
-    "Conjure Volley",
-    "Faerie Fire",
-    "Forcecage",
-    "Maze",
-    "Prismatic Spray",
-    "Revivify",
-    "Sanctuary",
-    "Sleet Storm",
-    "Spare the Dying",
-    "Spiritual Weapon"
+    "Spiritual Weapon",
+    "Animate Dead",
+    "Create Undead"
   ],
   "magicInitiateInstances": [
     {

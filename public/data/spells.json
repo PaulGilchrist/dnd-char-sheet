@@ -2258,6 +2258,12 @@
         "concentration": false,
         "casting_time": "1 minute",
         "level": 6,
+        "upcast_at_slot_level": {
+            "6": "3 targets",
+            "7": "4 targets",
+            "8": "5 targets",
+            "9": "6 targets"
+        },
         "school": "Necromancy",
         "classes": [
             "Cleric",

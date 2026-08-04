@@ -118,6 +118,9 @@ function handleModalResult(popup, setModalState) {
         case 'tashasLaughter':
             setModalState({ tashasLaughterModal: payload });
             break;
+        case 'animateDead':
+            setModalState({ animateDeadModal: payload });
+            break;
         default:
             console.error(`[useSpellCastExecutor] Unknown modalName from spell cast: ${modalName}`);
     }

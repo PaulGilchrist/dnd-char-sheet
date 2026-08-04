@@ -396,7 +396,7 @@
       "passive_perception": 10
     },
     "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -494,7 +494,7 @@
       "passive_perception": 10
     },
     "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -594,7 +594,7 @@
       "passive_perception": 10
     },
     "languages": "Deep Speech, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -4556,7 +4556,7 @@
       "passive_perception": 6
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -4666,7 +4666,7 @@
       "passive_perception": 6
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -4776,7 +4776,7 @@
       "passive_perception": 6
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -8007,7 +8007,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -8108,7 +8108,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -8209,7 +8209,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -11067,7 +11067,7 @@
       "passive_perception": 12
     },
     "languages": "Celestial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -11170,7 +11170,7 @@
       "passive_perception": 12
     },
     "languages": "Celestial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -12897,7 +12897,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -13007,7 +13007,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -13113,7 +13113,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -16479,7 +16479,7 @@
       "passive_perception": 12
     },
     "languages": "Draconic, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -18810,7 +18810,7 @@
       "passive_perception": 10
     },
     "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -18918,7 +18918,7 @@
       "passive_perception": 10
     },
     "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -19022,7 +19022,7 @@
       "passive_perception": 10
     },
     "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -19130,7 +19130,7 @@
       "passive_perception": 10
     },
     "languages": "Primordial, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -20369,7 +20369,7 @@
       "passive_perception": 10
     },
     "languages": "Sylvan, understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -20569,7 +20569,7 @@
       "passive_perception": 10
     },
     "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -20674,7 +20674,7 @@
       "passive_perception": 10
     },
     "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -20785,7 +20785,7 @@
       "passive_perception": 10
     },
     "languages": "Abyssal, Infernal, Telepathy 60 ft.",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -46816,7 +46816,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -46917,7 +46917,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -47021,7 +47021,7 @@
       "passive_perception": 12
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -59250,7 +59250,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -59355,7 +59355,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,
@@ -59460,7 +59460,7 @@
       "passive_perception": 10
     },
     "languages": "understands your languages",
-    "challenge_rating": "None",
+    "challenge_rating": "0",
     "xp": 0,
     "proficiency_bonus": null,
     "legendary_resistance": null,

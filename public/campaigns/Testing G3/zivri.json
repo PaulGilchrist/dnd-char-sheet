@@ -46,12 +46,10 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Noble",
   "class": {
     "name": "Warlock",
     "subclass": {
-      "name": "Archfey Patron",
-      "type": ""
+      "name": "Great Old One Patron"
     },
     "divineOrder": "",
     "primalOrder": "",
@@ -69,7 +67,9 @@
     "pactBoon": "Tome"
   },
   "expertSkills": [],
-  "feats": [],
+  "feats": [
+    "Skilled"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Gnome",
@@ -109,8 +109,11 @@
     "Investigation",
     "Perception",
     "Nature",
-    "Survival"
+    "Survival",
+    "History",
+    "Persuasion"
   ],
+  "toolProficiencies": [],
   "specialActions": [],
   "spells": [
     "Charm Person",
@@ -120,8 +123,10 @@
     "Misty Step",
     "Invisibility"
   ],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Noble",
   "imagePath": "images/Zivri.png"
 }

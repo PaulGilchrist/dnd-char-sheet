@@ -81,6 +81,8 @@ import TashasLaughterModal from './modals/shared/TashasLaughterModal.jsx'
 import FlurryOfBlowsTargetPopup from './popups/FlurryOfBlowsTargetPopup.jsx'
 import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx'
 import DestructiveStrideModal from './modals/DestructiveStrideModal.jsx'
+import AnimateDeadModal from './modals/AnimateDeadModal.jsx'
+import { confirmAnimateDead } from '../../services/automation/handlers/spells/animateDeadHandler.js'
 import { handleApply } from '../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js'
 import { applyResistanceChoice } from '../../services/automation/handlers/combat/elementalEpitomeHandler.js'
 import { applyDamageTypeChoice, applyTargetChoice, skipTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js'
@@ -1316,6 +1318,24 @@ export default function CharActionModals({
                     maxTargets={mergedModalState.massHealingWordModal.maxTargets}
                     onConfirm={handleMassHealingWordConfirm}
                     onSkip={() => setModalState({ massHealingWordModal: null })}
+                />
+            )}
+            {mergedModalState.animateDeadModal && (
+                <AnimateDeadModal
+                    maxTargets={mergedModalState.animateDeadModal.maxTargets}
+                    onConfirm={async ({ zombieCount, skeletonCount }) => {
+                        setModalState({ animateDeadModal: null });
+                        const result = await confirmAnimateDead(
+                            mergedModalState.animateDeadModal.action,
+                            mergedModalState.animateDeadModal.playerStats,
+                            mergedModalState.animateDeadModal.campaignName,
+                            { zombieCount, skeletonCount }
+                        );
+                        if (result?.payload) {
+                            setPopupHtml(result.payload);
+                        }
+                    }}
+                    onClose={() => setModalState({ animateDeadModal: null })}
                 />
             )}
         </>

@@ -52,8 +52,8 @@ function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, to
     if (environmentFilter && m.environments && !m.environments.includes(environmentFilter)) return false;
     if (typeFilter && m.type && m.type.toLowerCase() !== typeFilter.toLowerCase()) return false;
     if (sizeFilter && m.size && m.size.toLowerCase() !== sizeFilter.toLowerCase()) return false;
-    const crMinNum = crMin === '' ? null : parseFloat(crMin);
-    const crMaxNum = crMax === '' ? null : parseFloat(crMax);
+    const crMinNum = !crMin ? null : parseFloat(crMin);
+    const crMaxNum = !crMax ? null : parseFloat(crMax);
     if (crMinNum !== null || crMaxNum !== null) {
       const cr = crToNumber(m.challenge_rating);
       if (!isNaN(cr)) {

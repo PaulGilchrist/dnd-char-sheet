@@ -1503,14 +1503,20 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
         if (consumedMaterial) await consumeMaterial(playerStats, consumedMaterial.itemName, campaignName);
         onExecute(spell, metaCtx);
       } else {
+        const isUpcast = spell.isUpcast;
+        const upcastLevel = spell.upcastLevel;
         const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
         const result = await prepareSpellCast(spell, metaCtx, {
           playerName: playerStats.name,
           playerStats,
           campaignName,
-          isUpcast: false,
+          isUpcast,
+          upcastLevel,
           freeCastAuthorized,
         });
+        if (!metaCtx.slotLevel && upcastLevel) {
+          metaCtx.slotLevel = upcastLevel;
+        }
         if (consumedMaterial) await consumeMaterial(playerStats, consumedMaterial.itemName, campaignName);
         onExecute(result.modifiedSpell, result.metaCtx);
       }
@@ -1600,13 +1606,19 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     }
 
     const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName);
+    const isUpcast = pending.spell?.isUpcast;
+    const upcastLevel = pending.spell?.upcastLevel;
     const result2 = await prepareSpellCast(pending.spell, metaCtx, {
       playerName: playerStats.name,
       playerStats,
       campaignName,
-      isUpcast: false,
+      isUpcast,
+      upcastLevel,
       freeCastAuthorized,
     });
+    if (!metaCtx.slotLevel && upcastLevel) {
+      metaCtx.slotLevel = upcastLevel;
+    }
     const sorcMaterial = getConsumedMaterial(pending.spell);
     if (sorcMaterial) await consumeMaterial(playerStats, sorcMaterial.itemName, campaignName);
     onExecute(result2.modifiedSpell, result2.metaCtx);
