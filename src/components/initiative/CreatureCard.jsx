@@ -9,11 +9,13 @@ import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/r
 import ConditionEffectBadges from './ConditionEffectBadges.jsx'
 
 const FLESH_TO_STONE_PREFIX = '_fleshToStone_';
+const PRISMATIC_SPRAY_INDIGO_PREFIX = '_prismaticSprayIndigo_';
+const PRISMATIC_SPRAY_VIOLET_PREFIX = '_prismaticSprayViolet_';
 import CreatureBadge from '../common/CreatureBadge.jsx'
 import { isBuffActive } from '../../services/automation/common/buffToggle.js';
 import { CONDITION_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
 import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc, clearUnbreakableMajesty } from '../../services/combat/auras/unbreakableMajesty.js'
-import { sendFleshToStoneResult } from '../../services/combat/conditions/savePromptService.js'
+import { sendFleshToStoneResult, sendPrismaticSprayIndigoResult, sendPrismaticSprayVioletResult } from '../../services/combat/conditions/savePromptService.js'
 import { isResilientSphereActive, getResilientSphereSource } from '../../services/combat/automation/automationPassives.js'
 
 const SHAPE_LABELS = {
@@ -59,6 +61,10 @@ function CreatureCard({
     });
     const saveTrackingKey = FLESH_TO_STONE_PREFIX + creature.name.replace(/\s+/g, '_');
     const fleshToStoneData = useRuntimeValue('campaign', saveTrackingKey, campaignName);
+    const prismaticIndigoKey = PRISMATIC_SPRAY_INDIGO_PREFIX + creature.name.replace(/\s+/g, '_');
+    const prismaticIndigoData = useRuntimeValue('campaign', prismaticIndigoKey, campaignName);
+    const prismaticVioletKey = PRISMATIC_SPRAY_VIOLET_PREFIX + creature.name.replace(/\s+/g, '_');
+    const prismaticVioletData = useRuntimeValue('campaign', prismaticVioletKey, campaignName);
     const isMajestyActive = creature.type === 'player' && isUnbreakableMajestyActive(creature.name, campaignName);
     const majestyDc = isMajestyActive ? getUnbreakableMajestySaveDc(creature.name, campaignName) : 0;
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
@@ -239,6 +245,76 @@ function CreatureCard({
                                         sendFleshToStoneResult(campaignName, creature.name, { success: false });
                                     }}
                                     title="Record failed save"
+                                >
+                                    <i className="fa-solid fa-xmark"></i> Failure
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+                {isLocalhost && (() => {
+                    if (!prismaticIndigoData) return null;
+                    return (
+                        <div className="flesh-to-stone-prompt">
+                            <span className="flesh-to-stone-label">
+                                <i className="fa-solid fa-eye"></i> Prismatic Spray (Indigo)
+                            </span>
+                            <div className="flesh-to-stone-row">
+                                <span className="flesh-to-stone-progress">
+                                    CON Saves: {prismaticIndigoData.successes}/3 | Failures: {prismaticIndigoData.failures}/3
+                                </span>
+                            </div>
+                            <div className="flesh-to-stone-row flesh-to-stone-actions">
+                                <button
+                                    className="flesh-to-stone-btn success"
+                                    onClick={() => {
+                                        sendPrismaticSprayIndigoResult(campaignName, creature.name, { success: true });
+                                    }}
+                                    title="Record successful CON save"
+                                >
+                                    <i className="fa-solid fa-check"></i> Success
+                                </button>
+                                <button
+                                    className="flesh-to-stone-btn failure"
+                                    onClick={() => {
+                                        sendPrismaticSprayIndigoResult(campaignName, creature.name, { success: false });
+                                    }}
+                                    title="Record failed CON save"
+                                >
+                                    <i className="fa-solid fa-xmark"></i> Failure
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+                {isLocalhost && (() => {
+                    if (!prismaticVioletData) return null;
+                    return (
+                        <div className="flesh-to-stone-prompt">
+                            <span className="flesh-to-stone-label">
+                                <i className="fa-solid fa-door-open"></i> Prismatic Spray (Violet)
+                            </span>
+                            <div className="flesh-to-stone-row">
+                                <span className="flesh-to-stone-progress">
+                                    WIS Save (caster's next turn)
+                                </span>
+                            </div>
+                            <div className="flesh-to-stone-row flesh-to-stone-actions">
+                                <button
+                                    className="flesh-to-stone-btn success"
+                                    onClick={() => {
+                                        sendPrismaticSprayVioletResult(campaignName, creature.name, { success: true });
+                                    }}
+                                    title="Record successful WIS save"
+                                >
+                                    <i className="fa-solid fa-check"></i> Success
+                                </button>
+                                <button
+                                    className="flesh-to-stone-btn failure"
+                                    onClick={() => {
+                                        sendPrismaticSprayVioletResult(campaignName, creature.name, { success: false });
+                                    }}
+                                    title="Record failed WIS save"
                                 >
                                     <i className="fa-solid fa-xmark"></i> Failure
                                 </button>

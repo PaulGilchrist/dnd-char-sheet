@@ -100,3 +100,57 @@ export function sendFleshToStoneResult(campaignName, targetName, resultData) {
     window.dispatchEvent(new CustomEvent('flesh-to-stone-result', { detail: { campaignName, targetName, result: resultData } }));
   }).catch((e) => { console.error("[savePromptService] Error:", e); });
 }
+
+export function sendPrismaticSprayIndigoPrompt(campaignName, promptData) {
+  const key = `prismaticSprayIndigoPrompt-${promptData.targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: promptData }),
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function clearPrismaticSprayIndigoPrompt(campaignName, targetName) {
+  const key = `prismaticSprayIndigoPrompt-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'DELETE',
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function sendPrismaticSprayIndigoResult(campaignName, targetName, resultData) {
+  const key = `prismaticSprayIndigoResult-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: resultData }),
+  }).then((res) => res.json()).then(() => {
+    window.dispatchEvent(new CustomEvent('prismatic-spray-indigo-result', { detail: { campaignName, targetName, result: resultData } }));
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function sendPrismaticSprayVioletPrompt(campaignName, promptData) {
+  const key = `prismaticSprayVioletPrompt-${promptData.targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: promptData }),
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function clearPrismaticSprayVioletPrompt(campaignName, targetName) {
+  const key = `prismaticSprayVioletPrompt-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'DELETE',
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}
+
+export function sendPrismaticSprayVioletResult(campaignName, targetName, resultData) {
+  const key = `prismaticSprayVioletResult-${targetName}`;
+  fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value: resultData }),
+  }).then((res) => res.json()).then(() => {
+    window.dispatchEvent(new CustomEvent('prismatic-spray-violet-result', { detail: { campaignName, targetName, result: resultData } }));
+  }).catch((e) => { console.error("[savePromptService] Error:", e); });
+}

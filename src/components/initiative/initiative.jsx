@@ -879,21 +879,26 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     timestamp: Date.now(),
                 }).catch(() => {});
             } else {
-                // Banish the creature — remove from combat and apply banishment
+                // Banish the creature — apply existing banishment target effect
                 const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
                 const filtered = conditions.filter(c => String(c).toLowerCase() !== 'blinded');
-                setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
+                setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
+
                 const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_violet' && te.source === saveData.casterName));
-                setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
+                const existingBanishment = cleanedEffects.filter(te => !(te.effect === 'banishment' || te.target === targetName && te.source === saveData.casterName));
+                setRuntimeValue('campaign', 'targetEffects', [
+                    ...existingBanishment,
+                    {
+                        effect: 'banishment',
+                        target: targetName,
+                        source: saveData.casterName,
+                        duration: 'Concentration, up to 1 minute',
+                        permanent: false,
+                    },
+                ], campaignName);
 
-                // Remove creature from combat summary
-                const idx = combatSummary.creatures.findIndex(c => c.name === targetName);
-                if (idx >= 0) {
-                    combatSummary.creatures.splice(idx, 1);
-                    storage.set('combatSummary', combatSummary, campaignName);
-                }
+                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
 
                 await logService.addEntry(campaignName, {
                     type: 'save_result',
@@ -912,6 +917,15 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     condition: 'Blinded',
                     reason: 'Prismatic Spray Violet (banishment)',
                     note: `${targetName} failed WIS save; Blinded removed, banished to another plane.`,
+                    timestamp: Date.now(),
+                }).catch(() => {});
+                await logService.addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'applied',
+                    characterName: targetName,
+                    condition: 'Incapacitated',
+                    reason: 'Prismatic Spray Violet (banishment)',
+                    note: `${targetName} is Incapacitated by banishment.`,
                     timestamp: Date.now(),
                 }).catch(() => {});
                 await logService.addEntry(campaignName, {

@@ -764,14 +764,54 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
            setRuntimeValue('campaign', 'targetEffects', ftsCleanedEffects, campaignName);
            setRuntimeValue('campaign', ftsKey, null, campaignName);
       }
-      addEntry(campaignName, {
-          type: 'ability_use',
-          characterName: characterName,
-          abilityName: 'Flesh to Stone',
-          description: 'Rest; Flesh to Stone ends.',
-      }).catch(() => {});
+       addEntry(campaignName, {
+           type: 'ability_use',
+           characterName: characterName,
+           abilityName: 'Flesh to Stone',
+           description: 'Rest; Flesh to Stone ends.',
+       }).catch(() => {});
 
-      // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
+       // Clean up Prismatic Spray recurring save tracking on rest.
+       const psAllKeys = getAllStoreKeys();
+       for (const psKey of psAllKeys) {
+           if (typeof psKey !== 'string') continue;
+           const psValue = getRuntimeValue('campaign', psKey, campaignName);
+           if (!psValue) continue;
+           const isIndigo = psKey.startsWith('_prismaticSprayIndigo_');
+           const isViolet = psKey.startsWith('_prismaticSprayViolet_');
+           if (!isIndigo && !isViolet) continue;
+           if (psValue.casterName !== characterName) continue;
+           const psTargetName = psKey.replace(/^_prismaticSpray(?:Indigo|Violet)_/, '').replace(/_/g, ' ');
+           if (isIndigo) {
+               const psConditions = getRuntimeValue(psTargetName, 'activeConditions', campaignName) || [];
+               const psFiltered = psConditions.filter(c => String(c).toLowerCase() !== 'restrained');
+               if (psFiltered.length !== psConditions.length) {
+                   setRuntimeValue(psTargetName, 'activeConditions', psFiltered, campaignName);
+               }
+               const psTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+               const psCleanedEffects = psTargetEffects.filter(te => !(te.target === psTargetName && te.effect === 'prismatic_spray_indigo' && te.source === characterName));
+               setRuntimeValue('campaign', 'targetEffects', psCleanedEffects, campaignName);
+           }
+           if (isViolet) {
+               const psConditions = getRuntimeValue(psTargetName, 'activeConditions', campaignName) || [];
+               const psFiltered = psConditions.filter(c => String(c).toLowerCase() !== 'blinded');
+               if (psFiltered.length !== psConditions.length) {
+                   setRuntimeValue(psTargetName, 'activeConditions', psFiltered, campaignName);
+               }
+               const psTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+               const psCleanedEffects = psTargetEffects.filter(te => !(te.target === psTargetName && te.effect === 'prismatic_spray_violet' && te.source === characterName));
+               setRuntimeValue('campaign', 'targetEffects', psCleanedEffects, campaignName);
+           }
+           setRuntimeValue('campaign', psKey, null, campaignName);
+       }
+       addEntry(campaignName, {
+           type: 'ability_use',
+           characterName: characterName,
+           abilityName: 'Prismatic Spray',
+           description: 'Rest; Prismatic Spray Indigo/Violet effects end.',
+       }).catch(() => {});
+
+       // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
       // Conditions (Charmed, Speed 0) are already removed by the expiration scan above.
       const ottoTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
       const ottoFilteredEffects = ottoTargetEffects.filter(te =>

@@ -41,6 +41,7 @@ import { isForcecageBlocked } from '../../services/automation/handlers/spells/fo
 import { isMazeBlocked } from '../../services/automation/handlers/spells/mazeHandler.js';
 import { isBanishmentBlocked } from '../../services/automation/handlers/spells/banishmentHandler.js';
 import { isImprisonmentBlocked } from '../../services/automation/handlers/spells/imprisonmentHandler.js';
+import { isPrismaticSprayBlocked } from '../../services/automation/handlers/spells/prismaticSprayHandler.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -84,6 +85,12 @@ export function createLogAndShow(deps) {
                 const description = `${attackerName}'s attack on ${targetName} is blocked by Imprisonment. No attack, spell, or effect can pass between inside and outside the prison.`;
                 setPopupHtml({ type: 'automation_info', name: 'Imprisonment', description });
                 addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Imprisonment.` });
+                return;
+            }
+            if (attackerName && targetName && isPrismaticSprayBlocked(attackerName, targetName, campaignName)) {
+                const description = `${attackerName}'s attack on ${targetName} is blocked by Prismatic Spray. No attack, spell, or effect can pass between inside and outside the demiplane.`;
+                setPopupHtml({ type: 'automation_info', name: 'Prismatic Spray', description });
+                addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Prismatic Spray.` });
                 return;
             }
         }

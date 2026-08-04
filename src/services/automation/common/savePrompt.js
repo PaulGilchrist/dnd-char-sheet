@@ -21,6 +21,7 @@ export function buildSaveDc(auto, playerStats) {
         return 8 + spellMod + prof;
     }
     if (typeof auto.saveDc === 'number') return auto.saveDc;
+    console.error(`[buildSaveDc] Spell "${auto.type || 'unknown'}" has no saveDc defined. Expected 'spell_save_dc', 'ability', or a number.`);
     return 10;
  }
 
