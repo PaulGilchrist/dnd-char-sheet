@@ -1,18 +1,10 @@
 import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../services/ui/logService.js';
-
-function getFileNameFromName(name) {
-    return `${name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-}
+import { consumeMaterial } from '../spells/materialComponents.js';
 
 export async function triggerRevivify(spell, metaCtx, playerStats, campaignName, targetName) {
-    const backpack = playerStats.inventory?.backpack || [];
-    const diamondIndex = backpack.findIndex(item => {
-        const name = typeof item === 'string' ? item : (item.name || '');
-        return name.toLowerCase().includes('diamond');
-    });
-
-    if (diamondIndex === -1) {
+    const consumed = await consumeMaterial(playerStats, 'Diamond (300 gp)', campaignName);
+    if (!consumed) {
         return {
             type: 'popup',
             payload: {
@@ -23,29 +15,6 @@ export async function triggerRevivify(spell, metaCtx, playerStats, campaignName,
             },
         };
     }
-
-    const newBackpack = [...backpack];
-    newBackpack.splice(diamondIndex, 1);
-
-    // Persist inventory change directly to the character JSON file via PATCH endpoint
-    const casterFile = getFileNameFromName(playerStats.name);
-    const patchUrl = `/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(casterFile)}`;
-    console.log('[revivify] PATCH url:', patchUrl, 'file:', casterFile, 'campaign:', campaignName);
-    const patchRes = await fetch(patchUrl, {
-        method: 'PATCH',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inventory: { ...playerStats.inventory, backpack: newBackpack } }),
-    });
-    console.log('[revivify] PATCH status:', patchRes.status, 'url:', patchUrl);
-    if (!patchRes.ok) {
-        const errText = await patchRes.text();
-        console.error('[revivify] PATCH error body:', errText);
-    }
-
-
-    // Update caster's local runtime store
-    setRuntimeValue(playerStats.name, 'inventory', { ...playerStats.inventory, backpack: newBackpack }, campaignName);
 
     const combatSummary = await (await fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/combat-summary`)).json().catch(() => null);
     const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);

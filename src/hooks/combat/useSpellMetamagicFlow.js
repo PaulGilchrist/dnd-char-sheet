@@ -53,6 +53,7 @@ import { confirmGreaterRestoration } from '../../services/rules/features/greater
 import { confirmRegenerate } from '../../services/rules/features/regenerateService.js'
 import { prepareSpellCast, isFreeCastAuthorized } from '../../services/rules/spells/spellPreparationService.js'
 import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js'
+import { getConsumedMaterial, hasMaterial, consumeMaterial, getMaterialRequirementMessage } from '../../services/rules/spells/materialComponents.js'
 
 function getCreatureTargets(excludeName, campaignName, characters = []) {
   const cs = getCombatSummary(campaignName);
@@ -151,6 +152,19 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   }, [pendingEnhanceAbility, enhanceAbilityStage]);
 
   const gateMetamagic = React.useCallback(async (spell, metaCtx = {}) => {
+    const consumedMaterial = getConsumedMaterial(spell);
+    if (consumedMaterial && !hasMaterial(playerStats, consumedMaterial.itemName)) {
+      if (setPopupHtml) {
+        setPopupHtml({
+          type: 'automation_info',
+          name: spell.name,
+          automationType: 'material_required',
+          description: getMaterialRequirementMessage(spell),
+        });
+      }
+      return;
+    }
+
     const isGreaterRestoration = (spell.name || '').toLowerCase() === 'greater restoration';
     const isLesserRestoration = (spell.name || '').toLowerCase() === 'lesser restoration';
     const isRemoveCurse = (spell.name || '').toLowerCase() === 'remove curse';
@@ -1187,23 +1201,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     }
 
     const isRevivify = (spell.name || '').toLowerCase() === 'revivify';
-    if (isRevivify && playerStats.rules === '2024') {
-      const backpack = playerStats.inventory?.backpack || [];
-      const hasDiamond = backpack.some(item => {
-        const name = typeof item === 'string' ? item : (item.name || '');
-        return name.toLowerCase().includes('diamond');
-      });
-      if (!hasDiamond) {
-        if (setPopupHtml) {
-          setPopupHtml({
-            type: 'automation_info',
-            name: spell.name,
-            automationType: 'revivify',
-            description: 'Revivify requires a diamond worth 300+ GP, which the spell consumes.',
-          });
-        }
-        return;
-      }
+    if (isRevivify) {
       const cs = getCombatSummary(campaignName);
       if (!cs?.creatures) {
         console.error(`[revivify] Combat summary missing or has no creatures for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
@@ -1449,8 +1447,10 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
       if (isCantrip && cantripAutoLevel) {
         const preparedSpell = { ...spell, level: cantripAutoLevel, baseLevel: 0 };
+        if (consumedMaterial) await consumeMaterial(playerStats, consumedMaterial.itemName, campaignName);
         onExecute(preparedSpell, metaCtx);
       } else if (metaCtx.oldConcentrationSpell !== undefined) {
+        if (consumedMaterial) await consumeMaterial(playerStats, consumedMaterial.itemName, campaignName);
         onExecute(spell, metaCtx);
       } else {
         const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
@@ -1461,6 +1461,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
           isUpcast: false,
           freeCastAuthorized,
         });
+        if (consumedMaterial) await consumeMaterial(playerStats, consumedMaterial.itemName, campaignName);
         onExecute(result.modifiedSpell, result.metaCtx);
       }
       return;
@@ -1556,6 +1557,8 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       isUpcast: false,
       freeCastAuthorized,
     });
+    const sorcMaterial = getConsumedMaterial(pending.spell);
+    if (sorcMaterial) await consumeMaterial(playerStats, sorcMaterial.itemName, campaignName);
     onExecute(result2.modifiedSpell, result2.metaCtx);
   }, [pendingMetamagic, playerStats, campaignName, onExecute, cfClearPending]);
 
@@ -1935,6 +1938,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleBeaconOfHopeSkip = createSkipHandler('beaconOfHope', (pending) => pending.creatureTargets);
 
   const handleHeroesFeastConfirm = createConfirmHandler('heroesFeast', async (pending, result) => {
+    await consumeMaterial(playerStats, 'Gem-Encrusted Bowl (1,000 gp)', campaignName);
     await applyHeroesFeastEffect(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'heroes_feast', range: pending.range, maxTargets: pending.maxTargets } },
       playerStats,
@@ -2046,6 +2050,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleHeroismSkip = createSkipHandler('heroism', (pending) => pending.creatureTargets);
 
   const handleGreaterRestorationConfirm = createConfirmHandler('greaterRestoration', async (pending, result) => {
+    await consumeMaterial(playerStats, 'Diamond Dust (100 gp)', campaignName);
     await confirmGreaterRestoration(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'greater_restoration', range: pending.range } },
       playerStats,
@@ -2137,6 +2142,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const handleForesightSkip = createSkipHandler('foresight', (pending) => pending.creatureTargets);
 
   const handleProtectionFromEvilAndGoodConfirm = createConfirmHandler('protectionFromEvilAndGood', async (pending, result) => {
+    await consumeMaterial(playerStats, 'Flask of Holy Water (25 gp)', campaignName);
     await applyProtectionFromEvilAndGood(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_evil_and_good' } },
       playerStats,
@@ -2271,6 +2277,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     if (!pending) return;
 
     cfClearPending('stoneSkin');
+    await consumeMaterial(playerStats, 'Diamond Dust (100 gp)', campaignName);
 
     addEntry(campaignName, {
       type: 'spell',
@@ -2407,6 +2414,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     if (!pending) return;
 
     cfClearPending('forcecage');
+    await consumeMaterial(playerStats, 'Ruby Dust (1,500 gp)', campaignName);
 
     addEntry(campaignName, {
       type: 'spell',

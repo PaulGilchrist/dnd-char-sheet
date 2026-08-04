@@ -1,0 +1,99 @@
+import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../services/ui/logService.js';
+
+function getFileNameFromName(name) {
+    return `${name.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+}
+
+const MATERIAL_REGISTRY = {
+    'Arcane Lock': { itemName: 'Gold Dust (25 gp)', required: 'gold dust worth 25+ GP, which the spell consumes' },
+    'Astral Projection': { itemName: 'Jacinth (25,000 gp)', required: 'jacinth and silver bar, all of which the spell consumes' },
+    'Awaken': { itemName: 'Agate (1,000 gp)', required: 'an agate worth 1,000+ GP, which the spell consumes' },
+    'Clone': { itemName: 'Diamond (1,000 gp)', required: 'a diamond worth 1,000+ GP, which the spell consumes' },
+    'Continual Flame': { itemName: 'Ruby Dust (50 gp)', required: 'ruby dust worth 50+ GP, which the spell consumes' },
+    'Divination': { itemName: 'Incense (25 gp)', required: 'incense worth 25+ GP, which the spell consumes' },
+    'Find Familiar': { itemName: 'Incense (10 gp)', required: 'burning incense worth 10+ GP, which the spell consumes' },
+    'Forcecage': { itemName: 'Ruby Dust (1,500 gp)', required: 'ruby dust worth 1,500+ GP, which the spell consumes' },
+    'Gentle Repose': { itemName: 'Copper Piece (2 gp)', required: '2 Copper Pieces, which the spell consumes' },
+    'Glyph of Warding': { itemName: 'Powdered Diamond (200 gp)', required: 'powdered diamond worth 200+ GP, which the spell consumes' },
+    'Greater Restoration': { itemName: 'Diamond Dust (100 gp)', required: 'diamond dust worth 100+ GP, which the spell consumes' },
+    'Hallow': { itemName: 'Incense (1,000 gp)', required: 'incense worth 1,000+ GP, which the spell consumes' },
+    "Heroes' Feast": { itemName: 'Gem-Encrusted Bowl (1,000 gp)', required: 'a gem-encrusted bowl worth 1,000+ GP, which the spell consumes' },
+    'Illusory Script': { itemName: 'Rare Inks (10 gp)', required: 'ink worth 10+ GP, which the spell consumes' },
+    'Legend Lore': { itemName: 'Incense (250 gp)', required: 'incense worth 250+ GP, which the spell consumes' },
+    'Magic Circle': { itemName: 'Salt and Powdered Silver (100 gp)', required: 'salt and powdered silver worth 100+ GP, which the spell consumes' },
+    'Magic Mouth': { itemName: 'Jade Dust (10 gp)', required: 'jade dust worth 10+ GP, which the spell consumes' },
+    'Nondetection': { itemName: 'Diamond Dust (25 gp)', required: 'a pinch of diamond dust worth 25+ GP, which the spell consumes' },
+    'Planar Binding': { itemName: 'Jewel (1,000 gp)', required: 'a jewel worth 1,000+ GP, which the spell consumes' },
+    'Protection from Evil and Good': { itemName: 'Flask of Holy Water (25 gp)', required: 'a flask of Holy Water worth 25+ GP, which the spell consumes' },
+    'Raise Dead': { itemName: 'Diamond (500 gp)', required: 'a diamond worth 500+ GP, which the spell consumes' },
+    'Reincarnate': { itemName: 'Rare Oils (1,000 gp)', required: 'rare oils worth 1,000+ GP, which the spell consumes' },
+    'Resurrection': { itemName: 'Diamond (1,000 gp)', required: 'a diamond worth 1,000+ GP, which the spell consumes' },
+    'Revivify': { itemName: 'Diamond (300 gp)', required: 'a diamond worth 300+ GP, which the spell consumes' },
+    'Sequester': { itemName: 'Gem Dust (5,000 gp)', required: 'gem dust worth 5,000+ GP, which the spell consumes' },
+    'Simulacrum': { itemName: 'Powdered Ruby (1,500 gp)', required: 'powdered ruby worth 1,500+ GP, which the spell consumes' },
+    'Stone Skin': { itemName: 'Diamond Dust (100 gp)', required: 'diamond dust worth 100+ GP, which the spell consumes' },
+    'Symbol': { itemName: 'Powdered Diamond (1,000 gp)', required: 'powdered diamond worth 1,000+ GP, which the spell consumes' },
+    'Teleportation Circle': { itemName: 'Rare Inks (50 gp)', required: 'rare inks worth 50+ GP, which the spell consumes' },
+    'True Resurrection': { itemName: 'Diamond (25,000 gp)', required: 'diamonds worth 25,000+ GP, which the spell consumes' },
+    'True Seeing': { itemName: 'Mushroom Powder (25 gp)', required: 'mushroom powder worth 25+ GP, which the spell consumes' },
+};
+
+export function getConsumedMaterial(spell) {
+    if (!spell || !spell.name) return null;
+    return MATERIAL_REGISTRY[spell.name] || null;
+}
+
+export function hasMaterial(playerStats, itemName) {
+    const backpack = playerStats.inventory?.backpack || [];
+    return backpack.some(item => {
+        const name = typeof item === 'string' ? item : (item.name || '');
+        return name === itemName;
+    });
+}
+
+export async function consumeMaterial(playerStats, itemName, campaignName) {
+    const backpack = playerStats.inventory?.backpack || [];
+    const materialIndex = backpack.findIndex(item => {
+        const name = typeof item === 'string' ? item : (item.name || '');
+        return name === itemName;
+    });
+
+    if (materialIndex === -1) {
+        console.error(`[materialComponents] No ${itemName} found in backpack for ${playerStats.name}`);
+        return false;
+    }
+
+    const newBackpack = [...backpack];
+    newBackpack.splice(materialIndex, 1);
+
+    const casterFile = getFileNameFromName(playerStats.name);
+    const patchUrl = `/api/campaigns/${encodeURIComponent(campaignName)}/${encodeURIComponent(casterFile)}`;
+    const patchRes = await fetch(patchUrl, {
+        method: 'PATCH',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventory: { ...playerStats.inventory, backpack: newBackpack } }),
+    });
+    if (!patchRes.ok) {
+        const errText = await patchRes.text();
+        console.error(`[materialComponents] PATCH error body: ${errText}`);
+    }
+
+    setRuntimeValue(playerStats.name, 'inventory', { ...playerStats.inventory, backpack: newBackpack }, campaignName);
+
+    addEntry(campaignName, {
+        type: 'material_consumed',
+        characterName: playerStats.name,
+        material: itemName,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error('[materialComponents] Error logging material consumption:', e); });
+
+    return true;
+}
+
+export function getMaterialRequirementMessage(spell) {
+    const material = getConsumedMaterial(spell);
+    if (!material) return null;
+    return `${spell.name} requires ${material.required}, which the spell consumes.`;
+}

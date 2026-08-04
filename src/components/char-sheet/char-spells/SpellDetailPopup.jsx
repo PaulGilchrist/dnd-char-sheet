@@ -5,6 +5,8 @@ import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { getOverchannelNecroticDamage } from '../../../services/automation/handlers/class-wizard/overchannelHandler.js';
 import { isPsionicSpell, hasPsionicSorcery } from '../../../services/rules/spells/metamagicRules.js';
 import { isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js';
+import { getConsumedMaterial } from '../../../services/rules/spells/materialComponents.js';
+import { hasMaterial } from '../../../services/rules/spells/materialComponents.js';
 
 function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, upcastLevels = [], playerLevel = 1 }) {
   const isCantrip = spell.level === 0;
@@ -241,6 +243,17 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
             <i className="fa-solid fa-ghost"></i> No Verbal components (Improved Illusions)
           </div>
         )}
+        {(() => {
+          const consumedMaterial = getConsumedMaterial(spell);
+          if (!consumedMaterial) return null;
+          const hasIt = hasMaterial(playerStats, consumedMaterial.itemName);
+          return (
+            <div className="spell-detail-material">
+              <i className="fa-solid fa-flask"></i> <b>Material:</b> {consumedMaterial.itemName} — <strong>{consumedMaterial.required}</strong>
+              {!hasIt && <span className="spell-detail-material-missing"> (not found in backpack)</span>}
+            </div>
+          );
+        })()}
         <div className="spell-detail-actions">
           <button
             className="char-btn"

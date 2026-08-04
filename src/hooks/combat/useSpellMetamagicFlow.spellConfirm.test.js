@@ -64,6 +64,33 @@ vi.mock('../../services/rules/features/removeCurseService.js', () => ({
   confirmRemoveCurse: vi.fn(),
 }));
 
+vi.mock('../../services/rules/spells/materialComponents.js', () => ({
+  getConsumedMaterial: vi.fn(() => null),
+  hasMaterial: vi.fn(() => true),
+  consumeMaterial: vi.fn(() => Promise.resolve(true)),
+  getMaterialRequirementMessage: vi.fn(() => null),
+}));
+
+global.fetch = vi.fn((url) => {
+  if (url && url.includes('combat-summary')) {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ creatures: [] }),
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+  });
+});
+
+Object.defineProperty(window, 'dispatchEvent', {
+  value: vi.fn(),
+  writable: true,
+});
+
 function makePlayerStats(overrides = {}) {
   return {
     name: 'TestSorcerer',

@@ -13,16 +13,20 @@ export function useEquipmentSearch(tempInventory, onTempInventoryChange, onInven
 
   // Filter equipment based on search query and category
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && selectedCategory === 'All') {
       setFilteredEquipment([]);
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    let results = equipmentData.filter(item =>
-      item.name.toLowerCase().includes(query) ||
-      item.index.toLowerCase().includes(query)
-    );
+    let results = equipmentData;
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      results = results.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.index.toLowerCase().includes(query)
+      );
+    }
 
     if (selectedCategory !== 'All') {
       results = results.filter(item => item.equipment_category === selectedCategory);

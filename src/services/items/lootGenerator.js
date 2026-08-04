@@ -183,7 +183,7 @@ function generateEquipmentEntry(equipmentData, tier) {
 
   const eligible = equipmentData.filter(e => {
     if (!e.cost) return false;
-    if (['Property', 'Mounts and Vehicles'].includes(e.equipment_category)) return false;
+    if (['Property', 'Mounts and Vehicles', 'Material'].includes(e.equipment_category)) return false;
     const costGP = convertCostToGP(e.cost);
     if (!costGP && costGP !== 0) return false;
     return costGP >= minV * 0.2 && costGP <= maxV * 1.5;

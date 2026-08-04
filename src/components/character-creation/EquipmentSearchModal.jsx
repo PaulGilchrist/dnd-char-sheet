@@ -41,15 +41,17 @@ const EquipmentSearchModal = ({
 
         <div className="search-modal-body">
           <div className="category-filters">
-            {uniqueCategories.map(category => (
-              <button
-                key={category}
-                className={`category-filter-btn ${selectedCategory === category ? 'active' : ''}`}
-                onClick={() => onCategoryChange(category)}
-              >
-                {category}
-              </button>
-            ))}
+            <select
+              className="category-select"
+              value={selectedCategory}
+              onChange={(e) => onCategoryChange(e.target.value)}
+            >
+              {uniqueCategories.map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="search-input-container">

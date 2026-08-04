@@ -19,6 +19,7 @@ const WizardStepInventory = React.memo(function WizardStepInventory({ formData, 
     handleAddCustomItem,
     handleCategoryChange,
     handleSearchFieldFocus,
+    uniqueCategories,
   } = useEquipmentSearch(tempInventory, onTempInventoryChange, onInventoryChange);
 
   // Raw text state for each textarea field - allows free typing including commas
@@ -174,6 +175,7 @@ const WizardStepInventory = React.memo(function WizardStepInventory({ formData, 
         onAddCustomItem={handleAddCustomItem}
         currentItemCount={searchField === 'backpack' ? (tempInventory.backpack || []).length : (tempInventory.equipped || []).length}
         searchField={searchField}
+        uniqueCategories={uniqueCategories}
       />
     </div>
   );

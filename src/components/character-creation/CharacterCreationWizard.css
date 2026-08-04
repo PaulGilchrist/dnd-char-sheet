@@ -1017,18 +1017,43 @@
     border-color: var(--background-color-category-filter-active);
 }
 
+.character-creation-wizard .category-select {
+    padding: 0.5rem 1rem;
+    background-color: var(--background-color-category-filter);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    cursor: pointer;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.character-creation-wizard .category-select:hover {
+    background-color: var(--background-color-category-filter-hover);
+}
+
+.character-creation-wizard .category-select:focus {
+    outline: none;
+    border-color: var(--background-color-category-filter-active);
+}
+
 .character-creation-wizard .search-input-container {
     margin-bottom: 1rem;
+    max-width: 100%;
 }
 
 .character-creation-wizard .search-input {
     width: 100%;
+    max-width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid var(--border-color-input);
     border-radius: 4px;
     font-size: 1rem;
     background-color: var(--background-color-input);
     color: var(--color-text);
+    box-sizing: border-box;
 }
 
 .character-creation-wizard .search-input:focus {

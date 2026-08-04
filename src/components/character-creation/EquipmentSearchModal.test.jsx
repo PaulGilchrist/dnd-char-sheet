@@ -144,8 +144,8 @@ describe('EquipmentSearchModal', () => {
     it('should highlight the selected category button', () => {
       const props = createMockProps({ selectedCategory: 'Armor' });
       render(<EquipmentSearchModal {...props} />);
-      expect(screen.getByText('Armor')).toHaveClass('active');
-      expect(screen.getByText('All')).not.toHaveClass('active');
+      const select = screen.getByRole('combobox');
+      expect(select.value).toBe('Armor');
     });
   });
 
@@ -158,10 +158,11 @@ describe('EquipmentSearchModal', () => {
       expect(props.onSearchChange).toHaveBeenCalledWith('dagger');
     });
 
-    it('should call onCategoryChange when a category button is clicked', () => {
+    it('should call onCategoryChange when a category is selected', () => {
       const props = createMockProps();
       render(<EquipmentSearchModal {...props} />);
-      fireEvent.click(screen.getByText('Weapons'));
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: 'Weapons' } });
       expect(props.onCategoryChange).toHaveBeenCalledWith('Weapons');
     });
 
