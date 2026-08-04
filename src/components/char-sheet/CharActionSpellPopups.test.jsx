@@ -261,7 +261,7 @@ describe('CharActionSpellPopups', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({ actionHandleAidConfirm })}
-          actionPendingAid={{ spellName: 'Aid', spellLevel: 2 }}
+          actionPendingAid={{ spellName: 'Aid', spellLevel: 2, creatureTargets: ['Ally'] }}
         />
       );
       screen.getByTestId('aid-confirm').click();
@@ -273,7 +273,7 @@ describe('CharActionSpellPopups', () => {
       render(
         <CharActionSpellPopups
           {...createBaseProps({ actionHandleAidSkip })}
-          actionPendingAid={{ spellName: 'Aid', spellLevel: 2 }}
+          actionPendingAid={{ spellName: 'Aid', spellLevel: 2, creatureTargets: ['Ally'] }}
         />
       );
       screen.getByTestId('aid-skip').click();
