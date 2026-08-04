@@ -811,16 +811,23 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
            description: 'Rest; Prismatic Spray Indigo/Violet effects end.',
        }).catch(() => {});
 
-       // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
-      // Conditions (Charmed, Speed 0) are already removed by the expiration scan above.
-      const ottoTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-      const ottoFilteredEffects = ottoTargetEffects.filter(te =>
-          !(te.effect === 'ottos_irresistible_dance' && (te.source === characterName || te.target === characterName))
-      );
-      if (ottoFilteredEffects.length !== ottoTargetEffects.length) {
-          setRuntimeValue('campaign', 'targetEffects', ottoFilteredEffects, campaignName);
-      }
-}
+        // Clean up Otto's Irresistible Dance spell badges on rest / initiative roll.
+       // Conditions (Charmed, Speed 0) are already removed by the expiration scan above.
+       const ottoTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+       const ottoFilteredEffects = ottoTargetEffects.filter(te =>
+           !(te.effect === 'ottos_irresistible_dance' && (te.source === characterName || te.target === characterName))
+       );
+       if (ottoFilteredEffects.length !== ottoTargetEffects.length) {
+           setRuntimeValue('campaign', 'targetEffects', ottoFilteredEffects, campaignName);
+       }
+
+       // Clean up Sanctuary on any creature on short/long rest or initiative roll
+       const sanctuaryTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+       const sanctuaryFilteredEffects = sanctuaryTargetEffects.filter(te => te.effect !== 'sanctuary');
+       if (sanctuaryFilteredEffects.length !== sanctuaryTargetEffects.length) {
+           setRuntimeValue('campaign', 'targetEffects', sanctuaryFilteredEffects, campaignName);
+       }
+   }
 
     export async function expireStaleEffects(campaignName, overrideActiveName) {
         const currentRound = getCurrentCombatRound(campaignName);

@@ -37,11 +37,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
-    // Set concentration tracking for duration (1 minute = 10 rounds default)
-    // Expires on initiative roll (when caster becomes active), short rest, long rest
+    // Expires on initiative roll (when warded target becomes active), short rest, long rest
     addExpiration(playerName, targetName, [
         { type: 'remove_target_effect', effectKey: EFFECT_KEY, source: playerName },
-    ], campaignName, undefined, playerName);
+    ], campaignName, undefined, targetName);
 
     addEntry(campaignName, {
         type: 'ability_use',
