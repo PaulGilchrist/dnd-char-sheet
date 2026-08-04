@@ -3,6 +3,7 @@ import { getDistanceFeet } from '../../../../services/rules/combat/rangeValidati
 import { isDistanceInRange } from '../../../../services/rules/combat/rangeCheck.js';
 import { isApplyBusy, setApplyBusy } from './areaEffectModalInstances.js';
 import { createOverlay, hitTestOverlay } from '../../../../models/SpellOverlay.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 function AreaEffectTargetModalBase({
   combatSummary,
@@ -37,6 +38,24 @@ function AreaEffectTargetModalBase({
   const [results, setResults] = useState([]);
   const [pendingPrompts, setPendingPrompts] = useState([]);
 
+  const getForcecageBlocked = useCallback((targetName) => {
+    if (!attackerName || !targetName) return false;
+    const forcecageEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    if (!Array.isArray(forcecageEffects) || forcecageEffects.length === 0) return false;
+
+    const attackerTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === attackerName);
+    const targetTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+      const attackerSources = forcecageEffects
+        .filter(te => te.effect === 'forcecage' && te.target === attackerName)
+        .map(te => te.source);
+      return !forcecageEffects.some(te => te.effect === 'forcecage' && te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+  }, [attackerName]);
+
   const eligibleTargets = useMemo(() => {
     if (!combatSummary?.creatures) return [];
     return combatSummary.creatures.filter(c => {
@@ -45,6 +64,7 @@ function AreaEffectTargetModalBase({
         const monster = Array.isArray(monsters) ? monsters.find(m => m.name === c.name) : undefined;
         if (!monster || monster.type.toLowerCase() !== 'undead') return false;
       }
+      if (getForcecageBlocked(c.name)) return false;
       if (!mapData || !attackerPos) return true;
       const targetPos = mapData.players?.find(p => p.name === c.name) || mapData.placedItems?.find(i => i.name === c.name);
       if (!targetPos) return true;
@@ -62,7 +82,7 @@ function AreaEffectTargetModalBase({
       
       return isDistanceInRange(getDistanceFeet(attackerPos, { gridX: targetPos.gridX, gridY: targetPos.gridY }), rangeFeet);
     });
-  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY, includeCaster]);
+  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY, includeCaster, getForcecageBlocked]);
 
   const toggleTarget = useCallback((name) => {
     setSelected(prev => {

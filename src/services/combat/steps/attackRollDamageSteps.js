@@ -18,6 +18,7 @@ import { isWithinRange } from '../../rules/combat/rangeCheck.js';
 import { createSaveListener } from '../../automation/common/savePrompt.js';
 import { resolveDiceExpression } from '../automation/automationExpressions.js';
 import { addCondition } from '../../combat/conditions/conditionSaveService.js';
+import { isForcecageBlocked } from '../../automation/handlers/spells/forcecageHandler.js';
 
 // DEBUG: temporarily trigger Overwhelming Strike on 10 instead of 20
 const OVERWHELMING_STRIKE_TEST_ROLL = 20;
@@ -41,6 +42,26 @@ export function buildAttackRollDamageSteps() {
       emit: 'maneuvers:check',
       condition: () => true,
       handler: async (ctx) => {
+        // Forcecage — no attack can pass between inside and outside the prison.
+        // When the attacker and target are on opposite sides, abort the pipeline.
+        // (This is a fallback — the check is also done in resolveAttackDamage before the pipeline runs.)
+        if (ctx.targetName && isForcecageBlocked(ctx.playerStats.name, ctx.targetName, ctx.campaignName)) {
+          const description = `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Forcecage — they are on opposite sides of the prison.`;
+          addEntry(ctx.campaignName, {
+            type: 'automation',
+            creatureName: ctx.playerStats.name,
+            name: 'Forcecage',
+            description,
+            timestamp: Date.now(),
+          }).catch(() => {});
+          ctx.setPopupHtml?.({
+            type: 'automation_info',
+            name: 'Forcecage',
+            description: `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Forcecage. No attack, spell, or effect can pass between inside and outside the prison.`,
+          });
+          return null;
+        }
+
         // Clear stale Stalker's Flurry state from previous turns
         const sfOptKey = `_${"Stalker's Flurry".replace(/\s+/g, '_')}_option`;
         setRuntimeValue(ctx.playerStats.name, sfOptKey, null, ctx.campaignName);

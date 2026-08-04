@@ -39,6 +39,7 @@ import {
     addCondition,
     buildConditionPopup,
 } from '../../services/combat/conditions/conditionSaveService.js'
+import { removeForcecageEffect } from '../../services/automation/handlers/spells/forcecageHandler.js'
 import {
     rollConcentrationSave,
     breakConcentration,
@@ -1177,6 +1178,37 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         condition: 'Charmed, Speed 0',
                         reason: 'Confusion (successful reroll)',
                         note: `${creatureName} succeeded on the WIS reroll; Confusion ends.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {})
+                }
+            }
+
+            // Forcecage: a successful CHA reroll on the Forcecaged badge lets the
+            // creature escape using teleportation or interplanar travel — remove
+            // the Forcecage target effect and log the escape.
+            if (String(condition.key).toLowerCase() === 'forcecaged') {
+                const forcecageEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'forcecage' && te.target === creatureName
+                )
+                if (forcecageEffect) {
+                    removeForcecageEffect(creatureName, forcecageEffect.source, campaignName)
+                    logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: forcecageEffect.source,
+                        rollType: 'save-forcecage',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'CHA',
+                        success: true,
+                        description: `${creatureName} succeeded on CHA save against Forcecage and escaped the prison using teleportation or interplanar travel.`,
+                    }).catch(() => {})
+                    logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Forcecaged',
+                        reason: 'Forcecage escape (successful CHA save)',
+                        note: `${creatureName} succeeded on the CHA reroll; the Forcecage no longer traps them.`,
                         timestamp: Date.now(),
                     }).catch(() => {})
                 }

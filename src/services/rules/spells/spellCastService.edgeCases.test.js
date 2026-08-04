@@ -135,6 +135,14 @@ vi.mock('../features/globeOfInvulnerabilityService.js', () => ({
   triggerGlobeOfInvulnerability: vi.fn(async () => {}),
 }))
 
+vi.mock('../features/forcecageService.js', () => ({
+  triggerForcecage: vi.fn(async () => {}),
+}))
+
+vi.mock('../../automation/handlers/spells/forcecageHandler.js', () => ({
+  isForcecageBlocked: vi.fn(() => false),
+}))
+
 vi.mock('../features/heroismService.js', () => ({
   handle: vi.fn(),
   applyHeroism: vi.fn(),
@@ -330,6 +338,12 @@ async function resetMockImplementations() {
   })
   await m('../features/globeOfInvulnerabilityService.js', {
     triggerGlobeOfInvulnerability: async () => {},
+  })
+  await m('../features/forcecageService.js', {
+    triggerForcecage: async () => {},
+  })
+  await m('../../automation/handlers/spells/forcecageHandler.js', {
+    isForcecageBlocked: () => false,
   })
   await m('../features/heroismService.js', {
     handle: async () => {},

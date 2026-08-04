@@ -996,7 +996,10 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     }
                     return <AttackResultPopup
                         popupHtml={popupHtml}
-                        onClose={() => setPopupHtml(null)}
+                        onClose={() => {
+                            if (popupHtml?.type === 'automation_info') return;
+                            setPopupHtml(null);
+                        }}
                         campaignName={campaignName}
                         attackerName={playerStats?.name}
                         setPopupHtml={setPopupHtml}

@@ -67,6 +67,8 @@ vi.mock('../features/foresightService.js', () => ({ triggerForesight: vi.fn(asyn
 vi.mock('../features/rayOfEnfeeblementService.js', () => ({ triggerRayOfEnfeeblement: vi.fn(async () => {}) }))
 vi.mock('../features/compelledDuelService.js', () => ({ triggerCompelledDuel: vi.fn(async () => {}) }))
 vi.mock('../features/globeOfInvulnerabilityService.js', () => ({ triggerGlobeOfInvulnerability: vi.fn(async () => {}) }))
+vi.mock('../features/forcecageService.js', () => ({ triggerForcecage: vi.fn(async () => {}) }))
+vi.mock('../../automation/handlers/spells/forcecageHandler.js', () => ({ isForcecageBlocked: vi.fn(() => false) }))
 vi.mock('../features/heroismService.js', () => ({ handle: vi.fn(), applyHeroism: vi.fn(), isHeroismActive: vi.fn() }))
 vi.mock('../features/holyAuraService.js', () => ({ triggerHolyAura: vi.fn(async () => {}) }))
 vi.mock('../features/powerWordStunService.js', () => ({ triggerPowerWordStun: vi.fn(async () => {}) }))
@@ -314,6 +316,94 @@ describe('executeSpellCast - no-damage spell routing', () => {
       await executeSpellCast(spell, makeMetaCtx(), services)
 
       expect(executeHandler).toHaveBeenCalled()
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // Forcecage — special-case routing and barrier blocking
+  // ------------------------------------------------------------------
+  describe('Forcecage routing', () => {
+    it('routes Forcecage through triggerForcecage and returns its popup', async () => {
+      const { triggerForcecage } = await import('../features/forcecageService.js')
+      triggerForcecage.mockResolvedValue({
+        type: 'popup',
+        payload: { type: 'automation_info', name: 'Forcecage', description: 'Goblin trapped.' },
+      })
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Forcecage', level: 7, concentration: true })
+      delete spell.damage
+      delete spell.dc
+
+      const result = await executeSpellCast(spell, makeMetaCtx({ slotLevel: 7 }), services)
+
+      expect(triggerForcecage).toHaveBeenCalled()
+      expect(result.automationPopup).toEqual(expect.objectContaining({ type: 'popup' }))
+    })
+
+    it('returns null automationPopup when triggerForcecage yields nothing', async () => {
+      const { triggerForcecage } = await import('../features/forcecageService.js')
+      triggerForcecage.mockResolvedValue(null)
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Forcecage', level: 7, concentration: true })
+      delete spell.damage
+      delete spell.dc
+
+      const result = await executeSpellCast(spell, makeMetaCtx({ slotLevel: 7 }), services)
+
+      expect(triggerForcecage).toHaveBeenCalled()
+      expect(result).toBeUndefined()
+    })
+  })
+
+  describe('checkForcecageBlocked', () => {
+    it('blocks a spell when caster and target are on opposite sides of the prison', async () => {
+      const { isForcecageBlocked } = await import('../../automation/handlers/spells/forcecageHandler.js')
+      vi.mocked(isForcecageBlocked).mockReturnValue(true)
+      const { checkForcecageBlocked } = await import('./spellCastService.js')
+      const services = makeServices()
+
+      const result = await checkForcecageBlocked(
+        makeSpell({ name: 'Fire Bolt' }),
+        'Goblin',
+        services.playerStats,
+        'testCampaign',
+      )
+
+      expect(isForcecageBlocked).toHaveBeenCalledWith('TestWizard', 'Goblin', 'testCampaign')
+      expect(result.automationPopup).toEqual(expect.objectContaining({ type: 'popup' }))
+      expect(result.automationPopup.payload.description).toContain('blocked')
+    })
+
+    it('does not block a spell when both creatures are on the same side', async () => {
+      const { isForcecageBlocked } = await import('../../automation/handlers/spells/forcecageHandler.js')
+      vi.mocked(isForcecageBlocked).mockReturnValue(false)
+      const { checkForcecageBlocked } = await import('./spellCastService.js')
+      const services = makeServices()
+
+      const result = await checkForcecageBlocked(
+        makeSpell({ name: 'Fire Bolt' }),
+        'Goblin',
+        services.playerStats,
+        'testCampaign',
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it('does not block a spell with no target', async () => {
+      const { isForcecageBlocked } = await import('../../automation/handlers/spells/forcecageHandler.js')
+      const { checkForcecageBlocked } = await import('./spellCastService.js')
+      const services = makeServices()
+
+      const result = await checkForcecageBlocked(
+        makeSpell({ name: 'Fire Bolt' }),
+        null,
+        services.playerStats,
+        'testCampaign',
+      )
+
+      expect(result).toBeNull()
+      expect(isForcecageBlocked).not.toHaveBeenCalled()
     })
   })
 })

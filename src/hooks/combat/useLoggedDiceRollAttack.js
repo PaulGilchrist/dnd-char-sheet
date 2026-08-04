@@ -37,6 +37,7 @@ import { createSaveListener } from '../../services/automation/common/savePrompt.
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { checkCompelledDuelAttackExpiry } from '../../services/automation/handlers/spells/compelledDuelHandler.js';
 import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
+import { isForcecageBlocked } from '../../services/automation/handlers/spells/forcecageHandler.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -55,6 +56,17 @@ export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
 
     return async function logAndShow(name, bonus, rollType, context) {
+        if (rollType === 'attack') {
+            const attackerName = context?.attackerName || characterName;
+            const targetName = context?.targetName;
+            if (attackerName && targetName && isForcecageBlocked(attackerName, targetName, campaignName)) {
+                const description = `${attackerName}'s attack on ${targetName} is blocked by Forcecage. No attack, spell, or effect can pass between inside and outside the prison.`;
+                setPopupHtml({ type: 'automation_info', name: 'Forcecage', description });
+                addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Forcecage.` });
+                return;
+            }
+        }
+
         const r1 = rollD20();
         const r2 = rollD20();
 

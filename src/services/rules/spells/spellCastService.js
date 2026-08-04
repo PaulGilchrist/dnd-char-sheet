@@ -43,6 +43,8 @@ import { checkCompelledDuelAttackExpiry } from '../../automation/index.js';
 import { triggerViciousMockeryForGeneric } from '../features/viciousMockeryService.js';
 import { endInvisibilityOnHostileAction } from '../features/invisibilityService.js';
 import { triggerGlobeOfInvulnerability } from '../features/globeOfInvulnerabilityService.js';
+import { triggerForcecage } from '../features/forcecageService.js';
+import { isForcecageBlocked } from '../../automation/handlers/spells/forcecageHandler.js';
 import { triggerHolyAura } from '../features/holyAuraService.js';
 import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
 import { triggerSlow } from '../features/slowService.js';
@@ -154,6 +156,35 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
     return null;
 }
 
+ export async function checkForcecageBlocked(spell, targetName, playerStats, campaignName) {
+    const casterName = playerStats.name;
+    if (!targetName) return null;
+
+    // A spell cannot pass between inside and outside a Forcecage prison. The
+    // caster and target must be on the same side of every relevant cage.
+    if (isForcecageBlocked(casterName, targetName, campaignName)) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: casterName,
+            name: 'Forcecage',
+            description: `${spell.name} from ${casterName} blocked by Forcecage — ${casterName} and ${targetName} are on opposite sides of the prison.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Forcecage',
+                    description: `${spell.name} is blocked by Forcecage. ${casterName} and ${targetName} are on opposite sides of the prison, and no attack, spell, or effect can pass through it.`,
+                },
+            },
+        };
+    }
+    return null;
+}
+
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
     if (getActiveBuffs(playerStats.name, campaignName).some(b => b.blocksSpellcasting)) {
         return;
@@ -163,6 +194,11 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     const globeBlock = await checkGlobeOfInvulnerability(spell, globeTargetName, playerStats, campaignName);
     if (globeBlock) {
         return globeBlock;
+    }
+
+    const forcecageBlock = await checkForcecageBlocked(spell, globeTargetName, playerStats, campaignName);
+    if (forcecageBlock) {
+        return forcecageBlock;
     }
 
     // Antimagic Field — block spell casting when caster or target is affected
@@ -730,6 +766,16 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         // Globe of Invulnerability — toggle passive barrier that blocks spells of level 5 or lower
         if (spell.name && spell.name.toLowerCase() === 'globe of invulnerability') {
             const result = await triggerGlobeOfInvulnerability(spell, metaCtx, playerStats, campaignName, mapName);
+            if (result) {
+                return { automationPopup: result };
+            }
+            return;
+        }
+
+        // Forcecage — trap selected creatures in a prison of force; attacks,
+        // spells, and effects can't pass between inside and outside
+        if (spell.name && spell.name.toLowerCase() === 'forcecage') {
+            const result = await triggerForcecage(spell, metaCtx, playerStats, campaignName, mapName);
             if (result) {
                 return { automationPopup: result };
             }

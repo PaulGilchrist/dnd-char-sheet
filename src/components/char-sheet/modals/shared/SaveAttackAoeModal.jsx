@@ -333,11 +333,28 @@ function SaveAttackAoeModal({
     const eligibleTargets = React.useMemo(() => {
         if (!combatSummary?.creatures) return [];
         return combatSummary.creatures
+            .filter(c => {
+                if (!playerStats.name || !c.name) return true;
+                const forcecageEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                if (!Array.isArray(forcecageEffects) || forcecageEffects.length === 0) return true;
+
+                const attackerTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === playerStats.name);
+                const targetTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name);
+
+                if (!attackerTrapped && !targetTrapped) return true;
+                if (attackerTrapped && targetTrapped) {
+                    const attackerSources = forcecageEffects
+                        .filter(te => te.effect === 'forcecage' && te.target === playerStats.name)
+                        .map(te => te.source);
+                    return forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name && attackerSources.includes(te.source));
+                }
+                return false;
+            })
             .map(c => ({
                 ...c,
                 carefulSpellProtected: isCarefulSpell && isCarefulAlly(c.name),
             }));
-    }, [combatSummary, isCarefulSpell, isCarefulAlly]);
+    }, [combatSummary, isCarefulSpell, isCarefulAlly, playerStats.name]);
 
     const getCreatureTargets = () => {
         return eligibleTargets.map(c => ({

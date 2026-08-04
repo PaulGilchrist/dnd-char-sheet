@@ -197,6 +197,52 @@ describe('ConditionEffectBadges', () => {
             expect(badge.tagName).toBe('SPAN');
         });
 
+        it('should render the Forcecaged badge when the forcecage targetEffect is present', () => {
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: 'Alice', effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                />
+            );
+            expect(screen.getByText('Forcecaged')).toBeInTheDocument();
+            expect(screen.getByTitle(/CHA save \(DC 17\)/)).toBeInTheDocument();
+        });
+
+        it('should not render the Forcecaged badge for another target', () => {
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: 'Bob', effect: 'forcecage', source: 'Goblin', dc: 17 }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                />
+            );
+            expect(screen.queryByText('Forcecaged')).not.toBeInTheDocument();
+        });
+
+        it('should roll the CHA escape save when the Forcecaged badge is clicked', () => {
+            const onRollConditionSave = vi.fn();
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: 'Alice', effect: 'forcecage', source: 'Goblin', dc: 17, duration: 'concentration' }]}
+                    creatureName="Alice"
+                    campaignName="test"
+                    isLocalhost={true}
+                    onRollConditionSave={onRollConditionSave}
+                />
+            );
+            fireEvent.click(screen.getByText('Forcecaged'));
+            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'forcecaged', label: 'Forcecaged', dc: 17, ability: 'cha' });
+        });
+
         it('should remove the dance targetEffect when the badge remove button is clicked', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Goblin', dc: 15, duration: 'concentration', conditions: ['charmed', 'speed_zero'] },

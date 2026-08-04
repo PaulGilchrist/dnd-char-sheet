@@ -265,6 +265,13 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue('campaign', 'targetEffects', filteredGlobeEffects, campaignName, true);
             }
 
+            // Clear Forcecage on initiative roll (new combat)
+            const forcecageEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredForcecageEffects = forcecageEffects.filter(te => te.effect !== 'forcecage');
+            if (filteredForcecageEffects.length !== forcecageEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredForcecageEffects, campaignName, true);
+            }
+
             // Clear Antimagic Field on initiative roll (new combat)
             const amfEffects = getRuntimeValue('campaign', 'targetEffects') || [];
             const filteredAmfEffects = amfEffects.filter(te => te.effect !== 'antimagic_field');

@@ -5,10 +5,10 @@ import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx'
 import MagicMissileTargetPopup from './popups/MagicMissileTargetPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
 import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
+import utils from '../../services/ui/utils.js'
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
-import utils from '../../services/ui/utils.js'
 
 export default function CharActionSpellPopups({
     playerStats,
@@ -67,6 +67,33 @@ export default function CharActionSpellPopups({
     handleActionMetamagicConfirm,
     handleActionMetamagicSkip,
 }) {
+    const playerStatsName = playerStats?.name;
+
+    const isForcecageBlocked = (attackerName, targetName) => {
+        if (!attackerName || !targetName) return false;
+        const forcecageEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        if (!Array.isArray(forcecageEffects) || forcecageEffects.length === 0) return false;
+
+        const attackerTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === attackerName);
+        const targetTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === targetName);
+
+        if (!attackerTrapped && !targetTrapped) return false;
+        if (attackerTrapped && targetTrapped) {
+            const attackerSources = forcecageEffects
+                .filter(te => te.effect === 'forcecage' && te.target === attackerName)
+                .map(te => te.source);
+            return !forcecageEffects.some(te => te.effect === 'forcecage' && te.target === targetName && attackerSources.includes(te.source));
+        }
+        return true;
+    };
+
+    const filterForcecageBlockedTargets = (targets) => {
+        return targets.filter(target => {
+            const name = typeof target === 'string' ? target : target.name;
+            return !isForcecageBlocked(playerStatsName, name);
+        });
+    };
+
     const [greaterRestorationSelectedTarget, setGreaterRestorationSelectedTarget] = useState(null);
 
     const loadGreaterRestorationEffects = useCallback(async (targetName) => {
@@ -164,7 +191,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Aid"
                     icon="fa-hand-holding-heart"
-                    targets={actionPendingAid.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingAid.creatureTargets)}
                     maxTargets={actionPendingAid.maxTargets}
                     description="Your spell bolsters your allies with toughness and resolve. Choose up to 3 creatures within range."
                     confirmLabel="Cast Aid"
@@ -176,7 +203,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Bane"
                     icon="fa-shield-halved"
-                    targets={actionPendingBane.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingBane.creatureTargets)}
                     maxTargets={actionPendingBane.maxTargets}
                     description="Curse up to three creatures of your choice that you can see within range. Affected creatures subtract 1d4 from attack rolls and saving throws."
                     confirmLabel="Cast Bane"
@@ -188,7 +215,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Bless"
                     icon="fa-hands"
-                    targets={actionPendingBless.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingBless.creatureTargets)}
                     maxTargets={actionPendingBless.maxTargets}
                     description="You bless up to three creatures of your choice within range. Affected creatures add 1d4 to attack rolls and saving throws."
                     confirmLabel="Cast Bless"
@@ -200,7 +227,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Faerie Fire"
                     icon="fa-fire"
-                    targets={actionPendingFaerieFire.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingFaerieFire.creatureTargets)}
                     description="Each creature in a 20-foot Cube within range must succeed on a Dexterity saving throw or be outlined in light for the duration. Affected creatures shed Dim Light in a 10-foot radius, can't benefit from the Invisible condition, and attack rolls against them have Advantage if the attacker can see them. Concentration, up to 1 minute."
                     confirmLabel="Cast Faerie Fire"
                     confirmIcon="fa-fire"
@@ -212,7 +239,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Beacon of Hope"
                     icon="fa-heart-pulse"
-                    targets={actionPendingBeaconOfHope.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingBeaconOfHope.creatureTargets)}
                     description="This spell bestows hope and vitality. Choose any number of creatures within range. For the duration, each target has advantage on wisdom saving throws and death saving throws, and regains the maximum number of hit points possible from any healing."
                     confirmLabel="Cast Beacon of Hope"
                     onConfirm={actionHandleBeaconOfHopeConfirm}
@@ -223,7 +250,7 @@ export default function CharActionSpellPopups({
                 <CreatureSelectionModal
                     title="Pass Without Trace"
                     icon="fa-ghost"
-                    targets={actionPendingPassWithoutTrace.creatureTargets}
+                    targets={filterForcecageBlockedTargets(actionPendingPassWithoutTrace.creatureTargets)}
                     description="A veil of shadows and silence radiates from you, masking you and your companions from detection. Choose creatures within 30 feet of you. Each chosen creature has a +10 bonus to Dexterity (Stealth) checks and can't be tracked except by magical means."
                     confirmLabel="Cast Pass Without Trace"
                     onConfirm={actionHandlePassWithoutTraceConfirm}
@@ -233,7 +260,7 @@ export default function CharActionSpellPopups({
             {actionPendingHaste && (
                 <SecondaryTargetModal
                     title="Haste"
-                    targets={actionPendingHaste.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingHaste.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleHasteConfirm([targetName])}
                     onSkip={actionHandleHasteSkip}
                     description="Choose a willing creature within range. Target's speed doubles, gains +2 AC, and gets advantage on DEX saves."
@@ -244,7 +271,7 @@ export default function CharActionSpellPopups({
             {actionPendingBarkskin && (
                 <SecondaryTargetModal
                     title="Barkskin"
-                    targets={actionPendingBarkskin.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingBarkskin.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleBarkskinConfirm([targetName])}
                     onSkip={actionHandleBarkskinSkip}
                     description="Choose a willing creature within range. Target's AC becomes 17."
@@ -255,7 +282,7 @@ export default function CharActionSpellPopups({
             {actionPendingHeal && (
                 <SecondaryTargetModal
                     title="Heal"
-                    targets={actionPendingHeal.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingHeal.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleHealConfirm({ targetName })}
                     onSkip={actionHandleHealSkip}
                     description="A surge of positive energy washes through the creature, causing it to regain 70 hit points. This spell also ends blindness, deafness, and any diseases affecting the target."
@@ -266,7 +293,7 @@ export default function CharActionSpellPopups({
             {actionPendingCureWounds && (
                 <SecondaryTargetModal
                     title="Cure Wounds"
-                    targets={actionPendingCureWounds.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingCureWounds.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleCureWoundsConfirm({ targetName })}
                     onSkip={actionHandleCureWoundsSkip}
                     description="Choose a creature within touch range. The target regains hit points equal to the roll of your dice plus your spellcasting ability modifier."
@@ -279,7 +306,7 @@ export default function CharActionSpellPopups({
                     return (
                         <SecondaryTargetModal
                             title="Greater Restoration"
-                            targets={actionPendingGreaterRestoration.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                            targets={filterForcecageBlockedTargets(actionPendingGreaterRestoration.creatureTargets).map(name => ({ name, type: 'creature' }))}
                             onTargetSelected={handleGreaterRestorationTargetSelected}
                             onSkip={actionHandleGreaterRestorationSkip}
                             description={`Choose a creature within <strong>${actionPendingGreaterRestoration.range}</strong>. You'll select which debilitating effect to remove.`}
@@ -310,7 +337,7 @@ export default function CharActionSpellPopups({
             {actionPendingRemoveCurse && (
                 <SecondaryTargetModal
                     title="Remove Curse"
-                    targets={actionPendingRemoveCurse.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingRemoveCurse.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleRemoveCurseConfirm({ targetName })}
                     onSkip={actionHandleRemoveCurseSkip}
                     description={`Choose a creature within <strong>${actionPendingRemoveCurse.range}</strong>. This spell ends all curses affecting the target and breaks the target's attunement to any cursed magic items.`}
@@ -321,6 +348,7 @@ export default function CharActionSpellPopups({
             {actionPendingMagicMissile && (() => {
               const { spell, totalMissiles, missileDamage, creatureTargets } = actionPendingMagicMissile;
               const currentTargetName = getTargetFromAttacker(getCombatSummary(campaignName), playerStats.name)?.name;
+              const filteredTargets = filterForcecageBlockedTargets(creatureTargets);
               return (
                 <MagicMissileTargetPopup
                   spell={{ name: spell.name, level: spell.level || 0 }}
@@ -328,7 +356,7 @@ export default function CharActionSpellPopups({
                   campaignName={campaignName}
                   totalMissiles={totalMissiles}
                   missileDamage={missileDamage}
-                  creatureTargets={creatureTargets}
+                  creatureTargets={filteredTargets}
                   currentTargetName={currentTargetName}
                   onConfirm={actionHandleMagicMissileConfirm}
                   onSkip={actionHandleMagicMissileSkip}
@@ -338,7 +366,7 @@ export default function CharActionSpellPopups({
             {actionPendingMageArmor && (
                 <SecondaryTargetModal
                     title="Mage Armor"
-                    targets={actionPendingMageArmor.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    targets={filterForcecageBlockedTargets(actionPendingMageArmor.creatureTargets).map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => actionHandleMageArmorConfirm([targetName])}
                     onSkip={actionHandleMageArmorSkip}
                     description="Choose a creature within range. The target's base AC becomes 13 + Dexterity modifier. Mage Armor lasts 8 hours and ends on a long rest."

@@ -529,6 +529,35 @@ describe('Initiative - Callback Integration', () => {
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'save_result', rollType: 'save-ottos-dance', saveType: 'WIS', success: true }));
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'condition', action: 'removed', condition: 'Charmed, Speed 0' }));
         });
+
+        it('should let a creature escape Forcecage on a successful Forcecaged CHA reroll', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'Alice' && prop === 'activeConditions') return ['forcecaged'];
+                if (key === 'Alice' && prop === 'activeConditionMeta') return { forcecaged: { dc: 15, ability: 'cha' } };
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'Alice' && prop === 'activeBuffs') return [];
+                if (key === 'campaign' && prop === 'targetEffects') return [{ target: 'Alice', effect: 'forcecage', source: 'Goblin', dc: 15, duration: 'concentration' }];
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', conditions: [] }, { name: 'Bob', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                const saveBtn = screen.getByTestId('condition-save-runtime-forcecaged-0');
+                fireEvent.click(saveBtn);
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [], 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'save_result', rollType: 'save-forcecage', saveType: 'CHA', success: true }));
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({ type: 'condition', action: 'removed', condition: 'Forcecaged' }));
+        });
     });
 
     describe('concentration save and break', () => {

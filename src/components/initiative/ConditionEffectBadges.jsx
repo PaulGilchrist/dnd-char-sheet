@@ -337,6 +337,16 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Confused', cls: 'effect-debuff', icon: 'fa-circle-notch', removable: isLocalhost, removeAction: 'target_effect', effectType: 'confusion', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'confused', label: 'Confused', dc: confusionDc, ability: 'wis' }) : undefined, tooltip: `Confused by ${casterName}: can't take Bonus Actions or Reactions. At start of turn rolls 1d10 behavior (1: move random direction; 2-6: does nothing; 7-8: Attack action vs random creature within reach; 9-10: chooses behavior). End of turn, repeats WIS save (DC ${confusionDc}); success ends the spell. Click to roll the WIS save.` })
     }
 
+    const forcecageEffect = targetEffects?.find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return te.effect === 'forcecage' && teTarget === creatureName;
+    })
+    if (forcecageEffect) {
+        const casterName = forcecageEffect.source || 'unknown'
+        const forcecageDc = forcecageEffect.dc || 0
+        badges.push({ label: 'Forcecaged', cls: 'effect-debuff', icon: 'fa-dungeon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'forcecage', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'forcecaged', label: 'Forcecaged', dc: forcecageDc, ability: 'cha' }) : undefined, tooltip: `Trapped in a Forcecage from ${casterName}: can't leave by nonmagical means, and no attack, spell, or effect can pass between inside and outside the prison. Click to attempt a CHA save (DC ${forcecageDc}); on success the creature can use teleportation or interplanar travel to exit.` })
+    }
+
     // Deduplicate badges by label, keeping the first occurrence
     const seenLabels = new Set()
     const uniqueBadges = badges.filter(b => {

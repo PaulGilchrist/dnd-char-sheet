@@ -251,6 +251,25 @@ describe('useSpellMetamagicFlow — spell confirm handlers', () => {
       },
     },
     {
+      name: 'Forcecage',
+      level: 7,
+      handler: 'handleForcecageConfirm',
+      pendingKey: 'pendingForcecage',
+      args: ['Goblin A', 'Goblin B'],
+      verify: async (automation) => {
+        expect(automation.executeHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Forcecage',
+            automation: expect.objectContaining({ type: 'forcecage', saveAbility: 'CHA', concentration: true, ruleset: '2024' }),
+            metaCtx: { creatures: ['Goblin A', 'Goblin B'] },
+          }),
+          expect.any(Object),
+          'TestCampaign',
+          null
+        );
+      },
+    },
+    {
       name: 'Lesser Restoration',
       level: 2,
       handler: 'handleLesserRestorationConfirm',

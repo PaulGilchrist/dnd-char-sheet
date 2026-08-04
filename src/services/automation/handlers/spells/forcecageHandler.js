@@ -1,10 +1,9 @@
-import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
+import { buildSaveDc } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
@@ -12,21 +11,80 @@ import storage from '../../../ui/storage.js';
 /**
  * Forcecage spell handler (2024 ruleset).
  * Mechanics:
- * - 100-foot range, cube-shaped prison (cage or box)
- * - Creatures completely inside the area are trapped
- * - Creatures partially inside or too large are pushed outside
+ * - 100-foot range, Cube-shaped prison of magical force (cage or box)
+ * - Creatures completely inside the area are trapped (selected via CreatureSelectionModal)
  * - Trapped creatures can't leave by nonmagical means
- * - If trapped creature tries teleportation/interplanar travel → CHA save
- * - On successful save → can exit via teleportation
- * - On failed save → doesn't exit, wastes the spell/effect
+ * - No attack, spell, or effect can pass between inside and outside the prison
+ * - Trapped creature can attempt a CHA save (click the badge) to use
+ *   teleportation/interplanar travel to exit; success ends the trap for that creature
  * - Cage extends into the Ethereal Plane (blocks ethereal travel)
  * - Can't be dispelled by Dispel Magic
- * - Concentration, up to 1 hour (2024) / 1 hour (5e, no concentration)
+ * - Concentration, up to 1 hour (2024)
  */
+
+function getForcecageEffects() {
+    const effects = getRuntimeValue('campaign', 'targetEffects') || [];
+    return Array.isArray(effects) ? effects.filter(te => te.effect === 'forcecage') : [];
+}
+
+/**
+ * True when a creature is inside any Forcecage.
+ */
+export function isCreatureTrappedInForcecage(creatureName) {
+    if (!creatureName) return false;
+    return getForcecageEffects().some(te => te.target === creatureName);
+}
+
+/**
+ * True when an attack/effect between attacker and target must be blocked by
+ * a Forcecage barrier. Allowed only when both are inside the same cage or
+ * both are outside any cage.
+ */
+export function isForcecageBlocked(attackerName, targetName, _campaignName) {
+    if (!attackerName || !targetName) return false;
+    const forcecageEffects = getForcecageEffects();
+    if (forcecageEffects.length === 0) return false;
+
+    const attackerTrapped = forcecageEffects.some(te => te.target === attackerName);
+    const targetTrapped = forcecageEffects.some(te => te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+        // Both trapped — allowed only if they share the same cage (same source)
+        const attackerSources = forcecageEffects
+            .filter(te => te.target === attackerName)
+            .map(te => te.source);
+        return !forcecageEffects.some(te => te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+}
+
+/**
+ * Remove the Forcecage target effect for a creature inside a specific cage.
+ * Returns the removed effect, or null when none was found.
+ */
+export function removeForcecageEffect(targetName, sourceName, campaignName) {
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const effects = Array.isArray(storedEffects) ? storedEffects : [];
+    const existing = effects.find(te => te.effect === 'forcecage' && te.target === targetName && te.source === sourceName);
+    if (!existing) return null;
+
+    setRuntimeValue(
+        'campaign',
+        'targetEffects',
+        effects.filter(te => !(te.effect === 'forcecage' && te.target === targetName && te.source === sourceName)),
+        campaignName
+    );
+    return existing;
+}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
-    const dc = buildSaveDc(auto, playerStats);
+    let dc = buildSaveDc(auto, playerStats);
+    if (auto.saveDc === 'ability' && playerStats.spellAbilities?.saveDc != null) {
+        dc = playerStats.spellAbilities.saveDc;
+    }
+    const casterName = playerStats.name;
 
     const cs = await getCombatContext(campaignName);
     if (!cs?.creatures || cs.creatures.length === 0) {
@@ -40,149 +98,89 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const casterName = playerStats.name;
-
-    // Determine if this is 2024 rules (concentration) or 5e (no concentration)
-    const is2024 = action.automation?.ruleset === '2024' || action.automation?.concentration === true;
-
-    // Register concentration for 2024 rules
-    if (is2024) {
-        const combatSummary = getCombatSummary(campaignName);
-        if (combatSummary) {
-            const concentrationDc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
-            addConcentration(combatSummary, casterName, 'Forcecage', concentrationDc);
-            storage.set('combatSummary', combatSummary, campaignName);
-            window.dispatchEvent(new CustomEvent('combat-summary-updated'));
-        }
+    // Selected targets come from the CreatureSelectionModal. No fallback — missing
+    // targets means the handler was invoked without a proper selection.
+    const selectedTargetNames = action.metaCtx?.creatures;
+    if (!Array.isArray(selectedTargetNames) || selectedTargetNames.length === 0) {
+        console.error(`[forcecage] No creatures selected for Forcecage. action.metaCtx.creatures is missing.`);
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No creatures selected for Forcecage. Nothing is trapped.',
+            },
+        };
     }
 
-    storeSpellLastAttack(campaignName, {
-        casterName,
-        spellName: action.name,
-        saveType: 'CHA',
-        saveDc: dc,
-        attackScope: 'aoe',
-    });
+    const targets = cs.creatures.filter(c => selectedTargetNames.includes(c.name));
+    if (targets.length === 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No creatures selected for Forcecage. Nothing is trapped.',
+            },
+        };
+    }
 
-    const targets = cs.creatures.filter(c => c.name !== casterName);
+    // Register concentration (2024 rules — concentration, up to 1 hour)
+    const combatSummary = getCombatSummary(campaignName);
+    if (combatSummary) {
+        const concentrationDc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+        addConcentration(combatSummary, casterName, 'Forcecage', concentrationDc);
+        storage.set('combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
 
-    let affectedCount = 0;
-    let savedCount = 0;
-    const results = [];
+    const trapped = [];
 
     for (const target of targets) {
         const targetName = target.name;
 
-        const { promptId, promise } = createSaveListener(campaignName, {
-            targetName,
-            saveType: 'CHA',
-            saveDc: dc,
-            dcSuccess: 'none',
-            disadvantage: action.metaCtx?.heightenTarget === targetName,
-        });
+        // Track the Forcecage effect with DC and source for cleanup and escape checks
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const effects = Array.isArray(storedEffects) ? [...storedEffects] : [];
+        const forcecageEffect = {
+            target: targetName,
+            effect: 'forcecage',
+            source: casterName,
+            dc: dc,
+            saveAbility: 'CHA',
+            duration: 'concentration',
+            concentration: true,
+        };
+        const existingIdx = effects.findIndex(
+            te => te.target === targetName && te.effect === 'forcecage'
+        );
+        if (existingIdx >= 0) {
+            effects[existingIdx] = forcecageEffect;
+        } else {
+            effects.push(forcecageEffect);
+        }
+        setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
+
+        addExpiration(casterName, targetName, [
+            { type: 'remove_target_effect', effectKey: 'forcecage', target: targetName, source: casterName },
+        ], campaignName);
 
         addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: casterName,
-            abilityName: action.name,
-            description: `${casterName} casts Forcecage! ${targetName} must make a CHA save (DC ${dc}) or be trapped in the cage.`,
-            promptId,
+            type: 'condition',
+            action: 'applied',
+            characterName: targetName,
+            condition: 'Forcecaged',
+            reason: 'Forcecage spell',
+            note: `${targetName} is trapped in a Forcecage cast by ${casterName}. Cannot leave by nonmagical means. No attack, spell, or effect can pass between inside and outside the prison. Must make a CHA save (DC ${dc}) to use teleportation or interplanar travel to exit. Cage extends into the Ethereal Plane. Can't be dispelled by Dispel Magic. Concentration, up to 1 hour.`,
+            timestamp: Date.now(),
         }).catch((e) => { console.error("[forcecage] Error:", e); });
 
-        const saveResult = await promise;
-
-        if (saveResult.success) {
-            savedCount++;
-            await addTargetResult(campaignName, {
-                targetName,
-                saveResult: 'success',
-                roll: saveResult.roll ?? 0,
-                total: saveResult.total ?? 0,
-                conditions: [],
-                appliedDamage: 0,
-            });
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: casterName,
-                rollType: 'save-forcecage',
-                targetName,
-                saveDc: dc,
-                saveType: 'CHA',
-                success: true,
-                description: `${targetName} succeeded on CHA save against Forcecage.`,
-            }).catch((e) => { console.error("[forcecage] Error:", e); });
-        } else {
-            affectedCount++;
-
-            // Track Forcecage effect with DC for cleanup and escape checks
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-            const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
-            const forcecageEffect = {
-                target: targetName,
-                effect: 'forcecage',
-                source: casterName,
-                dc: dc,
-                duration: is2024 ? 'concentration' : '1_hour',
-                concentration: is2024,
-            };
-            const existingIdx = effects.findIndex(
-                te => te.target === targetName && te.effect === 'forcecage'
-            );
-            if (existingIdx >= 0) {
-                effects[existingIdx] = forcecageEffect;
-            } else {
-                effects.push(forcecageEffect);
-            }
-            setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
-
-            // Store forcecage metadata for escape trigger tracking
-            setRuntimeValue(targetName, 'forcecageData', {
-                casterName,
-                dc,
-                timestamp: Date.now(),
-            }, campaignName);
-
-            await addTargetResult(campaignName, {
-                targetName,
-                saveResult: 'failure',
-                roll: saveResult.roll ?? 0,
-                total: saveResult.total ?? 0,
-                conditions: ['forcecage'],
-                appliedDamage: 0,
-            });
-
-            addEntry(campaignName, {
-                type: 'condition',
-                action: 'applied',
-                characterName: targetName,
-                condition: 'Forcecaged',
-                reason: 'Forcecage spell',
-                note: `${targetName} is trapped in a Forcecage. Cannot leave by nonmagical means. Must make CHA save (DC ${dc}) to use teleportation or interplanar travel. Cage extends into the Ethereal Plane. Can't be dispelled by Dispel Magic.${is2024 ? ' Concentration, up to 1 hour.' : ' Duration: 1 hour.'}`,
-                timestamp: Date.now(),
-            }).catch((e) => { console.error("[forcecage] Error:", e); });
-
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: casterName,
-                rollType: 'save-forcecage',
-                targetName,
-                saveDc: dc,
-                saveType: 'CHA',
-                success: false,
-                description: `${targetName} failed CHA save against Forcecage and is trapped.`,
-            }).catch((e) => { console.error("[forcecage] Error:", e); });
-
-            addExpiration(casterName, targetName, [
-                { type: 'remove_target_effect', effectKey: 'forcecage', target: targetName, source: casterName },
-            ], campaignName);
-
-            results.push(`${targetName} is trapped in the Forcecage.`);
-        }
+        trapped.push(targetName);
     }
 
-    const summary = affectedCount > 0
-        ? `Forcecage traps ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. Trapped creatures can't leave by nonmagical means and must make a CHA save (DC ${dc}) to use teleportation or interplanar travel to exit.`
-        : `No creatures trapped by Forcecage. ${savedCount} creature(s) saved.`;
+    const summary = trapped.length > 0
+        ? `Forcecage traps ${trapped.length} creature(s): ${trapped.join(', ')}. Trapped creatures can't leave by nonmagical means. No attack, spell, or effect can pass between inside and outside the prison. Click a creature's Forcecaged badge to attempt a CHA save (DC ${dc}); on success the creature can use teleportation or interplanar travel to exit.`
+        : 'No creatures trapped by Forcecage.';
 
     return {
         type: 'popup',
@@ -196,14 +194,14 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
 /**
  * forcecageEscapeHandler — triggered when a forcecaged creature attempts
- * teleportation or interplanar travel to escape.
+ * teleportation or interplanar travel to escape (forcecage_escape action).
  * Mechanics:
  * - CHA saving throw against the caster's DC
- * - On success: creature can use that magic to exit the cage
+ * - On success: creature escapes and the Forcecage effect is removed
  * - On failure: creature doesn't exit and wastes the spell/effect
  */
 export async function handleEscape(action, playerStats, campaignName, _mapName) {
-    const targetName = action.metaCtx?.forcecageTargetName;
+    const targetName = action.metaCtx?.target || action.metaCtx?.forcecageTargetName;
 
     if (!targetName) {
         return {
@@ -216,8 +214,9 @@ export async function handleEscape(action, playerStats, campaignName, _mapName) 
         };
     }
 
-    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-    const forcecageEffect = targetEffects.find(
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const effects = Array.isArray(targetEffects) ? targetEffects : [];
+    const forcecageEffect = effects.find(
         te => te.effect === 'forcecage' && te.target === targetName
     );
 
@@ -242,14 +241,9 @@ export async function handleEscape(action, playerStats, campaignName, _mapName) 
     const total = roll + chaBonus + chaProficiency;
     const success = total >= saveDc;
 
-    addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: targetName,
-        abilityName: 'Forcecage Escape Attempt',
-        description: `${targetName} attempts to escape Forcecage using teleportation/interplanar travel. CHA save: ${roll} + ${chaBonus + chaProficiency} = ${total} vs DC ${saveDc}.`,
-    }).catch((e) => { console.error("[forcecageEscape] Error:", e); });
-
     if (success) {
+        const removed = removeForcecageEffect(targetName, forcecageEffect.source, campaignName);
+
         addEntry(campaignName, {
             type: 'save_result',
             characterName: targetName,
@@ -261,42 +255,35 @@ export async function handleEscape(action, playerStats, campaignName, _mapName) 
             description: `${targetName} succeeded on CHA save and escaped the Forcecage.`,
         }).catch((e) => { console.error("[forcecageEscape] Error:", e); });
 
-        // Remove the forcecage effect
-        const remainingEffects = targetEffects.filter(
-            te => !(te.effect === 'forcecage' && te.target === targetName)
-        );
-        setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName);
-
-        // Clear forcecage metadata
-        setRuntimeValue(targetName, 'forcecageData', null, campaignName);
-
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
                 name: 'Forcecage Escape',
-                description: `${targetName} succeeded on CHA save (${total} vs DC ${saveDc}) and escaped the Forcecage using teleportation/interplanar travel.`,
-            },
-        };
-    } else {
-        addEntry(campaignName, {
-            type: 'save_result',
-            characterName: targetName,
-            rollType: 'save-forcecage-escape',
-            targetName,
-            saveDc,
-            saveType: 'CHA',
-            success: false,
-            description: `${targetName} failed CHA save and remains trapped in Forcecage.`,
-        }).catch((e) => { console.error("[forcecageEscape] Error:", e); });
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Forcecage Escape',
-                description: `${targetName} failed CHA save (${total} vs DC ${saveDc}) and remains trapped in the Forcecage. The teleportation/interplanar travel spell or effect is wasted.`,
+                description: removed
+                    ? `${targetName} succeeded on CHA save (${total} vs DC ${saveDc}) and escaped the Forcecage using teleportation/interplanar travel.`
+                    : `${targetName} succeeded on CHA save (${total} vs DC ${saveDc}).`,
             },
         };
     }
+
+    addEntry(campaignName, {
+        type: 'save_result',
+        characterName: targetName,
+        rollType: 'save-forcecage-escape',
+        targetName,
+        saveDc,
+        saveType: 'CHA',
+        success: false,
+        description: `${targetName} failed CHA save and remains trapped in Forcecage.`,
+    }).catch((e) => { console.error("[forcecageEscape] Error:", e); });
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: 'Forcecage Escape',
+            description: `${targetName} failed CHA save (${total} vs DC ${saveDc}) and remains trapped in the Forcecage. The teleportation/interplanar travel spell or effect is wasted.`,
+        },
+    };
 }
