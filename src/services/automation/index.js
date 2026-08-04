@@ -13,6 +13,7 @@ import { handle as handleSorcery } from './handlers/resources/sorceryHandler.js'
 import { handle as handleSpellCast } from './handlers/spells/spellCastHandler.js';
 import { handle as handleRegenerate, applyRegenerateEffect } from './handlers/spells/regenerateHandler.js';
 import { handle as handleAnimateDead, confirmAnimateDead as handleAnimateDeadConfirm } from './handlers/spells/animateDeadHandler.js';
+import { handle as handleCreateUndead, confirmCreateUndead as handleCreateUndeadConfirm } from './handlers/spells/createUndeadHandler.js';
 import { handle as handleInitiative } from './handlers/combat/initiativeHandler.js';
 
 import { handle as handleResourcePool } from './handlers/resources/resourcePoolHandler.js';
@@ -592,6 +593,8 @@ const HANDLER_MAP = {
         regenerate: handleRegenerate,
         animate_dead: handleAnimateDead,
         animate_dead_confirm: handleAnimateDeadConfirm,
+        create_undead: handleCreateUndead,
+        create_undead_confirm: handleCreateUndeadConfirm,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,

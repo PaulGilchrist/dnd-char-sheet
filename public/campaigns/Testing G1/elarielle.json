@@ -69,19 +69,23 @@
   "inventory": {
     "backpack": [
       "Blanket",
-      "Case,Map or Scroll",
+      "Case",
+      "Map or Scroll",
       "Fishing Tackle",
       "Grappling Hook",
-      "Ink (4, 1 oz bottles)",
+      "Ink (4",
+      "1 oz bottles)",
       "Ink Pens (2)",
       "Parchment (20 sheets)",
       "Playing Card Set",
       "Rations (5 days)",
-      "Rope, Silk (50 feet)",
+      "Rope",
+      "Silk (50 feet)",
       "String",
       "Waterskin",
       "Healer's Kit",
-      "Poisoner's Kit"
+      "Poisoner's Kit",
+      "Black Onyx (150 gp)"
     ],
     "equipped": [
       "Quarterstaff",

@@ -6,6 +6,8 @@ function getFileNameFromName(name) {
 }
 
 const MATERIAL_REGISTRY = {
+    'Animate Dead': { itemName: 'Drop of Blood, Piece of Flesh, Pinch of Bone Dust', required: 'a drop of blood, a piece of flesh, and a pinch of bone dust' },
+    'Create Undead': { itemName: 'Black Onyx (150 gp)', required: 'one 150+ GP black onyx stone for each corpse' },
     'Arcane Lock': { itemName: 'Gold Dust (25 gp)', required: 'gold dust worth 25+ GP, which the spell consumes' },
     'Astral Projection': { itemName: 'Jacinth (1,000 gp)', required: 'jacinth and silver bar, all of which the spell consumes' },
     'Awaken': { itemName: 'Agate (1,000 gp)', required: 'an agate worth 1,000+ GP, which the spell consumes' },

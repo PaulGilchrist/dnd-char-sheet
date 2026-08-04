@@ -3121,8 +3121,17 @@
         "ritual": false,
         "duration": "Instantaneous",
         "concentration": false,
-        "casting_time": "1 minute",
+        "casting_time": "1 bonus action",
         "level": 6,
+        "automation": {
+            "type": "create_undead"
+        },
+        "upcast_at_slot_level": {
+            "6": "3 targets",
+            "7": "4 targets",
+            "8": "5 targets",
+            "9": "6 targets"
+        },
         "attack_type": null,
         "damage": null,
         "school": "Necromancy",

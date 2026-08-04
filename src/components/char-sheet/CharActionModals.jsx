@@ -82,7 +82,9 @@ import FlurryOfBlowsTargetPopup from './popups/FlurryOfBlowsTargetPopup.jsx'
 import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx'
 import DestructiveStrideModal from './modals/DestructiveStrideModal.jsx'
 import AnimateDeadModal from './modals/AnimateDeadModal.jsx'
+import CreateUndeadModal from './modals/CreateUndeadModal.jsx'
 import { confirmAnimateDead } from '../../services/automation/handlers/spells/animateDeadHandler.js'
+import { confirmCreateUndead } from '../../services/automation/handlers/spells/createUndeadHandler.js'
 import { handleApply } from '../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js'
 import { applyResistanceChoice } from '../../services/automation/handlers/combat/elementalEpitomeHandler.js'
 import { applyDamageTypeChoice, applyTargetChoice, skipTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js'
@@ -1336,6 +1338,24 @@ export default function CharActionModals({
                         }
                     }}
                     onClose={() => setModalState({ animateDeadModal: null })}
+                />
+            )}
+            {mergedModalState.createUndeadModal && (
+                <CreateUndeadModal
+                    maxTargets={mergedModalState.createUndeadModal.maxTargets}
+                    onConfirm={async ({ ghoulCount }) => {
+                        setModalState({ createUndeadModal: null });
+                        const result = await confirmCreateUndead(
+                            mergedModalState.createUndeadModal.action,
+                            mergedModalState.createUndeadModal.playerStats,
+                            mergedModalState.createUndeadModal.campaignName,
+                            { ghoulCount }
+                        );
+                        if (result?.payload) {
+                            setPopupHtml(result.payload);
+                        }
+                    }}
+                    onClose={() => setModalState({ createUndeadModal: null })}
                 />
             )}
         </>

@@ -5,8 +5,9 @@ import storage from '../../../ui/storage.js';
 import cloneDeep from 'lodash/cloneDeep.js';
 import { loadMonsters } from '../../../ui/dataLoader.js';
 import { getMonsterSaveBonuses } from '../../../encounters/encounterToInitiative.js';
+import { getNextUniqueMonsterName } from '../../../encounters/encounterToInitiative.js';
 
-const MAX_TARGETS_KEY = 'animateDeadMaxTargets';
+const MAX_TARGETS_KEY = 'createUndeadMaxTargets';
 
 function getTargetEffects() {
     const stored = getRuntimeValue('campaign', 'targetEffects');
@@ -18,31 +19,31 @@ function getSlotLevel(action) {
     if (auto?.slotLevel) return auto.slotLevel;
     if (action.metaCtx?.slotLevel) return action.metaCtx.slotLevel;
     if (action.spell?.level) return action.spell.level;
-    return 3;
+    return 6;
 }
 
 function getMaxTargets(slotLevel) {
-    const upcast = { 3: 1, 4: 3, 5: 5, 6: 7, 7: 9, 8: 11, 9: 13 };
-    return upcast[slotLevel] || 1;
+    const upcast = { 6: 3, 7: 4, 8: 5, 9: 6 };
+    return upcast[slotLevel] || 3;
 }
 
-async function loadMonsterData(monsterIndex) {
+async function loadGhoulMonster() {
     const monsters = await loadMonsters();
-    const monster = monsters.find(m => m.index === monsterIndex);
+    const monster = monsters.find(m => m.index === 'ghoul');
     if (!monster) {
-        console.error(`[animateDead] Monster "${monsterIndex}" not found in monsters.json`);
+        console.error('[createUndead] Monster "ghoul" not found in monsters.json');
         return null;
     }
     return monster;
 }
 
-function buildCreatureEntry(baseName, monster, initiativeValue, index) {
-    const name = index === 0 ? baseName : `${baseName} ${index + 1}`;
+function buildGhoulEntry(baseName, monster, initiativeValue, existingCreatures) {
+    const name = getNextUniqueMonsterName(baseName, existingCreatures);
     const npcHp = monster.hit_points || 10;
     return {
         name,
         type: monster.type || 'Undead',
-        initiative: String(initiativeValue),
+        initiative: String(initiativeValue - 0.1),
         targetName: null,
         ac: typeof monster.armor_class === 'number' ? monster.armor_class : 10,
         resistances: monster.damage_resistances || [],
@@ -66,7 +67,7 @@ export async function handle(action, playerStats, campaignName) {
             payload: {
                 type: 'automation_info',
                 name: action.name,
-                description: `${action.name}: ${maxTargets} undead creature(s) created.`,
+                description: `${action.name}: ${maxTargets} ghoul(s) created.`,
                 automation: action.automation,
             },
         };
@@ -74,7 +75,7 @@ export async function handle(action, playerStats, campaignName) {
 
     return {
         type: 'modal',
-        modalName: 'animateDead',
+        modalName: 'createUndead',
         payload: {
             action,
             playerStats,
@@ -84,12 +85,12 @@ export async function handle(action, playerStats, campaignName) {
     };
 }
 
-export async function confirmAnimateDead(action, playerStats, campaignName, { zombieCount, skeletonCount }) {
+export async function confirmCreateUndead(action, playerStats, campaignName, { ghoulCount }) {
     const slotLevel = getSlotLevel(action);
     const maxTargets = getMaxTargets(slotLevel);
-    const total = (zombieCount || 0) + (skeletonCount || 0);
+    const count = ghoulCount || 1;
 
-    if (total <= 0) {
+    if (count <= 0) {
         return {
             type: 'popup',
             payload: {
@@ -115,6 +116,19 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
         };
     }
 
+    const ghoulMonster = await loadGhoulMonster();
+    if (!ghoulMonster) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'Failed to load ghoul monster data.',
+                automation: action.automation,
+            },
+        };
+    }
+
     const casterCreature = combatSummary.creatures.find(c => c.name === casterName);
     let initiativeValue = 0;
     if (casterCreature?.initiative !== '' && casterCreature?.initiative !== undefined) {
@@ -124,47 +138,11 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
     const casterInitBonus = casterCreature?.initiativeBonus || 0;
     initiativeValue = initiativeValue || (Math.floor(Math.random() * 20) + 1 + casterInitBonus);
 
-    const skeletonMonster = await loadMonsterData('skeleton');
-    if (!skeletonMonster) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: 'Failed to load skeleton monster data.',
-                automation: action.automation,
-            },
-        };
-    }
-
-    const zombieMonster = await loadMonsterData('zombie');
-    if (!zombieMonster) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: 'Failed to load zombie monster data.',
-                automation: action.automation,
-            },
-        };
-    }
-
     let targetEffects = getTargetEffects();
     const creatureNames = [];
 
-    for (let i = 0; i < (skeletonCount || 0); i++) {
-        const creature = buildCreatureEntry('Skeleton', skeletonMonster, initiativeValue, i);
-        combatSummary.creatures.push(creature);
-        const existingSummoned = targetEffects.find(te => te.target === creature.name && te.effect === 'summoned' && te.source === casterName);
-        if (!existingSummoned) {
-            targetEffects.push({ target: creature.name, source: casterName, effect: 'summoned' });
-        }
-        creatureNames.push(creature.name);
-    }
-
-    for (let i = 0; i < (zombieCount || 0); i++) {
-        const creature = buildCreatureEntry('Zombie', zombieMonster, initiativeValue, i);
+    for (let i = 0; i < count; i++) {
+        const creature = buildGhoulEntry('Ghoul', ghoulMonster, initiativeValue, combatSummary.creatures);
         combatSummary.creatures.push(creature);
         const existingSummoned = targetEffects.find(te => te.target === creature.name && te.effect === 'summoned' && te.source === casterName);
         if (!existingSummoned) {
@@ -174,8 +152,8 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
     }
 
     combatSummary.creatures.sort((a, b) => {
-        const aInit = a.initiative === '' || a.initiative === undefined ? 0 : parseInt(a.initiative, 10);
-        const bInit = b.initiative === '' || b.initiative === undefined ? 0 : parseInt(b.initiative, 10);
+        const aInit = a.initiative === '' || a.initiative === undefined ? 0 : Number(a.initiative);
+        const bInit = b.initiative === '' || b.initiative === undefined ? 0 : Number(b.initiative);
         return bInit - aInit;
     });
 
@@ -183,15 +161,14 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
     setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
     window.dispatchEvent(new CustomEvent('initiative-rolled'));
 
-    const zombieLabel = zombieCount > 0 ? `${zombieCount} Zombie${zombieCount > 1 ? 's' : ''}` : '';
-    const skeletonLabel = skeletonCount > 0 ? `${skeletonCount} Skeleton${skeletonCount > 1 ? 's' : ''}` : '';
-    const creatureList = [zombieLabel, skeletonLabel].filter(Boolean).join(' and ');
+    const plural = count > 1 ? 's' : '';
+    const ghoulLabel = `${count} Ghoul${plural}`;
 
     await addEntry(campaignName, {
         type: 'summons',
         characterName: casterName,
-        summonName: 'Animate Dead',
-        description: `${casterName} casts Animate Dead (slot level ${slotLevel}), creating ${total} undead creature(s).`,
+        summonName: 'Create Undead',
+        description: `${casterName} casts Create Undead (slot level ${slotLevel}), creating ${count} ghoul${plural}.`,
         summonedCreatures: creatureNames,
         timestamp: Date.now(),
     }).catch(() => {});
@@ -203,21 +180,21 @@ export async function confirmAnimateDead(action, playerStats, campaignName, { zo
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: `${casterName} casts Animate Dead, creating ${creatureList}. They act on your turn, right after you.`,
+            description: `${casterName} casts Create Undead, creating ${ghoulLabel}. They act on your turn, right after you.`,
             automation: action.automation,
         },
         logEntries: [{
             type: 'summons',
             characterName: casterName,
-            summonName: 'Animate Dead',
-            description: `${casterName} casts Animate Dead (slot level ${slotLevel}), creating ${total} undead creature(s).`,
+            summonName: 'Create Undead',
+            description: `${casterName} casts Create Undead (slot level ${slotLevel}), creating ${count} ghoul${plural}.`,
             summonedCreatures: creatureNames,
             timestamp: Date.now(),
         }],
     };
 }
 
-const HANDLER_MODAL = 'animateDead';
-const HANDLER_CONFIRM = 'animate_dead_confirm';
+const HANDLER_MODAL = 'createUndead';
+const HANDLER_CONFIRM = 'create_undead_confirm';
 
 export { HANDLER_MODAL as modalName, HANDLER_CONFIRM as confirmType };
