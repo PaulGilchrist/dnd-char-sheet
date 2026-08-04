@@ -44,7 +44,7 @@ describe('spareTheDyingHandler', () => {
             })
 
             const result = await handle(
-                { name: 'Spare the Dying', spell: { range: '15 feet', automation: { type: 'spare_the_dying' } } },
+                { name: 'Spare the Dying', spell: { range: '15 feet', automation: { type: 'spare_the_dying' } }, playerStats },
                 playerStats,
                 campaignName,
                 null
@@ -55,6 +55,30 @@ describe('spareTheDyingHandler', () => {
             expect(result.payload.targets.length).toBe(2)
             expect(result.payload.targets[0].isValidTarget).toBe(true)
             expect(result.payload.targets[0].hp).toBe(0)
+        })
+
+        it('excludes the caster from targets', async () => {
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Cleric', type: 'Humanoid' },
+                    { name: 'Ally1', type: 'Humanoid' },
+                ],
+            })
+            getRuntimeValue.mockImplementation((target, key) => {
+                if (key === 'currentHitPoints') return 0
+                if (key === 'isDead') return false
+                return undefined
+            })
+
+            const result = await handle(
+                { name: 'Spare the Dying', spell: {}, playerStats },
+                { name: 'Cleric' },
+                campaignName,
+                null
+            )
+
+            expect(result.payload.targets.length).toBe(1)
+            expect(result.payload.targets[0].name).toBe('Ally1')
         })
 
         it('excludes creatures with >0 HP', async () => {
@@ -161,9 +185,11 @@ describe('spareTheDyingHandler', () => {
     })
 
     describe('applySpareTheDying', () => {
-        it('sets deathSaves to [true, true, true] for target', async () => {
+        it('sets currentHitPoints to 1 and deathSaves for target', async () => {
             getRuntimeValue.mockImplementation((target, key) => {
                 if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return []
+                if (key === 'activeConditionMeta') return {}
                 return undefined
             })
 
@@ -175,13 +201,60 @@ describe('spareTheDyingHandler', () => {
                 { targetName: 'Ally1' }
             )
 
+            expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'currentHitPoints', 1, campaignName)
             expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'deathSaves', [true, true, true], campaignName)
-            expect(result.payload.description).toBe('Ally1 became stable.')
+            expect(result.payload.description).toBe('Ally1 rose to 1 HP and gained the Unconscious condition.')
         })
 
-        it('logs ability_use and spell_effect entries', async () => {
+        it('adds unconscious condition to target', async () => {
             getRuntimeValue.mockImplementation((target, key) => {
                 if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return []
+                if (key === 'activeConditionMeta') return {}
+                return undefined
+            })
+
+            await applySpareTheDying(
+                { name: 'Spare the Dying' },
+                playerStats,
+                campaignName,
+                null,
+                { targetName: 'Ally1' }
+            )
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'activeConditions', ['unconscious'], campaignName)
+            expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'activeConditionMeta', {
+                unconscious: {
+                    source: 'Cleric',
+                    reason: 'Spare the Dying',
+                },
+            }, campaignName)
+        })
+
+        it('removes existing unconscious before adding it', async () => {
+            getRuntimeValue.mockImplementation((target, key) => {
+                if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return ['unconscious', 'blinded']
+                if (key === 'activeConditionMeta') return {}
+                return undefined
+            })
+
+            await applySpareTheDying(
+                { name: 'Spare the Dying' },
+                playerStats,
+                campaignName,
+                null,
+                { targetName: 'Ally1' }
+            )
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'activeConditions', ['blinded', 'unconscious'], campaignName)
+        })
+
+        it('logs ability_use, spell_effect, and condition entries', async () => {
+            getRuntimeValue.mockImplementation((target, key) => {
+                if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return []
+                if (key === 'activeConditionMeta') return {}
                 return undefined
             })
 
@@ -207,7 +280,17 @@ describe('spareTheDyingHandler', () => {
                 characterName: 'Cleric',
                 spellName: 'Spare the Dying',
                 targetName: 'Ally1',
-                effects: ['Target became stable'],
+                effects: ['Target rose to 1 HP', 'Target gained Unconscious condition'],
+                timestamp: expect.any(Number),
+            })
+
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'condition',
+                action: 'applied',
+                characterName: 'Ally1',
+                condition: 'unconscious',
+                reason: 'Spare the Dying',
+                sourceName: 'Cleric',
                 timestamp: expect.any(Number),
             })
         })
@@ -222,6 +305,49 @@ describe('spareTheDyingHandler', () => {
             )
 
             expect(result).toBeNull()
+        })
+
+        it('rejects if target no longer has 0 HP', async () => {
+            getRuntimeValue.mockImplementation((target, key) => {
+                if (key === 'currentHitPoints') return 5
+                if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return []
+                if (key === 'activeConditionMeta') return {}
+                return undefined
+            })
+
+            const result = await applySpareTheDying(
+                { name: 'Spare the Dying' },
+                playerStats,
+                campaignName,
+                null,
+                { targetName: 'Ally1' }
+            )
+
+            expect(result.payload.type).toBe('automation_info')
+            expect(result.payload.description).toContain('no longer a valid target')
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Ally1', 'currentHitPoints', 1, campaignName)
+        })
+
+        it('rejects if target has 0 HP but is dead', async () => {
+            getRuntimeValue.mockImplementation((target, key) => {
+                if (key === 'currentHitPoints') return 0
+                if (key === 'isDead') return true
+                if (key === 'deathFailures') return [false, false, false]
+                if (key === 'activeConditions') return []
+                if (key === 'activeConditionMeta') return {}
+                return undefined
+            })
+
+            const result = await applySpareTheDying(
+                { name: 'Spare the Dying' },
+                playerStats,
+                campaignName,
+                null,
+                { targetName: 'DeadAlly' }
+            )
+
+            expect(result.payload.description).toContain('no longer a valid target')
         })
     })
 })

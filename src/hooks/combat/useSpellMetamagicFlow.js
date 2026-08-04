@@ -848,7 +848,8 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       if (!cs?.creatures) {
         console.error(`Creature targets empty for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
       }
-      const creatureTargets = cs?.creatures?.map(c => c.name) || [];
+      let creatureTargets = cs?.creatures?.map(c => c.name) || [];
+      creatureTargets = creatureTargets.filter(name => name !== playerStats.name);
       if (creatureTargets.length > 0) {
         cfSetPending('spareTheDying', {
           spell,
