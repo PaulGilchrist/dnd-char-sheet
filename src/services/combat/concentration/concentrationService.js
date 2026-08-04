@@ -42,7 +42,7 @@ function breakConcentration(combatSummary, creatureName) {
 }
 
 function clearAllConcentrations(campaignName, restingCreatureName) {
-    const cs = getRuntimeValue('campaign', 'combatSummary');
+    const cs = getCombatSummary(campaignName);
     const creatures = cs?.creatures || [];
     let changed = false;
     for (const creature of creatures) {

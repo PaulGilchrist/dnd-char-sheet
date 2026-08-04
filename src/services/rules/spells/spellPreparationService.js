@@ -227,6 +227,17 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
   }
 
+  // Spiritual Weapon concentration recast — free cast when already concentrating on Spiritual Weapon
+  if (spellName === 'Spiritual Weapon') {
+    const cs = getCombatSummary(campaignName);
+    if (cs) {
+      const creature = cs.creatures.find(c => c.name === playerName);
+      if (creature && creature.concentration && creature.concentration.spell === 'Spiritual Weapon') {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
