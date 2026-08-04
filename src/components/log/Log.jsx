@@ -20,6 +20,8 @@ function getRollIconType(rollType) {
     case 'save-confusion': return 'fa-shield-halved';
     case 'save-forcecage': return 'fa-shield-halved';
     case 'save-forcecage-escape': return 'fa-shield-halved';
+    case 'save-maze': return 'fa-shield-halved';
+    case 'save-maze-escape': return 'fa-shield-halved';
     case 'aoe-damage': return 'fa-wand-magic-sparkles';
     case 'initiative': return 'fa-bolt';
     case 'damage': return 'fa-skull';

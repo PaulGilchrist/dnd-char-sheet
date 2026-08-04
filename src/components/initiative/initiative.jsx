@@ -40,6 +40,7 @@ import {
     buildConditionPopup,
 } from '../../services/combat/conditions/conditionSaveService.js'
 import { removeForcecageEffect } from '../../services/automation/handlers/spells/forcecageHandler.js'
+import { removeMazeEffect } from '../../services/automation/handlers/spells/mazeHandler.js'
 import {
     rollConcentrationSave,
     breakConcentration,
@@ -1209,6 +1210,42 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         condition: 'Forcecaged',
                         reason: 'Forcecage escape (successful CHA save)',
                         note: `${creatureName} succeeded on the CHA reroll; the Forcecage no longer traps them.`,
+                        timestamp: Date.now(),
+                    }).catch(() => {})
+                }
+            }
+
+            // Maze: a successful INT (Investigation) reroll on the Incapacitated badge
+            // lets the creature escape the Maze — remove the maze target effect, clear
+            // mazeData, remove incapacitated condition, and log the escape.
+            if (String(condition.key).toLowerCase() === 'incapacitated') {
+                const mazeEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'maze' && te.target === creatureName
+                )
+                if (mazeEffect) {
+                    removeMazeEffect(creatureName, mazeEffect.source, campaignName)
+                    setRuntimeValue(creatureName, 'mazeData', null, campaignName)
+                    const storedConditions = getRuntimeValue(creatureName, 'activeConditions') || []
+                    const conditions = Array.isArray(storedConditions) ? storedConditions : []
+                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated')
+                    setRuntimeValue(creatureName, 'activeConditions', filtered, campaignName)
+                    logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: mazeEffect.source,
+                        rollType: 'save-maze-escape',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'INT',
+                        success: true,
+                        description: `${creatureName} succeeded on INT (Investigation) check (${r1} + ${bonus} = ${r1 + bonus} vs DC ${condition.dc}) and escaped the Maze.`,
+                    }).catch(() => {})
+                    logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Incapacitated',
+                        reason: 'Maze escape (successful INT Investigation check)',
+                        note: `${creatureName} escaped the Maze and is no longer Incapacitated.`,
                         timestamp: Date.now(),
                     }).catch(() => {})
                 }

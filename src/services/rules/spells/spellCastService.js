@@ -45,6 +45,9 @@ import { endInvisibilityOnHostileAction } from '../features/invisibilityService.
 import { triggerGlobeOfInvulnerability } from '../features/globeOfInvulnerabilityService.js';
 import { triggerForcecage } from '../features/forcecageService.js';
 import { isForcecageBlocked } from '../../automation/handlers/spells/forcecageHandler.js';
+import { isMazeBlocked } from '../../automation/handlers/spells/mazeHandler.js';
+import { isBanishmentBlocked } from '../../automation/handlers/spells/banishmentHandler.js';
+import { isImprisonmentBlocked } from '../../automation/handlers/spells/imprisonmentHandler.js';
 import { triggerHolyAura } from '../features/holyAuraService.js';
 import { getSilenceSource, isCreatureInSilenceZone } from '../features/silenceService.js';
 import { triggerSlow } from '../features/slowService.js';
@@ -178,6 +181,72 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
                     type: 'automation_info',
                     name: 'Forcecage',
                     description: `${spell.name} is blocked by Forcecage. ${casterName} and ${targetName} are on opposite sides of the prison, and no attack, spell, or effect can pass through it.`,
+                },
+            },
+        };
+    }
+
+    // A spell cannot pass between inside and outside a Maze demiplane.
+    if (isMazeBlocked(casterName, targetName, campaignName)) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: casterName,
+            name: 'Maze',
+            description: `${spell.name} from ${casterName} blocked by Maze — ${casterName} and ${targetName} are on opposite sides of the demiplane.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Maze',
+                    description: `${spell.name} is blocked by Maze. ${casterName} and ${targetName} are on opposite sides of the demiplane, and no attack, spell, or effect can pass through it.`,
+                },
+            },
+        };
+    }
+
+    // A spell cannot pass between inside and outside a Banishment demiplane.
+    if (isBanishmentBlocked(casterName, targetName, campaignName)) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: casterName,
+            name: 'Banishment',
+            description: `${spell.name} from ${casterName} blocked by Banishment — ${casterName} and ${targetName} are on opposite sides of the demiplane.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Banishment',
+                    description: `${spell.name} is blocked by Banishment. ${casterName} and ${targetName} are on opposite sides of the demiplane, and no attack, spell, or effect can pass through it.`,
+                },
+            },
+        };
+    }
+
+    // A spell cannot pass between inside and outside an Imprisonment prison.
+    if (isImprisonmentBlocked(casterName, targetName, campaignName)) {
+        await addEntry(campaignName, {
+            type: 'automation',
+            creatureName: casterName,
+            name: 'Imprisonment',
+            description: `${spell.name} from ${casterName} blocked by Imprisonment — ${casterName} and ${targetName} are on opposite sides of the prison.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
+        return {
+            automationPopup: {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Imprisonment',
+                    description: `${spell.name} is blocked by Imprisonment. ${casterName} and ${targetName} are on opposite sides of the prison, and no attack, spell, or effect can pass through it.`,
                 },
             },
         };

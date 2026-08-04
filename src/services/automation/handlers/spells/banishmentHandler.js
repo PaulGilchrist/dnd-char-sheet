@@ -10,6 +10,40 @@ import { rollD20 } from '../../../dice/diceRoller.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 
+function getBanishmentEffects() {
+    return (getRuntimeValue('campaign', 'targetEffects') || []).filter(te => te.effect === 'banishment');
+}
+
+/**
+ * True when a creature is currently banished.
+ */
+export function isCreatureTrappedInBanishment(creatureName) {
+    if (!creatureName) return false;
+    return getBanishmentEffects().some(te => te.target === creatureName);
+}
+
+/**
+ * True when an attack/effect between attacker and target must be blocked by
+ * a Banishment demiplane. Allowed only when both are banished by the same caster.
+ */
+export function isBanishmentBlocked(attackerName, targetName, _campaignName) {
+    if (!attackerName || !targetName) return false;
+    const banishmentEffects = getBanishmentEffects();
+    if (banishmentEffects.length === 0) return false;
+
+    const attackerTrapped = banishmentEffects.some(te => te.target === attackerName);
+    const targetTrapped = banishmentEffects.some(te => te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+        const attackerSources = banishmentEffects
+            .filter(te => te.target === attackerName)
+            .map(te => te.source);
+        return !banishmentEffects.some(te => te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+}
+
 function dispatchSaveResult(campaignName, promptId, targetName, saveType, saveDc, saveResult) {
     sendSaveResult(campaignName, targetName, {
         promptId,

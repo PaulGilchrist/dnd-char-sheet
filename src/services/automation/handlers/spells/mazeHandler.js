@@ -4,8 +4,44 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { storeSpellLastAttack } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+
+function getMazeEffects() {
+    return (getRuntimeValue('campaign', 'targetEffects') || []).filter(te => te.effect === 'maze');
+}
+
+/**
+ * True when a creature is currently trapped by Maze.
+ */
+export function isCreatureTrappedInMaze(creatureName) {
+    if (!creatureName) return false;
+    return getMazeEffects().some(te => te.target === creatureName);
+}
+
+/**
+ * True when an attack/effect between attacker and target must be blocked by
+ * a Maze barrier. Allowed only when both are inside the same maze or
+ * both are outside any maze.
+ */
+export function isMazeBlocked(attackerName, targetName, _campaignName) {
+    if (!attackerName || !targetName) return false;
+    const mazeEffects = getMazeEffects();
+    if (mazeEffects.length === 0) return false;
+
+    const attackerTrapped = mazeEffects.some(te => te.target === attackerName);
+    const targetTrapped = mazeEffects.some(te => te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+        // Both trapped — allowed only if they share the same maze (same source)
+        const attackerSources = mazeEffects
+            .filter(te => te.target === attackerName)
+            .map(te => te.source);
+        return !mazeEffects.some(te => te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+}
 
 /**
  * Maze spell handler (2024 ruleset).
@@ -149,16 +185,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         addConcentration(cs, casterName, action.name, concentrationDc);
     }
 
-    // Record save result
-    await addTargetResult(campaignName, {
-        targetName,
-        saveResult: 'failure',
-        roll: 0,
-        total: 0,
-        conditions: ['incapacitated'],
-        appliedDamage: 0,
-    });
-
     // Log to campaign journal
     addEntry(campaignName, {
         type: 'ability_use',
@@ -196,6 +222,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             description: `${targetName} is banished to a labyrinthine demiplane. ${targetName} is Incapacitated and can take a Study action (DC 20 INT Investigation) to escape.`,
         },
     };
+}
+
+export function removeMazeEffect(targetName, sourceName, campaignName) {
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const effects = Array.isArray(storedEffects) ? storedEffects : [];
+    const existing = effects.find(te => te.effect === 'maze' && te.target === targetName && te.source === sourceName);
+    if (!existing) return null;
+
+    setRuntimeValue(
+        'campaign',
+        'targetEffects',
+        effects.filter(te => !(te.effect === 'maze' && te.target === targetName && te.source === sourceName)),
+        campaignName
+    );
+    return existing;
 }
 
 /**

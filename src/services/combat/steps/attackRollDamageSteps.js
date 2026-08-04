@@ -19,6 +19,9 @@ import { createSaveListener } from '../../automation/common/savePrompt.js';
 import { resolveDiceExpression } from '../automation/automationExpressions.js';
 import { addCondition } from '../../combat/conditions/conditionSaveService.js';
 import { isForcecageBlocked } from '../../automation/handlers/spells/forcecageHandler.js';
+import { isMazeBlocked } from '../../automation/handlers/spells/mazeHandler.js';
+import { isBanishmentBlocked } from '../../automation/handlers/spells/banishmentHandler.js';
+import { isImprisonmentBlocked } from '../../automation/handlers/spells/imprisonmentHandler.js';
 
 // DEBUG: temporarily trigger Overwhelming Strike on 10 instead of 20
 const OVERWHELMING_STRIKE_TEST_ROLL = 20;
@@ -58,6 +61,63 @@ export function buildAttackRollDamageSteps() {
             type: 'automation_info',
             name: 'Forcecage',
             description: `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Forcecage. No attack, spell, or effect can pass between inside and outside the prison.`,
+          });
+          return null;
+        }
+
+        // Maze — the target is banished to a labyrinthine demiplane.
+        // No one can attack or be attacked while in the maze.
+        if (ctx.targetName && isMazeBlocked(ctx.playerStats.name, ctx.targetName, ctx.campaignName)) {
+          const description = `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Maze — they are on opposite sides of the demiplane barrier.`;
+          addEntry(ctx.campaignName, {
+            type: 'automation',
+            creatureName: ctx.playerStats.name,
+            name: 'Maze',
+            description,
+            timestamp: Date.now(),
+          }).catch(() => {});
+          ctx.setPopupHtml?.({
+            type: 'automation_info',
+            name: 'Maze',
+            description: `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Maze. No attack, spell, or effect can pass between inside and outside the demiplane.`,
+          });
+          return null;
+        }
+
+        // Banishment — the target is banished to a harmless demiplane.
+        // No one can attack or be attacked while banished.
+        if (ctx.targetName && isBanishmentBlocked(ctx.playerStats.name, ctx.targetName, ctx.campaignName)) {
+          const description = `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Banishment — they are on opposite sides of the demiplane barrier.`;
+          addEntry(ctx.campaignName, {
+            type: 'automation',
+            creatureName: ctx.playerStats.name,
+            name: 'Banishment',
+            description,
+            timestamp: Date.now(),
+          }).catch(() => {});
+          ctx.setPopupHtml?.({
+            type: 'automation_info',
+            name: 'Banishment',
+            description: `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Banishment. No attack, spell, or effect can pass between inside and outside the demiplane.`,
+          });
+          return null;
+        }
+
+        // Imprisonment — the target is magically restrained in a demiplane.
+        // No one can attack or be attacked while imprisoned.
+        if (ctx.targetName && isImprisonmentBlocked(ctx.playerStats.name, ctx.targetName, ctx.campaignName)) {
+          const description = `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Imprisonment — they are on opposite sides of the barrier.`;
+          addEntry(ctx.campaignName, {
+            type: 'automation',
+            creatureName: ctx.playerStats.name,
+            name: 'Imprisonment',
+            description,
+            timestamp: Date.now(),
+          }).catch(() => {});
+          ctx.setPopupHtml?.({
+            type: 'automation_info',
+            name: 'Imprisonment',
+            description: `${ctx.playerStats.name}'s attack on ${ctx.targetName} is blocked by Imprisonment. No attack, spell, or effect can pass between inside and outside the prison.`,
           });
           return null;
         }

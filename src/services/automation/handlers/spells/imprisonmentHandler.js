@@ -9,6 +9,40 @@ import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 import { rollD20 } from '../../../dice/diceRoller.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 
+function getImprisonmentEffects() {
+    return (getRuntimeValue('campaign', 'targetEffects') || []).filter(te => te.effect === 'imprisonment');
+}
+
+/**
+ * True when a creature is currently imprisoned.
+ */
+export function isCreatureTrappedInImprisonment(creatureName) {
+    if (!creatureName) return false;
+    return getImprisonmentEffects().some(te => te.target === creatureName);
+}
+
+/**
+ * True when an attack/effect between attacker and target must be blocked by
+ * an Imprisonment barrier. Allowed only when both are imprisoned by the same caster.
+ */
+export function isImprisonmentBlocked(attackerName, targetName, _campaignName) {
+    if (!attackerName || !targetName) return false;
+    const imprisonmentEffects = getImprisonmentEffects();
+    if (imprisonmentEffects.length === 0) return false;
+
+    const attackerTrapped = imprisonmentEffects.some(te => te.target === attackerName);
+    const targetTrapped = imprisonmentEffects.some(te => te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+        const attackerSources = imprisonmentEffects
+            .filter(te => te.target === attackerName)
+            .map(te => te.source);
+        return !imprisonmentEffects.some(te => te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+}
+
 function dispatchSaveResult(campaignName, promptId, targetName, saveType, saveDc, saveResult) {
     sendSaveResult(campaignName, targetName, {
         promptId,

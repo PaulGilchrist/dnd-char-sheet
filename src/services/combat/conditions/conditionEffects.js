@@ -5,7 +5,7 @@ const CONDITIONS_THAT_CANNOT_ACT = new Set([
  ])
 
 const CONDITIONS_THAT_SPEED_ZERO = new Set([
-    'grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero', 'forcecaged',
+    'grappled', 'paralyzed', 'petrified', 'restrained', 'stunned', 'unconscious', 'speed_zero', 'forcecaged', 'mazed',
 ])
 
 const CONDITION_KEYWORDS = new Set(['charmed', 'frightened', 'poison', 'magic'])
@@ -603,14 +603,21 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
            }
            break;
 
-         case 'forcecaged':
-           // Forcecaged: trapped in cage, can't leave by nonmagical means
-           // Speed is 0 (can't move out of cage)
-           effects.speedZero = true;
-           effects.cannotAct = true;
-           effects.concentrationBroken = true;
-           break;
-         }
+          case 'forcecaged':
+            // Forcecaged: trapped in cage, can't leave by nonmagical means
+            // Speed is 0 (can't move out of cage)
+            effects.speedZero = true;
+            effects.cannotAct = true;
+            effects.concentrationBroken = true;
+            break;
+          case 'mazed':
+            // Mazed: banished to labyrinthine demiplane, can't attack or be attacked
+            // Speed is 0, cannot act, concentration broken
+            effects.speedZero = true;
+            effects.cannotAct = true;
+            effects.concentrationBroken = true;
+            break;
+          }
     }
 
   for (const te of targetEffects) {

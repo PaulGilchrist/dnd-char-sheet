@@ -323,6 +323,13 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Banished', cls: 'effect-debuff', icon: 'fa-door-open', removable: isLocalhost, removeAction: 'target_effect', effectType: 'banishment', tooltip: `Banished by ${casterName}: Incapacitated in demiplane. ${permanent ? 'Permanent banishment - target will not return.' : 'Concentration, up to 1 minute.'}` })
     }
 
+    const mazeEffect = targetEffects?.find(te => te.effect === 'maze' && te.target === creatureName)
+    if (mazeEffect) {
+        const casterName = mazeEffect.source || 'unknown'
+        const mazeDc = mazeEffect.dc || 20
+        badges.push({ label: 'Mazed', cls: 'effect-debuff', icon: 'fa-dungeon', removable: isLocalhost, removeAction: 'target_effect', effectType: 'maze', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'incapacitated', label: 'Incapacitated', dc: mazeDc, ability: 'int' }) : undefined, tooltip: `Mazed by ${casterName}: Incapacitated in a labyrinthine demiplane. No one can attack or be attacked. Click to attempt a DC ${mazeDc} INT (Investigation) check to escape.` })
+    }
+
     const imprisonmentEffect = targetEffects?.find(te => te.effect === 'imprisonment' && te.target === creatureName)
     if (imprisonmentEffect) {
         const casterName = imprisonmentEffect.source || 'unknown'

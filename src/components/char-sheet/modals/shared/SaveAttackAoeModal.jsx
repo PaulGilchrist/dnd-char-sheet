@@ -335,20 +335,88 @@ function SaveAttackAoeModal({
         return combatSummary.creatures
             .filter(c => {
                 if (!playerStats.name || !c.name) return true;
+
+                // Forcecage blocking
                 const forcecageEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                if (!Array.isArray(forcecageEffects) || forcecageEffects.length === 0) return true;
+                if (Array.isArray(forcecageEffects) && forcecageEffects.length > 0) {
+                    const attackerTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === playerStats.name);
+                    const targetTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name);
 
-                const attackerTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === playerStats.name);
-                const targetTrapped = forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name);
-
-                if (!attackerTrapped && !targetTrapped) return true;
-                if (attackerTrapped && targetTrapped) {
-                    const attackerSources = forcecageEffects
-                        .filter(te => te.effect === 'forcecage' && te.target === playerStats.name)
-                        .map(te => te.source);
-                    return forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name && attackerSources.includes(te.source));
+                    if (attackerTrapped || targetTrapped) {
+                        if (attackerTrapped && targetTrapped) {
+                            const attackerSources = forcecageEffects
+                                .filter(te => te.effect === 'forcecage' && te.target === playerStats.name)
+                                .map(te => te.source);
+                            if (!forcecageEffects.some(te => te.effect === 'forcecage' && te.target === c.name && attackerSources.includes(te.source))) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
                 }
-                return false;
+
+                // Maze blocking
+                const mazeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                if (Array.isArray(mazeEffects) && mazeEffects.length > 0) {
+                    const attackerTrapped = mazeEffects.some(te => te.effect === 'maze' && te.target === playerStats.name);
+                    const targetTrapped = mazeEffects.some(te => te.effect === 'maze' && te.target === c.name);
+
+                    if (attackerTrapped || targetTrapped) {
+                        if (attackerTrapped && targetTrapped) {
+                            const attackerSources = mazeEffects
+                                .filter(te => te.effect === 'maze' && te.target === playerStats.name)
+                                .map(te => te.source);
+                            if (!mazeEffects.some(te => te.effect === 'maze' && te.target === c.name && attackerSources.includes(te.source))) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+
+                // Banishment blocking
+                const banishmentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                if (Array.isArray(banishmentEffects) && banishmentEffects.length > 0) {
+                    const attackerTrapped = banishmentEffects.some(te => te.effect === 'banishment' && te.target === playerStats.name);
+                    const targetTrapped = banishmentEffects.some(te => te.effect === 'banishment' && te.target === c.name);
+
+                    if (attackerTrapped || targetTrapped) {
+                        if (attackerTrapped && targetTrapped) {
+                            const attackerSources = banishmentEffects
+                                .filter(te => te.effect === 'banishment' && te.target === playerStats.name)
+                                .map(te => te.source);
+                            if (!banishmentEffects.some(te => te.effect === 'banishment' && te.target === c.name && attackerSources.includes(te.source))) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+
+                // Imprisonment blocking
+                const imprisonmentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                if (Array.isArray(imprisonmentEffects) && imprisonmentEffects.length > 0) {
+                    const attackerTrapped = imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === playerStats.name);
+                    const targetTrapped = imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === c.name);
+
+                    if (attackerTrapped || targetTrapped) {
+                        if (attackerTrapped && targetTrapped) {
+                            const attackerSources = imprisonmentEffects
+                                .filter(te => te.effect === 'imprisonment' && te.target === playerStats.name)
+                                .map(te => te.source);
+                            if (!imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === c.name && attackerSources.includes(te.source))) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
             })
             .map(c => ({
                 ...c,

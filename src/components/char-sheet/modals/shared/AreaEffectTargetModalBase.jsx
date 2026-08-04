@@ -56,6 +56,60 @@ function AreaEffectTargetModalBase({
     return true;
   }, [attackerName]);
 
+  const getMazeBlocked = useCallback((targetName) => {
+    if (!attackerName || !targetName) return false;
+    const mazeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    if (!Array.isArray(mazeEffects) || mazeEffects.length === 0) return false;
+
+    const attackerTrapped = mazeEffects.some(te => te.effect === 'maze' && te.target === attackerName);
+    const targetTrapped = mazeEffects.some(te => te.effect === 'maze' && te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+      const attackerSources = mazeEffects
+        .filter(te => te.effect === 'maze' && te.target === attackerName)
+        .map(te => te.source);
+      return !mazeEffects.some(te => te.effect === 'maze' && te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+  }, [attackerName]);
+
+  const getBanishmentBlocked = useCallback((targetName) => {
+    if (!attackerName || !targetName) return false;
+    const banishmentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    if (!Array.isArray(banishmentEffects) || banishmentEffects.length === 0) return false;
+
+    const attackerTrapped = banishmentEffects.some(te => te.effect === 'banishment' && te.target === attackerName);
+    const targetTrapped = banishmentEffects.some(te => te.effect === 'banishment' && te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+      const attackerSources = banishmentEffects
+        .filter(te => te.effect === 'banishment' && te.target === attackerName)
+        .map(te => te.source);
+      return !banishmentEffects.some(te => te.effect === 'banishment' && te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+  }, [attackerName]);
+
+  const getImprisonmentBlocked = useCallback((targetName) => {
+    if (!attackerName || !targetName) return false;
+    const imprisonmentEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    if (!Array.isArray(imprisonmentEffects) || imprisonmentEffects.length === 0) return false;
+
+    const attackerTrapped = imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === attackerName);
+    const targetTrapped = imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === targetName);
+
+    if (!attackerTrapped && !targetTrapped) return false;
+    if (attackerTrapped && targetTrapped) {
+      const attackerSources = imprisonmentEffects
+        .filter(te => te.effect === 'imprisonment' && te.target === attackerName)
+        .map(te => te.source);
+      return !imprisonmentEffects.some(te => te.effect === 'imprisonment' && te.target === targetName && attackerSources.includes(te.source));
+    }
+    return true;
+  }, [attackerName]);
+
   const eligibleTargets = useMemo(() => {
     if (!combatSummary?.creatures) return [];
     return combatSummary.creatures.filter(c => {
@@ -65,6 +119,9 @@ function AreaEffectTargetModalBase({
         if (!monster || monster.type.toLowerCase() !== 'undead') return false;
       }
       if (getForcecageBlocked(c.name)) return false;
+      if (getMazeBlocked(c.name)) return false;
+      if (getBanishmentBlocked(c.name)) return false;
+      if (getImprisonmentBlocked(c.name)) return false;
       if (!mapData || !attackerPos) return true;
       const targetPos = mapData.players?.find(p => p.name === c.name) || mapData.placedItems?.find(i => i.name === c.name);
       if (!targetPos) return true;
@@ -82,7 +139,7 @@ function AreaEffectTargetModalBase({
       
       return isDistanceInRange(getDistanceFeet(attackerPos, { gridX: targetPos.gridX, gridY: targetPos.gridY }), rangeFeet);
     });
-  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY, includeCaster, getForcecageBlocked]);
+  }, [combatSummary, attackerName, mapData, attackerPos, rangeFeet, turnUndead, monsters, shape, coneAngle, widthFt, attackerGridX, attackerGridY, includeCaster, getForcecageBlocked, getMazeBlocked, getBanishmentBlocked, getImprisonmentBlocked]);
 
   const toggleTarget = useCallback((name) => {
     setSelected(prev => {

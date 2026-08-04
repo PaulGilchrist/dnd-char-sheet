@@ -38,6 +38,9 @@ import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/
 import { checkCompelledDuelAttackExpiry } from '../../services/automation/handlers/spells/compelledDuelHandler.js';
 import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
 import { isForcecageBlocked } from '../../services/automation/handlers/spells/forcecageHandler.js';
+import { isMazeBlocked } from '../../services/automation/handlers/spells/mazeHandler.js';
+import { isBanishmentBlocked } from '../../services/automation/handlers/spells/banishmentHandler.js';
+import { isImprisonmentBlocked } from '../../services/automation/handlers/spells/imprisonmentHandler.js';
 
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
@@ -63,6 +66,24 @@ export function createLogAndShow(deps) {
                 const description = `${attackerName}'s attack on ${targetName} is blocked by Forcecage. No attack, spell, or effect can pass between inside and outside the prison.`;
                 setPopupHtml({ type: 'automation_info', name: 'Forcecage', description });
                 addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Forcecage.` });
+                return;
+            }
+            if (attackerName && targetName && isMazeBlocked(attackerName, targetName, campaignName)) {
+                const description = `${attackerName}'s attack on ${targetName} is blocked by Maze. No attack, spell, or effect can pass between inside and outside the demiplane.`;
+                setPopupHtml({ type: 'automation_info', name: 'Maze', description });
+                addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Maze.` });
+                return;
+            }
+            if (attackerName && targetName && isBanishmentBlocked(attackerName, targetName, campaignName)) {
+                const description = `${attackerName}'s attack on ${targetName} is blocked by Banishment. No attack, spell, or effect can pass between inside and outside the demiplane.`;
+                setPopupHtml({ type: 'automation_info', name: 'Banishment', description });
+                addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Banishment.` });
+                return;
+            }
+            if (attackerName && targetName && isImprisonmentBlocked(attackerName, targetName, campaignName)) {
+                const description = `${attackerName}'s attack on ${targetName} is blocked by Imprisonment. No attack, spell, or effect can pass between inside and outside the prison.`;
+                setPopupHtml({ type: 'automation_info', name: 'Imprisonment', description });
+                addEntry(campaignName, { type: 'info', text: `${attackerName}'s attack on ${targetName} was blocked by Imprisonment.` });
                 return;
             }
         }
