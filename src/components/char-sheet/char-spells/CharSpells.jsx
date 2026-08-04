@@ -960,7 +960,7 @@ return (
                 </div>
                 <CharSpellSlots playerStats={playerStats} campaignName={campaignName}></CharSpellSlots>
             </div>
-            {playerStats.spellAbilities.spells.length > 0 && <table className='table-spells table-striped'>
+            {spells.length > 0 && <table className='table-spells table-striped'>
                 <thead>
                     <tr>
                         <th className='left clickable' onClick={handleSortSpell}>Spell</th>
