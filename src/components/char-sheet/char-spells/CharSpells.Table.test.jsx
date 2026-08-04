@@ -213,6 +213,7 @@ describe('CharSpells - Table Rendering', () => {
       ruleset                | playerStats              | expectedHeaders
       ${'5e'}                | ${basePlayerStats}       | ${['Spell', 'Level', 'Prepared', 'Time', 'Range', 'Effect', 'Duration', 'Notes']}
       ${'2024'}              | ${helpers.mockPlayerStats2024} | ${['Spell', 'Level', 'Time', 'Range', 'Effect', 'Duration', 'Notes']}
+      ${'2024 wizard'}       | ${helpers.mockPlayerStats2024Wizard} | ${['Spell', 'Level', 'Prepared', 'Time', 'Range', 'Effect', 'Duration', 'Notes']}
     `('renders correct headers for $ruleset rules', ({ playerStats, expectedHeaders }) => {
       renderWithProps({ playerStats });
       const table = screen.getByRole('table');
@@ -320,13 +321,42 @@ describe('CharSpells - Table Rendering', () => {
       expect(toggleFn).toHaveBeenCalledWith('Shield');
     });
 
-    it('does not render prepared column or checkboxes for 2024 rules', () => {
+    it('does not render prepared column or checkboxes for non-wizard 2024 rules', () => {
       renderWithProps({ playerStats: helpers.mockPlayerStats2024 });
       const headers = screen.getByRole('table').querySelectorAll('th');
       const headerTexts = Array.from(headers).map(h => h.textContent.trim());
       expect(headerTexts).not.toContain('Prepared');
       const checkboxes = screen.queryAllByRole('checkbox');
       expect(checkboxes).toHaveLength(0);
+    });
+
+    it('renders the prepared column and checkboxes for a 2024 wizard', () => {
+      renderWithProps({ playerStats: helpers.mockPlayerStats2024Wizard });
+      const headers = screen.getByRole('table').querySelectorAll('th');
+      const headerTexts = Array.from(headers).map(h => h.textContent.trim());
+      expect(headerTexts).toContain('Prepared');
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes).toHaveLength(2);
+      checkboxes.forEach(checkbox => expect(checkbox).not.toBeChecked());
+    });
+
+    it('grays unprepared non-ritual 2024 wizard spells but keeps unprepared rituals castable', () => {
+      renderWithProps({ playerStats: helpers.mockPlayerStats2024Wizard });
+      const table = screen.getByRole('table');
+      const shieldRow = Array.from(table.querySelectorAll('tbody tr')).find(row => row.textContent.includes('Shield'));
+      const detectMagicRow = Array.from(table.querySelectorAll('tbody tr')).find(row => row.textContent.includes('Detect Magic'));
+      expect(shieldRow).toHaveClass('spell-row-not-castable');
+      expect(detectMagicRow).not.toHaveClass('spell-row-not-castable');
+
+      const shieldCell = screen.getByText('Shield');
+      expect(shieldCell).not.toHaveClass('clickable');
+      fireEvent.click(shieldCell);
+      expect(screen.queryByTestId('spell-detail-popup')).not.toBeInTheDocument();
+
+      const detectMagicCell = screen.getByText('Detect Magic');
+      expect(detectMagicCell).toHaveClass('clickable');
+      fireEvent.click(detectMagicCell);
+      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
     });
   });
 

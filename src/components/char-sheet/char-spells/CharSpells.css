@@ -12,6 +12,13 @@
 .char-spells .spell-name {
     cursor: pointer;
 }
+.char-spells .spell-name.not-castable {
+    cursor: default;
+    opacity: 0.45;
+}
+.char-spells .spell-row-not-castable {
+    opacity: 0.45;
+}
 .char-spells .table-spells {
     border-collapse: collapse;
     text-align: center;

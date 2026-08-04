@@ -46,6 +46,7 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const [pendingGreaterRestorationTarget, setPendingGreaterRestorationTarget] = React.useState(null);
     const [pendingLesserRestorationTarget, setPendingLesserRestorationTarget] = React.useState(null);
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
+    const isWizard = playerStats.class?.name === 'Wizard';
 
     const { resolvePositions: resolveSpellPositions, cachedPosRef: cachedCastPosRef } = useSpellPositionResolver(campaignName, mapName, playerStats.name);
 
@@ -64,6 +65,8 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     const [filterPrepared, setFilterPrepared] = React.useState(false);
     const [spells, setSpells] = React.useState([]);
     const is2024 = playerStats.rules === '2024';
+    // Only 5e shows the prepared column for everyone; in 2024 it's Wizard-only (spellbook vs prepared).
+    const showPreparedColumn = !is2024 || (is2024 && isWizard);
 
     React.useEffect(() => {
         if(playerStats.spellAbilities) {
@@ -104,8 +107,8 @@ const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells
     }
 return (
         <div className="char-spells">
-            {(playerStats.spellAbilities && playerStats.spellAbilities.spells.length > 0) && <div className="spell-popup-parent">
-                    {selectedSpell && (
+            {(playerStats.spellAbilities) && <div className="spell-popup-parent">
+                    {(playerStats.spellAbilities.spells.length > 0) && selectedSpell && (
                         <Popup onClickOrKeyDown={() => setSelectedSpell(null)}>
                             <SpellDetailPopup
                                 spell={selectedSpell}
@@ -950,19 +953,19 @@ return (
                 </div>
                 <div>
                     <b>Cantrips Known:</b> {playerStats.spellAbilities.cantrips_known ? playerStats.spellAbilities.cantrips_known : 0}<br/>
-                    {!is2024 && <div>
+                    {showPreparedColumn && <div>
                         <b>Prepared Spells:</b> {playerStats.spellAbilities.prepared_spells || playerStats.spellAbilities.spells_known ? (playerStats.spellAbilities.prepared_spells || playerStats.spellAbilities.spells_known) : 'All'}<br/>                    
                         <b>Max Prepared:</b> {playerStats.spellAbilities.maxPreparedSpells ? playerStats.spellAbilities.maxPreparedSpells : 'All'}
                     </div>}
                 </div>
                 <CharSpellSlots playerStats={playerStats} campaignName={campaignName}></CharSpellSlots>
             </div>
-            <table className='table-spells table-striped'>
+            {playerStats.spellAbilities.spells.length > 0 && <table className='table-spells table-striped'>
                 <thead>
                     <tr>
                         <th className='left clickable' onClick={handleSortSpell}>Spell</th>
                         <th className='clickable' onClick={handleSortLevel}>Level</th>
-                        {!is2024 && <th className='clickable' onClick={handleTogglePreparedFilter}>Prepared</th>}
+                        {showPreparedColumn && <th className='clickable' onClick={handleTogglePreparedFilter}>Prepared</th>}
                         <th>Time</th>
                         <th>Range</th>
                         <th>Effect</th>
@@ -999,11 +1002,16 @@ return (
                             const saveLabel = spell.dc.dc_success === 'half' ? 'half' : spell.dc.dc_success === 'negates' ? 'negates' : '';
                             effect = spell.dc.dc_type + (saveLabel ? ` ${saveLabel}` : '');
                         }
-                        return <tr key={spell.name}>
-                            <td className='left spell-name clickable' onClick={() => setSelectedSpell(spell)}>{spell.name}</td>
+                        const isPrepared = spell.prepared === 'Always' || spell.prepared === 'Prepared';
+                        // 2024 wizards: unprepared non-ritual spells are in the spellbook but not castable;
+                        // unprepared rituals remain castable via Ritual Adept. Other classes always have
+                        // prepared spells, so nothing is ever grayed.
+                        const isGrayedNonCastable = is2024 && isWizard && !isPrepared && !spell.ritual;
+                        return <tr key={spell.name} className={isGrayedNonCastable ? 'spell-row-not-castable' : ''}>
+                            <td className={`left spell-name ${isGrayedNonCastable ? 'not-castable' : 'clickable'}`} title={isGrayedNonCastable ? 'Not prepared' : undefined} onClick={() => { if (!isGrayedNonCastable) setSelectedSpell(spell); }}>{spell.name}</td>
                             <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
-                            {!is2024 && (spell.prepared !== 'Prepared' && spell.prepared !== '') && <td>{spell.prepared}</td>}
-                            {!is2024 && (spell.prepared === 'Prepared' || spell.prepared === '') && <td><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></td>}
+                            {showPreparedColumn && (spell.prepared !== 'Prepared' && spell.prepared !== '') && <td>{spell.prepared}</td>}
+                            {showPreparedColumn && (spell.prepared === 'Prepared' || spell.prepared === '') && <td><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></td>}
                             <td>{spell.casting_time ? spell.casting_time.replace(/\bbonus action\b/g, 'BA').replace(/\baction\b/g, ' A').replace(/\breaction\b/g, 'Reaction').replace(/\bminute\b/g, 'min').replace(/\bminutes\b/g, 'min') : ''}</td>
                             <td>{spell.range}</td>
                             <td>{effect}</td>
@@ -1012,7 +1020,7 @@ return (
                         </tr>
                     })}
                 </tbody>
-            </table>
+            </table>}
         </div>}
     </div>
     )

@@ -100,8 +100,8 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             }
             const stats = await rulesFactory.getPlayerStats(effectiveClasses, allEquipment, effectiveMagicItems, effectiveRaces, spellData, processingSummary);
 
-            // Load prepared spells from runtime state (skip for 2024 ruleset where all spells are known/prepared)
-            if (playerSummary.rules !== '2024') {
+            // Load prepared spells from runtime state (2024: only wizards track prepared vs known)
+            if (playerSummary.rules !== '2024' || playerSummary.class?.name === 'Wizard') {
                 const preparedSpells = getRuntimeValue(playerSummary.name, 'preparedSpells');
                 const preparedSpellsArray = Array.isArray(preparedSpells) ? preparedSpells : [];
 
@@ -944,11 +944,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     mapName={activeMapName}
                     characters={characters}
                 ></CharReactions>
-                {playerSummary.rules === '2024'
-                    ? <CharSpells playerStats={playerStats} campaignName={campaignName} exhaustionPenalty={exhaustionPenalty} conditionAttackMode={effectiveAttackMode} cannotAct={cannotAct} mapName={activeMapName} characters={characters} setModalState={setModalState}></CharSpells>
-                    : <CharSpells playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)} campaignName={campaignName} exhaustionPenalty={exhaustionPenalty} conditionAttackMode={effectiveAttackMode} cannotAct={cannotAct} mapName={activeMapName} characters={characters} setModalState={setModalState}></CharSpells>
-
-                }
+                <CharSpells playerStats={playerStats} handleTogglePreparedSpells={(spellName) => handleTogglePreparedSpells(spellName)} campaignName={campaignName} exhaustionPenalty={exhaustionPenalty} conditionAttackMode={effectiveAttackMode} cannotAct={cannotAct} mapName={activeMapName} characters={characters} setModalState={setModalState}></CharSpells>
                 <CharInventory playerStats={playerStats}></CharInventory>
                 <CharSpecialActions playerStats={playerStats} campaignName={campaignName} cannotAct={cannotAct} characters={characters} mapName={activeMapName}></CharSpecialActions>
                 <div className='no-print'><CharCharacterAdvancement playerStats={playerStats} campaignName={campaignName}></CharCharacterAdvancement></div>

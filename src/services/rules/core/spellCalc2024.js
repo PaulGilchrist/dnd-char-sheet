@@ -138,8 +138,12 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             spellAbilities.saveDc = 8 + spellAbility.bonus + playerStats.proficiency;
         }
 
+        // Wizards track prepared vs known (spellbook); every other 2024 class has all spells prepared.
+        // Wizard spells default to prepared — the sheet can un-prepare, and unprepared rituals stay
+        // castable per Ritual Adept.
+        const isWizard = playerStats.class?.name === 'Wizard';
         spellAbilities.spells.forEach((spell) => {
-            spell.prepared = 'Always';
+            spell.prepared = isWizard ? 'Prepared' : 'Always';
         });
 
         // Add subclass (major) spells as always prepared (2024 format: {name, level})
@@ -426,10 +430,13 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 }
             }
 
-            // Ritual Adept: add all ritual-tagged spells from the spellbook that aren't already known
+            // Ritual Adept (wizard class feature): the wizard's known ritual spells are already in their
+            // spell list, so do NOT inject every ritual spell in the game. Other ritual_spells features
+            // (e.g. the Ritual Caster feat) still grant the full ritual list.
             const ritualSpellsPassives = playerStats.automation.ritualSpells || [];
             if (ritualSpellsPassives.length > 0 && allSpells) {
-                ritualSpellsPassives.forEach(_ritualFeature => {
+                ritualSpellsPassives.forEach(ritualFeature => {
+                    if (ritualFeature.name === 'Ritual Adept') return;
                     allSpells.forEach(spellDetail => {
                         if (spellDetail.ritual && !spellAbilities.spells.find(s => s.name === spellDetail.name)) {
                             spellAbilities.spells.push({ ...spellDetail, prepared: 'Always' });
@@ -502,6 +509,11 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     spell.casting_time = 'Ritual';
                 }
             });
+        }
+
+        // 2024 Wizards prepare a subset of their spellbook; track the limit so the sheet can toggle prepared status
+        if (playerStats.class?.name === 'Wizard' && spellAbilities.prepared_spells != null) {
+            spellAbilities.maxPreparedSpells = spellAbilities.prepared_spells;
         }
     }
 

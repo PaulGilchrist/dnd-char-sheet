@@ -463,13 +463,14 @@ describe('spellCalc2024', () => {
 
     // ── Spell mapping and sorting ──
 
-    it('maps spell names to spell details with prepared=Always for all levels', () => {
+    it('maps spell names to spell details: wizard cantrips Always, level 1+ Prepared, and sets maxPreparedSpells', () => {
       const allSpells = [
         makeSpell('Fire Bolt', 0, { damage_type: 'Fire' }),
         makeSpell('Magic Missile', 1, { damage_type: 'Force' }),
       ];
       const stats = makePlayerStats();
       stats.spells = ['Fire Bolt', 'Magic Missile'];
+      stats.class.class_levels = [{ level: 1, spellcasting: { cantrips_known: 3, prepared_spells: 4, spell_slots_level_1: 2, spell_slots_level_2: 0, spell_slots_level_3: 0, spell_slots_level_4: 0, spell_slots_level_5: 0, spell_slots_level_6: 0, spell_slots_level_7: 0, spell_slots_level_8: 0, spell_slots_level_9: 0, spell_type: 'prepared' } }];
 
       const result = getSpellAbilities(allSpells, stats);
 
@@ -478,8 +479,25 @@ describe('spellCalc2024', () => {
       expect(fireBolt.prepared).toBe('Always');
       expect(fireBolt.level).toBe(0);
       const magicMissile = result.spells.find(s => s.name === 'Magic Missile');
-      expect(magicMissile.prepared).toBe('Always');
+      expect(magicMissile.prepared).toBe('Prepared');
       expect(magicMissile.level).toBe(1);
+      expect(result.maxPreparedSpells).toBe(4);
+    });
+
+    it('marks all spells Always prepared for non-wizard 2024 classes', () => {
+      const allSpells = [
+        makeSpell('Fire Bolt', 0, { damage_type: 'Fire' }),
+        makeSpell('Magic Missile', 1, { damage_type: 'Force' }),
+      ];
+      const stats = makePlayerStats();
+      stats.class.name = 'Cleric';
+      stats.spells = ['Fire Bolt', 'Magic Missile'];
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.find(s => s.name === 'Fire Bolt').prepared).toBe('Always');
+      expect(result.spells.find(s => s.name === 'Magic Missile').prepared).toBe('Always');
+      expect(result.maxPreparedSpells).toBeUndefined();
     });
 
     it('sorts spells by level ascending then name alphabetically', () => {
@@ -929,9 +947,9 @@ describe('spellCalc2024', () => {
       expect(minorIllusion.casting_time).toBe('1 action');
     });
 
-    // ── Automation: Ritual Adept ──
+    // ── Automation: Ritual Adept (wizard class feature) ──
 
-    it('adds ritual-tagged spells from spellbook when Ritual Adept is present', () => {
+    it('does not inject every ritual spell for the wizard Ritual Adept class feature — only known spells appear', () => {
       const allSpells = [
         makeSpell('Fire Bolt', 0, { ritual: false }),
         makeSpell('Alarm', 1, { ritual: true }),
@@ -939,7 +957,7 @@ describe('spellCalc2024', () => {
         makeSpell('Detect Magic', 1, { ritual: true, classes: ['Bard', 'Cleric'] }),
       ];
       const stats = makePlayerStats();
-      stats.spells = ['Fire Bolt'];
+      stats.spells = ['Fire Bolt', 'Alarm'];
       stats.automation = {
         ritualSpells: [{ type: 'passive_rule', effect: 'ritual_spells', name: 'Ritual Adept', hasAutomation: true }],
       };
@@ -949,8 +967,28 @@ describe('spellCalc2024', () => {
       const names = result.spells.map(s => s.name);
       expect(names).toContain('Fire Bolt');
       expect(names).toContain('Alarm');
+      expect(names).not.toContain('Find Familiar');
+      expect(names).not.toContain('Detect Magic');
+    });
+
+    it('still injects all ritual spells for other ritual_spells features like the Ritual Caster feat', () => {
+      const allSpells = [
+        makeSpell('Fire Bolt', 0, { ritual: false }),
+        makeSpell('Alarm', 1, { ritual: true }),
+        makeSpell('Find Familiar', 1, { ritual: true }),
+      ];
+      const stats = makePlayerStats();
+      stats.spells = ['Fire Bolt'];
+      stats.automation = {
+        ritualSpells: [{ type: 'passive_rule', effect: 'ritual_spells', name: 'Ritual Caster', hasAutomation: true }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      const names = result.spells.map(s => s.name);
+      expect(names).toContain('Fire Bolt');
+      expect(names).toContain('Alarm');
       expect(names).toContain('Find Familiar');
-      expect(names).toContain('Detect Magic');
     });
 
     it('deduplicates ritual spells already in known list', () => {
@@ -958,7 +996,7 @@ describe('spellCalc2024', () => {
       const stats = makePlayerStats();
       stats.spells = ['Alarm'];
       stats.automation = {
-        ritualSpells: [{ type: 'passive_rule', effect: 'ritual_spells', name: 'Ritual Adept', hasAutomation: true }],
+        ritualSpells: [{ type: 'passive_rule', effect: 'ritual_spells', name: 'Ritual Caster', hasAutomation: true }],
       };
 
       const result = getSpellAbilities(allSpells, stats);
