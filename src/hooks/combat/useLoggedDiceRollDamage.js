@@ -1715,6 +1715,87 @@ export function createLogDamageAndShow(deps) {
 
     return async function logDamageAndShow(name, formula, total, rolls, modifier, context) {
 
+        // Sanctuary: if target is warded, attacker (characterName) must succeed on WIS save before save-based spell (not attack damage follow-up)
+        if (context?.targetName && context?.saveDc && context?.saveType) {
+            const sanctuaryEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                te => te.effect === 'sanctuary' && te.target === context.targetName && te.source !== characterName
+            );
+            if (sanctuaryEffect) {
+                const sanctuaryCaster = sanctuaryEffect.source;
+                const saveDc = sanctuaryEffect.saveDc || (() => {
+                    console.error('[sanctuary] Missing saveDc on targetEffect for target', context.targetName, '— defaulting to 8');
+                    return 8;
+                })();
+
+                const promptId = utils.guid();
+                const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
+                pendingSaves[promptId] = {
+                    promptId,
+                    campaignName,
+                    targetName: characterName,
+                    attackerName: sanctuaryCaster,
+                    saveType: 'WIS',
+                    saveDc: saveDc,
+                    dcSuccess: 'none',
+                    disadvantage: false,
+                    advantage: false,
+                    condition: 'sanctuary',
+                    sourceName: sanctuaryCaster,
+                };
+                setRuntimeValue('campaign', 'pendingSavePrompts', pendingSaves, campaignName);
+
+                sendSavePrompt(campaignName, {
+                    promptId,
+                    targetName: characterName,
+                    attackerName: sanctuaryCaster,
+                    saveType: 'WIS',
+                    saveDc: saveDc,
+                    dcSuccess: 'none',
+                    disadvantage: false,
+                    advantage: false,
+                    condition: 'sanctuary',
+                    sourceName: sanctuaryCaster,
+                });
+
+                const saveResult = await new Promise((resolve) => {
+                    const handler = (event) => {
+                        if (event.detail.promptId !== promptId) return;
+                        window.removeEventListener('save-result', handler);
+                        const saves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
+                        delete saves[promptId];
+                        setRuntimeValue('campaign', 'pendingSavePrompts', saves, campaignName);
+                        resolve(event.detail);
+                    };
+                    window.addEventListener('save-result', handler);
+                });
+
+                if (!saveResult.success) {
+                    await addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: sanctuaryCaster,
+                        targetName: characterName,
+                        saveDc: saveDc,
+                        saveType: 'WIS',
+                        success: false,
+                        description: `${characterName} failed WIS save against Sanctuary on ${context.targetName} — attack is lost.`,
+                    }).catch((e) => { console.error("[sanctuary] Error logging:", e); });
+                    setPopupHtml({ type: 'automation_info', name: 'Sanctuary', description: `${characterName} failed WIS save against Sanctuary on ${context.targetName}. The spell is lost.` });
+                    return;
+                }
+
+                // Success: attacker's save allows the spell to proceed, sanctuary will end after attack resolves
+                await addEntry(campaignName, {
+                    type: 'save_result',
+                    characterName: sanctuaryCaster,
+                    targetName: characterName,
+                    saveDc: saveDc,
+                    saveType: 'WIS',
+                    success: true,
+                    description: `${characterName} succeeded on WIS save against Sanctuary on ${context.targetName}.`,
+                }).catch((e) => { console.error("[sanctuary] Error logging:", e); });
+            }
+        }
+
         // Apply Feinting Attack superiority die damage bonus
         const feintDieValue = getRuntimeValue(characterName, 'feintingAttackDieValue');
         if (feintDieValue && Number(feintDieValue) > 0) {

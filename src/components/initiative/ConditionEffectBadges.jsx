@@ -189,6 +189,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (compelledDuelEffect) {
         badges.push({ label: 'Compelled Duel', cls: 'effect-debuff', icon: 'fa-hand-fist', removable: true, removeAction: 'target_effect', effectType: 'compelled_duel', tooltip: `Disadvantage on attack rolls vs creatures other than ${compelledDuelEffect.source || 'you'} (Concentration, up to 1 minute)` })
     }
+    const sanctuaryEffect = targetEffects?.find(te => te.effect === 'sanctuary' && te.target === creatureName)
+    if (sanctuaryEffect) {
+        const casterName = sanctuaryEffect.source || 'unknown'
+        badges.push({ label: 'Sanctuary', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'sanctuary', tooltip: `Sanctuary from ${casterName}: Creatures targeting this creature with attack rolls or damaging spells must succeed on a WIS save or lose the attack/spell. Does not protect from areas of effect. Spell ends if the warded creature attacks, casts a spell, or deals damage.` })
+    }
     if (effects.banePenalty) {
         const baneEffect = targetEffects?.find(te => te.effect === 'bane_penalty' && te.target === creatureName)
         const casterName = baneEffect?.source || 'unknown'

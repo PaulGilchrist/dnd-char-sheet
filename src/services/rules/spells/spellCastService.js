@@ -559,7 +559,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         'dominate monster',
         'dominate person',
         'tasha\'s hideous laughter', 'hideous laughter',
-        'sanctuary',
         'ray of enfeeblement',
         'hex',
     ]);
@@ -1529,11 +1528,11 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         setupSpellBreakerDispelRetention(playerStats.name, metaCtx.slotLevel, campaignName, playerStats);
     }
 
-    // Sanctuary: ends if the warded creature casts a spell
+    // Sanctuary: ends if the warded creature (not the caster) casts a spell
     const sanctuaryEffects = (function () {
         try {
             return (getRuntimeValue('campaign', 'targetEffects') || []).filter(
-                te => te.effect === 'sanctuary' && te.source === playerStats.name
+                te => te.effect === 'sanctuary' && te.target === playerStats.name
             );
         } catch {
             return [];
@@ -1541,10 +1540,11 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     })();
     if (sanctuaryEffects.length > 0) {
         for (const se of sanctuaryEffects) {
-            const wardedCreature = characters?.find(c => c.name === se.target);
-            if (wardedCreature) {
-                endSanctuary(playerStats.name, se.target, campaignName,
-                    `${se.target} cast a spell, ending Sanctuary.`);
+            const casterName = se.source;
+            const caster = characters?.find(c => c.name === casterName);
+            if (caster) {
+                endSanctuary(casterName, playerStats.name, campaignName,
+                    `${playerStats.name} cast a spell, ending Sanctuary.`);
             }
         }
     }

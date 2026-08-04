@@ -603,7 +603,7 @@ export {
     applyDeathWardEffect, isDeathWardActive,
     isStoneSkinActive, getStoneSkinDamageTypes, isRayOfEnfeeblementActive, getResistanceDamageType,
     isCompelledDuelActive, checkCompelledDuelAttackExpiry, endCompelledDuel,
-    isSanctuaryActive, endSanctuary, getSanctuaryTarget,
+    isSanctuaryActive, endSanctuary, getSanctuaryTarget, handleSanctuary,
     isResistanceUsedThisTurn, applyShieldOfFaithEffect, isShieldOfFaithActive, getShieldOfFaithBonus,
     getWardingBondTarget, getWardingBondSource,     isWardingBondActive,
     applyHaste,

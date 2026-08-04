@@ -14,15 +14,11 @@ import { getLionDisadvantageAgainst } from '../combat/auras/lionAuraUtils.js';
 import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { hasAuraOfProtection } from '../combat/auras/auraOfProtection.js';
 import { endSanctuary } from './handlers/spells/sanctuaryHandler.js';
-import { sendSavePrompt } from '../combat/conditions/savePromptService.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
 import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
-import { storeSpellLastAttack, addTargetResult } from './common/damageRollback.js';
-import { addEntry } from '../ui/logService.js';
-import utils from '../ui/utils.js';
 
 export function buildAttackContextSync(attack, playerStats, campaignName, conditionAttackMode, _featRangeEffects) {
     const playerName = playerStats.name;
@@ -1007,111 +1003,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 }
             }
 
-             // Check Sanctuary spell — if target is warded, attacker must succeed on WIS save or lose attack/spell
-             if (base.targetName && campaignName) {
-                 const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                 const sanctuaryEffect = allTargetEffects.find(
-                     te => te.effect === 'sanctuary' && te.target === base.targetName && te.source !== playerStats.name
-                 );
-                 if (sanctuaryEffect && !base.isAutoMiss) {
-                     const sanctuaryCaster = sanctuaryEffect.source;
-                     const casterStats = (await getCombatContext(campaignName))?.creatures?.find(c => c.name === sanctuaryCaster);
-                     const sanctuaryDc = casterStats?.automation?.saveModifiers?.[0]?.saveDc || 8;
-                     const spellSaveDc = casterStats?.spellAbilities?.saveDc || sanctuaryDc;
-                      const finalDc = spellSaveDc > sanctuaryDc ? spellSaveDc : sanctuaryDc;
-
-                      const promptId = utils.guid();
-                     const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
-                     pendingSaves[promptId] = {
-                         promptId,
-                         campaignName,
-                         targetName: playerStats.name,
-                         attackerName: sanctuaryCaster,
-                         saveType: 'WIS',
-                         saveDc: finalDc,
-                         dcSuccess: 'none',
-                         disadvantage: false,
-                         advantage: false,
-                         condition: 'sanctuary',
-                         sourceName: sanctuaryCaster,
-                     };
-                     setRuntimeValue('campaign', 'pendingSavePrompts', pendingSaves, campaignName);
-
-                     storeSpellLastAttack(campaignName, {
-                         casterName: playerStats.name,
-                         spellName: 'Sanctuary Check',
-                         saveType: 'WIS',
-                         saveDc: finalDc,
-                         attackScope: 'single',
-                     });
-
-                     sendSavePrompt(campaignName, {
-                         promptId,
-                         targetName: playerStats.name,
-                         attackerName: sanctuaryCaster,
-                         saveType: 'WIS',
-                         saveDc: finalDc,
-                         dcSuccess: 'none',
-                         disadvantage: false,
-                         advantage: false,
-                         condition: 'sanctuary',
-                         sourceName: sanctuaryCaster,
-                     });
-
-                     const saveResult = await new Promise((resolve) => {
-                         const handler = (event) => {
-                             if (event.detail.promptId !== promptId) return;
-                             window.removeEventListener('save-result', handler);
-                             const saves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
-                             delete saves[promptId];
-                             setRuntimeValue('campaign', 'pendingSavePrompts', saves, campaignName);
-                             resolve(event.detail);
-                         };
-                         window.addEventListener('save-result', handler);
-                     });
-
-                     if (!saveResult.success) {
-                         await addTargetResult(campaignName, {
-                             targetName: playerStats.name,
-                             saveResult: 'failure',
-                             roll: saveResult.roll ?? 0,
-                             total: saveResult.total ?? 0,
-                             conditions: ['sanctuary'],
-                             appliedDamage: 0,
-                         });
-                         await addEntry(campaignName, {
-                             type: 'save_result',
-                             characterName: sanctuaryCaster,
-                             targetName: playerStats.name,
-                             saveDc: finalDc,
-                             saveType: 'WIS',
-                             success: false,
-                             description: `${playerStats.name} failed WIS save against Sanctuary on ${base.targetName} — attack/spell is lost.`,
-                         }).catch((e) => { console.error("[sanctuary] Error logging:", e); });
-                         return { ...base, isAutoMiss: true, sanctuaryBlocked: true, sanctuaryReason: 'Sanctuary (WIS save failed)' };
-                     }
-
-                     await addTargetResult(campaignName, {
-                         targetName: playerStats.name,
-                         saveResult: 'success',
-                         roll: saveResult.roll ?? 0,
-                         total: saveResult.total ?? 0,
-                         conditions: [],
-                         appliedDamage: 0,
-                     });
-                     await addEntry(campaignName, {
-                         type: 'save_result',
-                         characterName: sanctuaryCaster,
-                         targetName: playerStats.name,
-                         saveDc: finalDc,
-                         saveType: 'WIS',
-                         success: true,
-                         description: `${playerStats.name} succeeded on WIS save against Sanctuary on ${base.targetName} — attack/spell proceeds.`,
-                     }).catch((e) => { console.error("[sanctuary] Error logging:", e); });
-                 }
-             }
-
-            // Resolve accumulated map-based adv/dis counts
+             // Resolve accumulated map-based adv/dis counts
             if (base.forcedMode === undefined && (base._mapAdv || base._mapDis || base._rangeDis || base._meleeDis)) {
                 const totalMapAdv = base._mapAdv || 0;
                 const totalMapDis = (base._mapDis || 0) + (base._rangeDis || 0) + (base._meleeDis || 0);
