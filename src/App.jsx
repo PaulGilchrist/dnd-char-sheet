@@ -404,6 +404,9 @@ function App() {
           next[idx] = updated;
           return next;
         });
+        if (activeCharacter && activeCharacter.name === updated.name) {
+          setActiveCharacter(updated);
+        }
       }
       return;
     }
@@ -437,7 +440,7 @@ function App() {
     } else {
         setRuntimeObject(storeKey, event.data, campaignName, true);
     }
-  }, [campaignName, setCharacters]);
+  }, [campaignName, setCharacters, activeCharacter, setActiveCharacter]);
 
   const handleDeleteCharacter = async (characterName) => {
     try {

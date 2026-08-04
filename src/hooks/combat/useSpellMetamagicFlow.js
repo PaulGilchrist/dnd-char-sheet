@@ -46,6 +46,7 @@ import { triggerCharmPerson } from '../../services/rules/features/charmPersonSer
 import { triggerCharmMonster } from '../../services/rules/features/charmMonsterService.js'
 import { triggerBanishment } from '../../services/rules/features/banishmentService.js'
 import { triggerFaerieFire } from '../../services/rules/features/faerieFireService.js'
+import { triggerRevivify } from '../../services/rules/features/revivifyService.js'
 import { executeHandler } from '../../services/automation/index.js'
 import { useConfirmableFlow, rollbackSpellSlot } from './useConfirmableFlow.js'
 import { confirmGreaterRestoration } from '../../services/rules/features/greaterRestorationService.js'
@@ -120,6 +121,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingCharmMonster = getPending('charmMonster');
   const pendingBanishment = getPending('banishment');
   const pendingPrismaticSpray = getPending('prismatic_spray');
+  const pendingRevivify = getPending('revivify');
 
   const [resistanceStage, setResistanceStage] = React.useState(null);
   const [resistanceSelectedTargets, setResistanceSelectedTargets] = React.useState([]);
@@ -1184,6 +1186,45 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       }
     }
 
+    const isRevivify = (spell.name || '').toLowerCase() === 'revivify';
+    if (isRevivify && playerStats.rules === '2024') {
+      const backpack = playerStats.inventory?.backpack || [];
+      const hasDiamond = backpack.some(item => {
+        const name = typeof item === 'string' ? item : (item.name || '');
+        return name.toLowerCase().includes('diamond');
+      });
+      if (!hasDiamond) {
+        if (setPopupHtml) {
+          setPopupHtml({
+            type: 'automation_info',
+            name: spell.name,
+            automationType: 'revivify',
+            description: 'Revivify requires a diamond worth 300+ GP, which the spell consumes.',
+          });
+        }
+        return;
+      }
+      const cs = getCombatSummary(campaignName);
+      if (!cs?.creatures) {
+        console.error(`[revivify] Combat summary missing or has no creatures for ${spell?.name || "unknown"}: cs=${cs ? "exists" : "null"}, characters.length=${characters?.length ?? "undefined"}`);
+        return;
+      }
+      const creatureTargets = cs.creatures
+        .filter(c => c.name !== playerStats.name)
+        .map(c => c.name);
+      if (creatureTargets.length > 0) {
+        cfSetPending('revivify', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || 'Touch',
+          creatureTargets,
+        });
+        return;
+      }
+    }
+
     const isAuraOfLife = (spell.name || '').toLowerCase() === 'aura of life';
     if (isAuraOfLife) {
       const cs = getCombatSummary(campaignName);
@@ -1455,7 +1496,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       psionicCost: isPsionic && hasPsionic ? spellLevel : 0,
       _metaCtx: metaCtx,
     });
-    }, [isSorcerer, playerStats, campaignName, onExecute, cfSetPending, setSecondaryTargetModal, characters]);
+    }, [isSorcerer, playerStats, campaignName, onExecute, cfSetPending, setSecondaryTargetModal, characters, setPopupHtml]);
 
   const handleConfirm = React.useCallback(async (result) => {
     const pending = pendingMetamagic;
@@ -2597,6 +2638,23 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
 
   const handlePrismaticSpraySkip = createSkipHandler('prismatic_spray', (pending) => pending.creatureTargets);
 
+  const handleRevivifyConfirm = createConfirmHandler('revivify', async (pending, result) => {
+    const targetName = result.targetName;
+    if (!targetName) return;
+    const popup = await triggerRevivify(
+      pending.spell,
+      { targetName },
+      playerStats,
+      campaignName,
+      targetName
+    );
+    if (popup && setPopupHtml) {
+      setPopupHtml(popup.payload);
+    }
+  }, (pending) => pending.creatureTargets);
+
+  const handleRevivifySkip = createSkipHandler('revivify', (pending) => pending.creatureTargets);
+
   const handleMagicMissileConfirm = React.useCallback((result) => {
     const pending = pendingMagicMissile;
     if (!pending) return;
@@ -2618,5 +2676,5 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     cfClearPending('magicMissile');
   }, [cfClearPending]);
 
-  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingFaerieFire, handleFaerieFireConfirm, handleFaerieFireSkip, pendingHolyAura, pendingBeaconOfHope, pendingSlow, pendingHaste, pendingEnhanceAbility, pendingBarkskin, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEvilAndGood, pendingProtectionFromPoison, pendingStoneSkin, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingForcecage, pendingAntimagicField, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, pendingAnimalFriendship, pendingAuraOfLife, pendingAuraOfPurity, pendingCircleOfPower, pendingCompulsion, pendingAuraOfVitality, pendingForesight, pendingLongstrider, pendingSpareTheDying, pendingPrismaticSpray, handlePrismaticSprayConfirm, handlePrismaticSpraySkip, resistanceStage, enhanceAbilityStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleHolyAuraConfirm, handleHolyAuraSkip, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleEnhanceAbilityAbilitySelect, handleEnhanceAbilityConfirm, handleEnhanceAbilitySkip, handleBarkskinConfirm, handleBarkskinSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingFeignDeath, handleFeignDeathConfirm, handleFeignDeathSkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, handleCircleOfPowerConfirm, handleCircleOfPowerSkip, handleCompulsionConfirm, handleCompulsionSkip,     handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, handleForesightConfirm, handleForesightSkip, handleLongstriderConfirm, handleLongstriderSkip, handleSpareTheDyingConfirm, handleSpareTheDyingSkip, pendingConfusion, handleConfusionConfirm, handleConfusionSkip, pendingDeathWard: _pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip, pendingHeroism, handleHeroismConfirm, handleHeroismSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, protectionFromEnergyStage, handleProtectionFromEnergyTargetSelect, handleProtectionFromEnergyTypeSelect, handleProtectionFromEnergySkip, handleProtectionFromEvilAndGoodConfirm, handleProtectionFromEvilAndGoodSkip, handleProtectionFromPoisonConfirm, handleProtectionFromPoisonSkip, handleStoneSkinConfirm, handleStoneSkinSkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleForcecageConfirm, handleForcecageSkip, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip, pendingHoldMonster, pendingHoldPerson, handleHoldMonsterConfirm, handleHoldMonsterSkip, handleHoldPersonConfirm, handleHoldPersonSkip, pendingCharmPerson, handleCharmPersonConfirm, handleCharmPersonSkip, pendingCharmMonster, handleCharmMonsterConfirm, handleCharmMonsterSkip, pendingBanishment, handleBanishmentConfirm, handleBanishmentSkip, cfClearPending };
+  return { pendingMetamagic, pendingMultiTarget, pendingAid, pendingBane, pendingBless, pendingFaerieFire, handleFaerieFireConfirm, handleFaerieFireSkip, pendingHolyAura, pendingBeaconOfHope, pendingSlow, pendingHaste, pendingEnhanceAbility, pendingBarkskin, pendingInvisibility, pendingGreaterInvisibility, pendingHeal, pendingHeroesFeast, pendingGreaterRestoration, pendingLesserRestoration, pendingMageArmor, pendingShieldOfFaith, pendingProtectionFromEvilAndGood, pendingProtectionFromPoison, pendingStoneSkin, pendingProtectionFromEnergy, pendingResistance, pendingRemoveCurse, pendingMagicMissile, pendingPassWithoutTrace, pendingGlobe, pendingForcecage, pendingAntimagicField, pendingRegenerate, pendingHealingWord, pendingCureWounds, pendingStinkingCloud, pendingWeb, pendingAnimalFriendship, pendingAuraOfLife, pendingAuraOfPurity, pendingCircleOfPower, pendingCompulsion, pendingAuraOfVitality, pendingForesight, pendingLongstrider, pendingSpareTheDying, pendingPrismaticSpray, handlePrismaticSprayConfirm, handlePrismaticSpraySkip, pendingRevivify, handleRevivifyConfirm, handleRevivifySkip, resistanceStage, enhanceAbilityStage, handleResistanceTargetSelect, handleResistanceTypeSelect, gateMetamagic, handleConfirm, handleSkip, handleMultiTargetConfirm, handleMultiTargetSkip, handleAidConfirm, handleAidSkip, handleBaneConfirm, handleBaneSkip, handleBlessConfirm, handleBlessSkip, handleHolyAuraConfirm, handleHolyAuraSkip, handleBeaconOfHopeConfirm, handleBeaconOfHopeSkip, handleSlowConfirm, handleSlowSkip, handleHasteConfirm, handleHasteSkip, handleEnhanceAbilityAbilitySelect, handleEnhanceAbilityConfirm, handleEnhanceAbilitySkip, handleBarkskinConfirm, handleBarkskinSkip, handleInvisibilityConfirm, handleInvisibilitySkip, handleGreaterInvisibilityConfirm, handleGreaterInvisibilitySkip, pendingFeignDeath, handleFeignDeathConfirm, handleFeignDeathSkip, handleHealConfirm, handleHealSkip, handleHeroesFeastConfirm, handleHeroesFeastSkip, handleAuraOfLifeConfirm, handleAuraOfLifeSkip, handleAuraOfPurityConfirm, handleAuraOfPuritySkip, handleCircleOfPowerConfirm, handleCircleOfPowerSkip, handleCompulsionConfirm, handleCompulsionSkip,     handleAuraOfVitalityConfirm, handleAuraOfVitalitySkip, handleForesightConfirm, handleForesightSkip, handleLongstriderConfirm, handleLongstriderSkip, handleSpareTheDyingConfirm, handleSpareTheDyingSkip, pendingConfusion, handleConfusionConfirm, handleConfusionSkip, pendingDeathWard: _pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip, pendingHeroism, handleHeroismConfirm, handleHeroismSkip, handleGreaterRestorationConfirm, handleGreaterRestorationSkip, handleGreaterRestorationNoEffects, handleLesserRestorationConfirm, handleLesserRestorationSkip, handleMageArmorConfirm, handleMageArmorSkip, handleShieldOfFaithConfirm, handleShieldOfFaithSkip, protectionFromEnergyStage, handleProtectionFromEnergyTargetSelect, handleProtectionFromEnergyTypeSelect, handleProtectionFromEnergySkip, handleProtectionFromEvilAndGoodConfirm, handleProtectionFromEvilAndGoodSkip, handleProtectionFromPoisonConfirm, handleProtectionFromPoisonSkip, handleStoneSkinConfirm, handleStoneSkinSkip, handleResistanceSkip, handleRemoveCurseConfirm, handleRemoveCurseSkip, handleMagicMissileConfirm, handleMagicMissileSkip, handlePassWithoutTraceConfirm, handlePassWithoutTraceSkip, handleGlobeConfirm, handleGlobeSkip, handleForcecageConfirm, handleForcecageSkip, handleAntimagicFieldConfirm, handleAntimagicFieldSkip, handleRegenerateConfirm, handleRegenerateSkip, handleHealingWordConfirm, handleHealingWordSkip, handleCureWoundsConfirm, handleCureWoundsSkip, handleStinkingCloudConfirm, handleStinkingCloudSkip, handleWebConfirm, handleWebSkip, handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip, pendingHoldMonster, pendingHoldPerson, handleHoldMonsterConfirm, handleHoldMonsterSkip, handleHoldPersonConfirm, handleHoldPersonSkip, pendingCharmPerson, handleCharmPersonConfirm, handleCharmPersonSkip, pendingCharmMonster, handleCharmMonsterConfirm, handleCharmMonsterSkip, pendingBanishment, handleBanishmentConfirm, handleBanishmentSkip, cfClearPending };
 }

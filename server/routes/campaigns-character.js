@@ -114,6 +114,47 @@ router.put('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => {
     res.json({ message: 'Character updated successfully' });
 }));
 
+// API endpoint to merge partial data into an existing character file
+router.patch('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => {
+    const { campaign, file } = req.params;
+    if (file === 'log' || !file.endsWith('.json')) return next();
+    const patch = req.body;
+
+    if (!campaign || !file || !patch || typeof patch !== 'object') {
+        return res.status(400).json({ error: 'Campaign, file, and patch data are required' });
+    }
+
+    const dir = campaignDir(campaign);
+    const filePath = path.join(dir, file);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Character file not found' });
+    }
+
+    const character = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
+    // Deep merge: merge patch into character recursively for nested objects
+    function deepMerge(target, source) {
+        for (const key of Object.keys(source)) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+                deepMerge(target[key], source[key]);
+            } else {
+                target[key] = source[key];
+            }
+        }
+    }
+
+    deepMerge(character, patch);
+
+    // Write the updated character data
+    fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
+
+    // Broadcast character update
+    publish(`character-${campaign}-${file}`, character);
+
+    res.json({ message: 'Character updated successfully', character });
+}));
+
 // API endpoint to delete a character file and its associated image
 router.delete('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => {
     const { campaign, file } = req.params;

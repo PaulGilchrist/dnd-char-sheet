@@ -63,6 +63,9 @@ export default function CharActionSpellPopups({
     actionPendingCureWounds,
     actionHandleCureWoundsConfirm,
     actionHandleCureWoundsSkip,
+    actionPendingRevivify,
+    actionHandleRevivifyConfirm,
+    actionHandleRevivifySkip,
     pendingActionMetamagic,
     handleActionMetamagicConfirm,
     handleActionMetamagicSkip,
@@ -298,6 +301,17 @@ export default function CharActionSpellPopups({
                     onSkip={actionHandleCureWoundsSkip}
                     description="Choose a creature within touch range. The target regains hit points equal to the roll of your dice plus your spellcasting ability modifier."
                     confirmLabel="Cast Cure Wounds"
+                    confirmIcon="fa-heart"
+                />
+            )}
+            {actionPendingRevivify && (
+                <SecondaryTargetModal
+                    title="Revivify"
+                    targets={filterForcecageBlockedTargets(actionPendingRevivify.creatureTargets).map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => actionHandleRevivifyConfirm({ targetName })}
+                    onSkip={actionHandleRevivifySkip}
+                    description="Choose a creature to revive. The target must have 0 Hit Points. A diamond worth 300+ GP is consumed."
+                    confirmLabel="Cast Revivify"
                     confirmIcon="fa-heart"
                 />
             )}
