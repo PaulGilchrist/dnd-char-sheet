@@ -46,8 +46,8 @@
     ]
   },
   {
-    "index": "agate",
-    "name": "Agate",
+    "index": "agate-1000-gp",
+    "name": "Agate (1,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1000,
@@ -1042,8 +1042,8 @@
     "rules": "2024"
   },
   {
-    "index": "copper-piece",
-    "name": "Copper Piece",
+    "index": "copper-piece-2-gp",
+    "name": "Copper Piece (2 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 2,
@@ -1247,8 +1247,8 @@
     ]
   },
   {
-    "index": "diamond-dust",
-    "name": "Diamond Dust",
+    "index": "diamond-dust-100-gp",
+    "name": "Diamond Dust (100 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 100,
@@ -1668,8 +1668,8 @@
     "mastery": "Sap"
   },
   {
-    "index": "flask-of-holy-water",
-    "name": "Flask of Holy Water",
+    "index": "flask-of-holy-water-25-gp",
+    "name": "Flask of Holy Water (25 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 25,
@@ -1777,8 +1777,8 @@
     "passengers": 40
   },
   {
-    "index": "gem-dust",
-    "name": "Gem Dust",
+    "index": "gem-dust-5000-gp",
+    "name": "Gem Dust (5,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 5000,
@@ -1790,8 +1790,8 @@
     ]
   },
   {
-    "index": "gem-encrusted-bowl",
-    "name": "Gem-Encrusted Bowl",
+    "index": "gem-encrusted-bowl-1000-gp",
+    "name": "Gem-Encrusted Bowl (1,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1000,
@@ -1848,8 +1848,8 @@
     "rules": "2024"
   },
   {
-    "index": "gold-dust",
-    "name": "Gold Dust",
+    "index": "gold-dust-25-gp",
+    "name": "Gold Dust (25 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 25,
@@ -2270,8 +2270,8 @@
     "weight": 25
   },
   {
-    "index": "incense",
-    "name": "Incense",
+    "index": "incense-25-gp",
+    "name": "Incense (25 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 25,
@@ -2280,6 +2280,19 @@
     "weight": 1,
     "description": [
       "Used as a material component for the Divination spell(s)."
+    ]
+  },
+  {
+    "index": "incense-10-gp",
+    "name": "Incense (10 gp)",
+    "equipment_category": "Material",
+    "cost": {
+      "quantity": 10,
+      "unit": "gp"
+    },
+    "weight": 1,
+    "description": [
+      "Used as a material component for the Find Familiar spell."
     ]
   },
   {
@@ -2306,6 +2319,19 @@
     "weight": 1,
     "description": [
       "Used as a material component for the Legend Lore spell(s)."
+    ]
+  },
+  {
+    "index": "ink-10-gp",
+    "name": "Ink (10 gp)",
+    "equipment_category": "Material",
+    "cost": {
+      "quantity": 10,
+      "unit": "gp"
+    },
+    "weight": 0,
+    "description": [
+      "Used as a material component for the Illusory Script spell."
     ]
   },
   {
@@ -2366,8 +2392,8 @@
     ]
   },
   {
-    "index": "jacinth",
-    "name": "Jacinth",
+    "index": "jacinth-1000-gp",
+    "name": "Jacinth (1,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1000,
@@ -2379,8 +2405,8 @@
     ]
   },
   {
-    "index": "jade-dust",
-    "name": "Jade Dust",
+    "index": "jade-dust-10-gp",
+    "name": "Jade Dust (10 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 10,
@@ -2422,8 +2448,8 @@
     "mastery": "Slow"
   },
   {
-    "index": "jewel",
-    "name": "Jewel",
+    "index": "jewel-1000-gp",
+    "name": "Jewel (1,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1000,
@@ -3076,8 +3102,8 @@
     "capacity": "420 lb."
   },
   {
-    "index": "mushroom-powder",
-    "name": "Mushroom Powder",
+    "index": "mushroom-powder-25-gp",
+    "name": "Mushroom Powder (25 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 25,
@@ -3516,8 +3542,8 @@
     ]
   },
   {
-    "index": "powdered-diamond",
-    "name": "Powdered Diamond",
+    "index": "powdered-diamond-200-gp",
+    "name": "Powdered Diamond (200 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 200,
@@ -3542,8 +3568,8 @@
     ]
   },
   {
-    "index": "powdered-ruby",
-    "name": "Powdered Ruby",
+    "index": "powdered-ruby-1500-gp",
+    "name": "Powdered Ruby (1,500 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1500,
@@ -3676,8 +3702,8 @@
     "mastery": "Vex"
   },
   {
-    "index": "rare-inks",
-    "name": "Rare Inks",
+    "index": "rare-inks-50-gp",
+    "name": "Rare Inks (50 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 50,
@@ -3689,8 +3715,8 @@
     ]
   },
   {
-    "index": "rare-oils",
-    "name": "Rare Oils",
+    "index": "rare-oils-1000-gp",
+    "name": "Rare Oils (1,000 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 1000,
@@ -3843,8 +3869,8 @@
     "passengers": 2
   },
   {
-    "index": "ruby-dust",
-    "name": "Ruby Dust",
+    "index": "ruby-dust-50-gp",
+    "name": "Ruby Dust (50 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 50,
@@ -3970,8 +3996,8 @@
     "passengers": 20
   },
   {
-    "index": "salt-and-powdered-silver",
-    "name": "Salt and Powdered Silver",
+    "index": "salt-and-powdered-silver-100-gp",
+    "name": "Salt and Powdered Silver (100 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 100,
@@ -4259,8 +4285,8 @@
     ]
   },
   {
-    "index": "silver-bar",
-    "name": "Silver Bar",
+    "index": "silver-bar-100-gp",
+    "name": "Silver Bar (100 gp)",
     "equipment_category": "Material",
     "cost": {
       "quantity": 100,

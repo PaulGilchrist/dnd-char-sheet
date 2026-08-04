@@ -7,7 +7,7 @@ function getFileNameFromName(name) {
 
 const MATERIAL_REGISTRY = {
     'Arcane Lock': { itemName: 'Gold Dust (25 gp)', required: 'gold dust worth 25+ GP, which the spell consumes' },
-    'Astral Projection': { itemName: 'Jacinth (25,000 gp)', required: 'jacinth and silver bar, all of which the spell consumes' },
+    'Astral Projection': { itemName: 'Jacinth (1,000 gp)', required: 'jacinth and silver bar, all of which the spell consumes' },
     'Awaken': { itemName: 'Agate (1,000 gp)', required: 'an agate worth 1,000+ GP, which the spell consumes' },
     'Clone': { itemName: 'Diamond (1,000 gp)', required: 'a diamond worth 1,000+ GP, which the spell consumes' },
     'Continual Flame': { itemName: 'Ruby Dust (50 gp)', required: 'ruby dust worth 50+ GP, which the spell consumes' },
@@ -19,7 +19,7 @@ const MATERIAL_REGISTRY = {
     'Greater Restoration': { itemName: 'Diamond Dust (100 gp)', required: 'diamond dust worth 100+ GP, which the spell consumes' },
     'Hallow': { itemName: 'Incense (1,000 gp)', required: 'incense worth 1,000+ GP, which the spell consumes' },
     "Heroes' Feast": { itemName: 'Gem-Encrusted Bowl (1,000 gp)', required: 'a gem-encrusted bowl worth 1,000+ GP, which the spell consumes' },
-    'Illusory Script': { itemName: 'Rare Inks (10 gp)', required: 'ink worth 10+ GP, which the spell consumes' },
+    'Illusory Script': { itemName: 'Ink (10 gp)', required: 'ink worth 10+ GP, which the spell consumes' },
     'Legend Lore': { itemName: 'Incense (250 gp)', required: 'incense worth 250+ GP, which the spell consumes' },
     'Magic Circle': { itemName: 'Salt and Powdered Silver (100 gp)', required: 'salt and powdered silver worth 100+ GP, which the spell consumes' },
     'Magic Mouth': { itemName: 'Jade Dust (10 gp)', required: 'jade dust worth 10+ GP, which the spell consumes' },
