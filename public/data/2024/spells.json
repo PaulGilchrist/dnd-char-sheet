@@ -5177,8 +5177,16 @@
             "hpPerLevelAbove": 10,
             "variants": [
                 {
-                    "name": "Fiendish Spirit",
-                    "monsterIndex": "fiendish-spirit"
+                    "name": "Fiendish Spirit (Demon)",
+                    "monsterIndex": "fiendish-spirit-demon"
+                },
+                {
+                    "name": "Fiendish Spirit (Devil)",
+                    "monsterIndex": "fiendish-spirit-devil"
+                },
+                {
+                    "name": "Fiendish Spirit (Yugoloth)",
+                    "monsterIndex": "fiendish-spirit-yugoloth"
                 }
             ]
         }
