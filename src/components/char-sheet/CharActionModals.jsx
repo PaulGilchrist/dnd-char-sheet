@@ -37,6 +37,7 @@ import WarMagicCantripModal from './modals/WarMagicCantripModal.jsx'
 import WarMagicSpellModal from './modals/WarMagicSpellModal.jsx'
 import SacredWeaponModal from './modals/divine/SacredWeaponModal.jsx'
 import PrimalCompanionBonusActionModal from './modals/PrimalCompanionBonusActionModal.jsx'
+import PrimalCompanionSummonModal from './modals/PrimalCompanionSummonModal.jsx'
 import MistyWandererModal from './modals/MistyWandererModal.jsx'
 import FeyReinforcementsModal from './modals/FeyReinforcementsModal.jsx'
 import StepsOfTheFeyTauntModal from './modals/StepsOfTheFeyTauntModal.jsx'
@@ -697,6 +698,12 @@ export default function CharActionModals({
                 <PrimalCompanionBonusActionModal
                     {...mergedModalState.primalCompanionBonusActionModal}
                     onClose={() => setModalState({ primalCompanionBonusActionModal: null })}
+                />
+            )}
+            {mergedModalState.primalCompanionSummonModal && (
+                <PrimalCompanionSummonModal
+                    {...mergedModalState.primalCompanionSummonModal}
+                    onClose={() => setModalState({ primalCompanionSummonModal: null })}
                 />
             )}
             {mergedModalState.mistyWandererModal && (

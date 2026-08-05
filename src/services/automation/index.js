@@ -114,7 +114,7 @@ import { handle as handleRelentlessEndurance } from './handlers/class-cleric-pal
 import { handle as handleSoulOfVengeance } from './handlers/class-cleric-paladin/soulOfVengeanceHandler.js';
 import { handle as handleAvengingAngel } from './handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { handle as handleRadianceOfDawn } from './handlers/class-cleric-paladin/radianceOfDawnHandler.js';
-import { handle as handlePrimalCompanionSummon, handleCommand as handlePrimalCompanionCommand, handleRestore as handlePrimalCompanionRestore, handleBonusActionCommand as handlePrimalCompanionBonusActionCommand, applyBonusActionCommand as applyPrimalCompanionBonusActionCommand } from './handlers/class-ranger/primalCompanionHandler.js';
+import { handle as handlePrimalCompanionSummon, confirmPrimalCompanionSummon as handlePrimalCompanionSummonConfirm, handleCommand as handlePrimalCompanionCommand, handleRestore as handlePrimalCompanionRestore, handleBonusActionCommand as handlePrimalCompanionBonusActionCommand, applyBonusActionCommand as applyPrimalCompanionBonusActionCommand } from './handlers/class-ranger/primalCompanionHandler.js';
 import { handle as handlePrimalCompanionSpellShare, applySpellShare as applyPrimalCompanionSpellShare } from './handlers/class-ranger/primalCompanionSpellShareHandler.js';
 import { handle as handleBeguilingTwist } from './handlers/class-ranger/beguilingTwistHandler.js';
 import { handle as handleFeyReinforcements, confirmFeyReinforcement as handleFeyReinforcementsConfirm } from './handlers/class-warlock/feyReinforcementsHandler.js';
@@ -409,6 +409,7 @@ const HANDLER_MAP = {
         avenging_angel: handleAvengingAngel,
         radiance_of_dawn: handleRadianceOfDawn,
         primal_companion_summon: handlePrimalCompanionSummon,
+        primal_companion_summon_confirm: handlePrimalCompanionSummonConfirm,
         primal_companion_command: handlePrimalCompanionCommand,
         primal_companion_restore: handlePrimalCompanionRestore,
         primal_companion_bonus_action_command: handlePrimalCompanionBonusActionCommand,

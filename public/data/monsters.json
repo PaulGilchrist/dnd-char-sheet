@@ -8027,11 +8027,11 @@
     "condition_immunities": [],
     "actions": [
       {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "name": "Beast's Strike",
+        "description": "Melee Weapon Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+2+WIS modifier Piercing damage.",
         "attack_bonus": null,
         "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
+        "damage_dice_primary": "1d8+2+WIS modifier",
         "damage_type_primary": "piercing"
       }
     ],
@@ -8128,12 +8128,18 @@
     "condition_immunities": [],
     "actions": [
       {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "name": "Beast's Strike",
+        "description": "Melee Weapon Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+2+WIS modifier Bludgeoning/Piercing/Slashing damage.",
         "attack_bonus": null,
         "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "piercing"
+        "damage_dice_primary": "1d8+2+WIS modifier",
+        "damage_type_primary": "bludgeoning/piercing/slashing"
+      },
+      {
+        "name": "Beast's Strike — Charge",
+        "description": "The beast charges forward 20 ft. The target must succeed on a DC 20 Strength saving throw or be knocked prone.",
+        "save_dc": 20,
+        "save_type": "Str"
       }
     ],
     "traits": [
@@ -8228,12 +8234,18 @@
     "condition_immunities": [],
     "actions": [
       {
-        "name": "Rend",
-        "description": "Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d8+4+spell level Piercing damage.",
+        "name": "Beast's Strike",
+        "description": "Melee Weapon Attack: +spell attack modifier, reach 5 ft. Hit: 1d6+2+WIS modifier Bludgeoning/Piercing damage.",
         "attack_bonus": null,
         "reach": "5 ft.",
-        "damage_dice_primary": "1d8+4+spell level",
-        "damage_type_primary": "piercing"
+        "damage_dice_primary": "1d6+2+WIS modifier",
+        "damage_type_primary": "bludgeoning/piercing"
+      },
+      {
+        "name": "Beast's Strike — Grapple",
+        "description": "The beast lunges to grapple the target. The target must succeed on a DC 20 Wisdom saving throw or become grappled.",
+        "save_dc": 20,
+        "save_type": "Wis"
       }
     ],
     "traits": [

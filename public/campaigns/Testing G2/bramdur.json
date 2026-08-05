@@ -46,12 +46,10 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Guide",
   "class": {
     "name": "Ranger",
     "subclass": {
-      "name": "Hunter",
-      "type": ""
+      "name": "Beast Master"
     },
     "divineOrder": "",
     "primalOrder": "",
@@ -64,7 +62,9 @@
     "Perception",
     "Survival"
   ],
-  "feats": [],
+  "feats": [
+    "Magic Initiate"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Dwarf",
@@ -107,6 +107,9 @@
     "Survival",
     "Perception"
   ],
+  "toolProficiencies": [
+    "Cartographer's Tools"
+  ],
   "specialActions": [],
   "spells": [
     "Animal Friendship",
@@ -119,9 +122,10 @@
     "Water Walk",
     "Wind Wall"
   ],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
-  "originalFileName": "Bramdur.json",
+  "background": "Guide",
   "imagePath": "images/Bramdur.png"
 }

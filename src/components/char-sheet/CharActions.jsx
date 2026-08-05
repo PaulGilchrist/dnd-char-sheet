@@ -1148,6 +1148,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     case 'warMagicSpell': setModalState({ warMagicSpellModal: result.payload }); break;
                     case 'sacredWeaponDamageType': setModalState({ sacredWeaponModal: result.payload }); break;
                     case 'primalCompanionBonusActionCommand': setModalState({ primalCompanionBonusActionModal: result.payload }); break;
+                    case 'primalCompanionSummon': setModalState({ primalCompanionSummonModal: result.payload }); break;
                     case 'mistyWanderer': setModalState({ mistyWandererModal: result.payload }); break;
                     case 'feyReinforcements': setModalState({ feyReinforcementsModal: result.payload }); break;
                     case 'stepsOfTheFeyTaunt': setModalState({ stepsOfTheFeyTauntModal: result.payload }); break;
