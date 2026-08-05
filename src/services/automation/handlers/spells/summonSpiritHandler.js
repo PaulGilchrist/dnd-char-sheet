@@ -1,4 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHpOnKey } from '../buffs/tempHpService.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
@@ -69,7 +70,7 @@ function resolveMonsterActions(monster, { slotLevel, spellAttackMod, spellSaveDc
     });
 }
 
-function buildSpiritCreature(monster, displayName, casterName, initiativeValue, slotLevel, auto, playerStats) {
+function buildSpiritCreature(monster, displayName, casterName, initiativeValue, slotLevel, auto, playerStats, options = {}) {
     const baseAc = typeof monster.armor_class === 'number' ? monster.armor_class : 10;
     const baseHp = monster.hit_points || 10;
     const scale = auto.scale !== false;
@@ -83,6 +84,19 @@ function buildSpiritCreature(monster, displayName, casterName, initiativeValue, 
     const spellAttackMod = getSpellAttackModifier(playerStats);
     const wisModifier = getWisdomModifier(playerStats);
     const spellcastingModifier = getSpellcastingModifier(playerStats);
+
+    const actions = resolveMonsterActions(monster, { slotLevel, spellAttackMod, spellSaveDc, wisModifier, spellcastingModifier });
+
+    if (options.noConcentration) {
+        actions.push({
+            name: "Psychic Strike",
+            casting_time: "Bonus Action",
+            description: `The thrall lashes out with psychic energy. Make a spell attack roll. On a hit, the target takes 1d6 Psychic damage. This bonus action can only be used on a creature under the warlock's Hex spell.`,
+            attack_bonus: spellAttackMod,
+            damage_dice_primary: "1d6",
+            damage_type_primary: "Psychic",
+        });
+    }
 
     return {
         name: displayName,
@@ -99,9 +113,12 @@ function buildSpiritCreature(monster, displayName, casterName, initiativeValue, 
         monsterIndex: monster.index,
         size: monster.size || 'Medium',
         speed: monster.speed || { walk: '30 ft.' },
-        actions: resolveMonsterActions(monster, { slotLevel, spellAttackMod, spellSaveDc, wisModifier, spellcastingModifier }),
+        actions,
         summonedBy: casterName,
         summonSource: 'spell',
+        createThrall: true,
+        warlockLevel: options.warlockLevel || playerStats.level,
+        chaModifier: options.chaModifier || 0,
     };
 }
 
@@ -143,9 +160,19 @@ async function performSummon(action, playerStats, campaignName, variant) {
         return infoPopup(action, `Failed to load monster data for ${variant.name}.`);
     }
 
+    const isSummonAberration = action.name === 'Summon Aberration';
+    const noConcentration = !!auto.noConcentration || isSummonAberration;
     const initiativeValue = getCasterInitiativeValue(combatSummary, casterName);
-    const creature = buildSpiritCreature(monster, variant.name, casterName, initiativeValue, slotLevel, auto, playerStats);
+    const creature = buildSpiritCreature(monster, variant.name, casterName, initiativeValue, slotLevel, auto, playerStats, { noConcentration, warlockLevel: playerStats.level, chaModifier: (playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0) });
     combatSummary.creatures.push(creature);
+
+    if (isSummonAberration) {
+        const chaMod = playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0;
+        const warlockLevel = playerStats.level;
+        const tempHp = warlockLevel + chaMod;
+        const tempHpKey = `_${creature.name.replace(/\s+/g, '_')}_tempHp`;
+        setTempHpOnKey(creature.name, tempHpKey, tempHp, campaignName);
+    }
 
     let targetEffects = getTargetEffects();
     const existingSummoned = targetEffects.find(
@@ -157,7 +184,7 @@ async function performSummon(action, playerStats, campaignName, variant) {
             source: casterName,
             effect: 'summoned',
             summonSource: 'spell',
-            duration: 'concentration',
+            duration: noConcentration ? '1_minute' : 'concentration',
         });
     }
 
@@ -167,7 +194,9 @@ async function performSummon(action, playerStats, campaignName, variant) {
         return bInit - aInit;
     });
 
-    addConcentration(combatSummary, casterName, action.name, getSpellSaveDc(playerStats));
+    if (!noConcentration) {
+        addConcentration(combatSummary, casterName, action.name, getSpellSaveDc(playerStats));
+    }
     storage.set('combatSummary', cloneDeep(combatSummary), campaignName);
     setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
     window.dispatchEvent(new CustomEvent('initiative-rolled'));

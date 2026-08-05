@@ -211,6 +211,19 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
   }, []);
 
   const handleAttack = (name, bonus, action) => {
+    if (name === 'Psychic Strike') {
+      const target = getTarget();
+      if (!target) {
+        alert('Psychic Strike requires a target to be selected.');
+        return;
+      }
+      const hexEffect = allTargetEffects.find(te => te.target === target.name && te.effect === 'hex_ability_check_disadvantage');
+      if (!hexEffect) {
+        alert('Psychic Strike can only be used on a creature under the warlock\'s Hex spell.');
+        return;
+      }
+    }
+
     const target = getTarget();
     const primaryDamageType = action?.damage_type_primary ? [action.damage_type_primary] : [];
 

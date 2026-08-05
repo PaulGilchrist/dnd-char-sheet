@@ -21,9 +21,9 @@ function getSpellAttackModifier(playerStats) {
 }
 
 const TYPE_TO_MONSTER_INDEX = {
-    'Beast of the Land': 'bestial-spirit-land',
-    'Beast of the Sea': 'bestial-spirit-water',
-    'Beast of the Sky': 'bestial-spirit-air',
+    'Beast of the Land': 'primal-companion-beast-of-the-land',
+    'Beast of the Sea': 'primal-companion-beast-of-the-sea',
+    'Beast of the Sky': 'primal-companion-beast-of-the-sky',
 };
 
 function hasFeature(playerStats, featureName) {

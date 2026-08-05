@@ -105,7 +105,7 @@ describe('collectAutomationFromFeatures – direct action types', () => {
     const actionTypes = [
         'warding_bond', 'war_magic_cantrip', 'war_magic_spell',
         'bastion_of_law', 'contact_patron', 'dragon_companion',
-        'create_thrall', 'remove_curse', 'stealth_attack',
+        'remove_curse', 'stealth_attack',
         'primal_companion_command', 'primal_companion_restore',
     ]
 
@@ -211,7 +211,7 @@ describe('collectAutomationFromFeatures – special action types', () => {
         'living_legend', 'cloak_of_shadows', 'holy_nimbus', 'holy_aura',
         'avenging_angel', 'elder_champion', 'large_form',
         'celestial_resilience', 'revelation_in_flesh', 'peerless_athlete',
-        'dragon_wings', 'clairvoyant_combatant',
+        'dragon_wings', 'clairvoyant_combatant', 'create_thrall',
         'celestial_revelation', 'elfish_lineage', 'gnomish_lineage',
         'fiendish_legacy', 'portent',
     ]

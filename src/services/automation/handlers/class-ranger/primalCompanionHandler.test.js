@@ -75,7 +75,7 @@ describe('primalCompanionHandler', () => {
 
     const mockMonsters = [
         {
-            index: 'bestial-spirit-air', name: 'Bestial Spirit (Air)', type: 'beast',
+            index: 'primal-companion-beast-of-the-sky', name: 'Primal Companion (Beast of the Sky)', type: 'beast',
             armor_class: 11, hit_points: 20, damage_resistances: [], damage_immunities: [], immunities: [],
             saving_throws: { str: { modifier: 4 }, dex: { modifier: 0 }, con: { modifier: 3 }, int: { modifier: -3 }, wis: { modifier: 2 }, cha: { modifier: -3 } },
             actions: [{
@@ -88,7 +88,7 @@ describe('primalCompanionHandler', () => {
             }],
         },
         {
-            index: 'bestial-spirit-land', name: 'Bestial Spirit (Land)', type: 'beast',
+            index: 'primal-companion-beast-of-the-land', name: 'Primal Companion (Beast of the Land)', type: 'beast',
             armor_class: 11, hit_points: 30, damage_resistances: [], damage_immunities: [], immunities: [],
             saving_throws: { str: { modifier: 4 }, dex: { modifier: 0 }, con: { modifier: 3 }, int: { modifier: -3 }, wis: { modifier: 2 }, cha: { modifier: -3 } },
             actions: [
@@ -109,7 +109,7 @@ describe('primalCompanionHandler', () => {
             ],
         },
         {
-            index: 'bestial-spirit-water', name: 'Bestial Spirit (Water)', type: 'beast',
+            index: 'primal-companion-beast-of-the-sea', name: 'Primal Companion (Beast of the Sea)', type: 'beast',
             armor_class: 11, hit_points: 30, damage_resistances: [], damage_immunities: [], immunities: [],
             saving_throws: { str: { modifier: 4 }, dex: { modifier: 0 }, con: { modifier: 3 }, int: { modifier: -3 }, wis: { modifier: 2 }, cha: { modifier: -3 } },
             actions: [

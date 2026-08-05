@@ -164,7 +164,6 @@ import { handle as handleFiendishResilience } from './handlers/class-warlock/fie
 import { handle as handleHurlThroughHell } from './handlers/class-warlock/hurlThroughHellHandler.js';
 import { handle as handleClairvoyantCombatant } from './handlers/class-warlock/clairvoyantCombatantHandler.js';
 import { handle as handlePsychicSpells } from './handlers/class-warlock/psychicSpellsHandler.js';
-import { handle as handleCreateThrall } from './handlers/class-warlock/createThrallHandler.js';
 import { handle as handleCreateThrallTempHp } from './handlers/class-warlock/createThrallTempHpHandler.js';
 import { handle as handleSpellMastery } from './handlers/class-wizard/spellMasteryHandler.js';
 import { handle as handleSignatureSpells } from './handlers/class-wizard/signatureSpellsHandler.js';
@@ -473,7 +472,6 @@ const HANDLER_MAP = {
                 hurl_through_hell: handleHurlThroughHell,
                 clairvoyant_combatant: handleClairvoyantCombatant,
                 psychic_spells: handlePsychicSpells,
-                create_thrall: handleCreateThrall,
                 create_thrall_temp_hp: handleCreateThrallTempHp,
                 spell_mastery: handleSpellMastery,
                 signature_spells: handleSignatureSpells,

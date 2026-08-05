@@ -889,7 +889,7 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 result.specialActions.push(info)
                 break
             case 'create_thrall':
-                result.actions.push(info)
+                result.specialActions.push(info)
                 break
             case 'create_thrall_temp_hp':
                 result.passives.push(info)

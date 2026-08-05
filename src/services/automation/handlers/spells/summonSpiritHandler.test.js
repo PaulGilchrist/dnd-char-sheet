@@ -51,7 +51,11 @@ import { addConcentration } from '../../../combat/concentration/concentrationSer
 describe('summonSpiritHandler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        getRuntimeValue.mockReturnValue([]);
+        const targetEffects = [];
+        getRuntimeValue.mockImplementation((_entity, key) => {
+            if (key === 'targetEffects') return targetEffects;
+            return null;
+        });
         getCombatSummary.mockReturnValue({
             creatures: [
                 { name: 'TestCaster', initiative: '15', initiativeBonus: 3 },
