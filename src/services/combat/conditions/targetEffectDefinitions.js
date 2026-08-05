@@ -538,6 +538,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'starry_form',
+    label: 'Starry Form',
+    description: 'The Druid has assumed a luminous starry form, gaining resistance to Bludgeoning, Piercing, and Slashing damage. Constellation: {constellation}.',
+    icon: 'fa-star',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source', 'constellation'],
+  },
+  {
     effect: 'summoned',
     label: 'Summoned',
     description: 'This creature was summoned by another creature.',

@@ -37,7 +37,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     }, []);
 
     const { saveDcBonus: displaySaveDcBonus } = getInnateSorceryBonus(playerStats.name, campaignName);
-    const _activeBuffs = useRuntimeValue(playerStats.name, 'activeBuffs', campaignName); (void _activeBuffs);
+    const activeBuffs = useRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
 
     const is2024Rules = playerStats.rules === '2024';
 
@@ -324,6 +324,34 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                                     allyAttack: true,
                                 },
                             })}>Wrath of the Sea:</b> <span>Force a creature to make a CON save or take WIS modifier d6 Cold damage.</span>
+                        </div>
+                    );
+                })()}
+
+                {(() => {
+                    const starryFormBuff = Array.isArray(activeBuffs) ? activeBuffs.find(b => b.name === 'Starry Form' && b.constellation === 'Archer') : null;
+                    if (!starryFormBuff) return null;
+                    const level = playerStats.level || 1;
+                    const isTwinkled = level >= 10;
+                    const damageDice = isTwinkled ? '2d8' : '1d8';
+                    const wis = playerStats.abilities.find(a => a.name === 'Wisdom');
+                    const wisMod = wis?.bonus || 0;
+                    const spellAttackMod = playerStats.spellAbilities?.toHit || 0;
+                    return (
+                        <div>
+                            <b className="clickable" onClick={() => onAutomationAction({
+                                name: 'Starry Form: Luminous Arrow',
+                                description: `Ranged spell attack, 60 ft. On a hit: ${damageDice} + ${wisMod} Radiant damage.`,
+                                automation: {
+                                    type: 'starry_form_arrow',
+                                    action: 'bonus_action',
+                                    damageDice,
+                                    damageType: 'Radiant',
+                                    damageBonus: wisMod,
+                                    spellAttackMod,
+                                    range: '60_ft',
+                                },
+                            })}>Starry Form: Luminous Arrow:</b> <span>Ranged spell attack, 60 ft. On a hit: ${damageDice} + ${wisMod} Radiant damage.</span>
                         </div>
                     );
                 })()}

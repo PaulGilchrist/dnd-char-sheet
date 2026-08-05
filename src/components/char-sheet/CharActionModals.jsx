@@ -1385,8 +1385,37 @@ export default function CharActionModals({
                     onClose={() => setModalState({ summonSpiritModal: null })}
                 />
             )}
+            {mergedModalState.starryChaliceHealModal && (
+                <SecondaryTargetModal
+                    title="Starry Form: Chalice"
+                    targets={mergedModalState.starryChaliceHealModal.targetNames.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={(targetName) => handleStarryChaliceConfirm(targetName)}
+                    onSkip={() => setModalState({ starryChaliceHealModal: null })}
+                    description="Choose a creature within 30 feet to regain hit points from the Chalice constellation."
+                    confirmLabel="Heal"
+                    confirmIcon="fa-heart"
+                    showHp={true}
+                />
+            )}
         </>
     );
+
+    async function handleStarryChaliceConfirm(targetName) {
+        setModalState({ starryChaliceHealModal: null });
+        const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
+        const result = await applyStarryChaliceHeal(targetName, campaignName);
+        if (result) {
+            setPopupHtml({
+                type: 'heal',
+                name: 'Starry Form: Chalice',
+                formula: `${mergedModalState.starryChaliceHealModal.amount} HP`,
+                rolls: [],
+                total: mergedModalState.starryChaliceHealModal.amount,
+                targetName: result.targetName,
+                finalHeal: result.actualHeal,
+            });
+        }
+    }
 
     async function handleEpitomeConfirm(chosenType) {
         setModalState({ epitomeModal: null });

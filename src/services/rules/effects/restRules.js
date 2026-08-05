@@ -86,6 +86,7 @@ export function computeShortRestHpNewCurrent(currentHp, maxHp, recoveredAmount) 
 export const SHORT_REST_RESOURCES = [
   'channelDivinityCharges',
   'wildShapeUses',
+  'starryFormUses',
   'psionicEnergy',
   'focusPoints',
   'superiorityDice',
@@ -118,6 +119,7 @@ export const LONG_REST_RESOURCES = [
   'bardicInspirationUses',
   'channelDivinityCharges',
   'wildShapeUses',
+  'starryFormUses',
   'secondWindUses',
   'psionicEnergy',
   'focusPoints',
@@ -472,7 +474,7 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     // Clear Globe of Invulnerability target effects on short rest
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     if (Array.isArray(storedEffects)) {
-      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage');
+      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage' && te.effect !== 'starry_form');
       setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
     }
 
@@ -872,6 +874,13 @@ export async function applyLongRest(playerStats, campaignName) {
     const filteredForesightEffects = foresightEffects.filter(e => e.effect !== 'foresight' && e.effect !== 'advantage_attacks' && e.effect !== 'advantage_saves' && e.effect !== 'advantage_abilities');
     if (filteredForesightEffects.length !== foresightEffects.length) {
       setRuntimeValue('campaign', 'targetEffects', filteredForesightEffects, campaignName, true)
+    }
+
+    // Clear Starry Form on long rest
+    const starryEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const filteredStarryEffects = starryEffects.filter(e => e.effect !== 'starry_form');
+    if (filteredStarryEffects.length !== starryEffects.length) {
+      setRuntimeValue('campaign', 'targetEffects', filteredStarryEffects, campaignName, true)
     }
 
     // End Wild Shape on long rest

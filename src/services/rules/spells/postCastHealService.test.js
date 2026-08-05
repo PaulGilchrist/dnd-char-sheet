@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   triggerPostCastSelfHeals,
   triggerPostCastAllyHeals,
+  applyStarryChaliceHeal,
 } from './postCastHealService.js'
 
 vi.mock('../../combat/automation/automationService.js', () => ({
@@ -14,14 +15,28 @@ vi.mock('../../automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
 }))
 
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
+}))
+
+vi.mock('../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}))
+
 const { evaluateAutoExpression } = await import('../../combat/automation/automationService.js')
 const { applyHealingDirectly, logHealingToSSE } = await import('../../automation/common/healingRoll.js')
+const { getRuntimeValue, setRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js')
+const { getCombatSummary } = await import('../../encounters/combatData.js')
 
 describe('postCastHealService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     evaluateAutoExpression.mockReturnValue(10)
     applyHealingDirectly.mockReturnValue({ newHp: 20, maxHp: 20, actualHeal: 10 })
+    getRuntimeValue.mockReturnValue(null)
+    setRuntimeValue.mockReturnValue(undefined)
+    getCombatSummary.mockReturnValue({ creatures: [] })
   })
 
   describe('triggerPostCastSelfHeals', () => {
@@ -137,29 +152,21 @@ describe('postCastHealService', () => {
       expect(noHealResult).toBeNull()
     })
 
-    it('applies ally healing when conditions are met', async () => {
+    it('returns modal signal when conditions are met', async () => {
       const allyStats = { ...baseStats, activeBuffs: [{ name: 'Starry Form', constellation: 'Chalice' }] }
       const result = await triggerPostCastAllyHeals(healingSpell, {}, allyStats, 'camp', 'map')
-      expect(applyHealingDirectly).toHaveBeenCalledWith(allyStats, allyStats.name, 10, 'camp', allyStats.hitPoints)
-      expect(logHealingToSSE).toHaveBeenCalledWith('camp', {
-        targetName: allyStats.name,
-        sourceName: 'Ally Heal',
-        actualHeal: 10,
-        newHp: 20,
-        maxHp: 20,
-      })
-      expect(result).toEqual([{ name: 'Ally Heal', amount: 10, actualHeal: 10, targetName: 'Cleric1' }])
-    })
-
-    it('uses custom targetName when specified', async () => {
-      const customStats = {
-        ...baseStats,
-        automation: { passives: [{ type: 'post_cast_ally_heal', name: 'Targeted Heal', healExpression: '1d8', targetName: 'Ally1' }] },
-        activeBuffs: [{ name: 'Starry Form', constellation: 'Chalice' }],
-      }
-      const result = await triggerPostCastAllyHeals(healingSpell, {}, customStats, 'camp', 'map')
-      expect(applyHealingDirectly).toHaveBeenCalledWith(customStats, 'Ally1', 10, 'camp', null)
-      expect(result).toEqual([{ name: 'Targeted Heal', amount: 10, actualHeal: 10, targetName: 'Ally1' }])
+      expect(result).toEqual({ needsModal: true, amount: 10 })
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'pendingStarryChaliceHeal',
+        expect.objectContaining({
+          amount: 10,
+          casterName: 'Cleric1',
+          campaignName: 'camp',
+        }),
+        'camp',
+        true,
+      )
     })
 
     it('skips when othersOnly and spell is self-targeted', async () => {
@@ -178,7 +185,7 @@ describe('postCastHealService', () => {
       expect(evaluateAutoExpression).toHaveBeenCalledWith('2d8', twinkledStats, 2, 10, 1)
     })
 
-    it('handles multiple ally heal passives', async () => {
+    it('handles multiple ally heal passives (returns first match)', async () => {
       const multiStats = {
         ...baseStats,
         automation: {
@@ -190,7 +197,7 @@ describe('postCastHealService', () => {
         activeBuffs: [{ name: 'Starry Form', constellation: 'Chalice' }],
       }
       const result = await triggerPostCastAllyHeals(healingSpell, {}, multiStats, 'camp', 'map')
-      expect(result).toHaveLength(2)
+      expect(result).toEqual({ needsModal: true, amount: 10 })
     })
 
     it('throws when slot level is missing from both metaCtx and spell', async () => {
@@ -199,6 +206,46 @@ describe('postCastHealService', () => {
       await expect(
         triggerPostCastAllyHeals(noSlotSpell, {}, noSlotStats, 'camp', 'map')
       ).rejects.toThrow('slot level is required for post-cast ally heals')
+    })
+  })
+
+  describe('applyStarryChaliceHeal', () => {
+    it('applies healing to the selected target', async () => {
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
+        if (key === 'pendingStarryChaliceHeal') {
+          return { amount: 15, casterName: 'Cleric1', campaignName: 'camp', targetNames: ['Cleric1', 'Ally1'], sourceName: 'Ally Heal' }
+        }
+        return null
+      })
+
+      const result = await applyStarryChaliceHeal('Ally1', 'camp')
+
+      expect(result).toEqual({
+        targetName: 'Ally1',
+        actualHeal: 10,
+        newHp: 20,
+        maxHp: 20,
+      })
+      expect(logHealingToSSE).toHaveBeenCalledWith('camp', {
+        targetName: 'Ally1',
+        sourceName: 'Ally Heal',
+        actualHeal: 10,
+        newHp: 20,
+        maxHp: 20,
+      })
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'pendingStarryChaliceHeal',
+        null,
+        'camp',
+        true,
+      )
+    })
+
+    it('returns null when no pending heal', async () => {
+      getRuntimeValue.mockReturnValue(null)
+      const result = await applyStarryChaliceHeal('Ally1', 'camp')
+      expect(result).toBeNull()
     })
   })
 })

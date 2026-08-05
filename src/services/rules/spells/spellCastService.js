@@ -1132,9 +1132,23 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             triggerPostCastSelfHeals(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
                 console.error('[spellCast] Post-cast self-heal failed:', e);
             });
-            triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
+            const chaliceResult = await triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, mapName).catch(e => {
                 console.error('[spellCast] Post-cast ally-heal failed:', e);
+                return null;
             });
+            if (chaliceResult?.needsModal) {
+                const pending = getRuntimeValue('campaign', 'pendingStarryChaliceHeal', campaignName);
+                return {
+                    type: 'modal',
+                    modalName: 'starryChaliceHeal',
+                    payload: {
+                        casterName: playerStats.name,
+                        campaignName,
+                        amount: chaliceResult.amount,
+                        targetNames: pending?.targetNames || [playerStats.name],
+                    },
+                };
+            }
 
             return genericHealResult;
         }

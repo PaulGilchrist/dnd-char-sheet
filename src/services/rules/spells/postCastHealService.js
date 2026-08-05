@@ -1,5 +1,7 @@
 import { evaluateAutoExpression } from '../../combat/automation/automationService.js';
 import { applyHealingDirectly, logHealingToSSE } from '../../automation/common/healingRoll.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getCombatSummary } from '../../encounters/combatData.js';
 
 const HEALING_SPELL_NAMES = new Set([
     'aid',
@@ -96,7 +98,7 @@ function getPostCastAllyHeals(playerStats) {
     return results.length > 0 ? results : null;
 }
 
- export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, _mapName) {
+export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, _mapName) {
     if (!isHealingSpell(spell)) {
         return null;
     }
@@ -110,7 +112,6 @@ function getPostCastAllyHeals(playerStats) {
         return null;
     }
 
-    const results = [];
     const prof = playerStats.proficiency || 0;
     if (playerStats.level == null) {
         console.error('[postCastHealService] triggerPostCastAllyHeals: playerStats.level is missing')
@@ -138,20 +139,43 @@ function getPostCastAllyHeals(playerStats) {
             continue;
         }
 
-        const targetName = heal.targetName || playerStats.name;
-        const targetMaxHp = targetName === playerStats.name ? playerStats.hitPoints : null;
-        const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, targetName, amount, campaignName, targetMaxHp);
+        const cs = getCombatSummary(campaignName);
+        const creatureNames = (cs?.creatures || []).map(c => c.name);
+        const allTargets = [playerStats.name, ...creatureNames.filter(n => n !== playerStats.name)];
 
-        logHealingToSSE(campaignName, {
-            targetName,
+        setRuntimeValue('campaign', 'pendingStarryChaliceHeal', {
+            amount,
+            casterName: playerStats.name,
+            campaignName,
+            targetNames: allTargets,
             sourceName: heal.name,
-            actualHeal,
-            newHp,
-            maxHp,
-        });
+        }, campaignName, true);
 
-        results.push({ name: heal.name, amount, actualHeal, targetName });
+        return { needsModal: true, amount };
     }
 
-    return results.length > 0 ? results : null;
+    return null;
+}
+
+export async function applyStarryChaliceHeal(targetName, campaignName) {
+    const pending = getRuntimeValue('campaign', 'pendingStarryChaliceHeal', campaignName);
+    if (!pending) return null;
+
+    const { amount, sourceName } = pending;
+    const targetMaxHp = 999;
+    const { newHp, maxHp, actualHeal } = applyHealingDirectly(
+        { hitPoints: targetMaxHp }, targetName, amount, campaignName, targetMaxHp
+    );
+
+    logHealingToSSE(campaignName, {
+        targetName,
+        sourceName,
+        actualHeal,
+        newHp,
+        maxHp,
+    });
+
+    setRuntimeValue('campaign', 'pendingStarryChaliceHeal', null, campaignName, true);
+
+    return { targetName, actualHeal, newHp, maxHp };
 }

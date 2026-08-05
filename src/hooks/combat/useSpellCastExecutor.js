@@ -127,6 +127,9 @@ function handleModalResult(popup, setModalState) {
         case 'summonSpirit':
             setModalState({ summonSpiritModal: payload });
             break;
+        case 'starryChaliceHeal':
+            setModalState({ starryChaliceHealModal: payload });
+            break;
         default:
             console.error(`[useSpellCastExecutor] Unknown modalName from spell cast: ${modalName}`);
     }

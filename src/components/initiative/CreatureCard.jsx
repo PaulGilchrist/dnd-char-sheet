@@ -378,6 +378,30 @@ function CreatureCard({
                         }}
                     />
                 )}
+                {(() => {
+                    const starryBuffs = getRuntimeValue(creature.name, 'activeBuffs') || [];
+                    const starryFormBuff = Array.isArray(starryBuffs) ? starryBuffs.find(b => b.name === 'Starry Form' && b.constellation) : null;
+                    if (!starryFormBuff) return null;
+                    const constellation = starryFormBuff.constellation;
+                    return (
+                        <CreatureBadge
+                            icon='fa-star'
+                            label={`Starry Form - ${constellation}`}
+                            cls='effect-buff'
+                            tooltip={`Starry Form (${constellation} constellation): Luminous form active — Resistance to Bludgeoning, Piercing, and Slashing damage${constellation === 'Archer' ? '; Bonus Action: Luminous Arrow attack' : constellation === 'Chalice' ? '; Healing spells restore extra HP to allies within 30 feet' : '; Concentration checks: Treat d20 rolls of 9 or lower as 10'}`}
+                            removable={isLocalhost}
+                            onRemove={() => {
+                                const newBuffs = starryBuffs.filter(b => b.name !== 'Starry Form');
+                                setRuntimeValue(creature.name, 'activeBuffs', newBuffs, campaignName);
+                                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                                const filteredEffects = allTargetEffects.filter(te => !(te.effect === 'starry_form' && te.source === creature.name));
+                                if (filteredEffects.length !== allTargetEffects.length) {
+                                    setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
+                                }
+                            }}
+                        />
+                    );
+                })()}
                 {wrathOfTheSeaActive && (
                     <CreatureBadge
                         icon='fa-water'

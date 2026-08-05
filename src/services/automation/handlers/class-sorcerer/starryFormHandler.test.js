@@ -36,8 +36,9 @@ describe('starryFormHandler', () => {
   describe('handle - buff toggle', () => {
     it('should end starry form when already active and clear the buff', async () => {
       const existingBuffs = [{ name: 'Starry Form', effect: 'starry_form' }];
-      getRuntimeValue.mockImplementation((caster, key) => {
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
         if (key === 'activeBuffs') return existingBuffs;
+        if (key === 'targetEffects') return [];
         return 2;
       });
 
@@ -59,8 +60,9 @@ describe('starryFormHandler', () => {
         { name: 'Starry Form', effect: 'starry_form' },
         { name: 'Mage Armor', effect: 'mage_armor' },
       ];
-      getRuntimeValue.mockImplementation((caster, key) => {
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
         if (key === 'activeBuffs') return existingBuffs;
+        if (key === 'targetEffects') return [];
         return 2;
       });
 

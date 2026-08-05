@@ -89,6 +89,18 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                 setRuntimeValue(playerStats.name, 'activeBuffs', filteredRevelationBuffs, campaignName);
             }
 
+            // Clear Starry Form active state on initiative roll (new combat)
+            const starryBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
+            const filteredStarryBuffs = starryBuffs.filter(b => b.name !== 'Starry Form');
+            if (filteredStarryBuffs.length !== starryBuffs.length) {
+                setRuntimeValue(playerStats.name, 'activeBuffs', filteredStarryBuffs, campaignName);
+            }
+            const allStarryEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredStarryEffects = allStarryEffects.filter(te => te.effect !== 'starry_form' || te.source !== playerStats.name);
+            if (filteredStarryEffects.length !== allStarryEffects.length) {
+                setRuntimeValue('campaign', 'targetEffects', filteredStarryEffects, campaignName, true);
+            }
+
             // Clear concentration on initiative roll (new combat round)
             const cs = getCombatSummary(campaignName);
             if (cs && cs.creatures) {

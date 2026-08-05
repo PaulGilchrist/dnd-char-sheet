@@ -1,4 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../ui/logService.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 const CONSTELLATION_OPTIONS = ['Archer', 'Chalice', 'Dragon'];
 
@@ -13,6 +15,35 @@ export async function handle(action, playerStats, campaignName) {
     if (wasActive) {
         const newBuffs = activeBuffs.filter(b => b.name !== action.name);
         setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
+
+        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const filteredEffects = allTargetEffects.filter(te => !(te.effect === 'starry_form' && te.source === playerName));
+        if (filteredEffects.length !== allTargetEffects.length) {
+            setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
+        }
+
+        const cs = getCombatSummary(campaignName);
+        if (cs) {
+            const starryEffects = allTargetEffects.filter(te => te.effect === 'starry_form' && te.source === playerName);
+            for (const te of starryEffects) {
+                if (te.target) {
+                    const targetBuffs = getRuntimeValue(te.target, 'activeBuffs', campaignName) || [];
+                    const filteredBuffs = targetBuffs.filter(b => !(b.name === action.name && b.effect === 'starry_form'));
+                    if (filteredBuffs.length !== targetBuffs.length) {
+                        setRuntimeValue(te.target, 'activeBuffs', filteredBuffs, campaignName);
+                    }
+                }
+            }
+        }
+
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: action.name,
+            description: `${playerName} ended Starry Form.`,
+            timestamp: Date.now(),
+        }).catch(() => {});
+
         return {
             type: 'popup',
             payload: {
@@ -106,6 +137,17 @@ export async function applyConstellationOption(action, playerStats, campaignName
     const newBuffs = [...activeBuffs, buffEntry];
     setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
 
+    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const starryTargetEffect = {
+        effect: 'starry_form',
+        source: playerName,
+        target: playerName,
+        constellation: optionName,
+        duration: auto.duration || '1_minute',
+    };
+    const newTargetEffects = [...allTargetEffects.filter(te => te.effect !== 'starry_form' || te.source !== playerName), starryTargetEffect];
+    setRuntimeValue('campaign', 'targetEffects', newTargetEffects, campaignName, true);
+
     const optionEffects = [];
 
     if (optionName === 'Archer') {
@@ -122,6 +164,14 @@ export async function applyConstellationOption(action, playerStats, campaignName
     }
 
     const description = `${optionName} constellation chosen. ${optionEffects.join('. ')}.`;
+
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: action.name,
+        description: `${playerName} assumed Starry Form with the ${optionName} constellation. ${optionEffects.join('. ')}. Wild Shape use consumed.`,
+        timestamp: Date.now(),
+    }).catch(() => {});
 
     return {
         type: 'popup',

@@ -755,6 +755,15 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                     {wildShapeActiveChar && (
                         <CreatureBadge icon='fa-paw' label='Wild Shape' cls='effect-buff' tooltip='Wild Shape: Animal form active — spellcasting blocked, resistance types apply' />
                     )}
+                    {(() => {
+                        const starryBuffs = getRuntimeValue(playerStats.name, 'activeBuffs') || [];
+                        const starryFormBuff = Array.isArray(starryBuffs) ? starryBuffs.find(b => b.name === 'Starry Form' && b.constellation) : null;
+                        if (!starryFormBuff) return null;
+                        const constellation = starryFormBuff.constellation;
+                        return (
+                            <CreatureBadge icon='fa-star' label={`Starry Form - ${constellation}`} cls='effect-buff' tooltip={`Starry Form (${constellation} constellation): Luminous form active — Resistance to Bludgeoning, Piercing, and Slashing damage${constellation === 'Archer' ? '; Bonus Action: Luminous Arrow attack' : constellation === 'Chalice' ? '; Healing spells restore extra HP to allies within 30 feet' : '; Concentration checks: Treat d20 rolls of 9 or lower as 10'}`} />
+                        );
+                    })()}
                     {isAuraOfLifeActive(playerStats.name, campaignName) && (
                         <CreatureBadge icon='fa-heart-pulse' label='Aura of Life' cls='effect-buff' tooltip={'Aura of Life: Resistance to Necrotic damage, HP maximum can\'t be reduced, regain 1 HP at start of turn if at 0 HP'} />
                     )}
