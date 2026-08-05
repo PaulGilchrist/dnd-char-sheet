@@ -10,6 +10,9 @@ import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 
 async function getCreatureSaveBonus(creature, abilityAbbr, characters, campaignNpcs, getName) {
     if (creature.type === 'player') {
+        if (creature.wildShapeSource && abilityAbbr === 'con') {
+            return creature.wildShapeConSaveBonus ?? 0
+        }
         const character = characters.find(c => getName(c.name) === creature.name)
         return getAbilitySaveBonus(character?.computedStats || character, abilityAbbr)
     }

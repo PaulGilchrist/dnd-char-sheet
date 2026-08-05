@@ -1,9 +1,11 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatSummary } from '../../../encounters/combatData.js';
+import { getCombatSummary, setCombatSummaryCache } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { setTempHp } from '../buffs/tempHpService.js';
+import { loadMonsters } from '../../../ui/dataLoader.js';
+import { getMonsterSaveBonuses } from '../../../encounters/encounterToInitiative.js';
 
 const WILD_SHAPE_EFFECT = 'wild_shape';
 
@@ -26,6 +28,8 @@ function clearDruidCreature(combatSummary, druidName) {
     if (!combatSummary?.creatures) return;
     const druidCreature = combatSummary.creatures.find(c => c.name === druidName && c.type === 'player');
     if (druidCreature?.wildShapeSource) {
+        delete druidCreature.wildShapeConSaveBonus;
+        delete druidCreature.saving_throws;
         delete druidCreature.wildShapeSource;
         delete druidCreature.beastIndex;
         delete druidCreature.beastName;
@@ -38,6 +42,7 @@ export function cleanupWildShape(druidName, campaignName) {
     if (combatSummary) {
         clearDruidCreature(combatSummary, druidName);
         storage.set('combatSummary', combatSummary, campaignName);
+        setCombatSummaryCache(combatSummary, campaignName);
     }
 
     const targetEffects = getTargetEffects();
@@ -59,16 +64,6 @@ export async function activateWildShape(druidName, baseMonster, druidStats, camp
     const combatSummary = await getCombatContext(campaignName) || { creatures: [] };
     clearDruidCreature(combatSummary, druidName);
     markDruidCreature(combatSummary, druidName, baseMonster);
-    await storage.set('combatSummary', combatSummary, campaignName);
-
-    const targetEffects = getTargetEffects();
-    targetEffects.push({
-        target: druidName,
-        source: druidName,
-        effect: WILD_SHAPE_EFFECT,
-        beastName: baseMonster.name,
-    });
-    setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
 
     let amount = druidStats.level || 1;
     const isMoonDruid = druidStats.class?.major?.name === 'Circle of the Moon' || druidStats.class?.subclass?.name === 'Circle of the Moon';
@@ -81,7 +76,36 @@ export async function activateWildShape(druidName, baseMonster, druidStats, camp
         const beastAC = typeof baseMonster.armor_class === 'number' ? baseMonster.armor_class : 10;
         const circleFormsAC = Math.max(beastAC, 13 + wisMod);
         setRuntimeValue(druidName, 'circleFormsAC', circleFormsAC, campaignName);
+
+        const monsters = await loadMonsters();
+        const baseMonsterData = monsters.find(m => m.index === baseMonster.index);
+        if (baseMonsterData) {
+            const beastSaves = getMonsterSaveBonuses(baseMonsterData);
+            const beastConSave = beastSaves.con ?? 0;
+            const druidCreature = combatSummary.creatures?.find(c => c.name === druidName && c.type === 'player');
+            if (druidCreature) {
+                druidCreature.wildShapeConSaveBonus = beastConSave + wisMod;
+                const saving_throws = {};
+                for (const [abbr, bonus] of Object.entries(beastSaves)) {
+                    saving_throws[abbr] = { modifier: bonus };
+                }
+                saving_throws.con.modifier = beastConSave + wisMod;
+                druidCreature.saving_throws = saving_throws;
+            }
+        }
     }
+
+    await storage.set('combatSummary', combatSummary, campaignName);
+    setCombatSummaryCache(combatSummary, campaignName);
+
+    const targetEffects = getTargetEffects();
+    targetEffects.push({
+        target: druidName,
+        source: druidName,
+        effect: WILD_SHAPE_EFFECT,
+        beastName: baseMonster.name,
+    });
+    setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
 
     const maxWS = druidStats.class?.class_levels?.find(cl => cl.level === druidStats.level)?.wild_shape || 0;
     const currentWS = Number(getRuntimeValue(druidName, 'wildShapeUses', campaignName) ?? maxWS);

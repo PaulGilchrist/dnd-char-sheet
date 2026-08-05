@@ -690,21 +690,31 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
           <hr />
 
           <div className="mc-defenses">
-            {hasEntries(monster.saving_throws) && (
-              <div className="mc-defense-row">
-                <span className="mc-defense-label">Saving Throws</span>
-                <span>
-                  {Object.entries(monster.saving_throws).map(([ab, s], idx) => (
-                    <span key={ab}>
-                      {idx > 0 && ', '}
-                      <span className="mc-dice-link" onClick={() => handleSaveThrow(ab, s.modifier)} role="button" tabIndex={0}>
-                        {saveAbilityAbbr(ab)} {s.modifier >= 0 ? '+' : ''}{s.modifier}
+            {(() => {
+              const currentCs = getCombatSummary(campaignName);
+              const allCreatureNames = currentCs?.creatures?.map(c => c.name).join(', ') || 'none';
+              const summaryCreature = currentCs?.creatures?.find(c => c.name === monsterName);
+              console.debug('[MonsterCardModal] saving_throws lookup: monsterName=%s campaign=%s creatures=[%s] summaryCreature=%s summarySavingThrows=%s monsterSavingThrows=%s', monsterName, campaignName, allCreatureNames, !!summaryCreature, JSON.stringify(summaryCreature?.saving_throws), JSON.stringify(monster.saving_throws));
+              const saves = summaryCreature?.saving_throws && hasEntries(summaryCreature.saving_throws)
+                ? summaryCreature.saving_throws
+                : monster.saving_throws;
+              console.debug('[MonsterCardModal] using saves:', JSON.stringify(saves));
+              return hasEntries(saves) && (
+                <div className="mc-defense-row">
+                  <span className="mc-defense-label">Saving Throws</span>
+                  <span>
+                    {Object.entries(saves).map(([ab, s], idx) => (
+                      <span key={ab}>
+                        {idx > 0 && ', '}
+                        <span className="mc-dice-link" onClick={() => handleSaveThrow(ab, s.modifier)} role="button" tabIndex={0}>
+                          {saveAbilityAbbr(ab)} {s.modifier >= 0 ? '+' : ''}{s.modifier}
+                        </span>
                       </span>
-                    </span>
-                  ))}
-                </span>
-              </div>
-            )}
+                    ))}
+                  </span>
+                </div>
+              );
+            })()}
             {hasEntries(monster.skills) && (
               <div className="mc-defense-row">
                 <span className="mc-defense-label">Skills</span>

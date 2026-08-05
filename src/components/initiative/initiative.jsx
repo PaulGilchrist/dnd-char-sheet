@@ -1057,6 +1057,36 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
                     if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
                 }
+                const isMoonDruid = druidCharacter?.computedStats?.class?.major?.name === 'Circle of the Moon' || druidCharacter?.computedStats?.class?.subclass?.name === 'Circle of the Moon'
+                const beastSaves = {}
+                for (const abbr of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                    if (baseMonster.saving_throws?.[abbr]?.modifier != null) {
+                        beastSaves[abbr] = baseMonster.saving_throws[abbr].modifier
+                    } else if (baseMonster.ability_score_modifiers?.[abbr] != null) {
+                        beastSaves[abbr] = baseMonster.ability_score_modifiers[abbr]
+                    }
+                }
+                merged.saving_throws = {}
+                for (const [abbr, mod] of Object.entries(beastSaves)) {
+                    merged.saving_throws[abbr] = { modifier: mod }
+                }
+                if (isMoonDruid && druidCharacter) {
+                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
+                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
+                    const wisMod = Math.floor(((wisScore ?? 10) - 10) / 2)
+                    merged.saving_throws.con.modifier = beastSaves.con + wisMod
+                }
+                for (const action of merged.actions || []) {
+                    if (action.attack_bonus != null) {
+                        action.damage_type_primary = 'Radiant';
+                        if (action.damage_type_secondary) {
+                            action.damage_type_secondary = 'Radiant';
+                        }
+                        if (action.description) {
+                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage');
+                        }
+                    }
+                }
                 setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
                 return
