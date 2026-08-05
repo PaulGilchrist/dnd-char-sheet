@@ -258,6 +258,13 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
            newHp = 1;
        }
         setRuntimeValue(creature.name, 'currentHitPoints', newHp, campaignName);
+
+        if (creature.wildShapeSource && newHp <= 0 && oldHp > 0) {
+            const { cleanupWildShape } = await import('../../automation/handlers/class-druid/wildShapeCreatureBuilder.js');
+            cleanupWildShape(creature.name, campaignName);
+            setRuntimeValue(creature.name, 'deathSaves', [false, false, false], campaignName);
+            setRuntimeValue(creature.name, 'deathFailures', [false, false, false], campaignName);
+        }
       } else {
         oldHp = creature.currentHp;
         newHp = Math.max(0, oldHp - damageAfterTempHp);

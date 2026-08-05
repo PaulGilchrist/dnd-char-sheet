@@ -832,17 +832,20 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
         // Remove spell-summoned creatures on short/long rest or initiative roll
         removeSummonedCreatures(characterName, campaignName);
 
-        // Remove Wild Shape creatures on short/long rest or initiative roll
+        // End Wild Shape on short/long rest or initiative roll
         const _wildShapeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
         const _wildShapeTargets = _wildShapeEffects.filter(te => te.effect === 'wild_shape').map(te => te.source);
         for (const wsSource of _wildShapeTargets) {
             const _cs = getCombatSummary(campaignName);
             if (_cs) {
-                const _beast = _cs.creatures.find(c => c.wildShapeSource === wsSource);
-                if (_beast) {
-                    _cs.creatures = _cs.creatures.filter(c => c.name !== _beast.name);
-                    storage.set('combatSummary', _cs, campaignName);
+                const _druidCreature = _cs.creatures.find(c => c.name === wsSource && c.type === 'player');
+                if (_druidCreature?.wildShapeSource) {
+                    delete _druidCreature.wildShapeSource;
+                    delete _druidCreature.beastIndex;
+                    delete _druidCreature.beastName;
                 }
+                _cs.creatures = _cs.creatures.filter(c => !(c.wildShapeSource === wsSource && c.type !== 'player'));
+                storage.set('combatSummary', _cs, campaignName);
             }
             const _te = getRuntimeValue('campaign', 'targetEffects') || [];
             const _filtered = _te.filter(e => !(e.effect === 'wild_shape' && e.source === wsSource));

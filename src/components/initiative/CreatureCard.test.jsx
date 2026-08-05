@@ -528,4 +528,50 @@ describe('CreatureCard', () => {
             expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
+
+    describe('wild-shaped player card', () => {
+        const wildShapeCreature = {
+            name: 'Alice',
+            type: 'player',
+            wildShapeSource: 'Alice',
+            beastIndex: 'giant-spider',
+            beastName: 'Giant Spider',
+            currentHp: 20,
+            maxHp: 20,
+            initiative: 14,
+            targetName: '',
+            conditions: [],
+            concentration: null,
+        };
+
+        it('renders the beast name instead of the druid name', () => {
+            render(<CreatureCard {...props} creature={wildShapeCreature} allCreatures={[wildShapeCreature]} />);
+            expect(screen.getByText('Giant Spider')).toBeInTheDocument();
+            expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+        });
+
+        it('renders a clickable beast avatar that opens the monster card', () => {
+            render(<CreatureCard {...props} creature={wildShapeCreature} allCreatures={[wildShapeCreature]} />);
+            const avatar = screen.getByTestId('npc-avatar-Giant Spider');
+            expect(avatar).toBeInTheDocument();
+            fireEvent.click(avatar);
+            expect(props.onNpcClick).toHaveBeenCalledWith(wildShapeCreature, { allowNonLocalhost: true });
+        });
+
+        it('shows temp HP on the wild-shaped player card', () => {
+            const original = runtimeState.getRuntimeValue.getMockImplementation();
+            runtimeState.getRuntimeValue.mockImplementation((target, key) => (key === 'tempHp' ? 5 : original(target, key)));
+            render(<CreatureCard {...props} creature={wildShapeCreature} allCreatures={[wildShapeCreature]} />);
+            expect(screen.getByText(/Temp HP: 5/i)).toBeInTheDocument();
+            runtimeState.getRuntimeValue.mockImplementation(original);
+        });
+
+        it('does not show temp HP on a normal player card', () => {
+            const original = runtimeState.getRuntimeValue.getMockImplementation();
+            runtimeState.getRuntimeValue.mockImplementation((target, key) => (key === 'tempHp' ? 5 : original(target, key)));
+            render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={[defaultPlayerCreature]} />);
+            expect(screen.queryByText(/Temp HP:/i)).not.toBeInTheDocument();
+            runtimeState.getRuntimeValue.mockImplementation(original);
+        });
+    });
 });

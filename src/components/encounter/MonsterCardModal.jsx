@@ -729,7 +729,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
             {monster.languages && (
               <div className="mc-defense-row">
                 <span className="mc-defense-label">Languages</span>
-                <span>{monster.languages}</span>
+                <span>{Array.isArray(monster.languages) ? monster.languages.join(', ') : monster.languages}</span>
               </div>
             )}
             {hasEntries(monster.damage_vulnerabilities) && (

@@ -102,13 +102,13 @@ function CreatureCard({
                 </button>
             )}
             <div className='creature-avatar'>
-                {creature.type === 'player' ? (
+                {creature.type === 'player' && !creature.wildShapeSource ? (
                     <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
                 ) : (
                     <NpcAvatar
-                        name={creature.name}
+                        name={creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
                         imageUrl={npcImage}
-                        imagePath={creature.imagePath}
+                        imagePath={creature.wildShapeSource ? undefined : creature.imagePath}
                         campaignName={campaignName}
                         onClick={() => {
                             if (isLocalhost || isPlayerSummoned) {
@@ -127,7 +127,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{creature.name}</span>
+                    <span>{creature.wildShapeSource && creature.beastName ? creature.beastName : creature.name}</span>
                 )}
             </div>
             <CreatureHp
@@ -136,7 +136,7 @@ function CreatureCard({
                 onChange={onHpChange}
                 isPlayerSummoned={isPlayerSummoned}
             />
-            {creature.type !== 'player' && (() => {
+            {(creature.type !== 'player' || creature.wildShapeSource) && (() => {
                 const creatureTempHp = getRuntimeValue(creature.name, 'tempHp', campaignName) || 0;
                 return creatureTempHp > 0 ? (
                     <div className="temp-hp-display">
@@ -367,12 +367,14 @@ function CreatureCard({
                         icon='fa-paw'
                         label='Wild Shape'
                         cls='effect-buff'
-                        tooltip='Wild Shape: Animal form active — spellcasting blocked, resistance types apply'
+                        tooltip={creature.beastName
+                            ? `Wild Shape: Animal form active as ${creature.beastName} — spellcasting blocked, resistance types apply`
+                            : 'Wild Shape: Animal form active — spellcasting blocked, resistance types apply'}
                         removable={isLocalhost}
                         onRemove={() => {
-                            const buffs = getRuntimeValue(creature.name, 'activeBuffs') || [];
-                            const filtered = buffs.filter(b => b.effect !== 'Wild Shape');
-                            setRuntimeValue(creature.name, 'activeBuffs', filtered, campaignName);
+                            import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js').then(({ cleanupWildShape }) => {
+                                cleanupWildShape(creature.name, campaignName);
+                            });
                         }}
                     />
                 )}
@@ -414,25 +416,6 @@ function CreatureCard({
                         }}
                     />
                 )}
-                {creature.wildShapeSource && (() => {
-                    const te = myTargetEffects.find(te => te.effect === 'wild_shape');
-                    if (!te) return null;
-                    return (
-                        <CreatureBadge
-                            key={`wild_shape-${te.source}`}
-                            icon='fa-paw'
-                            label='Wild Shape'
-                            cls='effect-buff'
-                            tooltip={`Wild Shape: Animal form active — ${te.beastName || 'Druid beast form'}`}
-                            removable={isLocalhost}
-                            onRemove={() => {
-                                const effects = getRuntimeValue('campaign', 'targetEffects') || [];
-                                const filtered = effects.filter(e => !(e.target === creature.wildShapeSource && e.effect === 'wild_shape' && e.source === te.source));
-                                setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
-                            }}
-                        />
-                    );
-                })()}
                 {myTargetEffects.filter(te => te.effect === 'summoned').map(te => (
                     <CreatureBadge
                         key={`summoned-${te.source}`}

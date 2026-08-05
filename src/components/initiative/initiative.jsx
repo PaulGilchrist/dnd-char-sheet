@@ -271,10 +271,11 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     React.useEffect(() => {
         if (!combatSummary) return
         let cancelled = false
-        const npcs = combatSummary.creatures.filter(c => c.type !== 'player')
+        const npcs = combatSummary.creatures.filter(c => c.type !== 'player' || c.wildShapeSource)
         const promises = npcs.map(async (creature) => {
-            if (creature.imagePath) return { name: creature.name, url: null }
-            const url = await getMonsterImageUrl(creature.name, campaignNpcs, campaignName)
+            if (creature.imagePath && !creature.wildShapeSource) return { name: creature.name, url: null }
+            const imageName = creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name
+            const url = await getMonsterImageUrl(imageName, campaignNpcs, campaignName)
             return { name: creature.name, url }
         })
         Promise.all(promises).then(results => {
@@ -1031,6 +1032,30 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         }
         const combatSummary = getCombatSummary(campaignName)
         const runtimeCreature = combatSummary?.creatures?.find(c => c.name === creature.name)
+        if (runtimeCreature?.wildShapeSource && runtimeCreature.beastIndex) {
+            const monsters = await loadMonsters()
+            const baseMonster = monsters.find(m => m.index === runtimeCreature.beastIndex)
+            if (baseMonster) {
+                const merged = cloneDeep(baseMonster)
+                merged.name = runtimeCreature.beastName || baseMonster.name
+                merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
+                const druidCharacter = characters.find(c => utils.getName(c.name) === runtimeCreature.wildShapeSource)
+                if (druidCharacter) {
+                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
+                    const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
+                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
+                    const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
+                    if (intScore != null) merged.ability_scores.int = intScore
+                    if (wisScore != null) merged.ability_scores.wis = wisScore
+                    if (chaScore != null) merged.ability_scores.cha = chaScore
+                    const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
+                    if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
+                }
+                setViewingMonster(merged)
+                setViewingMonsterCreatureName(creature.name)
+                return
+            }
+        }
         if (runtimeCreature && runtimeCreature.monsterIndex) {
             const monsters = await loadMonsters()
             const baseMonster = monsters.find(m => m.index === runtimeCreature.monsterIndex)
@@ -1071,7 +1096,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         if (wisScore != null) merged.ability_scores.wis = wisScore
                         if (chaScore != null) merged.ability_scores.cha = chaScore
                         const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
-                        if (druidLanguages) merged.languages = druidLanguages
+                        if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
                     }
                 }
                 setViewingMonster(merged)
