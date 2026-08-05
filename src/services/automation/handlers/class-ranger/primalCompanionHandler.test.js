@@ -284,7 +284,7 @@ describe('primalCompanionHandler', () => {
             expect(summonedCreature.actions[0].damage_type_primary).toBe('bludgeoning/piercing/slashing');
             expect(summonedCreature.actions[0].description).toContain('1d8+2+3');
             expect(summonedCreature.actions[0].description).toContain('+6');
-            expect(summonedCreature.actions.length).toBe(2);
+            expect(summonedCreature.actions.length).toBe(3);
             expect(summonedCreature.actions[1].name).toBe("Beast's Strike — Charge");
             expect(summonedCreature.actions[1].save_dc).toBe(13);
             expect(summonedCreature.actions[1].save_type).toBe('Str');
@@ -309,7 +309,7 @@ describe('primalCompanionHandler', () => {
             expect(summonedCreature.actions[0].name).toBe("Beast's Strike");
             expect(summonedCreature.actions[0].damage_dice_primary).toBe('1d6+2+3');
             expect(summonedCreature.actions[0].damage_type_primary).toBe('bludgeoning/piercing');
-            expect(summonedCreature.actions.length).toBe(2);
+            expect(summonedCreature.actions.length).toBe(3);
             expect(summonedCreature.actions[1].name).toBe("Beast's Strike — Grapple");
             expect(summonedCreature.actions[1].save_dc).toBe(13);
             expect(summonedCreature.actions[1].save_type).toBe('Wis');
@@ -334,7 +334,7 @@ describe('primalCompanionHandler', () => {
             expect(summonedCreature.actions[0].name).toBe("Beast's Strike");
             expect(summonedCreature.actions[0].damage_dice_primary).toBe('1d8+2+3');
             expect(summonedCreature.actions[0].damage_type_primary).toBe('piercing');
-            expect(summonedCreature.actions.length).toBe(1);
+            expect(summonedCreature.actions.length).toBe(2);
         });
     });
 

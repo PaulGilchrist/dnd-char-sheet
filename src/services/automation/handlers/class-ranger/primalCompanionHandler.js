@@ -26,7 +26,19 @@ const TYPE_TO_MONSTER_INDEX = {
     'Beast of the Sky': 'bestial-spirit-air',
 };
 
-function buildPrimalCompanionCreature(monster, companionTypeConfig, displayName, initiativeValue, rangerLevel, wisModifier, spellAttackMod, proficiencyBonus, spellSaveDc) {
+function hasFeature(playerStats, featureName) {
+    const classLevels = playerStats?.class?.class_levels || [];
+    const subclassLevels = playerStats?.class?.subclass?.class_levels || [];
+    const majorFeatures = playerStats?.class?.major?.features || [];
+    const allFeatureNames = [
+        ...classLevels.flatMap(cl => (cl.features || []).map(f => f.name)),
+        ...subclassLevels.flatMap(cl => (cl.features || []).map(f => f.name)),
+        ...majorFeatures.map(f => f.name),
+    ];
+    return allFeatureNames.includes(featureName);
+}
+
+function buildPrimalCompanionCreature(monster, companionTypeConfig, displayName, initiativeValue, rangerLevel, wisModifier, spellAttackMod, proficiencyBonus, spellSaveDc, hasBestialFury) {
     const hp = companionTypeConfig.hpBase + (companionTypeConfig.hpPerLevel * rangerLevel);
 
     const baseSaves = getMonsterSaveBonuses(monster);
@@ -35,7 +47,7 @@ function buildPrimalCompanionCreature(monster, companionTypeConfig, displayName,
         adjustedSaves[key] = value + proficiencyBonus;
     }
 
-    const actions = resolveMonsterActions(monster, wisModifier, spellAttackMod, spellSaveDc);
+    const actions = resolveMonsterActions(monster, wisModifier, spellAttackMod, spellSaveDc, hasBestialFury);
 
     const speed = {};
     const baseSpeed = companionTypeConfig.speed || '30 ft';
@@ -66,13 +78,22 @@ function buildPrimalCompanionCreature(monster, companionTypeConfig, displayName,
     };
 }
 
-function resolveMonsterActions(monster, wisModifier, spellAttackMod, spellSaveDc) {
+function resolveMonsterActions(monster, wisModifier, spellAttackMod, spellSaveDc, hasBestialFury) {
     const actions = (monster.actions || []).map(action => {
         const resolved = { ...action };
         resolved.damage_dice_primary = String(resolved.damage_dice_primary || '').replace(/WIS modifier/gi, String(wisModifier));
         let desc = String(resolved.description || '');
         desc = desc.replace(/WIS modifier/gi, String(wisModifier));
         desc = desc.replace(/spell attack modifier/gi, `+${spellAttackMod}`);
+        if (hasBestialFury && resolved.name && resolved.name.includes("Beast's Strike")) {
+            desc += ' (can be used twice per turn)';
+            resolved.damage_type_primary = 'Force';
+            desc = desc.replace(/Bludgeoning\/Piercing\/Slashing/gi, 'Force')
+                .replace(/Bludgeoning\/Piercing/gi, 'Force')
+                .replace(/Slashing/gi, 'Force')
+                .replace(/Piercing/gi, 'Force')
+                .replace(/Bludgeoning/gi, 'Force');
+        }
         resolved.description = desc;
         if (resolved.attack_bonus === null || resolved.attack_bonus === undefined) {
             resolved.attack_bonus = spellAttackMod;
@@ -82,6 +103,12 @@ function resolveMonsterActions(monster, wisModifier, spellAttackMod, spellSaveDc
         }
         return resolved;
     });
+
+    actions.push({
+        name: "Exceptional Training",
+        description: `Bonus Action: The beast can take the Dash, Disengage, Dodge, or Help action. It can deal Force damage instead of its normal damage type.`,
+    });
+
     return actions;
 }
 
@@ -211,7 +238,9 @@ export async function confirmPrimalCompanionSummon(action, playerStats, campaign
 
     const displayName = `Primal Companion (${selectedType})`;
 
-    const creature = buildPrimalCompanionCreature(monster, companionTypeConfig, displayName, initiativeValue, rangerLevel, wisModifier, spellAttackMod, proficiencyBonus, spellSaveDc);
+    const hasBestialFury = hasFeature(playerStats, 'Bestial Fury');
+
+    const creature = buildPrimalCompanionCreature(monster, companionTypeConfig, displayName, initiativeValue, rangerLevel, wisModifier, spellAttackMod, proficiencyBonus, spellSaveDc, hasBestialFury);
     combatSummary.creatures.push(creature);
 
     let targetEffects = getTargetEffects();
@@ -282,11 +311,7 @@ export async function handleCommand(action, playerStats, campaignName) {
 
     let description = `${action.name}: Commanded ${companionType} to use Beast's Strike.`;
 
-    const allFeatures = [
-        ...(playerStats?.class?.class_levels || []).flatMap(cl => (cl.features || [])),
-        ...(playerStats?.class?.subclass?.class_levels || []).flatMap(cl => (cl.features || [])),
-    ];
-    const hasBestialFury = allFeatures.some(f => f.name === 'Bestial Fury');
+    const hasBestialFury = hasFeature(playerStats, 'Bestial Fury');
     if (hasBestialFury) {
         description += ' Bestial Fury: beast attacks twice!';
     }
