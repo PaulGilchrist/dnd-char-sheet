@@ -170,8 +170,7 @@ async function performSummon(action, playerStats, campaignName, variant) {
         const chaMod = playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0;
         const warlockLevel = playerStats.level;
         const tempHp = warlockLevel + chaMod;
-        const tempHpKey = `_${creature.name.replace(/\s+/g, '_')}_tempHp`;
-        setTempHpOnKey(creature.name, tempHpKey, tempHp, campaignName);
+        setTempHpOnKey(creature.name, 'tempHp', tempHp, campaignName);
     }
 
     let targetEffects = getTargetEffects();

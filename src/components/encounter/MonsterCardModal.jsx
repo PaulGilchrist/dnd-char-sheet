@@ -50,6 +50,7 @@ function extractConditionsFromSaveEffect(saveEffect) {
 
 function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureName, mapName, characters }) {
   const monsterName = creatureName || monster?.name || 'Monster';
+  const creatureTempHp = getRuntimeValue(monsterName, 'tempHp', campaignName) || 0;
   const fallbackCsRef = useRef(null);
   const [mapData, setMapData] = useState(null);
   const [evasionSelection, setEvasionSelection] = useState(null);
@@ -617,6 +618,12 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
                 {monster.hit_points}{monster.hit_dice ? ` (${monster.hit_dice})` : ''}
               </span>
             </div>
+            {creatureTempHp > 0 && (
+              <div className="mc-stat">
+                <span className="mc-stat-label">Temp HP</span>
+                <span className="mc-stat-value mc-stat-temp-hp"><i className="fa-solid fa-shield"></i> {creatureTempHp}</span>
+              </div>
+            )}
             <div className="mc-stat mc-stat-speed">
               <span className="mc-stat-label">Speed</span>
               <span className={'mc-stat-value' + (condEffects?.speedZero ? ' mc-stat-penalized' : '')}>

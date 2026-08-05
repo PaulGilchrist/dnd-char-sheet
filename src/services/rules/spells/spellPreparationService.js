@@ -491,7 +491,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
   let oldConcentrationSpell = null;
   let isEyebiteRecast = false;
 
-  if (!isWgbSpell && spell.concentration) {
+  if (!isWgbSpell && spell.concentration && spell.name !== 'Summon Aberration') {
     const cs = getCombatSummary(campaignName);
     if (cs) {
       const creature = cs.creatures.find(c => c.name === playerStats.name);

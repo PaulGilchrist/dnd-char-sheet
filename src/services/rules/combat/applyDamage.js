@@ -224,6 +224,16 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
     }
 
     let oldHp, newHp, actualDamageTaken;
+
+    // Temp HP absorbs damage first for all creatures
+    let damageAfterTempHp = wardDamage;
+    const currentTempHp = Number(getRuntimeValue(creature.name, 'tempHp', campaignName) || 0);
+    if (currentTempHp > 0) {
+        const absorbed = Math.min(damageAfterTempHp, currentTempHp);
+        damageAfterTempHp -= absorbed;
+        setRuntimeValue(creature.name, 'tempHp', currentTempHp - absorbed, campaignName);
+    }
+
     if (isPlayer) {
        const storedCurrentHp = getRuntimeValue(creature.name, 'currentHitPoints');
        if (storedCurrentHp == null) {
@@ -240,15 +250,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
            throw new Error(`currentHitPoints not found for ${JSON.stringify(creature.name)}`);
        }
 
-       // Temp HP absorbs damage first
-       let damageAfterTempHp = wardDamage;
-       const currentTempHp = Number(getRuntimeValue(creature.name, 'tempHp', campaignName) || 0);
-       if (currentTempHp > 0) {
-           const absorbed = Math.min(damageAfterTempHp, currentTempHp);
-           damageAfterTempHp -= absorbed;
-           setRuntimeValue(creature.name, 'tempHp', currentTempHp - absorbed, campaignName);
-       }
-
        oldHp = storedCurrentHp;
        newHp = Math.max(0, oldHp - damageAfterTempHp);
        actualDamageTaken = oldHp - newHp;
@@ -259,7 +260,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         setRuntimeValue(creature.name, 'currentHitPoints', newHp, campaignName);
       } else {
         oldHp = creature.currentHp;
-        newHp = Math.max(0, oldHp - wardDamage);
+        newHp = Math.max(0, oldHp - damageAfterTempHp);
         actualDamageTaken = oldHp - newHp;
         if (options?.damageSequenceId && _reTriggeredSequenceIds.has(options.damageSequenceId) && newHp <= 0 && oldHp > 0) {
             newHp = 1;

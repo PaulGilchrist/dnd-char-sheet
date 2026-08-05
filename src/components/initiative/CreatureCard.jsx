@@ -136,6 +136,14 @@ function CreatureCard({
                 onChange={onHpChange}
                 isPlayerSummoned={isPlayerSummoned}
             />
+            {creature.type !== 'player' && (() => {
+                const creatureTempHp = getRuntimeValue(creature.name, 'tempHp', campaignName) || 0;
+                return creatureTempHp > 0 ? (
+                    <div className="temp-hp-display">
+                        <i className="fa-solid fa-shield"></i> Temp HP: {creatureTempHp}
+                    </div>
+                ) : null;
+            })()}
             <div className='creature-initiative'>Initiative&nbsp;
                 <input
                     min="0"

@@ -119,6 +119,12 @@
     background-color: rgba(255, 204, 0, 0.08);
 }
 
+.initiative .creature-card .temp-hp-display {
+    font-size: 0.75rem;
+    color: #3498db;
+    margin-top: 2px;
+}
+
 .initiative .creature-card.player {
     border: 2px solid #2ecc71;
 }

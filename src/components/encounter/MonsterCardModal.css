@@ -109,6 +109,11 @@
   color: var(--color-text);
 }
 
+.mc-stat-temp-hp {
+  font-size: 0.8rem;
+  color: #3498db;
+}
+
 .mc-conditions-section {
   padding: 8px 0 4px;
   display: flex;
