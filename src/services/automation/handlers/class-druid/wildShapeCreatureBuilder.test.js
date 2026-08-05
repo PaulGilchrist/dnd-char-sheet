@@ -61,6 +61,13 @@ const moonDruidStats = {
     abilities: [{ name: 'Wisdom', bonus: 3 }],
 };
 
+const level14MoonDruidStats = {
+    name: 'Maribelle',
+    level: 14,
+    class: { major: { name: 'Circle of the Moon' }, class_levels: [{ level: 14, wild_shape: 4 }] },
+    abilities: [{ name: 'Wisdom', bonus: 4 }],
+};
+
 function mockRuntimeForActivate() {
     getRuntimeValue.mockImplementation((name, key) => {
         if (name === 'campaign' && key === 'targetEffects') return [];
@@ -170,6 +177,43 @@ describe('wildShapeCreatureBuilder', () => {
 
             await expect(activateWildShape('Maribelle', giantSpider, druidStats, campaignName)).resolves.toBeDefined();
         });
+
+        it('does not add lunarFormAction for Moon Druid below level 14', async () => {
+            const wolf = { index: 'wolf', name: 'Wolf', challenge_rating: 1 / 8, armor_class: 13, actions: [{ name: 'Bite', attack_bonus: 3 }] };
+            const cs = { creatures: [{ name: 'Maribelle', type: 'player', initiative: '20' }] };
+            getCombatContext.mockResolvedValue(cs);
+            loadMonsters.mockResolvedValue([wolf]);
+
+            await activateWildShape('Maribelle', wolf, moonDruidStats, campaignName);
+
+            expect(cs.creatures[0].lunarFormAction).toBeUndefined();
+        });
+
+        it('adds lunarFormAction for Moon Druid at level 14', async () => {
+            const wolf = { index: 'wolf', name: 'Wolf', challenge_rating: 1 / 8, armor_class: 13, actions: [{ name: 'Bite', attack_bonus: 5 }] };
+            const cs = { creatures: [{ name: 'Maribelle', type: 'player', initiative: '20' }] };
+            getCombatContext.mockResolvedValue(cs);
+            loadMonsters.mockResolvedValue([wolf]);
+
+            await activateWildShape('Maribelle', wolf, level14MoonDruidStats, campaignName);
+
+            expect(cs.creatures[0].lunarFormAction).toEqual({
+                name: 'Lunar Form',
+                damage_dice_primary: '2d10',
+                damage_type_primary: 'Radiant',
+                description: 'Once per turn on a hit with a Wild Shape form attack, you can deal an extra 2d10 Radiant damage to the target.',
+            });
+        });
+
+        it('does not add lunarFormAction when no monsters loaded', async () => {
+            const cs = { creatures: [{ name: 'Maribelle', type: 'player', initiative: '20' }] };
+            getCombatContext.mockResolvedValue(cs);
+            loadMonsters.mockResolvedValue([]);
+
+            await activateWildShape('Maribelle', giantSpider, level14MoonDruidStats, campaignName);
+
+            expect(cs.creatures[0].lunarFormAction).toBeUndefined();
+        });
     });
 
     describe('cleanupWildShape', () => {
@@ -226,6 +270,28 @@ describe('wildShapeCreatureBuilder', () => {
 
             expect(cs.creatures[0].wildShapeConSaveBonus).toBeUndefined();
             expect(cs.creatures[0].saving_throws).toBeUndefined();
+        });
+
+        it('clears lunarFormAction when cleaning up Moon Druid wild shape', () => {
+            const cs = {
+                creatures: [
+                    { name: 'Maribelle', type: 'player', wildShapeSource: 'Maribelle', beastIndex: 'wolf', beastName: 'Wolf', lunarFormAction: { name: 'Lunar Form', damage_dice_primary: '2d10', damage_type_primary: 'Radiant', description: 'Once per turn on a hit with a Wild Shape form attack, you can deal an extra 2d10 Radiant damage to the target.' } },
+                ],
+            };
+            getCombatSummary.mockReturnValue(cs);
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'campaign' && key === 'targetEffects') {
+                    return [{ target: 'Maribelle', source: 'Maribelle', effect: 'wild_shape', beastName: 'Wolf' }];
+                }
+                if (name === 'Maribelle' && key === 'activeBuffs') {
+                    return [{ name: 'Wild Shape', effect: 'shape_shift' }];
+                }
+                return undefined;
+            });
+
+            cleanupWildShape('Maribelle', campaignName);
+
+            expect(cs.creatures[0].lunarFormAction).toBeUndefined();
         });
     });
 });

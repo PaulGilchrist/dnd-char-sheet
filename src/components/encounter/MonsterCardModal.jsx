@@ -692,13 +692,10 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
           <div className="mc-defenses">
             {(() => {
               const currentCs = getCombatSummary(campaignName);
-              const allCreatureNames = currentCs?.creatures?.map(c => c.name).join(', ') || 'none';
               const summaryCreature = currentCs?.creatures?.find(c => c.name === monsterName);
-              console.debug('[MonsterCardModal] saving_throws lookup: monsterName=%s campaign=%s creatures=[%s] summaryCreature=%s summarySavingThrows=%s monsterSavingThrows=%s', monsterName, campaignName, allCreatureNames, !!summaryCreature, JSON.stringify(summaryCreature?.saving_throws), JSON.stringify(monster.saving_throws));
               const saves = summaryCreature?.saving_throws && hasEntries(summaryCreature.saving_throws)
                 ? summaryCreature.saving_throws
                 : monster.saving_throws;
-              console.debug('[MonsterCardModal] using saves:', JSON.stringify(saves));
               return hasEntries(saves) && (
                 <div className="mc-defense-row">
                   <span className="mc-defense-label">Saving Throws</span>

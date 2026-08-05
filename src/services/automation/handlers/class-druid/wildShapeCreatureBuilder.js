@@ -33,6 +33,7 @@ function clearDruidCreature(combatSummary, druidName) {
         delete druidCreature.wildShapeSource;
         delete druidCreature.beastIndex;
         delete druidCreature.beastName;
+        delete druidCreature.lunarFormAction;
     }
     combatSummary.creatures = combatSummary.creatures.filter(c => !(c.wildShapeSource === druidName && c.type !== 'player'));
 }
@@ -91,6 +92,15 @@ export async function activateWildShape(druidName, baseMonster, druidStats, camp
                 }
                 saving_throws.con.modifier = beastConSave + wisMod;
                 druidCreature.saving_throws = saving_throws;
+
+                if (druidStats.level >= 14) {
+                    druidCreature.lunarFormAction = {
+                        name: 'Lunar Form',
+                        damage_dice_primary: '2d10',
+                        damage_type_primary: 'Radiant',
+                        description: 'Once per turn on a hit with a Wild Shape form attack, you can deal an extra 2d10 Radiant damage to the target.',
+                    };
+                }
             }
         }
     }

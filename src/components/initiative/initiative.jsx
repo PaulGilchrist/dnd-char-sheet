@@ -1087,6 +1087,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         }
                     }
                 }
+                if (runtimeCreature.lunarFormAction) {
+                    merged.actions = [...(merged.actions || []), runtimeCreature.lunarFormAction]
+                }
                 setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
                 return
