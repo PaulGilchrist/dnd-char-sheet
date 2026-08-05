@@ -829,9 +829,31 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
            setRuntimeValue('campaign', 'targetEffects', sanctuaryFilteredEffects, campaignName);
        }
 
-       // Remove spell-summoned creatures on short/long rest or initiative roll
-       removeSummonedCreatures(characterName, campaignName);
-   }
+        // Remove spell-summoned creatures on short/long rest or initiative roll
+        removeSummonedCreatures(characterName, campaignName);
+
+        // Remove Wild Shape creatures on short/long rest or initiative roll
+        const _wildShapeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const _wildShapeTargets = _wildShapeEffects.filter(te => te.effect === 'wild_shape').map(te => te.source);
+        for (const wsSource of _wildShapeTargets) {
+            const _cs = getCombatSummary(campaignName);
+            if (_cs) {
+                const _beast = _cs.creatures.find(c => c.wildShapeSource === wsSource);
+                if (_beast) {
+                    _cs.creatures = _cs.creatures.filter(c => c.name !== _beast.name);
+                    storage.set('combatSummary', _cs, campaignName);
+                }
+            }
+            const _te = getRuntimeValue('campaign', 'targetEffects') || [];
+            const _filtered = _te.filter(e => !(e.effect === 'wild_shape' && e.source === wsSource));
+            if (_filtered.length !== _te.length) {
+                setRuntimeValue('campaign', 'targetEffects', _filtered, campaignName, true);
+            }
+            const _buffs = getRuntimeValue(wsSource, 'activeBuffs') || [];
+            setRuntimeValue(wsSource, 'activeBuffs', _buffs.filter(b => b.effect !== 'shape_shift'), campaignName);
+            setRuntimeValue(wsSource, 'tempHp', 0, campaignName);
+        }
+    }
 
     export async function expireStaleEffects(campaignName, overrideActiveName) {
         const currentRound = getCurrentCombatRound(campaignName);

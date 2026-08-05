@@ -106,6 +106,17 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         return handleTelepathicSpeech(action, playerStats, campaignName, _mapName);
     }
 
+    let targetName = playerStats.name;
+    if (auto?.target === 'willing_creature') {
+        const combatSummary = getCombatSummary(campaignName);
+        if (combatSummary) {
+            const target = getTargetFromAttacker(combatSummary, playerStats.name);
+            if (target) {
+                targetName = target.name;
+            }
+        }
+    }
+
     // Wild Shape: check uses before toggling
     if (auto?.effect === 'shape_shift') {
         const maxWS = playerStats.class?.class_levels?.find(cl => cl.level === playerStats.level)?.wild_shape || 0;
@@ -121,16 +132,47 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 },
             };
         }
-    }
 
-    let targetName = playerStats.name;
-    if (auto?.target === 'willing_creature') {
-        const combatSummary = getCombatSummary(campaignName);
-        if (combatSummary) {
-            const target = getTargetFromAttacker(combatSummary, playerStats.name);
-            if (target) {
-                targetName = target.name;
-            }
+        const { wasActive } = toggleBuff(
+            playerStats.name,
+            action.name,
+            auto,
+            campaignName,
+            targetName
+        );
+
+        if (!wasActive) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'wild_shape_select',
+                    action: action,
+                    playerStats: playerStats,
+                    campaignName: campaignName,
+                },
+            };
+        } else {
+            const { cleanupWildShape: cleanup } = await import('../class-druid/wildShapeCreatureBuilder.js');
+            cleanup(playerStats.name, campaignName);
+
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: action.name,
+                description: `${playerStats.name} deactivated Wild Shape.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[buffHandler] Wild Shape log error:', e); });
+
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: `${action.name} toggled OFF`,
+                    automation: auto,
+                },
+            };
         }
     }
 
@@ -203,39 +245,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }
     }
 
-    // Wild Shape: consume a use and log when activating
-    if (auto?.effect === 'shape_shift') {
-        if (!wasActive) {
-            const maxWS = playerStats.class?.class_levels?.find(cl => cl.level === playerStats.level)?.wild_shape || 0;
-            const currentWS = Number(getRuntimeValue(playerStats.name, 'wildShapeUses', campaignName) ?? maxWS);
-            await setRuntimeValue(playerStats.name, 'wildShapeUses', currentWS - 1, campaignName);
-
-            const wildShapeHours = Math.floor(maxWS / 2);
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: action.name,
-                description: `${playerStats.name} activated Wild Shape (${wildShapeHours} hours).`,
-                timestamp: Date.now(),
-            }).catch((e) => { console.error('[buffHandler] Wild Shape log error:', e); });
-        } else {
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: action.name,
-                description: `${playerStats.name} deactivated Wild Shape.`,
-                timestamp: Date.now(),
-            }).catch((e) => { console.error('[buffHandler] Wild Shape log error:', e); });
-        }
-    }
 
     if (!wasActive && auto?.tempHpExpression) {
-        let amount = evaluateAutoExpression(auto.tempHpExpression, playerStats);
-        // Circle of the Moon: Circle Forms overrides temp HP to 3 × Druid level
-        const isMoonDruid = playerStats.class?.major?.name === 'Moon' || playerStats.class?.subclass?.name === 'Moon';
-        if (isMoonDruid && auto?.effect === 'shape_shift') {
-            amount = 3 * (playerStats.level || 1);
-        }
+        const amount = evaluateAutoExpression(auto.tempHpExpression, playerStats);
         if (typeof amount === 'number' && amount > 0) {
             setTempHp(playerStats.name, amount, campaignName);
         }

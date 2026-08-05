@@ -547,6 +547,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source'],
   },
   {
+    effect: 'wild_shape',
+    label: 'Wild Shape',
+    description: 'The Druid has transformed into a beast form. Retains HP, HP Dice, Intelligence/Wisdom/Charisma scores, class features, languages, and feats.',
+    icon: 'fa-paw',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source', 'beastName'],
+  },
+  {
     effect: 'pass_without_trace_bonus',
     label: 'Pass Without Trace',
     description: 'The creature gains a +10 bonus to Dexterity (Stealth) checks.',

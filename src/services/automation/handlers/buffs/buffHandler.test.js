@@ -468,19 +468,21 @@ describe('buffHandler.handle', () => {
       expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(ps.name, 'tempHp', expect.any(Number), campaignName);
     });
 
-    it('uses Circle of the Moon override for temp HP when effect is shape_shift', async () => {
+    it('returns wild_shape_select popup for shape_shift when activating', async () => {
       const ps = makePlayerStats({
         level: 7,
         class: { major: { name: 'Druid' }, subclass: { name: 'Moon' }, class_levels: [{ level: 7, wild_shape: 2 }] },
       });
       const action = makeAction({ tempHpExpression: '2d6+2', effect: 'shape_shift' });
-      buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
-      automationService.evaluateAutoExpression.mockReturnValue(7);
       runtimeState.getRuntimeValue.mockReturnValue(2);
 
-      await handle(action, ps, campaignName, null);
+      const result = await handle(action, ps, campaignName, null);
 
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(ps.name, 'tempHp', 21, campaignName);
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('wild_shape_select');
+      expect(result.payload.action).toBe(action);
+      expect(result.payload.playerStats).toBe(ps);
+      expect(result.payload.campaignName).toBe(campaignName);
     });
   });
 

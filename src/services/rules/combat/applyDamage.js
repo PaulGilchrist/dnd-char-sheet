@@ -266,6 +266,15 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             newHp = 1;
         }
         creature.currentHp = newHp;
+
+        if (creature.wildShapeSource && newHp <= 0 && oldHp > 0) {
+            const { cleanupWildShape } = await import('../../automation/handlers/class-druid/wildShapeCreatureBuilder.js');
+            const druidName = creature.wildShapeSource;
+            cleanupWildShape(druidName, campaignName);
+            setRuntimeValue(druidName, 'currentHitPoints', 0, campaignName);
+            setRuntimeValue(druidName, 'deathSaves', [false, false, false], campaignName);
+            setRuntimeValue(druidName, 'deathFailures', [false, false, false], campaignName);
+        }
        }
 
     // Update lastAttack with actual HP damage dealt (after resistances, feature reduction, ward absorption)

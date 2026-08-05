@@ -1060,6 +1060,20 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 if (runtimeCreature.actions) {
                     merged.actions = runtimeCreature.actions
                 }
+                if (runtimeCreature.wildShapeSource) {
+                    const druidCharacter = characters.find(c => utils.getName(c.name) === runtimeCreature.wildShapeSource)
+                    if (druidCharacter) {
+                        const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
+                        const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
+                        const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
+                        const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
+                        if (intScore != null) merged.ability_scores.int = intScore
+                        if (wisScore != null) merged.ability_scores.wis = wisScore
+                        if (chaScore != null) merged.ability_scores.cha = chaScore
+                        const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
+                        if (druidLanguages) merged.languages = druidLanguages
+                    }
+                }
                 setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
                 return

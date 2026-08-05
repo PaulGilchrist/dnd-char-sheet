@@ -70,10 +70,10 @@ function CreatureCard({
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
     const wrathOfTheSeaActive = creature.type === 'player' && getRuntimeValue(creature.name, 'wrathOfTheSeaActive', campaignName);
     const recklessAttackActive = myTargetEffects.some(te => te.effect === 'reckless_attack');
-    const isPlayerSummoned = creature.type !== 'player' && myTargetEffects.some(te =>
+    const isPlayerSummoned = (creature.type !== 'player' || creature.wildShapeSource) && myTargetEffects.some(te =>
         te.effect === 'summoned' &&
         allCreatures.some(c => c.type === 'player' && c.name === te.source)
-    );
+    ) || (creature.wildShapeSource && allCreatures.some(c => c.type === 'player' && c.name === creature.wildShapeSource));
 
     const sanctuaryInfo = (() => {
         for (const other of allCreatures) {
@@ -414,6 +414,25 @@ function CreatureCard({
                         }}
                     />
                 )}
+                {creature.wildShapeSource && (() => {
+                    const te = myTargetEffects.find(te => te.effect === 'wild_shape');
+                    if (!te) return null;
+                    return (
+                        <CreatureBadge
+                            key={`wild_shape-${te.source}`}
+                            icon='fa-paw'
+                            label='Wild Shape'
+                            cls='effect-buff'
+                            tooltip={`Wild Shape: Animal form active — ${te.beastName || 'Druid beast form'}`}
+                            removable={isLocalhost}
+                            onRemove={() => {
+                                const effects = getRuntimeValue('campaign', 'targetEffects') || [];
+                                const filtered = effects.filter(e => !(e.target === creature.wildShapeSource && e.effect === 'wild_shape' && e.source === te.source));
+                                setRuntimeValue('campaign', 'targetEffects', filtered, campaignName);
+                            }}
+                        />
+                    );
+                })()}
                 {myTargetEffects.filter(te => te.effect === 'summoned').map(te => (
                     <CreatureBadge
                         key={`summoned-${te.source}`}

@@ -34,6 +34,7 @@ import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
+import WildShapeBeastModal from './modals/WildShapeBeastModal.jsx'
 
 function ShieldOfFaithTargetSelectionModal({ popupHtml, setPopupHtml, playerStats, campaignName }) {
     const targets = popupHtml?.creatureTargets?.map(name => ({ name, type: 'creature' })) || [];
@@ -73,6 +74,13 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     }, []);
 
     const { popupHtml, setPopupHtml, value, Provider } = useSharedPopup();
+
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    const handleWildShapeConfirm = React.useCallback(async (action, beast, stats, campName) => {
+        const { activateWildShape } = await import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js');
+        await activateWildShape(stats.name, beast, stats, campName);
+    }, []);
 
     const storedExhaustion = useRuntimeValue(playerSummary?.name, 'exhaustionLevel', campaignName);
     const exhaustionLevel = typeof storedExhaustion === 'number' ? Math.min(EXHAUSTION_LEVELS, Math.max(0, storedExhaustion)) : 0;
@@ -961,6 +969,20 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     }
                     if (popupHtml.type === 'automation_info') {
                         return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div className="dice-roll-header"><i className="fa-solid fa-info-circle"></i>{popupHtml.name}</div><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.description) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
+                    }
+                    if (popupHtml.type === 'wild_shape_select') {
+                        return (
+                            <WildShapeBeastModal
+                                playerStats={popupHtml.playerStats}
+                                campaignName={popupHtml.campaignName}
+                                onConfirm={(beast) => {
+                                    setPopupHtml(null);
+                                    handleWildShapeConfirm(popupHtml.action, beast, popupHtml.playerStats, popupHtml.campaignName);
+                                }}
+                                onCancel={() => setPopupHtml(null)}
+                                isLocalhost={isLocalhost}
+                            />
+                        );
                     }
                     if (popupHtml.type === 'heal_multi') {
                         const healResults = popupHtml.results || [];
