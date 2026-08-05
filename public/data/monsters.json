@@ -1059,7 +1059,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 17, +9 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Fear</em>, <strong>Melf's Acid Arrow</strong> (level 3 version)<br><strong>1/Day Each:</strong> <em>Speak with Dead</em>, <em>Vitriolic Sphere</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -1389,7 +1390,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 18):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Invisibility</em>, <em>Mage Hand</em>, <em>Shatter</em><br><strong>1/Day Each:</strong> <em>Scrying</em>, <em>Sending</em>",
-        "save_dc": 18
+        "save_dc": 18,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -1537,7 +1539,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 16):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Minor Illusion</em>, <em>Scorching Ray</em>, <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell), <em>Speak with Animals</em><br><strong>1/Day Each:</strong> <em>Detect Thoughts</em>, <em>Control Weather</em>",
-        "save_dc": 16
+        "save_dc": 16,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -1687,7 +1690,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 17, +10 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Guiding Bolt</em> (level 2 version), <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell), <em>Speak with Animals</em>, <em>Thaumaturgy</em><br><strong>1/Day Each:</strong> <em>Detect Thoughts</em>, <em>Water Breathing</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -1836,7 +1840,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 17):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Mind Spike</em> (level 4 version), <em>Minor Illusion</em>, <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell)<br><strong>1/Day Each:</strong> <em>Greater Restoration</em>, <em>Major Image</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -1982,7 +1987,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21, +13 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Guiding Bolt</em> (level 2 version), <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell)<br><strong>1/Day Each:</strong> <em>Flame Strike</em>, <em>Zone of Truth</em>",
-        "save_dc": 21
+        "save_dc": 21,
+        "save_type": "Charisma"
       },
       {
         "name": "Weakening Breath",
@@ -2136,7 +2142,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 17):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Mind Spike</em> (level 3 version)<br><strong>1/Day:</strong> <em>Geas</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -2276,7 +2283,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 20, +12 to hit with spell attacks):<br><strong>At Will:</strong> <em>Command</em> (level 2 version), <em>Detect Magic</em>, <em>Scorching Ray</em><br><strong>1/Day:</strong> <em>Fireball</em>",
-        "save_dc": 20
+        "save_dc": 20,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -2414,12 +2422,14 @@
         "name": "Paralyzing Breath",
         "description": "Constitution Saving Throw: DC 20, each creature in a 60-foot <strong>Cone</strong>. First Failure: The target has the <strong>Incapacitated</strong> condition until the end of its next turn, when it repeats the save. Second Failure: The target has the <strong>Paralyzed</strong> condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically.",
         "save_dc": 20,
-        "save_type": "Constitution"
+        "save_type": "Constitution",
+        "save_effect": "Failure: the target has the Incapacitated And Paralyzed condition."
       },
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 19, +11 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Hold Monster</em>, <em>Ice Knife</em>, <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell)<br><strong>1/Day Each:</strong> <em>Ice Storm</em> (level 5 version), <em>Zone of Truth</em>",
-        "save_dc": 19
+        "save_dc": 19,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -2577,7 +2587,8 @@
       {
         "name": "Frightful Presence",
         "description": "The dragon casts *Fear*, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 14). The dragon can't take this action again until the start of its next turn.",
-        "save_dc": 14
+        "save_dc": 14,
+        "save_type": "Charisma"
       },
       {
         "name": "Pounce",
@@ -2865,7 +2876,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21, +13 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Fear</em>, <strong>Melf's Acid Arrow</strong> (level 4 version)<br><strong>1/Day Each:</strong> <em>Create Undead</em>, <em>Speak with Dead</em>, <strong>Vitriolic Sphere</strong> (level 5 version)",
-        "save_dc": 21
+        "save_dc": 21,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -3008,7 +3020,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 22):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Invisibility</em>, <em>Mage Hand</em>, <em>Shatter</em> (level 3 version)<br><strong>1/Day Each:</strong> <em>Scrying</em>, <em>Sending</em>",
-        "save_dc": 22
+        "save_dc": 22,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -3161,7 +3174,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 20):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Minor Illusion</em>, <em>Scorching Ray</em> (level 3 version), <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell), <em>Speak with Animals</em><br><strong>1/Day Each:</strong> <em>Control Weather</em>, <em>Detect Thoughts</em>",
-        "save_dc": 20
+        "save_dc": 20,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -3315,7 +3329,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 22, +14 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Guiding Bolt</em> (level 2 version), <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell), <em>Speak with Animals</em>, <em>Thaumaturgy</em><br><strong>1/Day Each:</strong> <em>Detect Thoughts</em>, <em>Control Water</em>, <em>Scrying</em>, <em>Water Breathing</em>",
-        "save_dc": 22
+        "save_dc": 22,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -3461,7 +3476,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Mind Spike</em> (level 5 version), <em>Minor Illusion</em>, <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell)<br><strong>1/Day Each:</strong> <em>Greater Restoration</em>, <em>Major Image</em>, <em>Project Image</em>",
-        "save_dc": 21
+        "save_dc": 21,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -3607,7 +3623,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 24, +16 to hit with spell attacks):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Guiding Bolt</em> (level 4 version), <em>Shapechange</em> (Beast or Humanoid form only, no Temporary Hit Points gained from the spell, and no <strong>Concentration</strong> or <strong>Temporary Hit Points</strong> required to maintain the spell)<br><strong>1/Day Each:</strong> <em>Flame Strike</em> (level 6 version), <em>Word of Recall</em>, <em>Zone of Truth</em>",
-        "save_dc": 24
+        "save_dc": 24,
+        "save_type": "Charisma"
       },
       {
         "name": "Weakening Breath",
@@ -3761,7 +3778,8 @@
       {
         "name": "Spellcasting",
         "description": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Mind Spike</em> (level 5 version)<br><strong>1/Day Each:</strong> <em>Geas</em>, <em>Modify Memory</em>",
-        "save_dc": 21
+        "save_dc": 21,
+        "save_type": "Charisma"
       }
     ],
     "legendary_actions": [
@@ -4047,7 +4065,8 @@
         "save_type": "Constitution",
         "recharge": "5-6",
         "damage_dice_primary": "15d8",
-        "damage_type_primary": "Cold"
+        "damage_type_primary": "Cold",
+        "save_effect": "Failure: 67 (15d8) Cold damage. Success: Half damage."
       },
       {
         "name": "Paralyzing Breath",
@@ -4076,7 +4095,8 @@
         "save_dc": 23,
         "save_type": "Dexterity",
         "damage_dice_primary": "4d6",
-        "damage_type_primary": "Cold"
+        "damage_type_primary": "Cold",
+        "save_effect": "Failure: 14 (4d6) Cold damage. Success: Half damage."
       },
       {
         "name": "Pounce",
@@ -4194,7 +4214,8 @@
         "save_type": "Constitution",
         "recharge": "5-6",
         "damage_dice_primary": "14d8",
-        "damage_type_primary": "Cold"
+        "damage_type_primary": "Cold",
+        "save_effect": "Failure: 63 (14d8) Cold damage. Success: Half damage."
       }
     ],
     "legendary_actions": [
@@ -4208,7 +4229,8 @@
         "save_dc": 20,
         "save_type": "Constitution",
         "damage_dice_primary": "4d6",
-        "damage_type_primary": "Cold"
+        "damage_type_primary": "Cold",
+        "save_effect": "Failure: 17 (5d6) Cold damage. Success: Half damage."
       },
       {
         "name": "Frightful Presence",
@@ -5538,7 +5560,8 @@
       {
         "name": "Spellcasting",
         "description": "The arcanaloth casts one of the following spells, requiring no Material components and using Intelligence as the spellcasting ability (spell save DC 17):<br><strong>At Will:</strong> <em>Alter Self</em>, <em>Detect Magic</em>, <em>Identify</em>, <em>Mage Hand</em>, <em>Prestidigitation</em><br><strong>1/Day Each:</strong> <em>Contact Other Plane</em>, <em>Detect Thoughts</em>, <em>Dimension Door</em>, <em>Mind Blank</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Intelligence"
       }
     ],
     "bonus_actions": [
@@ -5662,7 +5685,8 @@
       {
         "name": "Spellcasting",
         "description": "The hag casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 22):<br><strong>At Will:</strong> <em>Detect Thoughts</em>, <em>Dimension Door</em>, <em>Dispel Magic</em>, <em>Hypnotic Pattern</em><br><strong>2/Day Each:</strong> <em>Mass Suggestion</em>, <em>Modify Memory</em>, <em>Plane Shift</em>",
-        "save_dc": 22
+        "save_dc": 22,
+        "save_type": "Charisma"
       }
     ],
     "bonus_actions": [
@@ -5845,7 +5869,8 @@
       {
         "name": "Spellcasting",
         "description": "The archmage casts one of the following spells, using Intelligence as the spellcasting ability (spell save DC 17):<br><strong>At Will:</strong> <em>Detect Magic</em>, <em>Detect Thoughts</em>, <em>Disguise Self</em>, <em>Invisibility</em>, <em>Light</em>, <em>Mage Armor</em> (included in AC), <em>Mage Hand</em>, <em>Prestidigitation</em><br><strong>2/Day Each:</strong> <em>Fly</em>, <em>Lightning Bolt</em> (level 7 version)<br><strong>1/Day Each:</strong> <em>Cone of Cold</em> (level 9 version), <em>Mind Blank</em> (cast before combat), <em>Scrying</em>, <em>Teleport</em>",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Intelligence"
       }
     ],
     "bonus_actions": [
@@ -8958,7 +8983,8 @@
         "save_dc": 23,
         "save_type": "Dexterity",
         "damage_dice_primary": "3d6 + 8",
-        "damage_type_primary": "Acid"
+        "damage_type_primary": "Acid",
+        "save_effect": "Failure: The target has the Restrained condition. The target can use its action to make a DC 23 Strength check, ending the effect on itself on a success."
       }
     ],
     "legendary_actions": [
@@ -11822,7 +11848,8 @@
         "description": "The centaur casts one of the following spells, using Wisdom as the spellcasting ability (spell save DC 15):\n<strong>At Will:</strong> Druidcraft, Speak with Animals",
         "spell_save_dc": 15,
         "spellcasting_ability": "Wisdom",
-        "save_dc": 15
+        "save_dc": 15,
+        "save_type": "Wisdom"
       }
     ],
     "bonus_actions": [
@@ -12615,7 +12642,8 @@
         "description": "The giant casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 15):\n<strong>At Will:</strong> Detect Magic, Fog Cloud, Light\n<strong>1/Day Each:</strong> Control Weather, Gaseous Form, Telekinesis",
         "spell_save_dc": 15,
         "spellcasting_ability": "Charisma",
-        "save_dc": 15
+        "save_dc": 15,
+        "save_type": "Charisma"
       }
     ],
     "bonus_actions": [
@@ -14191,7 +14219,8 @@
         "spell_save_dc": 12,
         "spell_attack_bonus": 4,
         "spellcasting_ability": "Wisdom",
-        "save_dc": 12
+        "save_dc": 12,
+        "save_type": "Wisdom"
       }
     ],
     "bonus_actions": [
@@ -14310,7 +14339,8 @@
         "description": "The cultist casts one of the following spells, using Charisma as the spellcasting ability (spell save DC 17):\n<strong>At Will:</strong> Mage Armor (included in AC), Thaumaturgy\n<strong>1/Day Each:</strong> Jallarsi's Storm of Radiance (level 7 version), Mass Suggestion",
         "spell_save_dc": 17,
         "spellcasting_ability": "Charisma",
-        "save_dc": 17
+        "save_dc": 17,
+        "save_type": "Charisma"
       }
     ],
     "bonus_actions": [],
@@ -14515,7 +14545,8 @@
         "description": "The cyclops casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 16):\n<strong>2/Day Each:</strong> Arcane Eye, Detect Magic, Locate Object\n<strong>1/Day:</strong> Legend Lore",
         "spell_save_dc": 16,
         "spellcasting_ability": "Wisdom",
-        "save_dc": 16
+        "save_dc": 16,
+        "save_type": "Wisdom"
       }
     ],
     "bonus_actions": [],
@@ -28193,7 +28224,8 @@
         "description": "The goblin casts one of the following spells, using Intelligence as the spellcasting ability (spell save DC 13):\n<strong>At Will:</strong> <strong>Minor Illusion</strong>\n<strong>1/Day Each:</strong> <strong>Blindness/Deafness</strong>, <strong>Faerie Fire</strong>, <strong>Grease</strong>",
         "spell_save_dc": 13,
         "spellcasting_ability": "Intelligence",
-        "save_dc": 13
+        "save_dc": 13,
+        "save_type": "Intelligence"
       }
     ],
     "bonus_actions": [],
@@ -29318,7 +29350,9 @@
       {
         "name": "Illusory Appearance",
         "description": "The hag covers herself and anything she is wearing or carrying with a magical illusion that makes her look like another creature of her general size and humanoid shape. The illusion ends if the hag takes a bonus action to end it or if she dies.\nThe changes wrought by this effect fail to hold up to physical inspection. For example, the hag could appear to have smooth skin, but someone touching her would feel her rough flesh. Otherwise, a creature must take an action to visually inspect the illusion and succeed on a DC 20 Intelligence (Investigation) check to discern that the hag is disguised.",
-        "save_dc": 20
+        "save_dc": 20,
+        "save_type": "Intelligence",
+        "save_effect": "Failure: The target can't perceive the hag and is blinded until the illusion ends."
       },
       {
         "name": "Invisible Passage",
@@ -33324,7 +33358,7 @@
         "description": "The incubus casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 15):<br><strong>At Will:</strong> <strong>Disguise Self</strong>, <strong>Ethereality</strong><br><strong>1/Day Each:</strong> <strong>Dream</strong>, <strong>Hypnotic Pattern</strong>",
         "attack_bonus": 0,
         "save_dc": 15,
-        "save_type": "",
+        "save_type": "Charisma",
         "save_effect": "The incubus casts one of the following spells using Charisma as the spellcasting ability (spell save DC 15): At Will: Disguise Self, Ethereality; 1/Day Each: Dream, Hypnotic Pattern.",
         "range": "",
         "reach": "",
@@ -35006,7 +35040,9 @@
         "description": "Ranged Weapon Attack: +3 to hit, range 5/15 ft., one Large or smaller creature. Hit: The target is restrained. A creature can use its action to make a DC 10 Strength check to free itself or another creature in a net, ending the effect on a success. Dealing 5 slashing damage to the net (AC 10) frees the target without harming it and destroys the net.",
         "attack_bonus": 3,
         "save_dc": 10,
-        "damage_type_primary": "Slashing"
+        "damage_type_primary": "Slashing",
+        "save_type": "Strength",
+        "save_effect": "Failure: The target has the Restrained condition until the net is torn or lifted free (action to tear the net requires a successful DC 10 Strength check)."
       }
     ],
     "traits": [
@@ -35633,7 +35669,6 @@
         "description": "Melee Weapon Attack: +4 to hit, reach 10 ft., one target. Hit: 5 (1d6 + 2) piercing damage. If the target is a Medium or smaller creature, it is grappled (escape DC 14). Until this grapple ends, the kuo-toa can't use its pincer staff on another target.",
         "attack_bonus": 4,
         "reach": "10 ft.",
-        "save_dc": 14,
         "damage_dice_primary": "1d6 + 2",
         "damage_type_primary": "piercing"
       }
@@ -37025,7 +37060,6 @@
         "description": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage, or 7 (1dlO + 2) piercing damage in crocodile form. Ifthe lizardfolk is in crocodile form and the target is a Large or smaller creature, the target is grappled (escape DC 12). Until this grapple ends, the target is restrained, and the lizardfolk can't bite another target. If the lizardfolk reverts to its true form, the grapple ends.",
         "attack_bonus": 4,
         "reach": "5 ft.",
-        "save_dc": 12,
         "damage_dice_primary": "1d6 + 2",
         "damage_type_primary": "Piercing"
       },
@@ -54336,7 +54370,8 @@
       {
         "name": "Spellcasting",
         "description": "The sphinx casts one of the following spells, requiring no Material components and using Intelligence as the spellcasting ability (spell save DC 15): At Will: Detect Magic, Identify, Prestidigitation; 1/Day Each: Locate Object, Remove Curse",
-        "save_dc": 15
+        "save_dc": 15,
+        "save_type": "Intelligence"
       }
     ],
     "bonus_actions": [],
@@ -54893,7 +54928,8 @@
       {
         "name": "Spellcasting",
         "description": "The naga casts one of the following spells, requiring no Somatic or Material components and using Intelligence as the spellcasting ability (spell save DC 14): At Will: Detect Magic, Mage Hand, Minor Illusion, Water Breathing; 2/Day Each: Detect Thoughts, Dimension Door, Hold Person (level 3 version), Lightning Bolt (level 4 version)",
-        "save_dc": 14
+        "save_dc": 14,
+        "save_type": "Intelligence"
       }
     ],
     "bonus_actions": [],
@@ -57824,7 +57860,6 @@
         "description": "Melee Weapon Attack: +19 to hit, reach 10 ft., one target. Hit: 36 (4dl2 + 10) piercing damage. Ifthe target is a creature, it is grappled (escape DC 20). Until this grapple ends, the target is restrained, and the tarrasque can't bite another target.",
         "attack_bonus": 19,
         "reach": "10 ft.",
-        "save_dc": 20,
         "damage_dice_primary": "4d12 + 10",
         "damage_type_primary": "Piercing"
       },
@@ -57865,7 +57900,9 @@
       {
         "name": "Swallow",
         "description": "The tarrasque makes one bite attack against a Large or smaller creature it is grappling. If the attack hits, the target takes the bite's damage, the target is swallowed, and the grapple ends. While swallowed, the creature is blinded and restrained, it has total cover against attacks and other effects outside the tarrasque, and it takes 56 (16d6) acid damage at the start of each of the tarrasque's turns. If the tarrasque takes 60 damage or more on a single turn from a creature inside it, the tarrasque must succeed on a DC 20 Constitution saving throw at the end of that turn or regurgitate all swallowed creatures, which fall prone in a space within 10 feet ofthe tarrasque. If the tarrasque dies, a swallowed creature is no longer restrained by it and can escape from the corpse by using 30 feet of movement, exiting prone.",
-        "save_dc": 20
+        "save_dc": 20,
+        "save_type": "Constitution",
+        "save_effect": "Failure: 28 (8d6 + 6) Bludgeoning damage. If the target is a creature, it is swallowed."
       }
     ],
     "traits": [
@@ -60236,7 +60273,8 @@
         "damage_dice_primary": "1d4 + 4",
         "damage_type_primary": "Piercing",
         "damage_dice_secondary": "3d8",
-        "damage_type_secondary": "Necrotic"
+        "damage_type_secondary": "Necrotic",
+        "save_effect": "Failure: 6 (1d4 + 4) Piercing, the target has the Grappled And Incapacitated And Restrained condition."
       }
     ],
     "bonus_actions": [
@@ -65255,7 +65293,8 @@
         },
         "save_type": "Dexterity",
         "damage_dice_primary": "16d6",
-        "damage_type_primary": "Necrotic"
+        "damage_type_primary": "Necrotic",
+        "save_effect": "Failure: 56 (16d6) Necrotic damage. Success: Half damage."
       }
     ],
     "traits": [
@@ -65711,7 +65750,8 @@
       {
         "name": "Spellcasting",
         "description": "The yuan-ti casts one of the following spells, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 15): At Will: Animal Friendship (snakes only); 3/Day: Suggestion",
-        "save_dc": 15
+        "save_dc": 15,
+        "save_type": "Wisdom"
       }
     ],
     "bonus_actions": [
@@ -65951,7 +65991,6 @@
         "description": "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 10 (2d6 + 3) bludgeoning damage, and the target is grappled (escape DC 13). Until this grapple ends, the target is restrained, and the yuan-ti can't constrict another target.",
         "attack_bonus": 5,
         "reach": "5 ft.",
-        "save_dc": 13,
         "damage_dice_primary": "2d6 + 3",
         "damage_type_primary": "bludgeoning"
       },

@@ -36,12 +36,12 @@ export function extractDamageDiceFromDescription(description, existingDamageDice
 
 const CONDITIONS = ['blinded', 'charmed', 'cursed', 'deafened', 'frightened', 'grappled', 'incapacitated', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained', 'stunned', 'unconscious'];
 
-function extractConditionsFromDescription(description) {
-  if (!description || typeof description !== 'string') return [];
+function extractConditionsFromSaveEffect(saveEffect) {
+  if (!saveEffect || typeof saveEffect !== 'string') return [];
   const found = [];
   for (const condition of CONDITIONS) {
     const regex = new RegExp(`\\b${condition}\\b`, 'i');
-    if (regex.test(description)) {
+    if (regex.test(saveEffect)) {
       found.push(condition);
     }
   }
@@ -404,6 +404,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
       saveDc: action?.save_dc || null,
       saveType: action?.save_type ? toAbbr(action.save_type) : null,
       dcSuccess: action?.save_dc != null ? 'half' : null,
+      saveConditions: extractConditionsFromSaveEffect(action?.save_effect),
     });
   };
 
@@ -479,7 +480,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
       {actionHasSave && (() => {
         const saveDamageFormula = extractDamageDiceFromDescription(action?.description, action?.damage_dice_primary);
         const saveDamageType = getDamageTypesForAction(action)[0] || null;
-        const saveConditions = extractConditionsFromDescription(action?.description);
+        const saveConditions = extractConditionsFromSaveEffect(action?.save_effect);
         const handleSaveRoll = () => {
           const target = getTarget();
           const saveMod = getSaveModifierForSaveType(action.save_type, target, characters, creatures);
