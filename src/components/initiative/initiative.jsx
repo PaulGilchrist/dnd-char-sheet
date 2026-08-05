@@ -7,6 +7,7 @@ import { useSyncedState } from '../../hooks/runtime/useSyncedState.js'
 import storage from '../../services/ui/storage.js'
 import { clearDeathSavePrompt, clearFleshToStonePrompt } from '../../services/combat/conditions/savePromptService.js'
 import { getMonsterImageUrl, getMonsterData } from '../../services/npcs/monsterUtils.js'
+import { loadMonsters } from '../../services/ui/dataLoader.js'
 import { getAbilityLabel, CONDITIONS } from '../../services/combat/conditions/conditionUtils.js'
 import { generateLootFromCombatSummary } from '../../services/items/lootGenerator.js'
 import * as logService from '../../services/ui/logService.js'
@@ -1024,6 +1025,42 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const formatted = npcToMonsterFormat(npc)
             if (formatted) {
                 setViewingMonster(formatted)
+                setViewingMonsterCreatureName(creature.name)
+                return
+            }
+        }
+        const combatSummary = getCombatSummary(campaignName)
+        const runtimeCreature = combatSummary?.creatures?.find(c => c.name === creature.name)
+        if (runtimeCreature && runtimeCreature.monsterIndex) {
+            const monsters = await loadMonsters()
+            const baseMonster = monsters.find(m => m.index === runtimeCreature.monsterIndex)
+            if (baseMonster) {
+                const merged = cloneDeep(baseMonster)
+                merged.name = runtimeCreature.name
+                merged.armor_class = runtimeCreature.ac
+                merged.hit_points = runtimeCreature.currentHp
+                merged.type = runtimeCreature.type
+                merged.size = runtimeCreature.size
+                if (runtimeCreature.speed) {
+                    merged.speed = runtimeCreature.speed
+                }
+                if (runtimeCreature.saveBonuses && baseMonster.saving_throws) {
+                    for (const [abbr, bonus] of Object.entries(runtimeCreature.saveBonuses)) {
+                        if (merged.saving_throws?.[abbr]) {
+                            merged.saving_throws[abbr].modifier = bonus
+                        }
+                    }
+                }
+                if (runtimeCreature.resistances) {
+                    merged.damage_resistances = runtimeCreature.resistances
+                }
+                if (runtimeCreature.immunities) {
+                    merged.damage_immunities = runtimeCreature.immunities
+                }
+                if (runtimeCreature.actions) {
+                    merged.actions = runtimeCreature.actions
+                }
+                setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
                 return
             }
