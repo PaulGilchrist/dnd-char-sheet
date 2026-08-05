@@ -124,6 +124,9 @@ function handleModalResult(popup, setModalState) {
         case 'createUndead':
             setModalState({ createUndeadModal: payload });
             break;
+        case 'summonSpirit':
+            setModalState({ summonSpiritModal: payload });
+            break;
         default:
             console.error(`[useSpellCastExecutor] Unknown modalName from spell cast: ${modalName}`);
     }

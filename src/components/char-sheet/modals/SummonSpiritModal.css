@@ -1,0 +1,37 @@
+.summon-spirit-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.summon-spirit-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.summon-spirit-option:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.summon-spirit-option-selected {
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+}
+
+.summon-spirit-option-desc {
+    display: block;
+    margin-top: 4px;
+    opacity: 0.8;
+    font-size: 0.9em;
+    line-height: 1.4;
+}

@@ -1311,6 +1311,9 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     case 'createUndead':
                         setModalState({ createUndeadModal: result.payload });
                         break;
+                    case 'summonSpirit':
+                        setModalState({ summonSpiritModal: result.payload });
+                        break;
                 }
                 break;
             case 'roll':

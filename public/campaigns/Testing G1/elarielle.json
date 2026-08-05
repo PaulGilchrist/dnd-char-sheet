@@ -120,9 +120,20 @@
     "Poison Spray",
     "Shocking Grasp",
     "Acid Splash",
-    "Spiritual Weapon",
-    "Animate Dead",
-    "Create Undead"
+    "Animate Objects",
+    "Bestial Spirit",
+    "Draconic Spirit",
+    "Fey Spirit",
+    "Summon Fey",
+    "Fiendish Spirit",
+    "Summon Fiend",
+    "Giant Insect",
+    "Summon Aberration",
+    "Summon Beast",
+    "Summon Celestial",
+    "Summon Construct",
+    "Summon Elemental",
+    "Summon Undead"
   ],
   "magicInitiateInstances": [
     {

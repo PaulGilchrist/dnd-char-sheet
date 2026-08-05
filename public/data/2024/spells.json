@@ -334,7 +334,26 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Animated Object",
+            "scale": false,
+            "variants": [
+                {
+                    "name": "Animated Object (Medium)",
+                    "monsterIndex": "animate-objects-medium"
+                },
+                {
+                    "name": "Animated Object (Large)",
+                    "monsterIndex": "animate-objects-large"
+                },
+                {
+                    "name": "Animated Object (Huge)",
+                    "monsterIndex": "animate-objects-huge"
+                }
+            ]
+        }
     },
     {
         "index": "antimagic-field",
@@ -1145,8 +1164,8 @@
         ],
         "material": null,
         "ritual": false,
-        "duration": "1 minute",
-        "concentration": false,
+        "duration": "Concentration, up to 1 hour",
+        "concentration": true,
         "casting_time": "Action",
         "level": 2,
         "attack_type": null,
@@ -1158,7 +1177,27 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Bestial Spirit",
+            "baseLevel": 2,
+            "hpPerLevelAbove": 5,
+            "variants": [
+                {
+                    "name": "Bestial Spirit (Air)",
+                    "monsterIndex": "bestial-spirit-air"
+                },
+                {
+                    "name": "Bestial Spirit (Land)",
+                    "monsterIndex": "bestial-spirit-land"
+                },
+                {
+                    "name": "Bestial Spirit (Water)",
+                    "monsterIndex": "bestial-spirit-water"
+                }
+            ]
+        }
     },
     {
         "index": "bestow-curse",
@@ -4158,8 +4197,8 @@
         ],
         "material": null,
         "ritual": false,
-        "duration": "1 minute",
-        "concentration": false,
+        "duration": "Concentration, up to 1 hour",
+        "concentration": true,
         "casting_time": "Action",
         "level": 5,
         "attack_type": null,
@@ -4171,7 +4210,19 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Draconic Spirit",
+            "baseLevel": 5,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Draconic Spirit",
+                    "monsterIndex": "draconic-spirit"
+                }
+            ]
+        }
     },
     {
         "index": "dragons-breath",
@@ -5065,8 +5116,8 @@
         ],
         "material": null,
         "ritual": false,
-        "duration": "1 minute",
-        "concentration": false,
+        "duration": "Concentration, up to 1 hour",
+        "concentration": true,
         "casting_time": "Action",
         "level": 3,
         "attack_type": null,
@@ -5078,7 +5129,19 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Fey Spirit",
+            "baseLevel": 3,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Fey Spirit",
+                    "monsterIndex": "fey-spirit"
+                }
+            ]
+        }
     },
     {
         "index": "fiendish-spirit",
@@ -5093,8 +5156,8 @@
         ],
         "material": null,
         "ritual": false,
-        "duration": "1 minute",
-        "concentration": false,
+        "duration": "Concentration, up to 1 hour",
+        "concentration": true,
         "casting_time": "Action",
         "level": 6,
         "attack_type": null,
@@ -5106,7 +5169,19 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Fiendish Spirit",
+            "baseLevel": 6,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Fiendish Spirit",
+                    "monsterIndex": "fiendish-spirit"
+                }
+            ]
+        }
     },
     {
         "index": "find-familiar",
@@ -6153,6 +6228,25 @@
             "7": "Uses stat block for level 7",
             "8": "Uses stat block for level 8",
             "9": "Uses stat block for level 9"
+        },
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Giant Insect",
+            "scale": false,
+            "variants": [
+                {
+                    "name": "Giant Centipede",
+                    "monsterIndex": "giant-centipede"
+                },
+                {
+                    "name": "Giant Spider",
+                    "monsterIndex": "giant-spider"
+                },
+                {
+                    "name": "Giant Wasp",
+                    "monsterIndex": "giant-wasp"
+                }
+            ]
         }
     },
     {
@@ -12518,7 +12612,27 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Aberrant Spirit",
+            "baseLevel": 4,
+            "hpPerLevelAbove": 5,
+            "variants": [
+                {
+                    "name": "Aberrant Spirit (Beholderkin)",
+                    "monsterIndex": "aberrant-spirit-beholderkin"
+                },
+                {
+                    "name": "Aberrant Spirit (Mind Flayer)",
+                    "monsterIndex": "aberrant-spirit-mind-flayer"
+                },
+                {
+                    "name": "Aberrant Spirit (Slaad)",
+                    "monsterIndex": "aberrant-spirit-slaad"
+                }
+            ]
+        }
     },
     {
         "index": "summon-beast",
@@ -12547,7 +12661,27 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Bestial Spirit",
+            "baseLevel": 2,
+            "hpPerLevelAbove": 5,
+            "variants": [
+                {
+                    "name": "Bestial Spirit (Air)",
+                    "monsterIndex": "bestial-spirit-air"
+                },
+                {
+                    "name": "Bestial Spirit (Land)",
+                    "monsterIndex": "bestial-spirit-land"
+                },
+                {
+                    "name": "Bestial Spirit (Water)",
+                    "monsterIndex": "bestial-spirit-water"
+                }
+            ]
+        }
     },
     {
         "index": "summon-celestial",
@@ -12576,7 +12710,23 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Celestial Spirit",
+            "baseLevel": 5,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Celestial Spirit (Avenger)",
+                    "monsterIndex": "celestial-spirit-avenger"
+                },
+                {
+                    "name": "Celestial Spirit (Defender)",
+                    "monsterIndex": "celestial-spirit-defender"
+                }
+            ]
+        }
     },
     {
         "index": "summon-construct",
@@ -12611,6 +12761,26 @@
             "7": "Uses stat block for level 7",
             "8": "Uses stat block for level 8",
             "9": "Uses stat block for level 9"
+        },
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Construct Spirit",
+            "baseLevel": 4,
+            "hpPerLevelAbove": 5,
+            "variants": [
+                {
+                    "name": "Construct Spirit (Clay)",
+                    "monsterIndex": "construct-spirit-clay"
+                },
+                {
+                    "name": "Construct Spirit (Metal)",
+                    "monsterIndex": "construct-spirit-metal"
+                },
+                {
+                    "name": "Construct Spirit (Stone)",
+                    "monsterIndex": "construct-spirit-stone"
+                }
+            ]
         }
     },
     {
@@ -12641,7 +12811,31 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Elemental Spirit",
+            "baseLevel": 4,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Elemental Spirit (Air)",
+                    "monsterIndex": "elemental-spirit-air"
+                },
+                {
+                    "name": "Elemental Spirit (Earth)",
+                    "monsterIndex": "elemental-spirit-earth"
+                },
+                {
+                    "name": "Elemental Spirit (Fire)",
+                    "monsterIndex": "elemental-spirit-fire"
+                },
+                {
+                    "name": "Elemental Spirit (Water)",
+                    "monsterIndex": "elemental-spirit-water"
+                }
+            ]
+        }
     },
     {
         "index": "summon-fiend",
@@ -12670,7 +12864,27 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Fiendish Spirit",
+            "baseLevel": 6,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Fiendish Spirit (Demon)",
+                    "monsterIndex": "fiendish-spirit-demon"
+                },
+                {
+                    "name": "Fiendish Spirit (Devil)",
+                    "monsterIndex": "fiendish-spirit-devil"
+                },
+                {
+                    "name": "Fiendish Spirit (Yugoloth)",
+                    "monsterIndex": "fiendish-spirit-yugoloth"
+                }
+            ]
+        }
     },
     {
         "index": "summon-undead",
@@ -12707,6 +12921,26 @@
             "7": "Uses stat block for level 7",
             "8": "Uses stat block for level 8",
             "9": "Uses stat block for level 9"
+        },
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Undead Spirit",
+            "baseLevel": 3,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Undead Spirit (Ghostly)",
+                    "monsterIndex": "undead-spirit-ghostly"
+                },
+                {
+                    "name": "Undead Spirit (Putrid)",
+                    "monsterIndex": "undead-spirit-putrid"
+                },
+                {
+                    "name": "Undead Spirit (Skeletal)",
+                    "monsterIndex": "undead-spirit-skeletal"
+                }
+            ]
         }
     },
     {
@@ -12737,7 +12971,19 @@
             "Fey Wanderer"
         ],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "summon_spirit",
+            "typeLabel": "Fey Spirit",
+            "baseLevel": 4,
+            "hpPerLevelAbove": 10,
+            "variants": [
+                {
+                    "name": "Fey Spirit",
+                    "monsterIndex": "fey-spirit"
+                }
+            ]
+        }
     },
     {
         "index": "sunbeam",

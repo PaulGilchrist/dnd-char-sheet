@@ -14,6 +14,7 @@ import { handle as handleSpellCast } from './handlers/spells/spellCastHandler.js
 import { handle as handleRegenerate, applyRegenerateEffect } from './handlers/spells/regenerateHandler.js';
 import { handle as handleAnimateDead, confirmAnimateDead as handleAnimateDeadConfirm } from './handlers/spells/animateDeadHandler.js';
 import { handle as handleCreateUndead, confirmCreateUndead as handleCreateUndeadConfirm } from './handlers/spells/createUndeadHandler.js';
+import { handle as handleSummonSpirit, confirmSummonSpirit as handleSummonSpiritConfirm } from './handlers/spells/summonSpiritHandler.js';
 import { handle as handleInitiative } from './handlers/combat/initiativeHandler.js';
 
 import { handle as handleResourcePool } from './handlers/resources/resourcePoolHandler.js';
@@ -596,6 +597,8 @@ const HANDLER_MAP = {
         animate_dead_confirm: handleAnimateDeadConfirm,
         create_undead: handleCreateUndead,
         create_undead_confirm: handleCreateUndeadConfirm,
+        summon_spirit: handleSummonSpirit,
+        summon_spirit_confirm: handleSummonSpiritConfirm,
         survive_and_heal: handleBoonOfRecovery,
         lucky_point: handleLuckyPoint,
         telekinetic_shove: handleTelekineticShove,
@@ -649,6 +652,7 @@ export { confirmPowerWordFortify } from './handlers/buffs/powerWordFortifyHandle
 export { confirmSearingVengeance, skipSearingVengeance } from './handlers/class-warlock/searingVengeanceHandler.js';
 export { confirmCelestialResilience, skipCelestialResilience } from './handlers/class-warlock/celestialResilienceHandler.js';
 export { confirmAnimateDead } from './handlers/spells/animateDeadHandler.js';
+export { confirmSummonSpirit } from './handlers/spells/summonSpiritHandler.js';
 export async function executeHandler(action, playerStats, campaignName, mapName, characters) {
     if (!action?.automation) {
         return null;

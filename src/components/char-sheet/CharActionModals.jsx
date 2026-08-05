@@ -84,8 +84,10 @@ import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx'
 import DestructiveStrideModal from './modals/DestructiveStrideModal.jsx'
 import AnimateDeadModal from './modals/AnimateDeadModal.jsx'
 import CreateUndeadModal from './modals/CreateUndeadModal.jsx'
+import SummonSpiritModal from './modals/SummonSpiritModal.jsx'
 import { confirmAnimateDead } from '../../services/automation/handlers/spells/animateDeadHandler.js'
 import { confirmCreateUndead } from '../../services/automation/handlers/spells/createUndeadHandler.js'
+import { confirmSummonSpirit } from '../../services/automation/handlers/spells/summonSpiritHandler.js'
 import { handleApply } from '../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js'
 import { applyResistanceChoice } from '../../services/automation/handlers/combat/elementalEpitomeHandler.js'
 import { applyDamageTypeChoice, applyTargetChoice, skipTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js'
@@ -1363,6 +1365,24 @@ export default function CharActionModals({
                         }
                     }}
                     onClose={() => setModalState({ createUndeadModal: null })}
+                />
+            )}
+            {mergedModalState.summonSpiritModal && (
+                <SummonSpiritModal
+                    action={mergedModalState.summonSpiritModal.action}
+                    onConfirm={async (variantName) => {
+                        setModalState({ summonSpiritModal: null });
+                        const result = await confirmSummonSpirit(
+                            mergedModalState.summonSpiritModal.action,
+                            mergedModalState.summonSpiritModal.playerStats,
+                            mergedModalState.summonSpiritModal.campaignName,
+                            variantName
+                        );
+                        if (result?.payload) {
+                            setPopupHtml(result.payload);
+                        }
+                    }}
+                    onClose={() => setModalState({ summonSpiritModal: null })}
                 />
             )}
         </>

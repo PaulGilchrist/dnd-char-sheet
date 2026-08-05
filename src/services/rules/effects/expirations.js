@@ -12,6 +12,7 @@ import { breakConcentration, cleanupConcentrationEffects } from '../../combat/co
 import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
 import { handleConfusionTurnStart } from '../../automation/handlers/spells/confusionTurnStartHandler.js';
 import { processSleetStormAreaSave } from '../../automation/handlers/spells/sleetStormHandler.js';
+import { removeSummonedCreatures } from '../../combat/summons/summonedCreatureService.js';
 const KEY = 'pendingExpirations';
 
 function ensureArray(value, name) {
@@ -827,6 +828,9 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
        if (sanctuaryFilteredEffects.length !== sanctuaryTargetEffects.length) {
            setRuntimeValue('campaign', 'targetEffects', sanctuaryFilteredEffects, campaignName);
        }
+
+       // Remove spell-summoned creatures on short/long rest or initiative roll
+       removeSummonedCreatures(characterName, campaignName);
    }
 
     export async function expireStaleEffects(campaignName, overrideActiveName) {

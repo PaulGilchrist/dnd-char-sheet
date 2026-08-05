@@ -10,6 +10,7 @@ import { logConditionEvent } from '../../encounters/combatLoggingService.js'
 import { addEntry } from '../../ui/logService.js'
 import { clearFleshToStonePrompt } from '../conditions/savePromptService.js'
 import { removeHeroismBuff } from '../../rules/features/heroismService.js'
+import { removeSummonedCreatures } from '../summons/summonedCreatureService.js'
 
 function hasDragonConstellation(creature, characters) {
     if (!creature || !creature.name) return false;
@@ -125,6 +126,8 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
 }
 
 async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
+    removeSummonedCreatures(casterName, campaignName);
+
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
 
