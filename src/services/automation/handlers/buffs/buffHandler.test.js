@@ -471,7 +471,7 @@ describe('buffHandler.handle', () => {
     it('returns wild_shape_select popup for shape_shift when activating', async () => {
       const ps = makePlayerStats({
         level: 7,
-        class: { major: { name: 'Druid' }, subclass: { name: 'Moon' }, class_levels: [{ level: 7, wild_shape: 2 }] },
+        class: { major: { name: 'Druid' }, subclass: { name: 'Circle of the Moon' }, class_levels: [{ level: 7, wild_shape: 2 }] },
       });
       const action = makeAction({ tempHpExpression: '2d6+2', effect: 'shape_shift' });
       runtimeState.getRuntimeValue.mockReturnValue(2);

@@ -50,6 +50,7 @@ export function cleanupWildShape(druidName, campaignName) {
     setRuntimeValue(druidName, 'activeBuffs', activeBuffs.filter(b => b.effect !== 'shape_shift'), campaignName);
 
     setRuntimeValue(druidName, 'tempHp', 0, campaignName);
+    setRuntimeValue(druidName, 'circleFormsAC', null, campaignName);
 }
 
 export async function activateWildShape(druidName, baseMonster, druidStats, campaignName) {
@@ -70,9 +71,17 @@ export async function activateWildShape(druidName, baseMonster, druidStats, camp
     setRuntimeValue('campaign', 'targetEffects', targetEffects, campaignName);
 
     let amount = druidStats.level || 1;
-    const isMoonDruid = druidStats.class?.major?.name === 'Moon' || druidStats.class?.subclass?.name === 'Moon';
+    const isMoonDruid = druidStats.class?.major?.name === 'Circle of the Moon' || druidStats.class?.subclass?.name === 'Circle of the Moon';
     if (isMoonDruid) amount = 3 * amount;
     setTempHp(druidName, amount, campaignName);
+
+    if (isMoonDruid) {
+        const wis = druidStats.abilities?.find(a => a.name === 'Wisdom');
+        const wisMod = wis?.bonus ?? 0;
+        const beastAC = typeof baseMonster.armor_class === 'number' ? baseMonster.armor_class : 10;
+        const circleFormsAC = Math.max(beastAC, 13 + wisMod);
+        setRuntimeValue(druidName, 'circleFormsAC', circleFormsAC, campaignName);
+    }
 
     const maxWS = druidStats.class?.class_levels?.find(cl => cl.level === druidStats.level)?.wild_shape || 0;
     const currentWS = Number(getRuntimeValue(druidName, 'wildShapeUses', campaignName) ?? maxWS);

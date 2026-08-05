@@ -35,12 +35,19 @@ import { addEntry } from '../../../ui/logService.js';
 
 const campaignName = 'TestCampaign';
 
-const giantSpider = { index: 'giant-spider', name: 'Giant Spider', challenge_rating: 1 };
+const giantSpider = { index: 'giant-spider', name: 'Giant Spider', challenge_rating: 1, armor_class: 11 };
 
 const druidStats = {
     name: 'Maribelle',
     level: 2,
     class: { major: { name: 'Druid' }, class_levels: [{ level: 2, wild_shape: 2 }] },
+};
+
+const moonDruidStats = {
+    name: 'Maribelle',
+    level: 4,
+    class: { major: { name: 'Circle of the Moon' }, class_levels: [{ level: 4, wild_shape: 2 }] },
+    abilities: [{ name: 'Wisdom', bonus: 3 }],
 };
 
 function mockRuntimeForActivate() {
@@ -76,7 +83,28 @@ describe('wildShapeCreatureBuilder', () => {
                 { target: 'Maribelle', source: 'Maribelle', effect: 'wild_shape', beastName: 'Giant Spider' },
             ], campaignName);
             expect(setTempHp).toHaveBeenCalledWith('Maribelle', 2, campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Maribelle', 'circleFormsAC', expect.any(Number), campaignName);
             expect(result).toEqual({ name: 'Giant Spider', index: 'giant-spider' });
+        });
+
+        it('sets circleFormsAC for Circle of the Moon Druid', async () => {
+            const cs = { creatures: [{ name: 'Maribelle', type: 'player', initiative: '20' }] };
+            getCombatContext.mockResolvedValue(cs);
+
+            await activateWildShape('Maribelle', giantSpider, moonDruidStats, campaignName);
+
+            expect(setTempHp).toHaveBeenCalledWith('Maribelle', 12, campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith('Maribelle', 'circleFormsAC', 16, campaignName);
+        });
+
+        it('uses beast AC when higher than 13 + wis mod for Circle of the Moon', async () => {
+            const wolf = { index: 'wolf', name: 'Wolf', challenge_rating: 1 / 8, armor_class: 18 };
+            const cs = { creatures: [{ name: 'Maribelle', type: 'player', initiative: '20' }] };
+            getCombatContext.mockResolvedValue(cs);
+
+            await activateWildShape('Maribelle', wolf, moonDruidStats, campaignName);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Maribelle', 'circleFormsAC', 18, campaignName);
         });
 
         it('removes leftover beast creatures from previous versions', async () => {
@@ -132,6 +160,7 @@ describe('wildShapeCreatureBuilder', () => {
             expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', [], campaignName, true);
             expect(setRuntimeValue).toHaveBeenCalledWith('Maribelle', 'activeBuffs', [], campaignName);
             expect(setRuntimeValue).toHaveBeenCalledWith('Maribelle', 'tempHp', 0, campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith('Maribelle', 'circleFormsAC', null, campaignName);
         });
     });
 });

@@ -142,10 +142,12 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const activeBuffs = getRuntimeValue(c.name, 'activeBuffs') || []
             const shieldOfFaithBonus = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield_of_faith') ? 2 : 0
             const barkskinActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'barkskin')
+            const circleFormsAC = c.wildShapeSource ? (getRuntimeValue(c.name, 'circleFormsAC') ?? null) : null
+            const ac = circleFormsAC ?? (barkskinActive ? 17 : (stats?.armorClass ?? 10) + shieldOfFaithBonus)
             return {
                 ...c,
                 imagePath: character?.imagePath || '',
-                ac: barkskinActive ? 17 : (stats?.armorClass ?? 10) + shieldOfFaithBonus,
+                ac,
                 resistances: stats?.resistances || [],
                 immunities: stats?.immunities || [],
                 currentHp,
@@ -1039,6 +1041,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 const merged = cloneDeep(baseMonster)
                 merged.name = runtimeCreature.beastName || baseMonster.name
                 merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
+                const circleFormsAC = getRuntimeValue(creature.name, 'circleFormsAC') ?? null
+                if (circleFormsAC != null) {
+                    merged.armor_class = circleFormsAC
+                }
                 const druidCharacter = characters.find(c => utils.getName(c.name) === runtimeCreature.wildShapeSource)
                 if (druidCharacter) {
                     const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []

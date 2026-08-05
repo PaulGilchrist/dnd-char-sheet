@@ -116,12 +116,13 @@ const classRules = {
         const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
         let maxWildShapeChallengeRating = classLevel?.beast_max_cr || 0;
 
-        if (playerStats.class.major && playerStats.class.major.name === 'Moon' && playerStats.level > 1) {
+        const isMoonDruid = playerStats.class?.major?.name === 'Circle of the Moon' || playerStats.class?.subclass?.name === 'Circle of the Moon';
+        if (isMoonDruid && playerStats.level > 1) {
             maxWildShapeChallengeRating = 1;
             if (playerStats.level > 5) {
                 maxWildShapeChallengeRating = Math.floor(playerStats.level / 3);
             }
-            }
+        }
 
         return maxWildShapeChallengeRating;
         },

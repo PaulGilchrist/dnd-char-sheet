@@ -82,12 +82,12 @@ describe('classRules', () => {
     });
 
     it('returns 1 for Circle of Moon Druid levels 2-5', () => {
-      const playerStats = { class: { name: 'Druid', subclass: { name: 'Moon' } }, level: 4 };
+      const playerStats = { class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } }, level: 4 };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1);
     });
 
     it('returns floor(level/3) for Circle of Moon Druid level 6+', () => {
-      const playerStats = { class: { name: 'Druid', subclass: { name: 'Moon' } }, level: 9 };
+      const playerStats = { class: { name: 'Druid', subclass: { name: 'Circle of the Moon' } }, level: 9 };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(3);
     });
 
@@ -95,7 +95,7 @@ describe('classRules', () => {
       const playerStats = {
         class: {
           name: 'Druid',
-          subclass: { name: 'Moon' },
+          subclass: { name: 'Circle of the Moon' },
           class_levels: [{ level: 4, class_specific: { wild_shape_max_cr: 1 } }],
         },
         level: 4,

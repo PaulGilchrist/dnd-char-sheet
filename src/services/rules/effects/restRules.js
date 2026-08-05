@@ -874,6 +874,32 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue('campaign', 'targetEffects', filteredForesightEffects, campaignName, true)
     }
 
+    // End Wild Shape on long rest
+    const wildShapeEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const wildShapeTargets = wildShapeEffects.filter(te => te.effect === 'wild_shape').map(te => te.source);
+    for (const wsSource of wildShapeTargets) {
+      const cs = getCombatSummary(campaignName);
+      if (cs) {
+        const druidCreature = cs.creatures?.find(c => c.name === wsSource && c.type === 'player');
+        if (druidCreature) {
+          delete druidCreature.wildShapeSource;
+          delete druidCreature.beastIndex;
+          delete druidCreature.beastName;
+        }
+        cs.creatures = cs.creatures.filter(c => !(c.wildShapeSource === wsSource && c.type !== 'player'));
+        storageService.default.set('combatSummary', cs, campaignName);
+      }
+      const te = getRuntimeValue('campaign', 'targetEffects') || [];
+      const filtered = te.filter(e => !(e.effect === 'wild_shape' && e.source === wsSource));
+      if (filtered.length !== te.length) {
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+      }
+      const buffs = getRuntimeValue(wsSource, 'activeBuffs') || [];
+      setRuntimeValue(wsSource, 'activeBuffs', buffs.filter(b => b.effect !== 'shape_shift'), campaignName);
+      setRuntimeValue(wsSource, 'circleFormsAC', null, campaignName);
+      setRuntimeValue(wsSource, 'tempHp', 0, campaignName);
+    }
+
     // Clear regenerateActive flag from all targets and set them to full HP on long rest
     const longRestAllKeys = getAllStoreKeys();
     for (const key of longRestAllKeys) {

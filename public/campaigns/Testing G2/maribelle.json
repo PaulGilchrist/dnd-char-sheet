@@ -46,18 +46,18 @@
       "miscIncrease": 0
     }
   ],
-  "background": "Hermit",
   "class": {
     "name": "Druid",
     "subclass": {
-      "name": "Circle of the Sea",
-      "type": ""
+      "name": "Circle of the Moon"
     },
     "divineOrder": "",
     "primalOrder": "Magician"
   },
   "expertSkills": [],
-  "feats": [],
+  "feats": [
+    "Healer"
+  ],
   "fightingStyles": [],
   "race": {
     "name": "Halfling",
@@ -98,7 +98,12 @@
     "Insight",
     "Nature",
     "Nature",
-    "Stealth"
+    "Stealth",
+    "Medicine",
+    "Religion"
+  ],
+  "toolProficiencies": [
+    "Herbalism Kit"
   ],
   "specialActions": [],
   "spells": [
@@ -123,8 +128,10 @@
     "Insect Plague",
     "Charm Person"
   ],
+  "magicInitiateInstances": [],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
+  "background": "Hermit",
   "imagePath": "images/Maribelle.png"
 }

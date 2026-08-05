@@ -129,12 +129,12 @@ describe('classRules2024', () => {
     });
 
     it('returns 1 for Moon subclass level > 1', () => {
-      const playerStats = { class: { class_levels: [{ level: 3, beast_max_cr: 0.5 }], major: { name: 'Moon' } }, level: 3 };
+      const playerStats = { class: { class_levels: [{ level: 3, beast_max_cr: 0.5 }], major: { name: 'Circle of the Moon' } }, level: 3 };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(1);
     });
 
     it('returns Math.floor(level/3) for Moon subclass level > 5', () => {
-      const playerStats = { class: { class_levels: [{ level: 8, beast_max_cr: 0.5 }], major: { name: 'Moon' } }, level: 8 };
+      const playerStats = { class: { class_levels: [{ level: 8, beast_max_cr: 0.5 }], major: { name: 'Circle of the Moon' } }, level: 8 };
       expect(classRules.getDruidMaxWildShapeChallengeRating(playerStats)).toBe(2);
     });
 
