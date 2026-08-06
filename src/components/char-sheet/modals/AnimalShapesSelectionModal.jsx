@@ -26,8 +26,7 @@ function getBeastActionsSummary(actions) {
 }
 
 function getBeastImageUrl(beast) {
-    const slug = (beast.index || beast.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    return `https://paulgilchrist.github.io/dnd-tools/images/${slug}.jpg`;
+    return `https://paulgilchrist.github.io/dnd-tools/images/${beast.index}.jpg`;
 }
 
 function AnimalShapesSelectionModal({ targets, maxCR, campaignName, title = 'Animal Shapes', icon = 'fa-paw', onConfirm, onCancel }) {

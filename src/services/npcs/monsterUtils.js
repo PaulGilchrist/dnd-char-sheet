@@ -38,8 +38,7 @@ export async function getMonsterImageUrl(npcName, npcs, campaignName) {
     const baseName = stripTrailingNumber(npcName);
     const monster = monstersCache.find(m => m.name.toLowerCase() === baseName.toLowerCase());
     if (monster) {
-        const slug = (monster.index || monster.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        return `https://paulgilchrist.github.io/dnd-tools/images/${slug}.jpg`;
+        return `https://paulgilchrist.github.io/dnd-tools/images/${monster.index}.jpg`;
      }
     return null;
 }

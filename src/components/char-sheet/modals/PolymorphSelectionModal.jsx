@@ -184,7 +184,7 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
                                 const cr = parseChallengeRating(beast.challenge_rating);
                                 const isSelected = selectedBeast?.index === beast.index;
                                 const beastSpeeds = filterBeastSpeeds(beast.speed, wildShapeLimitations);
-                                const imageUrl = `https://paulgilchrist.github.io/dnd-tools/images/${(beast.index || beast.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.jpg`;
+                                const imageUrl = `https://paulgilchrist.github.io/dnd-tools/images/${beast.index}.jpg`;
 
                                 return (
                                     <div

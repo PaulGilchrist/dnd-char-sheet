@@ -87,7 +87,7 @@ describe('monsterUtils', () => {
         'https://paulgilchrist.github.io/dnd-tools/images/orc.jpg'
       );
       await expect(getMonsterImageUrl('Ancient Dragon', npcs)).resolves.toBe(
-        'https://paulgilchrist.github.io/dnd-tools/images/ancient-dragon.jpg'
+        'https://paulgilchrist.github.io/dnd-tools/images/dragon.jpg'
       );
     });
 
