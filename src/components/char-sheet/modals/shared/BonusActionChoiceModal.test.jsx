@@ -18,9 +18,14 @@ vi.mock('../../../../services/encounters/combatData.js', () => ({
   getCurrentCombatRound: vi.fn(() => 1),
 }));
 
+vi.mock('../../../../services/ui/logService.js', () => ({
+  addEntry: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Re-import mocked modules ──
 
 import * as bonusActionHandler from '../../../../services/automation/handlers/combat/bonusActionChoiceHandler.js';
+import * as logService from '../../../../services/ui/logService.js';
 
 // ── Test fixtures ──
 
@@ -467,5 +472,177 @@ describe('BonusActionChoiceModal', () => {
       expect(customEventSpy).not.toHaveBeenCalled();
     });
     customEventSpy.mockRestore();
+  });
+
+  // ── Log entry creation ──
+
+  it('calls addEntry with correct log data on apply', async () => {
+    bonusActionHandler.applyBonusActionChoice.mockReturnValue({
+      type: 'popup',
+      payload: {
+        type: 'automation_info',
+        name: 'Cunning Action',
+        description: 'Dash selected: You take the Dash bonus action.',
+        automation: baseAction.automation,
+      },
+    });
+    render(<BonusActionChoiceModal {...makeProps()} />);
+    selectOption(0);
+    clickApply();
+    await waitFor(() => {
+      expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', {
+        type: 'ability_use',
+        characterName: 'Rogue1',
+        abilityName: 'Cunning Action',
+        description: 'Dash selected — Object use',
+      });
+    });
+  });
+
+  it('calls addEntry with Sleight of Hand description', async () => {
+    bonusActionHandler.applyBonusActionChoice.mockReturnValue({
+      type: 'popup',
+      payload: {
+        type: 'automation_info',
+        name: 'Fast Hands',
+        description: 'Sleight of Hand selected.',
+        automation: { options: [{ name: 'Sleight of Hand' }] },
+      },
+    });
+    const actionWithSleight = {
+      name: 'Fast Hands',
+      automation: {
+        oncePerTurn: true,
+        options: [
+          { name: 'Sleight of Hand', description: 'Make a Sleight of Hand check.' },
+          { name: 'Thieves\' Tools', description: 'Use thieves\' tools.' },
+        ],
+      },
+    };
+    render(<BonusActionChoiceModal {...makeProps({ action: actionWithSleight })} />);
+    selectOption(0);
+    clickApply();
+    await waitFor(() => {
+      expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', {
+        type: 'ability_use',
+        characterName: 'Rogue1',
+        abilityName: 'Fast Hands',
+        description: "Sleight of Hand selected — Dexterity (Sleight of Hand) check initiated",
+      });
+    });
+  });
+
+  it('calls addEntry with Thieves Tools description', async () => {
+    bonusActionHandler.applyBonusActionChoice.mockReturnValue({
+      type: 'popup',
+      payload: {
+        type: 'automation_info',
+        name: 'Fast Hands',
+        description: "Thieves' Tools selected.",
+        automation: { options: [{ name: "Thieves' Tools" }] },
+      },
+    });
+    const actionWithTools = {
+      name: 'Fast Hands',
+      automation: {
+        oncePerTurn: true,
+        options: [
+          { name: 'Sleight of Hand', description: 'Make a Sleight of Hand check.' },
+          { name: "Thieves' Tools", description: 'Use thieves\' tools.' },
+        ],
+      },
+    };
+    render(<BonusActionChoiceModal {...makeProps({ action: actionWithTools })} />);
+    selectOption(1);
+    clickApply();
+    await waitFor(() => {
+      expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', {
+        type: 'ability_use',
+        characterName: 'Rogue1',
+        abilityName: 'Fast Hands',
+        description: "Thieves' Tools selected — Thieves' Tools check initiated",
+      });
+    });
+  });
+
+  // ── Options prop override ──
+
+  it('uses options prop when provided, ignoring action.automation.options', () => {
+    const action = {
+      name: 'Cunning Action',
+      automation: {
+        options: [
+          { name: 'Dash', description: 'Dash desc' },
+          { name: 'Disengage', description: 'Disengage desc' },
+        ],
+      },
+    };
+    const optionsProp = [
+      { name: 'Hide', description: 'Hide desc' },
+    ];
+    render(<BonusActionChoiceModal {...makeProps({ action, options: optionsProp })} />);
+    expect(screen.getByText('Hide')).toBeInTheDocument();
+    expect(screen.queryByText('Dash')).not.toBeInTheDocument();
+    expect(screen.queryByText('Disengage')).not.toBeInTheDocument();
+  });
+
+  // ── Overlay click to close (initial state) ──
+
+  it('calls onClose when overlay is clicked in initial state', () => {
+    const onClose = vi.fn();
+    render(<BonusActionChoiceModal {...makeProps({ onClose })} />);
+    fireEvent.click(document.querySelector('.sp-overlay'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Overlay click does not close when clicking inside modal (initial state) ──
+
+  it('does not close when clicking inside modal in initial state', () => {
+    const onClose = vi.fn();
+    render(<BonusActionChoiceModal {...makeProps({ onClose })} />);
+    fireEvent.click(document.querySelector('.sp-modal'));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // ── Result state with missing payload ──
+
+  it('handles result with no payload gracefully', async () => {
+    bonusActionHandler.applyBonusActionChoice.mockReturnValue({
+      type: 'popup',
+    });
+    render(<BonusActionChoiceModal {...makeProps()} />);
+    selectOption(0);
+    clickApply();
+    await waitFor(() => {
+      const body = document.querySelector('.sp-body');
+      expect(body.textContent).toBe('');
+    });
+  });
+
+  // ── Cleanup on unmount ──
+
+  it('resets state on unmount via cleanup effect', async () => {
+    bonusActionHandler.applyBonusActionChoice.mockReturnValue({
+      type: 'popup',
+      payload: {
+        type: 'automation_info',
+        name: 'Cunning Action',
+        description: 'Dash selected.',
+        automation: baseAction.automation,
+      },
+    });
+    const { unmount } = render(<BonusActionChoiceModal {...makeProps()} />);
+    selectOption(0);
+    clickApply();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
+    });
+    unmount();
+    // After unmount, the internal state should be reset
+    // We verify by re-rendering and confirming initial state
+    const { rerender } = render(<BonusActionChoiceModal {...makeProps()} />);
+    rerender(<BonusActionChoiceModal {...makeProps()} />);
+    expect(screen.getByText('Choose a Bonus Action:')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
   });
 });

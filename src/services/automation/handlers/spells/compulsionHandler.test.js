@@ -48,6 +48,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 const campaignName = 'TestCampaign';
 
@@ -125,6 +126,64 @@ describe('compulsionHandler.handle', () => {
         condition: 'charmed',
       });
     });
+
+    it('passes disadvantage when metamagicHeighten is set in action metaCtx', async () => {
+      setupBaseMocks();
+
+      const action = {
+        name: 'Compulsion',
+        automation: { type: 'compulsion', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { metamagicHeighten: true },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: true,
+      }));
+    });
+
+    it('passes disadvantage when metaCtx.metamagicHeighten is truthy', async () => {
+      setupBaseMocks();
+
+      const action = {
+        name: 'Compulsion',
+        automation: { type: 'compulsion', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { metamagicHeighten: true },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: true,
+      }));
+    });
+  });
+
+  describe('storeSpellLastAttack', () => {
+    it('stores spell last attack info with WIS save type and single scope', async () => {
+      setupBaseMocks();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+        casterName: 'TestCaster',
+        spellName: 'Compulsion',
+        saveType: 'WIS',
+        saveDc: 15,
+        attackScope: 'single',
+      });
+    });
+
+    it('uses action.name as spellName', async () => {
+      setupBaseMocks();
+
+      await handle({ name: 'My Compulsion', automation: { type: 'compulsion' } }, makePlayerStats(), campaignName, null);
+
+      expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        spellName: 'My Compulsion',
+      }));
+    });
   });
 
   describe('ability_use log entry', () => {
@@ -140,6 +199,24 @@ describe('compulsionHandler.handle', () => {
         description: expect.stringContaining('TestCaster casts Compulsion on Goblin'),
         promptId: 'test-prompt-id',
       });
+    });
+
+    it('includes "with Advantage" in ability_use description when advantage is true', async () => {
+      setupBaseMocks();
+
+      await handle(makeAction({ advantage: true }), makePlayerStats(), campaignName, null);
+
+      const abilityCall = addEntry.mock.calls.find(call => call[1]?.type === 'ability_use');
+      expect(abilityCall[1].description).toContain('with Advantage');
+    });
+
+    it('omits "with Advantage" when advantage is false', async () => {
+      setupBaseMocks();
+
+      await handle(makeAction({ advantage: false }), makePlayerStats(), campaignName, null);
+
+      const abilityCall = addEntry.mock.calls.find(call => call[1]?.type === 'ability_use');
+      expect(abilityCall[1].description).not.toContain('with Advantage');
     });
   });
 
@@ -179,6 +256,40 @@ describe('compulsionHandler.handle', () => {
 
       expect(sendSaveResult).toHaveBeenCalled();
     });
+
+    it('uses fallback roll with advantage for NPC when creature not found', async () => {
+      resolveTarget.mockResolvedValue({
+        target: { name: 'Goblin', type: 'npc' },
+        cs: { creatures: [] },
+      });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction({ advantage: true }), makePlayerStats(), campaignName, null);
+
+      expect(sendSaveResult).toHaveBeenCalled();
+    });
+
+    it('dispatches save-result custom event for NPC targets', async () => {
+      setupBaseMocks({ success: false }, true);
+      rollSaveForCreature.mockReturnValue({ roll: 8, total: 10, bonus: 2, success: false, rawRolls: [8, 12] });
+
+      const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+      const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(dispatchEventSpy).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'save-result',
+      }));
+
+      addEventListenerSpy.mockRestore();
+      dispatchEventSpy.mockRestore();
+    });
   });
 
   describe('successful save', () => {
@@ -207,6 +318,41 @@ describe('compulsionHandler.handle', () => {
       expect(abilityEntries.length).toBe(1);
       const saveEntries = addEntry.mock.calls.filter(call => call[1].type === 'save_result');
       expect(saveEntries.length).toBe(1);
+    });
+
+    it('calls addTargetResult with success details', async () => {
+      setupBaseMocks({ success: true, roll: 14, total: 16, bonus: 2 });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addTargetResult).toHaveBeenCalledWith(campaignName, {
+        targetName: 'Goblin',
+        saveResult: 'success',
+        roll: 14,
+        total: 16,
+        conditions: [],
+        appliedDamage: 0,
+      });
+    });
+
+    it('defaults roll/total to 0 when missing from saveResult', async () => {
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        roll: 0,
+        total: 0,
+      }));
+    });
+
+    it('does not apply charmed condition or add expiration on success', async () => {
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(addExpiration).not.toHaveBeenCalled();
     });
   });
 
@@ -250,6 +396,20 @@ describe('compulsionHandler.handle', () => {
         'Goblin',
         'activeConditions',
         ['charmed'],
+        campaignName,
+      );
+    });
+
+    it('deduplicates CHARMED (case-insensitive) when already present', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue(['CHARMED', 'frightened']);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['frightened', 'charmed'],
         campaignName,
       );
     });
@@ -314,6 +474,62 @@ describe('compulsionHandler.handle', () => {
         saveType: 'WIS',
       }));
     });
+
+    it('calls addTargetResult with failure details', async () => {
+      setupBaseMocks({ success: false, roll: 5, total: 7, bonus: 2 });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addTargetResult).toHaveBeenCalledWith(campaignName, {
+        targetName: 'Goblin',
+        saveResult: 'failure',
+        roll: 5,
+        total: 7,
+        conditions: ['charmed'],
+        appliedDamage: 0,
+      });
+    });
+
+    it('handles null/undefined saveResult.roll by defaulting to 0', async () => {
+      setupBaseMocks({ success: false, total: 7 });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addTargetResult).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        roll: 0,
+        total: 7,
+      }));
+    });
+
+    it('handles getRuntimeValue returning null by defaulting to empty array', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue(null);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
+
+    it('handles getRuntimeValue returning non-array by defaulting to empty array', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue('not-an-array');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
   });
 
   describe('edge cases', () => {
@@ -349,6 +565,36 @@ describe('compulsionHandler.handle', () => {
       const result = await handle(makeAction(), ps, campaignName, null);
 
       expect(result.payload.description).toContain('WizardX');
+    });
+
+    it('ignores the mapName parameter', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, 'some-map');
+
+      expect(resolveTarget).toHaveBeenCalledWith(campaignName, 'TestCaster');
+    });
+
+    it('uses custom saveDc from automation config', async () => {
+      setupBaseMocks();
+
+      await handle(makeAction({ saveDc: 18 }), makePlayerStats(), campaignName, null);
+
+      expect(buildSaveDc).toHaveBeenCalledWith(
+        expect.objectContaining({ saveDc: 18 }),
+        makePlayerStats(),
+      );
+    });
+
+    it('passes advantage: false by default when not specified', async () => {
+      setupBaseMocks();
+
+      await handle(makeAction({ advantage: false }), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        advantage: false,
+      }));
     });
   });
 });

@@ -107,6 +107,22 @@ describe('HypnoticPatternShakeModal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('closes when the overlay background is clicked', () => {
+      const onClose = vi.fn();
+      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when the modal inner content is clicked', () => {
+      const onClose = vi.fn();
+      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   describe('shake action', () => {
@@ -225,6 +241,25 @@ describe('HypnoticPatternShakeModal', () => {
       await waitFor(() => {
         expect(addEntry).not.toHaveBeenCalled();
       });
+    });
+
+    it('logs error and rethrows when executeHandler throws', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      executeHandler.mockImplementation(() => Promise.reject(new Error('handler failed')));
+      const onClose = vi.fn();
+      render(<HypnoticPatternShakeModal {...makeProps({ onClose })} />);
+      const radios = document.querySelectorAll('input[type="radio"]');
+      fireEvent.click(radios[0]);
+      const shakeBtn = screen.getByRole('button', { name: 'Shake Free (Orc Warrior)' });
+      try {
+        fireEvent.click(shakeBtn);
+      } catch (_e) {
+        // Component rethrows the error from catch block
+      }
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('[HypnoticPatternShake] Failed:', expect.any(Error));
+      });
+      consoleSpy.mockRestore();
     });
   });
 

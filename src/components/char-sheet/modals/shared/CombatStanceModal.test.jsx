@@ -309,4 +309,37 @@ describe('CombatStanceModal', () => {
       expect(screen.getByText('Lightning')).toBeInTheDocument();
     });
   });
+
+  describe('close/cancel behavior', () => {
+    it('calls onClose when Cancel button is clicked', () => {
+      const onClose = vi.fn();
+      render(<CombatStanceModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onClose when overlay is clicked', () => {
+      const onClose = vi.fn();
+      render(<CombatStanceModal {...makeProps({ onClose })} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not close when modal inner content is clicked', () => {
+      const onClose = vi.fn();
+      render(<CombatStanceModal {...makeProps({ onClose })} />);
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('does not close when a stance option label is clicked', () => {
+      const onClose = vi.fn();
+      render(<CombatStanceModal {...makeProps({ onClose })} />);
+      const labels = document.querySelectorAll('label');
+      fireEvent.click(labels[0]);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
 });

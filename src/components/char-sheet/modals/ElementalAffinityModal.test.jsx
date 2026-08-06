@@ -327,4 +327,186 @@ describe('ElementalAffinityModal', () => {
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
   });
+
+  // ── Overlay interaction ──
+
+  describe('overlay interaction', () => {
+    it('calls onClose when the overlay background is clicked', () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      const overlay = document.querySelector('.sp-overlay');
+      fireEvent.click(overlay);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onClose when modal content is clicked', () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      const modal = document.querySelector('.sp-modal');
+      fireEvent.click(modal);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Cancel button ──
+
+  describe('cancel button', () => {
+    it('calls onClose when Cancel is clicked', () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call applyTypeChoice when Cancel is clicked', () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByLabelText('Fire'));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(elementalAffinityHandler.applyTypeChoice).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── elemental_adept effect ──
+
+  describe('elemental_adept effect', () => {
+    it('renders elemental_adept description text when effect is set', () => {
+      const adeptAction = makeAction({
+        automation: {
+          type: 'class_feature',
+          damageTypes: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+          effect: 'elemental_adept',
+        },
+      });
+      render(<ElementalAffinityModal {...makeProps({ action: adeptAction })} />);
+      expect(screen.getByText(/Choose one of the following damage types/)).toBeInTheDocument();
+      expect(screen.getByText(/ignore Resistance/)).toBeInTheDocument();
+      expect(screen.getByText(/treat any 1 on a damage die as a 2/)).toBeInTheDocument();
+    });
+
+    it('renders Thunder in the options when elemental_adept', () => {
+      const adeptAction = makeAction({
+        automation: {
+          type: 'class_feature',
+          damageTypes: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+          effect: 'elemental_adept',
+        },
+      });
+      render(<ElementalAffinityModal {...makeProps({ action: adeptAction })} />);
+      expect(screen.getByLabelText('Thunder')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Poison')).not.toBeInTheDocument();
+    });
+
+    it('shows elemental_adept popup description after apply', async () => {
+      const adeptAction = makeAction({
+        name: 'Elemental Affinity',
+        effect: 'elemental_adept',
+        automation: {
+          type: 'class_feature',
+          damageTypes: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+          effect: 'elemental_adept',
+        },
+      });
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Elemental Affinity',
+          description: 'Elemental Affinity: Fire selected. Spells you cast ignore Resistance to damage of the chosen type. In addition, when you roll damage for a spell you cast that deals damage of that type, you can treat any 1 on a damage die as a 2.',
+        },
+      });
+      render(<ElementalAffinityModal {...makeProps({ action: adeptAction })} />);
+      fireEvent.click(screen.getByLabelText('Fire'));
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByText(/ignore Resistance/)).toBeInTheDocument();
+        expect(screen.getByText(/treat any 1 on a damage die as a 2/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Result view overlay close ──
+
+  describe('result view overlay close', () => {
+    beforeEach(() => {
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue({
+        type: 'popup',
+        payload: {
+          type: 'automation_info',
+          name: 'Elemental Affinity',
+          description: 'Elemental Affinity: Fire selected.',
+        },
+      });
+    });
+
+    it('calls onClose when overlay is clicked in result view', async () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByLabelText('Fire'));
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+      });
+      await waitFor(() => {
+        const overlay = document.querySelector('.sp-overlay');
+        fireEvent.click(overlay);
+      });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onClose when result modal content is clicked', async () => {
+      const onClose = vi.fn();
+      render(<ElementalAffinityModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByLabelText('Fire'));
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+      });
+      await waitFor(() => {
+        const modal = document.querySelector('.sp-modal');
+        fireEvent.click(modal);
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Null/undefined result handling ──
+
+  describe('null result handling', () => {
+    it('does not show result view when applyTypeChoice returns null', async () => {
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(null);
+      render(<ElementalAffinityModal {...baseProps} />);
+      fireEvent.click(screen.getByLabelText('Fire'));
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+      });
+    });
+
+    it('does not show result view when applyTypeChoice returns undefined', async () => {
+      elementalAffinityHandler.applyTypeChoice.mockResolvedValue(undefined);
+      render(<ElementalAffinityModal {...baseProps} />);
+      fireEvent.click(screen.getByLabelText('Acid'));
+      await waitFor(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Damage Type/ }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Damage Type/ })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Header icon ──
+
+  describe('header icon', () => {
+    it('renders the bolt icon in the header', () => {
+      render(<ElementalAffinityModal {...baseProps} />);
+      const icon = document.querySelector('.sp-header i.fa-solid.fa-bolt');
+      expect(icon).toBeInTheDocument();
+    });
+  });
 });
