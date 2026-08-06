@@ -592,6 +592,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'beastName'],
   },
   {
+    effect: 'shapechange',
+    label: 'Shapechange',
+    description: 'The caster has transformed into a creature (formName) by Shapechange. The caster\'s game statistics are replaced by the creature\'s, but the caster retains its creature type, mental ability scores, Hit Points, Hit Point Dice, proficiencies, and ability to communicate. The transformation ends when concentration breaks, on a short or long rest, or when the caster rolls initiative.',
+    icon: 'fa-paw',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source', 'formName'],
+  },
+  {
     effect: 'object_transform',
     label: 'True Polymorph (Object)',
     description: 'The target has been transformed into an object (objectType) by True Polymorph. The target gains the incapacitated condition. The transformation ends when the caster loses concentration or when the spell expires.',

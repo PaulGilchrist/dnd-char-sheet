@@ -6,6 +6,7 @@ import { getCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
 import { endInvisibility, endGreaterInvisibility } from '../../services/rules/features/invisibilityService.js';
 import { revertPolymorph } from '../../services/automation/handlers/spells/polymorphService.js';
+import { revertShapechange } from '../../services/automation/handlers/spells/shapechangeService.js';
 
 // INITIATIVE RESET: When adding a new once-per-turn tracker, reset it with
 // setRuntimeValue(playerStats.name, '_TrackerName_usedRound', null, campaignName)
@@ -237,6 +238,14 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                         const polymorphEffects = storedEffects.filter(te => te.effect === 'polymorph' && te.source === playerStats.name);
                         for (const effect of polymorphEffects) {
                             revertPolymorph(effect.target, campaignName);
+                        }
+                    }
+
+                    if (concentrationSpell === 'Shapechange') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const shapechangeEffects = storedEffects.filter(te => te.effect === 'shapechange' && te.source === playerStats.name);
+                        for (const effect of shapechangeEffects) {
+                            revertShapechange(effect.target, campaignName);
                         }
                     }
                 }

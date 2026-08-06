@@ -112,7 +112,6 @@ function getPostCastAllyHeals(playerStats, campaignName) {
 }
 
 export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, _mapName) {
-    console.log(`[postCastHealService] triggerPostCastAllyHeals entry: spell=${spell.name}, level=${spell.level}, isHealingSpell=${isHealingSpell(spell)}, caster=${playerStats.name}, campaign=${campaignName}`);
     if (!isHealingSpell(spell)) {
         return null;
     }

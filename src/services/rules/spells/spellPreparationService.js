@@ -238,6 +238,17 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
   }
 
+  // Shapechange concentration recast — free cast when already concentrating on Shapechange
+  if (spellName === 'Shapechange') {
+    const cs = getCombatSummary(campaignName);
+    if (cs) {
+      const creature = cs.creatures.find(c => c.name === playerName);
+      if (creature && creature.concentration && creature.concentration.spell === 'Shapechange') {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 

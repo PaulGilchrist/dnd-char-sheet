@@ -16,6 +16,7 @@ import { removeSummonedCreatures } from '../../combat/summons/summonedCreatureSe
 import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
 import { revertAnimalShapes } from '../../automation/handlers/spells/animalShapesService.js';
 import { revertTruePolymorph } from '../../automation/handlers/spells/truePolymorphService.js';
+import { revertShapechange } from '../../automation/handlers/spells/shapechangeService.js';
 const KEY = 'pendingExpirations';
 
 function ensureArray(value, name) {
@@ -1237,6 +1238,10 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
 
             case 'true_polymorph':
                 revertTruePolymorph(targetName, campaignName);
+                break;
+
+            case 'shapechange':
+                revertShapechange(targetName, campaignName);
                 break;
 
             case 'charmed':

@@ -395,6 +395,28 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
       }
     }
 
+    const isShapechange = (spell.name || '').toLowerCase() === 'shapechange';
+    if (isShapechange) {
+      const cs = getCombatSummary(campaignName);
+      const creatureTargets = cs?.creatures
+        ?.map(c => c.name) || [];
+      // Shapechange is self-only: prepend caster and filter to only the caster
+      const selfTargets = creatureTargets.filter(n => n === playerStats.name);
+      if (selfTargets.length > 0) {
+        cfSetPending('shapechange', {
+          spell,
+          spellName: spell.name,
+          spellLevel: spell.level || 0,
+          castingTime: spell.casting_time,
+          range: spell.range || 'Self',
+          creatureTargets: selfTargets,
+          maxTargets: 1,
+          characters,
+        });
+        return;
+      }
+    }
+
     const isAnimalShapes = (spell.name || '').toLowerCase() === 'animal shapes';
     if (isAnimalShapes) {
       const allies = getAllyList(playerStats.name);

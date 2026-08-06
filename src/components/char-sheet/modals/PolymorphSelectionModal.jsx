@@ -40,7 +40,7 @@ function getBeastActionsSummary(actions) {
     return actions.map(a => a.name).join(', ');
 }
 
-function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wild Shape', icon = 'fa-paw', actionLabel = 'Wild Shape', allowAnyCreature = false, mode = 'creature_to_creature', onConfirm, onCancel }) {
+function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wild Shape', icon = 'fa-paw', actionLabel = 'Wild Shape', allowAnyCreature = false, mode = 'creature_to_creature', excludeTypes = [], onConfirm, onCancel }) {
     const [beasts, setBeasts] = React.useState([]);
     const [selectedBeast, setSelectedBeast] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
@@ -62,6 +62,11 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
                 let creatureList = allMonsters;
                 if (!allowAnyCreature) {
                     creatureList = creatureList.filter(m => m.type && m.type.toLowerCase() === 'beast');
+                }
+
+                if (excludeTypes.length > 0) {
+                    const lowerExclude = excludeTypes.map(t => t.toLowerCase());
+                    creatureList = creatureList.filter(m => !lowerExclude.includes((m.type || '').toLowerCase()));
                 }
 
                 if (mode === 'object_into_creature') {
@@ -100,7 +105,7 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
             }
         }
         loadBeasts();
-    }, [playerStats, effectiveMaxCR, wildShapeLimitations, campaignName, allowAnyCreature, mode]);
+    }, [playerStats, effectiveMaxCR, wildShapeLimitations, campaignName, allowAnyCreature, mode, excludeTypes]);
 
     const filteredBeasts = React.useMemo(() => {
         if (!searchTerm.trim()) return beasts;
@@ -166,6 +171,11 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
                     {wildShapeLimitations && !allowAnyCreature && (
                         <div className="wild-shape-info">
                             <strong>Movement:</strong> {wildShapeLimitations}
+                        </div>
+                    )}
+                    {excludeTypes.length > 0 && (
+                        <div className="wild-shape-info">
+                            <strong>Excluded Types:</strong> {excludeTypes.join(', ')}
                         </div>
                     )}
                     <div className="wild-shape-search">

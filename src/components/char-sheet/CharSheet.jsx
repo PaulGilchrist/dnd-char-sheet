@@ -97,6 +97,19 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         });
     }, [playerStats]);
 
+    const handleShapechangeConfirm = React.useCallback(async (form, popupData) => {
+        const { confirmShapechangeTransform } = await import('../../services/automation/handlers/spells/shapechangeService.js');
+        await confirmShapechangeTransform({
+            targetName: popupData.targetName,
+            form,
+            casterName: popupData.casterName,
+            spell: popupData.spell,
+            spellLevel: popupData.spellLevel,
+            playerStats,
+            campaignName: popupData.campaignName,
+        });
+    }, [playerStats]);
+
     const handleAnimalShapesBeastConfirm = React.useCallback(async (targetBeastMap) => {
         setPopupHtml(null);
         const { applyAnimalShapes } = await import('../../services/automation/handlers/spells/animalShapesService.js');
@@ -1045,6 +1058,24 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                                 onConfirm={(beast) => {
                                     setPopupHtml(null);
                                     handlePolymorphConfirm(beast, popupHtml);
+                                }}
+                                onCancel={() => setPopupHtml(null)}
+                            />
+                        );
+                    }
+                    if (popupHtml.type === 'shapechange_select') {
+                        return (
+                            <PolymorphSelectionModal
+                                maxCR={popupHtml.maxCR}
+                                campaignName={popupHtml.campaignName}
+                                title="Shapechange"
+                                icon="fa-paw"
+                                actionLabel="Shapechange"
+                                allowAnyCreature={true}
+                                excludeTypes={['construct', 'undead']}
+                                onConfirm={(form) => {
+                                    setPopupHtml(null);
+                                    handleShapechangeConfirm(form, popupHtml);
                                 }}
                                 onCancel={() => setPopupHtml(null)}
                             />
