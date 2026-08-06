@@ -235,9 +235,10 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         setRuntimeValue(creature.name, 'tempHp', currentTempHp - absorbed, campaignName);
     }
 
-    // Polymorph: when the beast form's temp-HP buffer drops to 0, the transformation ends
+    // Polymorph: when the beast form's temp-HP buffer is depleted, the transformation ends
     const polymorphBuffer = Number(getRuntimeValue(creature.name, 'polymorphTempHp', campaignName) || 0);
-    if (polymorphBuffer > 0 && currentTempHp > 0 && Number(getRuntimeValue(creature.name, 'tempHp', campaignName) || 0) === 0) {
+    const tempHpAfterDrain = Number(getRuntimeValue(creature.name, 'tempHp', campaignName) || 0);
+    if (polymorphBuffer > 0 && tempHpAfterDrain <= 0) {
         await revertPolymorph(creature.name, campaignName);
     }
 

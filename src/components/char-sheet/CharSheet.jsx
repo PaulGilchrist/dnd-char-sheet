@@ -35,6 +35,7 @@ import * as storageService from '../../services/ui/storage.js';
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
 import PolymorphSelectionModal from './modals/PolymorphSelectionModal.jsx'
+import AnimalShapesSelectionModal from './modals/AnimalShapesSelectionModal.jsx'
 import ObjectTransformModal from './modals/ObjectTransformModal.jsx'
 
 function ShieldOfFaithTargetSelectionModal({ popupHtml, setPopupHtml, playerStats, campaignName }) {
@@ -95,6 +96,18 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             campaignName: popupData.campaignName,
         });
     }, [playerStats]);
+
+    const handleAnimalShapesBeastConfirm = React.useCallback(async (targetBeastMap) => {
+        setPopupHtml(null);
+        const { applyAnimalShapes } = await import('../../services/automation/handlers/spells/animalShapesService.js');
+        await applyAnimalShapes({
+            targetBeastMap,
+            casterName: playerStats.name,
+            spell: { name: 'Animal Shapes', level: 8 },
+            playerStats,
+            campaignName,
+        });
+    }, [playerStats, campaignName, setPopupHtml]);
 
     const handleTruePolymorphConfirm = React.useCallback(async (creature, popupData) => {
         const { confirmTruePolymorphTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
@@ -1033,6 +1046,19 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                                     setPopupHtml(null);
                                     handlePolymorphConfirm(beast, popupHtml);
                                 }}
+                                onCancel={() => setPopupHtml(null)}
+                            />
+                        );
+                    }
+                    if (popupHtml.type === 'animal_shapes_target_selection') {
+                        return (
+                            <AnimalShapesSelectionModal
+                                targets={popupHtml.targets}
+                                maxCR={popupHtml.maxCR}
+                                campaignName={popupHtml.campaignName}
+                                title="Animal Shapes"
+                                icon="fa-paw"
+                                onConfirm={handleAnimalShapesBeastConfirm}
                                 onCancel={() => setPopupHtml(null)}
                             />
                         );

@@ -1,0 +1,261 @@
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+  setCombatSummaryCache: vi.fn(),
+  getCurrentCombatRound: vi.fn(() => 1),
+}));
+
+vi.mock('../../../rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn(),
+}));
+
+vi.mock('../../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  default: {
+    set: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { addEntry } from '../../../ui/logService.js';
+import storage from '../../../ui/storage.js';
+import { applyAnimalShapes, revertAnimalShapes, getActiveAnimalShapes, getAnimalShapesCaster } from './animalShapesService.js';
+
+const campaignName = 'TestCampaign';
+const casterName = 'Druid1';
+const targetName = 'Rogue1';
+
+const beast = {
+  name: 'Wolf',
+  index: 'wolf',
+  size: 'Large',
+  hit_points: 13,
+  armor_class: 11,
+  speed: { walk: 40 },
+  challenge_rating: '1/4',
+  actions: [{ name: 'Bite' }],
+};
+
+const creature = {
+  name: targetName,
+  type: 'player',
+  maxHp: 10,
+  ac: 14,
+  speed: { walk: 30 },
+  currentHp: 8,
+};
+
+function setupCombatContext(creatures = [creature]) {
+  getCombatContext.mockResolvedValue({ creatures });
+  getRuntimeValue.mockImplementation((key, subKey) => {
+    if (key === 'campaign' && subKey === 'targetEffects') return [];
+    if (key === casterName && subKey === 'pendingExpirations') return [];
+    return undefined;
+  });
+  setRuntimeValue.mockClear();
+  addEntry.mockClear();
+  storage.set.mockClear();
+}
+
+describe('animalShapesService', () => {
+  describe('applyAnimalShapes', () => {
+    it('should return error when no targetBeastMap', async () => {
+      const result = await applyAnimalShapes({
+        targetBeastMap: null,
+        casterName,
+        spell: { name: 'Animal Shapes', level: 8 },
+        campaignName,
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toBe('no_targets');
+    });
+
+    it('should transform a target with the chosen beast', async () => {
+      setupCombatContext();
+      const result = await applyAnimalShapes({
+        targetBeastMap: { [targetName]: beast },
+        casterName,
+        spell: { name: 'Animal Shapes', level: 8 },
+        campaignName,
+      });
+      expect(result.ok).toBe(true);
+      expect(setRuntimeValue).toHaveBeenCalledWith(targetName, 'tempHp', 13, campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith(targetName, 'animalShapesTempHp', 13, campaignName);
+      expect(creature.maxHp).toBe(13);
+      expect(creature.ac).toBe(11);
+      expect(creature.speed).toEqual({ walk: 40 });
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), campaignName);
+      expect(addEntry).toHaveBeenCalled();
+    });
+
+    it('should set animal_shapes targetEffect', async () => {
+      setupCombatContext();
+      await applyAnimalShapes({
+        targetBeastMap: { [targetName]: beast },
+        casterName,
+        spell: { name: 'Animal Shapes', level: 8 },
+        campaignName,
+      });
+      const calls = setRuntimeValue.mock.calls.filter(
+        call => call[0] === 'campaign' && call[1] === 'targetEffects'
+      );
+      expect(calls.length).toBeGreaterThan(0);
+      const effects = calls[calls.length - 1][2] ? calls[calls.length - 1] : calls[0];
+      const effect = effects[2] || effects[1];
+      expect(Array.isArray(effect)).toBe(true);
+    });
+
+    it('should add expiration with expireOnCreatureName set to target', async () => {
+      setupCombatContext();
+      await applyAnimalShapes({
+        targetBeastMap: { [targetName]: beast },
+        casterName,
+        spell: { name: 'Animal Shapes', level: 8 },
+        campaignName,
+      });
+      const expirationCalls = setRuntimeValue.mock.calls.filter(
+        call => call[0] === casterName && call[1] === 'pendingExpirations'
+      );
+      expect(expirationCalls.length).toBeGreaterThan(0);
+      const expList = expirationCalls[0][2];
+      expect(Array.isArray(expList)).toBe(true);
+      const expEntry = expList[0];
+      expect(expEntry.target).toBe(targetName);
+      expect(expEntry.expireOnCreatureName).toBe(targetName);
+      expect(expEntry.expiryRounds).toBe(Infinity);
+    });
+  });
+
+  describe('revertAnimalShapes', () => {
+    it('should restore original stats', () => {
+      const cs = {
+        creatures: [{
+          ...creature,
+          polymorphOriginal: { maxHp: 10, ac: 14, speed: { walk: 30 } },
+          animalShapesSource: casterName,
+          animalShapesBeast: beast,
+          beastName: 'Wolf',
+          maxHp: 13,
+          ac: 11,
+          speed: { walk: 40 },
+        }],
+      };
+      getCombatSummary.mockReturnValue(cs);
+      getRuntimeValue.mockImplementation((key, subKey) => {
+        if (key === 'campaign' && subKey === 'targetEffects') return [{ effect: 'animal_shapes', target: targetName }];
+        if (key === casterName && subKey === 'pendingExpirations') return [];
+        if (key === targetName && subKey === 'animalShapesTempHp') return 13;
+        if (key === targetName && subKey === 'tempHp') return 5;
+        return undefined;
+      });
+
+      revertAnimalShapes(targetName, campaignName);
+
+      expect(cs.creatures[0].maxHp).toBe(10);
+      expect(cs.creatures[0].ac).toBe(14);
+      expect(cs.creatures[0].speed).toEqual({ walk: 30 });
+      expect(cs.creatures[0].animalShapesSource).toBeUndefined();
+      expect(cs.creatures[0].animalShapesBeast).toBeUndefined();
+      expect(cs.creatures[0].beastName).toBeUndefined();
+    });
+
+    it('should calculate remaining temp HP correctly', () => {
+      const cs = {
+        creatures: [{
+          ...creature,
+          polymorphOriginal: { maxHp: 10, ac: 14, speed: { walk: 30 } },
+          animalShapesSource: casterName,
+          beastName: 'Wolf',
+          maxHp: 10,
+          ac: 14,
+          speed: { walk: 30 },
+        }],
+      };
+      getCombatSummary.mockReturnValue(cs);
+      getRuntimeValue.mockImplementation((key, subKey) => {
+        if (key === 'campaign' && subKey === 'targetEffects') return [];
+        if (key === casterName && subKey === 'pendingExpirations') return [];
+        if (key === targetName && subKey === 'animalShapesTempHp') return 13;
+        if (key === targetName && subKey === 'tempHp') return 5;
+        return undefined;
+      });
+
+      revertAnimalShapes(targetName, campaignName);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(targetName, 'tempHp', 0, campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith(targetName, 'animalShapesTempHp', 0, campaignName);
+    });
+
+    it('should return true when changes were made', () => {
+      const cs = {
+        creatures: [{
+          ...creature,
+          animalShapesSource: casterName,
+          polymorphOriginal: { maxHp: 10 },
+          beastName: 'Wolf',
+        }],
+      };
+      getCombatSummary.mockReturnValue(cs);
+      getRuntimeValue.mockImplementation(() => undefined);
+
+      const result = revertAnimalShapes(targetName, campaignName);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no animal_shapes effect found', () => {
+      const freshCreature = { name: targetName, type: 'player', maxHp: 10, ac: 14, speed: { walk: 30 } };
+      const cs = { creatures: [freshCreature] };
+      getCombatSummary.mockReturnValue(cs);
+      getRuntimeValue.mockImplementation(() => undefined);
+
+      const result = revertAnimalShapes(targetName, campaignName);
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getActiveAnimalShapes', () => {
+    it('should return only animal_shapes effects', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'polymorph', target: 'Goblin' },
+        { effect: 'animal_shapes', target: targetName },
+        { effect: 'haste', target: 'Wizard' },
+        { effect: 'animal_shapes', target: 'Barbarian' },
+      ]);
+
+      const result = getActiveAnimalShapes(campaignName);
+      expect(result).toHaveLength(2);
+      expect(result.every(te => te.effect === 'animal_shapes')).toBe(true);
+    });
+  });
+
+  describe('getAnimalShapesCaster', () => {
+    it('should return the source of the animal_shapes effect', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'animal_shapes', target: targetName, source: casterName },
+      ]);
+
+      const result = getAnimalShapesCaster(targetName, campaignName);
+      expect(result).toBe(casterName);
+    });
+
+    it('should return null when no animal_shapes effect found', () => {
+      getRuntimeValue.mockReturnValue([
+        { effect: 'polymorph', target: targetName, source: 'OtherCaster' },
+      ]);
+
+      const result = getAnimalShapesCaster(targetName, campaignName);
+      expect(result).toBeNull();
+    });
+  });
+});

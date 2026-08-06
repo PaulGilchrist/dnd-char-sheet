@@ -17,6 +17,7 @@ function getRollIconType(rollType) {
     case 'save-damage': return 'fa-shield-halved';
     case 'save-banishment': return 'fa-shield-halved';
     case 'save-polymorph': return 'fa-paw';
+    case 'save-animal-shapes': return 'fa-paw';
     case 'save-prismatic-spray': return 'fa-wand-magic-sparkles';
     case 'save-prismatic-spray-indigo': return 'fa-eye';
     case 'save-prismatic-spray-violet': return 'fa-door-open';

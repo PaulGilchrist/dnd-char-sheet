@@ -273,10 +273,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     React.useEffect(() => {
         if (!combatSummary) return
         let cancelled = false
-        const npcs = combatSummary.creatures.filter(c => c.type !== 'player' || c.wildShapeSource || c.polymorphSource)
+        const npcs = combatSummary.creatures.filter(c => c.type !== 'player' || c.wildShapeSource || c.polymorphSource || c.animalShapesSource)
         const promises = npcs.map(async (creature) => {
-            if (creature.imagePath && !creature.wildShapeSource && !creature.polymorphSource) return { name: creature.name, url: null }
-            const imageName = creature.wildShapeSource ? (creature.beastName || creature.name) : creature.polymorphSource ? (creature.beastName || creature.name) : creature.name
+            if (creature.imagePath && !creature.wildShapeSource && !creature.polymorphSource && !creature.animalShapesSource) return { name: creature.name, url: null }
+            const imageName = creature.wildShapeSource || creature.animalShapesSource ? (creature.beastName || creature.name) : creature.polymorphSource ? (creature.beastName || creature.name) : creature.name
             const url = await getMonsterImageUrl(imageName, campaignNpcs, campaignName)
             return { name: creature.name, url }
         })

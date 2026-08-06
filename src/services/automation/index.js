@@ -217,6 +217,7 @@ import { applyCompulsionEffect } from '../../services/rules/features/compulsionS
 import { handle as handleCrownOfMadness } from './handlers/spells/crownOfMadnessHandler.js';
 import { triggerCrownOfMadness } from '../../services/rules/features/crownOfMadnessService.js';
 import { handle as handleAnimalFriendship } from './handlers/spells/animalFriendshipHandler.js';
+import { handle as handleAnimalShapes } from './handlers/spells/animalShapesHandler.js';
 import { handle as handleDominateBeast } from './handlers/spells/dominateBeastHandler.js';
 import { handle as handleDominateMonster } from './handlers/spells/dominateMonsterHandler.js';
 import { handle as handleDominatePerson } from './handlers/spells/dominatePersonHandler.js';
@@ -525,6 +526,7 @@ const HANDLER_MAP = {
         hold_monster: handleHoldMonster,
         banishment: handleBanishment,
         polymorph: handlePolymorph,
+        animal_shapes: handleAnimalShapes,
         true_polymorph: handleTruePolymorph,
         maze: handleMaze,
         maze_escape: handleMazeEscape,

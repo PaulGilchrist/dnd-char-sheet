@@ -69,6 +69,7 @@ function CreatureCard({
     const majestyDc = isMajestyActive ? getUnbreakableMajestySaveDc(creature.name, campaignName) : 0;
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
     const polymorphActive = myTargetEffects.some(te => te.effect === 'polymorph');
+    const animalShapesActive = myTargetEffects.some(te => te.effect === 'animal_shapes');
     const wrathOfTheSeaActive = creature.type === 'player' && getRuntimeValue(creature.name, 'wrathOfTheSeaActive', campaignName);
     const recklessAttackActive = myTargetEffects.some(te => te.effect === 'reckless_attack');
     const isPlayerSummoned = (creature.type !== 'player' || creature.wildShapeSource) && myTargetEffects.some(te =>
@@ -111,13 +112,13 @@ function CreatureCard({
                     }}>
                         <i className={`fa-solid ${creature.polymorphObject.icon || 'fa-circle'}`}></i>
                     </div>
-                ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource) ? (
+                ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource && !creature.animalShapesSource) ? (
                     <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
                 ) : (
                     <NpcAvatar
-                        name={creature.polymorphSource || creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
+                        name={creature.polymorphSource || creature.animalShapesSource || creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
                         imageUrl={npcImage}
-                        imagePath={creature.wildShapeSource || creature.polymorphSource ? undefined : creature.imagePath}
+                        imagePath={creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource ? undefined : creature.imagePath}
                         campaignName={campaignName}
                         onClick={() => {
                             if (isLocalhost || isPlayerSummoned) {
@@ -138,7 +139,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{(creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
+                    <span>{(creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource) && creature.beastName ? creature.beastName : creature.name}</span>
                 )}
             </div>
             <CreatureHp
@@ -147,7 +148,7 @@ function CreatureCard({
                 onChange={onHpChange}
                 isPlayerSummoned={isPlayerSummoned}
             />
-            {(creature.type !== 'player' || creature.wildShapeSource || creature.polymorphSource) && (() => {
+            {(creature.type !== 'player' || creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource) && (() => {
                 const creatureTempHp = getRuntimeValue(creature.name, 'tempHp', campaignName) || 0;
                 return creatureTempHp > 0 ? (
                     <div className="temp-hp-display">
@@ -401,6 +402,22 @@ function CreatureCard({
                         onRemove={() => {
                             import('../../services/automation/handlers/spells/polymorphService.js').then(({ revertPolymorph }) => {
                                 revertPolymorph(creature.name, campaignName);
+                            });
+                        }}
+                    />
+                )}
+                {animalShapesActive && (
+                    <CreatureBadge
+                        icon='fa-paw'
+                        label='Animal Shapes'
+                        cls='effect-buff'
+                        tooltip={creature.beastName
+                            ? `Animal Shapes: Transformed into ${creature.beastName} — game statistics replaced, retains original HP`
+                            : 'Animal Shapes: Transformed into a beast — game statistics replaced, retains original HP'}
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            import('../../services/automation/handlers/spells/animalShapesService.js').then(({ revertAnimalShapes }) => {
+                                revertAnimalShapes(creature.name, campaignName);
                             });
                         }}
                     />

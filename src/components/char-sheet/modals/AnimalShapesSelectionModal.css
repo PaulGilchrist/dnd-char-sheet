@@ -1,0 +1,129 @@
+.animal-shapes-target-sections {
+    text-align: left;
+}
+
+.animal-shapes-target-section {
+    margin-bottom: 20px;
+    padding: 12px;
+    border: 1px solid var(--color-header);
+    border-radius: 8px;
+}
+
+.animal-shapes-target-header {
+    font-weight: bold;
+    font-size: 1.05em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.animal-shapes-selected-badge {
+    font-size: 0.85em;
+    font-weight: normal;
+    opacity: 0.8;
+    color: #4ade80;
+    margin-left: auto;
+}
+
+.animal-shapes-search {
+    margin-bottom: 8px;
+}
+
+.animal-shapes-search input {
+    width: 100%;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--color-header);
+    border-radius: 6px;
+    color: var(--color-header-inner);
+    font-size: 0.85em;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.animal-shapes-search input:focus {
+    border-color: var(--color-link);
+}
+
+.animal-shapes-search input::placeholder {
+    color: var(--color-header-inner);
+    opacity: 0.5;
+}
+
+.animal-shapes-beast-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.animal-shapes-beast-item {
+    display: flex;
+    gap: 10px;
+    padding: 6px 10px;
+    margin: 2px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+}
+
+.animal-shapes-beast-item:hover {
+    border-color: var(--color-link);
+}
+
+.animal-shapes-beast-item.selected {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-link);
+}
+
+.animal-shapes-beast-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+}
+
+.animal-shapes-beast-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.animal-shapes-beast-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.animal-shapes-beast-name {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.animal-shapes-beast-cr,
+.animal-shapes-beast-size {
+    font-size: 0.8em;
+    opacity: 0.7;
+    font-weight: normal;
+}
+
+.animal-shapes-beast-stats {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-top: 1px;
+}
+
+.animal-shapes-beast-actions {
+    font-size: 0.8em;
+    opacity: 0.7;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-modal--very-wide {
+    max-width: 900px;
+    width: 90%;
+}

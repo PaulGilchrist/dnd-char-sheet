@@ -7,10 +7,6 @@ function stripTrailingNumber(name) {
     return name.replace(/\s+\d+$/, '');
 }
 
-function nameToImageUrlSlug(name) {
-    return name.toLowerCase().replace(/[^a-z0-9()]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-}
-
 /**
  * Look up a monster image URL by NPC name, with optional campaign NPC fallback.
  * Strips trailing numbers (e.g., "Goblin 1" -> "Goblin") for case-insensitive lookup.
@@ -42,7 +38,8 @@ export async function getMonsterImageUrl(npcName, npcs, campaignName) {
     const baseName = stripTrailingNumber(npcName);
     const monster = monstersCache.find(m => m.name.toLowerCase() === baseName.toLowerCase());
     if (monster) {
-        return `https://paulgilchrist.github.io/dnd-tools/images/${nameToImageUrlSlug(monster.name)}.jpg`;
+        const slug = (monster.index || monster.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        return `https://paulgilchrist.github.io/dnd-tools/images/${slug}.jpg`;
      }
     return null;
 }

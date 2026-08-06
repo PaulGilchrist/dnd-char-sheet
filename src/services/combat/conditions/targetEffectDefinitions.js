@@ -583,6 +583,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'beastName', 'mode'],
   },
   {
+    effect: 'animal_shapes',
+    label: 'Animal Shapes',
+    description: 'The target has been transformed into a beast (beastName) by Animal Shapes. Its game statistics are replaced by the beast\'s, but it retains its Hit Points. The target gains temporary hit points equal to the beast\'s HP. These temporary hit points vanish if any remain when the spell ends.',
+    icon: 'fa-paw',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source', 'beastName'],
+  },
+  {
     effect: 'object_transform',
     label: 'True Polymorph (Object)',
     description: 'The target has been transformed into an object (objectType) by True Polymorph. The target gains the incapacitated condition. The transformation ends when the caster loses concentration or when the spell expires.',
