@@ -540,6 +540,23 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         return;
     }
 
+    // Shapechange — self-only transformation, shows creature selection modal
+    if (fullSpell.name && fullSpell.name.toLowerCase() === 'shapechange') {
+        const shapechangeModule = await import('../../automation/handlers/spells/shapechangeHandler.js');
+        const handleShapechange = shapechangeModule.handle;
+        const action = {
+            name: fullSpell.name,
+            spell: fullSpell,
+            automation: { type: 'shapechange' },
+            metaCtx: { ...metaCtx, characters },
+        };
+        const popup = await handleShapechange(action, playerStats, campaignName, mapName, characters);
+        if (popup) {
+            return { automationPopup: popup };
+        }
+        return;
+    }
+
     // Generic automation routing — any spell with automation.type that hasn't been handled by a specific case above
     // This ensures all automated spells (shield, blade_ward, buff_ally, temp_buff, etc.) work when cast
     // Skip spells with automation.effects — those have AoE/single-target effects handled below

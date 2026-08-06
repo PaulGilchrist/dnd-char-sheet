@@ -70,12 +70,13 @@ function CreatureCard({
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
     const polymorphActive = myTargetEffects.some(te => te.effect === 'polymorph');
     const animalShapesActive = myTargetEffects.some(te => te.effect === 'animal_shapes');
+    const shapechangeActive = myTargetEffects.some(te => te.effect === 'shapechange');
     const wrathOfTheSeaActive = creature.type === 'player' && getRuntimeValue(creature.name, 'wrathOfTheSeaActive', campaignName);
     const recklessAttackActive = myTargetEffects.some(te => te.effect === 'reckless_attack');
-    const isPlayerSummoned = (creature.type !== 'player' || creature.wildShapeSource) && myTargetEffects.some(te =>
+    const isPlayerSummoned = (creature.type !== 'player' || creature.wildShapeSource || creature.shapechangeSource) && myTargetEffects.some(te =>
         te.effect === 'summoned' &&
         allCreatures.some(c => c.type === 'player' && c.name === te.source)
-    ) || (creature.wildShapeSource && allCreatures.some(c => c.type === 'player' && c.name === creature.wildShapeSource));
+    ) || (creature.wildShapeSource && allCreatures.some(c => c.type === 'player' && c.name === creature.wildShapeSource)) || (creature.shapechangeSource && allCreatures.some(c => c.type === 'player' && c.name === creature.shapechangeSource));
 
     const sanctuaryInfo = (() => {
         for (const other of allCreatures) {
@@ -112,13 +113,13 @@ function CreatureCard({
                     }}>
                         <i className={`fa-solid ${creature.polymorphObject.icon || 'fa-circle'}`}></i>
                     </div>
-                ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource && !creature.animalShapesSource) ? (
+                ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource && !creature.animalShapesSource && !creature.shapechangeSource) ? (
                     <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
                 ) : (
                     <NpcAvatar
-                        name={creature.polymorphSource || creature.animalShapesSource || creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
+                        name={creature.polymorphSource || creature.animalShapesSource || creature.wildShapeSource || creature.shapechangeSource ? (creature.beastName || creature.formName || creature.name) : creature.name}
                         imageUrl={npcImage}
-                        imagePath={creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource ? undefined : creature.imagePath}
+                        imagePath={creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource || creature.shapechangeSource ? undefined : creature.imagePath}
                         campaignName={campaignName}
                         onClick={() => {
                             if (isLocalhost || isPlayerSummoned) {
@@ -139,7 +140,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{(creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource) && creature.beastName ? creature.beastName : creature.name}</span>
+                    <span>{(creature.wildShapeSource || creature.polymorphSource || creature.animalShapesSource || creature.shapechangeSource) && (creature.beastName || creature.formName) ? (creature.beastName || creature.formName) : creature.name}</span>
                 )}
             </div>
             <CreatureHp
@@ -418,6 +419,22 @@ function CreatureCard({
                         onRemove={() => {
                             import('../../services/automation/handlers/spells/animalShapesService.js').then(({ revertAnimalShapes }) => {
                                 revertAnimalShapes(creature.name, campaignName);
+                            });
+                        }}
+                    />
+                )}
+                {shapechangeActive && (
+                    <CreatureBadge
+                        icon='fa-paw'
+                        label='Shapechange'
+                        cls='effect-buff'
+                        tooltip={creature.formName
+                            ? `Shapechange: Transformed into ${creature.formName} — game statistics replaced, reverts when concentration is broken`
+                            : 'Shapechange: Transformed — game statistics replaced, reverts when concentration is broken'}
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            import('../../services/automation/handlers/spells/shapechangeService.js').then(({ revertShapechange }) => {
+                                revertShapechange(creature.name, campaignName);
                             });
                         }}
                     />
