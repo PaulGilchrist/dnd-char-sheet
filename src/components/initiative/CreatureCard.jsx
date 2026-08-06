@@ -68,6 +68,7 @@ function CreatureCard({
     const isMajestyActive = creature.type === 'player' && isUnbreakableMajestyActive(creature.name, campaignName);
     const majestyDc = isMajestyActive ? getUnbreakableMajestySaveDc(creature.name, campaignName) : 0;
     const wildShapeActive = isBuffActive(creature.name, 'Wild Shape', campaignName);
+    const polymorphActive = myTargetEffects.some(te => te.effect === 'polymorph');
     const wrathOfTheSeaActive = creature.type === 'player' && getRuntimeValue(creature.name, 'wrathOfTheSeaActive', campaignName);
     const recklessAttackActive = myTargetEffects.some(te => te.effect === 'reckless_attack');
     const isPlayerSummoned = (creature.type !== 'player' || creature.wildShapeSource) && myTargetEffects.some(te =>
@@ -102,13 +103,13 @@ function CreatureCard({
                 </button>
             )}
             <div className='creature-avatar'>
-                {creature.type === 'player' && !creature.wildShapeSource ? (
+                {(creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource) ? (
                     <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
                 ) : (
                     <NpcAvatar
-                        name={creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
+                        name={creature.polymorphSource || creature.wildShapeSource ? (creature.beastName || creature.name) : creature.name}
                         imageUrl={npcImage}
-                        imagePath={creature.wildShapeSource ? undefined : creature.imagePath}
+                        imagePath={creature.wildShapeSource || creature.polymorphSource ? undefined : creature.imagePath}
                         campaignName={campaignName}
                         onClick={() => {
                             if (isLocalhost || isPlayerSummoned) {
@@ -127,7 +128,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{creature.wildShapeSource && creature.beastName ? creature.beastName : creature.name}</span>
+                    <span>{(creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
                 )}
             </div>
             <CreatureHp
@@ -136,7 +137,7 @@ function CreatureCard({
                 onChange={onHpChange}
                 isPlayerSummoned={isPlayerSummoned}
             />
-            {(creature.type !== 'player' || creature.wildShapeSource) && (() => {
+            {(creature.type !== 'player' || creature.wildShapeSource || creature.polymorphSource) && (() => {
                 const creatureTempHp = getRuntimeValue(creature.name, 'tempHp', campaignName) || 0;
                 return creatureTempHp > 0 ? (
                     <div className="temp-hp-display">
@@ -374,6 +375,22 @@ function CreatureCard({
                         onRemove={() => {
                             import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js').then(({ cleanupWildShape }) => {
                                 cleanupWildShape(creature.name, campaignName);
+                            });
+                        }}
+                    />
+                )}
+                {polymorphActive && (
+                    <CreatureBadge
+                        icon='fa-paw'
+                        label='Polymorph'
+                        cls='effect-buff'
+                        tooltip={creature.beastName
+                            ? `Polymorph: Transformed into ${creature.beastName} — game statistics replaced, reverts at 0 HP or when the caster loses concentration`
+                            : 'Polymorph: Transformed into a beast — game statistics replaced, reverts at 0 HP or when the caster loses concentration'}
+                        removable={isLocalhost}
+                        onRemove={() => {
+                            import('../../services/automation/handlers/spells/polymorphService.js').then(({ revertPolymorph }) => {
+                                revertPolymorph(creature.name, campaignName);
                             });
                         }}
                     />

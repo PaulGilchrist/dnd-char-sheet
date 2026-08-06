@@ -19,6 +19,7 @@ import { checkRelentlessRage } from '../../rules/features/relentlessRageService.
 import { checkDeathWard } from '../../rules/features/deathWardService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
+import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
 
 // Tracks which multi-attack sequences have already triggered Relentless Endurance.
 // Prevents follow-up hits in the same sequence from re-killing the character.
@@ -232,6 +233,12 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         const absorbed = Math.min(damageAfterTempHp, currentTempHp);
         damageAfterTempHp -= absorbed;
         setRuntimeValue(creature.name, 'tempHp', currentTempHp - absorbed, campaignName);
+    }
+
+    // Polymorph: when the beast form's temp-HP buffer drops to 0, the transformation ends
+    const polymorphBuffer = Number(getRuntimeValue(creature.name, 'polymorphTempHp', campaignName) || 0);
+    if (polymorphBuffer > 0 && currentTempHp > 0 && Number(getRuntimeValue(creature.name, 'tempHp', campaignName) || 0) === 0) {
+        await revertPolymorph(creature.name, campaignName);
     }
 
     if (isPlayer) {

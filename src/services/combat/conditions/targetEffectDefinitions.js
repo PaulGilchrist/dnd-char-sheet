@@ -565,6 +565,15 @@ const TARGET_EFFECT_DEFINITIONS = [
     fields: ['source', 'beastName'],
   },
   {
+    effect: 'polymorph',
+    label: 'Polymorph',
+    description: 'The target has been transformed into a beast (beastName). Its game statistics are replaced by the beast\'s, including its hit points. The transformation ends when the beast form drops to 0 hit points, when the caster loses concentration, or when the spell expires.',
+    icon: 'fa-paw',
+    cls: 'effect-buff',
+    group: 'Spells',
+    fields: ['source', 'beastName'],
+  },
+  {
     effect: 'pass_without_trace_bonus',
     label: 'Pass Without Trace',
     description: 'The creature gains a +10 bonus to Dexterity (Stealth) checks.',

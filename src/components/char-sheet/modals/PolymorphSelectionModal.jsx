@@ -1,7 +1,7 @@
 import React from 'react';
 import { loadMonsters } from '../../../services/ui/dataLoader.js';
 import { getClassFeatures } from '../../../services/character/classFeatures.js';
-import './WildShapeBeastModal.css';
+import './PolymorphSelectionModal.css';
 
 function parseChallengeRating(crString) {
     if (!crString) return 0;
@@ -14,6 +14,7 @@ function parseChallengeRating(crString) {
 
 function filterBeastSpeeds(beastSpeeds, limitations) {
     if (!beastSpeeds) return {};
+    if (!limitations) return beastSpeeds;
     const filtered = {};
     if (beastSpeeds.walk) filtered.walk = beastSpeeds.walk;
     const hasFly = limitations.includes('fly');
@@ -39,29 +40,34 @@ function getBeastActionsSummary(actions) {
     return actions.map(a => a.name).join(', ');
 }
 
-function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel }) {
+function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wild Shape', icon = 'fa-paw', actionLabel = 'Wild Shape', onConfirm, onCancel }) {
     const [beasts, setBeasts] = React.useState([]);
     const [selectedBeast, setSelectedBeast] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [searchTerm, setSearchTerm] = React.useState('');
 
+    const wildShapeLimitations = playerStats
+        ? (getClassFeatures(playerStats)?.wildShapeLimitations || 'walk only (no swim or fly)')
+        : null;
+    const effectiveMaxCR = typeof maxCR === 'number'
+        ? maxCR
+        : (getClassFeatures(playerStats)?.maxWildShapeChallengeRating || 0);
+
     React.useEffect(() => {
         async function loadBeasts() {
             try {
                 const allMonsters = await loadMonsters();
-                const druidFeatures = getClassFeatures(playerStats) || {};
-                const maxCR = druidFeatures.maxWildShapeChallengeRating || 0;
-                const limitations = druidFeatures.wildShapeLimitations || 'walk only (no swim or fly)';
 
                 const beastList = allMonsters
                     .filter(m => m.type && m.type.toLowerCase() === 'beast')
                     .filter(m => {
                         const cr = parseChallengeRating(m.challenge_rating);
-                        return cr <= maxCR;
+                        return cr <= effectiveMaxCR;
                     })
                     .filter(m => {
-                        const filteredSpeeds = filterBeastSpeeds(m.speed, limitations);
+                        if (!wildShapeLimitations) return true;
+                        const filteredSpeeds = filterBeastSpeeds(m.speed, wildShapeLimitations);
                         return filteredSpeeds.walk;
                     })
                     .sort((a, b) => {
@@ -73,14 +79,14 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
 
                 setBeasts(beastList);
             } catch (err) {
-                console.error('[WildShapeBeastModal] Error loading beasts:', err);
+                console.error('[PolymorphSelectionModal] Error loading beasts:', err);
                 setError('Failed to load beast data.');
             } finally {
                 setLoading(false);
             }
         }
         loadBeasts();
-    }, [playerStats, campaignName]);
+    }, [playerStats, effectiveMaxCR, wildShapeLimitations, campaignName]);
 
     const filteredBeasts = React.useMemo(() => {
         if (!searchTerm.trim()) return beasts;
@@ -104,21 +110,11 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
         return () => document.removeEventListener('keydown', handleKey);
     }, [onCancel]);
 
-    const maxCR = (() => {
-        const druidFeatures = getClassFeatures(playerStats) || {};
-        return druidFeatures.maxWildShapeChallengeRating || 0;
-    })();
-
-    const limitations = (() => {
-        const druidFeatures = getClassFeatures(playerStats) || {};
-        return druidFeatures.wildShapeLimitations || 'walk only (no swim or fly)';
-    })();
-
     if (loading) {
         return (
             <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
                 <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
-                    <div className="sp-header"><i className="fa-solid fa-paw"></i> Wild Shape</div>
+                    <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p>Loading available beasts...</p></div>
                 </div>
             </div>
@@ -129,7 +125,7 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
         return (
             <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
                 <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
-                    <div className="sp-header"><i className="fa-solid fa-paw"></i> Wild Shape</div>
+                    <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p className="sp-note">{error}</p></div>
                     <div className="sp-actions">
                         <button className="sp-dismiss-btn" onClick={onCancel}>Close</button>
@@ -142,12 +138,14 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
     return (
         <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
             <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
-                <div className="sp-header"><i className="fa-solid fa-paw"></i> Wild Shape</div>
+                <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                 <div className="sp-body">
-                    <p>Choose a beast form (CR {maxCR} or lower)</p>
-                    <div className="wild-shape-info">
-                        <strong>Movement:</strong> {limitations}
-                    </div>
+                    <p>Choose a beast form (CR {effectiveMaxCR} or lower)</p>
+                    {wildShapeLimitations && (
+                        <div className="wild-shape-info">
+                            <strong>Movement:</strong> {wildShapeLimitations}
+                        </div>
+                    )}
                     <div className="wild-shape-search">
                         <input
                             type="text"
@@ -158,12 +156,12 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
                     </div>
                     <div className="wild-shape-list">
                         {filteredBeasts.length === 0 ? (
-                            <p className="sp-note">No beasts match your Wild Shape limitations.</p>
+                            <p className="sp-note">No beasts match {wildShapeLimitations ? 'your Wild Shape limitations' : 'the target\'s CR requirement'}.</p>
                         ) : (
                             filteredBeasts.map((beast) => {
                                 const cr = parseChallengeRating(beast.challenge_rating);
                                 const isSelected = selectedBeast?.index === beast.index;
-                                const filteredSpeeds = filterBeastSpeeds(beast.speed, limitations);
+                                const beastSpeeds = filterBeastSpeeds(beast.speed, wildShapeLimitations);
                                 const imageUrl = `https://paulgilchrist.github.io/dnd-tools/images/${beast.name.toLowerCase().replace(/[^a-z0-9()]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.jpg`;
 
                                 return (
@@ -186,7 +184,7 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
                                             </div>
                                             <div className="wild-shape-beast-stats">
                                                 <span>{beast.size}</span>
-                                                <span>{formatSpeed(filteredSpeeds)}</span>
+                                                <span>{formatSpeed(beastSpeeds)}</span>
                                             </div>
                                             <div className="wild-shape-beast-actions">
                                                 {getBeastActionsSummary(beast.actions)}
@@ -205,7 +203,7 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
                         onClick={handleConfirm}
                         disabled={!selectedBeast}
                     >
-                        <i className="fa-solid fa-paw"></i> Wild Shape
+                        <i className={`fa-solid ${icon}`}></i> {actionLabel}
                     </button>
                 </div>
             </div>
@@ -213,4 +211,4 @@ function WildShapeBeastModal({ playerStats, campaignName, onConfirm, onCancel })
     );
 }
 
-export default WildShapeBeastModal;
+export default PolymorphSelectionModal;

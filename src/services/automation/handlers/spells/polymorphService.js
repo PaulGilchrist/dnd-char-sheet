@@ -1,0 +1,209 @@
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getCombatSummary, setCombatSummaryCache, getCurrentCombatRound } from '../../../encounters/combatData.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { addEntry } from '../../../ui/logService.js';
+import storage from '../../../ui/storage.js';
+import { handle as runPolymorphHandler } from './polymorphHandler.js';
+
+const POLYMORPH_EFFECT = 'polymorph';
+
+export function getActivePolymorphs(campaignName) {
+    const effects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    return effects.filter(te => te.effect === POLYMORPH_EFFECT);
+}
+
+export function getPolymorphCaster(targetName, campaignName) {
+    const effects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const effect = effects.find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return teTarget === targetName && te.effect === POLYMORPH_EFFECT;
+    });
+    return effect?.source || null;
+}
+
+export async function applyPolymorph(spell, metaCtx, playerStats, campaignName, mapName) {
+    const spellName = (spell.name || '').toLowerCase();
+    if (spellName !== 'polymorph') return null;
+
+    const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
+    const slotLevel = metaCtx?.slotLevel || spell.level || 4;
+
+    const action = {
+        name: spell.name,
+        automation: {
+            type: 'polymorph',
+            saveDc: spellSaveDc,
+            saveType: 'WIS',
+        },
+        spell,
+        spellSlotLevel: slotLevel,
+        metaCtx,
+    };
+
+    try {
+        const result = await runPolymorphHandler(action, playerStats, campaignName, mapName);
+        return result;
+    } catch (e) {
+        console.error(`[polymorphService] Failed to execute ${spell.name} handler:`, e);
+        return null;
+    }
+}
+
+export async function confirmPolymorphTransform({ targetName, beast, casterName, spell, playerStats, campaignName }) {
+    const cs = await getCombatContext(campaignName) || { creatures: [] };
+    const creature = cs.creatures.find(c => c.name === targetName);
+    if (!creature) {
+        console.error(`[polymorphService] Target ${targetName} not found in combat.`);
+        return { ok: false, reason: 'no_target' };
+    }
+
+    const beastHp = typeof beast.hit_points === 'number' ? beast.hit_points : 0;
+    const beastAc = typeof beast.armor_class === 'number' ? beast.armor_class : 10;
+
+    creature.polymorphOriginal = {
+        maxHp: creature.maxHp ?? beastHp,
+        ac: creature.ac ?? beastAc,
+        speed: creature.speed,
+    };
+    creature.polymorphSource = casterName;
+    creature.polymorphBeast = {
+        name: beast.name,
+        index: beast.index,
+        size: beast.size,
+        hitPoints: beastHp,
+        armorClass: beastAc,
+        speed: beast.speed,
+        challengeRating: beast.challenge_rating,
+    };
+    creature.beastName = beast.name;
+    creature.maxHp = beastHp;
+    creature.ac = beastAc;
+    creature.speed = beast.speed;
+
+    setRuntimeValue(targetName, 'tempHp', beastHp, campaignName);
+    setRuntimeValue(targetName, 'polymorphTempHp', beastHp, campaignName);
+
+    await storage.set('combatSummary', cs, campaignName);
+    setCombatSummaryCache(cs, campaignName);
+
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const cleaned = targetEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return !(teTarget === targetName && te.effect === POLYMORPH_EFFECT);
+    });
+    cleaned.push({
+        target: targetName,
+        source: casterName,
+        effect: POLYMORPH_EFFECT,
+        duration: 'concentration',
+        beastName: beast.name,
+    });
+    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName, true);
+
+    const casterCreature = cs.creatures.find(c => c.name === casterName);
+    if (casterCreature) {
+        const concentrationDc = 8 + (playerStats.proficiency || 2) + (playerStats.abilities?.CON?.bonus ?? 0);
+        addConcentration(cs, casterName, spell?.name || 'Polymorph', concentrationDc);
+        await storage.set('combatSummary', cs, campaignName);
+        setCombatSummaryCache(cs, campaignName);
+    }
+
+    const expirations = getRuntimeValue(casterName, 'pendingExpirations', campaignName);
+    const expList = Array.isArray(expirations) ? expirations : [];
+    const filteredExp = expList.filter(e => !(e.target === targetName && (e.effects || []).some(ef => ef.type === POLYMORPH_EFFECT)));
+    filteredExp.push({
+        target: targetName,
+        effects: [{ type: POLYMORPH_EFFECT }],
+        appliedRound: getCurrentCombatRound(campaignName),
+        expiryRounds: Infinity,
+        expireOnCreatureName: null,
+    });
+    setRuntimeValue(casterName, 'pendingExpirations', filteredExp, campaignName);
+
+    addEntry(campaignName, {
+        type: 'save_result',
+        characterName: casterName,
+        rollType: 'save-polymorph',
+        targetName,
+        saveDc: 0,
+        saveType: 'WIS',
+        success: false,
+        description: `${targetName} is transformed into ${beast.name} (CR ${beast.challenge_rating}) by ${casterName}'s ${spell?.name || 'Polymorph'}.`,
+    }).catch(() => {});
+
+    return { ok: true };
+}
+
+export function revertPolymorph(targetName, campaignName) {
+    const cs = getCombatSummary(campaignName);
+    let polymorphCaster = null;
+    let changed = false;
+
+    if (cs?.creatures) {
+        const creature = cs.creatures.find(c => c.name === targetName);
+        if (creature?.polymorphSource) {
+            polymorphCaster = creature.polymorphSource;
+            const original = creature.polymorphOriginal || {};
+            creature.maxHp = original.maxHp;
+            creature.ac = original.ac;
+            if (original.speed !== undefined) creature.speed = original.speed;
+            delete creature.polymorphSource;
+            delete creature.polymorphOriginal;
+            delete creature.polymorphBeast;
+            delete creature.beastName;
+            changed = true;
+        }
+    }
+    if (changed && cs) {
+        storage.set('combatSummary', cs, campaignName);
+        setCombatSummaryCache(cs, campaignName);
+    }
+
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    const filtered = targetEffects.filter(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+        return !(teTarget === targetName && te.effect === POLYMORPH_EFFECT);
+    });
+    if (filtered.length !== targetEffects.length) {
+        setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+        if (!polymorphCaster) {
+            const effect = targetEffects.find(te => {
+                const teTarget = Array.isArray(te.target) ? te.target[0] : te.target;
+                return teTarget === targetName && te.effect === POLYMORPH_EFFECT;
+            });
+            polymorphCaster = effect?.source || null;
+        }
+    }
+
+    const polymorphTempHp = Number(getRuntimeValue(targetName, 'polymorphTempHp', campaignName) || 0);
+    const playerCurrentHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
+    if (polymorphTempHp > 0) {
+        const storedTempHp = Number(getRuntimeValue(targetName, 'tempHp', campaignName) || 0);
+        const remaining = Math.max(0, storedTempHp - polymorphTempHp);
+        setRuntimeValue(targetName, 'tempHp', remaining, campaignName);
+        setRuntimeValue(targetName, 'polymorphTempHp', 0, campaignName);
+    } else if (typeof playerCurrentHp === 'number') {
+        setRuntimeValue(targetName, 'tempHp', playerCurrentHp, campaignName);
+        setRuntimeValue(targetName, 'polymorphTempHp', 0, campaignName);
+    }
+
+    if (polymorphCaster) {
+        const expirations = getRuntimeValue(polymorphCaster, 'pendingExpirations', campaignName);
+        if (Array.isArray(expirations)) {
+            const filteredExp = expirations.filter(e => !(e.target === targetName && (e.effects || []).some(ef => ef.type === POLYMORPH_EFFECT)));
+            if (filteredExp.length !== expirations.length) {
+                setRuntimeValue(polymorphCaster, 'pendingExpirations', filteredExp, campaignName);
+            }
+        }
+    }
+
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: targetName,
+        abilityName: 'Polymorph',
+        description: `${targetName} reverts to their normal form.`,
+    }).catch(() => {});
+
+    return changed;
+}

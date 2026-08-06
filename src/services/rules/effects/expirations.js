@@ -13,6 +13,7 @@ import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
 import { handleConfusionTurnStart } from '../../automation/handlers/spells/confusionTurnStartHandler.js';
 import { processSleetStormAreaSave } from '../../automation/handlers/spells/sleetStormHandler.js';
 import { removeSummonedCreatures } from '../../combat/summons/summonedCreatureService.js';
+import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
 const KEY = 'pendingExpirations';
 
 function ensureArray(value, name) {
@@ -1193,6 +1194,10 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
             case 'condition':
                 removeActiveCondition(targetName, effect.condition, campaignName);
                 removeNpcCondition(targetName, effect.condition, campaignName);
+                break;
+
+            case 'polymorph':
+                revertPolymorph(targetName, campaignName);
                 break;
 
             case 'charmed':

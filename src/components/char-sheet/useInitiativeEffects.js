@@ -5,6 +5,7 @@ import { rollExpression } from '../../services/dice/diceRoller.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
 import { endInvisibility, endGreaterInvisibility } from '../../services/rules/features/invisibilityService.js';
+import { revertPolymorph } from '../../services/automation/handlers/spells/polymorphService.js';
 
 // INITIATIVE RESET: When adding a new once-per-turn tracker, reset it with
 // setRuntimeValue(playerStats.name, '_TrackerName_usedRound', null, campaignName)
@@ -228,6 +229,14 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
                         const filtered = storedEffects.filter(te => !(te.effect === 'enhance_ability' && te.source === playerStats.name));
                         if (filtered.length !== storedEffects.length) {
                             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
+                        }
+                    }
+
+                    if (concentrationSpell === 'Polymorph') {
+                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                        const polymorphEffects = storedEffects.filter(te => te.effect === 'polymorph' && te.source === playerStats.name);
+                        for (const effect of polymorphEffects) {
+                            revertPolymorph(effect.target, campaignName);
                         }
                     }
                 }

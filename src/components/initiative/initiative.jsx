@@ -1095,6 +1095,65 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 return
             }
         }
+        if (runtimeCreature && runtimeCreature.polymorphSource && runtimeCreature.polymorphBeast?.index) {
+            const monsters = await loadMonsters()
+            const baseMonster = monsters.find(m => m.index === runtimeCreature.polymorphBeast.index)
+            if (baseMonster) {
+                const merged = cloneDeep(baseMonster)
+                merged.name = runtimeCreature.beastName || baseMonster.name
+                merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
+                merged.armor_class = runtimeCreature.ac
+                merged.type = 'beast'
+                merged.size = runtimeCreature.size || baseMonster.size
+                merged.challenge_rating = runtimeCreature.polymorphBeast.challengeRating || baseMonster.challenge_rating
+                if (runtimeCreature.speed) {
+                    merged.speed = runtimeCreature.speed
+                }
+                const polymorphTempHp = getRuntimeValue(creature.name, 'polymorphTempHp', campaignName)
+                if (typeof polymorphTempHp === 'number' && polymorphTempHp > 0) {
+                    merged.hit_points_temp = polymorphTempHp
+                }
+                const casterName = runtimeCreature.polymorphSource
+                const druidCharacter = characters.find(c => utils.getName(c.name) === casterName)
+                if (druidCharacter) {
+                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
+                    const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
+                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
+                    const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
+                    if (intScore != null) merged.ability_scores.int = intScore
+                    if (wisScore != null) merged.ability_scores.wis = wisScore
+                    if (chaScore != null) merged.ability_scores.cha = chaScore
+                    const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
+                    if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
+                }
+                const beastSaves = {}
+                for (const abbr of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                    if (baseMonster.saving_throws?.[abbr]?.modifier != null) {
+                        beastSaves[abbr] = baseMonster.saving_throws[abbr].modifier
+                    } else if (baseMonster.ability_score_modifiers?.[abbr] != null) {
+                        beastSaves[abbr] = baseMonster.ability_score_modifiers[abbr]
+                    }
+                }
+                merged.saving_throws = {}
+                for (const [abbr, mod] of Object.entries(beastSaves)) {
+                    merged.saving_throws[abbr] = { modifier: mod }
+                }
+                for (const action of merged.actions || []) {
+                    if (action.attack_bonus != null) {
+                        action.damage_type_primary = 'Radiant';
+                        if (action.damage_type_secondary) {
+                            action.damage_type_secondary = 'Radiant';
+                        }
+                        if (action.description) {
+                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage');
+                        }
+                    }
+                }
+                setViewingMonster(merged)
+                setViewingMonsterCreatureName(creature.name)
+                return
+            }
+        }
         if (runtimeCreature && runtimeCreature.monsterIndex) {
             const monsters = await loadMonsters()
             const baseMonster = monsters.find(m => m.index === runtimeCreature.monsterIndex)

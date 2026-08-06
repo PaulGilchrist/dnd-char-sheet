@@ -35,7 +35,7 @@
       "name": "Wisdom",
       "baseScore": 9,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 2,
       "miscIncrease": 0
     },
     {
@@ -120,20 +120,10 @@
     "Poison Spray",
     "Shocking Grasp",
     "Acid Splash",
-    "Animate Objects",
-    "Bestial Spirit",
-    "Draconic Spirit",
-    "Fey Spirit",
-    "Summon Fey",
-    "Fiendish Spirit",
-    "Summon Fiend",
-    "Giant Insect",
-    "Summon Aberration",
-    "Summon Beast",
-    "Summon Celestial",
-    "Summon Construct",
-    "Summon Elemental",
-    "Summon Undead"
+    "Polymorph",
+    "True Polymorph",
+    "Animal Shapes",
+    "Shapechange"
   ],
   "magicInitiateInstances": [
     {

@@ -34,7 +34,7 @@ import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
-import WildShapeBeastModal from './modals/WildShapeBeastModal.jsx'
+import PolymorphSelectionModal from './modals/PolymorphSelectionModal.jsx'
 
 function ShieldOfFaithTargetSelectionModal({ popupHtml, setPopupHtml, playerStats, campaignName }) {
     const targets = popupHtml?.creatureTargets?.map(name => ({ name, type: 'creature' })) || [];
@@ -81,6 +81,19 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         const { activateWildShape } = await import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js');
         await activateWildShape(stats.name, beast, stats, campName);
     }, []);
+
+    const handlePolymorphConfirm = React.useCallback(async (beast, popupData) => {
+        const { confirmPolymorphTransform } = await import('../../services/automation/handlers/spells/polymorphService.js');
+        await confirmPolymorphTransform({
+            targetName: popupData.targetName,
+            beast,
+            casterName: popupData.casterName,
+            spell: popupData.spell,
+            spellLevel: popupData.spellLevel,
+            playerStats,
+            campaignName: popupData.campaignName,
+        });
+    }, [playerStats]);
 
     const storedExhaustion = useRuntimeValue(playerSummary?.name, 'exhaustionLevel', campaignName);
     const exhaustionLevel = typeof storedExhaustion === 'number' ? Math.min(EXHAUSTION_LEVELS, Math.max(0, storedExhaustion)) : 0;
@@ -972,15 +985,34 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     }
                     if (popupHtml.type === 'wild_shape_select') {
                         return (
-                            <WildShapeBeastModal
+                            <PolymorphSelectionModal
                                 playerStats={popupHtml.playerStats}
                                 campaignName={popupHtml.campaignName}
+                                title="Wild Shape"
+                                icon="fa-paw"
+                                actionLabel="Wild Shape"
                                 onConfirm={(beast) => {
                                     setPopupHtml(null);
                                     handleWildShapeConfirm(popupHtml.action, beast, popupHtml.playerStats, popupHtml.campaignName);
                                 }}
                                 onCancel={() => setPopupHtml(null)}
                                 isLocalhost={isLocalhost}
+                            />
+                        );
+                    }
+                    if (popupHtml.type === 'polymorph_select') {
+                        return (
+                            <PolymorphSelectionModal
+                                maxCR={popupHtml.maxCR}
+                                campaignName={popupHtml.campaignName}
+                                title="Polymorph"
+                                icon="fa-paw"
+                                actionLabel="Transform"
+                                onConfirm={(beast) => {
+                                    setPopupHtml(null);
+                                    handlePolymorphConfirm(beast, popupHtml);
+                                }}
+                                onCancel={() => setPopupHtml(null)}
                             />
                         );
                     }
