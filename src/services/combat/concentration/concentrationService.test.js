@@ -21,6 +21,7 @@ vi.mock('../conditions/conditionSaveService.js', () => ({
 }))
 
 import { rollD20 } from '../../dice/diceRoller.js'
+import { getStore } from '../../../hooks/runtime/useRuntimeState.js'
 import { rollConcentrationSave as rollConcentrationRules, breakConcentration as breakConcentrationRules } from './concentrationRules.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
@@ -118,6 +119,53 @@ describe('rollConcentrationSave', () => {
         )
 
         expect(rollConcentrationRules).toHaveBeenCalledWith(3, 13, true, false)
+    })
+
+    it('passes dragon constellation result when buff is only in the runtime store', async () => {
+        rollConcentrationRules.mockReturnValue({ roll: 10, success: true })
+        getCreatureSaveBonus.mockResolvedValue(3)
+        computeAuraBonus.mockResolvedValue({ bonus: 0 })
+
+        const creature = { name: 'Sorcerer', type: 'player' }
+        const chars = [createCharacter('Sorcerer', { activeBuffs: [] })]
+        getStore('Sorcerer').set('activeBuffs', [{ name: 'Starry Form', constellation: 'Dragon' }])
+
+        await rollConcentrationSaveSvc(
+            creature, { spell: 'Shield', dc: 13 }, chars, [], '', null, (n) => n
+        )
+
+        expect(rollConcentrationRules).toHaveBeenCalledWith(3, 13, true, false)
+    })
+
+    it('returns starryDragonFloor and raw display rolls when Dragon is active', async () => {
+        rollConcentrationRules.mockReturnValue({ roll: 10, success: true, rawRolls: [4] })
+        getCreatureSaveBonus.mockResolvedValue(3)
+        computeAuraBonus.mockResolvedValue({ bonus: 0 })
+
+        const creature = { name: 'Sorcerer', type: 'player' }
+        const chars = [createCharacter('Sorcerer', { activeBuffs: [{ name: 'Starry Form', constellation: 'Dragon' }] })]
+
+        const result = await rollConcentrationSaveSvc(
+            creature, { spell: 'Shield', dc: 13 }, chars, [], '', null, (n) => n
+        )
+
+        expect(result.starryDragonFloor).toBe(true)
+        expect(result.displayRolls).toEqual([4])
+    })
+
+    it('falls back to the effective roll for display when not disadvantage and no raw rolls', async () => {
+        rollConcentrationRules.mockReturnValue({ roll: 10, success: true })
+        getCreatureSaveBonus.mockResolvedValue(3)
+        computeAuraBonus.mockResolvedValue({ bonus: 0 })
+
+        const creature = { name: 'Alice', type: 'player' }
+        const chars = [createCharacter('Alice')]
+
+        const result = await rollConcentrationSaveSvc(
+            creature, { spell: 'Bless', dc: 10 }, chars, [], '', null, (n) => n
+        )
+
+        expect(result.displayRolls).toEqual([10])
     })
 
     it('passes disadvantage flag to concentrationRules when attacker has concentration_breaker', async () => {
@@ -267,5 +315,18 @@ describe('buildConcentrationPopup', () => {
     it('wraps the roll value in a rolls array', () => {
         const popup = buildConcentrationPopup(7, 0, undefined, 'Haste', 10, true)
         expect(popup.rolls).toEqual([7])
+    })
+
+    it('uses raw display rolls and sets starryDragonFloor when Dragon floor applied', () => {
+        const popup = buildConcentrationPopup(10, 3, undefined, 'Bless', 13, true, true, [4])
+
+        expect(popup.rolls).toEqual([4])
+        expect(popup.starryDragonFloor).toBe(true)
+    })
+
+    it('omits starryDragonFloor when not provided', () => {
+        const popup = buildConcentrationPopup(10, 3, undefined, 'Bless', 13, true)
+
+        expect(popup.starryDragonFloor).toBeUndefined()
     })
 })

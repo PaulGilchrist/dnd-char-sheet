@@ -30,6 +30,10 @@ vi.mock('../../../services/automation/handlers/buffs/auraOfPurityHandler.js', ()
   getAuraOfPuritySaveAdvantageConditions: vi.fn(),
 }));
 
+vi.mock('../starryFormConstellation.js', () => ({
+  hasStarryDragonConstellation: vi.fn(),
+}));
+
 // ── Imports ──────────────────────────────────────────────────────
 
 import {
@@ -46,6 +50,7 @@ import { getAbilitySaveBonus } from './conditionUtils.js';
 import { computeAuraBonus } from '../auras/auraOfProtection.js';
 import { playerIsImmuneToCondition } from '../automation/automationService.js';
 import { isAuraOfPurityActive, getAuraOfPuritySaveAdvantageConditions } from '../../../services/automation/handlers/buffs/auraOfPurityHandler.js';
+import { hasStarryDragonConstellation } from '../starryFormConstellation.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -527,6 +532,116 @@ describe('getCreatureSaveBonus', () => {
         defaultGetName,
       );
       expect(rollD20).toHaveBeenCalledTimes(1);
+    });
+
+    it('floors a low CON condition save roll to 10 when Starry Form Dragon is active', async () => {
+      getAbilitySaveBonus.mockReturnValue(3);
+      computeAuraBonus.mockResolvedValue({ bonus: 0 });
+      rollD20.mockReturnValue(5);
+      isAuraOfPurityActive.mockReturnValue(false);
+      hasStarryDragonConstellation.mockReturnValue(true);
+
+      const result = await rollConditionSave(
+        { type: 'player', name: 'Hero' },
+        { ability: 'con', key: 'deafened', dc: 15 },
+        [{ name: 'Hero' }],
+        [],
+        'Campaign',
+        '',
+        defaultGetName,
+      );
+
+      expect(result.roll).toBe(10);
+      expect(result.total).toBe(13);
+      expect(result.success).toBe(false);
+      expect(result.rolls).toEqual([5]);
+      expect(result.starryDragonFloor).toBe(true);
+    });
+
+    it('does not floor when Starry Form Dragon is inactive or roll is above 9', async () => {
+      getAbilitySaveBonus.mockReturnValue(3);
+      computeAuraBonus.mockResolvedValue({ bonus: 0 });
+      isAuraOfPurityActive.mockReturnValue(false);
+      hasStarryDragonConstellation.mockReturnValue(true);
+      rollD20.mockReturnValue(12);
+
+      let result = await rollConditionSave(
+        { type: 'player', name: 'Hero' },
+        { ability: 'con', key: 'deafened', dc: 15 },
+        [{ name: 'Hero' }],
+        [],
+        'Campaign',
+        '',
+        defaultGetName,
+      );
+
+      expect(result.roll).toBe(12);
+      expect(result.total).toBe(15);
+      expect(result.starryDragonFloor).toBe(true);
+
+      hasStarryDragonConstellation.mockReturnValue(false);
+      rollD20.mockReturnValue(5);
+
+      result = await rollConditionSave(
+        { type: 'player', name: 'Hero' },
+        { ability: 'con', key: 'deafened', dc: 10 },
+        [{ name: 'Hero' }],
+        [],
+        'Campaign',
+        '',
+        defaultGetName,
+      );
+
+      expect(result.roll).toBe(5);
+      expect(result.total).toBe(8);
+      expect(result.starryDragonFloor).toBe(false);
+    });
+
+    it('only applies the Starry Form Dragon floor to Constitution saves', async () => {
+      getAbilitySaveBonus.mockReturnValue(3);
+      computeAuraBonus.mockResolvedValue({ bonus: 0 });
+      isAuraOfPurityActive.mockReturnValue(false);
+      hasStarryDragonConstellation.mockReturnValue(true);
+      rollD20.mockReturnValue(5);
+
+      const result = await rollConditionSave(
+        { type: 'player', name: 'Hero' },
+        { ability: 'wis', key: 'charmed', dc: 10 },
+        [{ name: 'Hero' }],
+        [],
+        'Campaign',
+        '',
+        defaultGetName,
+      );
+
+      expect(result.roll).toBe(5);
+      expect(result.total).toBe(8);
+      expect(result.starryDragonFloor).toBe(false);
+    });
+
+    it('floors the effective roll on an advantage CON save when Starry Form Dragon is active', async () => {
+      getAbilitySaveBonus.mockReturnValue(3);
+      computeAuraBonus.mockResolvedValue({ bonus: 0 });
+      isAuraOfPurityActive.mockReturnValue(true);
+      getAuraOfPuritySaveAdvantageConditions.mockReturnValue(['deafened']);
+      hasStarryDragonConstellation.mockReturnValue(true);
+      rollD20.mockReturnValueOnce(8).mockReturnValueOnce(2);
+
+      const result = await rollConditionSave(
+        { type: 'player', name: 'Hero' },
+        { ability: 'con', key: 'deafened', dc: 15 },
+        [{ name: 'Hero' }],
+        [],
+        'Campaign',
+        '',
+        defaultGetName,
+      );
+
+      expect(result.roll).toBe(10);
+      expect(result.total).toBe(13);
+      expect(result.success).toBe(false);
+      expect(result.advantage).toBe(true);
+      expect(result.starryDragonFloor).toBe(true);
     });
   });
 

@@ -59,6 +59,28 @@ function getSuperiorityDice(characterName, campaignName) {
     return Number(getRuntimeValue(characterName, usesKey, campaignName) ?? defaultMax);
 }
 
+const STAR_DRAGON_INT_SKILLS = ['Arcana', 'History', 'Investigation', 'Nature', 'Religion'];
+const STAR_DRAGON_WIS_SKILLS = ['Animal Handling', 'Insight', 'Medicine', 'Perception', 'Survival'];
+
+export function hasStarryDragonActive(characterName, campaignName) {
+    const buffs = getRuntimeValue(characterName, 'activeBuffs', campaignName);
+    return Array.isArray(buffs) && buffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
+}
+
+export function starryDragonAppliesToRoll(name, rollType) {
+    const normalized = (name || '').trim();
+    if (rollType === 'save') {
+        return normalized === 'Constitution' || normalized === 'CONSTITUTION' || normalized === 'CON';
+    }
+    if (rollType === 'check' || rollType === 'skill') {
+        return normalized === 'Intelligence' || normalized === 'Intellect' || normalized === 'INT'
+            || normalized === 'Wisdom' || normalized === 'WIS'
+            || STAR_DRAGON_INT_SKILLS.includes(normalized)
+            || STAR_DRAGON_WIS_SKILLS.includes(normalized);
+    }
+    return false;
+}
+
 export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
 
@@ -213,7 +235,11 @@ export function createLogAndShow(deps) {
         const r1 = rollD20();
         const r2 = rollD20();
 
-        const effectiveD20 = (context?.d20Floor10 && r1 <= 9) ? 10 : r1;
+        const starryDragonFloor = (rollType === 'save' || rollType === 'check' || rollType === 'skill')
+            && hasStarryDragonActive(characterName, campaignName)
+            && starryDragonAppliesToRoll(name, rollType);
+
+        const effectiveD20 = ((context?.d20Floor10 || starryDragonFloor) && r1 <= 9) ? 10 : r1;
 
         let effectiveD20Roll;
         let forcedMode = context?.forcedMode || 'normal';
@@ -834,6 +860,7 @@ export function createLogAndShow(deps) {
                 defensiveDuelistBonus: context?.defensiveDuelistBonus || 0,
                 baitAndSwitchBonus: context?.baitAndSwitchBonus || 0,
                 d20Floor10: context?.d20Floor10,
+                starryDragonFloor,
                  tacticalMind: context?.tacticalMind,
                  tacticalMindBonus: context?.tacticalMindBonus,
                  darkOnesLuck: context?.darkOnesLuck,

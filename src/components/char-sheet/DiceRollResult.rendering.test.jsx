@@ -127,4 +127,29 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText('Critical Miss!')).not.toBeInTheDocument();
         });
     });
+
+    describe('Starry Form (Dragon) floor', () => {
+        it('floors the total to 10 + bonus when starryDragonFloor and roll <= 9', () => {
+            render(
+                <DiceRollResult name="Constitution" type="d20" rolls={[8]} bonus={3} rollType="save" starryDragonFloor />
+            );
+            expect(screen.getByText('13')).toBeInTheDocument();
+            expect(screen.getByText(/Starry Form \(Dragon\): d20 8 → 10/)).toBeInTheDocument();
+        });
+
+        it('keeps the normal total when the roll is above 9', () => {
+            render(
+                <DiceRollResult name="Constitution" type="d20" rolls={[11]} bonus={3} rollType="save" starryDragonFloor />
+            );
+            expect(screen.getByText('14')).toBeInTheDocument();
+            expect(screen.queryByText(/Starry Form \(Dragon\)/)).not.toBeInTheDocument();
+        });
+
+        it('does not floor when starryDragonFloor is false', () => {
+            render(
+                <DiceRollResult name="Constitution" type="d20" rolls={[8]} bonus={3} rollType="save" starryDragonFloor={false} />
+            );
+            expect(screen.getByText('11')).toBeInTheDocument();
+        });
+    });
 });

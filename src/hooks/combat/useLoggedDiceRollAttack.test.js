@@ -199,6 +199,85 @@ describe('createLogAndShow (useLoggedDiceRollAttack)', () => {
         });
     });
 
+    describe('Starry Form (Dragon) floor', () => {
+        it('floors a Constitution save to 10 when the Starry Form Dragon buff is active', async () => {
+            rollD20.mockReturnValueOnce(8);
+            getRuntimeValue.mockImplementation((key, field) => {
+                if (key === 'TestFighter' && field === 'activeBuffs') {
+                    return [{ name: 'Starry Form', constellation: 'Dragon' }];
+                }
+                return null;
+            });
+            const fn = createFn();
+            await fn('Constitution', 3, 'save', {});
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                starryDragonFloor: true,
+            }));
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                rollType: 'save',
+                total: 13,
+            }));
+        });
+
+        it('does not floor when the buff is inactive', async () => {
+            rollD20.mockReturnValueOnce(8);
+            const fn = createFn();
+            await fn('Constitution', 3, 'save', {});
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                starryDragonFloor: false,
+            }));
+            expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+                rollType: 'save',
+                total: 11,
+            }));
+        });
+
+        it('does not floor an attack roll even with the buff active', async () => {
+            rollD20.mockReturnValueOnce(8);
+            getRuntimeValue.mockImplementation((key, field) => {
+                if (key === 'TestFighter' && field === 'activeBuffs') {
+                    return [{ name: 'Starry Form', constellation: 'Dragon' }];
+                }
+                return null;
+            });
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                starryDragonFloor: false,
+            }));
+        });
+
+        it('applies to a Wisdom skill check when the buff is active', async () => {
+            rollD20.mockReturnValueOnce(6);
+            getRuntimeValue.mockImplementation((key, field) => {
+                if (key === 'TestFighter' && field === 'activeBuffs') {
+                    return [{ name: 'Starry Form', constellation: 'Dragon' }];
+                }
+                return null;
+            });
+            const fn = createFn();
+            await fn('Perception', 2, 'skill', {});
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                starryDragonFloor: true,
+            }));
+        });
+
+        it('does not floor an unrelated save type', async () => {
+            rollD20.mockReturnValueOnce(8);
+            getRuntimeValue.mockImplementation((key, field) => {
+                if (key === 'TestFighter' && field === 'activeBuffs') {
+                    return [{ name: 'Starry Form', constellation: 'Dragon' }];
+                }
+                return null;
+            });
+            const fn = createFn();
+            await fn('Dexterity', 3, 'save', {});
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                starryDragonFloor: false,
+            }));
+        });
+    });
+
     describe('cover and defensive bonuses', () => {
         it('adds coverAcBonus to effectiveAc', async () => {
             getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 15 });

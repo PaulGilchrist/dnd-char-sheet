@@ -7,6 +7,7 @@ import { getAuraOfPuritySaveAdvantageConditions, isAuraOfPurityActive } from '..
 import { isCircleOfPowerActive } from '../../automation/handlers/buffs/circleOfPowerHandler.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { hasStarryDragonConstellation } from '../starryFormConstellation.js'
 
 async function getCreatureSaveBonus(creature, abilityAbbr, characters, campaignNpcs, getName) {
     if (creature.type === 'player') {
@@ -71,20 +72,28 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
     }
 
     const hasAdvantage = hasAuraOfPurityAdvantage || hasPassiveImmunityAdvantage || isCircleOfPowerActive(creature.name, campaignName) || hasProtectionFromPoisonAdvantage
+    const dragonConstellationActive = String(condition.ability || '').toLowerCase() === 'con' && hasStarryDragonConstellation(creature, characters)
     if (hasAdvantage) {
         const a = rollD20()
         const b = rollD20()
-        const roll = Math.max(a, b)
+        let roll = Math.max(a, b)
+        if (dragonConstellationActive && roll <= 9) {
+            roll = 10
+        }
         const total = roll + saveBonus + auraBonus
         const success = total >= condition.dc
         const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined
-        return { roll, total, success, bonus: saveBonus + auraBonus, bonusDetail, advantage: true, rolls: [a, b] }
+        return { roll, total, success, bonus: saveBonus + auraBonus, bonusDetail, advantage: true, rolls: [a, b], starryDragonFloor: dragonConstellationActive }
     }
-    const r1 = rollD20()
+    let r1 = rollD20()
+    const rawRoll = r1
+    if (dragonConstellationActive && r1 <= 9) {
+        r1 = 10
+    }
     const total = r1 + saveBonus + auraBonus
     const success = total >= condition.dc
     const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined
-    return { roll: r1, total, success, bonus: saveBonus + auraBonus, bonusDetail, rolls: [r1] }
+    return { roll: r1, total, success, bonus: saveBonus + auraBonus, bonusDetail, rolls: [rawRoll], starryDragonFloor: dragonConstellationActive }
 }
 
 function removeCondition(combatSummary, creatureName, condition, getRuntimeValue, setRuntimeValue, campaignName) {
@@ -141,7 +150,7 @@ function addCondition(combatSummary, creatureName, conditionDef, dc, ability, ge
     }
 }
 
-function buildConditionPopup(roll, bonus, bonusDetail, abilityLabel, conditionLabel, dc, success, rolls, advantage) {
+function buildConditionPopup(roll, bonus, bonusDetail, abilityLabel, conditionLabel, dc, success, rolls, advantage, starryDragonFloor) {
     return {
         type: 'd20',
         rollType: 'condition-save',
@@ -156,6 +165,7 @@ function buildConditionPopup(roll, bonus, bonusDetail, abilityLabel, conditionLa
         dc,
         success,
         forcedMode: advantage ? 'advantage' : undefined,
+        ...(starryDragonFloor ? { starryDragonFloor } : {}),
     }
 }
 

@@ -2,6 +2,7 @@ import * as concentrationRules from './concentrationRules.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
 import { getRuntimeValue, setRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js'
+import { hasStarryDragonConstellation } from '../starryFormConstellation.js'
 import storage from '../../../services/ui/storage.js'
 import { getCombatSummary } from '../../encounters/combatData.js'
 import { clearExpirationEffects } from '../../rules/effects/expirations.js'
@@ -12,26 +13,16 @@ import { clearFleshToStonePrompt } from '../conditions/savePromptService.js'
 import { removeHeroismBuff } from '../../rules/features/heroismService.js'
 import { removeSummonedCreatures } from '../summons/summonedCreatureService.js'
 
-function hasDragonConstellation(creature, characters) {
-    if (!creature || !creature.name) return false;
-    const target = characters?.find(c => {
-        const name = typeof c === 'string' ? c : c.name;
-        return name === creature.name;
-    });
-    if (!target || typeof target === 'string') return false;
-    const activeBuffs = target.activeBuffs || target.computedStats?.activeBuffs || [];
-    return activeBuffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
-}
-
 async function rollConcentrationSave(creature, concentration, characters, campaignNpcs, campaignName, mapName, getName, disadvantage = false) {
     const saveBonus = await getCreatureSaveBonus(creature, 'con', characters, campaignNpcs, getName)
     const aura = await computeAuraBonus({ targetName: creature.name, characters, campaignName, activeMapName: mapName, allCreatures: getCombatSummary(campaignName)?.creatures })
     const auraBonus = aura.bonus
     const effectiveSaveBonus = saveBonus + auraBonus
-    const dragonConstellationActive = hasDragonConstellation(creature, characters)
-    const { roll: r1, success } = concentrationRules.rollConcentrationSave(effectiveSaveBonus, concentration.dc, dragonConstellationActive, disadvantage)
+    const dragonConstellationActive = hasStarryDragonConstellation(creature, characters)
+    const { roll: r1, success, rawRolls } = concentrationRules.rollConcentrationSave(effectiveSaveBonus, concentration.dc, dragonConstellationActive, disadvantage)
     const bonusDetail = auraBonus > 0 ? `(+${auraBonus} aura${aura.sourceName ? ' from ' + aura.sourceName : ''})` : undefined
-    return { roll: r1, success, bonus: effectiveSaveBonus, bonusDetail }
+    const displayRolls = !disadvantage && Array.isArray(rawRolls) && rawRolls.length > 0 ? rawRolls : [r1]
+    return { roll: r1, success, bonus: effectiveSaveBonus, bonusDetail, starryDragonFloor: dragonConstellationActive, displayRolls }
 }
 
 function breakConcentration(combatSummary, creatureName) {
@@ -108,12 +99,12 @@ function addConcentration(combatSummary, creatureName, spellName, dc, target = n
     }
 }
 
-function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, success) {
+function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, success, starryDragonFloor, displayRolls) {
     return {
         type: 'd20',
         rollType: 'condition-save',
         name: 'Concentration',
-        rolls: [roll],
+        rolls: displayRolls || [roll],
         bonus,
         bonusDetail,
         targetName: null,
@@ -122,6 +113,7 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
         condition: spellName,
         dc,
         success,
+        ...(starryDragonFloor ? { starryDragonFloor } : {}),
     }
 }
 

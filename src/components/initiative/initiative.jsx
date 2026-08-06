@@ -1202,7 +1202,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         const creature = combatSummary.creatures.find(c => c.name === creatureName)
         if (!creature) return
 
-        const { roll: r1, success, bonus, bonusDetail, rolls } = await rollConditionSave(
+        const { roll: r1, success, bonus, bonusDetail, rolls, starryDragonFloor } = await rollConditionSave(
             creature, condition, characters, campaignNpcs, campaignName, mapName, utils.getName
         )
 
@@ -1384,7 +1384,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         storage.set('combatSummary', combatSummary, campaignName)
         setCombatSummary(cloneDeep(combatSummary))
 
-        setConditionPopup(buildConditionPopup(r1, bonus, bonusDetail, getAbilityLabel(condition.ability), condition.label, condition.dc, success, rolls, rolls && rolls.length > 1))
+        setConditionPopup(buildConditionPopup(r1, bonus, bonusDetail, getAbilityLabel(condition.ability), condition.label, condition.dc, success, rolls, rolls && rolls.length > 1, starryDragonFloor))
 
         logConditionSave(campaignName, creatureName, r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
     }
@@ -1417,7 +1417,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
           })
         }
 
-        const { roll: r1, success, bonus, bonusDetail } = await rollConcentrationSave(
+        const { roll: r1, success, bonus, bonusDetail, starryDragonFloor, displayRolls } = await rollConcentrationSave(
             creature, concentration, characters, campaignNpcs, campaignName, mapName, utils.getName, hasConcentrationBreaker
         )
 
@@ -1428,7 +1428,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         storage.set('combatSummary', combatSummary, campaignName)
         setCombatSummary(cloneDeep(combatSummary))
 
-        setConditionPopup(buildConcentrationPopup(r1, bonus, bonusDetail, concentration.spell, concentration.dc, success))
+        setConditionPopup(buildConcentrationPopup(r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, starryDragonFloor, displayRolls))
 
         const mode = hasConcentrationBreaker ? 'disadvantage' : (advantageSources.length > 0 ? 'advantage' : 'normal')
         logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, mode, advantageSources.length > 0 ? advantageSources : undefined)
@@ -1711,6 +1711,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                         targetAc={conditionPopup.targetAc}
                         hit={conditionPopup.hit}
                         forcedMode={conditionPopup.forcedMode}
+                        starryDragonFloor={conditionPopup.starryDragonFloor}
                     >
                     </DiceRollResult>
                     <div className={`condition-save-result ${conditionPopup.success ? 'condition-save-success' : 'condition-save-failure'}`}>
