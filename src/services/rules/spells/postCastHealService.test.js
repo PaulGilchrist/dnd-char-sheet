@@ -24,10 +24,15 @@ vi.mock('../../encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(),
 }))
 
+vi.mock('../combat/applyHealing.js', () => ({
+  applyHealingToTarget: vi.fn(),
+}))
+
 const { evaluateAutoExpression } = await import('../../combat/automation/automationService.js')
 const { applyHealingDirectly, logHealingToSSE } = await import('../../automation/common/healingRoll.js')
 const { getRuntimeValue, setRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js')
 const { getCombatSummary } = await import('../../encounters/combatData.js')
+const { applyHealingToTarget } = await import('../combat/applyHealing.js')
 
 describe('postCastHealService', () => {
   beforeEach(() => {
@@ -37,6 +42,7 @@ describe('postCastHealService', () => {
     getRuntimeValue.mockReturnValue(null)
     setRuntimeValue.mockReturnValue(undefined)
     getCombatSummary.mockReturnValue({ creatures: [] })
+    applyHealingToTarget.mockReturnValue(null)
   })
 
   describe('triggerPostCastSelfHeals', () => {
@@ -210,16 +216,21 @@ describe('postCastHealService', () => {
   })
 
   describe('applyStarryChaliceHeal', () => {
-    it('applies healing to the selected target', async () => {
+    it('heals a player target through applyHealingToTarget using runtime HP', async () => {
       getRuntimeValue.mockImplementation((caster, key, _camp) => {
         if (key === 'pendingStarryChaliceHeal') {
           return { amount: 15, casterName: 'Cleric1', campaignName: 'camp', targetNames: ['Cleric1', 'Ally1'], sourceName: 'Ally Heal' }
         }
+        if (key === 'hitPoints') return 20
         return null
       })
+      getCombatSummary.mockReturnValue({ creatures: [{ name: 'Ally1', type: 'player', currentHp: 10, maxHp: 20 }] })
+      applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 10, newHp: 20 })
 
       const result = await applyStarryChaliceHeal('Ally1', 'camp')
 
+      expect(applyHealingToTarget).toHaveBeenCalledWith(expect.any(Object), 'Ally1', 15, 'camp')
+      expect(applyHealingDirectly).not.toHaveBeenCalled()
       expect(result).toEqual({
         targetName: 'Ally1',
         actualHeal: 10,
@@ -240,6 +251,51 @@ describe('postCastHealService', () => {
         'camp',
         true,
       )
+    })
+
+    it('heals an NPC target through applyHealingToTarget with maxHp from combat summary', async () => {
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
+        if (key === 'pendingStarryChaliceHeal') {
+          return { amount: 15, casterName: 'Cleric1', campaignName: 'camp', targetNames: ['Cleric1', 'Orc1'], sourceName: 'Ally Heal' }
+        }
+        return null
+      })
+      getCombatSummary.mockReturnValue({ creatures: [{ name: 'Orc1', type: 'npc', currentHp: 5, maxHp: 30 }] })
+      applyHealingToTarget.mockReturnValue({ actualHeal: 10, oldHp: 5, newHp: 15 })
+
+      const result = await applyStarryChaliceHeal('Orc1', 'camp')
+
+      expect(applyHealingToTarget).toHaveBeenCalledWith(expect.any(Object), 'Orc1', 15, 'camp')
+      expect(applyHealingDirectly).not.toHaveBeenCalled()
+      expect(result).toEqual({
+        targetName: 'Orc1',
+        actualHeal: 10,
+        newHp: 15,
+        maxHp: 30,
+      })
+    })
+
+    it('falls back to applyHealingDirectly when target is not in combat summary', async () => {
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
+        if (key === 'pendingStarryChaliceHeal') {
+          return { amount: 15, casterName: 'Cleric1', campaignName: 'camp', targetNames: ['Cleric1'], sourceName: 'Ally Heal' }
+        }
+        if (key === 'currentHitPoints') return 10
+        return null
+      })
+      getCombatSummary.mockReturnValue({ creatures: [] })
+      applyHealingToTarget.mockReturnValue(null)
+
+      const result = await applyStarryChaliceHeal('Cleric1', 'camp')
+
+      expect(applyHealingToTarget).toHaveBeenCalledWith(expect.any(Object), 'Cleric1', 15, 'camp')
+      expect(applyHealingDirectly).toHaveBeenCalledWith({}, 'Cleric1', 15, 'camp', null)
+      expect(result).toEqual({
+        targetName: 'Cleric1',
+        actualHeal: 10,
+        newHp: 20,
+        maxHp: 20,
+      })
     })
 
     it('returns null when no pending heal', async () => {

@@ -712,8 +712,8 @@ describe('attackCalc2024', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Starry Form: Luminous Arrow');
       expect(result[0].attackType).toBe('spell');
-      expect(result[0].damage.damage_dice).toBe('1d8');
-      expect(result[0].damage.damage_type).toBe('Radiant');
+      expect(result[0].damage).toBe('1d8+3');
+      expect(result[0].damageType).toBe('Radiant');
       expect(result[0].actionType).toBe('Bonus Action');
     });
 
@@ -731,7 +731,7 @@ describe('attackCalc2024', () => {
 
       const result = getAttacks([], [], playerStats);
 
-      expect(result[0].damage.damage_dice).toBe('2d8');
+      expect(result[0].damage).toBe('2d8+3');
     });
 
     it('does not add Starry Form attack when the buff is not active', () => {

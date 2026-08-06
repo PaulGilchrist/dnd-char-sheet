@@ -1,6 +1,5 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getCombatSummary } from '../../../encounters/combatData.js';
 
 const CONSTELLATION_OPTIONS = ['Archer', 'Chalice', 'Dragon'];
 
@@ -8,56 +7,10 @@ export async function handle(action, playerStats, campaignName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    const stored = getRuntimeValue(playerName, 'activeBuffs', campaignName);
-    const activeBuffs = Array.isArray(stored) ? stored : [];
-    const wasActive = activeBuffs.some(b => b.name === action.name);
-
-    if (wasActive) {
-        const newBuffs = activeBuffs.filter(b => b.name !== action.name);
-        setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
-
-        const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-        const filteredEffects = allTargetEffects.filter(te => !(te.effect === 'starry_form' && te.source === playerName));
-        if (filteredEffects.length !== allTargetEffects.length) {
-            setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName, true);
-        }
-
-        const cs = getCombatSummary(campaignName);
-        if (cs) {
-            const starryEffects = allTargetEffects.filter(te => te.effect === 'starry_form' && te.source === playerName);
-            for (const te of starryEffects) {
-                if (te.target) {
-                    const targetBuffs = getRuntimeValue(te.target, 'activeBuffs', campaignName) || [];
-                    const filteredBuffs = targetBuffs.filter(b => !(b.name === action.name && b.effect === 'starry_form'));
-                    if (filteredBuffs.length !== targetBuffs.length) {
-                        setRuntimeValue(te.target, 'activeBuffs', filteredBuffs, campaignName);
-                    }
-                }
-            }
-        }
-
-        addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: action.name,
-            description: `${playerName} ended Starry Form.`,
-            timestamp: Date.now(),
-        }).catch(() => {});
-
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                automationType: auto.type,
-                description: `${action.name} ended`,
-                automation: auto,
-            },
-        };
-    }
-
-    const usesKey = auto.resourceKey || 'starryFormUses';
+    const usesKey = 'wildShapeUses';
     const usesMax = auto.uses || 0;
+    const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
+    const maxWildShapeUses = classLevel?.wild_shape || 0;
 
     if (usesMax > 0) {
         const currentUses = Number(getRuntimeValue(playerName, usesKey, campaignName) ?? usesMax);
@@ -75,9 +28,9 @@ export async function handle(action, playerStats, campaignName) {
         }
         await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
     } else {
-        const resourceKey = auto.resourceKey || 'starryFormUses';
+        const resourceKey = 'wildShapeUses';
         const storedResource = getRuntimeValue(playerName, resourceKey, campaignName);
-        const currentResource = storedResource != null ? Number(storedResource) : 0;
+        const currentResource = storedResource != null ? Number(storedResource) : maxWildShapeUses;
         if (currentResource <= 0) {
             return {
                 type: 'popup',
@@ -122,6 +75,10 @@ export async function applyConstellationOption(action, playerStats, campaignName
 
     const stored = getRuntimeValue(playerName, 'activeBuffs', campaignName);
     const activeBuffs = Array.isArray(stored) ? stored : [];
+    const existingStarryFormIndex = activeBuffs.findIndex(b => b.name === 'Starry Form');
+    if (existingStarryFormIndex !== -1) {
+        activeBuffs.splice(existingStarryFormIndex, 1);
+    }
     const buffEntry = {
         name: action.name,
         effect: 'starry_form',
@@ -136,7 +93,6 @@ export async function applyConstellationOption(action, playerStats, campaignName
     }
     const newBuffs = [...activeBuffs, buffEntry];
     setRuntimeValue(playerName, 'activeBuffs', newBuffs, campaignName);
-
     const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     const starryTargetEffect = {
         effect: 'starry_form',

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { applyConstellationOption } from '../../../services/automation/handlers/class-sorcerer/starryFormHandler.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import '../CharSheet.css';
 
 function ConstellationSelectionModal({ action, playerStats, campaignName, isTwinkled, onConfirm, onClose }) {
@@ -7,6 +8,15 @@ function ConstellationSelectionModal({ action, playerStats, campaignName, isTwin
     const [result, setResult] = useState(null);
 
     const options = ['Archer', 'Chalice', 'Dragon'];
+
+    useEffect(() => {
+        const stored = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
+        const activeBuffs = Array.isArray(stored) ? stored : [];
+        const starryBuff = activeBuffs.find(b => b.name === action.name && b.constellation);
+        if (starryBuff) {
+            setSelected(starryBuff.constellation);
+        }
+    }, [playerStats.name, campaignName, action.name]);
 
     const handleApply = async () => {
         if (!selected) return;
@@ -55,11 +65,20 @@ function ConstellationSelectionModal({ action, playerStats, campaignName, isTwin
                                     effects.push('Fly Speed 20 feet (hover)');
                                 }
                             }
+                            const isSelected = selected === opt;
                             return (
                                 <button
                                     key={opt}
                                     className="sp-roll-btn"
-                                    style={{ margin: '0 6px 8px 6px', display: 'block', width: '100%', textAlign: 'left' }}
+                                    style={{
+                                        margin: '0 6px 8px 6px',
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        background: isSelected ? 'rgba(255,255,255,0.15)' : 'transparent',
+                                        border: isSelected ? '1px solid var(--color-link)' : '1px solid transparent',
+                                        borderRadius: '6px',
+                                    }}
                                     onClick={() => setSelected(opt)}
                                 >
                                     <b>{opt}</b><br/>

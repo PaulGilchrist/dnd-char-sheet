@@ -86,7 +86,6 @@ export function computeShortRestHpNewCurrent(currentHp, maxHp, recoveredAmount) 
 export const SHORT_REST_RESOURCES = [
   'channelDivinityCharges',
   'wildShapeUses',
-  'starryFormUses',
   'psionicEnergy',
   'focusPoints',
   'superiorityDice',
@@ -119,7 +118,6 @@ export const LONG_REST_RESOURCES = [
   'bardicInspirationUses',
   'channelDivinityCharges',
   'wildShapeUses',
-  'starryFormUses',
   'secondWindUses',
   'psionicEnergy',
   'focusPoints',

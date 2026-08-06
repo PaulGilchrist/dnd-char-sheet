@@ -1,5 +1,8 @@
 import { evaluateAutoExpression } from '../../combat/automation/automationService.js';
+import { resolveDiceExpression } from '../../combat/automation/automationExpressions.js';
+import { rollExpression } from '../../dice/diceRoller.js';
 import { applyHealingDirectly, logHealingToSSE } from '../../automation/common/healingRoll.js';
+import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../encounters/combatData.js';
 
@@ -30,14 +33,19 @@ function getPostCastSelfHeals(playerStats) {
     return passives.filter(p => p.type === 'post_cast_self_heal');
 }
 
-function getPostCastAllyHeals(playerStats) {
+function getPostCastAllyHeals(playerStats, campaignName) {
     const passives = playerStats.automation?.passives ?? [];
-    const activeBuffs = playerStats.activeBuffs ?? [];
-    const starryFormActive = activeBuffs.some(b => b.name === 'Starry Form' && b.constellation === 'Chalice');
+    const storedBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
+    const activeBuffs = Array.isArray(storedBuffs) ? storedBuffs : (playerStats.activeBuffs ?? []);
+    const allyHealPassives = passives.filter(p => p.type === 'post_cast_ally_heal');
+    const starryBuffs = activeBuffs.filter(b => b.name === 'Starry Form');
+    const starryFormActive = starryBuffs.some(b => b.constellation === 'Chalice');
+    console.log(`[postCastHealService] getPostCastAllyHeals for ${playerStats.name} (campaign=${campaignName}): totalPassives=${passives.length}, allyHealPassives=${allyHealPassives.length}`, allyHealPassives.map(p => ({ type: p.type, name: p.name, healExpression: p.healExpression })));
+    console.log(`[postCastHealService] getPostCastAllyHeals buffs for ${playerStats.name}: storedBuffs=${Array.isArray(storedBuffs) ? storedBuffs.length : 'N/A'} (used ${Array.isArray(storedBuffs) ? 'runtime' : 'playerStats.activeBuffs'}), starryBuffs=${JSON.stringify(starryBuffs.map(b => ({ name: b.name, constellation: b.constellation })))}, starryFormActive=${starryFormActive}`);
     if (!starryFormActive) {
         return [];
     }
-    return passives.filter(p => p.type === 'post_cast_ally_heal');
+    return allyHealPassives;
 }
 
  export async function triggerPostCastSelfHeals(spell, metaCtx, playerStats, campaignName, _mapName) {
@@ -77,7 +85,12 @@ function getPostCastAllyHeals(playerStats) {
         if (isTwinkled) {
             expression = expression.replace(/1d8/g, '2d8');
         }
-        const amount = evaluateAutoExpression(expression, playerStats, prof, level, slotLevel);
+        const resolvedExpression = resolveDiceExpression(expression, playerStats, slotLevel);
+        const evaluated = evaluateAutoExpression(resolvedExpression, playerStats, prof, level, slotLevel);
+        const rollResult = typeof evaluated === 'number'
+            ? { total: evaluated, rolls: [evaluated], formula: resolvedExpression }
+            : rollExpression(resolvedExpression);
+        const amount = rollResult?.total ?? 0;
         if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
             continue;
         }
@@ -99,6 +112,7 @@ function getPostCastAllyHeals(playerStats) {
 }
 
 export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, campaignName, _mapName) {
+    console.log(`[postCastHealService] triggerPostCastAllyHeals entry: spell=${spell.name}, level=${spell.level}, isHealingSpell=${isHealingSpell(spell)}, caster=${playerStats.name}, campaign=${campaignName}`);
     if (!isHealingSpell(spell)) {
         return null;
     }
@@ -107,7 +121,8 @@ export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, camp
         return null;
     }
 
-    const allyHeals = getPostCastAllyHeals(playerStats);
+    const allyHeals = getPostCastAllyHeals(playerStats, campaignName);
+    console.log(`[postCastHealService] triggerPostCastAllyHeals allyHeals.length=${allyHeals.length}`);
     if (allyHeals.length === 0) {
         return null;
     }
@@ -134,7 +149,12 @@ export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, camp
         if (isTwinkled) {
             expression = expression.replace(/1d8/g, '2d8');
         }
-        const amount = evaluateAutoExpression(expression, playerStats, prof, level, slotLevel);
+        const resolvedExpression = resolveDiceExpression(expression, playerStats, slotLevel);
+        const evaluated = evaluateAutoExpression(resolvedExpression, playerStats, prof, level, slotLevel);
+        const rollResult = typeof evaluated === 'number'
+            ? { total: evaluated, rolls: [evaluated], formula: resolvedExpression }
+            : rollExpression(resolvedExpression);
+        const amount = rollResult?.total ?? 0;
         if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
             continue;
         }
@@ -162,10 +182,23 @@ export async function applyStarryChaliceHeal(targetName, campaignName) {
     if (!pending) return null;
 
     const { amount, sourceName } = pending;
-    const targetMaxHp = 999;
-    const { newHp, maxHp, actualHeal } = applyHealingDirectly(
-        { hitPoints: targetMaxHp }, targetName, amount, campaignName, targetMaxHp
-    );
+    const cs = getCombatSummary(campaignName);
+    const result = applyHealingToTarget(cs, targetName, amount, campaignName);
+
+    let newHp, maxHp, actualHeal;
+    if (result) {
+        newHp = result.newHp;
+        actualHeal = result.actualHeal;
+        const creature = cs?.creatures?.find(c => c.name === targetName);
+        maxHp = creature?.type === 'player'
+            ? (getRuntimeValue(targetName, 'hitPoints', campaignName) ?? creature?.maxHp)
+            : (creature?.maxHp ?? getRuntimeValue(targetName, 'hitPoints', campaignName) ?? newHp);
+    } else {
+        const fallback = applyHealingDirectly({}, targetName, amount, campaignName, null);
+        newHp = fallback.newHp;
+        maxHp = fallback.maxHp;
+        actualHeal = fallback.actualHeal;
+    }
 
     logHealingToSSE(campaignName, {
         targetName,

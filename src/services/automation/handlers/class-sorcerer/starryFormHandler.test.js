@@ -33,8 +33,8 @@ describe('starryFormHandler', () => {
     vi.clearAllMocks();
   });
 
-  describe('handle - buff toggle', () => {
-    it('should end starry form when already active and clear the buff', async () => {
+  describe('handle - always shows modal', () => {
+    it('should open constellation modal even when starry form is already active', async () => {
       const existingBuffs = [{ name: 'Starry Form', effect: 'starry_form' }];
       getRuntimeValue.mockImplementation((caster, key, _camp) => {
         if (key === 'activeBuffs') return existingBuffs;
@@ -44,18 +44,17 @@ describe('starryFormHandler', () => {
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toBe('Starry Form ended');
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('starryFormConstellation');
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'TestSorcerer',
-        'activeBuffs',
-        [],
+        'wildShapeUses',
+        1,
         campaignName,
       );
     });
 
-    it('should preserve other buffs when ending starry form', async () => {
+    it('should open constellation modal with other buffs present', async () => {
       const existingBuffs = [
         { name: 'Starry Form', effect: 'starry_form' },
         { name: 'Mage Armor', effect: 'mage_armor' },
@@ -68,13 +67,8 @@ describe('starryFormHandler', () => {
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 
-      expect(result.type).toBe('popup');
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'TestSorcerer',
-        'activeBuffs',
-        [{ name: 'Mage Armor', effect: 'mage_armor' }],
-        campaignName,
-      );
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('starryFormConstellation');
     });
 
     it('should open constellation modal when starry form is not active', async () => {
@@ -96,7 +90,7 @@ describe('starryFormHandler', () => {
     it('should return no uses remaining when usesMax > 0 and current uses is zero', async () => {
       getRuntimeValue.mockImplementation((caster, key) => {
         if (key === 'activeBuffs') return [];
-        if (key === 'starryFormUses') return 0;
+        if (key === 'wildShapeUses') return 0;
         return null;
       });
 
@@ -107,15 +101,15 @@ describe('starryFormHandler', () => {
       expect(setRuntimeValue).not.toHaveBeenCalled();
     });
 
-    it('should return no uses remaining when custom resource key is zero', async () => {
+    it('should return no uses remaining when wildShapeUses is zero regardless of resourceKey', async () => {
       getRuntimeValue.mockImplementation((caster, key) => {
         if (key === 'activeBuffs') return [];
-        if (key === 'customResource') return 0;
+        if (key === 'wildShapeUses') return 0;
         return null;
       });
 
       const result = await handle(
-        makeAction({ resourceKey: 'customResource', uses: 5 }),
+        makeAction({ resourceKey: 'starryFormUses', uses: 5 }),
         makePlayerStats(),
         campaignName,
       );
@@ -130,7 +124,7 @@ describe('starryFormHandler', () => {
     it('should decrement starryFormUses when available', async () => {
       getRuntimeValue.mockImplementation((caster, key) => {
         if (key === 'activeBuffs') return [];
-        if (key === 'starryFormUses') return 2;
+        if (key === 'wildShapeUses') return 2;
         return null;
       });
 
@@ -139,21 +133,21 @@ describe('starryFormHandler', () => {
       expect(result.type).toBe('modal');
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'TestSorcerer',
-        'starryFormUses',
+        'wildShapeUses',
         1,
         campaignName,
       );
     });
 
-    it('should decrement custom resource when available', async () => {
+    it('should always use wildShapeUses even when a custom resourceKey is present', async () => {
       getRuntimeValue.mockImplementation((caster, key) => {
         if (key === 'activeBuffs') return [];
-        if (key === 'customResource') return 3;
+        if (key === 'wildShapeUses') return 3;
         return null;
       });
 
       const result = await handle(
-        makeAction({ resourceKey: 'customResource', uses: 5 }),
+        makeAction({ resourceKey: 'starryFormUses', uses: 5 }),
         makePlayerStats(),
         campaignName,
       );
@@ -161,7 +155,7 @@ describe('starryFormHandler', () => {
       expect(result.type).toBe('modal');
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'TestSorcerer',
-        'customResource',
+        'wildShapeUses',
         2,
         campaignName,
       );
@@ -187,7 +181,7 @@ describe('starryFormHandler', () => {
       expect(result.type).toBe('modal');
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'TestSorcerer',
-        'starryFormUses',
+        'wildShapeUses',
         0,
         campaignName,
       );

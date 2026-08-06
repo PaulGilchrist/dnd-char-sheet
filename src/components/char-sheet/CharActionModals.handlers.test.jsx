@@ -253,14 +253,14 @@ describe('CharActionModals handlers', () => {
     for (const { modalProp } of constellationCases) {
       it(`${modalProp}: confirm calls handleConstellationSelect with payload and option`, () => {
         const handleConstellationSelect = vi.fn();
-        const payload = { action: {}, playerStats: {}, campaignName: 'test' };
+        const modalData = { action: {}, playerStats: {}, campaignName: 'test' };
         render(<CharActionModals
           {...createBaseProps({ handleConstellationSelect })}
-          modalState={{ [modalProp]: { payload } }}
+          modalState={{ [modalProp]: modalData }}
           setModalState={vi.fn()}
         />);
         fireEvent.click(screen.getByTestId('const-confirm'));
-        expect(handleConstellationSelect).toHaveBeenCalledWith(payload, 'test-option');
+        expect(handleConstellationSelect).toHaveBeenCalledWith(modalData, 'test-option');
       });
 
       it(`${modalProp}: close calls setModalState with cleared modal`, () => {

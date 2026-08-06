@@ -74,6 +74,7 @@ import { handle as handleMultiTarget } from './handlers/combat/multiTargetHandle
 import { handle as handleDivineOrder } from './handlers/class-cleric-paladin/divineOrderHandler.js';
 import { handle as handleNaturesSanctuary, handleMove as handleNaturesSanctuaryMove } from './handlers/class-ranger/naturesSanctuaryHandler.js';
 import { handle as handleStarryForm } from './handlers/class-sorcerer/starryFormHandler.js';
+import { handle as handleStarryFormArrow } from './handlers/class-sorcerer/starryFormArrowHandler.js';
 import { handle as handleCosmicOmen } from './handlers/class-sorcerer/cosmicOmenHandler.js';
 import { handle as handleTwinklingConstellation } from './handlers/class-sorcerer/twinklingConstellationHandler.js';
 import { handle as handleTacticalMind } from './handlers/class-fighter-rogue/tacticalMindHandler.js';
@@ -363,6 +364,7 @@ const HANDLER_MAP = {
         nature_sanctuary: handleNaturesSanctuary,
         nature_sanctuary_move: handleNaturesSanctuaryMove,
         starry_form: handleStarryForm,
+        starry_form_arrow: handleStarryFormArrow,
         cosmic_omen: handleCosmicOmen,
         twinkling_constellations: handleTwinklingConstellation,
         tactical_mind: handleTacticalMind,

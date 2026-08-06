@@ -1032,21 +1032,21 @@ export default function CharActionModals({
             )}
             {mergedModalState.starryFormConstellationModal && (
                 <ConstellationSelectionModal
-                    action={mergedModalState.starryFormConstellationModal.payload.action}
-                    playerStats={mergedModalState.starryFormConstellationModal.payload.playerStats}
-                    campaignName={mergedModalState.starryFormConstellationModal.payload.campaignName}
+                    action={mergedModalState.starryFormConstellationModal.action}
+                    playerStats={mergedModalState.starryFormConstellationModal.playerStats}
+                    campaignName={mergedModalState.starryFormConstellationModal.campaignName}
                     isTwinkled={false}
-                    onConfirm={(option) => handleConstellationSelect(mergedModalState.starryFormConstellationModal.payload, option)}
+                    onConfirm={(option) => handleConstellationSelect(mergedModalState.starryFormConstellationModal, option)}
                     onClose={() => setModalState({ starryFormConstellationModal: null })}
                 />
             )}
             {mergedModalState.twinklingConstellationModal && (
                 <ConstellationSelectionModal
-                    action={mergedModalState.twinklingConstellationModal.payload.action}
-                    playerStats={mergedModalState.twinklingConstellationModal.payload.playerStats}
-                    campaignName={mergedModalState.twinklingConstellationModal.payload.campaignName}
+                    action={mergedModalState.twinklingConstellationModal.action}
+                    playerStats={mergedModalState.twinklingConstellationModal.playerStats}
+                    campaignName={mergedModalState.twinklingConstellationModal.campaignName}
                     isTwinkled={true}
-                    onConfirm={(option) => handleConstellationSelect(mergedModalState.twinklingConstellationModal.payload, option)}
+                    onConfirm={(option) => handleConstellationSelect(mergedModalState.twinklingConstellationModal, option)}
                     onClose={() => setModalState({ twinklingConstellationModal: null })}
                 />
             )}
