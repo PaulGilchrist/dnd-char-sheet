@@ -48,7 +48,6 @@ function useSSEEqualityGuard(setter) {
     const currentValueRef = useRef(undefined);
 
     return useCallback((newVal) => {
-        console.trace('[useSSEEqualityGuard] called with', newVal?.creatures?.map(c => c.name));
         if (typeof newVal === 'function') {
             setter((prev) => {
                 const result = newVal(prev);
@@ -60,10 +59,8 @@ function useSSEEqualityGuard(setter) {
             });
         } else {
             if (valuesEqual(currentValueRef.current, newVal)) {
-                console.log('[useSSEEqualityGuard] BLOCKED - values equal, ref has', currentValueRef.current?.creatures?.map(c => c.name), 'new has', newVal?.creatures?.map(c => c.name));
                 return;
             }
-            console.log('[useSSEEqualityGuard] ALLOWED - ref has', currentValueRef.current?.creatures?.map(c => c.name), 'new has', newVal?.creatures?.map(c => c.name));
             currentValueRef.current = newVal;
             setter(newVal);
         }

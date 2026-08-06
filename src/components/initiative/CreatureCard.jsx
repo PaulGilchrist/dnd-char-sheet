@@ -103,7 +103,15 @@ function CreatureCard({
                 </button>
             )}
             <div className='creature-avatar'>
-                {(creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource) ? (
+                {creature.polymorphObject ? (
+                    <div className="npc-avatar" onClick={() => {
+                        if (isLocalhost || isPlayerSummoned) {
+                            onNpcClick(creature, { allowNonLocalhost: true });
+                        }
+                    }}>
+                        <i className={`fa-solid ${creature.polymorphObject.icon || 'fa-circle'}`}></i>
+                    </div>
+                ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource) ? (
                     <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
                 ) : (
                     <NpcAvatar
@@ -120,7 +128,9 @@ function CreatureCard({
                 )}
             </div>
             <div className='creature-name'>
-                {creature.type === 'npc' ? (
+                {creature.polymorphObject ? (
+                    <span>{creature.polymorphObject.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                ) : creature.type === 'npc' ? (
                     <MonsterNameAutocomplete
                         value={creature.name}
                         onChange={(newVal) => onNameChange(creature.name, newVal)}
@@ -128,7 +138,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{(creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
+                    <span>{creature.polymorphObject ? creature.polymorphObject.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : (creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
                 )}
             </div>
             <CreatureHp

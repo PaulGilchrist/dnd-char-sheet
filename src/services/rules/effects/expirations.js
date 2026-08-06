@@ -5,7 +5,7 @@ import { getAllyList } from '../../../hooks/useAllySelection.js';
 import { evaluateAutoExpression } from '../../combat/automation/automationExpressions.js';
 import utils from '../../ui/utils.js';
 import storage from '../../ui/storage.js';
-import { getCurrentCombatRound, getActiveCreatureName, getCombatSummary, loadCombatSummary } from '../../encounters/combatData.js';
+import { getCurrentCombatRound, getActiveCreatureName, getCombatSummary, loadCombatSummary, setCombatSummaryCache } from '../../encounters/combatData.js';
 import { addEntry } from '../../ui/logService.js';
 import { isWithinRange } from '../combat/rangeCheck.js';
 import { breakConcentration, cleanupConcentrationEffects } from '../../combat/concentration/concentrationService.js';
@@ -831,9 +831,38 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
            setRuntimeValue('campaign', 'targetEffects', sanctuaryFilteredEffects, campaignName);
        }
 
-        // Remove spell-summoned creatures on short/long rest or initiative roll
-        removeSummonedCreatures(characterName, campaignName);
-    }
+         // Remove spell-summoned creatures on short/long rest or initiative roll
+         removeSummonedCreatures(characterName, campaignName);
+
+         // Remove object transforms on short/long rest or initiative roll
+         const csForExpire = getCombatSummary(campaignName);
+         if (csForExpire?.creatures) {
+            const objectCreatures = csForExpire.creatures.filter(c => c.polymorphObject && c.polymorphSource === characterName);
+            if (objectCreatures.length > 0) {
+               for (const creature of objectCreatures) {
+                  const original = creature.polymorphOriginal || {};
+                  if (original.maxHp !== undefined) creature.maxHp = original.maxHp;
+                  if (original.ac !== undefined) creature.ac = original.ac;
+                  if (original.speed !== undefined) creature.speed = original.speed;
+                  delete creature.polymorphObject;
+                  delete creature.objectType;
+                  const activeConditions = getRuntimeValue(creature.name, 'activeConditions') || [];
+                  const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+                  if (filteredConds.length !== activeConditions.length) {
+                     setRuntimeValue(creature.name, 'activeConditions', filteredConds, campaignName);
+                  }
+               }
+               storage.set('combatSummary', csForExpire, campaignName);
+               setCombatSummaryCache(csForExpire, campaignName);
+            }
+            // Clear object_transform targetEffects for this caster
+            const allObjEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const filteredObjEffects = allObjEffects.filter(te => !(te.effect === 'object_transform' && te.source === characterName));
+            if (filteredObjEffects.length !== allObjEffects.length) {
+               setRuntimeValue('campaign', 'targetEffects', filteredObjEffects, campaignName);
+            }
+         }
+     }
 
     export async function expireStaleEffects(campaignName, overrideActiveName) {
         const currentRound = getCurrentCombatRound(campaignName);

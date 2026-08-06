@@ -112,7 +112,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
 
     const handleObjectTransformConfirm = React.useCallback(async (objectType, popupData) => {
         const { applyObjectTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
-        const targetName = popupData.targetName || (popupData._metaCtx?.truePolymorphTarget);
+        const targetName = popupData.targetName || popupData.casterName;
         await applyObjectTransform(targetName, objectType, popupData.casterName, popupData.spell, popupData.campaignName, playerStats);
     }, [playerStats]);
 
@@ -1060,7 +1060,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                             <ObjectTransformModal
                                 onConfirm={(objectType) => {
                                     setPopupHtml(null);
-                                    handleObjectTransformConfirm(objectType, { ...popupHtml, _metaCtx: { truePolymorphTarget: popupHtml.targetName } });
+                                    handleObjectTransformConfirm(objectType, popupHtml);
                                 }}
                                 onCancel={() => setPopupHtml(null)}
                             />

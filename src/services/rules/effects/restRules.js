@@ -485,6 +485,24 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
         storageService.default.set('combatSummary', shortRestCs, campaignName);
         setCombatSummaryCache(shortRestCs, campaignName);
       }
+      const objectTransforms = shortRestCs.creatures.filter(c => c.polymorphObject);
+      if (objectTransforms.length > 0) {
+        for (const creature of objectTransforms) {
+          const original = creature.polymorphOriginal || {};
+          if (original.maxHp !== undefined) creature.maxHp = original.maxHp;
+          if (original.ac !== undefined) creature.ac = original.ac;
+          if (original.speed !== undefined) creature.speed = original.speed;
+          delete creature.polymorphObject;
+          delete creature.objectType;
+               const activeConditions = getRuntimeValue(creature.name, 'activeConditions', campaignName) || [];
+          const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+          if (filteredConds.length !== activeConditions.length) {
+            setRuntimeValue(creature.name, 'activeConditions', filteredConds, campaignName);
+          }
+        }
+        storageService.default.set('combatSummary', shortRestCs, campaignName);
+        setCombatSummaryCache(shortRestCs, campaignName);
+      }
     }
 
     // Clear Awakened Mind target on short rest
@@ -714,10 +732,28 @@ export async function applyLongRest(playerStats, campaignName) {
               longRestCs.creatures = longRestCs.creatures.filter(c => c.summonSource !== 'true_polymorph');
               storageService.default.set('combatSummary', longRestCs, campaignName);
               setCombatSummaryCache(longRestCs, campaignName);
-           }
-        }
+            }
+         }
+         const objectTransforms = longRestCs.creatures.filter(c => c.polymorphObject);
+         if (objectTransforms.length > 0) {
+            for (const creature of objectTransforms) {
+               const original = creature.polymorphOriginal || {};
+               if (original.maxHp !== undefined) creature.maxHp = original.maxHp;
+               if (original.ac !== undefined) creature.ac = original.ac;
+               if (original.speed !== undefined) creature.speed = original.speed;
+               delete creature.polymorphObject;
+               delete creature.objectType;
+          const activeConditions = getRuntimeValue(creature.name, 'activeConditions', campaignName) || [];
+               const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+               if (filteredConds.length !== activeConditions.length) {
+                  setRuntimeValue(creature.name, 'activeConditions', filteredConds, campaignName);
+               }
+            }
+            storageService.default.set('combatSummary', longRestCs, campaignName);
+            setCombatSummaryCache(longRestCs, campaignName);
+         }
 
-      // Clear Awakened Mind target on long rest
+       // Clear Awakened Mind target on long rest
       charData.awakenedMindTarget = null;
 
       // Clear Clairvoyant Combatant target on long rest

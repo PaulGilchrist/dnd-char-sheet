@@ -118,7 +118,6 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
 }
 
 async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
-    console.log('[cleanupConcentrationEffects] casterName:', casterName, 'spellName:', spellName, 'campaignName:', campaignName);
     removeSummonedCreatures(casterName, campaignName);
 
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []

@@ -231,6 +231,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 type: 'popup',
                 payload: {
                     type: 'true_polymorph_object',
+                    targetName,
                     casterName,
                     campaignName,
                     spell: action.spell,
