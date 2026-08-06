@@ -377,19 +377,13 @@ export function revertTruePolymorph(targetName, campaignName) {
         if (original.speed !== undefined) creature.speed = original.speed;
         delete creature.polymorphObject;
         delete creature.objectType;
+        delete creature.polymorphSource;
+        delete creature.polymorphOriginal;
 
-        let changed = false;
         const activeConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
         const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
         if (filteredConds.length !== activeConditions.length) {
             setRuntimeValue(targetName, 'activeConditions', filteredConds, campaignName);
-            changed = true;
-        }
-
-        if (changed || creature.maxHp !== (original.maxHp ?? creature.maxHp)) {
-            const updated = { ...cs, creatures: cs.creatures };
-            storage.set('combatSummary', updated, campaignName);
-            setCombatSummaryCache(updated, campaignName);
         }
 
         const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
@@ -400,6 +394,10 @@ export function revertTruePolymorph(targetName, campaignName) {
         if (filtered.length !== targetEffects.length) {
             setRuntimeValue('campaign', 'targetEffects', filtered, campaignName, true);
         }
+
+        const updated = { ...cs, creatures: cs.creatures };
+        storage.set('combatSummary', updated, campaignName);
+        setCombatSummaryCache(updated, campaignName);
 
         addEntry(campaignName, {
             type: 'ability_use',

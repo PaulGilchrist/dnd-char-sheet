@@ -138,7 +138,7 @@ function CreatureCard({
                         showBadge={campaignNpcs.some(n => n.name?.toLowerCase() === creature.name?.toLowerCase())}
                     />
                 ) : (
-                    <span>{creature.polymorphObject ? creature.polymorphObject.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : (creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
+                    <span>{(creature.wildShapeSource || creature.polymorphSource) && creature.beastName ? creature.beastName : creature.name}</span>
                 )}
             </div>
             <CreatureHp

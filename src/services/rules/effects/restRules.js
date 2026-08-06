@@ -724,33 +724,33 @@ export async function applyLongRest(playerStats, campaignName) {
            setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage' && te.effect !== 'polymorph' && te.effect !== 'true_polymorph' && te.effect !== 'object_transform'), campaignName);
         }
 
-       // Remove True Polymorph summoned creatures on long rest
-        const longRestCs = getCombatSummary(campaignName);
-        if (longRestCs?.creatures) {
-           const summonedToRemove = longRestCs.creatures.filter(c => c.summonSource === 'true_polymorph');
-           if (summonedToRemove.length > 0) {
-              longRestCs.creatures = longRestCs.creatures.filter(c => c.summonSource !== 'true_polymorph');
-              storageService.default.set('combatSummary', longRestCs, campaignName);
-              setCombatSummaryCache(longRestCs, campaignName);
+        // Remove True Polymorph summoned creatures on long rest
+         const longRestCs = getCombatSummary(campaignName);
+         if (longRestCs?.creatures) {
+            const summonedToRemove = longRestCs.creatures.filter(c => c.summonSource === 'true_polymorph');
+            if (summonedToRemove.length > 0) {
+               longRestCs.creatures = longRestCs.creatures.filter(c => c.summonSource !== 'true_polymorph');
+               storageService.default.set('combatSummary', longRestCs, campaignName);
+               setCombatSummaryCache(longRestCs, campaignName);
             }
-         }
-         const objectTransforms = longRestCs.creatures.filter(c => c.polymorphObject);
-         if (objectTransforms.length > 0) {
-            for (const creature of objectTransforms) {
-               const original = creature.polymorphOriginal || {};
-               if (original.maxHp !== undefined) creature.maxHp = original.maxHp;
-               if (original.ac !== undefined) creature.ac = original.ac;
-               if (original.speed !== undefined) creature.speed = original.speed;
-               delete creature.polymorphObject;
-               delete creature.objectType;
-          const activeConditions = getRuntimeValue(creature.name, 'activeConditions', campaignName) || [];
-               const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
-               if (filteredConds.length !== activeConditions.length) {
-                  setRuntimeValue(creature.name, 'activeConditions', filteredConds, campaignName);
+            const objectTransforms = longRestCs.creatures.filter(c => c.polymorphObject);
+            if (objectTransforms.length > 0) {
+               for (const creature of objectTransforms) {
+                  const original = creature.polymorphOriginal || {};
+                  if (original.maxHp !== undefined) creature.maxHp = original.maxHp;
+                  if (original.ac !== undefined) creature.ac = original.ac;
+                  if (original.speed !== undefined) creature.speed = original.speed;
+                  delete creature.polymorphObject;
+                  delete creature.objectType;
+            const activeConditions = getRuntimeValue(creature.name, 'activeConditions', campaignName) || [];
+                  const filteredConds = activeConditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
+                  if (filteredConds.length !== activeConditions.length) {
+                     setRuntimeValue(creature.name, 'activeConditions', filteredConds, campaignName);
+                  }
                }
+               storageService.default.set('combatSummary', longRestCs, campaignName);
+               setCombatSummaryCache(longRestCs, campaignName);
             }
-            storageService.default.set('combatSummary', longRestCs, campaignName);
-            setCombatSummaryCache(longRestCs, campaignName);
          }
 
        // Clear Awakened Mind target on long rest

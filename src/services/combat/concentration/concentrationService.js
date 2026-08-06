@@ -12,6 +12,7 @@ import { addEntry } from '../../ui/logService.js'
 import { clearFleshToStonePrompt } from '../conditions/savePromptService.js'
 import { removeHeroismBuff } from '../../rules/features/heroismService.js'
 import { removeSummonedCreatures } from '../summons/summonedCreatureService.js'
+import { revertTruePolymorph } from '../../automation/handlers/spells/truePolymorphService.js'
 
 async function rollConcentrationSave(creature, concentration, characters, campaignNpcs, campaignName, mapName, getName, disadvantage = false) {
     const saveBonus = await getCreatureSaveBonus(creature, 'con', characters, campaignNpcs, getName)
@@ -119,6 +120,17 @@ function buildConcentrationPopup(roll, bonus, bonusDetail, spellName, dc, succes
 
 async function cleanupConcentrationEffects(casterName, spellName, campaignName) {
     removeSummonedCreatures(casterName, campaignName);
+
+    // Revert creature-into-object transforms when concentration breaks
+    const objectTransformEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(te =>
+        te.source === casterName && te.duration === 'concentration' && te.effect === 'object_transform'
+    );
+    for (const te of objectTransformEffects) {
+        const target = Array.isArray(te.target) ? te.target[0] : te.target;
+        if (target) {
+            revertTruePolymorph(target, campaignName);
+        }
+    }
 
     const targetEffects = getRuntimeValue('campaign', 'targetEffects') || []
     const casterEffects = targetEffects.filter(te => te.source === casterName && te.duration === 'concentration')
