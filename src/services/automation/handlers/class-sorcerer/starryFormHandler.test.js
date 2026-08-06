@@ -34,11 +34,44 @@ describe('starryFormHandler', () => {
   });
 
   describe('handle - always shows modal', () => {
-    it('should open constellation modal even when starry form is already active', async () => {
-      const existingBuffs = [{ name: 'Starry Form', effect: 'starry_form' }];
+    it('should open constellation modal without consuming Wild Shape when starry form is already active and player is level 10+', async () => {
+      const existingBuffs = [{ name: 'Starry Form', effect: 'starry_form', constellation: 'Archer' }];
       getRuntimeValue.mockImplementation((caster, key, _camp) => {
         if (key === 'activeBuffs') return existingBuffs;
         if (key === 'targetEffects') return [];
+        return 2;
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('starryFormConstellation');
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('should consume Wild Shape when starry form is already active but player is below level 10', async () => {
+      const existingBuffs = [{ name: 'Starry Form', effect: 'starry_form', constellation: 'Archer' }];
+      getRuntimeValue.mockImplementation((caster, key, _camp) => {
+        if (key === 'activeBuffs') return existingBuffs;
+        if (key === 'targetEffects') return [];
+        return 2;
+      });
+
+      const result = await handle(makeAction(), makePlayerStats({ level: 5 }), campaignName);
+
+      expect(result.type).toBe('modal');
+      expect(result.modalName).toBe('starryFormConstellation');
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestSorcerer',
+        'wildShapeUses',
+        1,
+        campaignName,
+      );
+    });
+
+    it('should consume Wild Shape when starry form is not active even at level 10+', async () => {
+      getRuntimeValue.mockImplementation((caster, key) => {
+        if (key === 'activeBuffs') return [];
         return 2;
       });
 
@@ -56,7 +89,7 @@ describe('starryFormHandler', () => {
 
     it('should open constellation modal with other buffs present', async () => {
       const existingBuffs = [
-        { name: 'Starry Form', effect: 'starry_form' },
+        { name: 'Starry Form', effect: 'starry_form', constellation: 'Archer' },
         { name: 'Mage Armor', effect: 'mage_armor' },
       ];
       getRuntimeValue.mockImplementation((caster, key, _camp) => {
@@ -69,20 +102,7 @@ describe('starryFormHandler', () => {
 
       expect(result.type).toBe('modal');
       expect(result.modalName).toBe('starryFormConstellation');
-    });
-
-    it('should open constellation modal when starry form is not active', async () => {
-      getRuntimeValue.mockImplementation((caster, key) => {
-        if (key === 'activeBuffs') return [];
-        return 2;
-      });
-
-      const result = await handle(makeAction(), makePlayerStats(), campaignName);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('starryFormConstellation');
-      expect(result.payload.action).toEqual(makeAction());
-      expect(result.payload.playerStats).toEqual(makePlayerStats());
+      expect(setRuntimeValue).not.toHaveBeenCalled();
     });
   });
 

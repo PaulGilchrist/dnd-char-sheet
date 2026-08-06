@@ -1035,7 +1035,7 @@ export default function CharActionModals({
                     action={mergedModalState.starryFormConstellationModal.action}
                     playerStats={mergedModalState.starryFormConstellationModal.playerStats}
                     campaignName={mergedModalState.starryFormConstellationModal.campaignName}
-                    isTwinkled={false}
+                    isTwinkled={mergedModalState.starryFormConstellationModal.playerStats?.level >= 10}
                     onConfirm={(option) => handleConstellationSelect(mergedModalState.starryFormConstellationModal, option)}
                     onClose={() => setModalState({ starryFormConstellationModal: null })}
                 />

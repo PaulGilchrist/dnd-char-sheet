@@ -7,43 +7,52 @@ export async function handle(action, playerStats, campaignName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
-    const usesKey = 'wildShapeUses';
-    const usesMax = auto.uses || 0;
-    const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
-    const maxWildShapeUses = classLevel?.wild_shape || 0;
+    const level = playerStats.level || 1;
+    const isTwinkled = level >= 10;
 
-    if (usesMax > 0) {
-        const currentUses = Number(getRuntimeValue(playerName, usesKey, campaignName) ?? usesMax);
-        if (currentUses <= 0) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: action.name,
-                    automationType: auto.type,
-                    description: `${action.name} has no uses remaining.`,
-                    automation: auto,
-                },
-            };
+    const stored = getRuntimeValue(playerName, 'activeBuffs', campaignName);
+    const activeBuffs = Array.isArray(stored) ? stored : [];
+    const hasStarryFormActive = activeBuffs.some(b => b.name === 'Starry Form' && b.constellation);
+
+    if (!hasStarryFormActive || !isTwinkled) {
+        const usesKey = 'wildShapeUses';
+        const usesMax = auto.uses || 0;
+        const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
+        const maxWildShapeUses = classLevel?.wild_shape || 0;
+
+        if (usesMax > 0) {
+            const currentUses = Number(getRuntimeValue(playerName, usesKey, campaignName) ?? usesMax);
+            if (currentUses <= 0) {
+                return {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: action.name,
+                        automationType: auto.type,
+                        description: `${action.name} has no uses remaining.`,
+                        automation: auto,
+                    },
+                };
+            }
+            await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
+        } else {
+            const resourceKey = 'wildShapeUses';
+            const storedResource = getRuntimeValue(playerName, resourceKey, campaignName);
+            const currentResource = storedResource != null ? Number(storedResource) : maxWildShapeUses;
+            if (currentResource <= 0) {
+                return {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: action.name,
+                        automationType: auto.type,
+                        description: `${action.name} has no uses remaining.`,
+                        automation: auto,
+                    },
+                };
+            }
+            await setRuntimeValue(playerName, resourceKey, currentResource - 1, campaignName);
         }
-        await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
-    } else {
-        const resourceKey = 'wildShapeUses';
-        const storedResource = getRuntimeValue(playerName, resourceKey, campaignName);
-        const currentResource = storedResource != null ? Number(storedResource) : maxWildShapeUses;
-        if (currentResource <= 0) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: action.name,
-                    automationType: auto.type,
-                    description: `${action.name} has no uses remaining.`,
-                    automation: auto,
-                },
-            };
-        }
-        await setRuntimeValue(playerName, resourceKey, currentResource - 1, campaignName);
     }
 
     return {

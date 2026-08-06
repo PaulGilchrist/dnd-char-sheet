@@ -624,25 +624,30 @@ describe('MassSuggestionModal', () => {
     describe('condition deduplication', () => {
         it('does not add duplicate charmed condition', async () => {
             getRuntimeValue.mockReturnValue(['charmed']);
-            render(<MassSuggestionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
-            });
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            try {
+                render(<MassSuggestionModal {...makeProps()} />);
+                const labels = document.querySelectorAll('.secondary-target-row');
+                await act(async () => { fireEvent.click(labels[0]); });
+                await waitFor(() => {
+                    expect(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ })).toBeInTheDocument();
+                });
+                await act(async () => {
+                    fireEvent.click(screen.getByRole('button', { name: /Mass Suggestion \(1\)/ }));
+                });
 
-            await waitFor(() => {
-                const conditionCalls = setRuntimeValue.mock.calls.filter(
-                    call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                );
-                expect(conditionCalls.length).toBeGreaterThan(0);
-                const conditions = conditionCalls[0][2];
-                const charmedCount = conditions.filter(c => String(c).toLowerCase() === 'charmed').length;
-                expect(charmedCount).toBe(1);
-            });
+                await waitFor(() => {
+                    const conditionCalls = setRuntimeValue.mock.calls.filter(
+                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
+                    );
+                    expect(conditionCalls.length).toBeGreaterThan(0);
+                    const conditions = conditionCalls[0][2];
+                    const charmedCount = conditions.filter(c => String(c).toLowerCase() === 'charmed').length;
+                    expect(charmedCount).toBe(1);
+                });
+            } finally {
+                vi.restoreAllMocks();
+            }
         });
     });
 
