@@ -29,7 +29,7 @@ export const processImageUpload = (campaignName, characterName, character, origi
         }
 
         // Extract base64 data from data URL (e.g., "data:image/png;base64,iVBORw...")
-        const base64Data = character.image.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+        const base64Data = character.image.replace(/^data:image\/[^;]+;base64,/, '');
 
         // Save the image file
         fs.writeFileSync(imageFilePath, base64Data, 'base64');

@@ -332,8 +332,9 @@ function CampaignAdmin({ campaignName, onBack, theme, toggleTheme, onRenameCampa
                             </button>
                         </div>
                         <div className="ct-modal-body">
-                            <label className="ct-label">New Campaign Name</label>
+                            <label className="ct-label" htmlFor="rename-campaign-input">New Campaign Name</label>
                             <input
+                                id="rename-campaign-input"
                                 className="ct-input"
                                 type="text"
                                 value={newName}

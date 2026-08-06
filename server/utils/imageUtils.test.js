@@ -366,6 +366,255 @@ describe('imageUtils - processImageUpload', () => {
         expect(character.imageName).toBe('');
         expect(character.imagePath).toBeUndefined();
     });
+
+    it('should skip when originalImagePath is undefined', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-9', 'TestChar', character, undefined);
+
+        const newFilePath = getWrittenFilePath('test-campaign-9', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should skip when originalImagePath is null', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-10', 'TestChar', character, null);
+
+        const newFilePath = getWrittenFilePath('test-campaign-10', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should skip when originalImagePath is empty string (falsy)', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-11', 'TestChar', character, '');
+
+        const newFilePath = getWrittenFilePath('test-campaign-11', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should skip when originalImagePath is 0 (falsy)', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-12', 'TestChar', character, 0);
+
+        const newFilePath = getWrittenFilePath('test-campaign-12', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should skip when originalImagePath is false (falsy)', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-13', 'TestChar', character, false);
+
+        const newFilePath = getWrittenFilePath('test-campaign-13', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should skip when originalImagePath is NaN (falsy)', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-14', 'TestChar', character, NaN);
+
+        const newFilePath = getWrittenFilePath('test-campaign-14', 'TestChar.png');
+        expect(writtenFiles.has(newFilePath)).toBe(true);
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy.mock.calls.length).toBe(0);
+    });
+
+    it('should create directory with recursive option when it does not exist', () => {
+        // Override existsSync: return false so the directory creation branch is taken
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => false);
+        const mkdirSyncSpy = vi.spyOn(fs, 'mkdirSync').mockImplementation(() => { /* no-op */ });
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-15', 'TestChar', character);
+
+        expect(mkdirSyncSpy).toHaveBeenCalledWith(
+            expect.any(String),
+            { recursive: true },
+        );
+        mkdirSyncSpy.mockRestore();
+        fs.existsSync.mockRestore();
+    });
+
+    it('should use openSync with read mode and pass fd to fsyncSync', () => {
+        const openSyncSpy = vi.spyOn(fs, 'openSync').mockImplementation(() => 42);
+        const fsyncSyncSpy = vi.spyOn(fs, 'fsyncSync').mockImplementation(() => { /* no-op */ });
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-16', 'TestChar', character);
+
+        expect(openSyncSpy).toHaveBeenCalled();
+        expect(fsyncSyncSpy).toHaveBeenCalledWith(42);
+        openSyncSpy.mockRestore();
+        fsyncSyncSpy.mockRestore();
+    });
+
+    it('should set imagePath as relative path from campaign directory', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-17', 'TestChar', character);
+
+        expect(character.imagePath).toBe(path.join('images', 'TestChar.png'));
+        // Should NOT contain process.cwd() - it's a relative path
+        expect(character.imagePath).not.toContain(process.cwd());
+    });
+
+    it('should handle campaignName as empty string', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('', 'TestChar', character);
+
+        const expectedPath = path.join(process.cwd(), 'public', 'campaigns', '', 'images', 'TestChar.png');
+        expect(writtenFiles.has(expectedPath)).toBe(true);
+    });
+
+    it('should handle characterName as empty string', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-18', '', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-18', '.png');
+        expect(writtenFiles.has(expectedPath)).toBe(true);
+        expect(character.imagePath).toBe(path.join('images', '.png'));
+    });
+
+    it('should handle imageName with multiple dots in extension portion', () => {
+        const character = createMockCharacter('my.photo.backup', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-19', 'TestChar', character);
+
+        // The regex \.[^.]+$ matches '.backup' as the extension
+        const expectedPath = getWrittenFilePath('test-campaign-19', 'TestChar.backup');
+        expect(writtenFiles.has(expectedPath)).toBe(true);
+    });
+
+    it('should handle data URL with svg mime type', () => {
+        const fullDataUrl = 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=';
+        const character = createMockCharacter('photo.svg', fullDataUrl);
+
+        processImageUpload('test-campaign-20', 'TestChar', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-20', 'TestChar.svg');
+        const entry = writtenFiles.get(expectedPath);
+        expect(entry.data).toBe('PHN2Zz48L3N2Zz4=');
+    });
+
+    it('should handle data URL with x-icon mime type', () => {
+        const fullDataUrl = 'data:image/x-icon;base64,AAABAA==';
+        const character = createMockCharacter('photo.ico', fullDataUrl);
+
+        processImageUpload('test-campaign-21', 'TestChar', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-21', 'TestChar.ico');
+        const entry = writtenFiles.get(expectedPath);
+        expect(entry.data).toBe('AAABAA==');
+    });
+
+    it('should handle characterName with spaces', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('test-campaign-22', 'Test Char Name', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-22', 'Test Char Name.png');
+        expect(writtenFiles.has(expectedPath)).toBe(true);
+    });
+
+    it('should handle campaignName with spaces', () => {
+        const character = createMockCharacter('photo.png', 'data:image/png;base64,abc123');
+
+        processImageUpload('my test campaign', 'TestChar', character);
+
+        const expectedPath = path.join(process.cwd(), 'public', 'campaigns', 'my test campaign', 'images', 'TestChar.png');
+        expect(writtenFiles.has(expectedPath)).toBe(true);
+    });
+
+    it('should handle character with additional nested properties', () => {
+        const character = {
+            name: 'TestChar',
+            hp: 25,
+            maxHp: 30,
+            spells: [{ name: 'Fireball', level: 3 }],
+            equipment: ['Sword', 'Shield'],
+            imageName: 'photo.png',
+            image: 'data:image/png;base64,abc123',
+        };
+
+        processImageUpload('test-campaign-23', 'TestChar', character);
+
+        expect(character.hp).toBe(25);
+        expect(character.maxHp).toBe(30);
+        expect(character.spells).toEqual([{ name: 'Fireball', level: 3 }]);
+        expect(character.equipment).toEqual(['Sword', 'Shield']);
+        expect(character.imagePath).toBeDefined();
+        expect(character.image).toBeUndefined();
+        expect(character.imageName).toBeUndefined();
+    });
+
+    it('should handle data URL with uppercase mime type', () => {
+        const fullDataUrl = 'data:IMAGE/PNG;base64,abc123';
+        const character = createMockCharacter('photo.png', fullDataUrl);
+
+        processImageUpload('test-campaign-24', 'TestChar', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-24', 'TestChar.png');
+        const entry = writtenFiles.get(expectedPath);
+        // The regex is case-sensitive for [a-zA-Z], so it should still match
+        expect(entry).toBeDefined();
+    });
+
+    it('should handle data URL with dash in mime subtype', () => {
+        const fullDataUrl = 'data:image/vnd.microsoft.icon;base64,AAABAA==';
+        const character = createMockCharacter('photo.ico', fullDataUrl);
+
+        processImageUpload('test-campaign-25', 'TestChar', character);
+
+        const expectedPath = getWrittenFilePath('test-campaign-25', 'TestChar.ico');
+        const entry = writtenFiles.get(expectedPath);
+        expect(entry.data).toBe('AAABAA==');
+    });
+
+    it('should not process when image is 0 (falsy)', () => {
+        const character = { name: 'TestChar', image: 0, imageName: 'photo.png' };
+
+        processImageUpload('test-campaign-26', 'TestChar', character);
+
+        expect(character.image).toBe(0);
+        expect(character.imageName).toBe('photo.png');
+        expect(character.imagePath).toBeUndefined();
+    });
+
+    it('should not process when image is false (falsy)', () => {
+        const character = { name: 'TestChar', image: false, imageName: 'photo.png' };
+
+        processImageUpload('test-campaign-27', 'TestChar', character);
+
+        expect(character.image).toBe(false);
+        expect(character.imageName).toBe('photo.png');
+        expect(character.imagePath).toBeUndefined();
+    });
+
+    it('should not process when image is empty string (falsy)', () => {
+        const character = { name: 'TestChar', image: '', imageName: 'photo.png' };
+
+        processImageUpload('test-campaign-28', 'TestChar', character);
+
+        expect(character.image).toBe('');
+        expect(character.imageName).toBe('photo.png');
+        expect(character.imagePath).toBeUndefined();
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -530,5 +779,52 @@ describe('imageUtils - deleteCharacterImage', () => {
         });
 
         expect(() => deleteCharacterImage('campaigns/test/images/test.png')).not.toThrow();
+    });
+
+    it('should do nothing when imagePath is 0 (falsy)', () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => { /* no-op */ });
+
+        deleteCharacterImage(0);
+
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+    });
+
+    it('should do nothing when imagePath is false (falsy)', () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => { /* no-op */ });
+
+        deleteCharacterImage(false);
+
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+    });
+
+    it('should do nothing when imagePath is NaN (falsy)', () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => { /* no-op */ });
+
+        deleteCharacterImage(NaN);
+
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+    });
+
+    it('should handle image paths with relative path traversal (../)', () => {
+        const imagePath = path.join('campaigns', 'del-campaign-1', 'images', '..', 'images', 'TestChar.png');
+        const fullPath = path.join(process.cwd(), 'public', imagePath);
+
+        deleteCharacterImage(imagePath);
+
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy).toHaveBeenCalledWith(fullPath);
+    });
+
+    it('should handle image paths with multiple slashes', () => {
+        const imagePath = path.join('campaigns', 'del-campaign-1', 'images', 'TestChar.png');
+        const fullPath = path.join(process.cwd(), 'public', imagePath);
+
+        deleteCharacterImage(imagePath);
+
+        const unlinkSpy = fs.unlinkSync;
+        expect(unlinkSpy).toHaveBeenCalledWith(fullPath);
     });
 });

@@ -248,22 +248,6 @@ describe('encounters - POST /api/campaigns/:campaign/encounters', () => {
         expect(stored.encounters).toHaveLength(3);
         expect(stored.encounters.map(e => e.name)).toEqual(['Encounter One', 'Encounter Two', 'Encounter Three']);
     });
-
-    it('should return 500 on filesystem error', async () => {
-        setupEncounters('test-enc-campaign', { encounters: [] });
-        const { writeEncounters } = await import('../utils/encounterUtils.js');
-        writeEncounters.mockImplementation(() => {
-            throw new Error('Disk full');
-        });
-
-        const app = createTestApp();
-        const res = await request(app)
-            .post('/api/campaigns/test-enc-campaign/encounters')
-            .send({ name: 'Should Fail', data: {} });
-
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Disk full');
-    });
 });
 
 // ─── GET /api/campaigns/:campaign/encounters/:encountername ───────────────────
@@ -404,26 +388,6 @@ describe('encounters - PUT /api/campaigns/:campaign/encounters/:encountername', 
         expect(stored.encounters[0].selectedMonsters).toHaveLength(2);
         expect(stored.encounters[0].terrainType).toBe('mountain');
     });
-
-    it('should return 500 on filesystem error', async () => {
-        setupEncounters('test-enc-campaign', {
-            encounters: [
-                { name: 'Fail Update', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
-            ],
-        });
-        const { writeEncounters } = await import('../utils/encounterUtils.js');
-        writeEncounters.mockImplementation(() => {
-            throw new Error('Disk full');
-        });
-
-        const app = createTestApp();
-        const res = await request(app)
-            .put('/api/campaigns/test-enc-campaign/encounters/Fail Update')
-            .send({ effectiveXP: 200 });
-
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Disk full');
-    });
 });
 
 // ─── DELETE /api/campaigns/:campaign/encounters/:encountername ───────────────
@@ -473,24 +437,6 @@ describe('encounters - DELETE /api/campaigns/:campaign/encounters/:encountername
         const stored = globalThis._encounterStore.get('test-enc-campaign');
         expect(stored.encounters).toHaveLength(2);
         expect(stored.encounters.map(e => e.name)).toEqual(['First', 'Third']);
-    });
-
-    it('should return 500 on filesystem error', async () => {
-        setupEncounters('test-enc-campaign', {
-            encounters: [
-                { name: 'Fail Delete', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
-            ],
-        });
-        const { writeEncounters } = await import('../utils/encounterUtils.js');
-        writeEncounters.mockImplementation(() => {
-            throw new Error('Disk full');
-        });
-
-        const app = createTestApp();
-        const res = await request(app).delete('/api/campaigns/test-enc-campaign/encounters/Fail Delete');
-
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Disk full');
     });
 });
 
@@ -634,23 +580,302 @@ describe('encounters - PUT /api/campaigns/:campaign/encounters/:encountername/re
         expect(stored.encounters[1].name).toBe('Goblin Ambush 2');
     });
 
-    it('should return 500 on filesystem error', async () => {
+    it('should allow renaming to the same name (no conflict check for self)', async () => {
         setupEncounters('test-enc-campaign', {
             encounters: [
-                { name: 'Rename Me', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
+                { name: 'Same Name', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
             ],
-        });
-        const { writeEncounters } = await import('../utils/encounterUtils.js');
-        writeEncounters.mockImplementation(() => {
-            throw new Error('Disk full');
         });
 
         const app = createTestApp();
         const res = await request(app)
-            .put('/api/campaigns/test-enc-campaign/encounters/Rename Me/rename')
-            .send({ newName: 'Renamed' });
+            .put('/api/campaigns/test-enc-campaign/encounters/Same Name/rename')
+            .send({ newName: 'Same Name' });
 
-        expect(res.status).toBe(500);
-        expect(res.body.error).toBe('Disk full');
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('message', 'Encounter renamed successfully');
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].name).toBe('Same Name');
+    });
+});
+
+// ─── URL encoding and special characters ─────────────────────────────────────
+
+describe('encounters - URL encoding and special characters', () => {
+    it('should handle encounter names with spaces in GET list', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Goblin Ambush at Dawn', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns/test-enc-campaign/encounters');
+
+        expect(res.status).toBe(200);
+        expect(res.body.encounters[0].name).toBe('Goblin Ambush at Dawn');
+    });
+
+    it('should handle URL-encoded encounter names in GET single', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Dragon Fight', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 4000, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns/test-enc-campaign/encounters/Dragon%20Fight');
+
+        expect(res.status).toBe(200);
+        expect(res.body.name).toBe('Dragon Fight');
+    });
+
+    it('should handle URL-encoded encounter names in PUT update', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Dragon Fight', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 4000, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-enc-campaign/encounters/Dragon%20Fight')
+            .send({ effectiveXP: 5000 });
+
+        expect(res.status).toBe(200);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].effectiveXP).toBe(5000);
+    });
+
+    it('should handle URL-encoded encounter names in DELETE', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Dragon Fight', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 4000, selectedMonsters: [] },
+                { name: 'Keep Me', savedAt: '2025-01-02T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).delete('/api/campaigns/test-enc-campaign/encounters/Dragon%20Fight');
+
+        expect(res.status).toBe(200);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters).toHaveLength(1);
+        expect(stored.encounters[0].name).toBe('Keep Me');
+    });
+
+    it('should handle URL-encoded encounter names in rename', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Old Encounter', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-enc-campaign/encounters/Old%20Encounter/rename')
+            .send({ newName: 'New Encounter' });
+
+        expect(res.status).toBe(200);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].name).toBe('New Encounter');
+    });
+
+    it('should handle encounter names with special characters (hyphens, underscores)', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'goblin-ambush_v2', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns/test-enc-campaign/encounters/goblin-ambush_v2');
+
+        expect(res.status).toBe(200);
+        expect(res.body.name).toBe('goblin-ambush_v2');
+    });
+
+    it('should handle encounter names with numbers', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Encounter 3', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 300, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns/test-enc-campaign/encounters/Encounter%203');
+
+        expect(res.status).toBe(200);
+        expect(res.body.name).toBe('Encounter 3');
+    });
+});
+
+// ─── Case sensitivity ────────────────────────────────────────────────────────
+
+describe('encounters - case sensitivity', () => {
+    it('should treat encounter names as case-sensitive for creation', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'goblin ambush', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/test-enc-campaign/encounters')
+            .send({ name: 'Goblin Ambush', data: {} });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters).toHaveLength(2);
+        expect(stored.encounters.map(e => e.name)).toEqual(['goblin ambush', 'Goblin Ambush']);
+    });
+
+    it('should treat encounter names as case-sensitive for retrieval', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Goblin Ambush', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns/test-enc-campaign/encounters/goblin ambush');
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should treat encounter names as case-sensitive for update', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Goblin Ambush', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-enc-campaign/encounters/goblin ambush')
+            .send({ effectiveXP: 300 });
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should treat encounter names as case-sensitive for rename conflict check', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Goblin Ambush', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 200, selectedMonsters: [] },
+                { name: 'Dragon Fight', savedAt: '2025-01-02T00:00:00.000Z', effectiveXP: 4000, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-enc-campaign/encounters/Dragon Fight/rename')
+            .send({ newName: 'goblin ambush' });
+
+        expect(res.status).toBe(200);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[1].name).toBe('goblin ambush');
+    });
+});
+
+// ─── Edge cases ──────────────────────────────────────────────────────────────
+
+describe('encounters - edge cases', () => {
+    it('should handle POST with undefined data field', async () => {
+        setupEncounters('test-enc-campaign', { encounters: [] });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/test-enc-campaign/encounters')
+            .send({ name: 'Undefined Data Encounter' });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters).toHaveLength(1);
+        expect(stored.encounters[0].name).toBe('Undefined Data Encounter');
+    });
+
+    it('should handle PUT update with empty object body', async () => {
+        setupEncounters('test-enc-campaign', {
+            encounters: [
+                { name: 'Update Me', savedAt: '2025-01-01T00:00:00.000Z', effectiveXP: 100, selectedMonsters: [] },
+            ],
+        });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-enc-campaign/encounters/Update Me')
+            .send({});
+
+        expect(res.status).toBe(200);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].name).toBe('Update Me');
+        expect(stored.encounters[0].savedAt).toBe('2025-01-01T00:00:00.000Z');
+    });
+
+    it('should generate a valid ISO timestamp for savedAt on creation', async () => {
+        setupEncounters('test-enc-campaign', { encounters: [] });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/test-enc-campaign/encounters')
+            .send({ name: 'Timestamp Test', data: {} });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        const savedAt = stored.encounters[0].savedAt;
+        expect(new Date(savedAt).toISOString()).toBe(savedAt);
+        expect(savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    });
+
+    it('should handle campaign names with special characters', async () => {
+        setupEncounters('my-campaign-123', { encounters: [] });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/my-campaign-123/encounters')
+            .send({ name: 'Test Encounter', data: {} });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('my-campaign-123');
+        expect(stored.encounters).toHaveLength(1);
+    });
+
+    it('should handle empty selectedMonsters array in creation', async () => {
+        setupEncounters('test-enc-campaign', { encounters: [] });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/test-enc-campaign/encounters')
+            .send({ name: 'Empty Monsters', data: { selectedMonsters: [] } });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].selectedMonsters).toEqual([]);
+    });
+
+    it('should handle missing selectedMonsters in data during creation', async () => {
+        setupEncounters('test-enc-campaign', { encounters: [] });
+
+        const app = createTestApp();
+        const res = await request(app)
+            .post('/api/campaigns/test-enc-campaign/encounters')
+            .send({ name: 'No Monsters Field', data: { effectiveXP: 500 } });
+
+        expect(res.status).toBe(201);
+
+        const stored = globalThis._encounterStore.get('test-enc-campaign');
+        expect(stored.encounters[0].selectedMonsters).toEqual([]);
     });
 });

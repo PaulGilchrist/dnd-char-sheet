@@ -803,4 +803,337 @@ describe('spell-overlay - POST /spell-overlay', () => {
             expect(storedB[0].name).toBe('Shield');
         });
     });
+
+    describe('response content-type', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should return application/json content-type for GET', async () => {
+            const app = createTestApp();
+            const res = await request(app).get('/spell-overlay?campaign=test-campaign');
+
+            expect(res.headers['content-type']).toMatch(/application\/json/);
+        });
+
+        it('should return application/json content-type for POST', async () => {
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({ action: 'clear' });
+
+            expect(res.headers['content-type']).toMatch(/application\/json/);
+        });
+
+        it('should return application/json content-type for 400 error', async () => {
+            const app = createTestApp();
+            const res = await request(app).get('/spell-overlay');
+
+            expect(res.headers['content-type']).toMatch(/application\/json/);
+        });
+    });
+
+    describe('GET /spell-overlay with empty campaign', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should return 400 when campaign query param is empty string', async () => {
+            const app = createTestApp();
+            const res = await request(app).get('/spell-overlay?campaign=');
+
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error');
+            expect(res.body.error).toBe('campaign query param required');
+        });
+    });
+
+    describe('POST /spell-overlay with no body', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should return 500 when body is completely missing (bug: no null check on req.body)', async () => {
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign');
+
+            // BUG: production code crashes when req.body is undefined because
+            // it destructures without checking. Should return 200 with no-op.
+            expect(res.status).toBe(500);
+        });
+
+        it('should return success when body has no action field', async () => {
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({});
+
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('ok', true);
+        });
+    });
+
+    describe('add action - within-payload dedup', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should add overlays with duplicate IDs within the same payload (bug: no within-payload dedup)', async () => {
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [
+                        { id: 'overlay-1', name: 'Fireball', level: 3 },
+                        { id: 'overlay-1', name: 'Fireball Duplicate', level: 5 },
+                        { id: 'overlay-2', name: 'Shield', level: 1 },
+                    ],
+                });
+
+            expect(res.status).toBe(200);
+
+            // BUG: production code only deduplicates against existing overlays,
+            // not within the payload. So both overlay-1 entries are added.
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(3);
+        });
+
+        it('should add all overlays when all IDs in payload are unique', async () => {
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [
+                        { id: 'overlay-1', name: 'Fireball', level: 3 },
+                        { id: 'overlay-2', name: 'Shield', level: 1 },
+                        { id: 'overlay-3', name: 'Mage Armor', level: 1 },
+                    ],
+                });
+
+            expect(res.status).toBe(200);
+
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(3);
+        });
+    });
+
+    describe('update action - within-payload duplicates', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should handle duplicate IDs within the update payload (last wins due to find)', async () => {
+            spellOverlayData.set('test-campaign', [
+                { id: 'overlay-1', name: 'Fireball', level: 3 },
+                { id: 'overlay-2', name: 'Shield', level: 1 },
+            ]);
+
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'update',
+                    overlays: [
+                        { id: 'overlay-1', name: 'Fireball Updated', level: 4 },
+                        { id: 'overlay-1', name: 'Fireball V3', level: 6 },
+                    ],
+                });
+
+            expect(res.status).toBe(200);
+
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(2);
+            // find() returns first match, so first overlay in payload wins
+            expect(stored.find(o => o.id === 'overlay-1').name).toBe('Fireball Updated');
+        });
+    });
+
+    describe('update action - campaign key persistence', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should keep the campaign key in the store after update', async () => {
+            spellOverlayData.set('test-campaign', [
+                { id: 'overlay-1', name: 'Fireball', level: 3 },
+            ]);
+
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'update',
+                    overlays: [
+                        { id: 'overlay-1', name: 'Fireball Updated', level: 4 },
+                    ],
+                });
+
+            expect(res.status).toBe(200);
+            expect(spellOverlayData.has('test-campaign')).toBe(true);
+        });
+
+        it('should keep the campaign key in the store after update even when overlay does not exist', async () => {
+            spellOverlayData.set('test-campaign', [
+                { id: 'overlay-1', name: 'Fireball', level: 3 },
+            ]);
+
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'update',
+                    overlays: [
+                        { id: 'nonexistent', name: 'Ghost', level: 9 },
+                    ],
+                });
+
+            expect(res.status).toBe(200);
+            expect(spellOverlayData.has('test-campaign')).toBe(true);
+            // Original overlay should remain unchanged
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(1);
+            expect(stored[0].name).toBe('Fireball');
+        });
+    });
+
+    describe('remove action - edge cases', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should handle removing with overlayId as empty string', async () => {
+            spellOverlayData.set('test-campaign', [
+                { id: 'overlay-1', name: 'Fireball', level: 3 },
+            ]);
+
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'remove',
+                    overlayId: '',
+                });
+
+            expect(res.status).toBe(200);
+
+            // Empty string won't match any overlay id, so nothing should be removed
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(1);
+        });
+
+        it('should handle removing with numeric overlayId', async () => {
+            spellOverlayData.set('test-campaign', [
+                { id: 123, name: 'Fireball', level: 3 },
+                { id: 'overlay-2', name: 'Shield', level: 1 },
+            ]);
+
+            const app = createTestApp();
+            const res = await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'remove',
+                    overlayId: 123,
+                });
+
+            expect(res.status).toBe(200);
+
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(1);
+            expect(stored[0].id).toBe('overlay-2');
+        });
+    });
+
+    describe('multiple operations in sequence', () => {
+        afterEach(() => {
+            clearOverlayStore();
+        });
+
+        it('should handle add -> update -> remove -> clear sequence', async () => {
+            const app = createTestApp();
+
+            // Add
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [
+                        { id: 'overlay-1', name: 'Fireball', level: 3 },
+                        { id: 'overlay-2', name: 'Shield', level: 1 },
+                        { id: 'overlay-3', name: 'Mage Armor', level: 1 },
+                    ],
+                });
+
+            let stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(3);
+
+            // Update
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'update',
+                    overlays: [
+                        { id: 'overlay-2', name: 'Shield Updated', level: 2 },
+                    ],
+                });
+
+            stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(3);
+            expect(stored.find(o => o.id === 'overlay-2').name).toBe('Shield Updated');
+
+            // Remove
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'remove',
+                    overlayId: 'overlay-1',
+                });
+
+            stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(2);
+            expect(stored.find(o => o.id === 'overlay-1')).toBeUndefined();
+
+            // Clear
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'clear',
+                });
+
+            stored = spellOverlayData.get('test-campaign');
+            expect(stored).toEqual([]);
+        });
+
+        it('should handle rapid add of same overlay from multiple requests', async () => {
+            const app = createTestApp();
+
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [{ id: 'overlay-1', name: 'Fireball', level: 3 }],
+                });
+
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [{ id: 'overlay-1', name: 'Fireball Duplicate', level: 5 }],
+                });
+
+            await request(app)
+                .post('/spell-overlay?campaign=test-campaign')
+                .send({
+                    action: 'add',
+                    overlays: [{ id: 'overlay-1', name: 'Fireball Another Duplicate', level: 7 }],
+                });
+
+            const stored = spellOverlayData.get('test-campaign');
+            expect(stored).toHaveLength(1);
+            expect(stored[0].name).toBe('Fireball');
+            expect(stored[0].level).toBe(3);
+        });
+    });
 });

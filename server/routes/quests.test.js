@@ -573,6 +573,90 @@ describe('quests - GET /api/campaigns/:campaign/quests/:questId', () => {
     });
 });
 
+// ─── Campaign Isolation ──────────────────────────────────────────────────────
+
+describe('quests - Campaign isolation', () => {
+    it('should return different quest data for different campaigns', async () => {
+        const campaignAQuests = [
+            { id: 'quest-a1', title: 'Campaign A Quest', description: 'A', stage: 'active', objectives: [] },
+        ];
+        const campaignBQuests = [
+            { id: 'quest-b1', title: 'Campaign B Quest', description: 'B', stage: 'completed', objectives: [] },
+        ];
+        setupMock('quests', 'campaign-a', campaignAQuests);
+        setupMock('quests', 'campaign-b', campaignBQuests);
+
+        const app = createTestApp();
+
+        const resA = await request(app)
+            .get('/api/campaigns/campaign-a/quests')
+            .set('Host', 'localhost');
+
+        expect(resA.status).toBe(200);
+        expect(resA.body.quests).toHaveLength(1);
+        expect(resA.body.quests[0].title).toBe('Campaign A Quest');
+
+        const resB = await request(app)
+            .get('/api/campaigns/campaign-b/quests')
+            .set('Host', 'localhost');
+
+        expect(resB.status).toBe(200);
+        expect(resB.body.quests).toHaveLength(1);
+        expect(resB.body.quests[0].title).toBe('Campaign B Quest');
+    });
+
+    it('should return different single quest data for different campaigns', async () => {
+        const campaignAQuests = [
+            { id: 'q1', title: 'A Quest', description: 'A', stage: 'active', objectives: [] },
+        ];
+        const campaignBQuests = [
+            { id: 'q1', title: 'B Quest', description: 'B', stage: 'active', objectives: [] },
+        ];
+        setupMock('quests', 'campaign-a', campaignAQuests);
+        setupMock('quests', 'campaign-b', campaignBQuests);
+
+        const app = createTestApp();
+
+        const resA = await request(app)
+            .get('/api/campaigns/campaign-a/quests/q1')
+            .set('Host', 'localhost');
+
+        expect(resA.status).toBe(200);
+        expect(resA.body.quest.title).toBe('A Quest');
+
+        const resB = await request(app)
+            .get('/api/campaigns/campaign-b/quests/q1')
+            .set('Host', 'localhost');
+
+        expect(resB.status).toBe(200);
+        expect(resB.body.quest.title).toBe('B Quest');
+    });
+
+    it('should not leak quests between campaigns on delete', async () => {
+        const campaignAQuests = [
+            { id: 'q1', title: 'A Quest', description: 'A', stage: 'active', objectives: [] },
+        ];
+        const campaignBQuests = [
+            { id: 'q2', title: 'B Quest', description: 'B', stage: 'active', objectives: [] },
+        ];
+        setupMock('quests', 'campaign-a', campaignAQuests);
+        setupMock('quests', 'campaign-b', campaignBQuests);
+
+        const app = createTestApp();
+
+        await request(app)
+            .delete('/api/campaigns/campaign-a/quests/q1')
+            .set('Host', 'localhost');
+
+        const storedA = MOCK_STORE.get('campaign-a:quests');
+        expect(storedA).toHaveLength(0);
+
+        const storedB = MOCK_STORE.get('campaign-b:quests');
+        expect(storedB).toHaveLength(1);
+        expect(storedB[0].title).toBe('B Quest');
+    });
+});
+
 // ─── DELETE /api/campaigns/:campaign/quests/:questId ─────────────────────────
 
 describe('quests - DELETE /api/campaigns/:campaign/quests/:questId', () => {

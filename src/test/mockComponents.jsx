@@ -191,3 +191,14 @@ export const MockFactions = vi.fn(({ campaignName, isLocalhost, onBack }) => (
     <button data-testid="factions-back-btn" onClick={onBack}>Back from Factions</button>
   </div>
 ));
+
+export const MockCampaignAdmin = vi.fn(({ campaignName, onBack, theme, toggleTheme, onRenameCampaign, onDeleteCampaign }) => (
+  <div data-testid="campaign-admin">
+    <span data-testid="admin-campaign">{campaignName}</span>
+    <span data-testid="admin-theme">{theme}</span>
+    <button data-testid="admin-back-btn" onClick={onBack}>Back from Admin</button>
+    <button data-testid="admin-toggle-theme-btn" onClick={toggleTheme}>Toggle Theme</button>
+    <button data-testid="admin-rename-btn" onClick={onRenameCampaign}>Rename Campaign</button>
+    <button data-testid="admin-delete-btn" onClick={onDeleteCampaign}>Delete Campaign</button>
+  </div>
+));

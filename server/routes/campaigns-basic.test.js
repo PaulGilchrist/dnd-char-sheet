@@ -1,6 +1,7 @@
 import request from 'supertest';
 import express from 'express';
 import campaignsBasic from './campaigns-basic.js';
+import * as campaignPaths from '../utils/campaignPaths.js';
 
 // ─── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,29 @@ describe('campaignsBasic - GET /api/campaigns', () => {
         expect(res.body).toHaveProperty('error');
         expect(res.body.error).toBe('ENOENT: no such file or directory');
     });
+
+    it('should exclude hidden directories (starting with .)', async () => {
+        setupReaddir('/mock/campaigns/root', [
+            dirEntry('test-campaign-a', true),
+            dirEntry('.hidden-campaign', true),
+            dirEntry('test-campaign-b', true),
+        ]);
+
+        const app = createTestApp();
+        const res = await request(app).get('/api/campaigns');
+
+        expect(res.status).toBe(200);
+        expect(res.body.folders).toContain('test-campaign-a');
+        expect(res.body.folders).toContain('test-campaign-b');
+        expect(res.body.folders).not.toContain('.hidden-campaign');
+    });
+
+    it('should return 404 for non-existent routes', async () => {
+        const app = createTestApp();
+        const res = await request(app).get('/api/nonexistent');
+
+        expect(res.status).toBe(404);
+    });
 });
 
 // ─── /api/campaigns/:campaign ──────────────────────────────────────────────────
@@ -206,5 +230,16 @@ describe('campaignsBasic - GET /api/campaigns/:campaign', () => {
 
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('ENOENT: no such file or directory');
+    });
+
+    it('should call campaignDir with the campaign name from URL params', async () => {
+        setupReaddir('/mock/campaigns/root/my-special-campaign', [
+            dirEntry('character.json', false),
+        ]);
+
+        const app = createTestApp();
+        await request(app).get('/api/campaigns/my-special-campaign');
+
+        expect(campaignPaths.campaignDir).toHaveBeenCalledWith('my-special-campaign');
     });
 });

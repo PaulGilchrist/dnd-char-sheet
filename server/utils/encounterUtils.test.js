@@ -37,6 +37,30 @@ describe('encounterUtils - getEncountersFilePath', () => {
         const result = getEncountersFilePath('campaign');
         expect(result.endsWith('encounters.json')).toBe(true);
     });
+
+    it('should handle empty campaign name', () => {
+        const result = getEncountersFilePath('');
+        const expected = path.join(process.cwd(), 'public', 'campaigns', 'data', 'encounters.json');
+        expect(result).toBe(expected);
+    });
+
+    it('should handle campaign names with dots', () => {
+        const result = getEncountersFilePath('campaign.v1');
+        expect(result).toContain('campaign.v1');
+        expect(result).toContain('encounters.json');
+    });
+
+    it('should handle campaign names with spaces', () => {
+        const result = getEncountersFilePath('my campaign');
+        expect(result).toContain('my campaign');
+        expect(result).toContain('encounters.json');
+    });
+
+    it('should handle campaign names with mixed special characters', () => {
+        const result = getEncountersFilePath('campaign-1_test.v2');
+        expect(result).toContain('campaign-1_test.v2');
+        expect(result).toContain('encounters.json');
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -139,6 +163,41 @@ describe('encounterUtils - readEncounters', () => {
 
         const result = readEncounters('test-campaign-1');
         expect(result).toEqual(encountersData);
+    });
+
+    it('should log the actual Error object to console.error on invalid JSON', () => {
+        vi.spyOn(fs, 'readFileSync').mockReturnValue('invalid json');
+
+        const spy = vi.spyOn(console, 'error');
+        readEncounters('test-campaign-6');
+
+        expect(spy).toHaveBeenCalledWith('Error reading encounters file:', expect.any(Error));
+        spy.mockRestore();
+    });
+
+    it('should handle readFileSync throwing an I/O error', () => {
+        vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+            throw new Error('EIO: input/output error');
+        });
+
+        const spy = vi.spyOn(console, 'error');
+        const result = readEncounters('test-campaign-7');
+
+        expect(result).toEqual({ encounters: [] });
+        expect(spy).toHaveBeenCalledWith('Error reading encounters file:', expect.anything());
+        spy.mockRestore();
+    });
+
+    it('should handle readFileSync throwing with no message', () => {
+        vi.spyOn(fs, 'readFileSync').mockImplementation(() => {
+            throw new Error();
+        });
+
+        const spy = vi.spyOn(console, 'error');
+        const result = readEncounters('test-campaign-8');
+
+        expect(result).toEqual({ encounters: [] });
+        spy.mockRestore();
     });
 });
 
@@ -294,5 +353,78 @@ describe('encounterUtils - writeEncounters', () => {
 
         const parsed = JSON.parse(writtenData);
         expect(parsed.encounters).toHaveLength(3);
+    });
+
+    it('should propagate writeFileSync errors', () => {
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => true);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+            throw new Error('ENOSPC: no space left on device');
+        });
+
+        expect(() => writeEncounters('write-test-5', { encounters: [] })).toThrow('ENOSPC');
+    });
+
+    it('should propagate mkdirSync errors when creating directory fails', () => {
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => false);
+        vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {
+            throw new Error('EACCES: permission denied');
+        });
+
+        expect(() => writeEncounters('write-test-6', { encounters: [] })).toThrow('EACCES');
+    });
+
+    it('should use exact directory path from path.dirname of file path', () => {
+        let capturedDir = '';
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => false);
+        vi.spyOn(fs, 'mkdirSync').mockImplementation((dir) => {
+            capturedDir = dir;
+        });
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => { /* no-op */ });
+
+        writeEncounters('dir-test', { encounters: [] });
+
+        const expectedDir = path.join(process.cwd(), 'public', 'campaigns', 'dir-test', 'data');
+        expect(capturedDir).toBe(expectedDir);
+    });
+
+    it('should overwrite existing file with new data', () => {
+
+        let writtenData = '';
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => true);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation((filePath, data) => {
+            writtenData = data;
+        });
+
+        writeEncounters('overwrite-test', { encounters: [{ id: 'new' }] });
+
+        const parsed = JSON.parse(writtenData);
+        expect(parsed.encounters).toHaveLength(1);
+        expect(parsed.encounters[0].id).toBe('new');
+    });
+
+    it('should handle campaign names with special characters', () => {
+        let capturedPath = '';
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => true);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation((filePath) => {
+            capturedPath = filePath;
+        });
+
+        writeEncounters('campaign-1_test.v2', { encounters: [] });
+
+        expect(capturedPath).toContain('campaign-1_test.v2');
+        expect(capturedPath).toContain('encounters.json');
+    });
+
+    it('should handle empty campaign name', () => {
+        let capturedPath = '';
+        vi.spyOn(fs, 'existsSync').mockImplementation(() => true);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation((filePath) => {
+            capturedPath = filePath;
+        });
+
+        writeEncounters('', { encounters: [] });
+
+        const expectedPath = path.join(process.cwd(), 'public', 'campaigns', 'data', 'encounters.json');
+        expect(capturedPath).toBe(expectedPath);
     });
 });
