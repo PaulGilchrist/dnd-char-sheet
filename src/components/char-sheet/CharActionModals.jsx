@@ -91,6 +91,7 @@ import { confirmSummonSpirit } from '../../services/automation/handlers/spells/s
 import { handleApply } from '../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js'
 import { applyResistanceChoice } from '../../services/automation/handlers/combat/elementalEpitomeHandler.js'
 import { applyDamageTypeChoice, applyTargetChoice, skipTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js'
+import { applyStarryChaliceHeal } from '../../services/rules/spells/postCastHealService.js'
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { sanitizeHtml } from '../../services/ui/sanitize.js'
@@ -1402,7 +1403,6 @@ export default function CharActionModals({
 
     async function handleStarryChaliceConfirm(targetName) {
         setModalState({ starryChaliceHealModal: null });
-        const { applyStarryChaliceHeal } = await import('../../services/rules/spells/postCastHealService.js');
         const result = await applyStarryChaliceHeal(targetName, campaignName);
         if (result) {
             setPopupHtml({

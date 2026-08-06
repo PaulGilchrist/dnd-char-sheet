@@ -32,6 +32,11 @@ import { executeEmpoweredReroll } from '../../services/rules/spells/empoweredSpe
 import { getManeuversForRules, getSuperiorityDice } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import * as storageService from '../../services/ui/storage.js';
+import { activateWildShape } from '../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js'
+import { confirmPolymorphTransform } from '../../services/automation/handlers/spells/polymorphService.js'
+import { confirmShapechangeTransform } from '../../services/automation/handlers/spells/shapechangeService.js'
+import { applyAnimalShapes } from '../../services/automation/handlers/spells/animalShapesService.js'
+import { confirmTruePolymorphTransform, applyObjectTransform } from '../../services/automation/handlers/spells/truePolymorphService.js'
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
 import PolymorphSelectionModal from './modals/PolymorphSelectionModal.jsx'
@@ -80,12 +85,10 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     const handleWildShapeConfirm = React.useCallback(async (action, beast, stats, campName) => {
-        const { activateWildShape } = await import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js');
         await activateWildShape(stats.name, beast, stats, campName);
     }, []);
 
     const handlePolymorphConfirm = React.useCallback(async (beast, popupData) => {
-        const { confirmPolymorphTransform } = await import('../../services/automation/handlers/spells/polymorphService.js');
         await confirmPolymorphTransform({
             targetName: popupData.targetName,
             beast,
@@ -98,7 +101,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     }, [playerStats]);
 
     const handleShapechangeConfirm = React.useCallback(async (form, popupData) => {
-        const { confirmShapechangeTransform } = await import('../../services/automation/handlers/spells/shapechangeService.js');
         await confirmShapechangeTransform({
             targetName: popupData.targetName,
             form,
@@ -112,7 +114,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
 
     const handleAnimalShapesBeastConfirm = React.useCallback(async (targetBeastMap) => {
         setPopupHtml(null);
-        const { applyAnimalShapes } = await import('../../services/automation/handlers/spells/animalShapesService.js');
         await applyAnimalShapes({
             targetBeastMap,
             casterName: playerStats.name,
@@ -123,7 +124,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     }, [playerStats, campaignName, setPopupHtml]);
 
     const handleTruePolymorphConfirm = React.useCallback(async (creature, popupData) => {
-        const { confirmTruePolymorphTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
         await confirmTruePolymorphTransform({
             targetName: popupData.targetName,
             creature,
@@ -137,7 +137,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     }, [playerStats]);
 
     const handleObjectTransformConfirm = React.useCallback(async (objectType, popupData) => {
-        const { applyObjectTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
         const targetName = popupData.targetName || popupData.casterName;
         await applyObjectTransform(targetName, objectType, popupData.casterName, popupData.spell, popupData.campaignName, playerStats);
     }, [playerStats]);

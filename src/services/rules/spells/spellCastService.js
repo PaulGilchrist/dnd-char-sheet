@@ -61,6 +61,7 @@ import { triggerStinkingCloud } from '../features/stinkingCloudService.js';
 import { triggerSleetStorm } from '../features/sleetStormService.js';
 import { triggerFaerieFire } from '../features/faerieFireService.js';
 import { triggerImprisonment } from '../features/imprisonmentService.js';
+import { handle as handleShapechange } from '../../automation/handlers/spells/shapechangeHandler.js';
 import { triggerMassCureWounds } from '../features/massCureWoundsService.js';
 import { triggerPrayerOfHealing } from '../features/prayerOfHealingService.js';
 import { triggerMassHealingWord } from '../features/massHealingWordService.js';
@@ -542,8 +543,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
     // Shapechange — self-only transformation, shows creature selection modal
     if (fullSpell.name && fullSpell.name.toLowerCase() === 'shapechange') {
-        const shapechangeModule = await import('../../automation/handlers/spells/shapechangeHandler.js');
-        const handleShapechange = shapechangeModule.handle;
         const action = {
             name: fullSpell.name,
             spell: fullSpell,

@@ -6,7 +6,8 @@ import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { getCombatSummary, loadCombatSummary } from '../../../encounters/combatData.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { setTempHp } from './tempHpService.js';
+import { setTempHp } from './tempHpService.js'
+import { cleanupWildShape } from '../class-druid/wildShapeCreatureBuilder.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 
@@ -152,8 +153,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 },
             };
         } else {
-            const { cleanupWildShape: cleanup } = await import('../class-druid/wildShapeCreatureBuilder.js');
-            cleanup(playerStats.name, campaignName);
+            cleanupWildShape(playerStats.name, campaignName);
 
             addEntry(campaignName, {
                 type: 'ability_use',

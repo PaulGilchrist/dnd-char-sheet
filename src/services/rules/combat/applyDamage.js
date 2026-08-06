@@ -20,6 +20,7 @@ import { checkDeathWard } from '../../rules/features/deathWardService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
 import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
+import { cleanupWildShape } from '../../automation/handlers/class-druid/wildShapeCreatureBuilder.js';
 
 // Tracks which multi-attack sequences have already triggered Relentless Endurance.
 // Prevents follow-up hits in the same sequence from re-killing the character.
@@ -268,7 +269,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         setRuntimeValue(creature.name, 'currentHitPoints', newHp, campaignName);
 
         if (creature.wildShapeSource && newHp <= 0 && oldHp > 0) {
-            const { cleanupWildShape } = await import('../../automation/handlers/class-druid/wildShapeCreatureBuilder.js');
             cleanupWildShape(creature.name, campaignName);
             setRuntimeValue(creature.name, 'deathSaves', [false, false, false], campaignName);
             setRuntimeValue(creature.name, 'deathFailures', [false, false, false], campaignName);
@@ -283,7 +283,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         creature.currentHp = newHp;
 
         if (creature.wildShapeSource && newHp <= 0 && oldHp > 0) {
-            const { cleanupWildShape } = await import('../../automation/handlers/class-druid/wildShapeCreatureBuilder.js');
             const druidName = creature.wildShapeSource;
             cleanupWildShape(druidName, campaignName);
             setRuntimeValue(druidName, 'currentHitPoints', 0, campaignName);

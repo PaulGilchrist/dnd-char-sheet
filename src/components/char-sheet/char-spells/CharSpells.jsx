@@ -27,6 +27,8 @@ import { isInnateSorceryActive } from '../../../services/combat/buffs/buffServic
 import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import utils from '../../../services/ui/utils.js';
 import { normalizeAutoDamage, resolveAttackDamageStandalone } from '../useAttackDamageResolution.js';
+import { confirmShapechangeTransform } from '../../../services/automation/handlers/spells/shapechangeService.js'
+import { prepareSpellCast, isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js'
 import './CharSpells.css'
 
 const CharSpells = function CharSpells({ playerStats, handleTogglePreparedSpells, campaignName, exhaustionPenalty = 0, conditionAttackMode, cannotAct, mapName, characters, setModalState }) {
@@ -235,8 +237,6 @@ return (
                         allowAnyCreature={true}
                         excludeTypes={['construct', 'undead']}
                         onConfirm={async (form) => {
-                          const { confirmShapechangeTransform } = await import('../../../services/automation/handlers/spells/shapechangeService.js');
-                          const { prepareSpellCast, isFreeCastAuthorized } = await import('../../../services/rules/spells/spellPreparationService.js');
                           const isCantrip = pendingShapechange.spell.level === 0;
                           if (!isCantrip) {
                             const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pendingShapechange.spell.name, pendingShapechange.spell.level, playerStats, campaignName);

@@ -6,6 +6,7 @@ import { addEntry } from '../../../ui/logService.js';
 import storage from '../../../ui/storage.js';
 import { handle as runTruePolymorphHandler } from './truePolymorphHandler.js';
 import { revertPolymorph } from './polymorphService.js';
+import { loadMonsters } from '../../../ui/dataLoader.js';
 
 const TRUE_POLYMORPH_EFFECT = 'true_polymorph';
 const OBJECT_TRANSFORM_EFFECT = 'object_transform';
@@ -248,7 +249,6 @@ export async function applyObjectTransform(targetName, objectType, casterName, s
 }
 
 export async function summonCreatureFromObject(monsterIndex, casterName, initiativeValue, slotLevel, playerStats, campaignName) {
-    const { loadMonsters } = await import('../../../ui/dataLoader.js');
     const monsters = await loadMonsters();
     const monster = monsters.find(m => m.index === monsterIndex);
     if (!monster) {

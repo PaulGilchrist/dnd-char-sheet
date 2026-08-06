@@ -17,6 +17,10 @@ import { CONDITION_DESCRIPTIONS } from '../../services/combat/conditions/effectD
 import { isUnbreakableMajestyActive, getUnbreakableMajestySaveDc, clearUnbreakableMajesty } from '../../services/combat/auras/unbreakableMajesty.js'
 import { sendFleshToStoneResult, sendPrismaticSprayIndigoResult, sendPrismaticSprayVioletResult } from '../../services/combat/conditions/savePromptService.js'
 import { isResilientSphereActive, getResilientSphereSource } from '../../services/combat/automation/automationPassives.js'
+import { cleanupWildShape } from '../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js'
+import { revertPolymorph } from '../../services/automation/handlers/spells/polymorphService.js'
+import { revertAnimalShapes } from '../../services/automation/handlers/spells/animalShapesService.js'
+import { revertShapechange } from '../../services/automation/handlers/spells/shapechangeService.js'
 
 const SHAPE_LABELS = {
     sphere: 'Sphere',
@@ -385,9 +389,7 @@ function CreatureCard({
                             : 'Wild Shape: Animal form active — spellcasting blocked, resistance types apply'}
                         removable={isLocalhost}
                         onRemove={() => {
-                            import('../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js').then(({ cleanupWildShape }) => {
-                                cleanupWildShape(creature.name, campaignName);
-                            });
+                            cleanupWildShape(creature.name, campaignName);
                         }}
                     />
                 )}
@@ -401,9 +403,7 @@ function CreatureCard({
                             : 'Polymorph: Transformed into a beast — game statistics replaced, reverts at 0 HP or when the caster loses concentration'}
                         removable={isLocalhost}
                         onRemove={() => {
-                            import('../../services/automation/handlers/spells/polymorphService.js').then(({ revertPolymorph }) => {
-                                revertPolymorph(creature.name, campaignName);
-                            });
+                            revertPolymorph(creature.name, campaignName);
                         }}
                     />
                 )}
@@ -417,9 +417,7 @@ function CreatureCard({
                             : 'Animal Shapes: Transformed into a beast — game statistics replaced, retains original HP'}
                         removable={isLocalhost}
                         onRemove={() => {
-                            import('../../services/automation/handlers/spells/animalShapesService.js').then(({ revertAnimalShapes }) => {
-                                revertAnimalShapes(creature.name, campaignName);
-                            });
+                            revertAnimalShapes(creature.name, campaignName);
                         }}
                     />
                 )}
@@ -433,9 +431,7 @@ function CreatureCard({
                             : 'Shapechange: Transformed — game statistics replaced, reverts when concentration is broken'}
                         removable={isLocalhost}
                         onRemove={() => {
-                            import('../../services/automation/handlers/spells/shapechangeService.js').then(({ revertShapechange }) => {
-                                revertShapechange(creature.name, campaignName);
-                            });
+                            revertShapechange(creature.name, campaignName);
                         }}
                     />
                 )}
