@@ -6,7 +6,7 @@
 
 - `src/` — React frontend (JSX, no TypeScript)
   - `src/components/` — React component folders (PascalCase) with co-located CSS
-  - `src/hooks/` — Custom hooks (`runtime/`, `management/`, `wizard/`, `combat/`)
+  - `src/hooks/` — Custom hooks (`runtime/`, `management/`, `wizard/`, `combat/`, `ui/`)
   - `src/services/` — Business logic (rules engine, combat pipeline, automation handlers, map utilities)
   - `src/routes/config.js` — Client-side view config
 - `server/` — Express API
@@ -115,7 +115,7 @@ setRuntimeValue(characterKey, 'myKey', newValue, campaignName);
 - **Dual ruleset architecture:** `src/services/rules/rulesFactory.js` selects between 5e and 2024 rule modules at runtime. Each character has a `rules` field (`'5e'` or `'2024'`). Both rulesets coexist in one campaign. Every core rules module has two implementations (`abilityCalc.js` / `abilityCalc2024.js`, etc.).
 - **Combat pipeline:** Event-chain architecture (`actionPipeline`). Weapon attacks have 20+ steps, spells have 6 steps. Steps subscribe to events and emit new events. Feature riders (19 modules) are pluggable. Modals can pause/resume the pipeline.
 - **Automation registry:** 200+ handler functions in `src/services/automation/`. Features declare automation metadata (type, trigger, damage expressions) that is collected, categorized, and dispatched at runtime.
-- **Per-spell feature services:** ~47 service files in `src/services/rules/features/`, each implementing automation for a specific spell or class feature.
+- **Per-spell feature services:** ~74 service files in `src/services/rules/features/`, each implementing automation for a specific spell or class feature.
 
 ## Code Simplicity
 
