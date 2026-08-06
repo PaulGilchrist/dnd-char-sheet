@@ -14,6 +14,7 @@ import { handleConfusionTurnStart } from '../../automation/handlers/spells/confu
 import { processSleetStormAreaSave } from '../../automation/handlers/spells/sleetStormHandler.js';
 import { removeSummonedCreatures } from '../../combat/summons/summonedCreatureService.js';
 import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
+import { revertTruePolymorph } from '../../automation/handlers/spells/truePolymorphService.js';
 const KEY = 'pendingExpirations';
 
 function ensureArray(value, name) {
@@ -1198,6 +1199,10 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
 
             case 'polymorph':
                 revertPolymorph(targetName, campaignName);
+                break;
+
+            case 'true_polymorph':
+                revertTruePolymorph(targetName, campaignName);
                 break;
 
             case 'charmed':

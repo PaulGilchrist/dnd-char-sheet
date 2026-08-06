@@ -1,0 +1,48 @@
+.tp-path-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.tp-path-btn {
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.tp-path-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-hover);
+}
+
+.tp-path-icon {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+
+.tp-path-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.tp-path-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .tp-path-grid {
+        grid-template-columns: 1fr;
+    }
+}

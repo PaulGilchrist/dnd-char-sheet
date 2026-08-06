@@ -4,7 +4,7 @@ import { setRuntimeBatch, setRuntimeValue } from '../../../hooks/runtime/useRunt
 import { clearAllExpirationEffects } from './expirations.js'
 import { rollD20 } from '../../../services/dice/diceRoller.js'
 import * as storageService from '../../../services/ui/storage.js'
-import { getCombatSummary } from '../../../services/encounters/combatData.js'
+import { getCombatSummary, setCombatSummaryCache } from '../../../services/encounters/combatData.js'
 import { clearAllConcentrations } from '../../../services/combat/concentration/concentrationService.js'
 import { addEntry } from '../../../services/ui/logService.js'
 import { grantCelestialResilience } from '../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js'
@@ -472,8 +472,19 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
     // Clear Globe of Invulnerability target effects on short rest
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     if (Array.isArray(storedEffects)) {
-      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage' && te.effect !== 'starry_form');
+      const filteredEffects = storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage' && te.effect !== 'starry_form' && te.effect !== 'polymorph' && te.effect !== 'true_polymorph' && te.effect !== 'object_transform');
       setRuntimeValue('campaign', 'targetEffects', filteredEffects, campaignName);
+    }
+
+    // Remove True Polymorph summoned creatures on short rest
+    const shortRestCs = getCombatSummary(campaignName);
+    if (shortRestCs?.creatures) {
+      const summonedToRemove = shortRestCs.creatures.filter(c => c.summonSource === 'true_polymorph');
+      if (summonedToRemove.length > 0) {
+        shortRestCs.creatures = shortRestCs.creatures.filter(c => c.summonSource !== 'true_polymorph');
+        storageService.default.set('combatSummary', shortRestCs, campaignName);
+        setCombatSummaryCache(shortRestCs, campaignName);
+      }
     }
 
     // Clear Awakened Mind target on short rest
@@ -690,10 +701,21 @@ export async function applyLongRest(playerStats, campaignName) {
       charData.activeConditionMeta = {};
 
        // Clear Globe of Invulnerability target effects on long rest
-       const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-       if (Array.isArray(storedEffects)) {
-         setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage'), campaignName);
-       }
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        if (Array.isArray(storedEffects)) {
+           setRuntimeValue('campaign', 'targetEffects', storedEffects.filter(te => te.effect !== 'globe_barrier' && te.effect !== 'antimagic_field' && te.effect !== 'protection_from_evil_and_good' && te.effect !== 'forcecage' && te.effect !== 'polymorph' && te.effect !== 'true_polymorph' && te.effect !== 'object_transform'), campaignName);
+        }
+
+       // Remove True Polymorph summoned creatures on long rest
+        const longRestCs = getCombatSummary(campaignName);
+        if (longRestCs?.creatures) {
+           const summonedToRemove = longRestCs.creatures.filter(c => c.summonSource === 'true_polymorph');
+           if (summonedToRemove.length > 0) {
+              longRestCs.creatures = longRestCs.creatures.filter(c => c.summonSource !== 'true_polymorph');
+              storageService.default.set('combatSummary', longRestCs, campaignName);
+              setCombatSummaryCache(longRestCs, campaignName);
+           }
+        }
 
       // Clear Awakened Mind target on long rest
       charData.awakenedMindTarget = null;

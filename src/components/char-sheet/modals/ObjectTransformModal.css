@@ -1,0 +1,60 @@
+.object-type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.object-type-btn {
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.object-type-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-hover);
+}
+
+.object-type-btn.selected {
+    border-color: var(--primary-color);
+    background: var(--bg-selected);
+}
+
+.object-type-btn i {
+    font-size: 20px;
+    color: var(--primary-color);
+}
+
+.custom-object-input {
+    margin-top: 12px;
+}
+
+.custom-object-input input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-overlay);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.custom-object-input input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .object-type-grid {
+        grid-template-columns: 1fr;
+    }
+}

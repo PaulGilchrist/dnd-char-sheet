@@ -207,6 +207,7 @@ import { handle as handleFleshToStone } from './handlers/spells/fleshToStoneHand
 import { handle as handleHoldMonster } from './handlers/spells/holdMonsterHandler.js';
 import { handle as handleBanishment } from './handlers/spells/banishmentHandler.js';
 import { handle as handlePolymorph } from './handlers/spells/polymorphHandler.js';
+import { handle as handleTruePolymorph } from './handlers/spells/truePolymorphHandler.js';
 import { handle as handleMaze, handleEscape as handleMazeEscape, removeMazeEffect } from './handlers/spells/mazeHandler.js';
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
 import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandler.js';
@@ -524,6 +525,7 @@ const HANDLER_MAP = {
         hold_monster: handleHoldMonster,
         banishment: handleBanishment,
         polymorph: handlePolymorph,
+        true_polymorph: handleTruePolymorph,
         maze: handleMaze,
         maze_escape: handleMazeEscape,
         remove_maze: removeMazeEffect,

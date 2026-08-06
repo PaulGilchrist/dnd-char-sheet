@@ -40,7 +40,7 @@ function getBeastActionsSummary(actions) {
     return actions.map(a => a.name).join(', ');
 }
 
-function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wild Shape', icon = 'fa-paw', actionLabel = 'Wild Shape', onConfirm, onCancel }) {
+function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wild Shape', icon = 'fa-paw', actionLabel = 'Wild Shape', allowAnyCreature = false, mode = 'creature_to_creature', onConfirm, onCancel }) {
     const [beasts, setBeasts] = React.useState([]);
     const [selectedBeast, setSelectedBeast] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
@@ -59,34 +59,48 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
             try {
                 const allMonsters = await loadMonsters();
 
-                const beastList = allMonsters
-                    .filter(m => m.type && m.type.toLowerCase() === 'beast')
-                    .filter(m => {
+                let creatureList = allMonsters;
+                if (!allowAnyCreature) {
+                    creatureList = creatureList.filter(m => m.type && m.type.toLowerCase() === 'beast');
+                }
+
+                if (mode === 'object_into_creature') {
+                    creatureList = creatureList.filter(m => {
+                        const cr = parseChallengeRating(m.challenge_rating);
+                        return cr <= 9;
+                    });
+                } else {
+                    creatureList = creatureList.filter(m => {
                         const cr = parseChallengeRating(m.challenge_rating);
                         return cr <= effectiveMaxCR;
-                    })
-                    .filter(m => {
+                    });
+                }
+
+                if (!allowAnyCreature) {
+                    creatureList = creatureList.filter(m => {
                         if (!wildShapeLimitations) return true;
                         const filteredSpeeds = filterBeastSpeeds(m.speed, wildShapeLimitations);
                         return filteredSpeeds.walk;
-                    })
-                    .sort((a, b) => {
-                        const crA = parseChallengeRating(a.challenge_rating);
-                        const crB = parseChallengeRating(b.challenge_rating);
-                        if (crA !== crB) return crA - crB;
-                        return a.name.localeCompare(b.name);
                     });
+                }
 
-                setBeasts(beastList);
+                creatureList = creatureList.sort((a, b) => {
+                    const crA = parseChallengeRating(a.challenge_rating);
+                    const crB = parseChallengeRating(b.challenge_rating);
+                    if (crA !== crB) return crA - crB;
+                    return a.name.localeCompare(b.name);
+                });
+
+                setBeasts(creatureList);
             } catch (err) {
                 console.error('[PolymorphSelectionModal] Error loading beasts:', err);
-                setError('Failed to load beast data.');
+                setError('Failed to load creature data.');
             } finally {
                 setLoading(false);
             }
         }
         loadBeasts();
-    }, [playerStats, effectiveMaxCR, wildShapeLimitations, campaignName]);
+    }, [playerStats, effectiveMaxCR, wildShapeLimitations, campaignName, allowAnyCreature, mode]);
 
     const filteredBeasts = React.useMemo(() => {
         if (!searchTerm.trim()) return beasts;
@@ -115,7 +129,7 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
             <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
                 <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
                     <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
-                    <div className="sp-body"><p>Loading available beasts...</p></div>
+                    <div className="sp-body"><p>Loading available creatures...</p></div>
                 </div>
             </div>
         );
@@ -135,13 +149,21 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
         );
     }
 
+    const listLabel = allowAnyCreature
+        ? (mode === 'object_into_creature' ? 'Choose a creature form (CR 9 or lower)' : `Choose a creature form (CR ${effectiveMaxCR} or lower)`)
+        : `Choose a beast form (CR ${effectiveMaxCR} or lower)`;
+    const searchPlaceholder = allowAnyCreature ? 'Search creatures...' : 'Search beasts...';
+    const noResultsMsg = allowAnyCreature
+        ? (mode === 'object_into_creature' ? 'No creatures match the CR 9 requirement.' : `No creatures match the target's CR requirement.`)
+        : `No beasts match ${wildShapeLimitations ? 'your Wild Shape limitations' : 'the target\'s CR requirement'}.`;
+
     return (
         <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
             <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
                 <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                 <div className="sp-body">
-                    <p>Choose a beast form (CR {effectiveMaxCR} or lower)</p>
-                    {wildShapeLimitations && (
+                    <p>{listLabel}</p>
+                    {wildShapeLimitations && !allowAnyCreature && (
                         <div className="wild-shape-info">
                             <strong>Movement:</strong> {wildShapeLimitations}
                         </div>
@@ -149,14 +171,14 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
                     <div className="wild-shape-search">
                         <input
                             type="text"
-                            placeholder="Search beasts..."
+                            placeholder={searchPlaceholder}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="wild-shape-list">
                         {filteredBeasts.length === 0 ? (
-                            <p className="sp-note">No beasts match {wildShapeLimitations ? 'your Wild Shape limitations' : 'the target\'s CR requirement'}.</p>
+                            <p className="sp-note">{noResultsMsg}</p>
                         ) : (
                             filteredBeasts.map((beast) => {
                                 const cr = parseChallengeRating(beast.challenge_rating);

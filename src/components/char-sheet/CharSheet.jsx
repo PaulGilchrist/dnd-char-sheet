@@ -35,6 +35,7 @@ import * as storageService from '../../services/ui/storage.js';
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
 import PolymorphSelectionModal from './modals/PolymorphSelectionModal.jsx'
+import ObjectTransformModal from './modals/ObjectTransformModal.jsx'
 
 function ShieldOfFaithTargetSelectionModal({ popupHtml, setPopupHtml, playerStats, campaignName }) {
     const targets = popupHtml?.creatureTargets?.map(name => ({ name, type: 'creature' })) || [];
@@ -93,6 +94,26 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             playerStats,
             campaignName: popupData.campaignName,
         });
+    }, [playerStats]);
+
+    const handleTruePolymorphConfirm = React.useCallback(async (creature, popupData) => {
+        const { confirmTruePolymorphTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
+        await confirmTruePolymorphTransform({
+            targetName: popupData.targetName,
+            creature,
+            casterName: popupData.casterName,
+            spell: popupData.spell,
+            spellLevel: popupData.spellLevel,
+            playerStats,
+            campaignName: popupData.campaignName,
+            mode: popupData.mode || 'creature_to_creature',
+        });
+    }, [playerStats]);
+
+    const handleObjectTransformConfirm = React.useCallback(async (objectType, popupData) => {
+        const { applyObjectTransform } = await import('../../services/automation/handlers/spells/truePolymorphService.js');
+        const targetName = popupData.targetName || (popupData._metaCtx?.truePolymorphTarget);
+        await applyObjectTransform(targetName, objectType, popupData.casterName, popupData.spell, popupData.campaignName, playerStats);
     }, [playerStats]);
 
     const storedExhaustion = useRuntimeValue(playerSummary?.name, 'exhaustionLevel', campaignName);
@@ -1011,6 +1032,35 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                                 onConfirm={(beast) => {
                                     setPopupHtml(null);
                                     handlePolymorphConfirm(beast, popupHtml);
+                                }}
+                                onCancel={() => setPopupHtml(null)}
+                            />
+                        );
+                    }
+                    if (popupHtml.type === 'true_polymorph_select') {
+                        return (
+                            <PolymorphSelectionModal
+                                maxCR={popupHtml.maxCR}
+                                campaignName={popupHtml.campaignName}
+                                title="True Polymorph"
+                                icon="fa-paw"
+                                actionLabel="Transform"
+                                allowAnyCreature={true}
+                                mode={popupHtml.mode}
+                                onConfirm={(creature) => {
+                                    setPopupHtml(null);
+                                    handleTruePolymorphConfirm(creature, popupHtml);
+                                }}
+                                onCancel={() => setPopupHtml(null)}
+                            />
+                        );
+                    }
+                    if (popupHtml.type === 'true_polymorph_object') {
+                        return (
+                            <ObjectTransformModal
+                                onConfirm={(objectType) => {
+                                    setPopupHtml(null);
+                                    handleObjectTransformConfirm(objectType, { ...popupHtml, _metaCtx: { truePolymorphTarget: popupHtml.targetName } });
                                 }}
                                 onCancel={() => setPopupHtml(null)}
                             />
