@@ -317,16 +317,23 @@ function getMonsterSaveBonuses(monster) {
 
 export function revertTruePolymorph(targetName, campaignName) {
     const cs = getCombatSummary(campaignName);
+    console.log('[revertTruePolymorph] targetName:', targetName, 'campaignName:', campaignName);
+
     if (!cs?.creatures) {
+        console.log('[revertTruePolymorph] No creatures in combatSummary, returning false');
         return false;
     }
 
     const creature = cs.creatures.find(c => c.name === targetName);
     if (!creature) {
+        console.log('[revertTruePolymorph] Creature not found by name:', targetName);
         return false;
     }
 
+    console.log('[revertTruePolymorph] Creature found, summonSource:', creature.summonSource, 'polymorphSource:', creature.polymorphSource);
+
     if (creature.summonSource === 'true_polymorph') {
+        console.log('[revertTruePolymorph] Summoned creature — removing from combat');
         cs.creatures = cs.creatures.filter(c => c.name !== targetName);
         storage.set('combatSummary', cs, campaignName);
         setCombatSummaryCache(cs, campaignName);
@@ -351,8 +358,10 @@ export function revertTruePolymorph(targetName, campaignName) {
     }
 
     if (creature.polymorphSource) {
+        console.log('[revertTruePolymorph] Transformed creature — delegating to revertPolymorph');
         return revertPolymorph(targetName, campaignName);
     }
 
+    console.log('[revertTruePolymorph] No summonSource or polymorphSource, returning false');
     return false;
 }

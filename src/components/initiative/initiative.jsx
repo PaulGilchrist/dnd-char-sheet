@@ -216,8 +216,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
         const dataKey = event.key.slice(`change-${campaignName}-`.length)
         if (dataKey === 'combatSummary') {
+            console.log('[initiative SSE] combatSummary event, creatures:', event.data?.creatures?.map(c => c.name));
             if (!event.data?.creatures) return
-            const merged = { ...event.data }
+            const merged = cloneDeep(event.data)
             if (!merged.activeCreatureName) {
                 const activeName = getActiveCreatureName(campaignName)
                 if (activeName) {
@@ -484,6 +485,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     React.useEffect(() => {
         const handler = () => {
             const summary = getCombatSummary(campaignName)
+            console.log('[initiative custom event] combat-summary-updated, creatures:', summary?.creatures?.map(c => c.name));
             if (summary && JSON.stringify(summary) !== JSON.stringify(combatSummaryRef.current)) {
                 combatSummaryRef.current = summary
                 setCombatSummary(summary)
