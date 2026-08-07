@@ -1,4 +1,3 @@
-/* @cleaned-by-ai */
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';

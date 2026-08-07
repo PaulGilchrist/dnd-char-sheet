@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CharActionSpellPopups from './CharActionSpellPopups.jsx';
