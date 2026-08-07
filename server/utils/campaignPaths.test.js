@@ -177,8 +177,10 @@ describe('campaignPaths - ensureDataDir', () => {
     });
 
     it('should return the data directory path', () => {
+        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
         const result = campaignPaths.ensureDataDir('test-campaign');
         expect(result).toBe(path.resolve(process.cwd(), 'public', 'campaigns', 'test-campaign', 'data'));
+        fs.existsSync.mockRestore();
     });
 
     it('should not throw when directory already exists', () => {
@@ -205,15 +207,15 @@ describe('campaignPaths - ensureDataDir', () => {
     });
 
     it('should call existsSync with the data directory path', () => {
-        const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
 
         campaignPaths.ensureDataDir('test-campaign');
 
-        expect(existsSyncSpy).toHaveBeenCalledWith(
+        expect(fs.existsSync).toHaveBeenCalledWith(
             expect.stringContaining('test-campaign'),
         );
 
-        existsSyncSpy.mockRestore();
+        fs.existsSync.mockRestore();
     });
 
     it('should call mkdirSync with recursive option', () => {

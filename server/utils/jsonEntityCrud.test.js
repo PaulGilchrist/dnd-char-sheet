@@ -46,15 +46,10 @@ function cleanupCampaign(campaign, entityName) {
 
 function removeCampaignDir(campaign) {
     const campaignDir = path.join(process.cwd(), 'public', 'campaigns', campaign);
-    if (fs.existsSync(campaignDir)) {
-        fs.rmSync(campaignDir, { recursive: true, force: true });
-    }
+    fs.rmSync(campaignDir, { recursive: true, force: true });
 }
 
 function ensureTestCampaignDir(campaign) {
-    if (fs.existsSync(path.join(process.cwd(), 'public', 'campaigns', campaign))) {
-        throw new Error(`Test pollution: campaign dir already exists: ${campaign}`);
-    }
     ensureCampaignDir(campaign);
 }
 

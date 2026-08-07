@@ -140,4 +140,12 @@ describe('Subscriber', () => {
         expect(instanceA).not.toBe(instanceB);
     });
 
+    it('creates an EventSource without campaign param when campaignName is falsy', () => {
+        render(<Subscriber handleEvent={handleEventMock} campaignName={null} />);
+
+        const allInstances = MockEventSource.instances;
+        expect(allInstances.length).toBe(1);
+        expect(allInstances[0].url).toBe('http://localhost/subscribe?');
+    });
+
 });

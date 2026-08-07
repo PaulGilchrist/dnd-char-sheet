@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { vi } from 'vitest';
 
 export const mockGridCenterX = (gx) => gx * 40 + 20;

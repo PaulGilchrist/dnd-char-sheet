@@ -17,8 +17,8 @@ export default defineConfig({
         },
         coverage: {
             all: true,
-            clean: false,
-            cleanOnRerun: false,
+            clean: true,
+            cleanOnRerun: true,
             reportsDirectory: './coverage',
             tempDirectory: './.coverage-tmp',  // outside coverage folder
             reporter: ['text', 'json', 'html', 'lcov'],
@@ -26,6 +26,8 @@ export default defineConfig({
             exclude: [
                 'node_modules/',
                 'src/test/',
+                '**/*.test.js',
+                '**/*.test.jsx',
                 '**/*.css',
                 '**/*.scss',
                 '**/*.sass',
