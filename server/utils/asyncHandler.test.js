@@ -154,10 +154,10 @@ describe('asyncHandler - synchronous error handling', () => {
         const handler = asyncHandler((_req, _res, _next) => {
             throw new Error('test error');
         });
-        const req = createMockReq({ method: 'POST', originalUrl: '/api/campaigns/my-campaign/data' });
+        const req = createMockReq({ method: 'POST', originalUrl: '/api/campaigns/test-campaign/data' });
         handler(req, createMockRes(), vi.fn());
         expect(consoleSpy).toHaveBeenCalledWith(
-            'Error in POST /api/campaigns/my-campaign/data:',
+            'Error in POST /api/campaigns/test-campaign/data:',
             expect.any(Error),
         );
         consoleSpy.mockRestore();
@@ -448,9 +448,9 @@ describe('asyncHandler - HTTP method and URL logging', () => {
         const handler = asyncHandler((_req, _res, _next) => {
             throw new Error('post error');
         });
-        handler(createMockReq({ method: 'POST', originalUrl: '/api/campaigns/my-campaign/characters' }), createMockRes(), vi.fn());
+        handler(createMockReq({ method: 'POST', originalUrl: '/api/campaigns/test-campaign/characters' }), createMockRes(), vi.fn());
         expect(consoleSpy).toHaveBeenCalledWith(
-            'Error in POST /api/campaigns/my-campaign/characters:',
+            'Error in POST /api/campaigns/test-campaign/characters:',
             expect.any(Error),
         );
         consoleSpy.mockRestore();
@@ -500,9 +500,9 @@ describe('asyncHandler - HTTP method and URL logging', () => {
         const handler = asyncHandler((_req, _res, _next) => {
             throw new Error('complex url');
         });
-        handler(createMockReq({ method: 'GET', originalUrl: '/api/campaigns/my-campaign/encounters?include=monsters' }), createMockRes(), vi.fn());
+        handler(createMockReq({ method: 'GET', originalUrl: '/api/campaigns/test-campaign/encounters?include=monsters' }), createMockRes(), vi.fn());
         expect(consoleSpy).toHaveBeenCalledWith(
-            'Error in GET /api/campaigns/my-campaign/encounters?include=monsters:',
+            'Error in GET /api/campaigns/test-campaign/encounters?include=monsters:',
             expect.any(Error),
         );
         consoleSpy.mockRestore();
@@ -677,7 +677,7 @@ describe('asyncHandler - real-world patterns', () => {
             const campaignName = req.params.campaign;
             res.statusFn(200).jsonFn({ campaign: campaignName, maps: ['map1', 'map2'] });
         });
-        handler(createMockReq({ method: 'GET', originalUrl: '/api/campaigns/my-campaign/maps', params: { campaign: 'my-campaign' } }), createMockRes(), vi.fn());
+        handler(createMockReq({ method: 'GET', originalUrl: '/api/campaigns/test-campaign/maps', params: { campaign: 'test-campaign' } }), createMockRes(), vi.fn());
     });
 
     it('should handle a POST route that creates data and returns 201', () => {

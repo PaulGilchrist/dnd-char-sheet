@@ -224,7 +224,7 @@ describe('WildCompanionModal', () => {
   });
 
   it('uses the provided campaignName in setRuntimeBatch calls', async () => {
-    const props = makeProps({ campaignName: 'my-campaign' });
+    const props = makeProps({ campaignName: 'test-campaign' });
     render(<WildCompanionModal {...props} />);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Expend Level 1 Slot/i }));
@@ -232,7 +232,7 @@ describe('WildCompanionModal', () => {
     expect(mockSetRuntimeBatch).toHaveBeenCalledWith(
       'Druid1',
       expect.any(Object),
-      'my-campaign'
+      'test-campaign'
     );
   });
 

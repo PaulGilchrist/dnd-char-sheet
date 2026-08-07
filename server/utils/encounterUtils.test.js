@@ -17,7 +17,7 @@ describe('encounterUtils - getEncountersFilePath', () => {
     });
 
     it('should use process.cwd()', () => {
-        const result = getEncountersFilePath('my-campaign');
+        const result = getEncountersFilePath('test-campaign-1');
         expect(result).toContain(process.cwd());
     });
 

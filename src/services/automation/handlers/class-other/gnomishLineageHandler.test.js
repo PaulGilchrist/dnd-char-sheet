@@ -95,13 +95,13 @@ describe('gnomishLineageHandler', () => {
         });
 
         it('uses player stats name and campaign name for runtime writes', async () => {
-            await confirmGnomishLineage(makePlayerStats({ name: 'OtherPlayer' }), 'Deep Gnome', 'my-campaign');
+            await confirmGnomishLineage(makePlayerStats({ name: 'OtherPlayer' }), 'Deep Gnome', 'test-campaign');
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'OtherPlayer',
                 '_gnomishLineageSelection',
                 'Deep Gnome',
-                'my-campaign'
+                'test-campaign'
             );
         });
     });

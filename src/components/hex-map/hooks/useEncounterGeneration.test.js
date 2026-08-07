@@ -272,7 +272,7 @@ describe('useEncounterGeneration', () => {
 
         it('strips .json extension from map name for encounter name', async () => {
             const jsonArgs = [
-                'my-campaign',
+                'test-campaign',
                 'dungeon-exploration.json',
                 { '0,0': 'forest' },
                 [],
@@ -292,7 +292,7 @@ describe('useEncounterGeneration', () => {
             await result.current.handleStartEncounter(0, 0);
 
             expect(mapsService.createMap).toHaveBeenCalledWith(
-                'my-campaign',
+                'test-campaign',
                 'dungeon-exploration - Encounter at 0,0',
                 expect.any(Object)
             );

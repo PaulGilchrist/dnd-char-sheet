@@ -156,12 +156,12 @@ describe('sse - GET /subscribe', () => {
         });
 
         it('should write change data snapshot for matching campaign', () => {
-            characterChangeData.set('my-campaign', {
+            characterChangeData.set('test-campaign', {
                 character1: { hp: 25 },
                 character2: { hp: 10 },
             });
 
-            const mockReq = createMockReq({ campaign: 'my-campaign' });
+            const mockReq = createMockReq({ campaign: 'test-campaign' });
             const mockRes = createMockRes();
 
             subscribeHandler(mockReq, mockRes);
@@ -294,12 +294,12 @@ describe('sse - GET /subscribe', () => {
         });
 
         it('should write spell overlays for matching campaign with overlays', () => {
-            spellOverlayData.set('my-campaign', [
+            spellOverlayData.set('test-campaign', [
                 { id: 'overlay-1', name: 'Fireball', level: 3 },
                 { id: 'overlay-2', name: 'Shield', level: 1 },
             ]);
 
-            const mockReq = createMockReq({ campaign: 'my-campaign' });
+            const mockReq = createMockReq({ campaign: 'test-campaign' });
             const mockRes = createMockRes();
 
             subscribeHandler(mockReq, mockRes);
@@ -309,7 +309,7 @@ describe('sse - GET /subscribe', () => {
             );
             expect(overlayWrites).toHaveLength(1);
             const parsed = JSON.parse(overlayWrites[0].replace('data: ', ''));
-            expect(parsed.key).toBe('spell-overlay-my-campaign');
+            expect(parsed.key).toBe('spell-overlay-test-campaign');
             expect(parsed.data.action).toBe('add');
             expect(parsed.data.overlays).toHaveLength(2);
         });
@@ -503,7 +503,7 @@ describe('sse - GET catch-all for React Router', () => {
 
     it('should serve dist/index.html for nested paths', async () => {
         const app = createTestApp();
-        const res = await request(app).get('/campaigns/my-campaign/character/1');
+        const res = await request(app).get('/campaigns/test-campaign/character/1');
 
         expect(res.status).toBe(200);
     });

@@ -603,12 +603,12 @@ describe('changeData - saveFile edge cases', () => {
 
         const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => { /* no-op */ });
 
-        characterChangeData.set('my-campaign-123', { character1: { hp: 25 } });
+        characterChangeData.set('test-campaign-123', { character1: { hp: 25 } });
         saveFile();
 
         expect(writeSpy).toHaveBeenCalled();
         const callPath = writeSpy.mock.calls[0][0];
-        expect(callPath).toContain('my-campaign-123');
+        expect(callPath).toContain('test-campaign-123');
 
         writeSpy.mockRestore();
     });

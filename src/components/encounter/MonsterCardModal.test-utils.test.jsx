@@ -36,8 +36,8 @@ describe('MonsterCardModal.test-utils', () => {
 
     it('merges overrides into props', () => {
       const monster = utils.makeMonster();
-      const props = utils.makeProps(monster, { campaignName: 'my-campaign', creatureName: 'Goblin' });
-      expect(props.campaignName).toBe('my-campaign');
+      const props = utils.makeProps(monster, { campaignName: 'test-campaign', creatureName: 'Goblin' });
+      expect(props.campaignName).toBe('test-campaign');
       expect(props.creatureName).toBe('Goblin');
       expect(props.monster).toBe(monster);
     });

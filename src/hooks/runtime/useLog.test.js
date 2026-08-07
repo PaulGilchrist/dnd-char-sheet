@@ -45,11 +45,11 @@ describe('useLog', () => {
     });
 
     it('calls getLog with the campaign name', async () => {
-      const { result } = renderHook(() => useLog('my-campaign'));
+      const { result } = renderHook(() => useLog('test-campaign'));
       await waitFor(() => {
         expect(result.current.initialized).toBe(true);
       });
-      expect(logService.getLog).toHaveBeenCalledWith('my-campaign');
+      expect(logService.getLog).toHaveBeenCalledWith('test-campaign');
     });
 
     it('slices loaded entries to MAX_LOG_ENTRIES (200) when log has more', async () => {

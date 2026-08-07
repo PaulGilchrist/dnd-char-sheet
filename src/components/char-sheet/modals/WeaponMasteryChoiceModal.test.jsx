@@ -143,7 +143,7 @@ describe('WeaponMasteryChoiceModal', () => {
     const customPlayerStats = { name: 'Rogue2', level: 10 };
     render(
       <WeaponMasteryChoiceModal
-        {...makeProps({ playerStats: customPlayerStats, campaignName: 'my-campaign' })}
+        {...makeProps({ playerStats: customPlayerStats, campaignName: 'test-campaign' })}
       />
     );
     await act(async () => {
@@ -155,7 +155,7 @@ describe('WeaponMasteryChoiceModal', () => {
     expect(automation.applyWeaponMasteryChoice).toHaveBeenCalledWith(
       'Piercing',
       customPlayerStats,
-      'my-campaign'
+      'test-campaign'
     );
   });
 

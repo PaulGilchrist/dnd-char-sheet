@@ -263,10 +263,10 @@ describe('materialComponents', () => {
         'Drop of Blood, Piece of Flesh, Pinch of Bone Dust',
       ]);
 
-      const result = await consumeMaterial(stats, 'Drop of Blood, Piece of Flesh, Pinch of Bone Dust', 'my-campaign');
+      const result = await consumeMaterial(stats, 'Drop of Blood, Piece of Flesh, Pinch of Bone Dust', 'test-campaign');
 
       expect(result).toBe(true);
-      expect(mockAddEntry).toHaveBeenCalledWith('my-campaign', {
+      expect(mockAddEntry).toHaveBeenCalledWith('test-campaign', {
         type: 'material_consumed',
         characterName: 'Test Character',
         material: 'Drop of Blood, Piece of Flesh, Pinch of Bone Dust',
@@ -278,10 +278,10 @@ describe('materialComponents', () => {
       mockFetchOk();
       const stats = mockPlayerStats(['Some Material'], 'My Character');
 
-      await consumeMaterial(stats, 'Some Material', 'my-campaign');
+      await consumeMaterial(stats, 'Some Material', 'test-campaign');
 
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/campaigns/my-campaign/My_Character.json',
+        '/api/campaigns/test-campaign/My_Character.json',
         expect.objectContaining({
           method: 'PATCH',
           mode: 'cors',

@@ -177,7 +177,7 @@ describe('HypnoticPatternShakeModal', () => {
     it('uses custom props (campaignName, attackerName, featureName, range) in executeHandler and log', async () => {
       executeHandler.mockResolvedValue({ success: true });
       render(<HypnoticPatternShakeModal {...makeProps({
-        campaignName: 'my-campaign',
+        campaignName: 'test-campaign',
         attackerName: 'Sorcerer3',
         featureName: 'Custom Shake',
         rangeFeet: 45,
@@ -192,10 +192,10 @@ describe('HypnoticPatternShakeModal', () => {
             name: 'Custom Shake',
           },
           { name: 'Sorcerer3' },
-          'my-campaign',
+          'test-campaign',
           null
         );
-        expect(addEntry).toHaveBeenCalledWith('my-campaign', expect.objectContaining({
+        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
           characterName: 'Sorcerer3',
           abilityName: 'Shake Out Stupor',
           targetName: 'Orc Warrior',

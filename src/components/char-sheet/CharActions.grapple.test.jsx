@@ -237,7 +237,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue(null);
 
       await act(async () => {
-        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -292,7 +292,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin', conditions: [], type: 'npc', ability_score_modifiers: { str: 1 } });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -307,7 +307,7 @@ describe('CharActions grapple action', () => {
           name: 'Grapple',
           description: expect.stringContaining('Grapple successful'),
         }));
-        expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['grappled']), 'my-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['grappled']), 'test-campaign');
       });
     });
 
@@ -350,7 +350,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Orc', conditions: [], type: 'npc', ability_score_modifiers: { str: 10 } });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -365,7 +365,7 @@ describe('CharActions grapple action', () => {
           name: 'Grapple',
           description: expect.stringContaining('Grapple failed'),
         }));
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('Orc', 'activeConditions', expect.arrayContaining(['grappled']), 'my-campaign');
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('Orc', 'activeConditions', expect.arrayContaining(['grappled']), 'test-campaign');
       });
     });
 
@@ -406,7 +406,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin', conditions: [], type: 'npc', ability_score_modifiers: { str: 10 } });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -421,7 +421,7 @@ describe('CharActions grapple action', () => {
           name: 'Grapple',
           description: expect.stringContaining('Grapple failed'),
         }));
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['grappled']), 'my-campaign');
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['grappled']), 'test-campaign');
       });
     });
 
@@ -450,7 +450,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin', conditions: ['grappled'] });
 
       await act(async () => {
-        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -479,7 +479,7 @@ describe('CharActions grapple action', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="my-campaign" cannotAct={true} />);
+        render(<CharActions playerStats={createStats({ actions: ['Grapple'] })} campaignName="test-campaign" cannotAct={true} />);
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -533,7 +533,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin', conditions: [], type: 'npc', ability_score_modifiers: { str: 1 } });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');
@@ -599,7 +599,7 @@ describe('CharActions grapple action', () => {
       getTargetFromAttacker.mockReturnValue({ name: 'Goblin', conditions: [], type: 'npc', ability_score_modifiers: { str: 1 } });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const grappleBtn = screen.getByText('Grapple');

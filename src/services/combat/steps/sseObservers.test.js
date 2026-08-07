@@ -39,13 +39,13 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const wildcardObserver = observers.find(o => o.event === '*');
 
         await wildcardObserver.handler({}, { data: { total: 15 } }, 'damage:rolled');
 
         expect(fetchMock).toHaveBeenCalledWith(
-            '/api/campaigns/my-campaign/pipeline-event',
+            '/api/campaigns/test-campaign/pipeline-event',
             expect.objectContaining({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -61,7 +61,7 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const wildcardObserver = observers.find(o => o.event === '*');
 
         await wildcardObserver.handler({}, { data: { done: true } }, 'spell:applied');
@@ -74,13 +74,13 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const modalObserver = observers.find((o, idx) => o.event === '*' && idx > 0);
 
         await modalObserver.handler({}, { modal: true, data: { step: 'test-step' } });
 
         expect(fetchMock).toHaveBeenCalledWith(
-            '/api/campaigns/my-campaign/pipeline-event',
+            '/api/campaigns/test-campaign/pipeline-event',
             expect.objectContaining({
                 method: 'POST',
             })
@@ -94,7 +94,7 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const modalObserver = observers.find((o, idx) => o.event === '*' && idx > 0);
 
         await modalObserver.handler({}, { data: { total: 10 } });
@@ -113,7 +113,7 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const resumedObserver = observers.find(o => o.event === 'pipeline:resumed');
 
         await resumedObserver.handler({}, { data: { step: 'test-step' } });
@@ -126,7 +126,7 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockRejectedValue(new Error('Network error'));
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const wildcardObserver = observers.find(o => o.event === '*');
 
         // Should not throw
@@ -152,7 +152,7 @@ describe('createSseObservers', () => {
         const fetchMock = global.fetch;
         fetchMock.mockResolvedValue({ ok: true });
 
-        const observers = createSseObservers('my-campaign');
+        const observers = createSseObservers('test-campaign');
         const wildcardObserver = observers.find((o, idx) => o.event === '*' && idx === 0);
 
         await wildcardObserver.handler({}, { modal: true, data: { step: 'test-step' } }, 'damage:rolled');

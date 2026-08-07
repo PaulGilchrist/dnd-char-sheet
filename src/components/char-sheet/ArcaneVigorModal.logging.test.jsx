@@ -306,12 +306,12 @@ describe('ArcaneVigorModal - logging', () => {
 
   it('logs with correct campaign name', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
-    renderModal({ campaignName: 'my-campaign' });
+    renderModal({ campaignName: 'test-campaign' });
     fireEvent.click(screen.getByText(/Roll One/));
     await act(async () => {
       fireEvent.click(screen.getByText('Apply Healing'));
     });
-    expect(addEntry.mock.calls[0][0]).toBe('my-campaign');
-    expect(addEntry.mock.calls[1][0]).toBe('my-campaign');
+    expect(addEntry.mock.calls[0][0]).toBe('test-campaign');
+    expect(addEntry.mock.calls[1][0]).toBe('test-campaign');
   });
 });

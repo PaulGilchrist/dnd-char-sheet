@@ -122,8 +122,8 @@ describe('createBaseProps', () => {
     });
 
     it('overrides campaignName when provided', () => {
-      const props = createBaseProps({ campaignName: 'my-campaign' });
-      expect(props.campaignName).toBe('my-campaign');
+      const props = createBaseProps({ campaignName: 'test-campaign' });
+      expect(props.campaignName).toBe('test-campaign');
     });
 
     it('overrides characters when provided', () => {

@@ -216,7 +216,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Test Action', description: 'Does something.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Test Action:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -253,7 +253,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Thunderwave', description: 'Blast yourself.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />); });
       const actionEl = screen.getByText(/Thunderwave:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -284,7 +284,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Piercing Spray', description: 'Shoot needles.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />); });
       const actionEl = screen.getByText(/Piercing Spray:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -338,7 +338,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Erupting Flames', description: 'Flames erupt.', automation: { type: 'auto_effect', trigger: 'after_casting_action_spell' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Erupting Flames:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -368,7 +368,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Erupting Flames', description: 'Flames erupt.', automation: { type: 'auto_effect', trigger: 'after_casting_action_spell' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Erupting Flames:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -400,7 +400,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Test Action', description: 'Logs things.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Test Action:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -424,7 +424,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Test Action', description: 'Returns nothing.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Test Action:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -448,7 +448,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Test Action', description: 'Blocked.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" cannotAct={true} />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" cannotAct={true} />, { wrapper }); });
       const actionEl = screen.getByText(/Test Action:/);
       await act(async () => { fireEvent.click(actionEl); });
 
@@ -478,7 +478,7 @@ describe('CharActions automation action handler', () => {
         actions: [{ name: 'Flurry of Blows', description: 'Ki flurry.', automation: { type: 'auto_effect' } }],
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper }); });
       const actionEl = screen.getByText(/Flurry of Blows:/);
       await act(async () => { fireEvent.click(actionEl); });
 

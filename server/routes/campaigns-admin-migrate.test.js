@@ -186,13 +186,13 @@ describe('campaignsAdmin - POST /api/campaigns/migrate-image-paths', () => {
     it('should migrate imagePath in character JSON files', async () => {
         const app = createTestApp();
         const realCampaignsDir = `${process.cwd()}/public/campaigns`;
-        const realCampaignPath = `${realCampaignsDir}/my-campaign`;
-        ensureRealCampaignsDir(['my-campaign']);
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
         mockFsState.exists.add(realCampaignPath);
         const charPath = `${realCampaignPath}/character1.json`;
         const imageData = JSON.stringify({
             name: 'Hero',
-            imagePath: 'campaigns/my-campaign/images/hero.png',
+            imagePath: 'campaigns/test-campaign/images/hero.png',
         });
         mockFsState.files.set(charPath, imageData);
         mockFsState.readdir.set(realCampaignPath, ['character1.json']);

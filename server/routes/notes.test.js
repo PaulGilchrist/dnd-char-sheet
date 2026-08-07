@@ -289,13 +289,13 @@ describe('notes - GET /api/campaigns/:campaign/notes', () => {
     });
 
     it('should handle campaign names with special characters in list', async () => {
-        setupNotes('my-campaign-123', [
+        setupNotes('test-campaign-123', [
             { id: 'note-1', description: 'Test', isPrivate: false },
         ]);
 
         const app = createTestApp();
         const res = await request(app)
-            .get('/api/campaigns/my-campaign-123/notes')
+            .get('/api/campaigns/test-campaign-123/notes')
             .set('Host', 'localhost');
 
         expect(res.status).toBe(200);
@@ -485,12 +485,12 @@ describe('notes - POST /api/campaigns/:campaign/notes', () => {
 
         const app = createTestApp();
         const res = await request(app)
-            .post('/api/campaigns/my-campaign-123/notes')
+            .post('/api/campaigns/test-campaign-123/notes')
             .send({ notes: notesData });
 
         expect(res.status).toBe(200);
 
-        const stored = MOCK_STORE.get('my-campaign-123');
+        const stored = MOCK_STORE.get('test-campaign-123');
         expect(stored).toHaveLength(1);
     });
 });
@@ -914,18 +914,18 @@ describe('notes - DELETE /api/campaigns/:campaign/notes/:noteId', () => {
     });
 
     it('should handle campaign names with special characters', async () => {
-        setupNotes('my-campaign-123', [
+        setupNotes('test-campaign-123', [
             { id: 'note-1', description: 'Delete Me', isPrivate: false },
             { id: 'note-2', description: 'Keep Me', isPrivate: false },
         ]);
 
         const app = createTestApp();
         const res = await request(app)
-            .delete('/api/campaigns/my-campaign-123/notes/note-1');
+            .delete('/api/campaigns/test-campaign-123/notes/note-1');
 
         expect(res.status).toBe(200);
 
-        const stored = MOCK_STORE.get('my-campaign-123');
+        const stored = MOCK_STORE.get('test-campaign-123');
         expect(stored).toHaveLength(1);
         expect(stored[0].id).toBe('note-2');
     });

@@ -632,14 +632,14 @@ describe('spell-overlay - POST /spell-overlay', () => {
 
             const app = createTestApp();
             await request(app)
-                .post('/spell-overlay?campaign=my-campaign')
+                .post('/spell-overlay?campaign=test-campaign')
                 .send({
                     action: 'add',
                     overlays: [{ id: 'overlay-1', name: 'Fireball' }],
                 });
 
             expect(publishSpy).toHaveBeenCalledWith(
-                'spell-overlay-my-campaign',
+                'spell-overlay-test-campaign',
                 { action: 'add', overlays: [{ id: 'overlay-1', name: 'Fireball' }], overlayId: undefined }
             );
 

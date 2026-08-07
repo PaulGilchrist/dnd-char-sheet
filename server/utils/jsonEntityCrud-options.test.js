@@ -1,0 +1,420 @@
+import fs from 'fs';
+import path from 'path';
+import express from 'express';
+import request from 'supertest';
+import { createJsonEntityRouter } from '../utils/jsonEntityCrud.js';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function createTestApp(router) {
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+    return app;
+}
+
+function dataFileFor(campaign, entityName) {
+    return path.join(process.cwd(), 'public', 'campaigns', campaign, 'data', `${entityName}.json`);
+}
+
+function ensureCampaignDir(campaign) {
+    const dir = path.join(process.cwd(), 'public', 'campaigns', campaign, 'data');
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+}
+
+function writeEntities(campaign, entityName, entities) {
+    const filePath = dataFileFor(campaign, entityName);
+    ensureCampaignDir(campaign);
+    fs.writeFileSync(filePath, JSON.stringify(entities, null, 2));
+}
+
+function removeEntitiesFile(campaign, entityName) {
+    const filePath = dataFileFor(campaign, entityName);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+    }
+}
+
+function cleanupCampaign(campaign, entityName) {
+    removeEntitiesFile(campaign, entityName);
+}
+
+function removeCampaignDir(campaign) {
+    const campaignDir = path.join(process.cwd(), 'public', 'campaigns', campaign);
+    if (fs.existsSync(campaignDir)) {
+        fs.rmSync(campaignDir, { recursive: true, force: true });
+    }
+}
+
+function ensureTestCampaignDir(campaign) {
+    if (fs.existsSync(path.join(process.cwd(), 'public', 'campaigns', campaign))) {
+        throw new Error(`Test pollution: campaign dir already exists: ${campaign}`);
+    }
+    ensureCampaignDir(campaign);
+}
+
+// ---------------------------------------------------------------------------
+// Campaign isolation
+// ---------------------------------------------------------------------------
+
+describe('jsonEntityCrud - campaign isolation', () => {
+    const entityName = 'isolated';
+
+    beforeEach(() => {
+        ensureTestCampaignDir('test-campaign');
+        ensureTestCampaignDir('test-campaign-b');
+    });
+
+    afterEach(() => {
+        cleanupCampaign('test-campaign', entityName);
+        cleanupCampaign('test-campaign-b', entityName);
+        removeCampaignDir('test-campaign');
+        removeCampaignDir('test-campaign-b');
+    });
+
+    it('should keep data separate between campaigns', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        writeEntities('test-campaign', entityName, [{ id: 'a1', name: 'Campaign A' }]);
+        writeEntities('test-campaign-b', entityName, [{ id: 'b1', name: 'Campaign B' }]);
+
+        const resA = await request(app).get('/api/campaigns/test-campaign/isolated');
+        expect(resA.status).toBe(200);
+        expect(resA.body.isolated).toHaveLength(1);
+        expect(resA.body.isolated[0].name).toBe('Campaign A');
+
+        const resB = await request(app).get('/api/campaigns/test-campaign-b/isolated');
+        expect(resB.status).toBe(200);
+        expect(resB.body.isolated).toHaveLength(1);
+        expect(resB.body.isolated[0].name).toBe('Campaign B');
+    });
+
+    it('should allow same id in different campaigns', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        writeEntities('test-campaign', entityName, [{ id: 'same', name: 'A version' }]);
+        writeEntities('test-campaign-b', entityName, [{ id: 'same', name: 'B version' }]);
+
+        const resA = await request(app).get('/api/campaigns/test-campaign/isolated/same');
+        expect(resA.status).toBe(200);
+        expect(resA.body.isolated.name).toBe('A version');
+
+        const resB = await request(app).get('/api/campaigns/test-campaign-b/isolated/same');
+        expect(resB.status).toBe(200);
+        expect(resB.body.isolated.name).toBe('B version');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// File I/O behavior
+// ---------------------------------------------------------------------------
+
+describe('jsonEntityCrud - file I/O behavior', () => {
+    const entityName = 'fileio';
+    const campaign = 'test-campaign';
+
+    beforeEach(() => {
+        ensureTestCampaignDir(campaign);
+    });
+
+    afterEach(() => {
+        cleanupCampaign(campaign, entityName);
+        removeCampaignDir(campaign);
+    });
+
+    it('should create the data directory if it does not exist on first read', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        const res = await request(app).get(`/api/campaigns/${campaign}/${entityName}`);
+        expect(res.status).toBe(200);
+        expect(res.body[entityName]).toEqual([]);
+        expect(fs.existsSync(dataFileFor(campaign, entityName))).toBe(true);
+    });
+
+    it('should preserve JSON formatting on write (pretty-printed)', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        const entities = [{ id: 'e1', name: 'Entity' }];
+        await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ fileio: entities });
+
+        const content = fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8');
+        expect(content).toContain('\n');
+        expect(content).toContain('  ');
+    });
+
+    it('should handle entities with nested objects', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        const entities = [{
+            id: 'e1',
+            name: 'Complex',
+            nested: { deep: { value: 42 } },
+            array: [1, 2, 3],
+        }];
+        await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ fileio: entities });
+
+        const res = await request(app).get(`/api/campaigns/${campaign}/${entityName}/e1`);
+        expect(res.status).toBe(200);
+        expect(res.body.fileio.nested.deep.value).toBe(42);
+        expect(res.body.fileio.array).toEqual([1, 2, 3]);
+    });
+
+    it('should handle entities with unicode characters', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        const entities = [{
+            id: 'e1',
+            name: '日本語テスト',
+            emoji: '🎉🏰⚔️',
+        }];
+        await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ fileio: entities });
+
+        const res = await request(app).get(`/api/campaigns/${campaign}/${entityName}/e1`);
+        expect(res.status).toBe(200);
+        expect(res.body.fileio.name).toBe('日本語テスト');
+        expect(res.body.fileio.emoji).toBe('🎉🏰⚔️');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Error handling: catch blocks in GET by id and DELETE
+// ---------------------------------------------------------------------------
+
+describe('jsonEntityCrud - error handling in route handlers', () => {
+    const campaign = 'test-campaign';
+
+    beforeEach(() => {
+        ensureTestCampaignDir(campaign);
+    });
+
+    afterEach(() => {
+        cleanupCampaign(campaign, 'errorentities');
+        removeCampaignDir(campaign);
+    });
+
+    it('should throw on malformed JSON in GET by id route', async () => {
+        const filePath = dataFileFor(campaign, 'errorentities');
+        ensureCampaignDir(campaign);
+        fs.writeFileSync(filePath, 'not valid json {{{');
+
+        const router = createJsonEntityRouter('errorentities');
+        const app = createTestApp(router);
+
+        const res = await request(app).get(`/api/campaigns/${campaign}/errorentities/e1`);
+        // asyncHandler catches the thrown error and returns 500
+        expect(res.status).toBe(500);
+    });
+
+    it('should throw on malformed JSON in DELETE route', async () => {
+        const filePath = dataFileFor(campaign, 'errorentities');
+        ensureCampaignDir(campaign);
+        fs.writeFileSync(filePath, '{invalid json}');
+
+        const router = createJsonEntityRouter('errorentities');
+        const app = createTestApp(router);
+
+        const res = await request(app).delete(`/api/campaigns/${campaign}/errorentities/e1`);
+        expect(res.status).toBe(500);
+    });
+
+    it('should throw on malformed JSON in GET list route', async () => {
+        const filePath = dataFileFor(campaign, 'errorentities');
+        ensureCampaignDir(campaign);
+        fs.writeFileSync(filePath, 'broken json');
+
+        const router = createJsonEntityRouter('errorentities');
+        const app = createTestApp(router);
+
+        const res = await request(app).get(`/api/campaigns/${campaign}/errorentities`);
+        expect(res.status).toBe(500);
+    });
+
+    it('should succeed on POST route with valid data', async () => {
+        const router = createJsonEntityRouter('errorentities');
+        const app = createTestApp(router);
+
+        const entities = [{ id: 'e1', name: 'Entity' }];
+        const res = await request(app)
+            .post(`/api/campaigns/${campaign}/errorentities`)
+            .send({ errorentities: entities });
+
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('success', true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Edge cases: entity names that affect routing
+// ---------------------------------------------------------------------------
+
+describe('jsonEntityCrud - entity name variations', () => {
+    const campaign = 'test-campaign';
+
+    beforeEach(() => {
+        ensureTestCampaignDir(campaign);
+    });
+
+    afterEach(() => {
+        cleanupCampaign(campaign, 'users');
+        cleanupCampaign(campaign, 'aliases');
+        removeCampaignDir(campaign);
+    });
+
+    it('should handle entity names ending in s (users -> user)', async () => {
+        const router = createJsonEntityRouter('users');
+        const app = createTestApp(router);
+
+        writeEntities(campaign, 'users', [{ id: 'u1', name: 'User' }]);
+
+        const listRes = await request(app).get(`/api/campaigns/${campaign}/users`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.users).toHaveLength(1);
+
+        const itemRes = await request(app).get(`/api/campaigns/${campaign}/users/u1`);
+        expect(itemRes.status).toBe(200);
+        expect(Object.keys(itemRes.body)).toEqual(['user']);
+    });
+
+    it('should handle entity names ending in s but not ies (aliases -> aliase)', async () => {
+        const router = createJsonEntityRouter('aliases');
+        const app = createTestApp(router);
+
+        writeEntities(campaign, 'aliases', [{ id: 'a1', name: 'Alias' }]);
+
+        const listRes = await request(app).get(`/api/campaigns/${campaign}/aliases`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.aliases).toHaveLength(1);
+
+        const itemRes = await request(app).get(`/api/campaigns/${campaign}/aliases/a1`);
+        expect(itemRes.status).toBe(200);
+        expect(Object.keys(itemRes.body)).toEqual(['aliase']);
+    });
+
+    it('should handle entity names ending in s (items -> item)', async () => {
+        const router = createJsonEntityRouter('items');
+        const app = createTestApp(router);
+
+        writeEntities(campaign, 'items', [{ id: 'i1', name: 'Item' }]);
+
+        const listRes = await request(app).get(`/api/campaigns/${campaign}/items`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.items).toHaveLength(1);
+
+        const itemRes = await request(app).get(`/api/campaigns/${campaign}/items/i1`);
+        expect(itemRes.status).toBe(200);
+        expect(Object.keys(itemRes.body)).toEqual(['item']);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Integration: full CRUD cycle
+// ---------------------------------------------------------------------------
+
+describe('jsonEntityCrud - full CRUD cycle', () => {
+    const entityName = 'cycle';
+    const campaign = 'test-campaign';
+
+    beforeEach(() => {
+        ensureTestCampaignDir(campaign);
+    });
+
+    afterEach(() => {
+        cleanupCampaign(campaign, entityName);
+        removeCampaignDir(campaign);
+    });
+
+    it('should support create, read, update, delete cycle', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        // Create
+        const entities = [{ id: 'c1', name: 'Created' }];
+        const createRes = await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ cycle: entities });
+        expect(createRes.status).toBe(200);
+
+        // Read
+        const readRes = await request(app).get(`/api/campaigns/${campaign}/${entityName}/c1`);
+        expect(readRes.status).toBe(200);
+        expect(readRes.body.cycle.name).toBe('Created');
+
+        // Update (overwrite)
+        const updated = [{ id: 'c1', name: 'Updated' }];
+        const updateRes = await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ cycle: updated });
+        expect(updateRes.status).toBe(200);
+
+        // Verify update
+        const verifyRes = await request(app).get(`/api/campaigns/${campaign}/${entityName}/c1`);
+        expect(verifyRes.status).toBe(200);
+        expect(verifyRes.body.cycle.name).toBe('Updated');
+
+        // Delete
+        const deleteRes = await request(app).delete(`/api/campaigns/${campaign}/${entityName}/c1`);
+        expect(deleteRes.status).toBe(200);
+
+        // Verify delete
+        const afterDelete = await request(app).get(`/api/campaigns/${campaign}/${entityName}/c1`);
+        expect(afterDelete.status).toBe(404);
+    });
+
+    it('should handle multiple operations in sequence', async () => {
+        const router = createJsonEntityRouter(entityName);
+        const app = createTestApp(router);
+
+        // Create two entities
+        await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ cycle: [
+                { id: 'c1', name: 'First' },
+                { id: 'c2', name: 'Second' },
+            ] });
+
+        // Read list
+        let listRes = await request(app).get(`/api/campaigns/${campaign}/${entityName}`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.cycle).toHaveLength(2);
+
+        // Delete one
+        await request(app).delete(`/api/campaigns/${campaign}/${entityName}/c1`);
+
+        // Verify one remains
+        listRes = await request(app).get(`/api/campaigns/${campaign}/${entityName}`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.cycle).toHaveLength(1);
+        expect(listRes.body.cycle[0].name).toBe('Second');
+
+        // Add another
+        await request(app)
+            .post(`/api/campaigns/${campaign}/${entityName}`)
+            .send({ cycle: [
+                { id: 'c2', name: 'Second' },
+                { id: 'c3', name: 'Third' },
+            ] });
+
+        // Verify final state
+        listRes = await request(app).get(`/api/campaigns/${campaign}/${entityName}`);
+        expect(listRes.status).toBe(200);
+        expect(listRes.body.cycle).toHaveLength(2);
+        expect(listRes.body.cycle.map(e => e.name)).toEqual(['Second', 'Third']);
+    });
+});

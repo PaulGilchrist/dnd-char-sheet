@@ -247,13 +247,13 @@ describe('GET /api/campaigns/:campaign/log', () => {
     });
 
     it('should handle campaign names with special characters', async () => {
-        ensureCampaign('my-campaign-123');
-        setLogFile('my-campaign-123', [
+        ensureCampaign('test-campaign-123');
+        setLogFile('test-campaign-123', [
             { type: 'test', message: 'Special campaign', timestamp: Date.now() },
         ]);
 
         const app = createTestApp();
-        const res = await request(app).get('/api/campaigns/my-campaign-123/log');
+        const res = await request(app).get('/api/campaigns/test-campaign-123/log');
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveLength(1);
@@ -453,14 +453,14 @@ describe('POST /api/campaigns/:campaign/log', () => {
 
     it('should publish with campaign name containing special characters', async () => {
         const { publish } = await import('../utils/changeData.js');
-        ensureCampaign('my-campaign-123');
+        ensureCampaign('test-campaign-123');
         const app = createTestApp();
         await request(app)
-            .post('/api/campaigns/my-campaign-123/log')
+            .post('/api/campaigns/test-campaign-123/log')
             .send({ type: 'test', message: 'Special' });
 
         expect(publish).toHaveBeenCalledWith(
-            'log-my-campaign-123',
+            'log-test-campaign-123',
             expect.any(Object)
         );
     });

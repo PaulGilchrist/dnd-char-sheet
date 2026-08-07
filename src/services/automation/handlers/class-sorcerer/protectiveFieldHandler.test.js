@@ -210,11 +210,11 @@ describe('protectiveFieldHandler', () => {
         });
 
         it('uses campaign name for runtime state and logging', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', 'my-map');
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', 'my-map');
 
-            expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('TestHero', 'psionicEnergy', 'my-campaign');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestHero', 'psionicEnergy', 5, 'my-campaign');
-            expect(logService.addEntry).toHaveBeenCalledWith('my-campaign', expect.any(Object));
+            expect(runtimeState.getRuntimeValue).toHaveBeenCalledWith('TestHero', 'psionicEnergy', 'test-campaign');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('TestHero', 'psionicEnergy', 5, 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.any(Object));
         });
 
         it('applies healing to target for reduction amount when attack found', async () => {

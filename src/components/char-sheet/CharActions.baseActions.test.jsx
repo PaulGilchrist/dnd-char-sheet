@@ -326,7 +326,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const hideBtn = screen.getByText('Hide');
@@ -337,7 +337,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'my-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'test-campaign');
         expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
           name: 'Hide',
           description: expect.stringContaining('Hide successful'),
@@ -378,7 +378,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const hideBtn = screen.getByText('Hide');
@@ -395,7 +395,7 @@ describe('CharActions base actions rendering', () => {
         }));
       });
 
-      expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'my-campaign');
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'activeConditions', expect.arrayContaining(['invisible']), 'test-campaign');
     });
 
     it('Hide does not add duplicate stealth buff when advantage already active and succeeds', async () => {
@@ -431,7 +431,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const hideBtn = screen.getByText('Hide');
@@ -442,8 +442,8 @@ describe('CharActions base actions rendering', () => {
       });
 
       await waitFor(() => {
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', ['invisible'], 'my-campaign');
-        expect(setRuntimeValue).toHaveBeenNthCalledWith(2, 'TestCharacter', 'activeBuffs', [{ effect: 'advantage_on_stealth' }], 'my-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'activeConditions', ['invisible'], 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenNthCalledWith(2, 'TestCharacter', 'activeBuffs', [{ effect: 'advantage_on_stealth' }], 'test-campaign');
       });
     });
 
@@ -508,7 +508,7 @@ describe('CharActions base actions rendering', () => {
       await act(async () => {
         render(<CharActions
           playerStats={stats}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           conditionEffects={{ wisCheckReplace: true }}
         />, { wrapper });
       });
@@ -558,7 +558,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
 
       const hideBtn = screen.getByText('Hide');
@@ -603,7 +603,7 @@ describe('CharActions base actions rendering', () => {
       await act(async () => {
         render(<CharActions
           playerStats={stats}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           conditionEffects={{ passWithoutTraceBonus: '5' }}
         />, { wrapper });
       });
@@ -650,7 +650,7 @@ describe('CharActions base actions rendering', () => {
       await act(async () => {
         render(<CharActions
           playerStats={stats}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           conditionEffects={{ hexAbilityCheckDisadvantage: true, hexAbilityCheckDisadvantageAbility: 'DEX' }}
         />, { wrapper });
       });
@@ -697,7 +697,7 @@ describe('CharActions base actions rendering', () => {
       await act(async () => {
         render(<CharActions
           playerStats={stats}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           conditionEffects={{ peerlessAthleteAdvantageSkills: ['Stealth'] }}
         />, { wrapper });
       });
@@ -746,7 +746,7 @@ describe('CharActions base actions rendering', () => {
       await act(async () => {
         render(<CharActions
           playerStats={stats}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           conditionEffects={{
             hexAbilityCheckDisadvantage: true,
             hexAbilityCheckDisadvantageAbility: 'DEX',
@@ -782,7 +782,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={createStats({ actions: ['Dodge'] })} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={createStats({ actions: ['Dodge'] })} campaignName="test-campaign" />, { wrapper });
       });
 
       const dodgeBtn = screen.getByText('Dodge');
@@ -812,7 +812,7 @@ describe('CharActions base actions rendering', () => {
       });
 
       await act(async () => {
-        render(<CharActions playerStats={createStats({ actions: ['Dodge'] })} campaignName="my-campaign" cannotAct={true} />, { wrapper });
+        render(<CharActions playerStats={createStats({ actions: ['Dodge'] })} campaignName="test-campaign" cannotAct={true} />, { wrapper });
       });
 
       const dodgeBtn = screen.getByText('Dodge');

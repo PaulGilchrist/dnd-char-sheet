@@ -838,16 +838,16 @@ describe('encounters - edge cases', () => {
     });
 
     it('should handle campaign names with special characters', async () => {
-        setupEncounters('my-campaign-123', { encounters: [] });
+        setupEncounters('test-campaign-123', { encounters: [] });
 
         const app = createTestApp();
         const res = await request(app)
-            .post('/api/campaigns/my-campaign-123/encounters')
+            .post('/api/campaigns/test-campaign-123/encounters')
             .send({ name: 'Test Encounter', data: {} });
 
         expect(res.status).toBe(201);
 
-        const stored = globalThis._encounterStore.get('my-campaign-123');
+        const stored = globalThis._encounterStore.get('test-campaign-123');
         expect(stored.encounters).toHaveLength(1);
     });
 

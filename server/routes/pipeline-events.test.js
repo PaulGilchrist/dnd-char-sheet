@@ -91,11 +91,11 @@ describe('pipeline-events - POST /api/campaigns/:campaign/pipeline-event', () =>
 
         const app = createTestApp();
         await request(app)
-            .post('/api/campaigns/my-campaign/pipeline-event')
+            .post('/api/campaigns/test-campaign/pipeline-event')
             .send({ key: 'damage:rolled', data: { total: 20 } });
 
         expect(publishSpy).toHaveBeenCalledWith(
-            'pipeline-my-campaign-damage:rolled',
+            'pipeline-test-campaign-damage:rolled',
             { total: 20 }
         );
 

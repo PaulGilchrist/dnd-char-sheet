@@ -30,7 +30,7 @@ describe('logService', () => {
             ];
             fetchSpy.mockResolvedValue(createResponse({ data: mockLog }));
 
-            const result = await getLog('my-campaign');
+            const result = await getLog('test-campaign');
 
             expect(result).toEqual(mockLog);
         });
@@ -54,7 +54,7 @@ describe('logService', () => {
         it('throws with descriptive error on non-ok response', async () => {
             fetchSpy.mockResolvedValue(createResponse({ ok: false, status: 500 }));
 
-            await expect(getLog('my-campaign')).rejects.toThrow('Failed to fetch log');
+            await expect(getLog('test-campaign')).rejects.toThrow('Failed to fetch log');
         });
 
     });
@@ -65,7 +65,7 @@ describe('logService', () => {
             const mockResponse = { success: true, entryId: 'e1' };
             fetchSpy.mockResolvedValue(createResponse({ data: mockResponse }));
 
-            const result = await addEntry('my-campaign', mockEntry);
+            const result = await addEntry('test-campaign', mockEntry);
 
             expect(result).toEqual(mockResponse);
         });
@@ -74,10 +74,10 @@ describe('logService', () => {
             const mockEntry = { message: 'Player cast fireball', type: 'spell' };
             fetchSpy.mockResolvedValue(createResponse({ data: { success: true } }));
 
-            await addEntry('my-campaign', mockEntry);
+            await addEntry('test-campaign', mockEntry);
 
             expect(fetchSpy).toHaveBeenCalledWith(
-                '/api/campaigns/my-campaign/log',
+                '/api/campaigns/test-campaign/log',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -97,7 +97,7 @@ describe('logService', () => {
         it('throws with descriptive error on non-ok response', async () => {
             fetchSpy.mockResolvedValue(createResponse({ ok: false, status: 500 }));
 
-            await expect(addEntry('my-campaign', { message: 'Test' })).rejects.toThrow('Failed to add log entry');
+            await expect(addEntry('test-campaign', { message: 'Test' })).rejects.toThrow('Failed to add log entry');
         });
 
     });

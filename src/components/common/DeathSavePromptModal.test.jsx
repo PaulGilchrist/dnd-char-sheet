@@ -123,8 +123,8 @@ describe('DeathSavePromptModal', () => {
   });
 
   it('renders Subscriber with campaignName when EventSource is available', () => {
-    render(<DeathSavePromptModal campaignName="my-campaign" />);
-    expect(screen.getByTestId('subscriber')).toHaveAttribute('data-campaign', 'my-campaign');
+    render(<DeathSavePromptModal campaignName="test-campaign" />);
+    expect(screen.getByTestId('subscriber')).toHaveAttribute('data-campaign', 'test-campaign');
   });
 
   // ── Prompt queuing ──

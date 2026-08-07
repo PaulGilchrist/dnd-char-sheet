@@ -20,10 +20,10 @@ describe('storage', () => {
             });
             vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch);
 
-            const result = await storage.get('myKey', 'myCampaign');
+            const result = await storage.get('myKey', 'test-campaign');
             expect(result).toEqual({ apiData: 42 });
             expect(fakeFetch).toHaveBeenCalledWith(
-                '/api/campaigns/myCampaign/myKey'
+                '/api/campaigns/test-campaign/myKey'
             );
         });
 
@@ -32,22 +32,22 @@ describe('storage', () => {
             vi.spyOn(globalThis, 'fetch').mockImplementation(
                 vi.fn().mockResolvedValue({ ok: false })
             );
-            expect(await storage.get('myKey', 'myCampaign')).toBeNull();
+            expect(await storage.get('myKey', 'test-campaign')).toBeNull();
 
             vi.spyOn(globalThis, 'fetch').mockImplementation(
                 vi.fn().mockRejectedValue(new Error('network error'))
             );
-            expect(await storage.get('myKey', 'myCampaign')).toBeNull();
+            expect(await storage.get('myKey', 'test-campaign')).toBeNull();
 
             vi.spyOn(globalThis, 'fetch').mockImplementation(
                 vi.fn().mockResolvedValue({ ok: true, json: async () => ({ value: null }) })
             );
-            expect(await storage.get('myKey', 'myCampaign')).toBeNull();
+            expect(await storage.get('myKey', 'test-campaign')).toBeNull();
 
             vi.spyOn(globalThis, 'fetch').mockImplementation(
                 vi.fn().mockResolvedValue({ ok: true, json: async () => ({ value: undefined }) })
             );
-            expect(await storage.get('myKey', 'myCampaign')).toBeNull();
+            expect(await storage.get('myKey', 'test-campaign')).toBeNull();
         });
 
         it('encodes campaignName and key in fetch URL', async () => {
@@ -70,9 +70,9 @@ describe('storage', () => {
             const fakeFetch = vi.fn().mockResolvedValue({ ok: true });
             vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch);
 
-            await storage.set('myKey', { foo: 'bar' }, 'myCampaign');
+            await storage.set('myKey', { foo: 'bar' }, 'test-campaign');
             expect(fakeFetch).toHaveBeenCalledWith(
-                '/api/campaigns/myCampaign/myKey',
+                '/api/campaigns/test-campaign/myKey',
                 expect.any(Object)
             );
         });
@@ -92,7 +92,7 @@ describe('storage', () => {
             const fakeFetch = vi.fn().mockRejectedValue(new Error('server down'));
             vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch);
 
-            await expect(storage.set('myKey', { foo: 'bar' }, 'myCampaign'))
+            await expect(storage.set('myKey', { foo: 'bar' }, 'test-campaign'))
                 .resolves.toBeUndefined();
         });
 
@@ -136,8 +136,8 @@ describe('storage', () => {
             vi.spyOn(storage, 'get').mockResolvedValueOnce(null);
             const setSpy = vi.spyOn(storage, 'set').mockResolvedValueOnce(undefined);
 
-            await storage.setProperty('PlayerOne', 'hp', 50, 'myCampaign');
-            expect(setSpy).toHaveBeenCalledWith('PlayerOne', { hp: 50 }, 'myCampaign');
+            await storage.setProperty('PlayerOne', 'hp', 50, 'test-campaign');
+            expect(setSpy).toHaveBeenCalledWith('PlayerOne', { hp: 50 }, 'test-campaign');
         });
 
         it('updates an existing object and sets the property, overwriting while preserving others', async () => {
@@ -145,11 +145,11 @@ describe('storage', () => {
             vi.spyOn(storage, 'get').mockResolvedValueOnce(existing);
             const setSpy = vi.spyOn(storage, 'set').mockResolvedValueOnce(undefined);
 
-            await storage.setProperty('Gandalf', 'hp', 50, 'myCampaign');
+            await storage.setProperty('Gandalf', 'hp', 50, 'test-campaign');
             expect(setSpy).toHaveBeenCalledWith(
                 'Gandalf',
                 { name: 'Gandalf', hp: 50 },
-                'myCampaign'
+                'test-campaign'
             );
         });
     });

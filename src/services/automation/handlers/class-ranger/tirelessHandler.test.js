@@ -462,42 +462,42 @@ describe('tirelessHandler', () => {
         });
 
         it('uses campaign name for logging', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
-            expect(addEntry).toHaveBeenCalledWith('my-campaign', expect.any(Object));
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.any(Object));
         });
     });
 
     describe('campaign name propagation', () => {
         it('passes campaignName to getRuntimeValue', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(getRuntimeValue).toHaveBeenCalledWith(
                 'RangerGirl',
                 'tirelessUses',
-                'my-campaign'
+                'test-campaign'
             );
         });
 
         it('passes campaignName to setRuntimeValue for uses', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'RangerGirl',
                 'tirelessUses',
                 expect.any(Number),
-                'my-campaign'
+                'test-campaign'
             );
         });
 
         it('passes campaignName to setRuntimeValue for tempHp', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'RangerGirl',
                 'tempHp',
                 expect.any(Number),
-                'my-campaign'
+                'test-campaign'
             );
         });
     });

@@ -124,7 +124,7 @@ describe('ArcaneChargeModal', () => {
     it('calls confirmArcaneCharge with action, playerStats, and campaignName', async () => {
       confirmArcaneCharge.mockResolvedValue(defaultConfirmResponse());
       const playerStats = { name: 'CustomSorcerer', level: 10 };
-      const campaignName = 'my-campaign';
+      const campaignName = 'test-campaign';
       render(<ArcaneChargeModal {...makeProps({ playerStats, campaignName })} />);
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /Teleport/ }));

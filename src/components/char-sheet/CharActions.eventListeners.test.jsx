@@ -208,7 +208,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('healing-popup', {
         detail: {
@@ -234,7 +234,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('healing-popup', {
         detail: {
@@ -261,7 +261,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('damage-popup', {
         detail: {
@@ -288,7 +288,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('inspiring-smite-pending', {
         detail: { test: 'data' },
@@ -323,7 +323,7 @@ describe('CharActions event listeners', () => {
         return null;
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       // Dispatch the damage-type-choice event
       window.dispatchEvent(new CustomEvent('damage-type-choice', {
@@ -357,7 +357,7 @@ describe('CharActions event listeners', () => {
         return null;
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('damage-type-skip'));
 
@@ -376,7 +376,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       window.dispatchEvent(new CustomEvent('soulstitch-modal-show', {
         detail: { spells: ['Magic Missile', 'Burning Hands'] },
@@ -404,13 +404,13 @@ describe('CharActions event listeners', () => {
         return null;
       });
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       // The handler listens for this event and sets secondaryTargetModal
       // We verify the handler exists by checking no errors are thrown
       expect(() => {
         window.dispatchEvent(new CustomEvent('potent-spellcasting-temp-hp', {
-          detail: { title: 'Potent Spellcasting', tempHp: 10, campaignName: 'my-campaign', attackerName: 'TestCharacter' },
+          detail: { title: 'Potent Spellcasting', tempHp: 10, campaignName: 'test-campaign', attackerName: 'TestCharacter' },
         }));
       }).not.toThrow();
     });
@@ -425,7 +425,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       expect(() => {
         window.dispatchEvent(new CustomEvent('sweeping-attack-modal-show', {
@@ -444,7 +444,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       expect(() => {
         window.dispatchEvent(new CustomEvent('bait-and-switch-modal-show', {
@@ -463,7 +463,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       expect(() => {
         window.dispatchEvent(new CustomEvent('commander-strike-modal-show', {
@@ -482,7 +482,7 @@ describe('CharActions event listeners', () => {
         </DiceRollContext.Provider>
       );
 
-      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="my-campaign" />, { wrapper }); });
+      await act(async () => { render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper }); });
 
       expect(() => {
         window.dispatchEvent(new CustomEvent('rally-choice-modal-show', {

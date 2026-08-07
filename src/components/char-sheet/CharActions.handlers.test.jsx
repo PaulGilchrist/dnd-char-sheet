@@ -296,7 +296,7 @@ describe('CharActions handlers', () => {
 
       render(<CharActions
         playerStats={createStats()}
-        campaignName="my-campaign"
+        campaignName="test-campaign"
       />, { wrapper });
 
       expect(screen.queryByText('TacticalMasterModal')).not.toBeInTheDocument();

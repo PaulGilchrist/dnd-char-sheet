@@ -686,7 +686,7 @@ describe('CharSpellSlotLevel', () => {
           level={1}
           totalSlots={3}
           playerStats={createPlayerStats()}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
         />
       );
 
@@ -697,7 +697,7 @@ describe('CharSpellSlotLevel', () => {
         'Test Character',
         'spell_slots_level_1',
         1,
-        'my-campaign'
+        'test-campaign'
       );
     });
 

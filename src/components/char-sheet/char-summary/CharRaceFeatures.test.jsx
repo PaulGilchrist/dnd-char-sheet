@@ -87,9 +87,9 @@ describe('CharRaceFeatures', () => {
                 name: 'Garrok',
                 race: { name: 'Dragonborn', traits: [{ automation: { uses: 2 } }] },
             });
-            renderComponent(stats, 'my-campaign');
+            renderComponent(stats, 'test-campaign');
             expect(screen.getByTestId('player-name')).toHaveTextContent('Garrok');
-            expect(screen.getByTestId('campaign-name')).toHaveTextContent('my-campaign');
+            expect(screen.getByTestId('campaign-name')).toHaveTextContent('test-campaign');
         });
 
         it('passes playerStats and level as deps to TrackedResourceInput', () => {

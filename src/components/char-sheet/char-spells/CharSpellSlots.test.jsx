@@ -199,10 +199,10 @@ describe('CharSpellSlots', () => {
     it('passes campaignName to all level components', () => {
       rules.getSpellMaxLevel.mockReturnValue(5);
 
-      render(<CharSpellSlots playerStats={createPlayerStats()} campaignName='my-campaign' />);
+      render(<CharSpellSlots playerStats={createPlayerStats()} campaignName='test-campaign' />);
 
       for (let i = 1; i <= 5; i++) {
-        expect(screen.getByTestId(`spell-slot-level-${i}`)).toHaveAttribute('data-campaign-name', 'my-campaign');
+        expect(screen.getByTestId(`spell-slot-level-${i}`)).toHaveAttribute('data-campaign-name', 'test-campaign');
       }
     });
 

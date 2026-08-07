@@ -289,12 +289,12 @@ describe('CharActions click handlers', () => {
             {children}
           </DiceRollContext.Provider>
         );
-        render(<CharActions playerStats={stats} campaignName="my-campaign" />, { wrapper });
+        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
       });
       const damageElement = screen.getByText('1d8+3');
       await act(async () => { fireEvent.click(damageElement); });
       await act(async () => { await Promise.resolve(); });
-      expect(vi.mocked(addEntry)).toHaveBeenCalledWith('my-campaign', expect.objectContaining({
+      expect(vi.mocked(addEntry)).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
         type: 'roll',
         rollType: 'damage',
         name: 'Longsword',

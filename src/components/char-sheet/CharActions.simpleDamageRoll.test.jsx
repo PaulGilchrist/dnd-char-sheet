@@ -218,7 +218,7 @@ describe('CharActions simple damage roll', () => {
           playerStats={createStats({
             attacks: [{ name: 'Shortsword', range: 5, hitBonus: 5, damage: '1d6+3', damageType: 'Piercing', type: 'Action' }]
           })}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
         />, { wrapper });
       });
 
@@ -256,7 +256,7 @@ describe('CharActions simple damage roll', () => {
           playerStats={createStats({
             attacks: [{ name: 'Dagger', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Action' }]
           })}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
         />, { wrapper });
       });
 
@@ -290,7 +290,7 @@ describe('CharActions simple damage roll', () => {
           playerStats={createStats({
             attacks: [{ name: 'Mace', range: 5, hitBonus: 5, damage: '1d6+3', damageType: 'Bludgeoning', type: 'Action' }]
           })}
-          campaignName="my-campaign"
+          campaignName="test-campaign"
           cannotAct={true}
         />, { wrapper });
       });

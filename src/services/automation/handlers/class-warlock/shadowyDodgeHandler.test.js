@@ -210,9 +210,9 @@ describe('shadowyDodgeHandler', () => {
                 damageTypes: ['fire'],
             });
 
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
-            expect(logService.addEntry).toHaveBeenCalledWith('my-campaign', expect.objectContaining({
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'Test Rogue',
                 abilityName: 'Shadowy Dodge',

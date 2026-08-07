@@ -678,14 +678,14 @@ describe('dreadAmbushHandler', () => {
 
     describe('campaign name propagation', () => {
         it('passes campaignName to applyDamageToTarget', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(applyDamageToTarget).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.any(String),
                 expect.any(Number),
                 expect.any(Array),
-                'my-campaign',
+                'test-campaign',
                 expect.any(Array),
                 false,
                 expect.any(String),
@@ -699,13 +699,13 @@ describe('dreadAmbushHandler', () => {
                 return undefined;
             });
 
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 playerName,
                 'dreadambushUses',
                 expect.any(Number),
-                'my-campaign',
+                'test-campaign',
             );
         });
 
@@ -713,7 +713,7 @@ describe('dreadAmbushHandler', () => {
             await handle(
                 makeAction({ automation: { oncePerTurn: true } }),
                 makePlayerStats(),
-                'my-campaign',
+                'test-campaign',
                 null,
             );
 
@@ -721,14 +721,14 @@ describe('dreadAmbushHandler', () => {
                 playerName,
                 'dreadAmbushUsedThisTurn',
                 expect.any(Number),
-                'my-campaign',
+                'test-campaign',
             );
         });
 
         it('passes campaignName to addEntry', async () => {
-            await handle(makeAction(), makePlayerStats(), 'my-campaign', null);
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
 
-            expect(addEntry).toHaveBeenCalledWith('my-campaign', expect.any(Object));
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.any(Object));
         });
     });
 

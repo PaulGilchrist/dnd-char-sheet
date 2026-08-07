@@ -6,7 +6,7 @@ export const getCharacterFolders = async () => {
     }
     
     const data = await response.json();
-    return data.folders || [];
+    return (data.folders || []).filter(name => name !== 'test-campaign');
   } catch (error) {
     console.error('Error fetching character folders:', error);
     return [];
