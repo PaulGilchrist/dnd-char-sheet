@@ -1,121 +1,362 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('./shared/CreatureSelectionModal.jsx', () => {
-  const Mock = ({ title, icon, _targets, maxTargets, description, note, _confirmLabel, _confirmIcon, onConfirm, onSkip }) => (
-    <div data-testid="creature-selection-modal">
-      <h2 data-testid="modal-title">{title}</h2>
-      <span data-testid="modal-icon">{icon}</span>
-      <span data-testid="modal-description">{description}</span>
-      <span data-testid="modal-note">{note}</span>
-      <span data-testid="modal-max-targets">{maxTargets}</span>
-      <button data-testid="confirm-btn" onClick={() => onConfirm(['Target1'])}>Confirm</button>
-      <button data-testid="skip-btn" onClick={onSkip}>Skip</button>
-    </div>
-  );
-  return { default: Mock };
-});
-
 import VitalityOfTheTreeModal from './VitalityOfTheTreeModal.jsx';
+
+// ── Mock CreatureSelectionModal ──
+
+vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
+  default: vi.fn((props) => {
+    const {
+      title,
+      icon,
+      targets,
+      description,
+      note,
+      confirmLabel,
+      confirmIcon,
+      onConfirm,
+      onSkip,
+    } = props;
+
+    return (
+      <div data-testid="creature-selection-modal">
+        <div className="sp-header">
+          <i className={`fa-solid ${icon}`}></i> {title}
+        </div>
+        {description && <p data-testid="modal-description">{description}</p>}
+        {note && <p className="sp-note" data-testid="modal-note">{note}</p>}
+        <div className="secondary-target-list">
+          {targets.map((target, i) => {
+            const name = target.name || target;
+            return (
+              <label key={i} data-testid={`target-${i}`}>
+                <span className="secondary-target-name">
+                  <strong>{name}</strong>
+                </span>
+              </label>
+            );
+          })}
+          {targets.length === 0 && (
+            <p className="sp-note" data-testid="no-targets">No targets available.</p>
+          )}
+        </div>
+        <div className="sp-actions">
+          <button
+            className="sp-roll-btn"
+            onClick={() => onConfirm([])}
+            disabled={true}
+            type="button"
+          >
+            <i className={`fa-solid ${confirmIcon || 'fa-crosshairs'}`}></i> {confirmLabel || 'Confirm'} (0)
+          </button>
+          <button className="sp-dismiss-btn" onClick={onSkip} type="button">
+            Skip
+          </button>
+        </div>
+      </div>
+    );
+  }),
+}));
+
+// ── Re-import mocked modules ──
+
+import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
+
+// ── Test helpers ──
+
+const mockOnConfirm = vi.fn();
+const mockOnSkip = vi.fn();
+
+const defaultTargets = [
+  { name: 'Ally1', type: 'player', currentHp: 15, maxHp: 30 },
+  { name: 'Ally2', type: 'player', currentHp: 30, maxHp: 30 },
+  { name: 'Enemy1', type: 'npc', currentHp: 20, maxHp: 40 },
+];
+
+function makeProps(overrides) {
+  return {
+    creatureTargets: defaultTargets,
+    tempHp: 5,
+    maxTargets: 2,
+    onConfirm: mockOnConfirm,
+    onSkip: mockOnSkip,
+    ...(overrides || {}),
+  };
+}
+
+// ── Tests ──
 
 describe('VitalityOfTheTreeModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the modal with correct title', () => {
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={5}
-        maxTargets={2}
-        onConfirm={vi.fn()}
-        onSkip={vi.fn()}
-      />
-    );
+  // ── Rendering ──
 
-    expect(screen.getByTestId('modal-title')).toHaveTextContent('Vitality of the Tree');
+  describe('rendering', () => {
+    it('renders with title "Vitality of the Tree"', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
+
+    it('renders with fa-tree icon in header', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(document.querySelector('.fa-solid.fa-tree')).toBeInTheDocument();
+    });
+
+    it('renders the description with max targets', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 3 })} />);
+      expect(
+        screen.getByText('Choose up to 3 creatures to grant temporary hit points')
+      ).toBeInTheDocument();
+    });
+
+    it('renders the note with temp HP amount', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ tempHp: 7 })} />);
+      expect(
+        screen.getByText("Each target gains 7 temp HP from the World Tree's life force.")
+      ).toBeInTheDocument();
+    });
+
+    it('renders confirm button with label "Grant Vitality"', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: /Grant Vitality/ })).toBeInTheDocument();
+    });
+
+    it('renders confirm button with fa-tree icon', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      const confirmBtn = screen.getByRole('button', { name: /Grant Vitality/ });
+      expect(confirmBtn.querySelector('.fa-solid.fa-tree')).toBeInTheDocument();
+    });
+
+    it('renders Skip button', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    });
+
+    it('renders CreatureSelectionModal with correct props', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.title).toBe('Vitality of the Tree');
+      expect(props.icon).toBe('fa-tree');
+      expect(props.description).toBe('Choose up to 2 creatures to grant temporary hit points');
+      expect(props.note).toBe('Each target gains 5 temp HP from the World Tree\'s life force.');
+      expect(props.confirmLabel).toBe('Grant Vitality');
+      expect(props.confirmIcon).toBe('fa-tree');
+    });
+
+    it('passes creatureTargets to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(
+        defaultTargets
+      );
+    });
+
+    it('passes maxTargets to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 5 })} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(5);
+    });
+
+    it('passes onConfirm to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onConfirm).toBe(
+        mockOnConfirm
+      );
+    });
+
+    it('passes onSkip to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onSkip).toBe(
+        mockOnSkip
+      );
+    });
+
+    it('renders target list items from creatureTargets', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByText('Ally1')).toBeInTheDocument();
+      expect(screen.getByText('Ally2')).toBeInTheDocument();
+      expect(screen.getByText('Enemy1')).toBeInTheDocument();
+    });
+
+    it('renders "No targets available." when no creatureTargets', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ creatureTargets: [] })} />);
+      expect(screen.getByText('No targets available.')).toBeInTheDocument();
+    });
   });
 
-  it('renders the correct icon', () => {
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={5}
-        maxTargets={2}
-        onConfirm={vi.fn()}
-        onSkip={vi.fn()}
-      />
-    );
+  // ── User interactions ──
 
-    expect(screen.getByTestId('modal-icon')).toHaveTextContent('fa-tree');
+  describe('user interactions', () => {
+    it('calls onSkip when Skip button is clicked', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+      expect(mockOnSkip).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call onConfirm when confirm button is clicked with no selection', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      const confirmBtn = screen.getByRole('button', { name: /Grant Vitality/ });
+      expect(confirmBtn).toBeDisabled();
+      fireEvent.click(confirmBtn);
+      expect(mockOnConfirm).not.toHaveBeenCalled();
+    });
   });
 
-  it('displays correct description with max targets', () => {
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={5}
-        maxTargets={3}
-        onConfirm={vi.fn()}
-        onSkip={vi.fn()}
-      />
-    );
+  // ── Prop passthrough ──
 
-    expect(screen.getByTestId('modal-description')).toHaveTextContent('Choose up to 3 creatures to grant temporary hit points');
+  describe('prop passthrough', () => {
+    it('passes different maxTargets values to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 1 })} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(1);
+
+      vi.clearAllMocks();
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 6 })} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(6);
+    });
+
+    it('passes different tempHp values to CreatureSelectionModal via description/note', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ tempHp: 10 })} />);
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(props.note).toBe("Each target gains 10 temp HP from the World Tree's life force.");
+    });
+
+    it('passes empty creatureTargets array to CreatureSelectionModal', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ creatureTargets: [] })} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual([]);
+    });
+
+    it('passes string targets to CreatureSelectionModal', () => {
+      const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
+      render(<VitalityOfTheTreeModal {...makeProps({ creatureTargets: stringTargets })} />);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(
+        stringTargets
+      );
+    });
   });
 
-  it('displays correct note with temp HP amount', () => {
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={7}
-        maxTargets={2}
-        onConfirm={vi.fn()}
-        onSkip={vi.fn()}
-      />
-    );
+  // ── Default values ──
 
-    expect(screen.getByTestId('modal-note')).toHaveTextContent('Each target gains 7 temp HP from the World Tree\'s life force.');
+  describe('default values', () => {
+    it('renders without maxTargets prop', () => {
+      const props = makeProps();
+      delete props.maxTargets;
+      render(<VitalityOfTheTreeModal {...props} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
+
+    it('renders without onConfirm prop', () => {
+      const props = makeProps();
+      delete props.onConfirm;
+      render(<VitalityOfTheTreeModal {...props} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
+
+    it('renders without onSkip prop', () => {
+      const props = makeProps();
+      delete props.onSkip;
+      render(<VitalityOfTheTreeModal {...props} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
+
+    it('renders without tempHp prop', () => {
+      const props = makeProps();
+      delete props.tempHp;
+      render(<VitalityOfTheTreeModal {...props} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
   });
 
-  it('calls onConfirm with selected targets when confirm is clicked', () => {
-    const onConfirm = vi.fn();
-    const onSkip = vi.fn();
+  // ── Fixed label/icon behavior ──
 
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={5}
-        maxTargets={2}
-        onConfirm={onConfirm}
-        onSkip={onSkip}
-      />
-    );
+  describe('fixed label and icon behavior', () => {
+    it('always uses "Vitality of the Tree" title', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByText('Vitality of the Tree')).toBeInTheDocument();
+    });
 
-    screen.getByTestId('confirm-btn').click();
+    it('always uses fa-tree icon', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(document.querySelectorAll('.fa-tree').length).toBeGreaterThan(0);
+    });
 
-    expect(onConfirm).toHaveBeenCalledWith(['Target1']);
-    expect(onSkip).not.toHaveBeenCalled();
+    it('always uses "Grant Vitality" confirm label', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(screen.getByRole('button', { name: /Grant Vitality/ })).toBeInTheDocument();
+    });
+
+    it('always shows "Choose up to N creatures to grant temporary hit points" description pattern', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 4 })} />);
+      expect(
+        screen.getByText('Choose up to 4 creatures to grant temporary hit points')
+      ).toBeInTheDocument();
+    });
   });
 
-  it('calls onSkip when skip is clicked', () => {
-    const onConfirm = vi.fn();
-    const onSkip = vi.fn();
+  // ── Description and note formatting ──
 
-    render(
-      <VitalityOfTheTreeModal
-        creatureTargets={[{ name: 'Ally1' }]}
-        tempHp={5}
-        maxTargets={2}
-        onConfirm={onConfirm}
-        onSkip={onSkip}
-      />
-    );
+  describe('description and note formatting', () => {
+    it('renders description with maxTargets=1', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 1 })} />);
+      expect(
+        screen.getByText('Choose up to 1 creatures to grant temporary hit points')
+      ).toBeInTheDocument();
+    });
 
-    screen.getByTestId('skip-btn').click();
+    it('renders description with maxTargets=10', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ maxTargets: 10 })} />);
+      expect(
+        screen.getByText('Choose up to 10 creatures to grant temporary hit points')
+      ).toBeInTheDocument();
+    });
 
-    expect(onSkip).toHaveBeenCalled();
-    expect(onConfirm).not.toHaveBeenCalled();
+    it('renders note with tempHp=0', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ tempHp: 0 })} />);
+      expect(
+        screen.getByText("Each target gains 0 temp HP from the World Tree's life force.")
+      ).toBeInTheDocument();
+    });
+
+    it('renders note with tempHp=1', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ tempHp: 1 })} />);
+      expect(
+        screen.getByText("Each target gains 1 temp HP from the World Tree's life force.")
+      ).toBeInTheDocument();
+    });
+
+    it('renders note with tempHp=100', () => {
+      render(<VitalityOfTheTreeModal {...makeProps({ tempHp: 100 })} />);
+      expect(
+        screen.getByText("Each target gains 100 temp HP from the World Tree's life force.")
+      ).toBeInTheDocument();
+    });
+  });
+
+  // ── Integration with CreatureSelectionModal mock ──
+
+  describe('integration with CreatureSelectionModal', () => {
+    it('renders with mixed object and string targets', () => {
+      const mixedTargets = [
+        { name: 'Ally1', type: 'player' },
+        'Ally2',
+        { name: 'Ally3' },
+      ];
+      render(<VitalityOfTheTreeModal {...makeProps({ creatureTargets: mixedTargets })} />);
+      expect(screen.getByText('Ally1')).toBeInTheDocument();
+      expect(screen.getByText('Ally2')).toBeInTheDocument();
+      expect(screen.getByText('Ally3')).toBeInTheDocument();
+    });
+
+    it('disables confirm button when no targets selected', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      const confirmBtn = screen.getByRole('button', { name: /Grant Vitality/ });
+      expect(confirmBtn).toBeDisabled();
+    });
+
+    it('shows selection count in confirm button', () => {
+      render(<VitalityOfTheTreeModal {...makeProps()} />);
+      expect(
+        screen.getByRole('button', { name: /Grant Vitality \(0\)/ })
+      ).toBeInTheDocument();
+    });
   });
 });

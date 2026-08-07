@@ -161,4 +161,60 @@ describe('RadianceOfDawnModal', () => {
       });
     });
   });
+
+  describe('structural rendering', () => {
+    it('renders the modal with sp-overlay and sp-modal classes', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
+    });
+
+    it('renders the modal header with sun icon and title', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      const header = document.querySelector('.sp-header');
+      expect(header).toBeInTheDocument();
+      expect(header.querySelector('.fa-solid.fa-sun')).toBeInTheDocument();
+      expect(header.textContent).toContain('Radiance of the Dawn');
+    });
+
+    it('renders the modal body with description and note', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      expect(document.querySelector('.sp-body')).toBeInTheDocument();
+      expect(document.querySelector('.sp-note')).toBeInTheDocument();
+    });
+
+    it('renders the actions area with confirm and skip buttons', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      const actions = document.querySelector('.sp-actions');
+      expect(actions).toBeInTheDocument();
+      expect(actions.querySelector('.sp-roll-btn')).toBeInTheDocument();
+      expect(actions.querySelector('.sp-dismiss-btn')).toBeInTheDocument();
+    });
+
+    it('renders the sun icon on the confirm button', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      const btn = screen.getByRole('button', { name: /Channel Divinity/ });
+      expect(btn.querySelector('.fa-solid.fa-sun')).toBeInTheDocument();
+    });
+
+    it('renders with hp percentage for non-player creatures', () => {
+      render(<RadianceOfDawnModal {...makeProps()} />);
+      expect(screen.getByText('(67% HP)')).toBeInTheDocument();
+      expect(screen.getByText('(40% HP)')).toBeInTheDocument();
+    });
+
+    it('does not show HP for player-type creatures', () => {
+      render(<RadianceOfDawnModal {...makeProps({ creatureTargets: [{ name: 'Ally', type: 'player', currentHp: 20, maxHp: 30 }] })} />);
+      expect(screen.getByText('Ally')).toBeInTheDocument();
+      expect(screen.queryByText('(67% HP)')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('renders without crashing when creatureTargets is an empty array', () => {
+      render(<RadianceOfDawnModal {...makeProps({ creatureTargets: [] })} />);
+      expect(screen.getByText('Radiance of the Dawn')).toBeInTheDocument();
+      expect(screen.getByText('No targets available.')).toBeInTheDocument();
+    });
+  });
 });

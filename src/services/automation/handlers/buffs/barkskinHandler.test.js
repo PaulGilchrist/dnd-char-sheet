@@ -1,0 +1,758 @@
+// @improved-by-ai
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { handle, applyBarkskin, isBarkskinActive } from './barkskinHandler.js';
+
+import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
+import * as expirations from '../../../rules/effects/expirations.js';
+import * as rangeValidation from '../../../rules/combat/rangeValidation.js';
+import * as targetResolver from '../../common/targetResolver.js';
+import * as logService from '../../../ui/logService.js';
+import * as combatData from '../../../encounters/combatData.js';
+
+vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+}));
+
+vi.mock('../../../rules/effects/expirations.js', () => ({
+    addExpiration: vi.fn(),
+}));
+
+vi.mock('../../../rules/combat/rangeValidation.js', () => ({
+    rangeToFeet: vi.fn((r) => (r === 'Touch' ? 5 : 30)),
+}));
+
+vi.mock('../../common/targetResolver.js', () => ({
+    resolveMapPositions: vi.fn(),
+}));
+
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(),
+}));
+
+const campaignName = 'test-campaign';
+const mapName = 'test-map';
+
+function makePlayerStats(overrides = {}) {
+    return {
+        name: 'TestWizard',
+        level: 5,
+        ...overrides,
+    };
+}
+
+function makeAction(overrides = {}) {
+    return {
+        name: 'Barkskin',
+        spell: { range: 'Touch', duration: 'Up to 1 hour', ...overrides.spell },
+        automation: { type: 'barkskin', ...overrides.automation },
+    };
+}
+
+// ─── handle ───
+
+describe('barkskinHandler.handle', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns target selection popup with creature list and barkskin_target_selection type', async () => {
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [
+                { name: 'Ally1' },
+                { name: 'Ally2' },
+                { name: 'TestWizard' },
+            ],
+        });
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('barkskin_target_selection');
+        expect(result.payload.name).toBe('Barkskin');
+        expect(result.payload.creatureTargets).toEqual(['Ally1', 'Ally2', 'TestWizard']);
+        expect(result.payload.duration).toBe('Up to 1 hour');
+        expect(result.payload.range).toBe('Touch');
+        expect(result.payload).toHaveProperty('rangeFt');
+        expect(result.payload.attackerPos).toBeNull();
+    });
+
+    it('uses custom spell range and duration when provided', async () => {
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Ally1' }],
+        });
+
+        const result = await handle(
+            makeAction({ spell: { range: '60 feet', duration: '8 hours' } }),
+            makePlayerStats(),
+            campaignName,
+            null,
+        );
+
+        expect(result.payload.range).toBe('60 feet');
+        expect(result.payload.duration).toBe('8 hours');
+    });
+
+    it('defaults range to Touch and duration to Up to 1 hour when spell is missing', async () => {
+        combatData.getCombatSummary.mockReturnValue({
+            creatures: [{ name: 'Ally1' }],
+        });
+
+        const result = await handle(
+            { name: 'Barkskin', automation: { type: 'barkskin' } },
+            makePlayerStats(),
+            campaignName,
+            null,
+        );
+
+        expect(result.payload.range).toBe('Touch');
+        expect(result.payload.duration).toBe('Up to 1 hour');
+    });
+
+    it('includes attackerPos when mapName is provided', async () => {
+        combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'Ally1' }] });
+        targetResolver.resolveMapPositions.mockResolvedValue({ attackerPos: { x: 1, y: 2 } });
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
+
+        expect(result.payload.attackerPos).toEqual({ x: 1, y: 2 });
+        expect(targetResolver.resolveMapPositions).toHaveBeenCalledWith(
+            campaignName,
+            mapName,
+            'TestWizard',
+        );
+    });
+
+    it('returns empty creature list when no combat summary', async () => {
+        combatData.getCombatSummary.mockReturnValue(null);
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(result.payload.creatureTargets).toEqual([]);
+    });
+
+    it('returns popup with empty creature targets when combat has no creatures', async () => {
+        combatData.getCombatSummary.mockReturnValue({ creatures: [] });
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('barkskin_target_selection');
+        expect(result.payload.creatureTargets).toEqual([]);
+    });
+
+    it('uses the spell.range from action.spell for rangeFt calculation', async () => {
+        combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'Ally1' }] });
+        rangeValidation.rangeToFeet.mockReturnValue(30);
+
+        await handle(
+            makeAction({ spell: { range: '30 feet' } }),
+            makePlayerStats(),
+            campaignName,
+            null,
+        );
+
+        expect(rangeValidation.rangeToFeet).toHaveBeenCalledWith('30 feet');
+    });
+
+    it('returns attackerPos as null when resolveMapPositions returns no position', async () => {
+        combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'Ally1' }] });
+        targetResolver.resolveMapPositions.mockResolvedValue({ attackerPos: null });
+
+        const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
+
+        expect(result.payload.attackerPos).toBeNull();
+    });
+});
+
+// ─── applyBarkskin ───
+
+describe('barkskinHandler.applyBarkskin', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useRuntimeState.getRuntimeValue.mockReset();
+        useRuntimeState.setRuntimeValue.mockReset();
+        expirations.addExpiration.mockReset();
+        logService.addEntry.mockReset();
+        combatData.getCombatSummary.mockReset();
+    });
+
+    it('returns null when targetNames is null', async () => {
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            null,
+            [],
+        );
+        expect(result).toBeNull();
+    });
+
+    it('returns null when targetNames is an empty array', async () => {
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            [],
+            [],
+        );
+        expect(result).toBeNull();
+    });
+
+    it('returns null when targetNames is not an array', async () => {
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            'not-an-array',
+            [],
+        );
+        expect(result).toBeNull();
+    });
+
+    it('applies barkskin buff to a target with AC below 17', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([]) // activeBuffs for target
+            .mockReturnValueOnce([]); // activeBuffs for other targets (not called in this case)
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result).not.toBeNull();
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.description).toContain('1 target(s) gained Barkskin');
+        expect(result.payload.description).toContain('Ally1');
+
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+            'Ally1',
+            'activeBuffs',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    name: 'Barkskin',
+                    effect: 'barkskin',
+                    sourceCharacter: 'TestWizard',
+                }),
+            ]),
+            campaignName,
+        );
+
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+            'TestWizard',
+            'Ally1',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    type: 'remove_active_buff',
+                    buffName: 'Barkskin',
+                }),
+            ]),
+            campaignName,
+        );
+
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestWizard',
+            abilityName: 'Barkskin',
+            description: expect.stringContaining('TestWizard cast Barkskin on Ally1'),
+        });
+    });
+
+    it('skips targets with AC >= 17', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 18 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result).not.toBeNull();
+        expect(result.payload.description).toContain('Barkskin failed on all 1 target(s)');
+        expect(result.payload.description).toContain('AC 18');
+        expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+            'Ally1',
+            'activeBuffs',
+            expect.any(Array),
+            campaignName,
+        );
+    });
+
+    it('skips targets with AC exactly 17', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 17 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('Barkskin failed on all 1 target(s)');
+        expect(result.payload.description).toContain('AC 17');
+    });
+
+    it('uses fallback AC from armorClass when computedStats is missing', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [
+            { name: 'Ally1', armorClass: 15 },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('1 target(s)');
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
+    });
+
+    it('uses default AC of 10 when no armorClass info available', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [
+            { name: 'Ally1' },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('1 target(s) gained Barkskin');
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
+    });
+
+    it('does not apply buff if Barkskin already active on target', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([{ name: 'Barkskin', effect: 'barkskin' }]) // Ally1 already has it
+            .mockReturnValueOnce([]); // other targets (not called)
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result).not.toBeNull();
+        const buffsCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+            (c) => c[0] === 'Ally1' && c[1] === 'activeBuffs',
+        );
+        expect(buffsCalls).toHaveLength(0);
+    });
+
+    it('does not apply buff if Barkskin exists with different effect value', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([{ name: 'Barkskin', effect: 'other_effect' }])
+            .mockReturnValueOnce([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        const buffsCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+            (c) => c[0] === 'Ally1' && c[1] === 'activeBuffs',
+        );
+        expect(buffsCalls).toHaveLength(0);
+    });
+
+    it('applies barkskin to multiple targets, skipping those with high AC', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([]) // Ally1 buffs
+            .mockReturnValueOnce([]) // Ally2 buffs
+            .mockReturnValueOnce([]); // Ally3 buffs
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+            { name: 'Ally2', computedStats: { armorClass: 20 } },
+            { name: 'Ally3', computedStats: { armorClass: 15 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1', 'Ally2', 'Ally3'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('2 target(s) gained Barkskin');
+        expect(result.payload.description).toContain('Ally1');
+        expect(result.payload.description).toContain('Ally3');
+        expect(result.payload.description).toContain('Barkskin would not improve');
+        expect(result.payload.description).toContain('Ally2');
+
+        const buffsCalls = useRuntimeState.setRuntimeValue.mock.calls.filter(
+            (c) => c[1] === 'activeBuffs',
+        );
+        expect(buffsCalls.length).toBe(2);
+        expect(buffsCalls.some((c) => c[0] === 'Ally1')).toBe(true);
+        expect(buffsCalls.some((c) => c[0] === 'Ally3')).toBe(true);
+    });
+
+    it('applies barkskin to targets not found in characters map (AC defaults to 10)', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['UnknownTarget'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('1 target(s) gained Barkskin');
+        expect(result.payload.description).toContain('UnknownTarget');
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
+    });
+
+    it('posts a log entry for each applied target', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([]) // Ally1
+            .mockReturnValueOnce([]); // Ally2
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+            { name: 'Ally2', computedStats: { armorClass: 15 } },
+        ];
+
+        await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1', 'Ally2'],
+            characters,
+        );
+
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestWizard',
+            abilityName: 'Barkskin',
+            description: expect.stringContaining('TestWizard cast Barkskin on Ally1'),
+        });
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: 'TestWizard',
+            abilityName: 'Barkskin',
+            description: expect.stringContaining('TestWizard cast Barkskin on Ally2'),
+        });
+    });
+
+    it('does not post log entries for skipped targets', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 20 } },
+        ];
+
+        await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('preserves existing buffs when adding Barkskin', async () => {
+        const existingBuffs = [
+            { name: 'Mage Armor', effect: 'mage_armor', baseAc: 13 },
+            { name: 'Shield', effect: 'shield' },
+        ];
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce(existingBuffs) // Ally1 activeBuffs
+            .mockReturnValueOnce([]); // other targets (not called)
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        const buffsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
+        expect(buffsArg).toContainEqual(
+            expect.objectContaining({ name: 'Mage Armor', effect: 'mage_armor' }),
+        );
+        expect(buffsArg).toContainEqual(
+            expect.objectContaining({ name: 'Shield', effect: 'shield' }),
+        );
+        expect(buffsArg).toContainEqual(
+            expect.objectContaining({ name: 'Barkskin', effect: 'barkskin' }),
+        );
+    });
+
+    it('uses custom duration from spell object', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        await applyBarkskin(
+            {
+                name: 'Barkskin',
+                spell: { duration: 'Custom duration' },
+                automation: { type: 'barkskin' },
+            },
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        const buffsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
+        const barkskinBuff = buffsArg.find((b) => b.name === 'Barkskin');
+        expect(barkskinBuff.duration).toBe('Custom duration');
+    });
+
+    it('handles activeBuffs being null (not set)', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValueOnce(null);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result).not.toBeNull();
+        const buffsArg = useRuntimeState.setRuntimeValue.mock.calls[0][2];
+        expect(buffsArg).toContainEqual(
+            expect.objectContaining({ name: 'Barkskin' }),
+        );
+    });
+
+    it('handles characters array being null/undefined (AC defaults to 10)', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+
+        const characters = null;
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        // Target not found in characters map, so AC defaults to 10 (below 17)
+        expect(result.payload.description).toContain('1 target(s) gained Barkskin');
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalled();
+    });
+
+    it('handles all targets being skipped (all high AC)', async () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([])
+            .mockReturnValueOnce([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 18 } },
+            { name: 'Ally2', computedStats: { armorClass: 20 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction(),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1', 'Ally2'],
+            characters,
+        );
+
+        expect(result.payload.description).toContain('Barkskin failed on all 2 target(s)');
+        expect(result.payload.description).toContain('Ally1');
+        expect(result.payload.description).toContain('Ally2');
+        expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+    });
+
+    it('returns popup with automation info payload type', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        const result = await applyBarkskin(
+            makeAction({ automation: { customField: 'value' } }),
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.automation).toEqual({ customField: 'value', type: 'barkskin' });
+    });
+
+    it('uses default action name when action.name is missing', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValueOnce([]);
+
+        const characters = [
+            { name: 'Ally1', computedStats: { armorClass: 14 } },
+        ];
+
+        const result = await applyBarkskin(
+            { spell: { range: 'Touch', duration: '1 hour' }, automation: {} },
+            makePlayerStats(),
+            campaignName,
+            null,
+            ['Ally1'],
+            characters,
+        );
+
+        expect(result.payload.name).toBeUndefined();
+    });
+});
+
+// ─── isBarkskinActive ───
+
+describe('barkskinHandler.isBarkskinActive', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useRuntimeState.getRuntimeValue.mockReset();
+    });
+
+    it('returns true when Barkskin buff with barkskin effect exists', () => {
+        useRuntimeState.getRuntimeValue
+            .mockReturnValueOnce([
+                { name: 'Barkskin', effect: 'barkskin', duration: '1_hour' },
+            ]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(true);
+    });
+
+    it('returns false when buff has wrong name', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([
+            { name: 'Stone Skin', effect: 'barkskin' },
+        ]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(false);
+    });
+
+    it('returns false when buff has wrong effect', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([
+            { name: 'Barkskin', effect: 'mage_armor' },
+        ]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(false);
+    });
+
+    it('returns false when activeBuffs is empty', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(false);
+    });
+
+    it('returns false when activeBuffs is null', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue(null);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(false);
+    });
+
+    it('returns false when activeBuffs is a string', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue('not-an-array');
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(false);
+    });
+
+    it('returns true when multiple buffs include Barkskin', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([
+            { name: 'Mage Armor', effect: 'mage_armor' },
+            { name: 'Barkskin', effect: 'barkskin' },
+            { name: 'Shield', effect: 'shield' },
+        ]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(true);
+    });
+
+    it('returns true when Barkskin appears among many buffs', () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue([
+            { name: 'Shield', effect: 'shield' },
+            { name: 'Mage Armor', effect: 'mage_armor' },
+            { name: 'Resist Energy', effect: 'resist_energy' },
+            { name: 'Barkskin', effect: 'barkskin' },
+            { name: 'Haste', effect: 'haste' },
+        ]);
+
+        expect(isBarkskinActive('Ally1', campaignName)).toBe(true);
+    });
+});

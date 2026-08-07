@@ -9,51 +9,52 @@ const mockHandleConfirm = vi.fn();
 
 vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
   default: vi.fn((props) => {
-    // Simulate the internal confirm behavior: calls onConfirm with selected array
     const selected = props.defaultSelected || [];
     return (
-      <div data-testid="creature-selection-modal">
-        <div className="sp-header">
-          <i className={`fa-solid ${props.icon}`}></i> {props.title}
-        </div>
-        {props.description && <p>{props.description}</p>}
-        <div className="secondary-target-list">
-          {props.targets.map((target, i) => {
-            const name = target.name || target;
-            const isSelected = selected.includes(name);
-            return (
-              <label
-                key={i}
-                className={`secondary-target-row ${isSelected ? 'secondary-target-selected' : ''}`}
-                data-testid={`target-${i}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => mockToggleTarget(name)}
-                />
-                <span className="secondary-target-name">
-                  <strong>{name}</strong>
-                </span>
-              </label>
-            );
-          })}
-          {props.targets.length === 0 && (
-            <p className="sp-note">No targets available.</p>
-          )}
-        </div>
-        <div className="sp-actions">
-          <button
-            className="sp-roll-btn"
-            onClick={() => mockHandleConfirm(selected)}
-            disabled={selected.length === 0}
-            type="button"
-          >
-            <i className={`fa-solid ${props.confirmIcon || 'fa-crosshairs'}`}></i> {props.confirmLabel || 'Confirm'} ({selected.length})
-          </button>
-          <button className="sp-dismiss-btn" onClick={props.onSkip} type="button">
-            Skip
-          </button>
+      <div className="sp-overlay" onClick={props.onSkip}>
+        <div className="sp-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="sp-header">
+            <i className={`fa-solid ${props.icon}`}></i> {props.title}
+          </div>
+          {props.description && <p dangerouslySetInnerHTML={{ __html: props.description }} />}
+          <div className="secondary-target-list">
+            {props.targets.map((target, i) => {
+              const name = target.name || target;
+              const isSelected = selected.includes(name);
+              return (
+                <label
+                  key={i}
+                  className={`secondary-target-row ${isSelected ? 'secondary-target-selected' : ''}`}
+                  data-testid={`target-${i}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => mockToggleTarget(name)}
+                  />
+                  <span className="secondary-target-name">
+                    <strong>{name}</strong>
+                  </span>
+                </label>
+              );
+            })}
+            {props.targets.length === 0 && (
+              <p className="sp-note">No targets available.</p>
+            )}
+          </div>
+          <div className="sp-actions">
+            <button
+              className="sp-roll-btn"
+              onClick={() => mockHandleConfirm(selected)}
+              disabled={selected.length === 0}
+              type="button"
+            >
+              <i className={`fa-solid ${props.confirmIcon || 'fa-crosshairs'}`}></i> {props.confirmLabel || 'Confirm'} ({selected.length})
+            </button>
+            <button className="sp-dismiss-btn" onClick={props.onSkip} type="button">
+              Skip
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -61,6 +62,7 @@ vi.mock('./shared/CreatureSelectionModal.jsx', () => ({
 }));
 
 // ── Re-import mocked module ──
+
 import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
 
 // ── Test helpers ──
@@ -130,7 +132,7 @@ describe('MassHealingWordModal', () => {
 
     it('renders CreatureSelectionModal with correct props', () => {
       render(<MassHealingWordModal {...makeProps()} />);
-      const props = CreatureSelectionModal.mock.calls[0][0];
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
       expect(props.title).toBe('Mass Healing Word');
       expect(props.icon).toBe('fa-feather');
       expect(props.description).toBe('Choose up to 6 creatures to heal.');
@@ -140,22 +142,22 @@ describe('MassHealingWordModal', () => {
 
     it('passes creatureTargets to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps()} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].targets).toEqual(defaultTargets);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(defaultTargets);
     });
 
     it('passes maxTargets to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps({ maxTargets: 5 })} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].maxTargets).toBe(5);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(5);
     });
 
     it('passes onConfirm to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps()} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].onConfirm).toBe(mockOnConfirm);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onConfirm).toBe(mockOnConfirm);
     });
 
     it('passes onSkip to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps()} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].onSkip).toBe(mockOnSkip);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].onSkip).toBe(mockOnSkip);
     });
   });
 
@@ -166,13 +168,6 @@ describe('MassHealingWordModal', () => {
       render(<MassHealingWordModal {...makeProps()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
       expect(mockOnSkip).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls onSkip when overlay is clicked', () => {
-      render(<MassHealingWordModal {...makeProps()} />);
-      // The mock renders a div with data-testid; simulate overlay click
-      fireEvent.click(screen.getByTestId('creature-selection-modal'));
-      expect(mockOnSkip).not.toHaveBeenCalled();
     });
 
     it('does not call onConfirm when confirm button is clicked with no selection', () => {
@@ -189,58 +184,65 @@ describe('MassHealingWordModal', () => {
   describe('prop passthrough', () => {
     it('passes different maxTargets values to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps({ maxTargets: 1 })} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].maxTargets).toBe(1);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(1);
 
       vi.clearAllMocks();
       render(<MassHealingWordModal {...makeProps({ maxTargets: 6 })} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].maxTargets).toBe(6);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].maxTargets).toBe(6);
     });
 
     it('passes empty creatureTargets array to CreatureSelectionModal', () => {
       render(<MassHealingWordModal {...makeProps({ creatureTargets: [] })} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].targets).toEqual([]);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual([]);
     });
 
     it('passes string targets to CreatureSelectionModal', () => {
       const stringTargets = ['AllyA', 'AllyB', 'AllyC'];
       render(<MassHealingWordModal {...makeProps({ creatureTargets: stringTargets })} />);
-      expect(CreatureSelectionModal.mock.calls[0][0].targets).toEqual(stringTargets);
+      expect(vi.mocked(CreatureSelectionModal).mock.calls[0][0].targets).toEqual(stringTargets);
     });
   });
 
-  // ── Default values ──
+  // ── Missing optional props ──
 
-  describe('default values', () => {
-    it('uses default maxTargets of 3 when not provided', () => {
-      const props = makeProps();
-      delete props.maxTargets;
-      render(<MassHealingWordModal {...props} />);
-      // CreatureSelectionModal receives undefined maxTargets, which the modal handles
-      expect(screen.getByText('Mass Healing Word')).toBeInTheDocument();
-    });
-
+  describe('missing optional props', () => {
     it('renders without maxTargets prop', () => {
       const props = makeProps();
       delete props.maxTargets;
       render(<MassHealingWordModal {...props} />);
+      expect(screen.getByText('Mass Healing Word')).toBeInTheDocument();
       expect(screen.getByText('Choose up to 6 creatures to heal.')).toBeInTheDocument();
+    });
+
+    it('renders without onConfirm prop', () => {
+      const props = makeProps();
+      delete props.onConfirm;
+      render(<MassHealingWordModal {...props} />);
+      expect(screen.getByText('Mass Healing Word')).toBeInTheDocument();
+    });
+
+    it('renders without onSkip prop', () => {
+      const props = makeProps();
+      delete props.onSkip;
+      render(<MassHealingWordModal {...props} />);
+      expect(screen.getByText('Mass Healing Word')).toBeInTheDocument();
     });
   });
 
   // ── Fixed label/icon behavior ──
 
   describe('fixed label and icon behavior', () => {
-    it('always uses "Mass Healing Word" title regardless of props', () => {
+    it('always uses "Mass Healing Word" title', () => {
       render(<MassHealingWordModal {...makeProps()} />);
       expect(screen.getByText('Mass Healing Word')).toBeInTheDocument();
     });
 
-    it('always uses feather icon regardless of props', () => {
+    it('always uses feather icon', () => {
       render(<MassHealingWordModal {...makeProps()} />);
       expect(document.querySelectorAll('.fa-feather').length).toBeGreaterThan(0);
     });
 
-    it('always uses "Heal" confirm label regardless of props', () => {
+    it('always uses "Heal" confirm label', () => {
       render(<MassHealingWordModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Heal/ })).toBeInTheDocument();
     });
@@ -276,6 +278,13 @@ describe('MassHealingWordModal', () => {
     it('shows selection count in confirm button', () => {
       render(<MassHealingWordModal {...makeProps()} />);
       expect(screen.getByRole('button', { name: /Heal \(0\)/ })).toBeInTheDocument();
+    });
+
+    it('passes onConfirm to CreatureSelectionModal for the mock to invoke', () => {
+      render(<MassHealingWordModal {...makeProps()} />);
+      const props = vi.mocked(CreatureSelectionModal).mock.calls[0][0];
+      expect(typeof props.onConfirm).toBe('function');
+      expect(props.onConfirm).toBe(mockOnConfirm);
     });
   });
 });

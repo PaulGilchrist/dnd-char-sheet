@@ -221,7 +221,4 @@ describe('campaignsAdmin - POST /api/campaigns/:campaign/admin/upload', () => {
     // Note: Upload tests require real multer multipart parsing.
     // The multer middleware mock cannot intercept supertest.attach() files.
     // These are verified manually via the upload endpoint code review.
-    it.skip('should complete upload when file is provided', () => { });
-    it.skip('should call saveFile and create safety snapshot on upload', () => { });
-    it.skip('should publish reload event after upload', () => { });
 });
