@@ -12,14 +12,14 @@
     },
     {
       "name": "Dexterity",
-      "baseScore": 14,
+      "baseScore": 15,
       "featIncrease": 0,
       "backgroundIncrease": 0,
       "miscIncrease": 0
     },
     {
       "name": "Constitution",
-      "baseScore": 14,
+      "baseScore": 13,
       "featIncrease": 0,
       "backgroundIncrease": 2,
       "miscIncrease": 0
@@ -35,7 +35,7 @@
       "name": "Wisdom",
       "baseScore": 12,
       "featIncrease": 0,
-      "backgroundIncrease": 0,
+      "backgroundIncrease": 2,
       "miscIncrease": 0
     },
     {
@@ -49,7 +49,7 @@
   "class": {
     "name": "Wizard",
     "subclass": {
-      "name": "Evoker"
+      "name": "Diviner"
     },
     "divineOrder": "",
     "primalOrder": ""
@@ -62,27 +62,14 @@
   "race": {
     "name": "Elf",
     "subrace": {
-      "name": "High Elf",
-      "description": ""
+      "name": "High Elf"
     }
   },
   "immunities": [],
   "inventory": {
-    "backpack": [
-      "Bedroll",
-      "Mess Kit",
-      "Ration",
-      "Rope",
-      "Hempen",
-      "Tinderbox",
-      "Torch",
-      "Waterskin"
-    ],
-    "equipped": [
-      "Dagger",
-      "Spellbook"
-    ],
-    "gold": 0,
+    "backpack": [],
+    "equipped": [],
+    "gold": 10,
     "magicItems": []
   },
   "languages": [
@@ -92,40 +79,45 @@
   "resistances": [],
   "skillProficiencies": [
     "Arcana",
-    "Religion",
     "History",
-    "Perception",
-    "Insight"
+    "Religion",
+    "Investigation",
+    "Perception"
   ],
   "toolProficiencies": [
     "Calligrapher's Supplies"
   ],
   "specialActions": [],
   "spells": [
-    "Alarm",
-    "Magic Missile",
-    "Minor Illusion",
-    "Fire Bolt",
-    "Mage Hand",
-    "Feather Fall",
+    "Guidance",
     "Toll the Dead",
-    "Mending",
-    "Bane",
-    "Find Familiar"
+    "Bless",
+    "Mage Hand",
+    "Minor Illusion",
+    "Prestidigitation",
+    "Alarm",
+    "False Life",
+    "Feather Fall",
+    "Invisibility"
   ],
   "magicInitiateInstances": [
     {
       "class": "Cleric",
       "cantrips": [
-        "Toll the Dead",
-        "Mending"
+        "Guidance",
+        "Toll the Dead"
       ],
-      "level1Spell": "Bane"
+      "level1Spell": "Bless"
     }
   ],
   "rules": "2024",
   "xp": 0,
   "xpMode": "milestone",
   "background": "Sage",
+  "featAbilityChoices": {
+    "Fey Touched-0": {
+      "assignment": "Intelligence"
+    }
+  },
   "imagePath": "images/Zane.png"
 }
