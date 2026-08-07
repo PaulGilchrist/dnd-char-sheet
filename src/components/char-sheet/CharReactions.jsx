@@ -621,7 +621,7 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                 />
             )}
             {reactions.filter(r => !getCategories(playerStats.rules || '5e').featuresToIgnore.includes(r.name)).map((reaction) => {
-                const isClickable = (reaction.details || reaction.name === OPPORTUNITY_ATTACK.name || hasAutomation(reaction)) && reaction.name !== 'Reactive Strike';
+                const isClickable = (reaction.details || reaction.name === OPPORTUNITY_ATTACK.name || reaction.name === 'Stand (Power Word Heal)' || hasAutomation(reaction)) && reaction.name !== 'Reactive Strike';
                 return <div key={reaction.name}>
                     <b className={isClickable ? "clickable" : ""} onClick={() => isClickable && handleReactionClick(reaction)}>{reaction.name}:</b> <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(reaction.description) }}></span>
                 </div>

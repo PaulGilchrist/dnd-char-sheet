@@ -4,11 +4,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
-import { endFriendsOnHostileAction } from '../../services/rules/features/friendsService.js';
-import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
-import { buildAttackContext, buildAttackContextSync } from '../../services/automation/contextBuilder.js';
-import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
-import { useActionSpellMetamagic } from '../../hooks/combat/useActionSpellMetamagic.js';
 
 const _syncedStore = new Map();
 
@@ -194,93 +189,17 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
-describe('CharActions handlers', () => {
+describe('CharActions simple damage roll', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve(['Hide', 'Dash', 'Disengage', 'Dodge', 'Grapple']) });
     getRuntimeValue.mockImplementation(() => null);
-    vi.mocked(buildAttackContext).mockResolvedValue({ hitBonus: 5 });
-    vi.mocked(buildAttackContextSync).mockReturnValue({ hitBonus: 5 });
-    vi.mocked(endFriendsOnHostileAction).mockReturnValue();
-    vi.mocked(endInvisibilityOnHostileAction).mockReturnValue();
-    vi.mocked(getCombatContext).mockResolvedValue(null);
   });
 
-  describe('handleAttackClick', () => {
-    it('ends Friends and Invisibility spells before rolling attack', async () => {
-      render(<CharActions playerStats={createStats({ attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }] })} />);
-
-      const attackEl = screen.getByText('Longsword');
-      await act(async () => { fireEvent.click(attackEl); });
-
-      expect(endFriendsOnHostileAction).toHaveBeenCalledWith('TestCharacter', undefined);
-      expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestCharacter', undefined);
-      expect(buildAttackContext).toHaveBeenCalled();
-    });
-
-    it('rolls the weapon attack when its hit bonus is clicked instead of casting it as a spell', async () => {
-      render(<CharActions playerStats={createStats({ attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }] })} />);
-
-      const hitEl = screen.getByText('+5');
-      await act(async () => { fireEvent.click(hitEl); });
-
-      expect(buildAttackContext).toHaveBeenCalled();
-      const spellAttackClick = vi.mocked(useActionSpellMetamagic).mock.results.at(-1)?.value.handleSpellAttackClick;
-      expect(spellAttackClick).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when cannotAct is true', async () => {
-      render(<CharActions playerStats={createStats({ attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }] })} cannotAct={true} />);
-
-      const attackEl = screen.getByText('Longsword');
-      await act(async () => { fireEvent.click(attackEl); });
-
-      expect(endFriendsOnHostileAction).not.toHaveBeenCalled();
-      expect(buildAttackContext).not.toHaveBeenCalled();
-    });
-
-    it('applies exhaustion penalty to hit bonus', async () => {
-      render(<CharActions playerStats={createStats({ attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }] })} exhaustionPenalty={2} />);
-
-      const attackEl = screen.getByText('Longsword');
-      await act(async () => { fireEvent.click(attackEl); });
-
-      expect(buildAttackContext).toHaveBeenCalled();
-    });
-
-    it('handles buildCtx failure gracefully', async () => {
-      vi.mocked(buildAttackContext).mockRejectedValue(new Error('context error'));
-      const consoleError = console.error;
-      console.error = vi.fn();
-
-      render(<CharActions playerStats={createStats({ attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }] })} />);
-
-      const attackEl = screen.getByText('Longsword');
-      await act(async () => { fireEvent.click(attackEl); });
-
-      expect(console.error).toHaveBeenCalledWith('[CharActions] Error:', expect.any(Error));
-      console.error = consoleError;
-    });
-  });
-
-  describe('handleCleaveAttack', () => {
-    it('strips ability modifier from cleave damage formula', async () => {
-      const formula = '1d8+3';
-      const cleaned = formula.replace(/\+\s*\d+/g, '').trim();
-      expect(cleaned).toBe('1d8');
-    });
-
-    it('falls back to original formula if cleaning removes all dice', async () => {
-      const formula = '+3';
-      const cleaned = formula.replace(/\+\s*\d+/g, '').trim();
-      expect(cleaned).toBe('');
-    });
-  });
-
-  describe('handleTacticalMaster', () => {
-    it('dismisses tactical master modal on close', async () => {
+  describe('handleSimpleDamageRoll', () => {
+    it('logs a simple damage roll for weapon attacks', async () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = ({ children }) => (
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
@@ -295,71 +214,37 @@ describe('CharActions handlers', () => {
         return null;
       });
 
-      render(<CharActions
-        playerStats={createStats()}
-        campaignName="my-campaign"
-      />, { wrapper });
-
-      expect(screen.queryByText('TacticalMasterModal')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('automation handling', () => {
-    it('calls executeHandler when action with automation is clicked and shows popup on result', async () => {
-      const { hasAutomation } = await import('../../services/combat/automation/automationService.js');
-      hasAutomation.mockReturnValue(true);
-      const { executeHandler } = await import('../../services/automation/index.js');
-      executeHandler.mockResolvedValue({ type: 'popup', payload: '<div>Popup</div>' });
-
-      getRuntimeValue.mockReturnValue(null);
-
-      const stats = createStats({
-        actions: [{ name: 'Smite', description: 'Strike with divine power.', automation: { type: 'auto_effect' } }],
+      await act(async () => {
+        render(<CharActions
+          playerStats={createStats({
+            attacks: [{ name: 'Shortsword', range: 5, hitBonus: 5, damage: '1d6+3', damageType: 'Piercing', type: 'Action' }]
+          })}
+          campaignName="my-campaign"
+        />, { wrapper });
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-      const actionName = screen.getByText(/Smite:/);
-      await act(async () => { fireEvent.click(actionName); });
+      const damageEl = screen.getByText('1d6+3');
+      await act(async () => { fireEvent.click(damageEl); });
+
       await waitFor(() => {
-        expect(executeHandler).toHaveBeenCalled();
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          type: 'damage',
+          name: 'Shortsword',
+          formula: '1d6+3',
+          note: 'Direct damage roll (no target)',
+        }));
       });
     });
 
-    it('dispatches automation when rage action is exhausted (handler shows popup)', async () => {
-      const { hasAutomation } = await import('../../services/combat/automation/automationService.js');
-      const { executeHandler } = await import('../../services/automation/index.js');
-      hasAutomation.mockReturnValue(true);
+    it('clears popupHtml before rolling', async () => {
+      const mockPopupHtml = { type: 'some-popup' };
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: mockPopupHtml, setPopupHtml: mockSetPopupHtml }}>
+          {children}
+        </DiceRollContext.Provider>
+      );
 
-      const stats = createStats({
-        actions: [{ name: 'Berserker Rage', description: 'You enter a rage.', automation: { type: 'combat_stance', recharge: 'long_rest_or_expend_rage' } }],
-      });
-
-      await act(async () => { render(<CharActions playerStats={stats} />); });
-      const actionName = screen.getByText(/Rage:/);
-      await act(async () => { fireEvent.click(actionName); });
-      expect(executeHandler).toHaveBeenCalled();
-    });
-  });
-
-  describe('areEqual for React.memo', () => {
-    it('returns true when playerStats, conditionAttackMode, exhaustionPenalty, and cannotAct are equal', () => {
-      const prevProps = { playerStats: { name: 'Test' }, conditionAttackMode: 'disadvantage', exhaustionPenalty: 2, cannotAct: false };
-      const nextProps = { playerStats: { name: 'Test' }, conditionAttackMode: 'disadvantage', exhaustionPenalty: 2, cannotAct: false };
-      expect(prevProps.playerStats).toEqual(nextProps.playerStats);
-      expect(prevProps.conditionAttackMode).toBe(nextProps.conditionAttackMode);
-      expect(prevProps.exhaustionPenalty).toBe(nextProps.exhaustionPenalty);
-      expect(prevProps.cannotAct).toBe(nextProps.cannotAct);
-    });
-
-    it('returns false when playerStats differ', () => {
-      const prevProps = { playerStats: { name: 'Test' }, conditionAttackMode: 'disadvantage', exhaustionPenalty: 2, cannotAct: false };
-      const nextProps = { playerStats: { name: 'Other' }, conditionAttackMode: 'disadvantage', exhaustionPenalty: 2, cannotAct: false };
-      expect(prevProps.playerStats).not.toEqual(nextProps.playerStats);
-    });
-  });
-
-  describe('feat range effects loading', () => {
-    it('renders without errors when playerStats has feats', async () => {
       getRuntimeValue.mockImplementation((_name, key) => {
         if (key === 'activeBuffs') return [];
         if (key === 'hasteExtraActionUsed') return false;
@@ -369,11 +254,52 @@ describe('CharActions handlers', () => {
 
       await act(async () => {
         render(<CharActions
-          playerStats={createStats({ feats: [{ name: 'War Caster' }] })}
-        />);
+          playerStats={createStats({
+            attacks: [{ name: 'Dagger', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Action' }]
+          })}
+          campaignName="my-campaign"
+        />, { wrapper });
       });
 
-      expect(screen.getByText('Actions')).toBeInTheDocument();
+      const damageEl = screen.getByText('1d4+3');
+      await act(async () => { fireEvent.click(damageEl); });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          type: 'damage',
+        }));
+      });
+    });
+
+    it('does nothing when cannotAct is true for damage clicks', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+          {children}
+        </DiceRollContext.Provider>
+      );
+
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [];
+        if (key === 'hasteExtraActionUsed') return false;
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      await act(async () => {
+        render(<CharActions
+          playerStats={createStats({
+            attacks: [{ name: 'Mace', range: 5, hitBonus: 5, damage: '1d6+3', damageType: 'Bludgeoning', type: 'Action' }]
+          })}
+          campaignName="my-campaign"
+          cannotAct={true}
+        />, { wrapper });
+      });
+
+      const damageEl = screen.getByText('1d6+3');
+      await act(async () => { fireEvent.click(damageEl); });
+
+      expect(mockSetPopupHtml).not.toHaveBeenCalled();
     });
   });
 });
