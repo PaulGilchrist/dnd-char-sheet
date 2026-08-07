@@ -104,7 +104,24 @@ vi.mock('./char-spells/SpellDetailPopup.jsx', () => ({
   default: vi.fn((props) => <div data-testid="spell-detail-popup">{props.spell?.name || 'SpellDetailPopup'}</div>),
 }));
 
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+  useDiceRollPopup: vi.fn(() => ({ popupHtml: 'some html', setPopupHtml: vi.fn() })),
+}));
+
+vi.mock('./HexAbilityModal.jsx', () => ({
+  default: vi.fn((props) => <div data-testid="hex-ability-modal"><button onClick={props.onCancel}>Cancel</button></div>),
+}));
+
+vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
+  default: vi.fn((props) => <div data-testid="secondary-target-modal">{props.title}</div>),
+}));
+
+vi.mock('./ArcaneVigorModal.jsx', () => ({
+  default: vi.fn(() => <div data-testid="arcane-vigor-modal">Arcane Vigor</div>),
+}));
+
 import { getInnateSorceryBonus } from '../../services/combat/buffs/buffService.js';
+import { hasAutomation } from '../../services/combat/automation/automationService.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -227,6 +244,113 @@ describe('CharBonusActions - Rendering', () => {
     it('shows Mastery column header for 2024 rules', () => {
       render(<CharBonusActions playerStats={createStats({ rules: '2024', attacks: [bonusActionAttack] })} getWeaponMastery={() => null} />);
       expect(screen.getByText('Mastery')).toBeInTheDocument();
+    });
+  });
+
+  describe('bonus action attack attack level display', () => {
+    it('shows Cantrip for level 0 attacks', () => {
+      const stats = createStats({
+        attacks: [{ name: 'Minor Illusion Attack', range: 120, hitBonus: 5, damage: '1d8', damageType: 'Psychic', type: 'Bonus Action' }],
+        spellAbilities: { toHit: 5, spells: [{ name: 'Minor Illusion Attack', level: 0 }] },
+      });
+      render(<CharBonusActions playerStats={stats} getWeaponMastery={() => null} />);
+      expect(screen.getByText('Cantrip')).toBeInTheDocument();
+    });
+
+    it('shows numeric level for higher level attacks', () => {
+      const stats = createStats({
+        attacks: [{ name: 'Ice Knife', range: 60, hitBonus: 5, damage: '1d10', damageType: 'Cold', type: 'Bonus Action' }],
+        spellAbilities: { toHit: 5, spells: [{ name: 'Ice Knife', level: 2 }] },
+      });
+      render(<CharBonusActions playerStats={stats} getWeaponMastery={() => null} />);
+      expect(screen.getByText('2')).toBeInTheDocument();
+    });
+  });
+
+  describe('bonus action spells - level display', () => {
+    it('shows Cantrip for level 0 bonus action spells', () => {
+      const spell = { name: 'Shocking Grasp', level: 0, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
+      expect(screen.getByText('Cantrip')).toBeInTheDocument();
+    });
+
+    it('shows numeric level for leveled bonus action spells', () => {
+      const spell = { name: 'Hideous Laughter', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
+      expect(screen.getByText('1')).toBeInTheDocument();
+    });
+  });
+
+  describe('utility concentration spells rendering', () => {
+    it('shows empty hit bonus column for utility concentration spells', () => {
+      const spell = { name: 'Armor of Agathys', level: 1, range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared', concentration: true };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
+      expect(screen.getByText('Armor of Agathys')).toBeInTheDocument();
+      expect(screen.getByText('Utility')).toBeInTheDocument();
+    });
+
+    it('shows Healing type for spells with heal_at_slot_level', () => {
+      const spell = { name: 'Healing Word', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared', heal_at_slot_level: true };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
+      expect(screen.getByText('Healing')).toBeInTheDocument();
+    });
+
+    it('shows damage type when spell has specific damage type', () => {
+      const spell = { name: 'Witch Bolt', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared', damage: { damage_type: 'Lightning' } };
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [spell] } })} />);
+      expect(screen.getByText('Lightning')).toBeInTheDocument();
+    });
+  });
+
+  describe('features filtered by featuresToIgnore', () => {
+    it('filters out bonus actions that are in featuresToIgnore list', () => {
+      const bonusActions = [
+        { name: 'Spellcasting', description: 'Cast spells.' },
+        { name: 'Cunning Action', description: 'Dash, Hide, or Disengage.', details: 'Quick movement.' },
+      ];
+      render(<CharBonusActions playerStats={createStats({ bonusActions })} />);
+      expect(screen.queryByText(/Spellcasting:/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Cunning Action:/)).toBeInTheDocument();
+    });
+  });
+
+  describe('automation badges on bonus actions', () => {
+    it('shows pool badge for healing_pool automation', () => {
+      vi.mocked(hasAutomation).mockReturnValue(true);
+      const bonusAction = {
+        name: 'Favored Soul',
+        description: 'Healing pool feature.',
+        automation: { type: 'healing_pool', pool: 15 },
+      };
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
+      expect(screen.getByText(/Pool: 15 HP/)).toBeInTheDocument();
+    });
+
+    it('shows damage badge for bonus action with damage', () => {
+      vi.mocked(hasAutomation).mockReturnValue(true);
+      const bonusAction = {
+        name: 'War Priest',
+        description: 'Make an attack.',
+        automation: { type: 'bonus_action_attack', damage: '1d8+3', damageType: 'Slashing' },
+      };
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
+      expect(screen.getByText(/1d8\+3 Slashing/)).toBeInTheDocument();
+    });
+  });
+
+  describe('popupHtml with hasBonusActions', () => {
+    it('renders a <br> when popupHtml exists and hasBonusActions is true', () => {
+      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
+      const { container } = render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} />);
+      expect(container.querySelector('br')).toBeTruthy();
+    });
+  });
+
+  describe('Arcane Vigor modal rendering', () => {
+    it('renders ArcaneVigorModal when modalState has arcaneVigorModal', () => {
+      const bonusAction = { name: 'Cunning Action', description: 'Quick movement.' };
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [bonusAction] })} modalState={{ arcaneVigorModal: { someData: true } }} setModalState={vi.fn()} />);
+      expect(screen.getByTestId('arcane-vigor-modal')).toBeInTheDocument();
     });
   });
 

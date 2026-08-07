@@ -1,6 +1,6 @@
 /* @cleaned-by-ai */
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CampaignAdmin from './CampaignAdmin.jsx';
 
 describe('CampaignAdmin - Rendering', () => {
@@ -116,6 +116,44 @@ describe('CampaignAdmin - Rendering', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const rollbackAction = getActionByText('Rollback to Snapshot');
             expect(rollbackAction).toHaveClass('admin-action--danger');
+        });
+    });
+
+    describe('campaign name encoding', () => {
+        it('URL-encodes the campaign name in API requests for clear-change-data', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'Done' }) })
+            );
+            window.confirm.mockReturnValueOnce(true);
+            render(<CampaignAdmin {...defaultProps} campaignName="my campaign/1" />);
+            const action = getActionByText('Clear Change Data');
+            const btn = action.querySelector('button');
+            fireEvent.click(btn);
+            await waitFor(() => {
+                expect(global.fetch).toHaveBeenCalledWith(
+                    '/api/campaigns/my%20campaign%2F1/admin/clear-change-data',
+                    { method: 'POST' }
+                );
+            });
+        });
+
+        it('URL-encodes the campaign name in DELETE requests for delete', async () => {
+            global.fetch = vi.fn(() =>
+                Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+            );
+            window.prompt.mockReturnValueOnce('my campaign/1');
+            window.confirm.mockReturnValueOnce(true);
+            window.confirm.mockReturnValueOnce(true);
+            render(<CampaignAdmin {...defaultProps} campaignName="my campaign/1" />);
+            const action = getActionByText('Delete Campaign');
+            const btn = action.querySelector('button');
+            fireEvent.click(btn);
+            await waitFor(() => {
+                expect(global.fetch).toHaveBeenCalledWith(
+                    '/api/campaigns/my%20campaign%2F1',
+                    { method: 'DELETE' }
+                );
+            });
         });
     });
 });

@@ -115,9 +115,29 @@ describe('useModalHandlers - damage type handlers', () => {
                 'test-campaign'
             );
         });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleDivineFuryDamageType } = useModalHandlers(deps);
+            handleDivineFuryDamageType('Radiant');
+            expect(deps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
     });
 
     describe('handleGenericDamageTypeChoice', () => {
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleGenericDamageTypeChoice } = useModalHandlers(deps);
+            handleGenericDamageTypeChoice('Fire');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
         it('applies chosen damage type with oncePerTurnKey', () => {
             const deps = createDeps({
                 pendingDamage: {
@@ -222,6 +242,34 @@ describe('useModalHandlers - damage type handlers', () => {
                 1,
                 'test-campaign'
             );
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
+            handleDamageTypeModifierChoice('radiant');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not set runtime value when _damageTypeModifier is absent', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Some Attack', damageType: 'fire' },
+                    formula: '1d6',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                },
+            });
+            const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
+            handleDamageTypeModifierChoice('cold');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 });

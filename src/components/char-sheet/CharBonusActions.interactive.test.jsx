@@ -32,8 +32,8 @@ vi.mock('../../services/automation/index.js', () => ({
   executeHandler: vi.fn(),
 }));
 
-vi.mock('../../services/automation/handlers/combat/saveAttackHandler.js', () => ({
-  isExhausted: vi.fn(() => false),
+vi.mock('../../services/automation/handlers/buffs/tempHpService.js', () => ({
+  setTempHp: vi.fn(),
 }));
 
 vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
@@ -109,8 +109,9 @@ vi.mock('./char-spells/SpellDetailPopup.jsx', () => ({
 }));
 
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../services/ui/logService.js';
+import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -236,5 +237,285 @@ describe('CharBonusActions - Interactive', () => {
     });
   });
 
+  describe('bolstering treat', () => {
+    it('shows Eat Bolstering Treat when hasBolsteringTreat is true', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 2;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        if (key === 'poisonDoses') return 0;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({ level: 5, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Eat Bolstering Treat:/)).toBeInTheDocument();
+      expect(screen.getByText(/gain a number of Temporary Hit Points equal to your Proficiency Bonus/)).toBeInTheDocument();
+    });
+
+    it('shows Eat Bolstering Treat when hasChefBolsteringTreats is true', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 1;
+        if (key === 'activeBuffs') return null;
+        if (key === 'poisonDoses') return 0;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({ level: 5, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Eat Bolstering Treat:/)).toBeInTheDocument();
+    });
+
+    it('does not show Eat Bolstering Treat when both counts are 0', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        if (key === 'poisonDoses') return 0;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'TestFeature', description: 'test' }] })} />);
+      expect(screen.queryByText(/Eat Bolstering Treat:/)).not.toBeInTheDocument();
+    });
+
+    it('does not show Eat Bolstering Treat when both are null', () => {
+      useRuntimeValue.mockReturnValue(null);
+      getRuntimeValue.mockReturnValue(null);
+      render(<CharBonusActions playerStats={createStats({ bonusActions: [{ name: 'TestFeature', description: 'test' }] })} />);
+      expect(screen.queryByText(/Eat Bolstering Treat:/)).not.toBeInTheDocument();
+    });
+
+    it('calls setTempHp and decrements treat count when clicked', async () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 2;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        if (key === 'poisonDoses') return 0;
+        return null;
+      });
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 2;
+        return null;
+      });
+      const stats = createStats({ level: 5, abilities: [{ name: 'Wisdom', bonus: 3 }], bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      fireEvent.click(screen.getByText(/Eat Bolstering Treat:/));
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'bolsteringTreat', 1, 'test');
+      });
+    });
+
+    it('blocks Eat Bolstering Treat when cannotAct is true', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'bolsteringTreat') return 2;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        if (key === 'poisonDoses') return 0;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({ level: 5, bonusActions: [{ name: 'TestFeature', description: 'test' }] });
+      render(<CharBonusActions playerStats={stats} campaignName="test" cannotAct={true} />);
+      fireEvent.click(screen.getByText(/Eat Bolstering Treat:/));
+      expect(vi.mocked(setTempHp)).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('apply poison', () => {
+    it('shows Apply Poison when hasApplyPoison and poisonDoses > 0', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 3;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({
+        abilities: [
+          { name: 'Dexterity', bonus: 3 },
+          { name: 'Intelligence', bonus: 1 },
+        ],
+        proficiency: 3,
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      expect(screen.getByText(/Apply Poison:/)).toBeInTheDocument();
+    });
+
+    it('does not show Apply Poison when poisonDoses is 0', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 0;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      expect(screen.queryByText(/Apply Poison:/)).not.toBeInTheDocument();
+    });
+
+    it('does not show Apply Poison when cannotAct is true', () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 3;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      getRuntimeValue.mockReturnValue(null);
+      const stats = createStats({
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" cannotAct={true} />);
+      expect(screen.queryByText(/Apply Poison:/)).not.toBeInTheDocument();
+    });
+
+    it('decrements poisonDoses and sets poisonedWeaponsActive when clicked', async () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 2;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 2;
+        return null;
+      });
+      const stats = createStats({
+        name: 'PoisonCharacter',
+        abilities: [
+          { name: 'Dexterity', bonus: 3 },
+          { name: 'Intelligence', bonus: 1 },
+        ],
+        proficiency: 3,
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      fireEvent.click(screen.getByText(/Apply Poison:/));
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith('PoisonCharacter', 'poisonDoses', 1, 'test');
+        expect(setRuntimeValue).toHaveBeenCalledWith('PoisonCharacter', 'poisonedWeaponsActive', true, 'test');
+      });
+    });
+
+    it('logs apply poison entry with correct save DC', async () => {
+      useRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 1;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 1;
+        return null;
+      });
+      const stats = createStats({
+        abilities: [
+          { name: 'Dexterity', bonus: 3 },
+          { name: 'Intelligence', bonus: 1 },
+        ],
+        proficiency: 3,
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      fireEvent.click(screen.getByText(/Apply Poison:/));
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+          type: 'ability_use',
+          abilityName: 'Apply Poison',
+        }));
+      });
+    });
+
+    it('computes save DC from max(dex, int) mod + proficiency', async () => {
+      vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+        if (key === 'poisonDoses') return 1;
+        if (key === 'bolsteringTreat') return 0;
+        if (key === 'chefBolsteringTreats') return 0;
+        if (key === 'activeBuffs') return null;
+        return null;
+      });
+      const poisonDosesMock = vi.fn((name, key) => {
+        if (key === 'poisonDoses') return 1;
+        return null;
+      });
+      getRuntimeValue.mockImplementation(poisonDosesMock);
+      const stats = createStats({
+        abilities: [
+          { name: 'Dexterity', bonus: 5 },
+          { name: 'Intelligence', bonus: 2 },
+        ],
+        proficiency: 3,
+        automation: { bonusActions: [{ type: 'apply_poison', name: 'Apply Poison' }] },
+        bonusActions: [{ name: 'TestFeature', description: 'test' }],
+      });
+      render(<CharBonusActions playerStats={stats} campaignName="test" />);
+      fireEvent.click(screen.getByText(/Apply Poison:/));
+      await waitFor(() => {
+        expect(poisonDosesMock).toHaveBeenCalled();
+        expect(addEntry).toHaveBeenCalled();
+        expect(addEntry.mock.calls[0][1].type).toBe('ability_use');
+        expect(addEntry.mock.calls[0][1].abilityName).toBe('Apply Poison');
+      });
+    });
+  });
+
+  describe('sacred weapon buff on hit bonus', () => {
+    it('adds sacred weapon bonus to hit for melee attacks when buff is active', () => {
+      const mockGrv = vi.fn((name, key) => {
+        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
+        return null;
+      });
+      getRuntimeValue.mockImplementation(mockGrv);
+      const stats = createStats({
+        abilities: [{ name: 'Charisma', bonus: 4 }],
+        attacks: [{ name: 'Rapier', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Piercing', type: 'Bonus Action', weaponType: 'melee' }],
+      });
+      render(<CharBonusActions playerStats={stats} exhaustionPenalty={0} />);
+      expect(screen.getByText(/\+9/)).toBeInTheDocument();
+    });
+
+    it('does not add sacred weapon bonus for ranged attacks', () => {
+      const mockGrv = vi.fn((name, key) => {
+        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
+        return null;
+      });
+      getRuntimeValue.mockImplementation(mockGrv);
+      const stats = createStats({
+        abilities: [{ name: 'Charisma', bonus: 4 }],
+        attacks: [{ name: 'Shortbow', range: 80, hitBonus: 5, damage: '1d6+3', damageType: 'Piercing', type: 'Bonus Action', weaponType: 'ranged' }],
+      });
+      render(<CharBonusActions playerStats={stats} exhaustionPenalty={0} />);
+      expect(screen.getByText(/\+5/)).toBeInTheDocument();
+    });
+
+    it('adds sacred weapon bonus for unarmed attacks', () => {
+      const mockGrv = vi.fn((name, key) => {
+        if (key === 'activeBuffs') return [{ effect: 'sacred_weapon' }];
+        return null;
+      });
+      getRuntimeValue.mockImplementation(mockGrv);
+      const stats = createStats({
+        abilities: [{ name: 'Charisma', bonus: 4 }],
+        attacks: [{ name: 'Unarmed Strike', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Bludgeoning', type: 'Bonus Action', weaponType: 'unarmed' }],
+      });
+      render(<CharBonusActions playerStats={stats} exhaustionPenalty={0} />);
+      expect(screen.getByText(/\+9/)).toBeInTheDocument();
+    });
+  });
 
 });

@@ -1,5 +1,5 @@
 // @cleaned-by-ai
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import LongRestButton from './LongRestButton.jsx';
 
@@ -22,7 +22,7 @@ vi.mock('../../services/ui/logService.js', () => ({
 }));
 
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: function MockModal({ title, icon, description, note, confirmLabel, confirmIcon }) {
+  default: function MockModal({ title, icon, description, note, confirmLabel, confirmIcon, targets }) {
     return (
       <div data-testid="creature-selection-modal">
         <div data-testid="modal-title">{title}</div>
@@ -31,6 +31,9 @@ vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
         <div data-testid="modal-note">{note}</div>
         <div data-testid="modal-confirm-label">{confirmLabel}</div>
         <div data-testid="modal-confirm-icon">{confirmIcon}</div>
+        {targets && targets.map((t, i) => (
+          <div key={i} data-testid={`target-${i}`}>{t.name}</div>
+        ))}
       </div>
     );
   },
@@ -39,6 +42,7 @@ vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
 // ── Re-import mocks ──
 
 import * as tranceRules from '../../services/rules/effects/tranceRules.js';
+import * as restRules from '../../services/rules/effects/restRules.js';
 
 // ── Fixtures ──
 
@@ -125,35 +129,37 @@ describe('LongRestButton rendering', () => {
     ).not.toThrow();
   });
 
-  it('renders CreatureSelectionModal when celestialResilienceAllies is returned from applyLongRest', async () => {
+  it('renders CreatureSelectionModal with correct props when celestialResilienceAllies is returned', async () => {
     tranceRules.hasTranceTrait.mockReturnValue(false);
     const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
+      creatureTargets: [{ name: 'Ally1', type: 'player' }, { name: 'Ally2', type: 'npc' }],
+      allyTempHp: 12,
+      selfTempHp: 8,
       maxTargets: 5,
     };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
 
-    const mockModalProps = {
-      title: 'Celestial Resilience',
-      icon: 'fa-shield-hart',
-      targets: celestialData.creatureTargets,
-      maxTargets: celestialData.maxTargets,
-      description: 'Choose up to 5 allies to gain temporary hit points from your Celestial Resilience.',
-      note: `You gain ${celestialData.selfTempHp} temporary hit points. Each selected ally gains ${celestialData.allyTempHp} temporary hit points.`,
-      confirmLabel: 'Grant Resilience',
-      confirmIcon: 'fa-shield-hart',
-      onConfirm: vi.fn(),
-      onSkip: vi.fn(),
-    };
+    render(<LongRestButton {...makeProps()} />);
 
-    const { default: Modal } = await import('./modals/shared/CreatureSelectionModal.jsx');
-    render(<Modal {...mockModalProps} />);
-    expect(screen.getByTestId('creature-selection-modal')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button'));
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
     expect(screen.getByTestId('modal-title')).toHaveTextContent('Celestial Resilience');
+    expect(screen.getByTestId('modal-icon')).toHaveTextContent('fa-shield-hart');
     expect(screen.getByTestId('modal-description')).toHaveTextContent(
       'Choose up to 5 allies to gain temporary hit points from your Celestial Resilience.',
     );
+    expect(screen.getByTestId('modal-note')).toHaveTextContent(
+      'You gain 8 temporary hit points. Each selected ally gains 12 temporary hit points.',
+    );
     expect(screen.getByTestId('modal-confirm-label')).toHaveTextContent('Grant Resilience');
+    expect(screen.getByTestId('modal-confirm-icon')).toHaveTextContent('fa-shield-hart');
+    expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+    expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
   });
 });

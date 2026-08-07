@@ -215,6 +215,24 @@ describe('useModalHandlers - flurry of blows', () => {
             expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
+        it('does nothing when applyFlurryOfBlows returns result without popup type and no openHandTargets', async () => {
+            applyFlurryOfBlows.mockResolvedValue({ someOtherField: 'value' });
+            const deps = createDeps({
+                modalState: {
+                    flurryOfBlowsModal: {
+                        action: { name: 'Flurry of Blows' },
+                        playerStats: { name: 'TestMonk' },
+                        campaignName: 'test-campaign',
+                        mapName: 'test-map',
+                        numAttacks: 1,
+                    },
+                },
+            });
+            const { handleFlurryOfBlowsConfirm } = useModalHandlers(deps);
+            await handleFlurryOfBlowsConfirm({ distribution: 'target1' });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
+        });
+
         it('does nothing when no flurry modal state exists', async () => {
             const deps = createDeps({
                 modalState: {},
@@ -356,6 +374,26 @@ describe('useModalHandlers - open hand from flurry', () => {
             const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
             await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
             expect(applyOpenHandTechnique).not.toHaveBeenCalled();
+        });
+
+        it('clears open hand state when result is not popup type', async () => {
+            applyOpenHandTechnique.mockResolvedValue({ type: 'other' });
+            const deps = createDeps({
+                modalState: {
+                    openHandFromFlurry: {
+                        targets: [
+                            { action: { name: 'Open Hand' }, targetName: 'Goblin' },
+                        ],
+                        saveDc: 15,
+                        currentIndex: 0,
+                        popupHtml: 'Flurry result',
+                    },
+                },
+            });
+            const { handleOpenHandFromFlurryConfirm } = useModalHandlers(deps);
+            await handleOpenHandFromFlurryConfirm({ optionName: 'Push' });
+            expect(deps.setModalState).toHaveBeenCalledWith({ openHandFromFlurry: null });
+            expect(deps.setPopupHtml).not.toHaveBeenCalled();
         });
 
         it('does nothing when no open hand state exists', async () => {
