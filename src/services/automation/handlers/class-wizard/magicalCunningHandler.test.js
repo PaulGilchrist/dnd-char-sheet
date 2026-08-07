@@ -192,7 +192,7 @@ describe('magicalCunningHandler', () => {
                 type: 'popup',
                 payload: {
                     type: 'automation_info',
-                    description: 'Celestial Resilience: You gain 3 temporary hit points.',
+                    description: 'You gain 3 temporary hit points.',
                 },
             }));
 

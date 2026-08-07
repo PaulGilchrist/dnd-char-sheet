@@ -2,6 +2,19 @@
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => {
+    const mockStore = new Map()
+    return {
+        getRuntimeValue: vi.fn(),
+        setRuntimeValue: vi.fn(),
+        getAllStoreKeys: vi.fn(),
+        getStore: vi.fn((key) => {
+            if (!mockStore.has(key)) mockStore.set(key, new Map())
+            return mockStore.get(key)
+        }),
+    }
+})
+
 vi.mock('../../dice/diceRoller.js', () => ({
     rollD20: vi.fn(),
 }))
@@ -20,8 +33,8 @@ vi.mock('../conditions/conditionSaveService.js', () => ({
     getCreatureSaveBonus: vi.fn(),
 }))
 
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { rollD20 } from '../../dice/diceRoller.js'
-import { getStore } from '../../../hooks/runtime/useRuntimeState.js'
 import { rollConcentrationSave as rollConcentrationRules, breakConcentration as breakConcentrationRules } from './concentrationRules.js'
 import { computeAuraBonus } from '../auras/auraOfProtection.js'
 import { getCreatureSaveBonus } from '../conditions/conditionSaveService.js'
@@ -30,6 +43,10 @@ import {
     breakConcentration as breakConcentrationSvc,
     addConcentration,
     buildConcentrationPopup,
+    clearBaneEffects,
+    clearBladeWardEffects,
+    clearBlessEffects,
+    clearRayOfEnfeeblementEffects,
 } from './concentrationService.js'
 
 function createCharacter(name, opts = {}) {
@@ -125,10 +142,13 @@ describe('rollConcentrationSave', () => {
         rollConcentrationRules.mockReturnValue({ roll: 10, success: true })
         getCreatureSaveBonus.mockResolvedValue(3)
         computeAuraBonus.mockResolvedValue({ bonus: 0 })
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'Sorcerer' && prop === 'activeBuffs') return [{ name: 'Starry Form', constellation: 'Dragon' }]
+            return null
+        })
 
         const creature = { name: 'Sorcerer', type: 'player' }
         const chars = [createCharacter('Sorcerer', { activeBuffs: [] })]
-        getStore('Sorcerer').set('activeBuffs', [{ name: 'Starry Form', constellation: 'Dragon' }])
 
         await rollConcentrationSaveSvc(
             creature, { spell: 'Shield', dc: 13 }, chars, [], '', null, (n) => n
@@ -328,5 +348,148 @@ describe('buildConcentrationPopup', () => {
         const popup = buildConcentrationPopup(10, 3, undefined, 'Bless', 13, true)
 
         expect(popup.starryDragonFloor).toBeUndefined()
+    })
+})
+
+describe('clearBaneEffects', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('removes targetEffects matching bane_penalty from the specified caster', () => {
+        const storedEffects = [
+            { effect: 'bane_penalty', source: 'Alice' },
+            { effect: 'bane_penalty', source: 'Bob' },
+            { effect: 'bless_bonus', source: 'Alice' },
+        ]
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return storedEffects
+            return null
+        })
+
+        clearBaneEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({ effect: 'bane_penalty', source: 'Bob' }),
+                expect.objectContaining({ effect: 'bless_bonus', source: 'Alice' }),
+            ]),
+            'TestCampaign',
+            true
+        )
+    })
+
+    it('does not call setRuntimeValue when no matching effects exist', () => {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return [{ effect: 'bless_bonus', source: 'Alice' }]
+            return null
+        })
+
+        clearBaneEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+})
+
+describe('clearBladeWardEffects', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('delegates to clearBaneEffects', () => {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return [{ effect: 'bane_penalty', source: 'Alice' }]
+            return null
+        })
+
+        clearBladeWardEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).toHaveBeenCalled()
+    })
+})
+
+describe('clearBlessEffects', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('removes targetEffects matching bless_bonus from the specified caster', () => {
+        const storedEffects = [
+            { effect: 'bless_bonus', source: 'Alice' },
+            { effect: 'bless_bonus', source: 'Bob' },
+            { effect: 'bane_penalty', source: 'Alice' },
+        ]
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return storedEffects
+            return null
+        })
+
+        clearBlessEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({ effect: 'bless_bonus', source: 'Bob' }),
+                expect.objectContaining({ effect: 'bane_penalty', source: 'Alice' }),
+            ]),
+            'TestCampaign',
+            true
+        )
+    })
+
+    it('does not call setRuntimeValue when no matching effects exist', () => {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return [{ effect: 'bane_penalty', source: 'Alice' }]
+            return null
+        })
+
+        clearBlessEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+})
+
+describe('clearRayOfEnfeeblementEffects', () => {
+    beforeEach(() => {
+        vi.clearAllMocks()
+    })
+
+    it('removes targetEffects matching ray_of_enfeeble_debuff from the specified caster', () => {
+        const storedEffects = [
+            { effect: 'ray_of_enfeeble_debuff', source: 'Alice' },
+            { effect: 'ray_of_enfeeble_debuff', source: 'Bob' },
+            { effect: 'bane_penalty', source: 'Alice' },
+        ]
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return storedEffects
+            return null
+        })
+
+        clearRayOfEnfeeblementEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({ effect: 'ray_of_enfeeble_debuff', source: 'Bob' }),
+                expect.objectContaining({ effect: 'bane_penalty', source: 'Alice' }),
+            ]),
+            'TestCampaign',
+            true
+        )
+    })
+
+    it('does not call setRuntimeValue when no matching effects exist', () => {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return [{ effect: 'bane_penalty', source: 'Alice' }]
+            return null
+        })
+
+        clearRayOfEnfeeblementEffects('TestCampaign', 'Alice')
+
+        expect(setRuntimeValue).not.toHaveBeenCalled()
     })
 })

@@ -1083,7 +1083,9 @@ describe('data loading & runtime state', () => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'hitPoints', expect.any(Object), 'test-campaign');
+    await waitFor(() => {
+      expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'hitPoints', expect.any(Object), 'test-campaign');
+    });
   });
 
   it('loads prepared spells from runtime for Wizard in 2024', async () => {

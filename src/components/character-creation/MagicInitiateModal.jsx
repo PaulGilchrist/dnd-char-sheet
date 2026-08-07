@@ -310,7 +310,7 @@ function MagicInitiateModal({ formData, allSpells, onArrayFieldChange, onClose }
             You can cast the 1st-level spell once without a spell slot and regain the ability to do so after a long rest.
           </p>
 
-          {instances.length > 0 && !editingIndex && (
+          {instances.length > 0 && editingIndex === null && (
             <div className="mi-instances-list">
               {instances.map((inst, i) => renderInstanceSummary(inst, i))}
             </div>
@@ -318,7 +318,7 @@ function MagicInitiateModal({ formData, allSpells, onArrayFieldChange, onClose }
 
           {editingIndex !== null && renderInstanceEditor(editingIndex)}
 
-          {!editingIndex && (
+          {editingIndex === null && (
             <div className="mi-add-instance">
               <button type="button" className="mi-add-btn" onClick={addInstance}>
                 <i className="fa-solid fa-plus"></i> Add Another Instance
@@ -326,7 +326,7 @@ function MagicInitiateModal({ formData, allSpells, onArrayFieldChange, onClose }
             </div>
           )}
 
-          {instances.length > 0 && !editingIndex && (
+          {instances.length > 0 && editingIndex === null && (
             <div className="mi-save-all">
               <button type="button" className="mi-save-all-btn" onClick={saveAll}>
                 <i className="fa-solid fa-check"></i> Save All
