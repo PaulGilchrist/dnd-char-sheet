@@ -46,8 +46,6 @@ vi.mock('../../services/automation/handlers/spells/shapechangeService.js', () =>
 }));
 
 import { getRuntimeValue, setRuntimeValue, setRuntimeBatch } from '../../hooks/runtime/useRuntimeState.js';
-import { getCombatSummary } from '../../services/encounters/combatData.js';
-import utils from '../../services/ui/utils.js';
 
 describe('useInitiativeEffects - batch resets and once-per-turn trackers', () => {
     const campaignName = 'test-campaign';
