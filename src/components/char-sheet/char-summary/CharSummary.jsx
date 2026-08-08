@@ -586,16 +586,14 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
                 <div className='char-header-text'>
                     <div className='name-row'>
                         <span className='name'>{playerStats.name}</span>&nbsp;&nbsp;
-                        {isLocalhost && (
-                            <div className='char-btn-group no-print'>
-                                <button className="char-btn" onClick={onEditCharacter} title="Edit Character"><i className="fas fa-pen"></i> Edit</button>
-                                <button className="char-btn" onClick={handleDeleteCharacter} title="Delete Character">Delete</button>
-                                <button className="char-btn" onClick={onUploadClick} title="Upload Character"><i className="fas fa-arrow-up"></i> Upload</button>
-                                <button className="char-btn" onClick={onSaveClick} title="Download Character"><i className="fas fa-arrow-down"></i> Download</button>
-                                <ShortRestButton onClick={() => setShowShortRest(true)} />
-                                <LongRestButton playerStats={playerStats} campaignName={campaignName} onLongRest={onLongRest} />
-                            </div>
-                        )}
+                        <div className='char-btn-group no-print'>
+                            <button className="char-btn" onClick={onEditCharacter} title="Edit Character"><i className="fas fa-pen"></i> Edit</button>
+                            <button className="char-btn" onClick={handleDeleteCharacter} title="Delete Character">Delete</button>
+                            <button className="char-btn" onClick={onUploadClick} title="Upload Character"><i className="fas fa-arrow-up"></i> Upload</button>
+                            <button className="char-btn" onClick={onSaveClick} title="Download Character"><i className="fas fa-arrow-down"></i> Download</button>
+                            <ShortRestButton onClick={() => setShowShortRest(true)} />
+                            <LongRestButton playerStats={playerStats} campaignName={campaignName} onLongRest={onLongRest} />
+                        </div>
                     </div>
                     <div className='summary' data-testid='char-summary-text'>
                         {playerStats.race.subrace && playerStats.race.subrace.name ? playerStats.race.subrace.name : playerStats.race.name}

@@ -179,6 +179,16 @@ describe('mockComponents', () => {
       expect(screen.getByTestId('sidebar-active-indicator')).toHaveTextContent('Encounters');
     });
 
+    it('should render charSheet label when activeView is charSheet without activeCharacter', () => {
+      render(<MockSidebar activeView="charSheet" campaignName="test" />);
+      expect(screen.getByTestId('sidebar-active-indicator')).toHaveTextContent('Character');
+    });
+
+    it('should render view label when activeView is not charSheet but activeCharacter present', () => {
+      render(<MockSidebar activeView="encounter" activeCharacter={{ name: 'Hero' }} campaignName="test" />);
+      expect(screen.getByTestId('sidebar-active-indicator')).toHaveTextContent('Encounters');
+    });
+
     it('should render empty active indicator for unknown view', () => {
       render(<MockSidebar activeView="unknownView" campaignName="test" />);
       expect(screen.getByTestId('sidebar-active-indicator').textContent).toBe('');

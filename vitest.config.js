@@ -25,7 +25,6 @@ export default defineConfig({
             provider: 'v8',
             exclude: [
                 'node_modules/',
-                'src/test/',
                 '**/*.test.js',
                 '**/*.test.jsx',
                 '**/*.css',

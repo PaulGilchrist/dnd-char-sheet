@@ -1,254 +1,140 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { clearActiveInstances } from '../components/char-sheet/modals/shared/areaEffectModalInstances.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render } from '@testing-library/react';
+import React from 'react';
+import './setup.js';
+import { setApplyBusy, isApplyBusy } from '../components/char-sheet/modals/shared/areaEffectModalInstances.js';
 
-describe('setup.js - localStorage mock', () => {
-  // Re-create the exact same mock logic from setup.js to test it independently
-  let localStorageMock;
-  beforeEach(() => {
-    localStorageMock = (() => {
-      let store = {};
-      return {
-        getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, value) => {
-          store[key] = String(value);
-        }),
-        removeItem: vi.fn((key) => {
-          delete store[key];
-        }),
-        clear: vi.fn(() => {
-          store = {};
-        }),
-      };
-    })();
-  });
+// setup.js runs as global vitest setup (vitest.config.js setupFiles) and is
+// what installs this mock, so window.localStorage IS the module under test.
+const storage = window.localStorage;
 
-  describe('localStorageMock structure', () => {
-    it('should expose getItem method', () => {
-      expect(localStorageMock.getItem).toBeTypeOf('function');
-    });
-
-    it('should expose setItem method', () => {
-      expect(localStorageMock.setItem).toBeTypeOf('function');
-    });
-
-    it('should expose removeItem method', () => {
-      expect(localStorageMock.removeItem).toBeTypeOf('function');
-    });
-
-    it('should expose clear method', () => {
-      expect(localStorageMock.clear).toBeTypeOf('function');
-    });
-
-    it('should have exactly 4 methods and no others', () => {
-      const keys = Object.keys(localStorageMock);
-      expect(keys).toEqual(['getItem', 'setItem', 'removeItem', 'clear']);
-    });
-
-    it('should be a vi.fn() instance for each method', () => {
-      expect(localStorageMock.getItem.mock).toBeDefined();
-      expect(localStorageMock.setItem.mock).toBeDefined();
-      expect(localStorageMock.removeItem.mock).toBeDefined();
-      expect(localStorageMock.clear.mock).toBeDefined();
-    });
-  });
-
-  describe('getItem behavior', () => {
-    it('should return null for a non-existent key', () => {
-      const result = localStorageMock.getItem('nonexistent');
-      expect(result).toBeNull();
-    });
-
-    it('should return the stored value for an existing key', () => {
-      localStorageMock.setItem('myKey', 'myValue');
-      const result = localStorageMock.getItem('myKey');
-      expect(result).toBe('myValue');
-    });
-
-    it('should return null when stored value is explicitly null-equivalent', () => {
-      // store[key] || null means undefined keys return null
-      const result = localStorageMock.getItem('absent');
-      expect(result).toBeNull();
-    });
-
-    it('should track call history for getItem', () => {
-      localStorageMock.getItem('key1');
-      localStorageMock.getItem('key2');
-      expect(localStorageMock.getItem.mock.calls.length).toBe(2);
-      expect(localStorageMock.getItem.mock.calls[0][0]).toBe('key1');
-      expect(localStorageMock.getItem.mock.calls[1][0]).toBe('key2');
-    });
-  });
-
-  describe('setItem behavior', () => {
-    it('should store a string value', () => {
-      localStorageMock.setItem('key1', 'value1');
-      expect(localStorageMock.getItem('key1')).toBe('value1');
-    });
-
-    it('should convert non-string values to strings', () => {
-      localStorageMock.setItem('numKey', 42);
-      expect(localStorageMock.getItem('numKey')).toBe('42');
-    });
-
-    it('should convert boolean values to strings', () => {
-      localStorageMock.setItem('boolKey', true);
-      expect(localStorageMock.getItem('boolKey')).toBe('true');
-    });
-
-    it('should overwrite existing values', () => {
-      localStorageMock.setItem('key', 'first');
-      localStorageMock.setItem('key', 'second');
-      expect(localStorageMock.getItem('key')).toBe('second');
-    });
-
-    it('should track call history for setItem', () => {
-      localStorageMock.setItem('a', '1');
-      localStorageMock.setItem('b', '2');
-      expect(localStorageMock.setItem.mock.calls.length).toBe(2);
-      expect(localStorageMock.setItem.mock.calls[0]).toEqual(['a', '1']);
-      expect(localStorageMock.setItem.mock.calls[1]).toEqual(['b', '2']);
-    });
-
-    it('should return null for empty string values due to || null fallback', () => {
-      localStorageMock.setItem('emptyKey', '');
-      expect(localStorageMock.getItem('emptyKey')).toBeNull();
-    });
-
-    it('should handle object conversion to string', () => {
-      const obj = { foo: 'bar' };
-      localStorageMock.setItem('objKey', obj);
-      expect(localStorageMock.getItem('objKey')).toBe('[object Object]');
-    });
-  });
-
-  describe('removeItem behavior', () => {
-    it('should remove an existing key', () => {
-      localStorageMock.setItem('toRemove', 'value');
-      localStorageMock.removeItem('toRemove');
-      expect(localStorageMock.getItem('toRemove')).toBeNull();
-    });
-
-    it('should not error when removing a non-existent key', () => {
-      expect(() => localStorageMock.removeItem('does-not-exist')).not.toThrow();
-    });
-
-    it('should not affect other keys when removing one', () => {
-      localStorageMock.setItem('keep1', 'val1');
-      localStorageMock.setItem('keep2', 'val2');
-      localStorageMock.removeItem('keep1');
-      expect(localStorageMock.getItem('keep1')).toBeNull();
-      expect(localStorageMock.getItem('keep2')).toBe('val2');
-    });
-
-    it('should track call history for removeItem', () => {
-      localStorageMock.removeItem('key1');
-      localStorageMock.removeItem('key2');
-      expect(localStorageMock.removeItem.mock.calls.length).toBe(2);
-      expect(localStorageMock.removeItem.mock.calls[0][0]).toBe('key1');
-      expect(localStorageMock.removeItem.mock.calls[1][0]).toBe('key2');
-    });
-  });
-
-  describe('clear behavior', () => {
-    it('should remove all stored keys', () => {
-      localStorageMock.setItem('k1', 'v1');
-      localStorageMock.setItem('k2', 'v2');
-      localStorageMock.clear();
-      expect(localStorageMock.getItem('k1')).toBeNull();
-      expect(localStorageMock.getItem('k2')).toBeNull();
-    });
-
-    it('should not error when clearing an empty store', () => {
-      expect(() => localStorageMock.clear()).not.toThrow();
-    });
-
-    it('should reset the internal store to empty', () => {
-      localStorageMock.setItem('a', '1');
-      localStorageMock.clear();
-      const keys = Object.keys({});
-      expect(keys.length).toBe(0);
-    });
-
-    it('should track call history for clear', () => {
-      localStorageMock.clear();
-      localStorageMock.clear();
-      expect(localStorageMock.clear.mock.calls.length).toBe(2);
-    });
-  });
-
-  describe('vi.fn() mock properties', () => {
-    it('should allow checking call counts', () => {
-      expect(localStorageMock.getItem.mock.calls.length).toBe(0);
-      localStorageMock.getItem('test');
-      expect(localStorageMock.getItem.mock.calls.length).toBe(1);
-    });
-
-    it('should expose mock.results for return values', () => {
-      localStorageMock.getItem('x');
-      expect(localStorageMock.getItem.mock.results).toBeDefined();
-    });
-
-    it('should allow mockClear to reset call history', () => {
-      localStorageMock.getItem('a');
-      localStorageMock.getItem('b');
-      expect(localStorageMock.getItem.mock.calls.length).toBe(2);
-      localStorageMock.getItem.mockClear();
-      expect(localStorageMock.getItem.mock.calls.length).toBe(0);
-    });
-
-    it('should allow mockReset to fully reset', () => {
-      localStorageMock.getItem('a');
-      localStorageMock.getItem.mockReset();
-      expect(localStorageMock.getItem.mock.calls.length).toBe(0);
-    });
-  });
-
-  describe('window.localStorage integration', () => {
-    it('should have localStorage defined on window', () => {
-      expect(window.localStorage).toBeDefined();
-    });
-
-    it('should use the mock for getItem', () => {
-      window.localStorage.getItem('windowTestKey');
-      expect(window.localStorage.getItem).toBeTypeOf('function');
-    });
-
-    it('should use the mock for setItem', () => {
-      window.localStorage.setItem('windowTestKey', 'windowTestValue');
-      expect(window.localStorage.getItem('windowTestKey')).toBe('windowTestValue');
-    });
-
-    it('should use the mock for removeItem', () => {
-      window.localStorage.removeItem('windowTestKey');
-      expect(window.localStorage.getItem('windowTestKey')).toBeNull();
-    });
-
-    it('should use the mock for clear', () => {
-      window.localStorage.setItem('clearTest', 'val');
-      window.localStorage.clear();
-      expect(window.localStorage.getItem('clearTest')).toBeNull();
-    });
-  });
+beforeEach(() => {
+    storage.clear();
+    vi.clearAllMocks();
 });
 
-describe('setup.js - clearActiveInstances integration', () => {
-  afterEach(() => {
-    clearActiveInstances();
-  });
+describe('setup.js - global localStorage mock installation', () => {
+    it('replaces window.localStorage with a vi.fn-based mock', () => {
+        expect(storage.getItem.mock).toBeDefined();
+        expect(storage.setItem.mock).toBeDefined();
+        expect(storage.removeItem.mock).toBeDefined();
+        expect(storage.clear.mock).toBeDefined();
+    });
 
-  it('should be importable from areaEffectModalInstances', () => {
-    expect(clearActiveInstances).toBeTypeOf('function');
-  });
+    it('exposes exactly the four Storage methods', () => {
+        expect(Object.keys(storage)).toEqual(['getItem', 'setItem', 'removeItem', 'clear']);
+    });
+});
 
-  it('should reset applyBusy state to false', () => {
-    // We can't directly test the internal state, but we can verify
-    // the function is callable without error
-    expect(() => clearActiveInstances()).not.toThrow();
-  });
+describe('setup.js - localStorage mock getItem', () => {
+    it('returns null for a missing key', () => {
+        expect(storage.getItem('missing')).toBeNull();
+    });
 
-  it('should be callable multiple times without error', () => {
-    clearActiveInstances();
-    clearActiveInstances();
-    clearActiveInstances();
-  });
+    it('returns the stored value for an existing key', () => {
+        storage.setItem('key', 'value');
+        expect(storage.getItem('key')).toBe('value');
+    });
+
+    it('returns null when the stored value is falsy (|| null fallback)', () => {
+        storage.setItem('empty', '');
+        expect(storage.getItem('empty')).toBeNull();
+    });
+
+    it('records call history', () => {
+        storage.getItem('a');
+        storage.getItem('b');
+        expect(storage.getItem.mock.calls).toEqual([['a'], ['b']]);
+    });
+});
+
+describe('setup.js - localStorage mock setItem', () => {
+    it('stores string values', () => {
+        storage.setItem('k', 'v');
+        expect(storage.getItem('k')).toBe('v');
+    });
+
+    it('coerces numbers, booleans and objects to strings', () => {
+        storage.setItem('n', 42);
+        storage.setItem('b', true);
+        storage.setItem('o', { a: 1 });
+        expect(storage.getItem('n')).toBe('42');
+        expect(storage.getItem('b')).toBe('true');
+        expect(storage.getItem('o')).toBe('[object Object]');
+    });
+
+    it('overwrites an existing value', () => {
+        storage.setItem('k', 'first');
+        storage.setItem('k', 'second');
+        expect(storage.getItem('k')).toBe('second');
+    });
+
+    it('records call history', () => {
+        storage.setItem('a', '1');
+        storage.setItem('b', '2');
+        expect(storage.setItem.mock.calls).toEqual([
+            ['a', '1'],
+            ['b', '2'],
+        ]);
+    });
+});
+
+describe('setup.js - localStorage mock removeItem', () => {
+    it('removes an existing key', () => {
+        storage.setItem('k', 'v');
+        storage.removeItem('k');
+        expect(storage.getItem('k')).toBeNull();
+    });
+
+    it('does not throw for a missing key', () => {
+        expect(() => storage.removeItem('nope')).not.toThrow();
+    });
+
+    it('only removes the requested key', () => {
+        storage.setItem('a', '1');
+        storage.setItem('b', '2');
+        storage.removeItem('a');
+        expect(storage.getItem('a')).toBeNull();
+        expect(storage.getItem('b')).toBe('2');
+    });
+
+    it('records call history', () => {
+        storage.removeItem('a');
+        storage.removeItem('b');
+        expect(storage.removeItem.mock.calls).toEqual([['a'], ['b']]);
+    });
+});
+
+describe('setup.js - localStorage mock clear', () => {
+    it('removes all stored keys', () => {
+        storage.setItem('a', '1');
+        storage.setItem('b', '2');
+        storage.clear();
+        expect(storage.getItem('a')).toBeNull();
+        expect(storage.getItem('b')).toBeNull();
+    });
+
+    it('does not throw on an empty store', () => {
+        expect(() => storage.clear()).not.toThrow();
+    });
+
+    it('records call history', () => {
+        storage.clear();
+        storage.clear();
+        expect(storage.clear.mock.calls).toHaveLength(2);
+    });
+});
+
+describe('setup.js - global afterEach cleanup hook', () => {
+    it('(setup) marks applyBusy true and renders a component', () => {
+        setApplyBusy(true);
+        expect(isApplyBusy()).toBe(true);
+        render(React.createElement('div', { 'data-testid': 'cleanup-proof' }));
+        expect(document.querySelector('[data-testid="cleanup-proof"]')).not.toBeNull();
+    });
+
+    it('(verify) proves setup.js afterEach ran cleanup() and clearActiveInstances()', () => {
+        expect(isApplyBusy()).toBe(false);
+        expect(document.querySelector('[data-testid="cleanup-proof"]')).toBeNull();
+    });
 });
