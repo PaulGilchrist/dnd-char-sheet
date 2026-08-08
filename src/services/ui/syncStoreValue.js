@@ -1,7 +1,7 @@
 const storeValue = new Map()
 
 function triggerSubscribers() {}
-function setStore(key, value) { storeValue.set(key, value) }
+export function setStore(key, value) { storeValue.set(key, value) }
 function getStoreFor(name) { return storeValue.get(name) || new Map() }
 async function loadData() { return {} }
 
