@@ -1220,7 +1220,11 @@ describe('prismaticSprayHandler.handle', () => {
       applyDamage.computeDamageAfterSave.mockReturnValue(30);
       savePrompt.createSaveListener.mockReturnValue(failSaveListener());
 
+      // Control random so Dragon doesn't get the fire (Red) ray it's immune to
+      const originalRandom = Math.random;
+      Math.random = () => 5 / 8; // firstRoll = 6 (Indigo) for all targets
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      Math.random = originalRandom;
 
       expect(result.payload.description).toContain('Prismatic Spray affects 3 creature(s)');
     });
@@ -1371,7 +1375,11 @@ describe('prismaticSprayHandler.handle', () => {
       applyDamage.computeDamageAfterSave.mockReturnValue(30);
       savePrompt.createSaveListener.mockReturnValue(failSaveListener());
 
+      // Control random so a single ray is rolled (firstRoll = 6, Indigo — not 8)
+      const originalRandom = Math.random;
+      Math.random = () => 5 / 8;
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      Math.random = originalRandom;
 
       expect(savePrompt.createSaveListener).toHaveBeenCalledTimes(1);
       expect(result.payload.description).toContain('Prismatic Spray affects 1 creature(s)');

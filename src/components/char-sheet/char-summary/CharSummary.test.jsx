@@ -1,10 +1,10 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
 import { DiceRollContext } from '../../../hooks/combat/DiceRollContext.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -659,13 +659,14 @@ describe('CharSummary - XP Modal Display', () => {
     });
 
     it('toggles milestone checkbox when unchecked switches to experience mode', () => {
-        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        const stats = { ...mockPlayerStats };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         const levelSuffix = screen.getByText(/milestone/);
         fireEvent.click(levelSuffix);
         const xpModal = screen.getByText('Experience Points').closest('.xp-modal');
         const checkbox = xpModal.querySelector('input[type="checkbox"]');
         fireEvent.click(checkbox);
-        expect(mockPlayerStats.xpMode).toBe('experience');
+        expect(stats.xpMode).toBe('experience');
     });
 
     it('hides info text when experience mode is enabled', () => {
@@ -745,12 +746,400 @@ describe('CharSummary - useEffect behaviors', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
+        mockPlayerStats.xpMode = 'milestone';
     });
 
     it('updates displayXp when playerStats.xp changes', () => {
-        const { rerender } = render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        const newStats = { ...mockPlayerStats, xp: 5000 };
+        const stats = { ...mockPlayerStats, xpMode: 'experience', xp: 2300 };
+        const { rerender } = render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/2,300 XP/)).toBeInTheDocument();
+        const newStats = { ...stats, xp: 5000 };
         rerender(<CharSummary playerStats={newStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/5,000 XP/)).toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Avatar Modal Display
+// ---------------------------------------------------------------------------
+describe('CharSummary - Avatar Modal', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('renders AvatarModal when imagePath is present and showAvatarModal is true', () => {
+        const stats = {
+            ...mockPlayerStats,
+            imagePath: '/images/character.png',
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+    });
+
+    it('does not render AvatarModal when imagePath is missing', () => {
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Starry Form Badge
+// ---------------------------------------------------------------------------
+describe('CharSummary - Starry Form Badge', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('shows Starry Form badge with Archer constellation', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form', constellation: 'Archer' }];
+            }
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
+    });
+
+    it('shows Starry Form badge with Chalice constellation', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form', constellation: 'Chalice' }];
+            }
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Starry Form - Chalice/)).toBeInTheDocument();
+    });
+
+    it('shows Starry Form badge with other constellation', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((name, key, _campaign) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form', constellation: 'Dragon' }];
+            }
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Starry Form - Dragon/)).toBeInTheDocument();
+    });
+
+    it('does not show Starry Form badge when activeBuffs is empty', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'activeBuffs') {
+                return [];
+            }
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+    });
+
+    it('does not show Starry Form badge when constellation is missing', () => {
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'activeBuffs') {
+                return [{ name: 'Starry Form' }];
+            }
+            return null;
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Senses, Proficiencies, Languages
+// ---------------------------------------------------------------------------
+describe('CharSummary - Senses Proficiencies Languages', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('renders senses with see_invisibility buff', () => {
+        getActiveBuffs.mockReturnValue([{ effect: 'see_invisibility' }]);
+        const stats = {
+            ...mockPlayerStats,
+            senses: [{ name: 'Blindsight', value: '60 ft' }],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Senses:/)).toBeInTheDocument();
+        expect(screen.getByText(/See Invisibility/)).toBeInTheDocument();
+    });
+
+    it('renders proficiencies with tool proficiencies', () => {
+        const stats = {
+            ...mockPlayerStats,
+            proficiencies: ['Heavy Armor'],
+            toolProficiencies: ['Blacksmith\'s Tools'],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Proficiencies:/)).toBeInTheDocument();
+        expect(screen.getByText(/Heavy Armor/)).toBeInTheDocument();
+        expect(screen.getByText(/Blacksmith/)).toBeInTheDocument();
+    });
+
+    it('renders languages', () => {
+        const stats = {
+            ...mockPlayerStats,
+            languages: ['Common', 'Dwarvish'],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Languages:/)).toBeInTheDocument();
+        expect(screen.getByText(/Common/)).toBeInTheDocument();
+        expect(screen.getByText(/Dwarvish/)).toBeInTheDocument();
+    });
+
+    it('does not render senses when empty', () => {
+        const stats = {
+            ...mockPlayerStats,
+            senses: [],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Senses:/)).not.toBeInTheDocument();
+    });
+
+    it('does not render proficiencies when empty', () => {
+        const stats = {
+            ...mockPlayerStats,
+            proficiencies: [],
+            toolProficiencies: [],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Proficiencies:/)).not.toBeInTheDocument();
+    });
+
+    it('does not render languages when empty', () => {
+        const stats = {
+            ...mockPlayerStats,
+            languages: [],
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Languages:/)).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Short Rest Modal
+// ---------------------------------------------------------------------------
+describe('CharSummary - Short Rest Modal', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('renders ShortRestModal when short rest button is clicked', () => {
+        const mockOnLongRest = vi.fn();
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} onLongRest={mockOnLongRest} />);
+        expect(screen.getByTestId('short-rest-btn')).toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Avatar Image Click
+// ---------------------------------------------------------------------------
+describe('CharSummary - Avatar Image Click', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+        getActiveBuffs.mockReturnValue([]);
+    });
+
+    it('renders avatar image that can be clicked', () => {
+        const stats = {
+            ...mockPlayerStats,
+            imagePath: '/images/character.png',
+        };
+        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByTestId('avatar-image')).toBeInTheDocument();
+    });
+});
+
+
+
+// ---------------------------------------------------------------------------
+// XP Modal Cancel Button
+// ---------------------------------------------------------------------------
+describe('CharSummary - XP Modal Cancel', () => {
+    it('closes XP modal when Cancel button is clicked', () => {
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        const clickable = screen.getByText((content, element) => {
+            return element?.tagName === 'SPAN' && element?.className?.includes('clickable') && content.includes('milestone');
+        });
+        fireEvent.click(clickable);
+        expect(screen.getByText('Experience Points')).toBeInTheDocument();
+        const cancelButton = screen.getByText('Cancel');
+        fireEvent.click(cancelButton);
+        expect(screen.queryByText('Experience Points')).not.toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Wild Magic Surge Effects
+// ---------------------------------------------------------------------------
+describe('CharSummary - Wild Magic Surge Effects', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('renders surge effects list when surgeEffects is present', () => {
+        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
+            if (key === 'wildMagicSurgeEffects') {
+                return [
+                    [{ timestamp: 1000, roll: 5, effect: 'Fireball', duration: '1 round' }, { timestamp: 2000, roll: 12, effect: 'Healing' }],
+                    vi.fn(),
+                ];
+            }
+            if (key === 'smiteOfProtectionActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceTargets') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryCreatures') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'wrathOfTheSeaActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'mantleOfMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'innerRadianceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'unbreakableMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchBonus') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'activeBuffs') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'coverRefresh') {
+                return [defaultValue, vi.fn()];
+            }
+            return [defaultValue, vi.fn()];
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
+        expect(screen.getByText(/#5 — Fireball/)).toBeInTheDocument();
+        expect(screen.getByText(/#12 — Healing/)).toBeInTheDocument();
+        expect(screen.getByTitle('1 round')).toBeInTheDocument();
+    });
+
+    it('shows "Tamed" when roll is "tamed"', () => {
+        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
+            if (key === 'wildMagicSurgeEffects') {
+                return [[{ timestamp: 3000, roll: 'tamed', effect: 'Wild Surge' }], vi.fn()];
+            }
+            if (key === 'smiteOfProtectionActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceTargets') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryCreatures') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'wrathOfTheSeaActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'mantleOfMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'innerRadianceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'unbreakableMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchBonus') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'activeBuffs') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'coverRefresh') {
+                return [defaultValue, vi.fn()];
+            }
+            return [defaultValue, vi.fn()];
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.getByText(/Tamed/)).toBeInTheDocument();
+    });
+
+    it('does not render surge effects when surgeEffects is null', () => {
+        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
+            if (key === 'wildMagicSurgeEffects') {
+                return [null, vi.fn()];
+            }
+            if (key === 'smiteOfProtectionActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'bulwarkOfForceTargets') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'naturesSanctuaryCreatures') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'wrathOfTheSeaActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'mantleOfMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'innerRadianceActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'unbreakableMajestyActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchActive') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'baitAndSwitchBonus') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'activeBuffs') {
+                return [defaultValue, vi.fn()];
+            }
+            if (key === 'coverRefresh') {
+                return [defaultValue, vi.fn()];
+            }
+            return [defaultValue, vi.fn()];
+        });
+        render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
+        expect(screen.queryByText(/Surge Effects:/)).not.toBeInTheDocument();
     });
 });

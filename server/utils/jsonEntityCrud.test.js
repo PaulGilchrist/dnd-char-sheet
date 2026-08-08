@@ -1,8 +1,55 @@
-import fs from 'fs';
-import path from 'path';
 import express from 'express';
 import request from 'supertest';
 import { createJsonEntityRouter } from '../utils/jsonEntityCrud.js';
+
+// ---------------------------------------------------------------------------
+// Mock filesystem
+// ---------------------------------------------------------------------------
+
+const mockFsState = new Map();
+
+vi.mock('fs', () => ({
+    default: {
+        existsSync: vi.fn((path) => mockFsState.has(path)),
+        mkdirSync: vi.fn((path) => {
+            mockFsState.set(path, true);
+        }),
+        rmSync: vi.fn((path) => {
+            for (const key of [...mockFsState.keys()]) {
+                if (key.startsWith(path)) mockFsState.delete(key);
+            }
+        }),
+        writeFileSync: vi.fn((path, data) => {
+            mockFsState.set(path, data);
+        }),
+        readFileSync: vi.fn((path) => mockFsState.get(path) || '{}'),
+        unlinkSync: vi.fn((path) => {
+            mockFsState.delete(path);
+        }),
+    },
+    existsSync: vi.fn((path) => mockFsState.has(path)),
+    mkdirSync: vi.fn((path) => {
+        mockFsState.set(path, true);
+    }),
+    rmSync: vi.fn((path) => {
+        for (const key of [...mockFsState.keys()]) {
+            if (key.startsWith(path)) mockFsState.delete(key);
+        }
+    }),
+    writeFileSync: vi.fn((path, data) => {
+        mockFsState.set(path, data);
+    }),
+    readFileSync: vi.fn((path) => mockFsState.get(path) || '{}'),
+    unlinkSync: vi.fn((path) => {
+        mockFsState.delete(path);
+    }),
+}));
+
+vi.mock('../utils/campaignPaths.js', () => ({
+    campaignDataDir: (name) => `/mock/campaigns/${name}/data`,
+    campaignDataFile: (campaign, fileName) => `/mock/campaigns/${campaign}/data/${fileName}`,
+    ensureDataDir: (campaign) => `/mock/campaigns/${campaign}/data`,
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,28 +63,24 @@ function createTestApp(router) {
 }
 
 function dataFileFor(campaign, entityName) {
-    return path.join(process.cwd(), 'public', 'campaigns', campaign, 'data', `${entityName}.json`);
+    return `/mock/campaigns/${campaign}/data/${entityName}.json`;
 }
 
 function ensureCampaignDir(campaign) {
-    const dir = path.join(process.cwd(), 'public', 'campaigns', campaign, 'data');
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
+    const dir = `/mock/campaigns/${campaign}/data`;
+    mockFsState.set(dir, true);
     return dir;
 }
 
 function writeEntities(campaign, entityName, entities) {
     const filePath = dataFileFor(campaign, entityName);
     ensureCampaignDir(campaign);
-    fs.writeFileSync(filePath, JSON.stringify(entities, null, 2));
+    mockFsState.set(filePath, JSON.stringify(entities, null, 2));
 }
 
 function removeEntitiesFile(campaign, entityName) {
     const filePath = dataFileFor(campaign, entityName);
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-    }
+    mockFsState.delete(filePath);
 }
 
 function cleanupCampaign(campaign, entityName) {
@@ -45,8 +88,10 @@ function cleanupCampaign(campaign, entityName) {
 }
 
 function removeCampaignDir(campaign) {
-    const campaignDir = path.join(process.cwd(), 'public', 'campaigns', campaign);
-    fs.rmSync(campaignDir, { recursive: true, force: true });
+    const campaignDir = `/mock/campaigns/${campaign}`;
+    for (const key of [...mockFsState.keys()]) {
+        if (key.startsWith(campaignDir)) mockFsState.delete(key);
+    }
 }
 
 function ensureTestCampaignDir(campaign) {
@@ -81,7 +126,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
             expect(res.body).toHaveProperty('testentities');
             expect(Array.isArray(res.body.testentities)).toBe(true);
             expect(res.body.testentities).toEqual([]);
-            expect(fs.existsSync(dataFileFor(campaign, entityName))).toBe(true);
+            expect(mockFsState.has(dataFileFor(campaign, entityName))).toBe(true);
         });
 
         it('should return all entities when file exists', async () => {
@@ -104,7 +149,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
         it('should return empty array when file contains non-array data', async () => {
             const filePath = dataFileFor(campaign, entityName);
             ensureCampaignDir(campaign);
-            fs.writeFileSync(filePath, JSON.stringify({ not: 'an array' }));
+            mockFsState.set(filePath, JSON.stringify({ not: 'an array' }));
 
             const router = createJsonEntityRouter(entityName);
             const app = createTestApp(router);
@@ -117,7 +162,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
         it('should return empty array when file contains null', async () => {
             const filePath = dataFileFor(campaign, entityName);
             ensureCampaignDir(campaign);
-            fs.writeFileSync(filePath, JSON.stringify(null));
+            mockFsState.set(filePath, JSON.stringify(null));
 
             const router = createJsonEntityRouter(entityName);
             const app = createTestApp(router);
@@ -155,7 +200,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('success', true);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(2);
             expect(stored[0].name).toBe('Entity One');
         });
@@ -173,7 +218,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
 
             expect(res.status).toBe(200);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(1);
             expect(stored[0].name).toBe('New Entity');
         });
@@ -188,7 +233,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('success', true);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toEqual([]);
         });
 
@@ -322,7 +367,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('success', true);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(1);
             expect(stored[0].name).toBe('Keep Me');
         });
@@ -338,7 +383,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('success', true);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(1);
         });
 
@@ -356,7 +401,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
 
             expect(res.status).toBe(200);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(2);
             expect(stored.map(e => e.name)).toEqual(['First', 'Third']);
         });
@@ -371,7 +416,7 @@ describe('jsonEntityCrud - basic CRUD with defaults', () => {
 
             expect(res.status).toBe(200);
 
-            const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, entityName), 'utf-8'));
+            const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, entityName)));
             expect(stored).toHaveLength(0);
         });
 
@@ -747,7 +792,7 @@ describe('jsonEntityCrud - onDelete option', () => {
         writeEntities(campaign, 'deletable', [{ id: 'e1', name: 'To Delete' }]);
 
         await request(app).delete(`/api/campaigns/${campaign}/deletable/e1`);
-        const stored = JSON.parse(fs.readFileSync(dataFileFor(campaign, 'deletable'), 'utf-8'));
+        const stored = JSON.parse(mockFsState.get(dataFileFor(campaign, "deletable")));
         expect(stored).toHaveLength(0);
     });
 });

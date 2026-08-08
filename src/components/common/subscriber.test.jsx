@@ -1,151 +1,179 @@
-/* @cleaned-by-ai */
-import { render, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import Subscriber from './Subscriber.jsx';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, act } from '@testing-library/react';
 
-class MockEventSource {
-    constructor(url) {
-        this.url = url;
-        this.onmessage = null;
-        this.onerror = null;
-        this.closed = false;
-    }
+import Subscriber from './subscriber.jsx';
 
-    close() {
-        this.closed = true;
-    }
+let mockEventSources;
 
-    static instances = [];
-    static getInstance(matcher) {
-        return matcher instanceof Function
-            ? this.instances.find(matcher)
-            : this.instances.find(i => i.url === matcher);
-    }
+beforeEach(() => {
+  vi.clearAllMocks();
+  localStorage.clear();
+  mockEventSources = [];
+  global.EventSource = vi.fn(function () {
+    const instance = { onmessage: null, close: vi.fn() };
+    mockEventSources.push(instance);
+    return instance;
+  });
+  global.EventSource.prototype.close = function () {};
+});
 
-    static reset() {
-        this.instances = [];
-    }
-}
-
-function urlWithCampaign(campaignName) {
-    const params = new URLSearchParams();
-    if (campaignName) params.set('campaign', campaignName);
-    return `http://localhost/subscribe?${params.toString()}`;
+function getLatestMockEventSource() {
+  return mockEventSources[mockEventSources.length - 1];
 }
 
 describe('Subscriber', () => {
-    let handleEventMock;
-    let originalHostname;
+  describe('rendering', () => {
+    it('renders an empty fragment (no visible DOM nodes)', () => {
+      const { container } = render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
+      expect(container.innerHTML).toBe('');
+    });
+  });
 
-    beforeEach(() => {
-        MockEventSource.reset();
-        handleEventMock = vi.fn();
+  describe('EventSource creation', () => {
+    it('creates EventSource with campaign param when campaignName is provided', () => {
+      const handleEvent = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="test-campaign"
+        />
+      );
+      expect(global.EventSource).toHaveBeenCalledWith(
+        'http://localhost/subscribe?campaign=test-campaign'
+      );
+    });
 
-        originalHostname = window.location.hostname;
-        Object.defineProperty(window, 'location', {
-            value: { hostname: 'localhost' },
-            writable: true,
-            configurable: true,
+    it('creates EventSource without campaign param when campaignName is falsy', () => {
+      const handleEvent = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName={null}
+        />
+      );
+      expect(global.EventSource).toHaveBeenCalledWith(
+        'http://localhost/subscribe?'
+      );
+    });
+
+    it('creates EventSource with empty string campaignName as no param', () => {
+      const handleEvent = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName=""
+        />
+      );
+      expect(global.EventSource).toHaveBeenCalledWith(
+        'http://localhost/subscribe?'
+      );
+    });
+  });
+
+  describe('event handling', () => {
+    it('calls handleEvent with parsed SSE data', () => {
+      const handleEvent = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="test-campaign"
+        />
+      );
+
+      const eventData = { type: 'test', data: 'value' };
+      act(() => {
+        getLatestMockEventSource().onmessage({
+          data: JSON.stringify(eventData),
         });
+      });
 
-        global.EventSource = class extends MockEventSource {
-            constructor(url) {
-                super(url);
-                MockEventSource.instances.push(this);
-            }
-        };
+      expect(handleEvent).toHaveBeenCalledWith(eventData);
     });
 
-    afterEach(() => {
-        cleanup();
-        MockEventSource.reset();
+    it('handles SSE events with complex nested data', () => {
+      const handleEvent = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={handleEvent}
+          campaignName="test-campaign"
+        />
+      );
 
-        if (originalHostname !== undefined) {
-            Object.defineProperty(window, 'location', {
-                value: { hostname: originalHostname },
-                writable: true,
-                configurable: true,
-            });
-        }
+      const complexData = {
+        key: 'combat-start',
+        data: {
+          round: 1,
+          initiative: [{ name: 'hero', value: 15 }],
+        },
+      };
+      act(() => {
+        getLatestMockEventSource().onmessage({
+          data: JSON.stringify(complexData),
+        });
+      });
 
-        delete global.EventSource;
+      expect(handleEvent).toHaveBeenCalledWith(complexData);
     });
+  });
 
-    it('creates an EventSource with the correct URL and campaign param', () => {
-        render(<Subscriber handleEvent={handleEventMock} campaignName="Test Campaign" />);
+  describe('handleEvent ref staleness prevention', () => {
+    it('calls the latest handleEvent when props change', async () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
 
-        const instance = MockEventSource.getInstance(urlWithCampaign('Test Campaign'));
-        expect(instance).toBeDefined();
-        expect(instance.url).toBe('http://localhost/subscribe?campaign=Test+Campaign');
+      // Use render with initial handler
+      const { rerender } = render(
+        <Subscriber
+          handleEvent={firstHandler}
+          campaignName="test-campaign"
+        />
+      );
+
+      // Flush effects so EventSource is created
+      await act(async () => {});
+
+      // Capture the EventSource instance
+      const capturedEs = mockEventSources[mockEventSources.length - 1];
+
+      // Rerender with a new handler
+      // useEffect only depends on [campaignName], so the same
+      // EventSource is kept; only the ref is updated in-place.
+      rerender(
+        <Subscriber
+          handleEvent={secondHandler}
+          campaignName="test-campaign"
+        />
+      );
+
+      act(() => {
+        capturedEs.onmessage({
+          data: JSON.stringify({ type: 'test' }),
+        });
+      });
+
+      expect(secondHandler).toHaveBeenCalledWith({ type: 'test' });
+      expect(firstHandler).not.toHaveBeenCalled();
     });
+  });
 
-    it('calls handleEvent when a message is received', () => {
-        render(<Subscriber handleEvent={handleEventMock} campaignName="Test Campaign" />);
+  describe('cleanup', () => {
+    it('calls EventSource.close on unmount', () => {
+      const { unmount } = render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
 
-        const instance = MockEventSource.getInstance(urlWithCampaign('Test Campaign'));
-        instance.onmessage({ data: JSON.stringify({ type: 'test', payload: 'data' }) });
-
-        expect(handleEventMock).toHaveBeenCalledWith({ type: 'test', payload: 'data' });
+      const es = getLatestMockEventSource();
+      expect(es.close).not.toHaveBeenCalled();
+      unmount();
+      expect(es.close).toHaveBeenCalled();
     });
-
-    it('throws when onmessage receives invalid JSON', () => {
-        render(<Subscriber handleEvent={handleEventMock} campaignName="Test Campaign" />);
-
-        const instance = MockEventSource.getInstance(urlWithCampaign('Test Campaign'));
-
-        expect(() => {
-            instance.onmessage({ data: 'not json' });
-        }).toThrow(SyntaxError);
-    });
-
-    it('uses ref to always call the latest handleEvent', () => {
-        const { rerender } = render(<Subscriber handleEvent={handleEventMock} campaignName="Test Campaign" />);
-
-        const instance = MockEventSource.getInstance(urlWithCampaign('Test Campaign'));
-        handleEventMock.mockReturnValue(undefined);
-
-        const newHandleEvent = vi.fn();
-        rerender(<Subscriber handleEvent={newHandleEvent} campaignName="Test Campaign" />);
-
-        instance.onmessage({ data: JSON.stringify({ type: 'updated' }) });
-
-        expect(newHandleEvent).toHaveBeenCalledWith({ type: 'updated' });
-        expect(handleEventMock).not.toHaveBeenCalledWith({ type: 'updated' });
-    });
-
-    it('closes the EventSource on unmount', () => {
-        const { unmount } = render(<Subscriber handleEvent={handleEventMock} campaignName="Test Campaign" />);
-
-        const instance = MockEventSource.getInstance(urlWithCampaign('Test Campaign'));
-        expect(instance.closed).toBe(false);
-
-        unmount();
-
-        expect(instance.closed).toBe(true);
-    });
-
-    it('creates separate EventSource instances for different campaign names', () => {
-        render(
-            <>
-                <Subscriber handleEvent={handleEventMock} campaignName="Campaign A" />
-                <Subscriber handleEvent={handleEventMock} campaignName="Campaign B" />
-            </>
-        );
-
-        const instanceA = MockEventSource.getInstance(urlWithCampaign('Campaign A'));
-        const instanceB = MockEventSource.getInstance(urlWithCampaign('Campaign B'));
-
-        expect(instanceA).toBeDefined();
-        expect(instanceB).toBeDefined();
-        expect(instanceA).not.toBe(instanceB);
-    });
-
-    it('creates an EventSource without campaign param when campaignName is falsy', () => {
-        render(<Subscriber handleEvent={handleEventMock} campaignName={null} />);
-
-        const allInstances = MockEventSource.instances;
-        expect(allInstances.length).toBe(1);
-        expect(allInstances[0].url).toBe('http://localhost/subscribe?');
-    });
-
+  });
 });

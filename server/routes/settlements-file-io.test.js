@@ -1,40 +1,54 @@
 import express from 'express';
 import request from 'supertest';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
 
-// Use createRequire to get the real fs/module that bypasses vitest mocking
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const realRequire = createRequire(resolve(__dirname, '../../package.json'));
-const realFs = realRequire('fs');
-const realOs = realRequire('os');
+// ---------------------------------------------------------------------------
+// Mock filesystem
+// ---------------------------------------------------------------------------
 
-// Create a temporary directory for file-based tests
-const TEMP_BASE = join(realOs.tmpdir(), `settlements-real-fs-${Date.now()}`);
+const mockFsState = new Map();
 
-function getTempCampaignDir(campaign) {
-    return join(TEMP_BASE, campaign, 'data');
-}
+vi.mock('fs', () => ({
+    default: {
+        existsSync: vi.fn((path) => mockFsState.has(path)),
+        mkdirSync: vi.fn((path) => {
+            mockFsState.set(path, true);
+        }),
+        rmSync: vi.fn((path) => {
+            for (const key of [...mockFsState.keys()]) {
+                if (key.startsWith(path)) mockFsState.delete(key);
+            }
+        }),
+        writeFileSync: vi.fn((path, data) => {
+            mockFsState.set(path, data);
+        }),
+        readFileSync: vi.fn((path) => mockFsState.get(path) || '{}'),
+        unlinkSync: vi.fn((path) => {
+            mockFsState.delete(path);
+        }),
+    },
+    existsSync: vi.fn((path) => mockFsState.has(path)),
+    mkdirSync: vi.fn((path) => {
+        mockFsState.set(path, true);
+    }),
+    rmSync: vi.fn((path) => {
+        for (const key of [...mockFsState.keys()]) {
+            if (key.startsWith(path)) mockFsState.delete(key);
+        }
+    }),
+    writeFileSync: vi.fn((path, data) => {
+        mockFsState.set(path, data);
+    }),
+    readFileSync: vi.fn((path) => mockFsState.get(path) || '{}'),
+    unlinkSync: vi.fn((path) => {
+        mockFsState.delete(path);
+    }),
+}));
 
-function getSettlementsFile(campaign) {
-    return join(getTempCampaignDir(campaign), 'settlements.json');
-}
-
-function ensureTempDir(campaign) {
-    const dir = getTempCampaignDir(campaign);
-    if (!realFs.existsSync(dir)) {
-        realFs.mkdirSync(dir, { recursive: true });
-    }
-    return dir;
-}
-
-function cleanup() {
-    if (realFs.existsSync(TEMP_BASE)) {
-        realFs.rmSync(TEMP_BASE, { recursive: true, force: true });
-    }
-}
+vi.mock('../utils/campaignPaths.js', () => ({
+    campaignDataDir: (name) => `/mock/campaigns/${name}/data`,
+    campaignDataFile: (campaign, fileName) => `/mock/campaigns/${campaign}/data/${fileName}`,
+    ensureDataDir: (campaign) => `/mock/campaigns/${campaign}/data`,
+}));
 
 // Shared mock store for jsonEntityCrud routes
 const MOCK_STORE = new Map();
@@ -52,12 +66,27 @@ function clearMockStore() {
     MOCK_STORE.clear();
 }
 
+function getSettlementsFile(campaign) {
+    return `/mock/campaigns/${campaign}/data/settlements.json`;
+}
+
+function ensureTempDir(campaign) {
+    const dir = `/mock/campaigns/${campaign}/data`;
+    mockFsState.set(dir, true);
+    return dir;
+}
+
+function cleanup() {
+    for (const key of [...mockFsState.keys()]) {
+        if (key.startsWith('/mock/campaigns/')) mockFsState.delete(key);
+    }
+}
+
 // We need to import the real settlements module without the fs/campaignPaths mocks
 // Since vitest hoists vi.mock to the top, we need to create a separate router
 // that replicates the jsonEntityCrud routes and then add the real PUT route
 
 import { Router } from 'express';
-
 function createJsonEntityCrudRoutes(entityName) {
     const router = Router();
     const idField = 'name';
@@ -134,8 +163,8 @@ baseRouter.put('/api/campaigns/:campaign/settlements/:settlementName', (req, res
         ensureTempDir(campaign);
 
         let settlements = [];
-        if (realFs.existsSync(filePath)) {
-            settlements = JSON.parse(realFs.readFileSync(filePath, 'utf-8'));
+        if (mockFsState.has(filePath)) {
+            settlements = JSON.parse(mockFsState.get(filePath));
         }
         if (!Array.isArray(settlements)) settlements = [];
 
@@ -147,7 +176,7 @@ baseRouter.put('/api/campaigns/:campaign/settlements/:settlementName', (req, res
             settlements.push(updatedSettlement);
         }
 
-        realFs.writeFileSync(filePath, JSON.stringify(settlements, null, 2));
+        mockFsState.set(filePath, JSON.stringify(settlements, null, 2));
         res.json({ success: true, settlement: updatedSettlement });
     } catch (error) {
         console.error('Error updating settlement:', error);
@@ -176,8 +205,8 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         const filePath = getSettlementsFile(campaign);
 
         // Ensure the file doesn't exist
-        if (realFs.existsSync(filePath)) {
-            realFs.unlinkSync(filePath);
+        if (mockFsState.has(filePath)) {
+            mockFsState.delete(filePath);
         }
 
         const settlementData = {
@@ -197,7 +226,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.body.settlement).toEqual(settlementData);
 
         // Verify the file was created
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(1);
         expect(fileData[0]).toEqual(settlementData);
@@ -211,7 +240,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+        mockFsState.set(filePath, JSON.stringify(existingData, null, 2));
 
         const updatedData = {
             name: 'Riverwood',
@@ -230,7 +259,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.body.settlement).toEqual(updatedData);
 
         // Verify the file was updated
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(1);
         expect(fileData[0]).toEqual(updatedData);
@@ -244,7 +273,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+        mockFsState.set(filePath, JSON.stringify(existingData, null, 2));
 
         const newSettlement = {
             name: 'Riverwood',
@@ -262,7 +291,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.body).toHaveProperty('success', true);
 
         // Verify both settlements are in the file
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(2);
         expect(fileData.find(s => s.name === 'Whiterun')).toBeDefined();
@@ -277,7 +306,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+        mockFsState.set(filePath, JSON.stringify(existingData, null, 2));
 
         const updatedData = {
             name: 'Riverwood',
@@ -294,7 +323,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.status).toBe(200);
 
         // Verify the file has the updated data without extraField
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(1);
         expect(fileData[0]).toEqual(updatedData);
@@ -357,7 +386,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         // Verify file content
         const filePath = getSettlementsFile(campaign);
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(1);
         expect(fileData[0].leaders).toEqual([{ name: 'Jarl Balgruuf', role: 'ruler' }]);
@@ -386,7 +415,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+        mockFsState.set(filePath, JSON.stringify(existingData, null, 2));
 
         // Try to update with different case - should create a new entry, not replace
         const updatedData = {
@@ -404,7 +433,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.status).toBe(200);
 
         // Verify both entries exist (case-sensitive matching)
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(2);
         expect(fileData.find(s => s.name === 'Whiterun')).toBeDefined();
@@ -447,7 +476,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         // Verify only one entry exists
         const filePath = getSettlementsFile(campaign);
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(1);
         expect(fileData[0]).toEqual(updatedData);
@@ -469,7 +498,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(largeDataSet, null, 2));
+        mockFsState.set(filePath, JSON.stringify(largeDataSet, null, 2));
 
         // Update one settlement
         const updatedData = {
@@ -487,7 +516,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         expect(res.status).toBe(200);
 
         // Verify file still has 50 settlements with updated one
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(50);
         const updated = fileData.find(s => s.name === 'Settlement 25');
@@ -501,7 +530,7 @@ describe('settlements - File-based PUT route (real fs operations)', () => {
         ensureTempDir(campaign);
 
         // Write invalid JSON to the file
-        realFs.writeFileSync(filePath, 'this is not valid json');
+        mockFsState.set(filePath, 'this is not valid json');
 
         const settlementData = {
             name: 'Riverwood',
@@ -545,12 +574,12 @@ describe('settlements - Campaign isolation (file-based)', () => {
         // Write Campaign A data
         const filePathA = getSettlementsFile(campaignA);
         ensureTempDir(campaignA);
-        realFs.writeFileSync(filePathA, JSON.stringify([settlementA], null, 2));
+        mockFsState.set(filePathA, JSON.stringify([settlementA], null, 2));
 
         // Write Campaign B data
         const filePathB = getSettlementsFile(campaignB);
         ensureTempDir(campaignB);
-        realFs.writeFileSync(filePathB, JSON.stringify([settlementB], null, 2));
+        mockFsState.set(filePathB, JSON.stringify([settlementB], null, 2));
 
         const app = createTestApp();
 
@@ -585,8 +614,8 @@ describe('settlements - Campaign isolation (file-based)', () => {
         expect(resB.body.settlement.type).toBe('metropolis');
 
         // Verify files are separate
-        const fileDataA = JSON.parse(realFs.readFileSync(filePathA, 'utf-8'));
-        const fileDataB = JSON.parse(realFs.readFileSync(filePathB, 'utf-8'));
+        const fileDataA = JSON.parse(mockFsState.get(filePathA));
+        const fileDataB = JSON.parse(mockFsState.get(filePathB));
 
         expect(fileDataA[0].type).toBe('town');
         expect(fileDataB[0].type).toBe('metropolis');
@@ -605,12 +634,12 @@ describe('settlements - Campaign isolation (file-based)', () => {
 
         const filePathA = getSettlementsFile(campaignA);
         ensureTempDir(campaignA);
-        realFs.writeFileSync(filePathA, JSON.stringify([settlementA], null, 2));
+        mockFsState.set(filePathA, JSON.stringify([settlementA], null, 2));
 
         // Campaign B has no file
         const filePathB = getSettlementsFile(campaignB);
-        if (realFs.existsSync(filePathB)) {
-            realFs.unlinkSync(filePathB);
+        if (mockFsState.has(filePathB)) {
+            mockFsState.delete(filePathB);
         }
 
         const app = createTestApp();
@@ -629,12 +658,12 @@ describe('settlements - Campaign isolation (file-based)', () => {
         expect(resB.status).toBe(200);
 
         // Verify Campaign A is unchanged
-        const fileDataA = JSON.parse(realFs.readFileSync(filePathA, 'utf-8'));
+        const fileDataA = JSON.parse(mockFsState.get(filePathA));
         expect(fileDataA).toHaveLength(1);
         expect(fileDataA[0].name).toBe('Whiterun');
 
         // Verify Campaign B has only its own settlement
-        const fileDataB = JSON.parse(realFs.readFileSync(filePathB, 'utf-8'));
+        const fileDataB = JSON.parse(mockFsState.get(filePathB));
         expect(fileDataB).toHaveLength(1);
         expect(fileDataB[0].name).toBe('Solitude');
     });
@@ -720,7 +749,7 @@ describe('settlements - File-based edge cases', () => {
 
         const filePath = getSettlementsFile(campaign);
         ensureTempDir(campaign);
-        realFs.writeFileSync(filePath, JSON.stringify(existingData, null, 2));
+        mockFsState.set(filePath, JSON.stringify(existingData, null, 2));
 
         const updatedData = {
             name: 'Riverwood',
@@ -737,7 +766,7 @@ describe('settlements - File-based edge cases', () => {
         expect(res.status).toBe(200);
 
         // Only the exact match should be replaced
-        const fileContent = realFs.readFileSync(filePath, 'utf-8');
+        const fileContent = mockFsState.get(filePath, 'utf-8');
         const fileData = JSON.parse(fileContent);
         expect(fileData).toHaveLength(2);
         expect(fileData.find(s => s.name === 'Riverwood').type).toBe('town');

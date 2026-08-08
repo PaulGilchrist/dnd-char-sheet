@@ -39,16 +39,18 @@ describe('useWizardFeatAbilityChoices - initial state', () => {
 
   it('returns empty choices when allFeats is empty', () => {
     const formData = createBaseFormData({ feats: ['Tough'] });
+    const allFeats = [];
     const { result } = renderHook(() =>
-      useWizardFeatAbilityChoices(formData, [], mockSetFormData)
+      useWizardFeatAbilityChoices(formData, allFeats, mockSetFormData)
     );
     expect(result.current.featAbilityChoices).toEqual([]);
   });
 
   it('returns empty choices when formData.feats is empty', () => {
     const formData = createBaseFormData({ feats: [] });
+    const allFeats = createMockAllFeats();
     const { result } = renderHook(() =>
-      useWizardFeatAbilityChoices(formData, createMockAllFeats(), mockSetFormData)
+      useWizardFeatAbilityChoices(formData, allFeats, mockSetFormData)
     );
     expect(result.current.featAbilityChoices).toEqual([]);
   });
@@ -61,8 +63,9 @@ describe('useWizardFeatAbilityChoices - initial state', () => {
     });
 
     const formData = createBaseFormData({ feats: ['Tough'] });
+    const allFeats = createMockAllFeats();
     const { result } = renderHook(() =>
-      useWizardFeatAbilityChoices(formData, createMockAllFeats(), mockSetFormData)
+      useWizardFeatAbilityChoices(formData, allFeats, mockSetFormData)
     );
     expect(result.current.featAbilityChoices).toEqual([]);
   });

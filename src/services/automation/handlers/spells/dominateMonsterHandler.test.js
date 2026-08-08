@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -43,11 +42,12 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 import { handle } from './dominateMonsterHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
+import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -111,6 +111,23 @@ describe('dominateMonsterHandler.handle', () => {
         dcSuccess: 'none',
         advantage: true,
         disadvantage: false,
+        condition: 'charmed',
+      });
+    });
+
+    it('passes disadvantage when metamagicHeighten is set on action', async () => {
+      setupBaseMocks();
+
+      await handle({ name: 'Dominate Monster', automation: { type: 'dominate_monster', saveType: 'WIS', saveDc: 15 }, metaCtx: { metamagicHeighten: true } }, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'Goblin',
+        attackerName: 'TestCaster',
+        saveType: 'WIS',
+        saveDc: 15,
+        dcSuccess: 'none',
+        advantage: false,
+        disadvantage: true,
         condition: 'charmed',
       });
     });
@@ -194,6 +211,53 @@ describe('dominateMonsterHandler.handle', () => {
     });
   });
 
+  describe('NPC target path', () => {
+    it('calls dispatchSaveResult for NPC targets on failed save', async () => {
+      const npcSaveResult = { roll: 8, total: 10, bonus: 2, success: false };
+      rollSaveForCreature.mockReturnValue(npcSaveResult);
+      setupBaseMocks({ success: false }, true);
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(rollSaveForCreature).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 } }),
+        'WIS',
+        15,
+        false,
+        false,
+      );
+
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        description: expect.stringContaining('Goblin must make a WIS save'),
+      }));
+    });
+
+    it('handles NPC target missing from creatures array', async () => {
+      resolveTarget.mockResolvedValue({
+        target: { name: 'Dragon', type: 'npc' },
+        cs: {
+          creatures: [],
+        },
+      });
+      buildSaveDc.mockReturnValue(18);
+      createSaveListener.mockReturnValue({
+        promptId: 'npc-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction({ saveDc: 18 }), { name: 'Wizard', level: 15, proficiency: 6, abilities: [{ name: 'Intelligence', bonus: 4 }] }, campaignName, null);
+
+      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'save_result',
+        targetName: 'Dragon',
+        success: false,
+      }));
+    });
+  });
+
   describe('edge cases', () => {
     it('handles missing automation property by defaulting to empty object', async () => {
       resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
@@ -208,6 +272,69 @@ describe('dominateMonsterHandler.handle', () => {
 
       expect(result.type).toBe('popup');
       expect(buildSaveDc).toHaveBeenCalledWith({}, makePlayerStats());
+    });
+
+    it('stores spell last attack with correct parameters', async () => {
+      const { storeSpellLastAttack } = await import('../../common/damageRollback.js');
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+        casterName: 'TestCaster',
+        spellName: 'Dominate Monster',
+        saveType: 'WIS',
+        saveDc: 15,
+        attackScope: 'single',
+      });
+    });
+
+    it('handles null target info object', async () => {
+      resolveTarget.mockResolvedValue({});
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('handles addEntry rejection on ability_use (line 84 catch)', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalledTimes(3);
+    });
+
+    it('handles addEntry rejection on save_result success (line 123 catch)', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalledTimes(2);
+    });
+
+    it('handles addEntry rejection on condition apply (line 162 catch)', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalledTimes(3);
+    });
+
+    it('handles addEntry rejection on save_result failure (line 173 catch)', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalledTimes(3);
     });
   });
 });

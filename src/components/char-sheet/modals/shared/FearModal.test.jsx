@@ -259,7 +259,9 @@ describe('FearModal', () => {
 
         it('uses heighten target for disadvantage on NPC saves', async () => {
             getRuntimeValue.mockReturnValue([]);
-            render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
+            vi.spyOn(Math, 'random').mockReturnValue(0.01);
+            try {
+                render(<FearModal {...makeProps({ metamagicHeighten: true })} />);
             const labels = document.querySelectorAll('.secondary-target-row');
             await act(async () => { fireEvent.click(labels[0]); });
             await waitFor(() => {
@@ -288,6 +290,9 @@ describe('FearModal', () => {
 
             // Verify the modal triggered save resolution (setRuntimeValue called for conditions)
             expect(setRuntimeValue).toHaveBeenCalled();
+            } finally {
+                vi.restoreAllMocks();
+            }
         });
     });
 

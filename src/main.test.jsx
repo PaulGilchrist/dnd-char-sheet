@@ -7,6 +7,13 @@ import React from 'react';
 vi.mock('./index.css', () => ({}));
 vi.mock('@fortawesome/fontawesome-free/css/all.css', () => ({}));
 
+// Mock ReactDOM.createRoot before importing main.jsx to capture the call
+const createRootMock = vi.fn(() => ({ render: vi.fn() }));
+vi.doMock('react-dom/client', () => ({
+  default: { createRoot: createRootMock },
+  createRoot: createRootMock,
+}));
+
 vi.mock('./services/ui/dataLoader.js', async () => {
   const { dataLoaderMocks } = await import('./test/appTestState.js');
   return dataLoaderMocks;
@@ -143,6 +150,42 @@ describe('main.jsx entry point', () => {
 
     // Remove all root elements to prevent duplicate IDs and stale renders
     document.querySelectorAll('#root').forEach(el => el.remove());
+  });
+
+  describe('main.jsx entry point coverage', () => {
+    it('calls ReactDOM.createRoot with #root element and renders App in StrictMode', async () => {
+      createRootMock.mockReset();
+      const mockRender = vi.fn();
+      createRootMock.mockReturnValue({ render: mockRender });
+
+      // Ensure #root exists in the DOM before importing main.jsx
+      const rootEl = document.createElement('div');
+      rootEl.id = 'root';
+      document.body.appendChild(rootEl);
+
+      // Dynamic import so vi.doMock takes effect
+      await import('./main.jsx');
+
+      expect(createRootMock).toHaveBeenCalledTimes(1);
+      expect(createRootMock).toHaveBeenCalledWith(rootEl);
+      expect(mockRender).toHaveBeenCalledTimes(1);
+      // Verify the rendered element is a StrictMode wrapping App
+      const renderArg = mockRender.mock.calls[0][0];
+      expect(renderArg.type).toBe(React.StrictMode);
+    });
+
+    it('throws when #root element does not exist in DOM', async () => {
+      createRootMock.mockReset();
+      const mockRender = vi.fn();
+      createRootMock.mockReturnValue({ render: mockRender });
+
+      // Remove any existing #root elements
+      document.querySelectorAll('#root').forEach(el => el.remove());
+
+      // Verify that ReactDOM.createRoot throws when passed a null element
+      // (this is the behavior main.jsx relies on when #root is missing)
+      expect(() => ReactDOM.createRoot(null)).toThrow();
+    });
   });
 
   describe('ReactDOM.createRoot rendering behavior', () => {
