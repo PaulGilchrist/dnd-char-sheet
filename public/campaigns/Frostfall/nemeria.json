@@ -1,0 +1,111 @@
+{
+  "name": "Nemeria",
+  "level": 1,
+  "alignment": "Chaotic Neutral",
+  "abilities": [
+    {
+      "name": "Strength",
+      "baseScore": 15,
+      "featIncrease": 0,
+      "backgroundIncrease": 2,
+      "miscIncrease": 0
+    },
+    {
+      "name": "Dexterity",
+      "baseScore": 10,
+      "featIncrease": 0,
+      "backgroundIncrease": 0,
+      "miscIncrease": 0
+    },
+    {
+      "name": "Constitution",
+      "baseScore": 15,
+      "featIncrease": 0,
+      "backgroundIncrease": 0,
+      "miscIncrease": 0
+    },
+    {
+      "name": "Intelligence",
+      "baseScore": 13,
+      "featIncrease": 0,
+      "backgroundIncrease": 0,
+      "miscIncrease": 0
+    },
+    {
+      "name": "Wisdom",
+      "baseScore": 10,
+      "featIncrease": 0,
+      "backgroundIncrease": 1,
+      "miscIncrease": 0
+    },
+    {
+      "name": "Charisma",
+      "baseScore": 8,
+      "featIncrease": 0,
+      "backgroundIncrease": 1,
+      "miscIncrease": 0
+    }
+  ],
+  "class": {
+    "name": "Fighter",
+    "subclass": {
+      "name": "Eldritch Knight"
+    },
+    "divineOrder": "",
+    "primalOrder": "",
+    "fightingStyles": [
+      "Great Weapon Fighting"
+    ]
+  },
+  "expertSkills": [],
+  "feats": [
+    "Alert"
+  ],
+  "fightingStyles": [],
+  "race": {
+    "name": "Tiefling",
+    "subrace": {
+      "name": "Infernal Tiefling"
+    }
+  },
+  "immunities": [],
+  "inventory": {
+    "backpack": [],
+    "equipped": [],
+    "gold": 10,
+    "magicItems": []
+  },
+  "languages": [
+    "Common"
+  ],
+  "resistances": [],
+  "skillProficiencies": [
+    "Athletics",
+    "Perception",
+    "Survival",
+    "History"
+  ],
+  "toolProficiencies": [
+    "Dice Set"
+  ],
+  "specialActions": [],
+  "spells": [],
+  "magicInitiateInstances": [],
+  "rules": "2024",
+  "xp": 0,
+  "xpMode": "milestone",
+  "background": "Guard",
+  "featAbilityChoices": {
+    "Ability Score Improvement-0": {
+      "mode": "single",
+      "assignments": {
+        "single": "Strength",
+        "dual": [
+          "Strength",
+          ""
+        ]
+      }
+    }
+  },
+  "imagePath": "images/Nemeria.png"
+}
