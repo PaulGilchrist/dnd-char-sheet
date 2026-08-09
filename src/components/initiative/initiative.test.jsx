@@ -204,6 +204,29 @@ describe('Initiative', () => {
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
         });
 
+        it('should increment round when wrapping from last to first creature', async () => {
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
+            vi.mocked(getActiveCreatureName).mockReturnValue(null);
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => {
+                const h4 = screen.getByRole('heading', { level: 4 });
+                const text = h4.textContent || '';
+                expect(text).toContain('round 1');
+            });
+            await act(async () => { fireEvent.click(screen.getByText('Next →')); });
+            await waitFor(() => {
+                const h4 = screen.getByRole('heading', { level: 4 });
+                const text = h4.textContent || '';
+                expect(text).toContain('round 1');
+            });
+            await act(async () => { fireEvent.click(screen.getByText('Next →')); });
+            await waitFor(() => {
+                const h4 = screen.getByRole('heading', { level: 4 });
+                const text = h4.textContent || '';
+                expect(text).toContain('round 2');
+            });
+        });
+
         it('should navigate to previous creature', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 2, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }, { name: 'Charlie', type: 'player' }] });
             vi.mocked(getActiveCreatureName).mockReturnValue('Charlie');

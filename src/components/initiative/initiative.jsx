@@ -86,7 +86,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     const [viewingMonsterCreatureName, setViewingMonsterCreatureName] = useSyncedState(campaignName, 'combat-ui-viewingMonsterCreatureName', null, campaignName)
     const carouselRef = React.useRef(null)
     const combatSummaryRef = React.useRef(null)
+    const roundRef = React.useRef(combatSummary?.round ?? 1)
     combatSummaryRef.current = combatSummary
+    roundRef.current = combatSummary?.round ?? roundRef.current
 
     React.useEffect(() => {
         setCombatSummaryCache(combatSummary, campaignName)
@@ -224,6 +226,10 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     merged.activeCreatureName = activeName
                 }
             }
+            const prevRound = combatSummaryRef.current?.round ?? 1
+            if (merged.round < prevRound) {
+                return
+            }
             combatSummaryRef.current = merged
             setCombatSummaryCache(merged, campaignName)
             setCombatSummaryG(merged)
@@ -233,7 +239,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         } else if (dataKey === 'lastAttack') {
             // lastAttack is now a root-level key — no in-memory cache needed
             // The runtime store handles sync via getRuntimeValue/setRuntimeValue
-        } else if (dataKey === 'activeCreatureName') {
+          } else if (dataKey === 'activeCreatureName') {
                const prevActive = activeCreatureNameRef.current
                const newActive = event.data
                activeCreatureNameRef.current = newActive
@@ -325,48 +331,49 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                  storage.set('activeCreatureName', newActiveName, campaignName)
                 setActiveCreatureName(newActiveName)
               } else {
-                cs.round++
-                storage.set('combatSummary', cs, campaignName)
-                setCombatSummary(cloneDeep(cs))
+                const roundToSet = (roundRef.current ?? 1) + 1
+                const updatedSummary = cloneDeep(cs)
+                updatedSummary.round = roundToSet
+                storage.set('combatSummary', updatedSummary, campaignName)
+                setCombatSummary(updatedSummary)
                 storage.set('activeCreatureName', newActiveName, campaignName)
                  setActiveCreatureName(newActiveName)
-                  for (const creature of cs.creatures) {
-                      clearPerRoundMajestyTrackers(creature.name, campaignName)
-                      if (creature.type === 'player') {
-                           setRuntimeValue(creature.name, '_cunningStrikeCostUsed', 0, campaignName);
-                           setRuntimeValue(creature.name, '_CunningStrike_usedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_Charge_Attack_usedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_FastHands_usedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_CunningAction_usedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_Cleave_UsedRound', null, campaignName);
-                           setRuntimeValue(creature.name, '_Nick_UsedRound', null, campaignName);
-                           setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName);
-                           setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName);
-                           setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName);
-                           setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName);
-                             setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName);
-                             setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName);
-                             setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName);
-                             setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName);
-                       }
-                  }
+                 for (const creature of cs.creatures) {
+                     clearPerRoundMajestyTrackers(creature.name, campaignName)
+                     if (creature.type === 'player') {
+                          setRuntimeValue(creature.name, '_cunningStrikeCostUsed', 0, campaignName);
+                          setRuntimeValue(creature.name, '_CunningStrike_usedRound', null, campaignName);
+                          setRuntimeValue(creature.name, '_Charge_Attack_usedRound', null, campaignName);
+                          setRuntimeValue(creature.name, '_FastHands_usedRound', null, campaignName);
+                          setRuntimeValue(creature.name, '_CunningAction_usedRound', null, campaignName);
+                          setRuntimeValue(creature.name, '_Cleave_UsedRound', null, campaignName);
+                          setRuntimeValue(creature.name, '_Nick_UsedRound', null, campaignName);
+                          setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName);
+                          setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName);
+                          setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName);
+                          setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName);
+                            setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName);
+                            setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName);
+                            setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName);
+                            setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName);
+                        }
+                   }
+                 expireStaleEffects(campaignName, newActiveName)
+                 const lastApplied = lastAppliedTurnStartCreatureRef.current
+                 if (lastApplied !== newActiveName) {
+                     lastAppliedTurnStartCreatureRef.current = newActiveName
+                     setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
+                     storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
+                     if (updatedSummary.lastAppliedTurnStartCreature !== newActiveName) {
+                         updatedSummary.lastAppliedTurnStartCreature = newActiveName
+                         setCombatSummary(cloneDeep(updatedSummary))
+                     }
+                     const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
+                     applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                     setTurnStartTick(t => t + 1)
+                 }
               }
-              expireStaleEffects(campaignName, newActiveName)
-              const lastApplied = lastAppliedTurnStartCreatureRef.current
-              if (lastApplied !== newActiveName) {
-                  lastAppliedTurnStartCreatureRef.current = newActiveName
-                  setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
-                  storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
-                  const cs = combatSummaryRef.current
-                  if (cs && cs.lastAppliedTurnStartCreature !== newActiveName) {
-                      cs.lastAppliedTurnStartCreature = newActiveName
-                      setCombatSummary(cloneDeep(cs))
-                  }
-                  const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-                  applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                  setTurnStartTick(t => t + 1)
-              }
-             }, [activeCreatureName, campaignName, characters])
+              }, [activeCreatureName, campaignName, characters])
 
     const handlePreviousCreature = React.useCallback(() => {
           if (isPrevDisabled) return
@@ -377,29 +384,33 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                storage.set('activeCreatureName', newActiveName, campaignName)
               setActiveCreatureName(newActiveName)
              } else {
-               if (cs.round > 1) {
-                   cs.round--
-                  storage.set('combatSummary', cs, campaignName)
-                  setCombatSummary(cloneDeep(cs))
-                 }
-               storage.set('activeCreatureName', newActiveName, campaignName)
-              setActiveCreatureName(newActiveName)
+              const currentRound = roundRef.current ?? 1
+              if (currentRound > 1) {
+                  const updatedSummary = cloneDeep(cs)
+                  updatedSummary.round = currentRound - 1
+                  storage.set('combatSummary', updatedSummary, campaignName)
+                  setCombatSummary(updatedSummary)
+                  expireStaleEffects(campaignName, newActiveName)
+                  const lastApplied = lastAppliedTurnStartCreatureRef.current
+                  if (lastApplied !== newActiveName) {
+                      lastAppliedTurnStartCreatureRef.current = newActiveName
+                      setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
+                      storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
+                      if (updatedSummary.lastAppliedTurnStartCreature !== newActiveName) {
+                          updatedSummary.lastAppliedTurnStartCreature = newActiveName
+                          setCombatSummary(cloneDeep(updatedSummary))
+                      }
+                      const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
+                      applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                      setTurnStartTick(t => t + 1)
+                  }
+                  storage.set('activeCreatureName', newActiveName, campaignName)
+                  setActiveCreatureName(newActiveName)
+                  for (const creature of cs.creatures) {
+                      clearPerRoundMajestyTrackers(creature.name, campaignName)
+                  }
+              }
              }
-                expireStaleEffects(campaignName, newActiveName)
-               const lastApplied = lastAppliedTurnStartCreatureRef.current
-               if (lastApplied !== newActiveName) {
-                   lastAppliedTurnStartCreatureRef.current = newActiveName
-                   setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
-                   storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
-                   const cs = combatSummaryRef.current
-                   if (cs && cs.lastAppliedTurnStartCreature !== newActiveName) {
-                       cs.lastAppliedTurnStartCreature = newActiveName
-                       setCombatSummary(cloneDeep(cs))
-                   }
-                   const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-                   applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                   setTurnStartTick(t => t + 1)
-               }
               }, [activeCreatureName, campaignName, isPrevDisabled, characters])
 
     React.useEffect(() => {
