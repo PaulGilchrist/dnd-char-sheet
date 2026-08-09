@@ -484,6 +484,88 @@ describe('campaignsCharacter - PUT /api/campaigns/:campaign/:file', () => {
 
         expect(publish).toHaveBeenCalledWith('character-test-campaign-Thorin.json', expect.any(Object));
     });
+
+    it('should rename image file when character name no longer matches image filename on standard update', async () => {
+        const mfs = getMockFs();
+        mfs.existsSync
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(true);
+        mfs.readFileSync.mockReturnValue(JSON.stringify({
+            name: 'Thorin',
+            class: 'Fighter',
+            imagePath: 'campaigns/test-campaign/images/oldname.png'
+        }));
+
+        const updatedData = {
+            name: 'Thorin',
+            class: 'Fighter',
+            level: 10,
+            imagePath: 'campaigns/test-campaign/images/oldname.png'
+        };
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-campaign/Thorin.json')
+            .send(updatedData);
+
+        expect(res.status).toBe(200);
+        expect(mfs.renameSync).toHaveBeenCalledWith(
+            expect.any(String),
+            '/mock/campaigns/test-campaign/images/Thorin.png'
+        );
+    });
+
+    it('should not rename image file when character name already matches image filename on standard update', async () => {
+        const mfs = getMockFs();
+        mfs.existsSync.mockReturnValue(true);
+        mfs.readFileSync.mockReturnValue(JSON.stringify({
+            name: 'Thorin',
+            class: 'Fighter',
+            imagePath: 'campaigns/test-campaign/images/Thorin.png'
+        }));
+
+        const updatedData = {
+            name: 'Thorin',
+            class: 'Fighter',
+            level: 10,
+            imagePath: 'campaigns/test-campaign/images/Thorin.png'
+        };
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-campaign/Thorin.json')
+            .send(updatedData);
+
+        expect(res.status).toBe(200);
+        expect(mfs.renameSync).not.toHaveBeenCalled();
+    });
+
+    it('should not attempt to rename image when old image file does not exist on disk', async () => {
+        const mfs = getMockFs();
+        mfs.existsSync
+            .mockReturnValueOnce(true)
+            .mockReturnValueOnce(false);
+        mfs.readFileSync.mockReturnValue(JSON.stringify({
+            name: 'Thorin',
+            class: 'Fighter',
+            imagePath: 'campaigns/test-campaign/images/oldname.png'
+        }));
+
+        const updatedData = {
+            name: 'Thorin',
+            class: 'Fighter',
+            level: 10,
+            imagePath: 'campaigns/test-campaign/images/oldname.png'
+        };
+
+        const app = createTestApp();
+        const res = await request(app)
+            .put('/api/campaigns/test-campaign/Thorin.json')
+            .send(updatedData);
+
+        expect(res.status).toBe(200);
+        expect(mfs.renameSync).not.toHaveBeenCalled();
+    });
 });
 
 // ─── DELETE /api/campaigns/:campaign/:file ───────────────────────────────────

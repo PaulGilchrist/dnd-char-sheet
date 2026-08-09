@@ -96,6 +96,25 @@ router.put('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => {
             // New image uploaded
             processImageUpload(campaign, character.name, character, originalImagePath);
         }
+        else if (originalImagePath && character.name) {
+            // Check if image filename matches the current character name
+            const originalImageFileName = path.basename(originalImagePath);
+            const expectedImageFileName = `${character.name}${path.extname(originalImageFileName)}`;
+            if (originalImageFileName !== expectedImageFileName) {
+                // Image filename doesn't match character name — fix it
+                const oldImageFullPath = path.join(process.cwd(), 'public', originalImagePath);
+                if (fs.existsSync(oldImageFullPath)) {
+                    const newImageFileName = expectedImageFileName;
+                    const newCampaignImagesDir = campaignImagesDir(campaign);
+                    const newImageFullPath = path.join(newCampaignImagesDir, newImageFileName);
+
+                    if (oldImageFullPath !== newImageFullPath) {
+                        fs.renameSync(oldImageFullPath, newImageFullPath);
+                        character.imagePath = path.join('images', newImageFileName);
+                    }
+                }
+            }
+        }
     }
 
     // Write the updated character data
