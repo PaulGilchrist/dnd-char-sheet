@@ -482,6 +482,7 @@ th {
         --color-header-inner: black;
         --color-main: black;
         --color-body: black;
+        --color-section-heading: black;
         --border-color-light: black;
         font-size: 12px;
     }
@@ -508,6 +509,8 @@ th {
 
     .sectionHeader {
         page-break-after: avoid;
+        color: black !important;
+        background-color: #e0e0e0 !important;
     }
 
     .attacks,
