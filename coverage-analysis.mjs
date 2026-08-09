@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { readFile, readdir, writeFile, unlink } from 'node:fs/promises';
+import { readFile, readdir, writeFile, unlink, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -96,6 +96,10 @@ function runCoverage() {
 }
 
 async function main() {
+    // Remove stale coverage data to ensure fresh run
+    const coverageDir = path.join(ROOT, 'coverage');
+    try { await rm(coverageDir, { recursive: true, force: true }); } catch { /* doesn't exist yet */ }
+
     // Remove stale queue so we never look at old data
     try { await unlink(OUTPUT_FILE); } catch { /* doesn't exist yet */ }
 

@@ -3,13 +3,10 @@ name: test-coverage
 description: Analyze code coverage and spawn test-implementation subagents one at a time to improve coverage across the ranked queue.
 ---
 
-## 1. Analyze coverage
-Run `node coverage-analysis.mjs` (the script at the project root). This regenerates `./coverage/coverage-final.json` and writes the ranked queue to `/tmp/coverage_files.json` (top 100 source files with the least coverage). If the script fails, stop and report the error.
+## 1. Load the queue
+Read `/tmp/coverage_files.json`. It is a JSON array of up to 100 objects, each `{ "path": "<abs path>", "score": <number>, "status": "zero-coverage" | "partial" }`, sorted by score ascending then path. Note: files that are pure re-export shims (no coverable bytecode) are already excluded by the script.  Stop and error if this file has not been updated within the last hour.
 
-## 2. Load the queue
-Read `/tmp/coverage_files.json`. It is a JSON array of up to 100 objects, each `{ "path": "<abs path>", "score": <number>, "status": "zero-coverage" | "partial" }`, sorted by score ascending then path. Note: files that are pure re-export shims (no coverable bytecode) are already excluded by the script.
-
-## 3. Process the queue sequentially, one file at a time
+## 2. Process the queue sequentially, one file at a time
 NEVER batch multiple files into one subagent.
 
 For each file in order, spawn a SINGLE fresh subagent (subagent_type `general`) with this exact prompt (filling in the placeholders):
