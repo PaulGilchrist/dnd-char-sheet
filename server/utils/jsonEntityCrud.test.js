@@ -51,6 +51,11 @@ vi.mock('../utils/campaignPaths.js', () => ({
     ensureDataDir: (campaign) => `/mock/campaigns/${campaign}/data`,
 }));
 
+// Clear mock filesystem state before every test to prevent cross-test contamination
+beforeEach(() => {
+    mockFsState.clear();
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
