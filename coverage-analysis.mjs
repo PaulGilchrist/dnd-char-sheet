@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -96,6 +96,9 @@ function runCoverage() {
 }
 
 async function main() {
+    // Remove stale queue so we never look at old data
+    try { await unlink(OUTPUT_FILE); } catch { /* doesn't exist yet */ }
+
     const thresholdArg = process.argv.find((a) => a.startsWith('--threshold='));
     const threshold = thresholdArg ? parseFloat(thresholdArg.split('=')[1]) : DEFAULT_THRESHOLD;
 
