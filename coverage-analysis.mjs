@@ -7,6 +7,7 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const COVERAGE_FILE = path.join(ROOT, 'coverage', 'coverage-final.json');
 const OUTPUT_FILE = '/tmp/coverage_files.json';
 const TOP_N = 100;
+const DEFAULT_THRESHOLD = 80;
 const EXCLUDED_DIRS = new Set(['node_modules', 'dist', 'coverage', 'public', 'vendor', 'eslint-plugin-custom']);
 
 function pct(hit, total) {
@@ -95,6 +96,9 @@ function runCoverage() {
 }
 
 async function main() {
+    const thresholdArg = process.argv.find((a) => a.startsWith('--threshold='));
+    const threshold = thresholdArg ? parseFloat(thresholdArg.split('=')[1]) : DEFAULT_THRESHOLD;
+
     await runCoverage();
 
     const raw = await readFile(COVERAGE_FILE, 'utf8');
@@ -119,10 +123,18 @@ async function main() {
 
     const byAbsPath = new Map();
     let skippedShims = 0;
+    let skippedNotInstrumented = 0;
     for (const file of sourceFiles) {
         const abs = path.resolve(ROOT, file);
         const entry = coverageData[abs];
-        if (entry && isEmptyCoverage(entry)) {
+
+        // Skip files not in coverage data (v8 didn't instrument them)
+        if (!entry) {
+            skippedNotInstrumented += 1;
+            continue;
+        }
+
+        if (isEmptyCoverage(entry)) {
             skippedShims += 1;
             continue;
         }
@@ -130,19 +142,18 @@ async function main() {
             skippedShims += 1;
             continue;
         }
-        let score = 0;
-        let status = 'zero-coverage';
-        if (entry) {
-            score = scoreFromEntry(entry);
-            status = 'partial';
-        }
+        let score = scoreFromEntry(entry);
+        let status = 'partial';
         byAbsPath.set(abs, { path: abs, score, status });
     }
 
-    const files = [...byAbsPath.values()].sort((a, b) => {
-        if (a.score !== b.score) return a.score - b.score;
-        return a.path.localeCompare(b.path);
-    });
+    // Filter by threshold, then sort lowest coverage first
+    const files = [...byAbsPath.values()]
+        .filter((f) => f.score < threshold)
+        .sort((a, b) => {
+            if (a.score !== b.score) return a.score - b.score;
+            return a.path.localeCompare(b.path);
+        });
 
     const topFiles = files.slice(0, TOP_N);
     await writeFile(OUTPUT_FILE, JSON.stringify(topFiles, null, 2));
@@ -152,6 +163,7 @@ async function main() {
 
     console.log(`Total source files: ${files.length}`);
     console.log(`Skipped shim files: ${skippedShims}`);
+    console.log(`Skipped not-instrumented files: ${skippedNotInstrumented}`);
     console.log(`Zero-coverage files: ${zeroCount}`);
     console.log(`Partial-coverage files: ${partialCount}`);
     console.log(`Top ${TOP_N} files by coverage (lowest first):`);
