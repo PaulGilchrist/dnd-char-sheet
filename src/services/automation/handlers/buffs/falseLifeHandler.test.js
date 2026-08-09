@@ -1,12 +1,4 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ── Mocks ──────────────────────────────────────────────────────
-
-vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-  setRuntimeValue: vi.fn(),
-  getRuntimeValue: vi.fn(() => 0),
-}));
 
 vi.mock('../../../dice/diceRoller.js', () => ({
   rollExpression: vi.fn(),
@@ -16,16 +8,16 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
-// ── Imports ────────────────────────────────────────────────────
+vi.mock('./tempHpService.js', () => ({
+  setTempHp: vi.fn(),
+}));
 
 import { handle } from './falseLifeHandler.js';
-import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as diceRoller from '../../../dice/diceRoller.js';
 import * as logService from '../../../ui/logService.js';
+import * as tempHpService from './tempHpService.js';
 
-// ── Helpers ────────────────────────────────────────────────────
-
-const CAMPAIGN_NAME = 'TestCampaign';
+const CAMPAIGN_NAME = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return { name: 'TestHero', ...overrides };
@@ -42,8 +34,6 @@ function makeAction(overrides = {}) {
 function successRoll(total, formula) {
   return { total, rolls: [], modifier: 0, formula };
 }
-
-// ── Tests ──────────────────────────────────────────────────────
 
 describe('falseLifeHandler.handle', () => {
   beforeEach(() => {
@@ -117,29 +107,40 @@ describe('falseLifeHandler.handle', () => {
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('5d6+5');
     });
+
+    it('falls back to default when spellSlotLevel does not match any key', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({
+        spell: { heal_at_slot_level: { 5: '10d6+10' } },
+        spellSlotLevel: 1,
+      });
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
   });
 
-  describe('setRuntimeValue', () => {
-    it('sets tempHp to the rolled total for the player', async () => {
+  describe('setTempHp call', () => {
+    it('calls setTempHp with the rolled total for the player', async () => {
       const ps = makePlayerStats({ name: 'Gandalf' });
       diceRoller.rollExpression.mockReturnValue(successRoll(12, '3d4+3'));
 
-      await handle(makeAction(), ps, 'MyCampaign', null);
+      await handle(makeAction(), ps, CAMPAIGN_NAME, null);
 
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+      expect(tempHpService.setTempHp).toHaveBeenCalledWith(
         'Gandalf',
-        'tempHp',
         12,
-        'MyCampaign'
+        CAMPAIGN_NAME,
       );
     });
 
-    it('does not call setRuntimeValue when roll fails', async () => {
+    it('does not call setTempHp when roll fails', async () => {
       diceRoller.rollExpression.mockReturnValue(null);
 
       await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
 
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
     });
   });
 
@@ -163,7 +164,7 @@ describe('falseLifeHandler.handle', () => {
           isTempHp: true,
           sourceName: 'Gandalf',
           note: 'False Life (2d4+4)',
-        })
+        }),
       );
     });
 
@@ -178,7 +179,7 @@ describe('falseLifeHandler.handle', () => {
         }),
         ps,
         CAMPAIGN_NAME,
-        null
+        null,
       );
 
       expect(logService.addEntry).toHaveBeenCalledWith(
@@ -187,7 +188,7 @@ describe('falseLifeHandler.handle', () => {
           type: 'hp_change',
           delta: 15,
           note: 'False Life (2d4 + 14)',
-        })
+        }),
       );
     });
 
@@ -209,7 +210,7 @@ describe('falseLifeHandler.handle', () => {
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('False Life');
       expect(result.payload.description).toBe(
-        'False Life: Gained 11 temporary hit points (rolled 2d4+4).'
+        'False Life: Gained 11 temporary hit points (rolled 2d4+4).',
       );
       expect(result.payload.automation).toEqual({ tempHpExpression: '2d4+4' });
     });
@@ -229,16 +230,25 @@ describe('falseLifeHandler.handle', () => {
         makeAction({ automation: { tempHpExpression: 'invalid' } }),
         makePlayerStats(),
         CAMPAIGN_NAME,
-        null
+        null,
       );
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('False Life');
       expect(result.payload.description).toBe(
-        'False Life: Could not roll temp HP (invalid).'
+        'False Life: Could not roll temp HP (invalid).',
       );
-      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+    });
+
+    it('does not call setTempHp or addEntry on roll failure', async () => {
+      diceRoller.rollExpression.mockReturnValue(null);
+
+      await handle(makeAction(), makePlayerStats(), CAMPAIGN_NAME, null);
+
+      expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+      expect(logService.addEntry).not.toHaveBeenCalled();
     });
   });
 });

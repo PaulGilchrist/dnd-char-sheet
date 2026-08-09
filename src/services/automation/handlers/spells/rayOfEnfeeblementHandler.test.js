@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './rayOfEnfeeblementHandler.js';
 
@@ -34,6 +33,10 @@ vi.mock('../../../encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(() => ({ creatures: [] })),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+    addConcentration: vi.fn(),
+}));
+
 vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
@@ -45,6 +48,9 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import { isRayOfEnfeeblementActive } from './rayOfEnfeeblementHandler.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -69,7 +75,7 @@ function makeAction(overrides = {}) {
 
 describe('rayOfEnfeeblementHandler', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
         getCombatSummary.mockReturnValue({ creatures: [] });
     });
 
@@ -358,6 +364,369 @@ describe('rayOfEnfeeblementHandler', () => {
                 timestamp: expect.any(Number),
             });
         });
+
+        it('replaces an existing disadvantage_next_attack effect from the same caster', async () => {
+            buildSaveDc.mockReturnValue(10);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+
+            const existingEffect = {
+                target: 'Goblin',
+                source: 'Test Wizard',
+                effect: 'disadvantage_next_attack',
+            };
+            const otherEffect = {
+                target: 'Goblin',
+                source: 'Other Wizard',
+                effect: 'disadvantage_next_attack',
+            };
+            getRuntimeValue.mockReturnValue([existingEffect, otherEffect]);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            const call = setRuntimeValue.mock.calls[0];
+            const newEffects = call[2];
+            expect(newEffects).toHaveLength(2);
+            expect(newEffects[0]).toEqual({
+                target: 'Goblin',
+                source: 'Test Wizard',
+                effect: 'disadvantage_next_attack',
+            });
+            expect(newEffects[1]).toBe(otherEffect);
+        });
+
+        it('handles getRuntimeValue returning null for targetEffects on successful save', async () => {
+            buildSaveDc.mockReturnValue(10);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+            getRuntimeValue.mockReturnValue(null);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Goblin',
+                        source: 'Test Wizard',
+                        effect: 'disadvantage_next_attack',
+                    }),
+                ]),
+                'test-campaign'
+            );
+        });
     });
 
+    describe('isRayOfEnfeeblementActive', () => {
+        it('returns true when the debuff effect exists for the target and caster', () => {
+            getRuntimeValue.mockReturnValue([
+                {
+                    target: 'Goblin',
+                    effect: 'ray_of_enfeeble_debuff',
+                    source: 'Test Wizard',
+                },
+            ]);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(true);
+        });
+
+        it('returns false when the debuff effect does not exist for the target', () => {
+            getRuntimeValue.mockReturnValue([
+                {
+                    target: 'Goblin',
+                    effect: 'ray_of_enfeeble_debuff',
+                    source: 'Other Wizard',
+                },
+            ]);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(false);
+        });
+
+        it('returns false when the debuff effect does not exist for the caster', () => {
+            getRuntimeValue.mockReturnValue([
+                {
+                    target: 'Goblin',
+                    effect: 'ray_of_enfeeble_debuff',
+                    source: 'Other Wizard',
+                },
+            ]);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(false);
+        });
+
+        it('returns false when targetEffects is empty', () => {
+            getRuntimeValue.mockReturnValue([]);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(false);
+        });
+
+        it('returns false when targetEffects is null/undefined', () => {
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(false);
+        });
+
+        it('returns false when there is no matching effect', () => {
+            getRuntimeValue.mockReturnValue([
+                {
+                    target: 'Goblin',
+                    effect: 'other_effect',
+                    source: 'Test Wizard',
+                },
+            ]);
+
+            const result = isRayOfEnfeeblementActive('Goblin', 'Test Wizard', 'test-campaign');
+
+            expect(result).toBe(false);
+        });
+    });
+
+    describe('handle — edge cases and error handling', () => {
+        it('handles action with no automation property', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            const action = { name: 'Ray of Enfeeblement' };
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.targetName).toBe('Unknown');
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Unknown',
+                saveType: 'CON',
+                saveDc: 10,
+                dcSuccess: 'none',
+                disadvantage: false,
+            });
+        });
+
+        it('handles action with null automation property', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            const action = { name: 'Ray of Enfeeblement', automation: null };
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.targetName).toBe('Unknown');
+        });
+
+        it('uses slotLevel from automation when present on failed save', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            const action = makeAction({ automation: { targetName: 'Goblin', slotLevel: 4 } });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        slotLevel: 4,
+                    }),
+                ]),
+                'test-campaign'
+            );
+        });
+
+        it('sets disadvantage from metamagicHeighten on save prompt', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            const action = makeAction({ metaCtx: { metamagicHeighten: true } });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Goblin',
+                saveType: 'CON',
+                saveDc: 10,
+                dcSuccess: 'none',
+                disadvantage: true,
+            });
+        });
+
+        it('handles save result with missing roll/total fields on success', async () => {
+            buildSaveDc.mockReturnValue(10);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addTargetResult).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Goblin',
+                saveResult: 'success',
+                roll: 0,
+                total: 0,
+                conditions: [],
+                appliedDamage: 0,
+            });
+        });
+
+        it('handles save result with missing roll/total fields on failure', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addTargetResult).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Goblin',
+                saveResult: 'failure',
+                roll: 0,
+                total: 0,
+                conditions: ['ray_of_enfeeble_debuff'],
+                appliedDamage: 0,
+            });
+        });
+
+        it('logs error when ability_use addEntry rejects', async () => {
+            buildSaveDc.mockReturnValue(10);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[rayOfEnfeeblement] Error:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('logs error when save_result addEntry rejects', async () => {
+            buildSaveDc.mockReturnValue(10);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            addEntry.mockImplementation(() => {
+                if (addEntry.mock.calls.length === 1) {
+                    return Promise.resolve();
+                }
+                return Promise.reject(new Error('log failure'));
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[rayOfEnfeeblement] Error:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('logs error when condition addEntry rejects', async () => {
+            buildSaveDc.mockReturnValue(10);
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            let callCount = 0;
+            addEntry.mockImplementation(() => {
+                callCount++;
+                if (callCount <= 1) {
+                    return Promise.resolve();
+                }
+                return Promise.reject(new Error('log failure'));
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[rayOfEnfeeblement] Error:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('logs error when automation_info addEntry rejects on success', async () => {
+            buildSaveDc.mockReturnValue(10);
+            createSaveListener.mockReturnValue({
+                promptId: 'test-prompt-id',
+                promise: Promise.resolve({ success: true }),
+            });
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            addEntry.mockImplementation(() => {
+                if (addEntry.mock.calls.length <= 2) {
+                    return Promise.resolve();
+                }
+                return Promise.reject(new Error('log failure'));
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[rayOfEnfeeblement] Error:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('uses default slotLevel 2 when automation.slotLevel is missing', async () => {
+            buildSaveDc.mockReturnValue(10);
+
+            const action = makeAction({ automation: { targetName: 'Goblin' } });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        slotLevel: 2,
+                    }),
+                ]),
+                'test-campaign'
+            );
+        });
+
+        it('stores spell last attack with correct parameters', async () => {
+            buildSaveDc.mockReturnValue(12);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(storeSpellLastAttack).toHaveBeenCalledWith('test-campaign', {
+                casterName: 'Test Wizard',
+                spellName: 'Ray of Enfeeblement',
+                saveType: 'CON',
+                saveDc: 12,
+                attackScope: 'single',
+            });
+        });
+
+        it('adds concentration tracking on failed save', async () => {
+            buildSaveDc.mockReturnValue(10);
+            getCombatSummary.mockReturnValue({ creatures: [], concentration: { add: vi.fn() } });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addConcentration).toHaveBeenCalledWith(
+                expect.objectContaining({ creatures: [] }),
+                'Test Wizard',
+                'Ray of Enfeeblement',
+                10
+            );
+        });
+    });
 });

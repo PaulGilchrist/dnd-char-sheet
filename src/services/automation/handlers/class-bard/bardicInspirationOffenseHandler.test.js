@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../dice/diceRoller.js', () => ({
@@ -25,7 +24,7 @@ import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageRollback from '../../common/damageRollback.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -186,6 +185,18 @@ describe('bardicInspirationOffenseHandler.handle', () => {
       expect(result.payload.description).toContain('Bonus damage applied to Goblin');
       expect(result.payload.description).not.toContain('No recent damage event found');
     });
+
+    it('falls back to no-damage message when lastAttack exists but targetName is falsy', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValueOnce(8);
+      useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+      damageRollback.findLastAttack.mockResolvedValue(makeLastAttack('Bard', null, Date.now()));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+      expect(result.payload.description).toContain('No recent damage event found');
+      expect(result.payload.description).not.toContain('Bonus damage applied to');
+    });
   });
 
   describe('error resilience', () => {
@@ -194,7 +205,7 @@ describe('bardicInspirationOffenseHandler.handle', () => {
       useRuntimeState.getRuntimeValue.mockReturnValueOnce(undefined);
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
       damageRollback.findLastAttack.mockResolvedValue(null);
-      logService.addEntry.mockImplementation(() => Promise.reject(new Error('log service failed')).catch(() => {}));
+      logService.addEntry.mockImplementation(() => Promise.reject(new Error('log service failed')));
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName);
 

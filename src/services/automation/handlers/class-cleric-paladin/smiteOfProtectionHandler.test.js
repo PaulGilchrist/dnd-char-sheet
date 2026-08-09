@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './smiteOfProtectionHandler.js';
@@ -109,6 +108,20 @@ describe('smiteOfProtectionHandler.handle', () => {
                 true,
                 campaignName,
             );
+        });
+
+        it('returns success popup even when addEntry rejects (error handler covers console.error)', async () => {
+            const logError = new Error('log service down');
+            addEntry.mockRejectedValue(logError);
+
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(consoleSpy).toHaveBeenCalledWith('[smiteOfProtection] Error:', logError);
+            consoleSpy.mockRestore();
         });
     });
 });

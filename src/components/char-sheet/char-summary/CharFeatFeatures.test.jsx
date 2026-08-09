@@ -16,7 +16,12 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('./TrackedResourceInput.jsx', () => {
   const mock = vi.fn((props) => {
-    return React.createElement('div', { 'data-testid': `tracked-${props.resourceKey}`, label: props.label }, props.label);
+    const max = props.getMax ? props.getMax() : 0;
+    return React.createElement('div', {
+      'data-testid': `tracked-${props.resourceKey}`,
+      label: props.label,
+      'data-max': max,
+    }, `${props.label}: ${max}`);
   });
   return { default: mock };
 });
@@ -381,6 +386,114 @@ describe('CharFeatFeatures', () => {
       // lpMax = 0, so hasLuckyFeat && lpMax > 0 = false
       // hasAnyResources = false => returns null
       expect(result.container.querySelector('[data-testid="char-feat-features"]')).toBeNull();
+    });
+  });
+
+  describe('getMax function coverage', () => {
+    it('calls getMax for luckyPoints returning proficiency value', () => {
+      const stats = { ...basePlayerStats, feats: ['Lucky'], proficiency: 5 };
+      setStore('luckyPoints', 3);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByTestId('tracked-luckyPoints')).toHaveAttribute('data-max', '5');
+    });
+
+    it('calls getMax for poisonDoses returning proficiency value', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'brew_poison', name: 'Brew Poison' }],
+        },
+      };
+      setStore('poisonDoses', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByTestId('tracked-poisonDoses')).toHaveAttribute('data-max', '3');
+    });
+
+    it('calls getMax for poisonDoses returning 0 when proficiency is missing', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'brew_poison', name: 'Brew Poison' }],
+        },
+      };
+      delete stats.proficiency;
+      setStore('poisonDoses', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByTestId('tracked-poisonDoses')).toHaveAttribute('data-max', '0');
+    });
+
+    it('calls getMax for replenishingMeals with replenishing meal feat (Math.max path)', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      // hasReplenishingMealFeat=true, replenishingMeals=2, proficiency=3
+      // Math.max(2, 4+3) = Math.max(2, 7) = 7
+      expect(screen.getByTestId('tracked-replenishingMeals')).toHaveAttribute('data-max', '7');
+    });
+
+    it('calls getMax for replenishingMeals without replenishing meal feat (returns 1)', () => {
+      const stats = { ...basePlayerStats };
+      setStore('replenishingMeals', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      // hasReplenishingMealFeat=false, so getMax returns 1
+      expect(screen.getByTestId('tracked-replenishingMeals')).toHaveAttribute('data-max', '1');
+    });
+
+    it('calls getMax for replenishingMeals with replenishing meal feat and low runtime value', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }],
+        },
+      };
+      setStore('replenishingMeals', 10);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      // hasReplenishingMealFeat=true, replenishingMeals=10, proficiency=3
+      // Math.max(10, 4+3) = Math.max(10, 7) = 10
+      expect(screen.getByTestId('tracked-replenishingMeals')).toHaveAttribute('data-max', '10');
+    });
+
+    it('calls getMax for chefBolsteringTreats returning proficiency value', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
+        },
+      };
+      setStore('chefBolsteringTreats', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      expect(screen.getByTestId('tracked-chefBolsteringTreats')).toHaveAttribute('data-max', '3');
+    });
+
+    it('calls getMax for chefBolsteringTreats returning chefBolsteringTreats when it exceeds proficiency fallback', () => {
+      const stats = {
+        ...basePlayerStats,
+        automation: {
+          ...basePlayerStats.automation,
+          specialActions: [{ type: 'temp_hp_buff', name: 'Bolstering Treats' }],
+        },
+      };
+      delete stats.proficiency;
+      setStore('chefBolsteringTreats', 2);
+      render(<CharFeatFeatures playerStats={stats} campaignName="test-campaign" />);
+      // Math.max(2, 1) = 2
+      expect(screen.getByTestId('tracked-chefBolsteringTreats')).toHaveAttribute('data-max', '2');
+    });
+
+    it('calls getMax for bolsteringTreat returning 1', () => {
+      setStore('bolsteringTreat', 1);
+      render(<CharFeatFeatures {...defaultProps} />);
+      expect(screen.getByTestId('tracked-bolsteringTreat')).toHaveAttribute('data-max', '1');
     });
   });
 });

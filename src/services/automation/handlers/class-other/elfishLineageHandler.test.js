@@ -5,6 +5,12 @@ import {
     confirmElfisLineage,
     changeElfisLineageCantrip,
     restoreUses,
+    getElfisLineageSelection,
+    getElfisLineageAbility,
+    getElfisLineageCantrip,
+    getElfisLineageLevel3Spell,
+    getElfisLineageLevel5Spell,
+    getElfisLineageWizardCantrip,
 } from './elfishLineageHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -167,6 +173,60 @@ describe('elfishLineageHandler', () => {
             calls.forEach((c) => {
                 expect(c[2]).toBeNull();
             });
+        });
+    });
+
+    describe('getElfisLineageSelection', () => {
+        it('returns the stored lineage selection', () => {
+            getRuntimeValue.mockReturnValue('Drow');
+            const result = getElfisLineageSelection(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Drow');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageSelection', 'test-campaign');
+        });
+    });
+
+    describe('getElfisLineageAbility', () => {
+        it('returns the stored spellcasting ability', () => {
+            getRuntimeValue.mockReturnValue('Charisma');
+            const result = getElfisLineageAbility(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Charisma');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageAbility', 'test-campaign');
+        });
+    });
+
+    describe('getElfisLineageCantrip', () => {
+        it('returns the stored cantrip', () => {
+            getRuntimeValue.mockReturnValue('Dancing Lights');
+            const result = getElfisLineageCantrip(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Dancing Lights');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageCantrip', 'test-campaign');
+        });
+    });
+
+    describe('getElfisLineageLevel3Spell', () => {
+        it('returns the stored level 3 spell', () => {
+            getRuntimeValue.mockReturnValue('Faerie Fire');
+            const result = getElfisLineageLevel3Spell(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Faerie Fire');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageLevel3', 'test-campaign');
+        });
+    });
+
+    describe('getElfisLineageLevel5Spell', () => {
+        it('returns the stored level 5 spell', () => {
+            getRuntimeValue.mockReturnValue('Darkness');
+            const result = getElfisLineageLevel5Spell(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Darkness');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageLevel5', 'test-campaign');
+        });
+    });
+
+    describe('getElfisLineageWizardCantrip', () => {
+        it('returns the stored wizard cantrip', () => {
+            getRuntimeValue.mockReturnValue('Prestidigitation');
+            const result = getElfisLineageWizardCantrip(makePlayerStats(), 'test-campaign');
+            expect(result).toBe('Prestidigitation');
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', '_elfishLineageWizardCantrip', 'test-campaign');
         });
     });
 });

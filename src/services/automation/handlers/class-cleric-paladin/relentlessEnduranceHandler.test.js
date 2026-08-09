@@ -1,6 +1,5 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handle } from './relentlessEnduranceHandler.js';
+import { handle, isRelentlessEnduranceUsed, setRelentlessEnduranceUsed } from './relentlessEnduranceHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
@@ -125,6 +124,88 @@ describe('relentlessEnduranceHandler', () => {
                 'ClericBoy',
                 'activeConditions',
                 [],
+                campaignName,
+            );
+        });
+
+        it('handles conditions with no unconscious to filter', async () => {
+            mockAt0Hp(false, ['poisoned', 'frightened']);
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ClericBoy',
+                'activeConditions',
+                ['poisoned', 'frightened'],
+                campaignName,
+            );
+        });
+
+        it('handles undefined activeConditions gracefully', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === 'relentlessEnduranceUsed') return false;
+                if (key === 'currentHitPoints') return 0;
+                if (key === 'activeConditions') return undefined;
+                return null;
+            });
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ClericBoy',
+                'activeConditions',
+                [],
+                campaignName,
+            );
+        });
+    });
+
+    describe('isRelentlessEnduranceUsed', () => {
+        it('returns true when the ability was used', () => {
+            getRuntimeValue.mockReturnValue(true);
+
+            const result = isRelentlessEnduranceUsed('ClericBoy', campaignName);
+
+            expect(result).toBe(true);
+            expect(getRuntimeValue).toHaveBeenCalledWith('ClericBoy', 'relentlessEnduranceUsed', campaignName);
+        });
+
+        it('returns false when the ability was not used', () => {
+            getRuntimeValue.mockReturnValue(false);
+
+            const result = isRelentlessEnduranceUsed('ClericBoy', campaignName);
+
+            expect(result).toBe(false);
+        });
+
+        it('returns false when the ability key is not set', () => {
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = isRelentlessEnduranceUsed('ClericBoy', campaignName);
+
+            expect(result).toBe(false);
+        });
+    });
+
+    describe('setRelentlessEnduranceUsed', () => {
+        it('sets the ability as used when true', async () => {
+            await setRelentlessEnduranceUsed('ClericBoy', campaignName, true);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ClericBoy',
+                'relentlessEnduranceUsed',
+                true,
+                campaignName,
+            );
+        });
+
+        it('sets the ability as not used when false', async () => {
+            await setRelentlessEnduranceUsed('ClericBoy', campaignName, false);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'ClericBoy',
+                'relentlessEnduranceUsed',
+                false,
                 campaignName,
             );
         });

@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getActionSpellNames, getBonusActionSpellNames, getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';

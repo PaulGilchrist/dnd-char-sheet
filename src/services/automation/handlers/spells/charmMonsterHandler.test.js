@@ -1,12 +1,11 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../common/savePrompt.js', () => ({
+vi.mock('../../../automation/common/savePrompt.js', () => ({
   buildSaveDc: vi.fn(),
   createSaveListener: vi.fn(),
 }));
 
-vi.mock('../../common/damageRollback.js', () => ({
+vi.mock('../../../automation/common/damageRollback.js', () => ({
   storeSpellLastAttack: vi.fn(),
   addTargetResult: vi.fn(() => Promise.resolve()),
 }));
@@ -41,7 +40,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
 }));
 
 import { handle } from './charmMonsterHandler.js';
-import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
+import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -49,7 +48,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -186,10 +185,34 @@ describe('charmMonsterHandler.handle', () => {
         promise: Promise.resolve({ success: false }),
       });
       getRuntimeValue.mockReturnValue([]);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'OtherCreature', type: 'player' },
+        ],
+      });
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(sendSaveResult).toHaveBeenCalled();
+      expect(sendSaveResult).not.toHaveBeenCalled();
+    });
+
+    it('handles addEntry rejection on success path', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockReturnValue(Promise.reject(new Error('log error')));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalled();
+    });
+
+    it('handles addEntry rejection on condition path', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockReturnValue(Promise.reject(new Error('log error')));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(addEntry).toHaveBeenCalled();
     });
   });
 
@@ -364,6 +387,106 @@ describe('charmMonsterHandler.handle', () => {
       const abilityEntries = addEntry.mock.calls.filter(call => call[1].type === 'ability_use');
       expect(abilityEntries.length).toBe(1);
       expect(abilityEntries[0][1].characterName).toBe('WizardX');
+    });
+
+    it('uses charmMonsterTargets from metaCtx for multi-target', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc' },
+          { name: 'Orc', type: 'npc' },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Monster',
+        automation: { type: 'charm_monster', saveType: 'WIS', saveDc: 15 },
+        metaCtx: {
+          charmMonsterTargets: ['Goblin', 'Orc'],
+        },
+      };
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('2 creature(s) charmed');
+      expect(result.payload.description).toContain('Goblin');
+      expect(result.payload.description).toContain('Orc');
+      expect(createSaveListener).toHaveBeenCalledTimes(2);
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({ targetName: 'Goblin' }));
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({ targetName: 'Orc' }));
+    });
+
+    it('uses charmMonsterAdvantages from metaCtx per-target', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc' },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Monster',
+        automation: { type: 'charm_monster', saveType: 'WIS', saveDc: 15 },
+        metaCtx: {
+          charmMonsterTargets: ['Goblin'],
+          charmMonsterAdvantages: { Goblin: true },
+        },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        advantage: true,
+      }));
+    });
+
+    it('uses metamagicHeighten to set disadvantage', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc' },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Monster',
+        automation: { type: 'charm_monster', saveType: 'WIS', saveDc: 15 },
+        targetName: 'Goblin',
+        metaCtx: {
+          metamagicHeighten: true,
+        },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: true,
+      }));
+    });
+
+    it('returns summary with no creatures charmed when all save successfully', async () => {
+      setupBaseMocks({ success: true });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('No creatures charmed');
+      expect(result.payload.description).toContain('saved');
     });
   });
 });

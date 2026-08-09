@@ -3,6 +3,11 @@ import {
     handle,
     confirmGnomishLineage,
     restoreUses,
+    getGnomishLineageSelection,
+    getGnomishLineageAbility,
+    getGnomishLineageCantrip,
+    getGnomishLineageLevel3Spell,
+    getGnomishLineageLevel5Spell,
 } from './gnomishLineageHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -118,6 +123,69 @@ describe('gnomishLineageHandler', () => {
             expect(calls[2]).toEqual(['GnomeBoy', '_gnomishLineageCantrip', null, 'test-campaign']);
             expect(calls[3]).toEqual(['GnomeBoy', '_gnomishLineageLevel3', null, 'test-campaign']);
             expect(calls[4]).toEqual(['GnomeBoy', '_gnomishLineageLevel5', null, 'test-campaign']);
+        });
+    });
+
+    describe('getGnomishLineageSelection', () => {
+        it('returns the stored lineage selection', () => {
+            getRuntimeValue.mockReturnValue('Rock Gnome');
+
+            const result = getGnomishLineageSelection(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBe('Rock Gnome');
+            expect(getRuntimeValue).toHaveBeenCalledWith('GnomeBoy', '_gnomishLineageSelection', 'test-campaign');
+        });
+
+        it('returns undefined when no lineage is selected', () => {
+            getRuntimeValue.mockReturnValue(undefined);
+
+            const result = getGnomishLineageSelection(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBeUndefined();
+        });
+    });
+
+    describe('getGnomishLineageAbility', () => {
+        it('returns the stored spellcasting ability', () => {
+            getRuntimeValue.mockReturnValue('Intelligence');
+
+            const result = getGnomishLineageAbility(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBe('Intelligence');
+            expect(getRuntimeValue).toHaveBeenCalledWith('GnomeBoy', '_gnomishLineageAbility', 'test-campaign');
+        });
+    });
+
+    describe('getGnomishLineageCantrip', () => {
+        it('returns the stored lineage cantrip', () => {
+            getRuntimeValue.mockReturnValue('Minor Illusion');
+
+            const result = getGnomishLineageCantrip(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBe('Minor Illusion');
+            expect(getRuntimeValue).toHaveBeenCalledWith('GnomeBoy', '_gnomishLineageCantrip', 'test-campaign');
+        });
+    });
+
+    describe('getGnomishLineageLevel3Spell', () => {
+        it('returns the stored level 3 lineage spell', () => {
+            getRuntimeValue.mockReturnValue('Speak with Animals');
+
+            const result = getGnomishLineageLevel3Spell(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBe('Speak with Animals');
+            expect(getRuntimeValue).toHaveBeenCalledWith('GnomeBoy', '_gnomishLineageLevel3', 'test-campaign');
+        });
+    });
+
+    describe('getGnomishLineageLevel5Spell', () => {
+        it('returns the stored level 5 lineage spell', () => {
+            getRuntimeValue.mockReturnValue('Call Lightning');
+
+            const result = getGnomishLineageLevel5Spell(makePlayerStats(), 'test-campaign');
+
+            expect(result).toBe('Call Lightning');
+            expect(getRuntimeValue).toHaveBeenCalledWith('GnomeBoy', '_gnomishLineageLevel5', 'test-campaign');
         });
     });
 });

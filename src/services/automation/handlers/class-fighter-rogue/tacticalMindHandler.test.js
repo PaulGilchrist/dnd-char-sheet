@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { handle } from './tacticalMindHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -157,6 +156,68 @@ describe('tacticalMindHandler.handle', () => {
                 abilityName: 'Tactical Mind',
                 timestamp: expect.any(Number),
             }));
+        });
+
+        it('logs error when addEntry rejects', async () => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 5 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 2;
+                return undefined;
+            });
+            const testError = new Error('log failed');
+            addEntry.mockRejectedValue(testError);
+
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(addEntry).toHaveBeenCalled();
+            expect(consoleSpy).toHaveBeenCalledWith('[tacticalMind] Error:', testError);
+
+            consoleSpy.mockRestore();
+        });
+
+        it('resets secondWindUses to max when getRuntimeValue returns null', async () => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 5 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return null;
+                return undefined;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Tactical Mind');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'secondWindUses', 1, 'test-campaign');
+        });
+
+        it('uses level 1 as default when playerStats.level is falsy', async () => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return mockCheck({ d20: 5 });
+                if (name === 'TestFighter' && key === 'secondWindUses') return 1;
+                return undefined;
+            });
+
+            const stats = makePlayerStats({ level: undefined });
+
+            const result = await handle(makeAction(), stats, 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'secondWindUses', 0, 'test-campaign');
+        });
+
+        it('handles skill rollType in addition to check', async () => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
+                if (name === 'campaign' && key === 'lastAttack') return { rollType: 'skill', attackerName: 'TestFighter', d20: 12, bonus: 3, checkName: 'Athletics' };
+                if (name === 'TestFighter' && key === 'secondWindUses') return 2;
+                return undefined;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Athletics');
         });
     });
 });

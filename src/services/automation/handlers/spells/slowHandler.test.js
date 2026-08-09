@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -8,10 +7,6 @@ vi.mock('../../common/savePrompt.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -34,7 +29,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 const casterName = 'Wizard1';
 const targetName = 'Goblin';
 const saveDc = 15;
@@ -82,6 +77,24 @@ describe('slowHandler.handle', () => {
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.name).toBe('Slow');
       expect(result.payload.description).toContain('No creatures in combat');
+    });
+  });
+
+  describe('action without automation property', () => {
+    it('still builds a save DC with default behavior using empty object', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-no-auto',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const actionNoAuto = { name: 'Slow' };
+      await handle(actionNoAuto, makePlayerStats(), campaignName, null);
+
+      expect(buildSaveDc).toHaveBeenCalledOnce();
+      const [auto] = buildSaveDc.mock.calls[0];
+      expect(auto).toEqual({});
     });
   });
 
@@ -166,6 +179,89 @@ describe('slowHandler.handle', () => {
           promptId: 'prompt-ability',
         }),
       );
+    });
+
+    it('uses single attack scope when metaCtx.targets is provided', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-single',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const actionWithTargets = {
+        name: 'Slow',
+        automation: { type: 'slow' },
+        metaCtx: {
+          targets: [{ name: 'Goblin' }],
+        },
+      };
+      await handle(actionWithTargets, makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'lastAttack',
+        expect.objectContaining({
+          attackScope: 'single',
+        }),
+        campaignName,
+      );
+    });
+
+    it('uses aoe attack scope when no metaCtx.targets', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-aoe',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'lastAttack',
+        expect.objectContaining({
+          attackScope: 'aoe',
+        }),
+        campaignName,
+      );
+    });
+
+    it('selects specific targets from metaCtx.targets array', async () => {
+      const twoTargetContext = {
+        creatures: [
+          { name: casterName, type: 'player', gridX: 5, gridY: 10 },
+          { name: 'Goblin', type: 'npc' },
+          { name: 'Orc', type: 'npc' },
+          { name: 'Skeleton', type: 'npc' },
+        ],
+        players: [{ name: casterName, gridX: 5, gridY: 10 }],
+        placedItems: [],
+      };
+      getCombatContext.mockResolvedValue(twoTargetContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-selected',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const actionWithTargets = {
+        name: 'Slow',
+        automation: { type: 'slow' },
+        metaCtx: {
+          targets: [{ name: 'Goblin' }, { name: 'Orc' }],
+        },
+      };
+      await handle(actionWithTargets, makePlayerStats(), campaignName, null);
+
+      // Should only call createSaveListener for the selected targets, not all non-casters
+      expect(createSaveListener).toHaveBeenCalledTimes(2);
+      // The map callback receives the target object, so targetName is the object { name: 'Goblin' }
+      const firstCallTarget = createSaveListener.mock.calls[0][1].targetName;
+      const secondCallTarget = createSaveListener.mock.calls[1][1].targetName;
+      expect(firstCallTarget).toEqual({ name: 'Goblin' });
+      expect(secondCallTarget).toEqual({ name: 'Orc' });
     });
   });
 
@@ -283,6 +379,156 @@ describe('slowHandler.handle', () => {
       expect(result.payload.description).toContain('action or bonus action');
       expect(result.payload.description).toContain('one attack max');
       expect(result.payload.description).toContain('somatic spell failure');
+    });
+
+    it('removes existing slow effects from targetEffects for this caster+target then adds new ones', async () => {
+      const existingEffects = [
+        { target: targetName, effect: 'no_reactions', source: casterName },
+        { target: targetName, effect: 'action_limit', source: casterName },
+        { target: 'OtherTarget', effect: 'no_reactions', source: 'OtherCaster' },
+      ];
+      setupFailedSave([], existingEffects);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      // setRuntimeValue is called for targetEffects; verify the filtered result
+      const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'targetEffects'
+      );
+      expect(targetEffectsCalls.length).toBeGreaterThan(0);
+      const effectsArg = targetEffectsCalls[0][2];
+      // Removes 2 existing caster effects for this target, keeps 1 other effect, adds 5 new effects = 6 total
+      expect(effectsArg).toHaveLength(6);
+      expect(effectsArg).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ target: 'OtherTarget', effect: 'no_reactions', source: 'OtherCaster' }),
+          expect.objectContaining({ target: targetName, effect: 'no_reactions', source: casterName }),
+          expect.objectContaining({ target: targetName, effect: 'dex_save_disadvantage', source: casterName }),
+          expect.objectContaining({ target: targetName, effect: 'action_limit', source: casterName }),
+          expect.objectContaining({ target: targetName, effect: 'single_attack_limit', source: casterName }),
+          expect.objectContaining({ target: targetName, effect: 'somatic_failure_chance', source: casterName }),
+        ])
+      );
+    });
+
+    it('filters out existing slow effects using the filter callback', async () => {
+      const existingEffects = [
+        { target: targetName, effect: 'no_reactions', source: casterName },
+        { target: targetName, effect: 'dex_save_disadvantage', source: casterName },
+        { target: targetName, effect: 'action_limit', source: casterName },
+        { target: targetName, effect: 'single_attack_limit', source: casterName },
+        { target: targetName, effect: 'somatic_failure_chance', source: casterName },
+        { target: 'Other', effect: 'no_reactions', source: 'OtherCaster' },
+      ];
+      setupFailedSave([], existingEffects);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'targetEffects'
+      );
+      expect(targetEffectsCalls.length).toBeGreaterThan(0);
+      const effectsArg = targetEffectsCalls[0][2];
+      // Should keep only the OtherTarget effect + 5 new effects = 6 total
+      expect(effectsArg).toHaveLength(6);
+      const otherEffect = effectsArg.find(e => e.target === 'Other');
+      expect(otherEffect).toBeDefined();
+    });
+  });
+
+  describe('failed save - null runtime values', () => {
+    it('handles null activeConditions gracefully', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return null;
+        if (keyOrProp === 'activeConditionMeta') return null;
+        if (keyOrProp === 'targetEffects') return null;
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-null-conds',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName,
+        'activeConditions',
+        expect.arrayContaining(['slow']),
+        campaignName,
+      );
+    });
+
+    it('handles null targetEffects gracefully', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        if (keyOrProp === 'activeConditionMeta') return {};
+        if (keyOrProp === 'targetEffects') return null;
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-null-effects',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'targetEffects'
+      );
+      expect(targetEffectsCalls.length).toBeGreaterThan(0);
+      expect(Array.isArray(targetEffectsCalls[0][2])).toBe(true);
+    });
+
+    it('handles non-array activeConditions gracefully', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return 'not-an-array';
+        if (keyOrProp === 'activeConditionMeta') return {};
+        if (keyOrProp === 'targetEffects') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-nonarray-conds',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName,
+        'activeConditions',
+        expect.arrayContaining(['slow']),
+        campaignName,
+      );
+    });
+
+    it('handles non-array targetEffects gracefully', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        if (keyOrProp === 'activeConditionMeta') return {};
+        if (keyOrProp === 'targetEffects') return 'not-an-array';
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-nonarray-effects',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'targetEffects'
+      );
+      expect(targetEffectsCalls.length).toBeGreaterThan(0);
+      expect(Array.isArray(targetEffectsCalls[0][2])).toBe(true);
     });
   });
 
@@ -440,6 +686,67 @@ describe('slowHandler.handle', () => {
 
       expect(createSaveListener).not.toHaveBeenCalled();
       expect(result.payload.description).toContain('No creatures affected');
+    });
+
+    it('handles addEntry rejection in ability_use log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-catch',
+        promise: Promise.resolve({ success: true }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+      // Should not throw - the .catch() handles it
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('handles addEntry rejection in save_result success log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-catch-success',
+        promise: Promise.resolve({ success: true }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('handles addEntry rejection in condition and save_result failure logs', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(saveDc);
+
+      addEntry.mockImplementation((_camp, entry) => {
+        // Reject on the condition log (3rd call) and save_result failure log (4th call)
+        if (entry.type === 'condition' || (entry.type === 'save_result' && entry.success === false)) {
+          return Promise.reject(new Error('log error'));
+        }
+        return Promise.resolve();
+      });
+
+      getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        if (keyOrProp === 'activeConditionMeta') return {};
+        if (keyOrProp === 'targetEffects') return [];
+        return [];
+      });
+
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-catch-fail',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+
+      // Verify the handler still completed despite the log errors
+      expect(addEntry).toHaveBeenCalled();
     });
   });
 });

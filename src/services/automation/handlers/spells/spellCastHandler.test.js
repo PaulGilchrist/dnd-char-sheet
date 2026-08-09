@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../dice/diceRoller.js', () => ({
@@ -47,7 +46,7 @@ import * as combatData from '../../../encounters/combatData.js';
 import * as concentrationService from '../../../combat/concentration/concentrationService.js';
 import storage from '../../../ui/storage.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -127,6 +126,18 @@ describe('spellCastHandler', () => {
       await handle(action, ps2, campaignName, null);
       expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestWizard', 'channelDivinityCharges', 2, campaignName,
+      );
+    });
+
+    it('handles missing class entirely, defaults to maxCharges=2', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats();
+      delete ps.class;
+      const action = makeAction({ resourceCost: 'channel_divinity' });
+      await handle(action, ps, campaignName, null);
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', 'channelDivinityCharges', 1, campaignName,
       );
     });
   });
@@ -292,11 +303,19 @@ describe('spellCastHandler', () => {
       expect(result.payload.html).toContain('Fire Bolt');
       expect(result.payload.html).toContain('Light');
 
-      // One used
+      // Fire Bolt used, Light not used
       runtimeState.getRuntimeValue.mockReturnValueOnce(true).mockReturnValueOnce(null);
       result = await handle(action, ps, campaignName, null);
       expect(result.payload.html).toContain('Light');
       expect(result.payload.html).not.toContain('Fire Bolt');
+
+      // Light also not used yet (tests the !stored true path)
+      runtimeState.getRuntimeValue.mockReturnValueOnce(null).mockReturnValueOnce(null);
+      result = await handle(action, ps, campaignName, null);
+      expect(result.payload.html).toContain('Light');
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Divine_Smite_Light_freeCast', true, campaignName,
+      );
 
       // All used
       runtimeState.getRuntimeValue.mockReturnValue(true);
@@ -521,6 +540,7 @@ describe('spellCastHandler', () => {
       combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'GlamourBard' }] });
       const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
 
+
       const action = {
         name: 'Mantle of Majesty',
         description: 'You always have the Command spell prepared...',
@@ -611,6 +631,351 @@ describe('spellCastHandler', () => {
 
       expect(result.type).toBe('popup');
       expect(result.payload.html).toContain('Charm Person');
+    });
+
+    it('skips concentration when combatSummary is null', async () => {
+      const ps = makePlayerStats({ name: 'GlamourBard' });
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue(null);
+
+      const action = {
+        name: 'Mantle of Majesty',
+        automation: {
+          type: 'free_spell',
+          spell: 'Command',
+          concentration: true,
+        },
+      };
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(concentrationService.addConcentration).not.toHaveBeenCalled();
+      expect(storage.set).not.toHaveBeenCalled();
+    });
+
+    it('calculates DC with no spellAbilities.saveDc, falling back to proficiency', async () => {
+      const ps = makePlayerStats({ name: 'GlamourBard', proficiency: 3 });
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'GlamourBard' }] });
+
+      const action = {
+        name: 'Mantle of Majesty',
+        automation: {
+          type: 'free_spell',
+          spell: 'Command',
+          concentration: true,
+        },
+      };
+
+      await handle(action, ps, campaignName, null);
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.any(Object),
+        'GlamourBard',
+        'Mantle of Majesty',
+        11,
+      );
+    });
+
+    it('calculates DC with no spellAbilities.saveDc and no proficiency, defaulting to 10', async () => {
+      const ps = makePlayerStats({ name: 'GlamourBard' });
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'GlamourBard' }] });
+
+      const action = {
+        name: 'Mantle of Majesty',
+        automation: {
+          type: 'free_spell',
+          spell: 'Command',
+          concentration: true,
+        },
+      };
+
+      await handle(action, ps, campaignName, null);
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        expect.any(Object),
+        'GlamourBard',
+        'Mantle of Majesty',
+        10,
+      );
+    });
+  });
+
+  describe('War God\'s Blessing (channel divinity free_spell with noConcentration + multi-spell)', () => {
+    it('sets _War_Gods_Blessing_active and returns HTML popup when noConcentration with multi-spell array', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats({
+        class: { class_levels: [{ level: 5, channel_divinity: 2 }] },
+      });
+      const action = {
+        name: 'War God\'s Blessing',
+        description: 'You can guide your allies...',
+        automation: {
+          type: 'free_spell',
+          spell: ['Attack of Opportunity', 'Reaction Attack'],
+          resourceCost: 'channel_divinity',
+          noConcentration: true,
+        },
+      };
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.html).toContain('War God\'s Blessing');
+      expect(result.payload.html).toContain('Channel Divinity expended');
+      expect(result.payload.html).toContain('Attack of Opportunity and Reaction Attack');
+      expect(result.payload.html).toContain('do not require Concentration');
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_War_Gods_Blessing_active', true, campaignName,
+      );
+
+      expect(logPoster.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestWizard',
+        abilityName: 'War God\'s Blessing',
+      }));
+    });
+  });
+
+  describe('Channel Divinity per-spell tracking reset', () => {
+    it('resets used/freeCast flags when perSpellTracking is true with spell array', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats({
+        class: { class_levels: [{ level: 5, channel_divinity: 2 }] },
+      });
+      const action = {
+        name: 'Channel Divinity: Charm',
+        automation: {
+          type: 'free_spell',
+          spell: ['Charm Person', 'Sleep'],
+          resourceCost: 'channel_divinity',
+          perSpellTracking: true,
+        },
+      };
+
+      await handle(action, ps, campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Charm_Person_used', null, campaignName,
+      );
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Charm_Person_freeCast', null, campaignName,
+      );
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Sleep_used', null, campaignName,
+      );
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Sleep_freeCast', null, campaignName,
+      );
+
+      expect(logPoster.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        description: expect.stringContaining('Charm Person or Sleep'),
+      }));
+    });
+
+    it('handles non-array spell in perSpellTracking reset', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats({
+        class: { class_levels: [{ level: 5, channel_divinity: 2 }] },
+      });
+      const action = {
+        name: 'Channel Divinity: Charm',
+        automation: {
+          type: 'free_spell',
+          spell: 'Charm Person',
+          resourceCost: 'channel_divinity',
+          perSpellTracking: true,
+        },
+      };
+
+      await handle(action, ps, campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Charm_Person_used', null, campaignName,
+      );
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Channel_Divinity:_Charm_Charm_Person_freeCast', null, campaignName,
+      );
+    });
+  });
+
+  describe('Non-perSpellTracking multi-spell with storedSpells set', () => {
+    it('sets freeCast to spellNames when not yet stored', async () => {
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats();
+      const action = makeAction({ spell: ['Fire Bolt', 'Light'] });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.html).toContain('Channel Divinity expended');
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Divine_Smite_freeCast', ['Fire Bolt', 'Light'], campaignName,
+      );
+    });
+  });
+
+  describe('PerSpellTracking inner if (!stored)', () => {
+    it('sets freeKey to true when not yet stored for a spell', async () => {
+      runtimeState.getRuntimeValue.mockReturnValueOnce(true).mockReturnValueOnce(null);
+
+      const ps = makePlayerStats();
+      const action = makeAction({ spell: ['Fire Bolt', 'Light'], perSpellTracking: true });
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.payload.html).toContain('Light');
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard', '_Divine_Smite_Light_freeCast', true, campaignName,
+      );
+    });
+  });
+
+  describe('2024 ruleset fallback', () => {
+    it('fetches from /data/2024/spells.json when playerStats.rules is 2024', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        json: vi.fn().mockResolvedValue([{ name: 'Fire Bolt', school: 'Evocation', damage: { damage_at_slot_level: { '1': '1d10' }, damage_type: 'Fire' } }]),
+      });
+      globalThis.fetch = fetchMock;
+
+      const ps = makePlayerStats({
+        rules: '2024',
+        spellAbilities: {
+          spells: [],
+        },
+      });
+      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7], modifier: 0 });
+      postCastRiderService.getEmpoweredEvocationFeatures.mockReturnValue([]);
+
+      const action = makeAction({ spell: 'Fire Bolt' });
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('roll');
+      expect(fetchMock).toHaveBeenCalledWith('/data/2024/spells.json');
+
+      delete globalThis.fetch;
+    });
+
+    it('fetches from /data/spells.json when playerStats.rules is 5e', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        json: vi.fn().mockResolvedValue([{ name: 'Fire Bolt', school: 'Evocation', damage: { damage_at_slot_level: { '1': '1d10' }, damage_type: 'Fire' } }]),
+      });
+      globalThis.fetch = fetchMock;
+
+      const ps = makePlayerStats({
+        rules: '5e',
+        spellAbilities: {
+          spells: [],
+        },
+      });
+      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7], modifier: 0 });
+      postCastRiderService.getEmpoweredEvocationFeatures.mockReturnValue([]);
+
+      const action = makeAction({ spell: 'Fire Bolt' });
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('roll');
+      expect(fetchMock).toHaveBeenCalledWith('/data/spells.json');
+
+      delete globalThis.fetch;
+    });
+
+    it('handles fetch failure gracefully', async () => {
+      const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'));
+      globalThis.fetch = fetchMock;
+
+      const ps = makePlayerStats({
+        spellAbilities: {
+          spells: [],
+        },
+      });
+
+      const action = makeAction({ spell: 'NonExistentSpell' });
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(fetchMock).toHaveBeenCalled();
+
+      delete globalThis.fetch;
+    });
+  });
+
+  describe('Error handlers (.catch)', () => {
+    it('logs console.error when addEntry rejects in Mantle of Majesty', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+      const ps = makePlayerStats({ name: 'GlamourBard', spellAbilities: { saveDc: 15 }, proficiency: 5 });
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      combatData.getCombatSummary.mockReturnValue({ creatures: [{ name: 'GlamourBard' }] });
+      logPoster.addEntry.mockRejectedValue(new Error('Log error'));
+
+      const action = {
+        name: 'Mantle of Majesty',
+        automation: {
+          type: 'free_spell',
+          spell: 'Command',
+          concentration: true,
+        },
+      };
+
+      await handle(action, ps, campaignName, null);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[spellCast] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('logs console.error when addEntry rejects in War God\'s Blessing', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats({
+        class: { class_levels: [{ level: 5, channel_divinity: 2 }] },
+      });
+      const action = {
+        name: 'War God\'s Blessing',
+        automation: {
+          type: 'free_spell',
+          spell: ['Attack of Opportunity', 'Reaction Attack'],
+          resourceCost: 'channel_divinity',
+          noConcentration: true,
+        },
+      };
+
+      logPoster.addEntry.mockRejectedValue(new Error('Log error'));
+      await handle(action, ps, campaignName, null);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[spellCast] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('logs console.error when addEntry rejects in perSpellTracking reset', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+
+      const ps = makePlayerStats({
+        class: { class_levels: [{ level: 5, channel_divinity: 2 }] },
+      });
+      const action = {
+        name: 'Channel Divinity: Charm',
+        automation: {
+          type: 'free_spell',
+          spell: ['Charm Person', 'Sleep'],
+          resourceCost: 'channel_divinity',
+          perSpellTracking: true,
+        },
+      };
+
+      logPoster.addEntry.mockRejectedValue(new Error('Log error'));
+      await handle(action, ps, campaignName, null);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[spellCast] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
     });
   });
 });

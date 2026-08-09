@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -9,10 +8,6 @@ vi.mock('../../common/savePrompt.js', () => ({
 vi.mock('../../common/damageRollback.js', () => ({
   storeSpellLastAttack: vi.fn(),
   addTargetResult: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -39,7 +34,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -67,9 +62,13 @@ function setupBaseMocks(saveResult = { success: true }) {
   });
 }
 
+function setupRejectingAddEntry() {
+  addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+}
+
 describe('suggestionHandler.handle', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('target resolution', () => {
@@ -141,6 +140,18 @@ describe('suggestionHandler.handle', () => {
         abilityName: 'My Suggestion',
       }));
     });
+
+    it('catches and logs errors from addEntry rejection on ability_use', async () => {
+      setupRejectingAddEntry();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      setupBaseMocks();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[suggestion] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('successful save', () => {
@@ -182,6 +193,19 @@ describe('suggestionHandler.handle', () => {
       expect(abilityEntries.length).toBe(1);
       const saveEntries = addEntry.mock.calls.filter(call => call[1].type === 'save_result');
       expect(saveEntries.length).toBe(1);
+    });
+
+    it('catches and logs errors from addEntry rejection on save_result success', async () => {
+      setupRejectingAddEntry();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const errorCalls = consoleSpy.mock.calls.filter(call => call[0] === '[suggestion] Error:');
+      expect(errorCalls.length).toBeGreaterThanOrEqual(1);
+      consoleSpy.mockRestore();
     });
   });
 
@@ -303,6 +327,34 @@ describe('suggestionHandler.handle', () => {
       expect(result.payload.description).toContain('damage');
       expect(result.payload.description).toContain('Charmed');
     });
+
+    it('catches and logs errors from addEntry rejection on condition log entry', async () => {
+      setupRejectingAddEntry();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const errorCalls = consoleSpy.mock.calls.filter(call => call[0] === '[suggestion] Error:');
+      expect(errorCalls.length).toBeGreaterThanOrEqual(1);
+      consoleSpy.mockRestore();
+    });
+
+    it('catches and logs errors from addEntry rejection on save_result failure', async () => {
+      setupRejectingAddEntry();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const errorCalls = consoleSpy.mock.calls.filter(call => call[0] === '[suggestion] Error:');
+      expect(errorCalls.length).toBeGreaterThanOrEqual(1);
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('edge cases', () => {
@@ -354,6 +406,53 @@ describe('suggestionHandler.handle', () => {
       expect(result.payload.description).toContain('WizardX');
       expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         description: expect.stringContaining('WizardX casts Suggestion'),
+      }));
+    });
+
+    it('handles non-array getRuntimeValue by defaulting to empty array', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue('not-an-array');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
+
+    it('sets disadvantage when metaCtx.metamagicHeighten is truthy', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle({ name: 'Suggestion', metaCtx: { metamagicHeighten: true }, automation: { type: 'suggestion', saveType: 'WIS', saveDc: 15 } }, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: true,
+      }));
+    });
+
+    it('does not set disadvantage when metaCtx.metamagicHeighten is falsy', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle({ name: 'Suggestion', metaCtx: { metamagicHeighten: false }, automation: { type: 'suggestion', saveType: 'WIS', saveDc: 15 } }, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: false,
+      }));
+    });
+
+    it('does not set disadvantage when metaCtx is missing', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: false,
       }));
     });
   });

@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -23,7 +22,7 @@ import { addEntry } from '../../../ui/logService.js';
 
 // ── Constants ──────────────────────────────────────────────────
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 const playerName = 'TestCleric';
 const livingLegendKey = 'livingLegendActive';
 const unerringStrikeKey = 'unerringStrikeUsed';

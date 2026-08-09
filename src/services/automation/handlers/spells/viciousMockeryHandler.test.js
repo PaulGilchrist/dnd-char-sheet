@@ -14,7 +14,7 @@ vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setRuntimeValue, getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 function makePlayerStats(overrides = {}) {
     return {
@@ -86,5 +86,104 @@ describe('viciousMockeryHandler', () => {
             undefined,
             'TestBard',
         );
+    });
+
+    it('replaces an existing disadvantage_next_attack effect from the same source', async () => {
+        const existingEffects = [
+            { target: 'Goblin', effect: 'disadvantage_next_attack', source: 'TestBard' },
+            { target: 'Goblin', effect: 'blinded', source: 'OtherCaster' },
+        ];
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return existingEffects;
+            return [];
+        });
+
+        await handle(makeAction(), makePlayerStats(), 'test-campaign', 'TestMap');
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestBard',
+                }),
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'blinded',
+                    source: 'OtherCaster',
+                }),
+            ]),
+            'test-campaign',
+        );
+
+        const calledWith = setRuntimeValue.mock.calls[0];
+        const effectsArray = calledWith[2];
+        const replacedIndex = existingEffects.findIndex(
+            te => te.target === 'Goblin' && te.effect === 'disadvantage_next_attack' && te.source === 'TestBard'
+        );
+        expect(effectsArray[replacedIndex]).toEqual({
+            target: 'Goblin',
+            source: 'TestBard',
+            effect: 'disadvantage_next_attack',
+        });
+        expect(effectsArray.length).toBe(2);
+    });
+
+    it('handles missing automation on action by defaulting targetName to Unknown', async () => {
+        const actionWithoutAutomation = { name: 'Vicious Mockery' };
+
+        await handle(actionWithoutAutomation, makePlayerStats(), 'test-campaign', 'TestMap');
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Unknown',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestBard',
+                }),
+            ]),
+            'test-campaign',
+        );
+    });
+
+    it('handles null targetEffects from runtime store', async () => {
+        getRuntimeValue.mockImplementation((key, prop) => {
+            if (key === 'campaign' && prop === 'targetEffects') return null;
+            return [];
+        });
+
+        await handle(makeAction(), makePlayerStats(), 'test-campaign', 'TestMap');
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'campaign',
+            'targetEffects',
+            expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestBard',
+                }),
+            ]),
+            'test-campaign',
+        );
+    });
+
+    it('handles addEntry rejection without throwing', async () => {
+        const { addEntry } = await import('../../../ui/logService.js');
+        addEntry.mockRejectedValueOnce(new Error('Log write failed'));
+
+        const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+        await expect(
+            handle(makeAction(), makePlayerStats(), 'test-campaign', 'TestMap')
+        ).resolves.toBeDefined();
+
+        expect(consoleSpy).toHaveBeenCalledWith('[viciousMockery] Error:', expect.any(Error));
+
+        consoleSpy.mockRestore();
     });
 });

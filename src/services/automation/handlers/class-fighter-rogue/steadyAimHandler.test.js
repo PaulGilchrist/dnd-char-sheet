@@ -1,6 +1,5 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handle } from './steadyAimHandler.js';
+import { handle, markAsMoved, clearMovementFlag, clearSpeedZero } from './steadyAimHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(() => undefined),
@@ -222,6 +221,206 @@ describe('steadyAimHandler', () => {
                 (c) => c[1] === 'targetEffects'
             );
             expect(effectCalls[0][2][0].duration).toBe(expectedDuration);
+        });
+
+        it('applies Roving Aim when roving_aim exists without Infiltration Expertise name', async () => {
+            getRuntimeValue.mockImplementation(makeGetRuntime());
+
+            const stats = makePlayerStats({
+                automation: {
+                    passives: [{ effect: 'roving_aim' }],
+                },
+            });
+
+            const result = await handle(makeAction(), stats, makeCampaignName());
+
+            expect(result.payload.description).toContain('Roving Aim');
+            expect(result.payload.description).toContain('Speed not reduced to 0');
+
+            const condCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(condCalls).toHaveLength(0);
+        });
+
+        it('logs error when addEntry rejects', async () => {
+            getRuntimeValue.mockImplementation(makeGetRuntime());
+            const testError = new Error('log failed');
+            addEntry.mockRejectedValue(testError);
+
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            const result = await handle(
+                makeAction(),
+                makePlayerStats(),
+                makeCampaignName()
+            );
+
+            expect(result.type).toBe('popup');
+            expect(addEntry).toHaveBeenCalled();
+            expect(consoleSpy).toHaveBeenCalledWith(
+                '[steadyAim] Error:',
+                testError
+            );
+
+            consoleSpy.mockRestore();
+        });
+
+        it('does not apply speed_zero when activeConditions is undefined', async () => {
+            getRuntimeValue.mockImplementation((_, key) => {
+                if (key === 'steadyAimMovedThisTurn') return false;
+                if (key === 'steadyAimSpeedZero') return false;
+                if (key === 'activeConditions') return undefined;
+                if (key === 'targetEffects') return [];
+                return undefined;
+            });
+
+            await handle(makeAction(), makePlayerStats(), makeCampaignName());
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestRogue',
+                'activeConditions',
+                ['speed_zero'],
+                'test-campaign'
+            );
+        });
+
+        it('does not remove conditions when toggling off with Roving Aim', async () => {
+            getRuntimeValue.mockImplementation(makeGetRuntime({
+                steadyAimMovedThisTurn: false,
+                steadyAimSpeedZero: true,
+                activeConditions: ['speed_zero', 'blinded'],
+                targetEffects: [],
+            }));
+
+            const stats = makePlayerStats({
+                automation: {
+                    passives: [{ name: 'Infiltration Expertise', effect: 'roving_aim' }],
+                },
+            });
+
+            await handle(makeAction(), stats, makeCampaignName());
+
+            const condCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(condCalls).toHaveLength(0);
+        });
+
+        it('handles undefined activeConditions when toggling off', async () => {
+            getRuntimeValue.mockImplementation((_, key) => {
+                if (key === 'steadyAimMovedThisTurn') return false;
+                if (key === 'steadyAimSpeedZero') return true;
+                if (key === 'activeConditions') return undefined;
+                return undefined;
+            });
+
+            await handle(makeAction(), makePlayerStats(), makeCampaignName());
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestRogue',
+                'activeConditions',
+                [],
+                'test-campaign'
+            );
+        });
+
+        it('does not add speed_zero when already present in conditions', async () => {
+            getRuntimeValue.mockImplementation((_, key) => {
+                if (key === 'steadyAimMovedThisTurn') return false;
+                if (key === 'steadyAimSpeedZero') return false;
+                if (key === 'activeConditions') return ['speed_zero', 'frightened'];
+                if (key === 'targetEffects') return [];
+                return undefined;
+            });
+
+            await handle(makeAction(), makePlayerStats(), makeCampaignName());
+
+            const condCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(condCalls).toHaveLength(0);
+        });
+
+        it('uses default duration when automation.duration is not provided', async () => {
+            getRuntimeValue.mockImplementation((_, key) => {
+                if (key === 'steadyAimMovedThisTurn') return false;
+                if (key === 'steadyAimSpeedZero') return false;
+                if (key === 'activeConditions') return [];
+                if (key === 'targetEffects') return [];
+                return undefined;
+            });
+
+            await handle(
+                makeAction({ automation: { type: 'steady_aim' } }),
+                makePlayerStats(),
+                makeCampaignName()
+            );
+
+            const effectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            expect(effectCalls[0][2][0].duration).toBe('until_end_of_turn');
+        });
+
+        it('uses default duration when automation.duration is explicitly null', async () => {
+            getRuntimeValue.mockImplementation((_, key) => {
+                if (key === 'steadyAimMovedThisTurn') return false;
+                if (key === 'steadyAimSpeedZero') return false;
+                if (key === 'activeConditions') return [];
+                if (key === 'targetEffects') return [];
+                return undefined;
+            });
+
+            await handle(
+                makeAction({ automation: { type: 'steady_aim', duration: null } }),
+                makePlayerStats(),
+                makeCampaignName()
+            );
+
+            const effectCalls = setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'targetEffects'
+            );
+            expect(effectCalls[0][2][0].duration).toBe('until_end_of_turn');
+        });
+    });
+
+    describe('markAsMoved', () => {
+        it('sets steadyAimMovedThisTurn to true', () => {
+            markAsMoved('TestRogue', 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestRogue',
+                'steadyAimMovedThisTurn',
+                true,
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('clearMovementFlag', () => {
+        it('sets steadyAimMovedThisTurn to false', () => {
+            clearMovementFlag('TestRogue', 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestRogue',
+                'steadyAimMovedThisTurn',
+                false,
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('clearSpeedZero', () => {
+        it('sets steadyAimSpeedZero to false', () => {
+            clearSpeedZero('TestRogue', 'test-campaign');
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestRogue',
+                'steadyAimSpeedZero',
+                false,
+                'test-campaign'
+            );
         });
     });
 });

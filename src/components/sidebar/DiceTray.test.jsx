@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -17,6 +16,14 @@ describe('DiceTray', () => {
     render(<DiceTray onRoll={mockOnRoll} />);
     screen.getByTitle('Roll d20').click();
     expect(mockOnRoll).toHaveBeenCalledWith({ label: 'd20', value: 7 });
+  });
+
+  it('renders all 7 dice buttons with correct labels', () => {
+    render(<DiceTray onRoll={mockOnRoll} />);
+    const diceLabels = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+    for (const label of diceLabels) {
+      expect(screen.getByTitle(`Roll ${label}`)).toBeInTheDocument();
+    }
   });
 
   it('rolls the correct number of sides for each die type', () => {
@@ -44,6 +51,38 @@ describe('DicePopup', () => {
     render(<DicePopup result={mockResult} onClose={mockOnClose} />);
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByText('d20')).toBeInTheDocument();
+  });
+
+  it('renders the correct icon for each die label', () => {
+    const dieLabels = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+    for (const label of dieLabels) {
+      const result = { label, value: 1 };
+      const { unmount } = render(<DicePopup result={result} onClose={mockOnClose} />);
+      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      const resultIcon = document.querySelector('.dice-tray-result-icon');
+      expect(resultIcon).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('renders SVG icons for d4, d8, d10, d12, d100 and Font Awesome for d6, d20', () => {
+    const svgDice = ['d4', 'd8', 'd10', 'd12', 'd100'];
+    const faDice = ['d6', 'd20'];
+    for (const label of svgDice) {
+      const result = { label, value: 1 };
+      const { unmount } = render(<DicePopup result={result} onClose={mockOnClose} />);
+      const resultIcon = document.querySelector('.dice-tray-result-icon');
+      expect(resultIcon.querySelector('svg')).toBeInTheDocument();
+      unmount();
+    }
+    for (const label of faDice) {
+      const result = { label, value: 1 };
+      const { unmount } = render(<DicePopup result={result} onClose={mockOnClose} />);
+      const resultIcon = document.querySelector('.dice-tray-result-icon');
+      expect(resultIcon.querySelector('i.fa-solid')).toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('calls onClose when the overlay is clicked but not when the modal is clicked', () => {

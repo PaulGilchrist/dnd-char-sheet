@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Event handler tests removed — all event dispatching on SVG hit areas is
 // redundant with PlacedItems.test.jsx (which covers rendering, hit area
 // presence, and NPC-specific selectors).  The handlers are trivial prop

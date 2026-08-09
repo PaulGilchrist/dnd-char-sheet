@@ -131,7 +131,7 @@ export const createMapDropsMocks = () => ({
 
 // Shared mocks setup — call this in each test file's beforeEach or inline
 export const setupMapMocks = (overrides = {}) => {
-    const { vi: _vi } = vi; // ensure vi is available
+    const _vi = vi; // ensure vi is available
 
     globalThis.EventSource = class MockEventSource {
         constructor() { this.onmessage = null; this.onerror = null; }

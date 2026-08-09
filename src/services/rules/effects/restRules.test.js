@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   getHitDieSize,
@@ -7,6 +6,10 @@ import {
   computeShortRestHpNewCurrent,
   applyShortRest,
   applyLongRest,
+  clearHuntersMarkConcentration,
+  getShortRestResources,
+  getLongRestResources,
+  spellSlotLevels,
 } from './restRules.js'
 
 // Mock dependencies
@@ -36,11 +39,42 @@ vi.mock('../../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve({})),
 }))
 
+vi.mock('../../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => null),
+  setCombatSummaryCache: vi.fn(),
+}))
+
+vi.mock('../../../services/combat/concentration/concentrationService.js', () => ({
+  clearAllConcentrations: vi.fn(),
+}))
+
+vi.mock('../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js', () => ({
+  grantCelestialResilience: vi.fn(() => null),
+}))
+
+vi.mock('../../../services/automation/handlers/buffs/tempHpService.js', () => ({
+  setTempHp: vi.fn((name, amount) => amount),
+}))
+
+vi.mock('../features/invisibilityService.js', () => ({
+  endInvisibility: vi.fn(),
+  endGreaterInvisibility: vi.fn(),
+}))
+
+vi.mock('../../../services/ui/storage.js', () => ({
+  default: { set: vi.fn() },
+}))
+
 // Import mocked functions for per-test customization
-import { getRuntimeValue, setRuntimeBatch, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
+import { getRuntimeValue, setRuntimeBatch, setRuntimeValue, getAllStoreKeys } from '../../../hooks/runtime/useRuntimeState.js'
 import { clearAllExpirationEffects } from './expirations.js'
 import { rollD20 } from '../../../services/dice/diceRoller.js'
 import { addEntry } from '../../../services/ui/logService.js'
+import { getCombatSummary } from '../../../services/encounters/combatData.js'
+import { grantCelestialResilience } from '../../../services/automation/handlers/class-warlock/celestialResilienceHandler.js'
+import { setTempHp } from '../../../services/automation/handlers/buffs/tempHpService.js'
+import { endInvisibility, endGreaterInvisibility } from '../features/invisibilityService.js'
+import * as storageService from '../../../services/ui/storage.js'
 
 const CAMPAIGN = 'test-campaign'
 
@@ -141,6 +175,74 @@ describe('restRules', () => {
     it('handles zero recovery', () => {
       expect(computeShortRestHpNewCurrent(null, 20, 0)).toBe(20)
       expect(computeShortRestHpNewCurrent(10, 20, 0)).toBe(10)
+    })
+  })
+
+  describe('clearHuntersMarkConcentration', () => {
+    it('clears Hunter\'s Mark concentration and removes from activeBuffs when creature has it', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [{ name: "Hunter's Mark" }, { name: 'Haste' }]
+        return undefined
+      })
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [{ name: 'Caster', concentration: { spell: "Hunter's Mark" } }],
+      })
+      clearHuntersMarkConcentration('Caster', CAMPAIGN)
+      expect(storageService.default.set).toHaveBeenCalled()
+      expect(setRuntimeValue).toHaveBeenCalledWith('Caster', 'activeBuffs', [{ name: 'Haste' }], CAMPAIGN)
+    })
+
+    it('does nothing when creature is not found', () => {
+      vi.clearAllMocks()
+      vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] })
+      clearHuntersMarkConcentration('NonExistent', CAMPAIGN)
+      expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+
+    it('does nothing when creature has no Hunter\'s Mark concentration', () => {
+      vi.clearAllMocks()
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [{ name: 'Caster', concentration: { spell: 'Witch Bolt' } }],
+      })
+      clearHuntersMarkConcentration('Caster', CAMPAIGN)
+      expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+
+    it('does nothing when creature has no concentration', () => {
+      vi.clearAllMocks()
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [{ name: 'Caster', concentration: null }],
+      })
+      clearHuntersMarkConcentration('Caster', CAMPAIGN)
+      expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+
+    it('does nothing when combatSummary is null', () => {
+      vi.clearAllMocks()
+      vi.mocked(getCombatSummary).mockReturnValue(null)
+      clearHuntersMarkConcentration('Caster', CAMPAIGN)
+      expect(setRuntimeValue).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('utility functions', () => {
+    it('getShortRestResources returns a copy of SHORT_REST_RESOURCES', () => {
+      const resources = getShortRestResources()
+      expect(Array.isArray(resources)).toBe(true)
+      expect(resources.length).toBeGreaterThan(0)
+      expect(resources).not.toBe(getShortRestResources())
+    })
+
+    it('getLongRestResources returns a copy of LONG_REST_RESOURCES', () => {
+      const resources = getLongRestResources()
+      expect(Array.isArray(resources)).toBe(true)
+      expect(resources.length).toBeGreaterThan(0)
+      expect(resources).not.toBe(getLongRestResources())
+    })
+
+    it('spellSlotLevels returns array 1-9', () => {
+      expect(spellSlotLevels()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
     })
   })
 
@@ -325,7 +427,316 @@ describe('restRules', () => {
       })
 
       await expect(applyShortRest(missingLevelStats({}), CAMPAIGN)).rejects.toThrow('playerStats.level is required')
-      await expect(applyShortRest(missingLevelStats({ passives: [{ type: 'resource_restoration', resourceKey: 'arcaneRecoveryLevels' }] }), CAMPAIGN)).rejects.toThrow('playerStats.level is required')
+
+      // Arcane Recovery error path - Wizard with level null and no Celestial Patron
+      const wizardMissingLevel = makeStats({
+        class: { name: 'Wizard' },
+        level: null,
+        automation: { passives: [{ type: 'resource_restoration', resourceKey: 'arcaneRecoveryLevels' }] },
+      })
+      await expect(applyShortRest(wizardMissingLevel, CAMPAIGN)).rejects.toThrow('playerStats.level is required')
+    })
+
+    it('handles Barbarian 2024 rage recharges on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1
+        return undefined
+      })
+      const barbarianStats = makeStats({
+        class: { name: 'Barbarian', class_levels: [{ level: 5, rages: 2 }] },
+        rules: '2024',
+        _trackedResources: { ragePoints: { current: 1 } },
+      })
+      await applyShortRest(barbarianStats, CAMPAIGN)
+      expect(getBatchUpdates().ragePoints).toBe(2)
+    })
+
+    it('handles Replenishing Meal on short rest', async () => {
+      vi.clearAllMocks()
+      const chefStats = makeStats({
+        proficiency: 3,
+        automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing', name: 'Replenishing Meal' }] },
+      })
+      await applyShortRest(chefStats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith('Test Hero', 'replenishingMeals', 7, CAMPAIGN, true)
+    })
+
+    it('handles Tireless Ranger exhaustion reduction on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'exhaustionLevel') return 3
+        return undefined
+      })
+      const rangerStats = makeStats({
+        class: { name: 'Ranger' },
+        level: 10,
+      })
+      await applyShortRest(rangerStats, CAMPAIGN)
+      expect(getBatchUpdates().exhaustionLevel).toBe(2)
+    })
+
+    it('preserves Mage Armor buffs on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [{ name: 'Mage Armor' }, { name: 'Shield' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(getBatchUpdates().activeBuffs).toEqual([{ name: 'Mage Armor' }])
+    })
+
+    it('handles Vow of Enmity target buff filtering on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'vowOfEnmityTarget') return 'Enemy1'
+        if (key === 'activeBuffs') return [{ effect: 'vow_of_enmity' }, { effect: 'haste' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Enemy1', 'activeBuffs', [{ effect: 'haste' }], CAMPAIGN,
+      )
+    })
+
+    it('handles targetEffects clearing on short rest when effects exist', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'globe_barrier' }, { effect: 'blur' }, { effect: 'barkskin' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects',
+        expect.arrayContaining([]),
+        CAMPAIGN,
+      )
+    })
+
+    it('handles clairvoyant_combatant targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'clairvoyant_combatant' }, { effect: 'haste' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects',
+        [{ effect: 'haste' }],
+        CAMPAIGN, true,
+      )
+    })
+
+    it('handles pass_without_trace_bonus targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'pass_without_trace_bonus' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles blur targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'blur' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles regenerate targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'regenerate' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles beacon_of_hope targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'beacon_of_hope' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles resistance_damage_reduction targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'resistance_damage_reduction' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles enhance_ability targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'enhance_ability' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles circle_of_power targetEffects clearing on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'circle_of_power' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign', 'targetEffects', [], CAMPAIGN, true,
+      )
+    })
+
+    it('handles regenerateActive clearing on short rest with store keys', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'regenerateActive') return true
+        if (key === 'hitPoints') return 50
+        return undefined
+      })
+      vi.mocked(getAllStoreKeys).mockReturnValue([123, 'Char1', 'Char2', null])
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith('Char1', 'regenerateActive', false, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith('Char1', 'currentHitPoints', 50, CAMPAIGN)
+    })
+
+    it('clears Invisibility on short rest when active', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_activeInvisibility_Test Hero') return 'Caster1'
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(endInvisibility).toHaveBeenCalledWith('Test Hero', CAMPAIGN, 'target finished a rest')
+      expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_activeInvisibility_Test Hero', null, CAMPAIGN)
+    })
+
+    it('clears Greater Invisibility on short rest when active', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_activeGreaterInvisibility_Test Hero') return 'Caster1'
+        return undefined
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(endGreaterInvisibility).toHaveBeenCalledWith('Test Hero', CAMPAIGN, 'target finished a rest')
+      expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_activeGreaterInvisibility_Test Hero', null, CAMPAIGN)
+    })
+
+    it('handles Celestial Resilience with combatSummary and allies', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'tempHp') return 5
+        return undefined
+      })
+      vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] })
+      vi.mocked(grantCelestialResilience).mockResolvedValue({
+        allyTempHp: 5,
+        allies: [{ name: 'Ally1', type: 'player' }],
+        selfTempHp: 10,
+        maxAllies: 5,
+      })
+      const celestialStats = makeStats({
+        class: { name: 'Warlock', subclass: { name: 'Celestial Patron' }, major: { name: 'Celestial Patron' } },
+        level: 6,
+        abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Charisma', bonus: 4 }],
+        specialActions: [{ name: 'Celestial Resilience' }],
+      })
+      const result = await applyShortRest(celestialStats, CAMPAIGN)
+      expect(grantCelestialResilience).toHaveBeenCalledWith(celestialStats, CAMPAIGN, 'short_rest')
+      expect(result.celestialResilienceAllies).toEqual({
+        creatureTargets: [{ name: 'Ally1', type: 'player' }],
+        allyTempHp: 5,
+        selfTempHp: 10,
+        maxTargets: 5,
+      })
+    })
+
+    it('handles addEntry catch on short rest celestial resilience', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'tempHp') return 5
+        return undefined
+      })
+      vi.mocked(addEntry).mockReturnValue(Promise.reject(new Error('Log failed')))
+      const celestialStats = makeStats({
+        class: { name: 'Warlock', subclass: { name: 'Celestial Patron' }, major: { name: 'Celestial Patron' } },
+        level: 6,
+        abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Charisma', bonus: 4 }],
+        specialActions: [{ name: 'Celestial Resilience' }],
+      })
+      await applyShortRest(celestialStats, CAMPAIGN)
+    })
+
+    it('handles True Polymorph summoned creature removal on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [
+          { name: 'Summon1', summonSource: 'true_polymorph', currentHp: 10, maxHp: 20 },
+          { name: 'Normal1', currentHp: 15, maxHp: 30 },
+        ],
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), CAMPAIGN)
+    })
+
+    it('handles object transforms on short rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'activeConditions') return ['incapacitated', 'blinded']
+        return undefined
+      })
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [
+          {
+            name: 'Transformed1',
+            polymorphObject: { maxHp: 50, ac: 15, speed: 30 },
+            polymorphOriginal: { maxHp: 50, ac: 15, speed: 30 },
+          },
+        ],
+      })
+      const stats = makeStats()
+      await applyShortRest(stats, CAMPAIGN)
+      const updates = getBatchUpdates()
+      expect(updates.activeConditions).toEqual([])
     })
   })
 
@@ -418,9 +829,7 @@ describe('restRules', () => {
         specialActions: [{ name: 'Celestial Resilience' }],
       })
       await applyLongRest(celestialStats, CAMPAIGN)
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Hero', 'tempHp', 10, CAMPAIGN,
-      )
+      expect(setTempHp).toHaveBeenCalledWith('Test Hero', 10, CAMPAIGN)
 
       // Celestial Resilience logs ability_use on long rest
       vi.clearAllMocks()
@@ -625,6 +1034,204 @@ describe('restRules', () => {
 
       // Overchannel
       expect(setRuntimeValue).toHaveBeenCalledWith('Test Hero', 'Overchannel_useCount', 0, CAMPAIGN, true)
+    })
+
+    it('handles post-cast rider uses on long rest', async () => {
+      vi.clearAllMocks()
+      const stats = makeStats({
+        automation: {
+          passives: [
+            { type: 'post_cast_rider', riderSave: { recharge: 'long_rest' }, name: 'Beguiling Magic' },
+            { type: 'passive_rule', riderSave: { recharge: 'long_rest' }, name: 'SomeRider' },
+          ],
+        },
+      })
+      await applyLongRest(stats, CAMPAIGN)
+      const updates = getBatchUpdates()
+      expect(updates.postCastRider_Beguiling_Magic).toBeNull()
+      expect(updates.postCastRider_SomeRider).toBeNull()
+    })
+
+    it('handles Vow of Enmity target buff filtering on long rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'vowOfEnmityTarget') return 'Enemy2'
+        if (key === 'activeBuffs') return [{ effect: 'vow_of_enmity' }, { effect: 'haste' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyLongRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Enemy2', 'activeBuffs', [{ effect: 'haste' }], CAMPAIGN,
+      )
+    })
+
+    it('handles Spell Thief on long rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_spellThiefBlockedList') return JSON.stringify([{ casterName: 'Caster1', spellName: 'Fireball' }])
+        if (key === '_spellThiefStolenList') return JSON.stringify([{ casterName: 'Caster2', spellName: 'Witch Bolt' }])
+        if (key === '_spellThiefCasterBlock') return JSON.stringify([{ thiefName: 'Test Hero', spellName: 'Fireball' }])
+        return undefined
+      })
+      const stats = makeStats({
+        automation: { reactions: [{ type: 'spell_thief' }] },
+      })
+      await applyLongRest(stats, CAMPAIGN)
+      const updates = getBatchUpdates()
+      expect(updates.spellthiefUses).toBe(1)
+      expect(updates.spellThiefBlocked_Caster1_Fireball).toBeNull()
+      expect(updates['spellThiefStolen_Caster2_Witch Bolt']).toBeNull()
+      expect(updates._spellThiefBlockedList).toBeNull()
+      expect(updates._spellThiefStolenList).toBeNull()
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Caster1', '_spellThiefCasterBlock', null, CAMPAIGN,
+      )
+    })
+
+    it('handles targetEffects clearing on long rest when effects exist', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'clairvoyant_combatant' }, { effect: 'blur' }, { effect: 'foresight' }]
+        return undefined
+      })
+      const stats = makeStats()
+      await applyLongRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalled()
+    })
+
+    it('handles Wild Shape cleanup on long rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'targetEffects') return [{ effect: 'wild_shape', source: 'Druid1' }]
+        if (key === 'activeBuffs') return [{ effect: 'shape_shift' }]
+        return undefined
+      })
+      vi.mocked(getCombatSummary).mockReturnValue({
+        creatures: [
+          { name: 'Druid1', type: 'player', wildShapeSource: 'Druid1', beastName: 'Bear' },
+          { name: 'Normal1', type: 'npc' },
+        ],
+      })
+      const stats = makeStats({ class: { name: 'Druid' } })
+      await applyLongRest(stats, CAMPAIGN)
+      expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), CAMPAIGN)
+    })
+
+    it('handles regenerateActive clearing on long rest with store keys', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'regenerateActive') return true
+        if (key === 'hitPoints') return 50
+        return undefined
+      })
+      vi.mocked(getAllStoreKeys).mockReturnValue(['Char1', 'Char2'])
+      const stats = makeStats()
+      await applyLongRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith('Char1', 'regenerateActive', false, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith('Char1', 'currentHitPoints', 50, CAMPAIGN)
+    })
+
+    it('clears Invisibility on long rest when active', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_activeInvisibility_Test Hero') return 'Caster1'
+        return undefined
+      })
+      const stats = makeStats()
+      await applyLongRest(stats, CAMPAIGN)
+      expect(endInvisibility).toHaveBeenCalledWith('Test Hero', CAMPAIGN, 'target finished a rest')
+    })
+
+    it('clears Greater Invisibility on long rest when active', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_activeGreaterInvisibility_Test Hero') return 'Caster1'
+        return undefined
+      })
+      const stats = makeStats()
+      await applyLongRest(stats, CAMPAIGN)
+      expect(endGreaterInvisibility).toHaveBeenCalledWith('Test Hero', CAMPAIGN, 'target finished a rest')
+    })
+
+    it('handles Magic Initiate/Fey Touched/Shadow Touched on long rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === '_magicInitiateInstances') return [{ spellName: 'Firebolt' }, { spellName: 'Light' }]
+        return undefined
+      })
+      const stats = makeStats({
+        feyTouchedSpell: 'Misty Step',
+        shadowTouchedSpell: 'Shadow of Moil',
+      })
+      await applyLongRest(stats, CAMPAIGN)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', '_Level_1_Spell_[Instance_1]_freeCastCount', null, CAMPAIGN, true,
+      )
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', '_feyTouchedSpell_freeCastCount', null, CAMPAIGN, true,
+      )
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', '_shadowTouchedSpell_freeCastCount', null, CAMPAIGN, true,
+      )
+    })
+
+    it('handles Celestial Resilience with combatSummary and allies on long rest', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'tempHp') return 3
+        return undefined
+      })
+      vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] })
+      vi.mocked(grantCelestialResilience).mockResolvedValue({
+        allyTempHp: 5,
+        allies: [{ name: 'Ally2', type: 'player' }],
+        selfTempHp: 10,
+        maxAllies: 5,
+      })
+      const celestialStats = makeStats({
+        class: { name: 'Warlock', subclass: { name: 'Celestial Patron' }, major: { name: 'Celestial Patron' } },
+        level: 6,
+        abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Charisma', bonus: 4 }],
+        specialActions: [{ name: 'Celestial Resilience' }],
+      })
+      await applyLongRest(celestialStats, CAMPAIGN)
+      expect(setTempHp).toHaveBeenCalledWith('Test Hero', 10, CAMPAIGN)
+      expect(grantCelestialResilience).toHaveBeenCalledWith(celestialStats, CAMPAIGN, 'long_rest')
+      expect(addEntry).toHaveBeenCalledWith(
+        CAMPAIGN,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'Test Hero',
+          abilityName: 'Celestial Resilience',
+          description: expect.stringContaining('10 temporary hit points'),
+        }),
+      )
+    })
+
+    it('handles addEntry catch on long rest celestial resilience', async () => {
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'tempHp') return 3
+        return undefined
+      })
+      vi.mocked(addEntry).mockReturnValue(Promise.reject(new Error('Log failed')))
+      const celestialStats = makeStats({
+        class: { name: 'Warlock', subclass: { name: 'Celestial Patron' }, major: { name: 'Celestial Patron' } },
+        level: 6,
+        abilities: [{ name: 'Strength', bonus: 3 }, { name: 'Charisma', bonus: 4 }],
+        specialActions: [{ name: 'Celestial Resilience' }],
+      })
+      await applyLongRest(celestialStats, CAMPAIGN)
+    })
+
+    it('throws when level is missing for Celestial Resilience on long rest', async () => {
+      const celestialStats = makeStats({
+        class: { name: 'Warlock', subclass: { name: 'Celestial Patron' }, major: { name: 'Celestial Patron' } },
+        level: null,
+        specialActions: [{ name: 'Celestial Resilience' }],
+      })
+      await expect(applyLongRest(celestialStats, CAMPAIGN)).rejects.toThrow('playerStats.level is required')
     })
   })
 })

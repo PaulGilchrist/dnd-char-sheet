@@ -495,21 +495,39 @@ describe('mapTestUtils', () => {
             expect(typeof setupMapMocks).toBe('function');
         });
 
-        it('should throw when called outside a test context where vi.mock hoisting is available', () => {
-            expect(() => setupMapMocks({})).toThrow(TypeError);
-        });
-
-        it('should throw with vi.mock error message', () => {
-            try {
-                setupMapMocks();
-            } catch (e) {
-                expect(e.message).toContain('mock');
-            }
-        });
-
         it('should have a default empty object parameter', () => {
             const fnLength = setupMapMocks.length;
             expect(fnLength).toBe(0);
+        });
+
+        it('should set up MockEventSource on globalThis and it should be instantiable with a close method', () => {
+            setupMapMocks();
+
+            expect(typeof globalThis.EventSource).toBe('function');
+
+            const mockES = new globalThis.EventSource();
+            expect(mockES).toHaveProperty('onmessage');
+            expect(mockES).toHaveProperty('onerror');
+            expect(typeof mockES.close).toBe('function');
+            expect(() => mockES.close()).not.toThrow();
+        });
+
+        it('should register vi.mock for dataLoader, mapsService, logService, and all hooks', async () => {
+            setupMapMocks();
+
+            const { loadMonsters } = await import('../../services/ui/dataLoader.js');
+            expect(loadMonsters).toBeDefined();
+            expect(typeof loadMonsters).toBe('function');
+
+            const { loadMapData, saveMapData, formatMapName, loadMaps } = await import('../../services/maps/mapsService.js');
+            expect(loadMapData).toBeDefined();
+            expect(saveMapData).toBeDefined();
+            expect(formatMapName).toBeDefined();
+            expect(loadMaps).toBeDefined();
+
+            const { getLog, addEntry } = await import('../../services/ui/logService.js');
+            expect(getLog).toBeDefined();
+            expect(addEntry).toBeDefined();
         });
     });
 });

@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -48,8 +47,9 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
+import { storeSpellLastAttack } from '../../common/damageRollback.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -363,6 +363,262 @@ describe('charmPersonHandler.handle', () => {
       const abilityEntries = addEntry.mock.calls.filter(call => call[1].type === 'ability_use');
       expect(abilityEntries.length).toBe(1);
       expect(abilityEntries[0][1].characterName).toBe('WizardX');
+    });
+  });
+
+  describe('multi-target', () => {
+    it('uses charmPersonTargets from metaCtx for target resolution', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+      });
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 } },
+          { name: 'Orc', type: 'npc', saveBonuses: { WIS: 1 } },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { charmPersonTargets: ['Goblin', 'Orc'] },
+      };
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('saved');
+      expect(result.payload.description).toContain('Goblin');
+      expect(result.payload.description).toContain('Orc');
+    });
+
+    it('passes multiple targets for attackScope when charmPersonTargets has > 1 entry', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+      });
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 } },
+          { name: 'Orc', type: 'npc', saveBonuses: { WIS: 1 } },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { charmPersonTargets: ['Goblin', 'Orc'] },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+        casterName: 'TestCaster',
+        spellName: 'Charm Person',
+        saveType: 'WIS',
+        saveDc: 15,
+        attackScope: 'single',
+      });
+    });
+
+    it('applies charmPersonAdvantages per target', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+      });
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 } },
+          { name: 'Orc', type: 'npc', saveBonuses: { WIS: 1 } },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { charmPersonTargets: ['Goblin', 'Orc'], charmPersonAdvantages: { Goblin: true } },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      const calls = createSaveListener.mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[0][1].advantage).toBe(true);
+      expect(calls[1][1].advantage).toBe(false);
+    });
+  });
+
+  describe('NPC handling', () => {
+
+    it('logs ability_use entry when NPC creature IS found in combat', async () => {
+      setupBaseMocks({ success: false }, true);
+      rollSaveForCreature.mockReturnValue({ roll: 8, total: 10, bonus: 2, success: false, rawRolls: [8, 12] });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      const abilityEntries = addEntry.mock.calls.filter(call => call[1].type === 'ability_use');
+      expect(abilityEntries.length).toBe(1);
+      expect(abilityEntries[0][1]).toEqual(expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'TestCaster',
+        abilityName: 'Charm Person',
+        promptId: 'test-prompt-id',
+      }));
+    });
+  });
+
+  describe('save result dispatch', () => {
+    it('dispatches window save-result event for NPC targets', async () => {
+      const windowSpy = vi.spyOn(globalThis.window, 'dispatchEvent');
+
+      setupBaseMocks({ success: false }, true);
+      rollSaveForCreature.mockReturnValue({ roll: 8, total: 10, bonus: 2, success: false, rawRolls: [8, 12] });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(windowSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+      const customEvent = windowSpy.mock.calls[0][0];
+      expect(customEvent.type).toBe('save-result');
+      expect(customEvent.detail.targetName).toBe('Goblin');
+      expect(customEvent.detail.saveType).toBe('WIS');
+      expect(customEvent.detail.saveDc).toBe(15);
+
+      windowSpy.mockRestore();
+    });
+  });
+
+  describe('storeSpellLastAttack', () => {
+    it('stores spell attack info with WIS save details', async () => {
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(storeSpellLastAttack).toHaveBeenCalledWith(campaignName, {
+        casterName: 'TestCaster',
+        spellName: 'Charm Person',
+        saveType: 'WIS',
+        saveDc: 15,
+        attackScope: 'single',
+      });
+    });
+  });
+
+  describe('disadvantage', () => {
+    it('passes disadvantage when metamagicHeighten is set on action', async () => {
+      setupBaseMocks();
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15, targetName: 'Goblin' },
+        metaCtx: { metamagicHeighten: true },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        disadvantage: true,
+      }));
+    });
+  });
+
+  describe('activeConditionMeta', () => {
+    it('handles non-array storedConditions by defaulting to empty array', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue('not-an-array');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
+
+    it('handles undefined storedConditions by defaulting to empty array', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue(undefined);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
+    it('stores dc and ability in activeConditionMeta for charmed', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditionMeta',
+        expect.objectContaining({
+          charmed: expect.objectContaining({
+            dc: 15,
+            ability: 'wis',
+          }),
+        }),
+        campaignName,
+      );
+    });
+
+    it('merges new charmed meta with existing meta', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce({ poisoned: { duration: '1 turn' } });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditionMeta',
+        expect.objectContaining({
+          poisoned: { duration: '1 turn' },
+          charmed: { dc: 15, ability: 'wis' },
+        }),
+        campaignName,
+      );
+    });
+  });
+
+  describe('catch block errors', () => {
+    it('logs catch block error when addEntry rejects on success path', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockRejectedValue(new Error('log failure'));
+
+      const consoleSpy = vi.spyOn(console, 'error');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[charmPerson] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('logs catch block errors when addEntry rejects on failed save', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log failure'));
+
+      const consoleSpy = vi.spyOn(console, 'error');
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledTimes(3);
+      expect(consoleSpy).toHaveBeenCalledWith('[charmPerson] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 });

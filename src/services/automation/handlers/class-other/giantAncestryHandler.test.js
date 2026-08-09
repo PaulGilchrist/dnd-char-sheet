@@ -1023,6 +1023,235 @@ describe('giantAncestryHandler', () => {
         });
     });
 
+    describe('getGiantAncestrySelection', () => {
+        it('returns the stored selection for the player', async () => {
+            getRuntimeValue.mockReturnValue("Fire's Burn");
+            const { getGiantAncestrySelection } = await import('./giantAncestryHandler.js');
+            const result = getGiantAncestrySelection(makePlayerStats(), 'campaign');
+
+            expect(result).toBe("Fire's Burn");
+            expect(getRuntimeValue).toHaveBeenCalledWith('TestHero', 'giantAncestrySelection', 'campaign');
+        });
+
+        it('returns null when no selection is stored', async () => {
+            getRuntimeValue.mockReturnValue(null);
+            const { getGiantAncestrySelection } = await import('./giantAncestryHandler.js');
+            const result = getGiantAncestrySelection(makePlayerStats(), 'campaign');
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('handleDirectType', () => {
+        it('dispatches to handleCloudsJaunt when type matches teleport', async () => {
+            getRuntimeValue.mockReturnValue("Cloud's Jaunt");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'teleport' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.automationType).toBe('teleport');
+        });
+
+        it('dispatches to handleFiresBurn when type matches damage', async () => {
+            getRuntimeValue.mockReturnValue("Fire's Burn");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'damage' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+        });
+
+        it('dispatches to handleFrostsChill when type matches damage_with_condition', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Frost's Chill";
+                if (key === 'frostsChillUses') return 3;
+                if (key === 'targetEffects') return [];
+                return null;
+            });
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'damage_with_condition' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+        });
+
+        it('dispatches to handleHillsTumble when type matches auto_effect', async () => {
+            getRuntimeValue.mockReturnValue("Hill's Tumble");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'auto_effect' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+        });
+
+        it('dispatches to handleStonesEndurance when type matches damage_reduction', async () => {
+            getRuntimeValue.mockReturnValue("Stone's Endurance");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'damage_reduction' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Stone's Endurance");
+        });
+
+        it('dispatches to handleStormsThunder when type matches reaction_damage', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Storm's Thunder";
+                if (key === 'stormsThunderUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack', attackerName: 'Orc' },
+                attackerName: 'Orc',
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'reaction_damage' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+        });
+    });
+
+    describe('handleDirectType unknown option', () => {
+        it('returns info popup when stored selection is unknown', async () => {
+            getRuntimeValue.mockReturnValue("Unknown Ancestry");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'damage' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Unknown Ancestry");
+        });
+    });
+
+    describe('handleDirectType type mismatch', () => {
+        it('returns info popup when direct type does not match selection type', async () => {
+            getRuntimeValue.mockReturnValue("Cloud's Jaunt");
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'damage' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Cloud's Jaunt");
+            expect(result.payload.description).toContain('damage');
+        });
+    });
+
+    describe('handle', () => {
+        it('dispatches to handleFiresBurn when stored selection is Fire', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Fire's Burn";
+                if (key === 'firesBurnUses') return 3;
+                return null;
+            });
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.name).toBe("Fire's Burn");
+        });
+
+        it('dispatches to handleFrostsChill when stored selection is Frost', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Frost's Chill";
+                if (key === 'frostsChillUses') return 3;
+                if (key === 'targetEffects') return [];
+                return null;
+            });
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.name).toBe("Frost's Chill");
+        });
+
+        it('dispatches to handleHillsTumble when stored selection is Hill', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Hill's Tumble";
+                if (key === 'hillsTumbleUses') return 3;
+                if (key === 'activeConditions') return [];
+                return null;
+            });
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Hill's Tumble");
+        });
+
+        it('dispatches to handleStonesEndurance when stored selection is Stone', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Stone's Endurance";
+                if (key === 'stonesEnduranceUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack', attackerName: 'Orc' },
+                attackerName: 'Orc',
+                targetName: 'TestHero',
+                totalDamage: 15,
+            });
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Stone's Endurance");
+        });
+
+        it('dispatches to handleStormsThunder when stored selection is Storm', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Storm's Thunder";
+                if (key === 'stormsThunderUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack', attackerName: 'Orc' },
+                attackerName: 'Orc',
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+        });
+    });
+
     describe('handleStonesEnduranceDirect', () => {
         const directAction = {
             name: "Stone's Endurance",

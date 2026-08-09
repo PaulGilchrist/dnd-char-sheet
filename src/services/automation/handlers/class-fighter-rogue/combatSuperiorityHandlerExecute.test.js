@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     executeAttackRiderManeuver,
@@ -352,6 +351,35 @@ describe('executeAttackRiderManeuver', () => {
         );
 
         expect(result.payload.description).toContain('Reaction to move');
+    });
+
+    it('calls applyConditionToTarget with null combatSummary when getCombatContext returns null', async () => {
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(null);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const consoleSpy = vi.spyOn(console, 'error');
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Goblin' }
+        );
+
+        expect(result.payload.description).toContain('Target made STR save DC 15: Failure');
+        expect(result.payload.description).toContain('fell Prone');
+        expect(consoleSpy).toHaveBeenCalledWith(
+            expect.stringContaining('[combatSuperiority] Failed to get combatSummary')
+        );
+        consoleSpy.mockRestore();
     });
 });
 

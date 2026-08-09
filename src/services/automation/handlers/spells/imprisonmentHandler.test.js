@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -49,7 +48,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -117,6 +116,28 @@ describe('imprisonmentHandler.handle', () => {
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
       expect(result.payload.description).toContain('No creatures in combat');
+    });
+
+    it('returns popup when target not found in combat creatures', async () => {
+      buildSaveDc.mockReturnValue(15);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'TestCaster', type: 'player' },
+          { name: 'Goblin', type: 'npc' },
+        ],
+      });
+      getTargetFromAttacker.mockReturnValue({ name: 'NonExistent', type: 'npc' });
+
+      const action = {
+        name: 'Imprisonment',
+        automation: { type: 'imprisonment', saveType: 'WIS', saveDc: 15 },
+      };
+
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('not found in combat');
     });
   });
 
@@ -299,6 +320,110 @@ describe('imprisonmentHandler.handle', () => {
           disadvantage: true,
         }),
       );
+    });
+  });
+
+  describe('error handling', () => {
+    it('handles addEntry rejection in ability_use log (catch callback)', async () => {
+      getRuntimeValue.mockImplementation((key, subKey) => {
+        if (key === 'campaign' && subKey === 'targetEffects') return [];
+        if (key === 'Goblin') {
+          if (subKey === 'activeConditions') return [];
+          if (subKey === 'activeConditionMeta') return {};
+        }
+        return undefined;
+      });
+
+      rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 7, bonus: 2, rawRolls: [5] });
+      buildSaveDc.mockReturnValue(15);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 },
+        ],
+      });
+      getTargetFromAttacker.mockReturnValue({ name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 });
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false, roll: 5, total: 7, bonus: 2 }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+      const action = {
+        name: 'Imprisonment',
+        automation: { type: 'imprisonment', saveType: 'WIS', saveDc: 15 },
+        targetName: 'Goblin',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await handle(action, makePlayerStats(), campaignName, null);
+      expect(consoleSpy).toHaveBeenCalledWith('[imprisonment] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in save success path (catch callback)', async () => {
+      buildSaveDc.mockReturnValue(15);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 },
+        ],
+      });
+      getTargetFromAttacker.mockReturnValue({ name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 });
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true, roll: 12, total: 14, bonus: 2 }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+      const action = {
+        name: 'Imprisonment',
+        automation: { type: 'imprisonment', saveType: 'WIS', saveDc: 15 },
+        targetName: 'Goblin',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await handle(action, makePlayerStats(), campaignName, null);
+      expect(consoleSpy).toHaveBeenCalledWith('[imprisonment] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in failed save path (catch callbacks)', async () => {
+      getRuntimeValue.mockImplementation((key, subKey) => {
+        if (key === 'campaign' && subKey === 'targetEffects') return [];
+        if (key === 'Goblin') {
+          if (subKey === 'activeConditions') return [];
+          if (subKey === 'activeConditionMeta') return {};
+        }
+        return undefined;
+      });
+
+      rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 7, bonus: 2, rawRolls: [5] });
+      buildSaveDc.mockReturnValue(15);
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 },
+        ],
+      });
+      getTargetFromAttacker.mockReturnValue({ name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 }, currentHp: 15, maxHp: 30 });
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false, roll: 5, total: 7, bonus: 2 }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+      const action = {
+        name: 'Imprisonment',
+        automation: { type: 'imprisonment', saveType: 'WIS', saveDc: 15 },
+        targetName: 'Goblin',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await handle(action, makePlayerStats(), campaignName, null);
+      const errorCalls = consoleSpy.mock.calls;
+      expect(errorCalls.length).toBeGreaterThan(0);
+      errorCalls.forEach(call => {
+        expect(call[0]).toBe('[imprisonment] Error:');
+      });
+      consoleSpy.mockRestore();
     });
   });
 });

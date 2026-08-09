@@ -1,7 +1,6 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { handle } from './undyingSentinelHandler.js';
+import { handle, isUndyingSentinelUsed, setUndyingSentinelUsed } from './undyingSentinelHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -31,7 +30,7 @@ vi.mock('../../../ui/storage.js', () => ({
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -252,6 +251,89 @@ describe('undyingSentinelHandler', () => {
           expect.objectContaining({ type: 'combat-summary-updated' }),
         );
       });
+
+      it('logs error when addEntry promise rejects', async () => {
+        const target = makeNPCTarget('Goblin', 0);
+        const cs = { creatures: [target] };
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+        getRuntimeValue
+          .mockReturnValueOnce(false)
+          .mockReturnValue(null);
+        getCombatContext.mockResolvedValue(cs);
+        getTargetFromAttacker.mockReturnValue(target);
+        addEntry.mockRejectedValue(new Error('log failure'));
+
+        await handle(makeAction(), makePlayerStats({ level: 5 }), campaignName, null);
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '[undyingSentinel] Error:',
+          expect.any(Error),
+        );
+        consoleErrorSpy.mockRestore();
+      });
+    });
+  });
+
+  describe('isUndyingSentinelUsed', () => {
+    it('returns true when runtime value is true', () => {
+      getRuntimeValue.mockReturnValue(true);
+
+      const result = isUndyingSentinelUsed('TestCleric', campaignName);
+
+      expect(result).toBe(true);
+      expect(getRuntimeValue).toHaveBeenCalledWith(
+        'TestCleric',
+        'undyingSentinelUsed',
+        campaignName,
+      );
+    });
+
+    it('returns false when runtime value is false', () => {
+      getRuntimeValue.mockReturnValue(false);
+
+      const result = isUndyingSentinelUsed('TestCleric', campaignName);
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when runtime value is null', () => {
+      getRuntimeValue.mockReturnValue(null);
+
+      const result = isUndyingSentinelUsed('TestCleric', campaignName);
+
+      expect(result).toBe(false);
+    });
+
+    it('returns false when runtime value is undefined', () => {
+      getRuntimeValue.mockReturnValue(undefined);
+
+      const result = isUndyingSentinelUsed('TestCleric', campaignName);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('setUndyingSentinelUsed', () => {
+    it('calls setRuntimeValue with the correct arguments when used=true', async () => {
+      await setUndyingSentinelUsed('TestCleric', campaignName, true);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestCleric',
+        'undyingSentinelUsed',
+        true,
+        campaignName,
+      );
+    });
+
+    it('calls setRuntimeValue with the correct arguments when used=false', async () => {
+      await setUndyingSentinelUsed('TestCleric', campaignName, false);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestCleric',
+        'undyingSentinelUsed',
+        false,
+        campaignName,
+      );
     });
   });
 

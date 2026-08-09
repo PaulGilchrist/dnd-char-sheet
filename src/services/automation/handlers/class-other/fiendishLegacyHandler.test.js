@@ -4,16 +4,30 @@ import {
     handle,
     confirmFiendishLegacy,
     restoreUses,
+    getFiendishLegacySelection,
+    getFiendishLegacyAbility,
+    getFiendishLegacyCantrip,
+    getFiendishLegacyLevel3Spell,
+    getFiendishLegacyLevel5Spell,
 } from './fiendishLegacyHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
-    getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
+    getRuntimeValue: vi.fn((_name, key, _campaign) => {
+        const keyValues = {
+            '_fiendishLegacySelection': 'Infernal',
+            '_fiendishLegacyAbility': 'Charisma',
+            '_fiendishLegacyCantrip': 'Fire Bolt',
+            '_fiendishLegacyLevel3': 'Hellish Rebuke',
+            '_fiendishLegacyLevel5': 'Darkness',
+        };
+        return keyValues[key] || null;
+    }),
     setRuntimeValue: vi.fn(async () => {}),
 }));
 
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 const playerName = 'Warlock1';
 
 function makePlayerStats(overrides = {}) {
@@ -56,7 +70,7 @@ describe('fiendishLegacyHandler.handle', () => {
         const result = await handle(
             { name: 'Fiendish Legacy', automation: { type: 'fiendish_legacy' } },
             makePlayerStats(),
-            campaignName,
+            'test-campaign',
             null
         );
 
@@ -90,6 +104,7 @@ describe('confirmFiendishLegacy', () => {
     });
 
     it('returns error popup for invalid legacy', async () => {
+        getRuntimeValue.mockReturnValue(null);
         const result = await confirmFiendishLegacy(makePlayerStats(), 'Nonexistent', campaignName);
         expect(result.type).toBe('popup');
         expect(result.payload.type).toBe('automation_info');
@@ -103,6 +118,7 @@ describe('confirmFiendishLegacy', () => {
     });
 
     it.each(Object.entries(LEGACY_DATA))('stores all runtime values for %s', async (legacy, data) => {
+        getRuntimeValue.mockReturnValue(null);
         const result = await confirmFiendishLegacy(makePlayerStats(), legacy, campaignName);
 
         expect(result.type).toBe('popup');
@@ -138,5 +154,65 @@ describe('restoreUses', () => {
         calls.forEach((c) => {
             expect(c[2]).toBeNull();
         });
+    });
+});
+
+describe('getFiendishLegacySelection', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns the stored legacy selection from runtime', () => {
+        const result = getFiendishLegacySelection(makePlayerStats(), campaignName);
+        expect(result).toBe('Infernal');
+        expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_fiendishLegacySelection', campaignName);
+    });
+});
+
+describe('getFiendishLegacyAbility', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns the stored spellcasting ability from runtime', () => {
+        const result = getFiendishLegacyAbility(makePlayerStats(), campaignName);
+        expect(result).toBe('Charisma');
+        expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_fiendishLegacyAbility', campaignName);
+    });
+});
+
+describe('getFiendishLegacyCantrip', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns the stored cantrip from runtime', () => {
+        const result = getFiendishLegacyCantrip(makePlayerStats(), campaignName);
+        expect(result).toBe('Fire Bolt');
+        expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_fiendishLegacyCantrip', campaignName);
+    });
+});
+
+describe('getFiendishLegacyLevel3Spell', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns the stored level 3 spell from runtime', () => {
+        const result = getFiendishLegacyLevel3Spell(makePlayerStats(), campaignName);
+        expect(result).toBe('Hellish Rebuke');
+        expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_fiendishLegacyLevel3', campaignName);
+    });
+});
+
+describe('getFiendishLegacyLevel5Spell', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns the stored level 5 spell from runtime', () => {
+        const result = getFiendishLegacyLevel5Spell(makePlayerStats(), campaignName);
+        expect(result).toBe('Darkness');
+        expect(getRuntimeValue).toHaveBeenCalledWith(playerName, '_fiendishLegacyLevel5', campaignName);
     });
 });
