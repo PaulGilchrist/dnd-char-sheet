@@ -1,5 +1,5 @@
 {
-  "name": "Slemonsr",
+  "name": "Boris",
   "level": 1,
   "alignment": "True Neutral",
   "abilities": [
@@ -77,8 +77,8 @@
       "Waterskin"
     ],
     "equipped": [
-      "Greataxe",
-      "Handaxe"
+      "Handaxe",
+      "Maul"
     ],
     "gold": 10,
     "magicItems": []

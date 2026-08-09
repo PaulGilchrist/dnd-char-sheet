@@ -70,8 +70,16 @@
   },
   "immunities": [],
   "inventory": {
-    "backpack": [],
-    "equipped": [],
+    "backpack": [
+      "Hempen Rope",
+      "Tinderbox",
+      "Ration"
+    ],
+    "equipped": [
+      "Greatsword",
+      "Leather",
+      "Longbow"
+    ],
     "gold": 10,
     "magicItems": []
   },
