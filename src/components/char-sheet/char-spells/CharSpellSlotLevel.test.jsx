@@ -36,11 +36,11 @@ describe('CharSpellSlotLevel', () => {
     });
 
     it.each`
-      availableSlots | totalSlots | expectedActive
-      ${3}           | ${4}       | ${3}
-      ${4}           | ${4}       | ${4}
-      ${0}           | ${3}       | ${0}
-    `('renders $expectedActive active slots when availableSlots=$availableSlots and totalSlots=$totalSlots', ({ availableSlots, totalSlots, expectedActive }) => {
+      availableSlots | totalSlots | expectedActive | expectedInactive
+      ${3}           | ${4}       | ${1}           | ${3}
+      ${4}           | ${4}       | ${0}           | ${4}
+      ${0}           | ${3}       | ${3}           | ${0}
+    `('renders $expectedActive active slots and $expectedInactive inactive slots when availableSlots=$availableSlots and totalSlots=$totalSlots', ({ availableSlots, totalSlots, expectedActive, expectedInactive }) => {
       useRuntimeValue.mockReturnValue(availableSlots);
 
       const { container } = render(
@@ -56,9 +56,7 @@ describe('CharSpellSlotLevel', () => {
       expect(activeSlots.length).toBe(expectedActive);
 
       const inactiveSlots = [...slots].filter((slot) => slot.classList.contains('inactive'));
-      if (availableSlots === 0 && totalSlots > 0) {
-        expect(inactiveSlots.length).toBe(totalSlots);
-      }
+      expect(inactiveSlots.length).toBe(expectedInactive);
     });
 
     it('renders 4 slots in a 2x2 grid layout', () => {
@@ -98,7 +96,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(4);
+      expect(activeSlots.length).toBe(0);
     });
 
     it('falls back to totalSlots when both runtime value and _trackedResources are absent', () => {
@@ -118,7 +116,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(3);
+      expect(activeSlots.length).toBe(0);
     });
 
     it('renders all 4 slots as inactive when totalSlots is 0', () => {
@@ -141,7 +139,7 @@ describe('CharSpellSlotLevel', () => {
       expect(inactiveSlots.length).toBe(0);
     });
 
-    it('renders all slots active when totalSlots >= 4 and availableSlots >= 4', () => {
+    it('renders all 4 slots as inactive when totalSlots >= 4 and availableSlots >= 4', () => {
       useRuntimeValue.mockReturnValue(4);
 
       const { container } = render(
@@ -169,13 +167,13 @@ describe('CharSpellSlotLevel', () => {
       );
 
       const slots = [...container.querySelectorAll('.slot')];
-      // slot[0]: availableSlots > 0 => true => active
-      // slot[1]: availableSlots > 1 => false, totalSlots > 1 => true => inactive
-      // slot[2]: availableSlots > 2 => false, totalSlots > 2 => true => inactive
-      // slot[3]: availableSlots > 3 => false, totalSlots > 3 => true => inactive
+      // slot[0]: totalSlots>0 && availableSlots>=totalSlots => 4>0 && 1>=4 => false; availableSlots<totalSlots => 1<4 => true => active
+      // slot[1]: totalSlots>0 && availableSlots>=totalSlots-1 => 4>0 && 1>=3 => false; availableSlots<totalSlots-1 => 1<3 => true => active
+      // slot[2]: totalSlots>0 && availableSlots>=totalSlots-2 => 4>0 && 1>=2 => false; availableSlots<totalSlots-2 => 1<2 => true => active
+      // slot[3]: totalSlots>0 && availableSlots>=totalSlots-3 => 4>0 && 1>=1 => true => inactive
       expect(slots[0].classList.contains('active')).toBe(true);
-      expect(slots[1].classList.contains('inactive')).toBe(true);
-      expect(slots[2].classList.contains('inactive')).toBe(true);
+      expect(slots[1].classList.contains('active')).toBe(true);
+      expect(slots[2].classList.contains('active')).toBe(true);
       expect(slots[3].classList.contains('inactive')).toBe(true);
     });
 
@@ -191,10 +189,10 @@ describe('CharSpellSlotLevel', () => {
       );
 
       const slots = [...container.querySelectorAll('.slot')];
-      // slot[0]: availableSlots > 0 => true => active
-      // slot[1]: availableSlots > 1 => true => active
-      // slot[2]: availableSlots > 2 => false, totalSlots > 2 => true => inactive
-      // slot[3]: availableSlots > 3 => false, totalSlots > 3 => true => inactive
+      // slot[0]: totalSlots>0 && availableSlots>=totalSlots => 4>0 && 2>=4 => false; availableSlots<totalSlots => 2<4 => true => active
+      // slot[1]: totalSlots>0 && availableSlots>=totalSlots-1 => 4>0 && 2>=3 => false; availableSlots<totalSlots-1 => 2<3 => true => active
+      // slot[2]: totalSlots>0 && availableSlots>=totalSlots-2 => 4>0 && 2>=2 => true => inactive
+      // slot[3]: totalSlots>0 && availableSlots>=totalSlots-3 => 4>0 && 2>=1 => true => inactive
       expect(slots[0].classList.contains('active')).toBe(true);
       expect(slots[1].classList.contains('active')).toBe(true);
       expect(slots[2].classList.contains('inactive')).toBe(true);
@@ -213,13 +211,13 @@ describe('CharSpellSlotLevel', () => {
       );
 
       const slots = [...container.querySelectorAll('.slot')];
-      // slot[0]: availableSlots > 0 => true => active
-      // slot[1]: availableSlots > 1 => true => active
-      // slot[2]: availableSlots > 2 => true => active
-      // slot[3]: availableSlots > 3 => false, totalSlots > 3 => true => inactive
+      // slot[0]: totalSlots>0 && availableSlots>=totalSlots => 4>0 && 3>=4 => false; availableSlots<totalSlots => 3<4 => true => active
+      // slot[1]: totalSlots>0 && availableSlots>=totalSlots-1 => 4>0 && 3>=3 => true => inactive
+      // slot[2]: totalSlots>0 && availableSlots>=totalSlots-2 => 4>0 && 3>=2 => true => inactive
+      // slot[3]: totalSlots>0 && availableSlots>=totalSlots-3 => 4>0 && 3>=1 => true => inactive
       expect(slots[0].classList.contains('active')).toBe(true);
-      expect(slots[1].classList.contains('active')).toBe(true);
-      expect(slots[2].classList.contains('active')).toBe(true);
+      expect(slots[1].classList.contains('inactive')).toBe(true);
+      expect(slots[2].classList.contains('inactive')).toBe(true);
       expect(slots[3].classList.contains('inactive')).toBe(true);
     });
   });
@@ -455,7 +453,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(1);
+      expect(activeSlots.length).toBe(3);
     });
 
     it('uses totalSlots when _trackedResources key is missing (capped at 4 rendered slots)', () => {
@@ -477,7 +475,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(4);
+      expect(activeSlots.length).toBe(0);
     });
 
     it('uses totalSlots when _trackedResources is missing the key for the level', () => {
@@ -499,7 +497,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(4);
+      expect(activeSlots.length).toBe(0);
     });
   });
 
@@ -566,7 +564,7 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(3);
+      expect(activeSlots.length).toBe(0);
     });
 
     it('handles negative totalSlots gracefully', () => {
@@ -598,8 +596,8 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      // All 4 slots should be active since availableSlots > 3
-      expect(activeSlots.length).toBe(4);
+      // All 3 slots that have totalSlots are consumed (inactive), 4th has no class
+      expect(activeSlots.length).toBe(0);
     });
 
     it('handles level as a string', () => {
@@ -836,7 +834,8 @@ describe('CharSpellSlotLevel', () => {
 
       const slots = container.querySelectorAll('.slot');
       const activeSlots = [...slots].filter((slot) => slot.classList.contains('active'));
-      expect(activeSlots.length).toBe(3);
+      // availableSlots=3, totalSlots=5: 2 available (active), 2 consumed (inactive), 1 no class
+      expect(activeSlots.length).toBe(2);
     });
   });
 });

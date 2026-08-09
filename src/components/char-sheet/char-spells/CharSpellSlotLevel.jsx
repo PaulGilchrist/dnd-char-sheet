@@ -23,12 +23,12 @@ function CharSpellSlotLevel({ level, totalSlots, playerStats, campaignName }) {
             <div className='header'>{level}</div>
             <div className='slots'>
                 <div className='row'>
-                    <div className={`slot ${availableSlots > 0 ? 'active' : totalSlots > 0 ? 'inactive' : ''}`}></div>
-                    <div className={`slot ${availableSlots > 1 ? 'active' : totalSlots > 1 ? 'inactive' : ''}`}></div>
+                    <div className={`slot ${totalSlots > 0 && availableSlots >= totalSlots ? 'inactive' : availableSlots < totalSlots ? 'active' : ''}`}></div>
+                    <div className={`slot ${totalSlots > 1 && availableSlots >= totalSlots - 1 ? 'inactive' : availableSlots < totalSlots - 1 ? 'active' : ''}`}></div>
                 </div>
                 <div className='row'>
-                    <div className={`slot ${availableSlots > 2 ? 'active' : totalSlots > 2 ? 'inactive' : ''}`}></div>
-                    <div className={`slot ${availableSlots > 3 ? 'active' : totalSlots > 3 ? 'inactive' : ''}`}></div>
+                    <div className={`slot ${totalSlots > 2 && availableSlots >= totalSlots - 2 ? 'inactive' : availableSlots < totalSlots - 2 ? 'active' : ''}`}></div>
+                    <div className={`slot ${totalSlots > 3 && availableSlots >= totalSlots - 3 ? 'inactive' : availableSlots < totalSlots - 3 ? 'active' : ''}`}></div>
                 </div>
             </div>
         </div>

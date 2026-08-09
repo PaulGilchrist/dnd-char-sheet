@@ -21,21 +21,21 @@
     width: 10px;
 }
 .char-spell-slot-level.level > .slots > .row > .slot.active {
-    background-color: var(--color-header);
-}
-.char-spell-slot-level.level > .slots > .row > .slot.inactive {
     border: 1px solid var(--color-header);
     height: 8px;
     width: 8px;
 }
+.char-spell-slot-level.level > .slots > .row > .slot.inactive {
+    background-color: var(--color-header);
+}
 @media print {
      .char-spell-slot-level.level > .slots > .row > .slot.active {
+        background-color: transparent;
+        border: 1px solid black;
+     }
+     .char-spell-slot-level.level > .slots > .row > .slot.inactive {
         print-color-adjust: exact;
          -webkit-print-color-adjust: exact;
         background-color: black;
      }
-     .char-spell-slot-level.level > .slots > .row > .slot.inactive {
-        background-color: transparent;
-        border: 1px solid black;
-     }
-}
+  }
