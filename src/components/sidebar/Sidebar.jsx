@@ -17,24 +17,7 @@ const VIEW_LABELS = {
 };
 
 function Sidebar({ campaignName, characters, activeCharacter, onBackToCampaigns, onAddCharacter, onCharacterClick, onInitiativeClick, onEncounterClick, onFactionsClick, onMapsClick, onNotesClick, onQuestsClick, onNPCsClick, onSettlementsClick, onLogClick, onRepairClick, onRenameCampaign: _onRenameCampaign, onDeleteCampaign: _onDeleteCampaign, isLocalhost, activeView }) {
-    const [isExpanded, setIsExpanded] = useState(() => {
-        try {
-            const stored = localStorage.getItem('sidebar-characters-expanded');
-            return stored !== null ? JSON.parse(stored) : true;
-        } catch {
-            return true;
-        }
-    });
-
     const [diceResult, setDiceResult] = useState(null);
-
-    const toggleCharactersExpanded = () => {
-        setIsExpanded((prev) => {
-            const newValue = !prev;
-            localStorage.setItem('sidebar-characters-expanded', JSON.stringify(newValue));
-            return newValue;
-        });
-    };
 
     const viewInfo = VIEW_LABELS[activeView];
     const activeLabel = activeView === 'charSheet' && activeCharacter
@@ -62,26 +45,23 @@ function Sidebar({ campaignName, characters, activeCharacter, onBackToCampaigns,
                 </button>
 
                 <div className="sidebar-section">
-                    <button className="sidebar-section-header" onClick={toggleCharactersExpanded}>
-                        <span className="sidebar-toggle-icon">{isExpanded ? '\u25BC' : '\u25B6'}</span>
+                    <div className="sidebar-section-header sidebar-section-header-static">
                         Characters
-                    </button>
-                    {isExpanded && (
-                        <div className="sidebar-submenu">
-                            <button className="sidebar-link add-character" onClick={onAddCharacter}>
-                                <i className="fa-solid fa-plus"></i> Add Character
+                    </div>
+                    <div className="sidebar-submenu">
+                        <button className="sidebar-link add-character" onClick={onAddCharacter}>
+                            <i className="fa-solid fa-plus"></i> Add Character
+                        </button>
+                        {characters.map((char, index) => (
+                            <button
+                                key={`${char.name}-${index}`}
+                                className={`sidebar-link${activeView === 'charSheet' && activeCharacter && activeCharacter.name === char.name ? ' active' : ''}`}
+                                onClick={() => onCharacterClick(char)}
+                            >
+                                {char.name}
                             </button>
-                            {characters.map((char, index) => (
-                                <button
-                                    key={`${char.name}-${index}`}
-                                    className={`sidebar-link${activeView === 'charSheet' && activeCharacter && activeCharacter.name === char.name ? ' active' : ''}`}
-                                    onClick={() => onCharacterClick(char)}
-                                >
-                                    {char.name}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                        ))}
+                    </div>
                 </div>
 
                 {isLocalhost && (

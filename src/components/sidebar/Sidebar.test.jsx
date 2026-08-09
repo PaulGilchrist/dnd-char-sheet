@@ -210,24 +210,12 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('characters section toggle', () => {
-    it('should toggle characters section, persist state, and restore from localStorage', () => {
+  describe('characters section', () => {
+    it('should always show the characters section without toggle', () => {
       const props = { ...defaultProps, characters: [{ name: 'Aragorn' }] };
-
-      // Default: expanded
       render(<Sidebar {...props} />);
+      expect(screen.getByText('Characters')).toBeInTheDocument();
       expect(screen.getByText('Aragorn')).toBeInTheDocument();
-
-      // Collapse
-      const charactersHeader = screen.getByText('Characters').closest('button');
-      fireEvent.click(charactersHeader);
-      expect(screen.queryByText('Aragorn')).not.toBeInTheDocument();
-      expect(window.localStorage.getItem('sidebar-characters-expanded')).toBe('false');
-
-      // Restore from localStorage
-      window.localStorage.setItem('sidebar-characters-expanded', 'false');
-      render(<Sidebar {...props} />);
-      expect(screen.queryByText('Aragorn')).not.toBeInTheDocument();
     });
   });
 });
