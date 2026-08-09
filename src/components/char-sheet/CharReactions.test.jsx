@@ -170,6 +170,14 @@ vi.mock('../../hooks/combat/useSpellCastExecutor.js', () => ({
 vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
     resolveSpellDamageAtLevel: vi.fn(() => '1d4+2'),
     isAutoHitSpell: vi.fn(() => false),
+    resolveHealExpression: vi.fn((spell, _level, _mod) => {
+        if (typeof spell.heal_at_slot_level === 'object' && spell.heal_at_slot_level !== null) {
+            const keys = Object.keys(spell.heal_at_slot_level);
+            const raw = spell.heal_at_slot_level[keys[0]];
+            return (raw || '').replace(/\bMOD\b/g, '3').replace(/\s*([+-])\s*/g, '$1');
+        }
+        return '1d4+3';
+    }),
 }));
 
 vi.mock('../../services/ui/formatUtils.js', () => ({

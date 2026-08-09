@@ -117,3 +117,36 @@ export function resolveSpellDamageWithTypes(spell, spellLevel) {
         secondaryType: null,
     };
 }
+
+/**
+ * Resolves a healing spell's heal_at_slot_level expression for display.
+ * For cantrips (level 0), selects the highest tier up to player level.
+ * For leveled spells, uses the base tier.
+ * Replaces 'MOD' with the spellcasting ability modifier.
+ * @param {Object} spell - The spell object with heal_at_slot_level property
+ * @param {number} playerLevel - The character's level
+ * @param {number} spellCastingMod - The spellcasting ability modifier
+ * @returns {string} The resolved healing expression (e.g. "1d4+1")
+ */
+export function resolveHealExpression(spell, playerLevel, spellCastingMod) {
+    const healAtSlotLevel = spell.heal_at_slot_level;
+    if (!healAtSlotLevel || typeof healAtSlotLevel !== 'object') return '';
+
+    let expression;
+    if (spell.level === 0) {
+        // Cantrip: use highest tier up to player level
+        const levels = Object.keys(healAtSlotLevel).map(Number).filter(l => l <= playerLevel);
+        const bestLevel = levels.length > 0 ? Math.max(...levels) : Object.keys(healAtSlotLevel)[0];
+        expression = healAtSlotLevel[bestLevel];
+    } else {
+        // Leveled spell: use the first (base) key
+        const levelKeys = Object.keys(healAtSlotLevel);
+        expression = healAtSlotLevel[levelKeys[0]];
+    }
+    if (!expression) return '';
+
+    if (spellCastingMod !== null && spellCastingMod !== undefined) {
+        expression = expression.replace(/\bMOD\b/g, String(spellCastingMod));
+    }
+    return expression.replace(/\s*([+-])\s*/g, '$1');
+}

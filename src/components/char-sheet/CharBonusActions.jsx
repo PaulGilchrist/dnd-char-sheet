@@ -20,7 +20,7 @@ import { getCurrentCombatRound } from '../../services/encounters/combatData.js'
 import { getInnateSorceryBonus } from '../../services/combat/buffs/buffService.js';
 import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 import { formatRange, signFormatter, getAttackSpellLevel } from '../../services/ui/formatUtils.js';
-import { resolveSpellDamageAtLevel, isAutoHitSpell } from '../../services/rules/core/spellDamageUtils.js';
+import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
 import { useSimpleDamageRoll } from '../../hooks/combat/useSimpleDamageRoll.js';
 import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
 import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
@@ -97,7 +97,10 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     }, [cannotAct, hasChefBolsteringTreats, playerStats, campaignName, setPopupHtml]);
 
     const getBonusSpellDamageDisplay = React.useCallback((spell) => {
-        if (spell.heal_at_slot_level) return '';
+        if (spell.heal_at_slot_level) {
+            const spellCastingMod = playerStats.spellAbilities?.modifier || 0;
+            return resolveHealExpression(spell, playerStats.level, spellCastingMod);
+        }
         const resolved = resolveSpellDamageAtLevel(spell, playerStats.level);
         if (!resolved || spell.level !== 0) return resolved;
         const potentFeature = playerStats.automation?.actions?.find(
@@ -230,7 +233,9 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                          })}
                         {bonusActionSpells.map((spell) => {
                             const damageType = typeof spell.damage === 'string' ? '' : (spell.damage?.damage_type || '');
-                            const resolvedDamage = spell.heal_at_slot_level ? '' : resolveSpellDamageAtLevel(spell, playerStats.level);
+                            const resolvedDamage = spell.heal_at_slot_level
+                                ? resolveHealExpression(spell, playerStats.level, playerStats.spellAbilities?.modifier || 0)
+                                : resolveSpellDamageAtLevel(spell, playerStats.level);
                             const autoHit = isAutoHitSpell(spell);
                             const isSpellAtk = !spell.dc;
                             const hasAttackType = spell.attack_type != null && spell.attack_type !== '';

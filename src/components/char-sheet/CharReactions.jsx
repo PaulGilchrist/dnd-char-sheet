@@ -30,7 +30,7 @@ import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.
 import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js'
 import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
 import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
-import { resolveSpellDamageAtLevel, isAutoHitSpell } from '../../services/rules/core/spellDamageUtils.js'
+import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js'
 import { signFormatter } from '../../services/ui/formatUtils.js';
 import './CharActions.css'
 
@@ -51,7 +51,10 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
     const pwhStance = useRuntimeValue(playerStats?.name, 'powerWordHealStandPermission', campaignName);
 
     const getReactionSpellDamageDisplay = React.useCallback((spell) => {
-        if (spell.heal_at_slot_level) return '';
+        if (spell.heal_at_slot_level) {
+            const spellCastingMod = playerStats.spellAbilities?.modifier || 0;
+            return resolveHealExpression(spell, playerStats.level, spellCastingMod);
+        }
         const resolved = resolveSpellDamageAtLevel(spell, playerStats.level);
         if (!resolved || spell.level !== 0) return resolved;
         const potentFeature = playerStats.automation?.actions?.find(
@@ -488,7 +491,9 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                 <div className='left'><b>Type</b></div>
                 {reactionSpells.map((spell) => {
                     const damageType = typeof spell.damage === 'string' ? '' : (spell.damage?.damage_type || '');
-                    const resolvedDamage = spell.heal_at_slot_level ? '' : resolveSpellDamageAtLevel(spell, playerStats.level);
+                    const resolvedDamage = spell.heal_at_slot_level
+                        ? resolveHealExpression(spell, playerStats.level, playerStats.spellAbilities?.modifier || 0)
+                        : resolveSpellDamageAtLevel(spell, playerStats.level);
                     const autoHit = isAutoHitSpell(spell);
                     const isSpellAtk = !spell.dc;
                     const hasAttackType = spell.attack_type != null && spell.attack_type !== '';
