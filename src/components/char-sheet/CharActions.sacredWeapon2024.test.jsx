@@ -320,6 +320,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
       const stats = createStats({
         rules: '2024',
         attacks: [{ name: 'Longsword', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing', type: 'Action' }],
+        automation: { passives: [{ type: 'weapon_kind_mastery' }] },
       });
 
       await act(async () => { render(<CharActions playerStats={stats} />); });
@@ -362,6 +363,7 @@ describe('CharActions sacred weapon and 2024 mastery', () => {
           toHit: 5,
           saveDc: 13,
         },
+        automation: { passives: [{ type: 'weapon_kind_mastery' }] },
       });
 
       await act(async () => { render(<CharActions playerStats={stats} />); });

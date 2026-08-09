@@ -1451,6 +1451,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     }, [actionGateMetamagic, resolveActionSpellPositions]);
 
     const is2024Rules = playerStats.rules === '2024';
+    const hasWeaponMastery = (playerStats.automation?.passives || []).some(p => p.type === 'weapon_kind_mastery');
 
     const categories = getCategories(playerStats.rules || '5e');
 
@@ -1471,14 +1472,14 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
             <div>
                 <div className='sectionHeader'>Actions</div>
                 {cannotAct && <span className='disabled-attack-label'>(Incapacitated)</span>}
-                <div className={`attacks ${is2024Rules ? 'mastery-enabled' : ''}`}>
+                <div className={`attacks ${is2024Rules && hasWeaponMastery ? 'mastery-enabled' : ''}`}>
                     <div className='left'><b>Name</b></div>
                     <div><b>Level</b></div>
                     <div><b>Range</b></div>
                     <div><b>Hit</b></div>
                     <div><b>Damage</b></div>
                     <div className='left'><b>Type</b></div>
-                    {is2024Rules && <div><b>Mastery</b></div>}
+                    {is2024Rules && hasWeaponMastery && <div><b>Mastery</b></div>}
                     {actionAttacks.map((attack) => {
                         const attackLevel = getAttackSpellLevel(playerStats.spellAbilities, attack.name);
                         const attackItem = { ...attack };
@@ -1506,7 +1507,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                                 handleSimpleDamageRoll(attackItem);
                             }}>{attack.damage}</div>
                             <div className='left'>{attack.damageType}</div>
-                            {is2024Rules && (() => { const mastery = getWeaponMastery(attack.name, attack, playerStats); return <div className={mastery ? "clickable" : ""} onClick={() => { if (mastery) showWeaponMasteryPopup(mastery, setPopupHtml); }}>{mastery}</div>; })()}
+                            {is2024Rules && hasWeaponMastery && (() => { const mastery = getWeaponMastery(attack.name, attack, playerStats); return <div className={mastery ? "clickable" : ""} onClick={() => { if (mastery) showWeaponMasteryPopup(mastery, setPopupHtml); }}>{mastery}</div>; })()}
                         </React.Fragment>;
                     })}
                     {actionSpells.map((spell) => {
@@ -1539,7 +1540,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                                 actionGateMetamagic(spell, {});
                             }}>{getSpellDamageDisplay(spell)}</div>
                             <div className='left'>{damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility')}</div>
-                            {is2024Rules && <div></div>}
+                            {is2024Rules && hasWeaponMastery && <div></div>}
                         </React.Fragment>;
                     })}
                 </div>

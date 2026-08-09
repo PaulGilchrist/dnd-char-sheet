@@ -40,6 +40,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     const activeBuffs = useRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
 
     const is2024Rules = playerStats.rules === '2024';
+    const hasWeaponMastery = (playerStats.automation?.passives || []).some(p => p.type === 'weapon_kind_mastery');
 
     const bolsteringTreat = useRuntimeValue(playerStats.name, 'bolsteringTreat', campaignName);
     const chefBolsteringTreats = useRuntimeValue(playerStats.name, 'chefBolsteringTreats', campaignName);
@@ -189,14 +190,14 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
              */}
               <div className='sectionHeader'>Bonus Actions</div>
                 {(bonusActionAttacks.length > 0 || bonusActionSpells.length > 0) ? (
-                  <div className={`attacks ${is2024Rules ? 'mastery-enabled' : ''}`}>
+                  <div className={`attacks ${is2024Rules && hasWeaponMastery ? 'mastery-enabled' : ''}`}>
                     <div className='left'><b>Name</b></div>
                         <div><b>Level</b></div>
                         <div><b>Range</b></div>
                         <div><b>Hit</b></div>
                         <div><b>Damage</b></div>
                         <div className='left'><b>Type</b></div>
-                        {is2024Rules && <div><b>Mastery</b></div>}
+                        {is2024Rules && hasWeaponMastery && <div><b>Mastery</b></div>}
                         {bonusActionAttacks.map((attack) => {
                             const attackLevel = getAttackSpellLevel(playerStats.spellAbilities, attack.name);
                             const attackItem = { ...attack };
@@ -224,7 +225,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                                    handleSimpleDamageRoll(attackItem);
                                }}>{attack.damage}</div>
                               <div className='left'>{attack.damageType}</div>
-                               {is2024Rules && (() => { const mastery = getWeaponMastery(attack.name, attack, playerStats); return <div className={mastery ? "clickable" : ""} onClick={() => { if (mastery) showWeaponMasteryPopup(mastery, setPopupHtml); }}>{mastery}</div>; })()}
+                               {is2024Rules && hasWeaponMastery && (() => { const mastery = getWeaponMastery(attack.name, attack, playerStats); return <div className={mastery ? "clickable" : ""} onClick={() => { if (mastery) showWeaponMasteryPopup(mastery, setPopupHtml); }}>{mastery}</div>; })()}
                          </React.Fragment>;
                          })}
                         {bonusActionSpells.map((spell) => {
@@ -259,7 +260,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                                     gateMetamagic(spell, {});
                                 }}>{isUtilityConc ? '' : getBonusSpellDamageDisplay(spell)}</div>
                                 <div className='left'>{isUtilityConc ? 'Utility' : (damageType || (spell.heal_at_slot_level ? 'Healing' : 'Utility'))}</div>
-                                {is2024Rules && <div></div>}
+                                {is2024Rules && hasWeaponMastery && <div></div>}
                            </React.Fragment>;
                       })}
                       <div className='half-line'></div>

@@ -20,6 +20,7 @@
         "damage": {
             "damage_type": "Acid",
             "damage_at_slot_level": {
+                "0": "1d6",
                 "5": "2d6",
                 "11": "3d6",
                 "17": "4d6"
@@ -5336,6 +5337,7 @@
         "damage": {
             "damage_type": "Fire",
             "damage_at_slot_level": {
+                "0": "1d10",
                 "5": "2d10",
                 "11": "3d10",
                 "17": "4d10"
@@ -8943,6 +8945,7 @@
         "damage": {
             "damage_type": "Psychic",
             "damage_at_slot_level": {
+                "0": "1d6",
                 "5": "2d6",
                 "11": "3d6",
                 "17": "4d6"
@@ -10044,6 +10047,7 @@
         "damage": {
             "damage_type": "Poison",
             "damage_at_slot_level": {
+                "0": "1d12",
                 "5": "2d12",
                 "11": "3d12",
                 "17": "4d12"
@@ -10420,6 +10424,7 @@
         "damage": {
             "damage_type": "Fire",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -10747,6 +10752,7 @@
         "damage": {
             "damage_type": "Cold",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -11125,6 +11131,7 @@
         "damage": {
             "damage_type": "Radiant",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -11597,6 +11604,7 @@
         "damage": {
             "damage_type": "Force",
             "damage_at_slot_level": {
+                "0": "d8",
                 "5": "d10",
                 "11": "d12",
                 "17": "2d6"
@@ -11672,6 +11680,7 @@
         "damage": {
             "damage_type": "Lightning",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -11984,6 +11993,7 @@
         "damage": {
             "damage_type": "Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -12344,6 +12354,7 @@
         "damage": {
             "damage_type": "Radiant",
             "damage_at_slot_level": {
+                "0": "1d8",
                 "5": "2d8",
                 "11": "3d8",
                 "17": "4d8"
@@ -13500,6 +13511,7 @@
         "damage": {
             "damage_type": "Piercing",
             "damage_at_slot_level": {
+                "0": "1d6",
                 "5": "2d6",
                 "11": "3d6",
                 "17": "4d6"
@@ -13701,6 +13713,7 @@
         "damage": {
             "damage_type": "Necrotic",
             "damage_at_slot_level": {
+                "0": "1d8 or 1d12",
                 "5": "2d8 or 2d12",
                 "11": "3d8 or 3d12",
                 "17": "4d8 or 4d12"
@@ -13925,6 +13938,7 @@
         "damage": {
             "damage_type": "Radiant",
             "damage_at_slot_level": {
+                "0": "0d6",
                 "5": "1d6",
                 "11": "2d6",
                 "17": "3d6"
@@ -14080,6 +14094,7 @@
         "damage": {
             "damage_type": "Psychic",
             "damage_at_slot_level": {
+                "0": "1d6",
                 "5": "2d6",
                 "11": "3d6",
                 "17": "4d6"
@@ -14652,6 +14667,7 @@
         "damage": {
             "damage_type": "Radiant",
             "damage_at_slot_level": {
+                "0": "1d6",
                 "5": "2d6",
                 "11": "3d6",
                 "17": "4d6"

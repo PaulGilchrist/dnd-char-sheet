@@ -241,7 +241,7 @@ describe('CharBonusActions - Rendering', () => {
     const bonusActionAttack = { name: 'Main Gauche', range: 5, hitBonus: 5, damage: '1d4+3', damageType: 'Piercing', type: 'Bonus Action' };
 
     it('shows Mastery column header for 2024 rules', () => {
-      render(<CharBonusActions playerStats={createStats({ rules: '2024', attacks: [bonusActionAttack] })} getWeaponMastery={() => null} />);
+      render(<CharBonusActions playerStats={createStats({ rules: '2024', attacks: [bonusActionAttack], automation: { passives: [{ type: 'weapon_kind_mastery', name: 'Weapon Kind Mastery' }] } })} getWeaponMastery={() => null} />);
       expect(screen.getByText('Mastery')).toBeInTheDocument();
     });
   });

@@ -249,7 +249,7 @@ describe('CharActions rendering', () => {
         damageType: 'Slashing',
         type: 'Action',
       };
-      render(<CharActions playerStats={createStats({ rules: '2024', attacks: [baseAttack] })} />);
+      render(<CharActions playerStats={createStats({ rules: '2024', attacks: [baseAttack], automation: { passives: [{ type: 'weapon_kind_mastery' }] } })} />);
       expect(screen.getByText('Mastery')).toBeInTheDocument();
     });
 
