@@ -1,0 +1,20 @@
+{
+  "displayName": "Test",
+  "name": "test",
+  "type": "indoor",
+  "gridSize": 30,
+  "walls": [],
+  "placedItems": [],
+  "paintCells": [],
+  "items": [],
+  "players": [],
+  "fog": [],
+  "rooms": [],
+  "description": "",
+  "seed": 12345,
+  "terrain": {},
+  "pois": [],
+  "zoom": 1,
+  "panX": 0,
+  "panY": 0
+}

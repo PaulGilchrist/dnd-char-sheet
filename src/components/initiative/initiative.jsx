@@ -104,7 +104,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     const [overlays, setOverlays] = React.useState([])
 
-    const [turnStartTick, setTurnStartTick] = React.useState(0)
     const [runtimeStateTick, setRuntimeStateTick] = React.useState(0)
 
     const [lootData, setLootData] = React.useState({ lootEntries: [], totalEncounterXp: 0 })
@@ -115,7 +114,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     const displayCreatures = React.useMemo(() => {
         if (!combatSummary || !combatSummary.creatures) return []
-        return combatSummary.creatures.map(c => {
+        const creatures = combatSummary.creatures.map(c => {
             const runtimeConditions = getRuntimeValue(c.name, 'activeConditions') || []
             const conditionMeta = getRuntimeValue(c.name, 'activeConditionMeta') || {}
             const csConditions = c.conditions || []
@@ -157,7 +156,8 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                 conditions,
             }
         })
-    }, [combatSummary, characters, turnStartTick]) // eslint-disable-line react-hooks/exhaustive-deps
+        return creatures
+    }, [combatSummary, characters])
 
     React.useEffect(() => {
         if (!campaignName) return
@@ -267,7 +267,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                   }
                   const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(event.data))
                   applyTurnStartEffects(event.data, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                   setTurnStartTick(t => t + 1)
+                   setRuntimeStateTick(t => t + 1)
                }
            } else if (!['log', 'spell-overlay'].includes(dataKey)) {
                // Any character-level change (vowOfEnmityTarget, activeBuffs, etc.) triggers a re-render
@@ -370,7 +370,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                      }
                      const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
                      applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                     setTurnStartTick(t => t + 1)
+                     setRuntimeStateTick(t => t + 1)
                  }
               }
               }, [activeCreatureName, campaignName, characters])
@@ -402,7 +402,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                       }
                       const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
                       applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                      setTurnStartTick(t => t + 1)
+                      setRuntimeStateTick(t => t + 1)
                   }
                   storage.set('activeCreatureName', newActiveName, campaignName)
                   setActiveCreatureName(newActiveName)
@@ -1668,7 +1668,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     return (
         <div className='initiative'>
             <Subscriber campaignName={campaignName} handleEvent={handleEvent} />
-            {combatSummary && combatSummary.creatures ? (
+            {combatSummary && combatSummary.creatures && characters.length > 0 ? (
              <>
              <h4>Initiative (round {combatSummary.round})</h4>
              <div className='carousel-container' ref={carouselRef}>

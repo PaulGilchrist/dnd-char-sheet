@@ -6,6 +6,8 @@ import asyncHandler from '../utils/asyncHandler.js';
 
 const router = express.Router();
 
+const SSE_PING_INTERVAL_MS = 15000;
+
 router.get('/subscribe', (req, res) => {
     const campaignName = req.query.campaign || '';
     res.setHeader('Content-Type', 'text/event-stream');
@@ -20,6 +22,7 @@ router.get('/subscribe', (req, res) => {
         campaignName,
     };
     subscribers.push(newClient);
+    console.log('[SSE] Client connected:', clientId, 'campaign:', campaignName, 'total:', subscribers.length);
 
     if (campaignName && characterChangeData.has(campaignName)) {
         const snapshot = characterChangeData.get(campaignName);
@@ -38,7 +41,18 @@ router.get('/subscribe', (req, res) => {
         }
     }
 
+    const pingInterval = setInterval(() => {
+        try {
+            res.write(':\n\n');
+        } catch (_e) {
+            clearInterval(pingInterval);
+        }
+    }, SSE_PING_INTERVAL_MS);
+
     req.on('close', () => {
+        clearInterval(pingInterval);
+        const hasError = req.destroyed || res.destroyed;
+        console.log('[SSE] Client closed:', clientId, 'campaign:', campaignName, 'destroyed:', hasError, 'headersSent:', res.headersSent);
         const index = subscribers.findIndex(client => client.id === clientId);
         if (index !== -1) subscribers.splice(index, 1);
     });

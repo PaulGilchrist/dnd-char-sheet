@@ -306,7 +306,7 @@ export async function loadMonsters() {
             return data;
         }
     } catch (error) {
-        console.error('Error loading monsters:', error);
+        console.error('[dataLoader] Error loading monsters:', error);
     }
     return [];
 }

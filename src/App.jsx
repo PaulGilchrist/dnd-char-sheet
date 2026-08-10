@@ -452,6 +452,7 @@ function App() {
   };
 
   if (showCampaignSelection) return <CampaignSelection onCampaignSelect={handleCampaignSelect} />;
+  if (appData.isLoading) return <div className="loading-overlay"><div className="loading-spinner">Loading rules data...</div></div>;
   if (!combatSummaryLoaded) return <div className="loading-overlay"><div className="loading-spinner">Loading campaign...</div></div>;
 
   return (

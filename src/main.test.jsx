@@ -153,7 +153,7 @@ describe('main.jsx entry point', () => {
   });
 
   describe('main.jsx entry point coverage', () => {
-    it('calls ReactDOM.createRoot with #root element and renders App in StrictMode', async () => {
+    it('calls ReactDOM.createRoot with #root element and renders App without StrictMode', async () => {
       createRootMock.mockReset();
       const mockRender = vi.fn();
       createRootMock.mockReturnValue({ render: mockRender });
@@ -169,9 +169,10 @@ describe('main.jsx entry point', () => {
       expect(createRootMock).toHaveBeenCalledTimes(1);
       expect(createRootMock).toHaveBeenCalledWith(rootEl);
       expect(mockRender).toHaveBeenCalledTimes(1);
-      // Verify the rendered element is a StrictMode wrapping App
+      // Verify the rendered element is App directly (no StrictMode wrapper)
       const renderArg = mockRender.mock.calls[0][0];
-      expect(renderArg.type).toBe(React.StrictMode);
+      expect(renderArg.type).not.toBe(React.StrictMode);
+      expect(typeof renderArg.type).toBe('function');
     });
 
     it('throws when #root element does not exist in DOM', async () => {

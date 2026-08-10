@@ -23,14 +23,20 @@ const Subscriber = ({ handleEvent, campaignName }) => {
          }
         const url = `http://${host}/subscribe?${urlParams.toString()}`;
         const eventSource = new EventSource(url);
-    eventSource.onmessage = (e) => {
-            const event = JSON.parse(e.data);
-            handleEventRef.current(event);
+        eventSource.onmessage = (e) => {
+            try {
+                const event = JSON.parse(e.data);
+                handleEventRef.current(event);
+              } catch (parseErr) {
+                console.error('[Subscriber] SSE parse error:', parseErr, 'data=', e.data.substring(0, 200))
+              }
           };
+        eventSource.onerror = (err) => console.error('[Subscriber] SSE error', err);
         return () => {
             eventSource.close();
          };
      }, [campaignName]);
+
     return (
          <React.Fragment></React.Fragment>
      );

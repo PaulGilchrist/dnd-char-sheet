@@ -34,13 +34,17 @@ app.use((req, res, next) => {
 });
 
 // Serve your React build (dist folder) BEFORE API routes
-app.use(express.static(path.join(process.cwd(), 'dist')));
+app.use(express.static(path.join(process.cwd(), 'dist'), {
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'no-store');
+    }
+}));
 
 // SSE endpoint, health check, and React Router fallback
 app.use(sseRoutes);
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
       // Get local network IP (e.g., 192.168.x.x)
     const interfaces = os.networkInterfaces();
     let lanIP = 'unknown';
@@ -69,6 +73,10 @@ app.listen(PORT, () => {
 
     // Start keep-alive health check
     keepAlive();
+
+    // Prevent Node.js HTTP keepAliveTimeout (5s default) from closing long-lived SSE connections
+    server.keepAliveTimeout = 120000;
+    server.headersTimeout = 120000;
 });
 
 // Serve static files from the public directory

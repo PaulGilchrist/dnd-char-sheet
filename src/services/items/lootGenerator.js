@@ -258,8 +258,10 @@ async function loadJSONData(file) {
   try {
     const res = await fetch(`/data/${file}`);
     if (!res.ok) return [];
-    return await res.json();
+    const data = await res.json();
+    return data;
   } catch {
+    console.error('[lootGenerator] Error loading /data/', file)
     return [];
   }
 }
