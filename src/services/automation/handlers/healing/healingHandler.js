@@ -157,7 +157,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
         }
 
         const baseHeal = rollResult.total + wisModifier;
-        const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName);
+        const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
         const healAmount = baseHeal + bonusHeal;
 
         const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, isSelf ? playerStats.name : targetName, healAmount, campaignName);
@@ -291,7 +291,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             const conBonus = playerStats.abilities?.find(a => a.name === 'Constitution')?.bonus || 0;
             healAmount = computeHitDieRecovery(rollResult.total, conBonus);
         } else {
-            ({ totalBonus: healAmount, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName));
+            ({ totalBonus: healAmount, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName));
         }
 
         const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, playerStats.name, healAmount, campaignName);
@@ -384,7 +384,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
                     return null;
                 }
 
-                const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName);
+                const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
                 const healAmount = rollResult.total + bonusHeal;
 
                 const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, targetName, healAmount, campaignName);
@@ -438,7 +438,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName);
 
             const baseHeal = typeof auto.healAmount === 'number' ? auto.healAmount : null;
-            const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName);
+            const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
             const totalHealAmount = baseHeal !== null ? baseHeal + bonusHeal : auto.healExpression;
 
             // Determine target for this flat-heal path
@@ -483,10 +483,10 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             };
         } else {
          const baseHeal = typeof auto.healAmount === 'number' ? auto.healAmount : null;
-         const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiencyBonus || 0, playerStats.level || 1, slotLevel, campaignName);
-         const totalHealAmount = baseHeal !== null ? baseHeal + bonusHeal : auto.healExpression;
+          const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
+          const totalHealAmount = baseHeal !== null ? baseHeal + bonusHeal : auto.healExpression;
 
-         const defaultTargetInfo = await resolveTarget(campaignName, playerStats.name);
+          const defaultTargetInfo = await resolveTarget(campaignName, playerStats.name);
          const defaultTargetName = defaultTargetInfo?.target?.name || playerStats.name;
          const { newHp: finalNewHp, maxHp: finalMaxHp, actualHeal: finalActualHeal } = applyHealingDirectly(playerStats, defaultTargetName, totalHealAmount, campaignName);
 
