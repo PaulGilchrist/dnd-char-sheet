@@ -26,6 +26,9 @@
         }
     };
 
+    // Per-key in-flight promise dedup (shared across concurrent callers)
+    let dataPromises = {};
+
     // Shared cache for version-agnostic data (files in /data/ not /data/2024/)
      const sharedDataCache = {
        skills: null,
@@ -72,36 +75,46 @@ async function loadData(dataType, version = '5e', optional = false) {
     return versionCache[cacheKey];
   }
 
-  try {
-    const path = getDataPath(dataType, version);
-    const response = await fetch(path);
-
-    if (!response.ok) {
-          if (optional && response.status === 404) {
-              // Optional data not found - cache empty array to avoid re-fetching
-            versionCache[cacheKey] = [];
-            return [];
-            }
-          throw new Error(`Failed to load ${version} ${dataType}.json from ${path}`);
-          }
-
-        // Check if response is actually JSON (Vite dev server may return HTML for missing files)
-        const contentType = response.headers?.get?.('content-type') ?? response.headers?.['content-type'];
-        if (!contentType || !contentType.includes('application/json')) {
-          if (optional) {
-            versionCache[cacheKey] = [];
-            return [];
-            }
-          throw new Error(`Expected JSON but got ${contentType} for ${version} ${dataType}.json`);
-          }
-
-        const data = await response.json();
-        versionCache[cacheKey] = data;
-        return data;
-  } catch (error) {
-    console.error(`Error loading ${version} ${dataType}.json:`, error);
-    return [];
+  const promiseKey = `${version}:${dataType}`;
+  if (dataPromises[promiseKey]) {
+    return dataPromises[promiseKey];
   }
+
+  dataPromises[promiseKey] = (async () => {
+    try {
+      const path = getDataPath(dataType, version);
+      const response = await fetch(path);
+
+      if (!response.ok) {
+            if (optional && response.status === 404) {
+                // Optional data not found - cache empty array to avoid re-fetching
+              versionCache[cacheKey] = [];
+              return [];
+              }
+            throw new Error(`Failed to load ${version} ${dataType}.json from ${path}`);
+            }
+
+          // Check if response is actually JSON (Vite dev server may return HTML for missing files)
+          const contentType = response.headers?.get?.('content-type') ?? response.headers?.['content-type'];
+          if (!contentType || !contentType.includes('application/json')) {
+            if (optional) {
+              versionCache[cacheKey] = [];
+              return [];
+              }
+            throw new Error(`Expected JSON but got ${contentType} for ${version} ${dataType}.json`);
+            }
+
+          const data = await response.json();
+          versionCache[cacheKey] = data;
+          return data;
+    } catch (error) {
+      console.error(`Error loading ${version} ${dataType}.json:`, error);
+      return [];
+    }
+  })();
+  const result = dataPromises[promiseKey];
+  dataPromises[promiseKey] = null;
+  return result;
 }
 
 /**
@@ -241,6 +254,8 @@ export async function fetchFeatData(featName, version = '5e') {
   return feats.find(f => f.name === featName || f.index === featName.toLowerCase()) || null;
 }
 
+let abilityScoresPromise = null;
+
 /**
   * Fetches ability scores data (with caching) - version agnostic
   * @returns {Promise<object[]>} - Raw abilities array from /data/ability-scores.json
@@ -249,25 +264,38 @@ export async function loadAbilityScores() {
     if (sharedDataCache.abilityScores) {
         return sharedDataCache.abilityScores;
      }
-    try {
-        const response = await fetch('/data/ability-scores.json');
-        if (response.ok) {
-            const data = await response.json();
-            sharedDataCache.abilityScores = data;
-            return data;
+    if (abilityScoresPromise) {
+        return abilityScoresPromise;
+    }
+    abilityScoresPromise = (async () => {
+        try {
+            const response = await fetch('/data/ability-scores.json');
+            if (response.ok) {
+                const data = await response.json();
+                sharedDataCache.abilityScores = data;
+                return data;
+             }
+        } catch (error) {
+            console.error('Error loading ability scores:', error);
          }
-    } catch (error) {
-        console.error('Error loading ability scores:', error);
+         return [
+             { full_name: 'Strength', skills: ['Athletics'] },
+             { full_name: 'Dexterity', skills: ['Acrobatics', 'Sleight of Hand', 'Stealth'] },
+             { full_name: 'Constitution', skills: [] },
+             { full_name: 'Intelligence', skills: ['Arcana', 'History', 'Investigation', 'Nature', 'Religion'] },
+             { full_name: 'Wisdom', skills: ['Animal Handling', 'Insight', 'Medicine', 'Perception', 'Survival'] },
+             { full_name: 'Charisma', skills: ['Deception', 'Intimidation', 'Performance', 'Persuasion'] }
+          ];
+     })();
+     try {
+         const result = await abilityScoresPromise;
+         return result;
+     } finally {
+         abilityScoresPromise = null;
      }
-     return [
-         { full_name: 'Strength', skills: ['Athletics'] },
-         { full_name: 'Dexterity', skills: ['Acrobatics', 'Sleight of Hand', 'Stealth'] },
-         { full_name: 'Constitution', skills: [] },
-         { full_name: 'Intelligence', skills: ['Arcana', 'History', 'Investigation', 'Nature', 'Religion'] },
-         { full_name: 'Wisdom', skills: ['Animal Handling', 'Insight', 'Medicine', 'Perception', 'Survival'] },
-         { full_name: 'Charisma', skills: ['Deception', 'Intimidation', 'Performance', 'Persuasion'] }
-      ];
-  }
+   }
+
+let equipmentPromise = null;
 
 /**
   * Fetches equipment data (with caching) - version agnostic
@@ -277,82 +305,130 @@ export async function loadEquipment() {
     if (sharedDataCache.equipment) {
         return sharedDataCache.equipment;
     }
-    try {
-        const response = await fetch('/data/equipment.json');
-        if (response.ok) {
-            const data = await response.json();
-            sharedDataCache.equipment = data;
-            return data;
-        }
-    } catch (error) {
-        console.error('Error loading equipment:', error);
+    if (equipmentPromise) {
+        return equipmentPromise;
     }
-    return [];
+    equipmentPromise = (async () => {
+        try {
+            const response = await fetch('/data/equipment.json');
+            if (response.ok) {
+                const data = await response.json();
+                sharedDataCache.equipment = data;
+                return data;
+            }
+        } catch (error) {
+            console.error('Error loading equipment:', error);
+        }
+        return [];
+    })();
+    try {
+        const result = await equipmentPromise;
+        return result;
+    } finally {
+        equipmentPromise = null;
+    }
 }
 
 /**
   * Fetches monsters data (with caching)
   * @returns {Promise<object[]>} - Array of monster data from /data/monsters.json
   */
+let monstersPromise = null;
+
 export async function loadMonsters() {
     if (sharedDataCache.monsters) {
         return sharedDataCache.monsters;
     }
-    try {
-        const response = await fetch('/data/monsters.json');
-        if (response.ok) {
-            const data = await response.json();
-            sharedDataCache.monsters = data;
-            return data;
-        }
-    } catch (error) {
-        console.error('[dataLoader] Error loading monsters:', error);
+    if (monstersPromise) {
+        return monstersPromise;
     }
-    return [];
+    monstersPromise = (async () => {
+        try {
+            const response = await fetch('/data/monsters.json');
+            if (response.ok) {
+                const data = await response.json();
+                sharedDataCache.monsters = data;
+                return data;
+            }
+        } catch (error) {
+            console.error('[dataLoader] Error loading monsters:', error);
+        }
+        return [];
+    })();
+    try {
+        const result = await monstersPromise;
+        return result;
+    } finally {
+        monstersPromise = null;
+    }
 }
 
+let magicItemsPromise = null;
+
 /**
-   * Fetches magic items data (with caching) - version agnostic
-   * @returns {Promise<object[]>} - Array of magic items data
-   */
+    * Fetches magic items data (with caching) - version agnostic
+    * @returns {Promise<object[]>} - Array of magic items data
+    */
     export async function loadMagicItems() {
         if (sharedDataCache.magicItems) {
           return sharedDataCache.magicItems;
         }
-
-        try {
-            const response = await fetch('/data/magic-items.json');
-             if (response.ok) {
-                const data = await response.json();
-             sharedDataCache.magicItems = data;
-                return data;
-                 }
-            } catch (error) {
-               console.error('Error loading magic items:', error);
-                }
-         return [];
+        if (magicItemsPromise) {
+          return magicItemsPromise;
+        }
+        magicItemsPromise = (async () => {
+            try {
+                const response = await fetch('/data/magic-items.json');
+                 if (response.ok) {
+                    const data = await response.json();
+                 sharedDataCache.magicItems = data;
+                    return data;
+                     }
+                } catch (error) {
+                   console.error('Error loading magic items:', error);
+                    }
+              return [];
+         })();
+         try {
+            const result = await magicItemsPromise;
+            return result;
+         } finally {
+            magicItemsPromise = null;
+         }
        }
 
+let fightingStylesPromise = null;
+
 /**
-   * Fetches fighting styles data (with caching) - version agnostic
-   * @returns {Promise<object[]>} - Array of fighting styles data
-   */
+    * Fetches fighting styles data (with caching) - version agnostic
+    * @returns {Promise<object[]>} - Array of fighting styles data
+    */
     export async function loadFightingStyles() {
         if (sharedDataCache.fightingStyles) {
           return sharedDataCache.fightingStyles;
         }
-
-        try {
-            const response = await fetch('/data/fighting-styles.json');
-             if (response.ok) {
-                const data = await response.json();
-             sharedDataCache.fightingStyles = data;
-                return data;
-                 }
-            } catch (error) {
-               console.error('Error loading fighting styles:', error);
-                }
-         return [];
+        if (fightingStylesPromise) {
+          return fightingStylesPromise;
+        }
+        fightingStylesPromise = (async () => {
+            try {
+                const response = await fetch('/data/fighting-styles.json');
+                 if (response.ok) {
+                    const data = await response.json();
+                 sharedDataCache.fightingStyles = data;
+                    return data;
+                     }
+                } catch (error) {
+                   console.error('Error loading fighting styles:', error);
+                    }
+              return [];
+         })();
+         try {
+            const result = await fightingStylesPromise;
+            return result;
+         } finally {
+            fightingStylesPromise = null;
+         }
        }
 
 /**
@@ -365,6 +441,8 @@ export async function loadMonsters() {
     const version = playerStats?.rules || '5e';
     return loadSpells(version);
 }
+
+let maneuversPromise = null;
 
 /**
  * Fetches maneuvers data (with caching)
@@ -379,19 +457,33 @@ export async function loadManeuvers(version = '5e') {
         return versionCache[cacheKey];
     }
 
-    try {
-        const path = getDataPath('maneuvers', version);
-        const response = await fetch(path);
-        if (response.ok) {
-            const data = await response.json();
-            versionCache[cacheKey] = data;
-            return data;
-        }
-    } catch (error) {
-        console.error(`Error loading ${version} maneuvers.json:`, error);
+    if (maneuversPromise && maneuversPromise.version === version) {
+        return maneuversPromise.promise;
     }
-    return [];
+
+    maneuversPromise = { version, promise: (async () => {
+        try {
+            const path = getDataPath('maneuvers', version);
+            const response = await fetch(path);
+            if (response.ok) {
+                const data = await response.json();
+                versionCache[cacheKey] = data;
+                return data;
+            }
+        } catch (error) {
+            console.error(`Error loading ${version} maneuvers.json:`, error);
+        }
+        return [];
+    })() };
+    try {
+        const result = await maneuversPromise.promise;
+        return result;
+    } finally {
+        maneuversPromise = null;
+    }
 }
+
+let spellsPromise = null;
 
 /**
  * Fetches spells data (with caching)
@@ -406,18 +498,30 @@ export async function loadSpells(version = '5e') {
         return versionCache[cacheKey];
     }
 
-    try {
-        const path = getDataPath('spells', version);
-        const response = await fetch(path);
-        if (response.ok) {
-            const data = await response.json();
-            versionCache[cacheKey] = data;
-            return data;
-        }
-    } catch (error) {
-        console.error(`Error loading ${version} spells.json:`, error);
+    if (spellsPromise && spellsPromise.version === version) {
+        return spellsPromise.promise;
     }
-    return [];
+
+    spellsPromise = { version, promise: (async () => {
+        try {
+            const path = getDataPath('spells', version);
+            const response = await fetch(path);
+            if (response.ok) {
+                const data = await response.json();
+                versionCache[cacheKey] = data;
+                return data;
+            }
+        } catch (error) {
+            console.error(`Error loading ${version} spells.json:`, error);
+        }
+        return [];
+    })() };
+    try {
+        const result = await spellsPromise.promise;
+        return result;
+    } finally {
+        spellsPromise = null;
+    }
 }
 
 /**
@@ -464,6 +568,8 @@ export async function loadSkills() {
      ];
  }
 
+let passiveSkillsPromise = null;
+
 /**
   * Fetches passive skills (with caching) - version agnostic
   * @returns {Promise<string[]>} - Array of passive skill names
@@ -472,43 +578,67 @@ export async function loadPassiveSkills() {
     if (sharedDataCache.passiveSkills) {
         return sharedDataCache.passiveSkills;
      }
-    try {
-        const response = await fetch('/data/passive-skills.json');
-        if (response.ok) {
-            const data = await response.json();
-            sharedDataCache.passiveSkills = data;
-            return data;
+    if (passiveSkillsPromise) {
+        return passiveSkillsPromise;
+    }
+    passiveSkillsPromise = (async () => {
+        try {
+            const response = await fetch('/data/passive-skills.json');
+            if (response.ok) {
+                const data = await response.json();
+                sharedDataCache.passiveSkills = data;
+                return data;
+             }
+        } catch (error) {
+            console.error('Error loading passive skills:', error);
          }
-    } catch (error) {
-        console.error('Error loading passive skills:', error);
+         // Fallback
+         return ['Insight', 'Investigation', 'Perception'];
+     })();
+     try {
+         const result = await passiveSkillsPromise;
+         return result;
+     } finally {
+         passiveSkillsPromise = null;
      }
-     // Fallback
-     return ['Insight', 'Investigation', 'Perception'];
- }
+  }
+
+let wildMagicSurgePromise = null;
 
 /**
-   * Fetches wild magic surge table data (with caching) - version agnostic
-   * @returns {Promise<object[]>} - Array of surge entries with min/max/effect
-   */
+    * Fetches wild magic surge table data (with caching) - version agnostic
+    * @returns {Promise<object[]>} - Array of surge entries with min/max/effect
+    */
 export async function loadWildMagicSurgeTable() {
     if (sharedDataCache.wildMagicSurgeTable) {
         return sharedDataCache.wildMagicSurgeTable;
     }
-    try {
-        const response = await fetch('/data/wild-magic-surge.json');
-        if (response.ok) {
-            const data = await response.json();
-            const parsed = data.map(entry => {
-                const [min, max] = entry.range.split('-').map(Number);
-                return { min, max, effect: entry.effect };
-            });
-            sharedDataCache.wildMagicSurgeTable = parsed;
-            return parsed;
-        }
-    } catch (error) {
-        console.error('Error loading wild magic surge table:', error);
+    if (wildMagicSurgePromise) {
+        return wildMagicSurgePromise;
     }
-    return [];
+    wildMagicSurgePromise = (async () => {
+        try {
+            const response = await fetch('/data/wild-magic-surge.json');
+            if (response.ok) {
+                const data = await response.json();
+                const parsed = data.map(entry => {
+                    const [min, max] = entry.range.split('-').map(Number);
+                    return { min, max, effect: entry.effect };
+                });
+                sharedDataCache.wildMagicSurgeTable = parsed;
+                return parsed;
+            }
+        } catch (error) {
+            console.error('Error loading wild magic surge table:', error);
+        }
+        return [];
+    })();
+    try {
+        const result = await wildMagicSurgePromise;
+        return result;
+    } finally {
+        wildMagicSurgePromise = null;
+    }
 }
 
 /**
@@ -533,6 +663,7 @@ export function clearDataCache() {
          spells: null,
          maneuvers: null
         };
+    dataPromises = {};
     sharedDataCache.skills = null;
       sharedDataCache.abilityScores = null;
     sharedDataCache.passiveSkills = null;

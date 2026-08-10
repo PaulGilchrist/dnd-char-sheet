@@ -291,6 +291,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const newImages = {}
             results.forEach(({ name, url }) => { newImages[name] = url })
             setNpcImages(newImages)
+        }).catch(err => {
+            if (cancelled) return
+            console.error('[initiative] NPC image resolution failed:', err)
         })
         return () => { cancelled = true }
     }, [combatSummary, campaignNpcs, campaignName])

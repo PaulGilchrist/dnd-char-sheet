@@ -33,10 +33,27 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve your React build (dist folder) BEFORE API routes
+// Serve static files from the public directory FIRST so live rule data
+// (/data/*) and campaign files (/campaigns/*) are never shadowed by the
+// stale copies Vite copies into dist/. /data/* never changes at runtime.
+app.use(express.static(path.join(process.cwd(), 'public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.includes('/data/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+            res.setHeader('Cache-Control', 'no-store');
+        }
+    }
+}));
+
+// Serve your React build (dist folder) - content-hashed assets cache forever
 app.use(express.static(path.join(process.cwd(), 'dist'), {
-    setHeaders: (res) => {
-        res.setHeader('Cache-Control', 'no-store');
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.css') || filePath.endsWith('.js') || filePath.match(/\.(woff2|woff|ttf|eot|otf|jpg|jpeg|png|gif|webp|svg|ico)$/i)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+            res.setHeader('Cache-Control', 'no-store');
+        }
     }
 }));
 
@@ -78,14 +95,6 @@ const server = app.listen(PORT, () => {
     server.keepAliveTimeout = 120000;
     server.headersTimeout = 120000;
 });
-
-// Serve static files from the public directory
-app.use(express.static(path.join(process.cwd(), 'public'), {
-    setHeaders: (res) => {
-        res.setHeader('Cache-Control', 'no-store');
-    }
-}));
-
 // ====== API ROUTES (mounted in original order) ======
 
 // Map routes (must be before wildcard :campaign route)
