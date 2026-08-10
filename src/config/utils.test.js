@@ -196,23 +196,10 @@ describe('character-creation/utils', () => {
         expect(errors).toHaveProperty('class', 'Class is required');
       });
 
-      it('requires subclass when the selected class has subclasses and none is chosen', async () => {
+      it('does not require subclass (subclass validation is handled in step 7)', async () => {
         const classSubtypes = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }] }];
         const formData = { class: { name: 'Fighter' } };
         const errors = await utils.validateStep(6, formData, {}, [], classSubtypes, '5e');
-        expect(errors).toHaveProperty('subclass', 'Subclass is required');
-      });
-
-      it('does not require subclass when the class has no subclasses', async () => {
-        const classSubtypes = [{ className: 'Fighter', subtypes: [] }];
-        const formData = { class: { name: 'Fighter' } };
-        const errors = await utils.validateStep(6, formData, {}, [], classSubtypes, '5e');
-        expect(errors).not.toHaveProperty('subclass');
-      });
-
-      it('does not require subclass when the class is not found in classSubtypes', async () => {
-        const formData = { class: { name: 'Rogue' } };
-        const errors = await utils.validateStep(6, formData, {}, [], [], '5e');
         expect(errors).not.toHaveProperty('subclass');
       });
     });

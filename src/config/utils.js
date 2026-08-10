@@ -143,16 +143,6 @@ export async function validateStep(step, formData, errors, racesData = [], class
     if (!formData.class || !formData.class.name) {
       newErrors.class = 'Class is required';
     }
-    
-    if (formData.class?.name) {
-      const selectedClass = classSubtypes.find(cs => cs.className === formData.class.name);
-      const availableSubclasses = selectedClass?.subtypes || [];
-      if (availableSubclasses.length > 0) {
-        if (!formData.class.subclass || !formData.class.subclass.name) {
-          newErrors.subclass = 'Subclass is required';
-        }
-      }
-    }
   }
   
   if (step === 7) {
