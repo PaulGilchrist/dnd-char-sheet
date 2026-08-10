@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../ui/dataLoader.js', () => ({
   loadSkills: vi.fn(),
-  loadPassiveSkills: vi.fn(),
   loadWildMagicSurgeTable: vi.fn(async () => []),
   loadFeatData: vi.fn().mockResolvedValue([]),
 }));
@@ -176,7 +175,6 @@ describe('rules', () => {
   describe('getAbilities (5e)', () => {
     beforeEach(() => {
       vi.mocked(dataLoader.loadSkills).mockResolvedValue(defaultSkills);
-      vi.mocked(dataLoader.loadPassiveSkills).mockResolvedValue(['Insight', 'Investigation', 'Perception']);
       raceRules.getRacialBonus.mockReturnValue(0);
     });
 

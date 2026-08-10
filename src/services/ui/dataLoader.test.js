@@ -18,7 +18,6 @@ import {
     loadMagicItems,
     loadSpells,
     loadSkills,
-    loadPassiveSkills,
     loadManeuvers,
     clearDataCache,
     getCacheState
@@ -483,26 +482,6 @@ describe('dataLoader', () => {
             expect(result).toHaveLength(18);
             expect(result[0]).toEqual({ name: 'Athletics', ability: 'Strength' });
             expect(result[17]).toEqual({ name: 'Persuasion', ability: 'Charisma' });
-        });
-    });
-
-    describe('loadPassiveSkills', () => {
-        it('loads passive skills and caches them', async () => {
-            const mockData = ['Insight', 'Investigation', 'Perception'];
-            global.fetch.mockResolvedValueOnce(mockSuccessResponse(mockData));
-
-            const result1 = await loadPassiveSkills();
-            expect(result1).toEqual(mockData);
-
-            const result2 = await loadPassiveSkills();
-            expect(result2).toEqual(mockData);
-        });
-
-        it('returns fallback passive skills on error', async () => {
-            global.fetch.mockResolvedValueOnce(mockErrorResponse(500));
-
-            const result = await loadPassiveSkills();
-            expect(result).toEqual(['Insight', 'Investigation', 'Perception']);
         });
     });
 

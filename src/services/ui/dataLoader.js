@@ -33,7 +33,7 @@
      const sharedDataCache = {
        skills: null,
         abilityScores: null,
-      passiveSkills: null,
+
        equipment: null,
       monsters: null,
       magicItems: null,
@@ -568,41 +568,6 @@ export async function loadSkills() {
      ];
  }
 
-let passiveSkillsPromise = null;
-
-/**
-  * Fetches passive skills (with caching) - version agnostic
-  * @returns {Promise<string[]>} - Array of passive skill names
-  */
-export async function loadPassiveSkills() {
-    if (sharedDataCache.passiveSkills) {
-        return sharedDataCache.passiveSkills;
-     }
-    if (passiveSkillsPromise) {
-        return passiveSkillsPromise;
-    }
-    passiveSkillsPromise = (async () => {
-        try {
-            const response = await fetch('/data/passive-skills.json');
-            if (response.ok) {
-                const data = await response.json();
-                sharedDataCache.passiveSkills = data;
-                return data;
-             }
-        } catch (error) {
-            console.error('Error loading passive skills:', error);
-         }
-         // Fallback
-         return ['Insight', 'Investigation', 'Perception'];
-     })();
-     try {
-         const result = await passiveSkillsPromise;
-         return result;
-     } finally {
-         passiveSkillsPromise = null;
-     }
-  }
-
 let wildMagicSurgePromise = null;
 
 /**
@@ -666,7 +631,6 @@ export function clearDataCache() {
     dataPromises = {};
     sharedDataCache.skills = null;
       sharedDataCache.abilityScores = null;
-    sharedDataCache.passiveSkills = null;
      sharedDataCache.equipment = null;
    sharedDataCache.monsters = null;
  sharedDataCache.magicItems = null;

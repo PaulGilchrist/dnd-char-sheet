@@ -6,7 +6,6 @@ import rules from '../rules.js';
 vi.mock('../ui/dataLoader.js', () => ({
   loadWildMagicSurgeTable: vi.fn(async () => []),
   loadSkills: vi.fn(),
-  loadPassiveSkills: vi.fn(),
   loadFeatData: vi.fn().mockResolvedValue([]),
 }));
 

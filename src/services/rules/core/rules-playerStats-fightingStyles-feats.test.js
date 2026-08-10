@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../ui/dataLoader.js', () => ({
   loadSkills: vi.fn(),
-  loadPassiveSkills: vi.fn(),
   loadFeatData: vi.fn().mockResolvedValue([]),
   loadBackgroundData: vi.fn(() => null),
   loadWildMagicSurgeTable: vi.fn(async () => []),
@@ -150,7 +149,6 @@ const makePlayerSummary = (overrides = {}) => ({
 
 const setupDefaults = (overrides = {}) => {
   vi.mocked(dataLoader.loadSkills).mockResolvedValue(defaultSkills);
-  vi.mocked(dataLoader.loadPassiveSkills).mockResolvedValue(['Insight']);
   classRules.getClass.mockReturnValue({ name: 'Fighter', hit_die: 10, saving_throws: [], proficiencies: [], class_levels: [{}], languages: [], subclass: {}, major: {}, ...overrides.class });
   raceRules.getRace.mockReturnValue({ name: 'Human', languages: ['Common'], traits: [], ...overrides.race });
   raceRules.getTraits.mockReturnValue({ actions: [], bonusActions: [], reactions: [], specialActions: [], characterAdvancement: [], ...overrides.traits });
@@ -173,7 +171,6 @@ const setupDefaults = (overrides = {}) => {
 
 const setupDefaults2024 = (overrides = {}) => {
   vi.mocked(dataLoader.loadSkills).mockResolvedValue(defaultSkills);
-  vi.mocked(dataLoader.loadPassiveSkills).mockResolvedValue(['Insight']);
   classRules2024.getClass.mockReturnValue({ name: 'Fighter', hit_die: 10, saving_throws: [], proficiencies: [], class_levels: [{}], languages: [], major: {}, ...overrides.class });
   raceRules2024.getRace.mockReturnValue({ name: 'Human', languages: ['Common'], traits: [], ...overrides.race });
   raceRules2024.getTraits.mockReturnValue({ actions: [], bonusActions: [], reactions: [], specialActions: [], characterAdvancement: [], ...overrides.traits });
