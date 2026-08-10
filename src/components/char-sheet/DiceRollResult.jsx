@@ -1,7 +1,52 @@
 import { useState } from 'react';
 import './diceRollResult.css';
 
-function DiceRollResult({ name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, targetName, targetAc, hit, resistanceNotice, hunterLoreNotice, forcedMode, advantageReason, isAutoMiss, rangeReason, coverReason, isAutoCrit, isCrit, isNatural1, dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, onQuickRoll, autoDamage, coverLevel, coverAcBonus, autoReroll, autoRerollBonus, autoRerollCondition, strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus, reliableTalent, onReroll, tacticalMind, tacticalMindBonus, darkOnesLuck, onDarkOnesLuck, strokeOfLuck, onStrokeOfLuck, defensiveDuelistBonus, baitAndSwitchBonus, isPotentCantrip, luckyAdvantage, luckyDisadvantage, onLuckyAdvantage, onLuckyDisadvantage, secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType, secondaryFinalDamage, secondarySaveResult, availableSuperiorityManeuvers, onSuperiorityManeuver, onTacticalMind, gwfApplied, gwfOriginalRolls, gwfDisplayRolls, elementalAdeptBonus, types, baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls, finalHeal, healReduced, bonusHeal, bonusHealDetail, psiBolsteredKnack, onPsiBolsteredKnack, psiBolsteredKnackDieSize, bardicInspiration, bardicInspirationDie, onBardicInspiration, luckyRerolled, luckyRerollValue, bardicInspirationDefense, bardicInspirationDefenseDieSize, bardicInspirationDefenseTargetName: _bardicInspirationDefenseTargetName, bardicInspirationOffense, bardicInspirationOffenseDieSize, onBardicInspirationDefense, onBardicInspirationOffense, unerringStrikeApplied, onDone, interceptedFeature, empoweredSpell, _empoweredSpellChaMod, spellName, onEmpoweredSpell, d20Floor10, starryDragonFloor, autoRerollForAttack, healingRerollOriginalRolls, healingRerollDisplayRolls, piercerPuncture, onPuncture,     critLabels, savageAttacker, onSavageAttacker, tavernBrawlerRerolls,         rayOfEnfeebleReduction, rayOfEnfeebleRoll, resistanceReduction, resistanceRoll, holyAuraSaveResult }) {
+function DiceRollResult(props) {
+    const {
+        // Roll data
+        name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, critLabels,
+
+        // Combat/target data
+        targetName, targetAc, hit, isAutoMiss, rangeReason, coverReason, coverLevel, coverAcBonus,
+        defensiveDuelistBonus, baitAndSwitchBonus, unerringStrikeApplied, interceptedFeature,
+        isCrit, isAutoCrit, isNatural1,
+
+        // Save data
+        dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, holyAuraSaveResult,
+
+        // Damage/heal data
+        finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, autoDamage,
+        secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType,
+        secondaryFinalDamage, secondarySaveResult,
+        finalHeal, healReduced, bonusHeal, bonusHealDetail, types,
+        baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls,
+        rayOfEnfeebleReduction, rayOfEnfeebleRoll, resistanceReduction, resistanceRoll,
+        elementalAdeptBonus, isPotentCantrip,
+
+        // Feature flags
+        strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus,
+        reliableTalent, tacticalMind, tacticalMindBonus, darkOnesLuck, strokeOfLuck,
+        luckyAdvantage, luckyDisadvantage,
+        bardicInspiration, bardicInspirationDie,         bardicInspirationDefense, bardicInspirationDefenseDieSize,
+        bardicInspirationOffense, bardicInspirationOffenseDieSize,
+        availableSuperiorityManeuvers, psiBolsteredKnack, psiBolsteredKnackDieSize,
+        empoweredSpell, savageAttacker, piercerPuncture,
+        autoReroll, autoRerollBonus, autoRerollCondition, autoRerollForAttack,
+        tavernBrawlerRerolls, d20Floor10, starryDragonFloor,
+        luckyRerolled, luckyRerollValue,
+        healingRerollOriginalRolls, healingRerollDisplayRolls,
+        gwfApplied, gwfOriginalRolls, gwfDisplayRolls,
+        spellName,
+
+        // Callbacks
+        onQuickRoll, onReroll, onDarkOnesLuck, onStrokeOfLuck, onLuckyAdvantage, onLuckyDisadvantage,
+        onSuperiorityManeuver, onTacticalMind, onPsiBolsteredKnack, onBardicInspiration,
+        onBardicInspirationDefense, onBardicInspirationOffense, onEmpoweredSpell, onPuncture,
+        onSavageAttacker, onDone,
+
+        // Notices
+        resistanceNotice, hunterLoreNotice, advantageReason, forcedMode,
+    } = props;
     const isD20 = type === 'd20';
     const [mode, setMode] = useState(forcedMode || 'normal');
     const [rerollUsed, setRerollUsed] = useState(false);
