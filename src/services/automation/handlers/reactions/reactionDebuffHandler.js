@@ -17,7 +17,7 @@ function getRuntimeUsesKey(featureName) {
     return featureName.toLowerCase().replace(/\s+/g, '') + 'Uses';
 }
 
-async function handleAttackRollDebuff(action, _playerStats, campaignName, mapName, attackerName, bardicDieSize, biDieRoll, combatSummary) {
+async function handleAttackRollDebuff(action, _playerStats, campaignName, _mapName, attackerName, bardicDieSize, biDieRoll, combatSummary) {
     const auto = action.automation;
 
     const attackResult = await findLastAttack(campaignName);
@@ -72,7 +72,7 @@ async function handleAttackRollDebuff(action, _playerStats, campaignName, mapNam
     return infoPopup(action.name, description, auto, { defenderHp });
 }
 
-async function handleDamageDebuff(action, _playerStats, campaignName, mapName, attackerName, bardicDieSize, biDieRoll, combatSummary) {
+async function handleDamageDebuff(action, _playerStats, campaignName, _mapName, attackerName, bardicDieSize, biDieRoll, combatSummary) {
     const auto = action.automation;
 
     const attackResult = await findLastAttack(campaignName);
@@ -101,7 +101,7 @@ async function handleDamageDebuff(action, _playerStats, campaignName, mapName, a
     return infoPopup(action.name, description, auto, { defenderHp });
 }
 
-async function handleDisadvantageDebuff(action, _playerStats, campaignName, mapName, attackerName, combatSummary) {
+async function handleDisadvantageDebuff(action, _playerStats, campaignName, _mapName, attackerName, combatSummary) {
     const auto = action.automation;
 
     const attackResult = await findLastAttack(campaignName);
@@ -150,7 +150,7 @@ async function handleDisadvantageDebuff(action, _playerStats, campaignName, mapN
     return infoPopup(action.name, description, auto, { defenderHp, defenderName, healedAmount });
 }
 
-async function handleTeleportAndSlow(action, playerStats, campaignName, mapName) {
+async function handleTeleportAndSlow(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const featureName = action.name || 'Branches of the Tree';
     const playerName = playerStats.name;
@@ -172,7 +172,7 @@ async function handleTeleportAndSlow(action, playerStats, campaignName, mapName)
     const rangeFt = rangeToFeet(auto.range || '30_ft');
     const activeMapName = getRuntimeValue('__map__', 'activeMapName');
 
-    if (activeMapName && mapName) {
+    if (activeMapName && _mapName) {
         const combatSummary = getCombatSummary(campaignName);
         if (combatSummary) {
             const playerCreature = combatSummary.players?.find(p => p.name === playerName);
@@ -317,7 +317,7 @@ function parseMagicItemName(itemName) {
     return { baseName: itemName, magicBonus: 0 };
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Feature';
@@ -396,7 +396,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
 
         const rangeFt = auto.range ? parseInt(auto.range.replace(/[^0-9]/g, '')) || 5 : 5;
-        if (mapName && rangeFt != null) {
+        if (_mapName && rangeFt != null) {
             const positions = await resolveMapPositions(campaignName, playerName);
             if (positions?.attackerPos && positions?.targetPos) {
                 const inRange = await isWithinRange(playerName, lastAttackerName, rangeFt);
@@ -426,7 +426,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
         await setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
 
-        result = await handleDisadvantageDebuff(action, playerStats, campaignName, mapName, lastAttackerName, combatSummary);
+        result = await handleDisadvantageDebuff(action, playerStats, campaignName, _mapName, lastAttackerName, combatSummary);
     } else if (effect === 'disadvantage_on_attack_roll') {
         const attackResult = await findLastAttack(campaignName);
         const attackEvent = attackResult.attackEvent;
@@ -438,7 +438,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
         const rangeFt = auto.range ? parseInt(auto.range.replace(/[^0-9]/g, '')) || 30 : 30;
 
-        if (mapName && rangeFt != null) {
+        if (_mapName && rangeFt != null) {
             const positions = await resolveMapPositions(campaignName, playerName);
             if (positions?.attackerPos && positions?.targetPos) {
                 const inRange = await isWithinRange(playerName, attackerName, rangeFt);
@@ -448,9 +448,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
             }
         }
 
-        result = await handleDisadvantageDebuff(action, playerStats, campaignName, mapName, attackerName, combatSummary);
+        result = await handleDisadvantageDebuff(action, playerStats, campaignName, _mapName, attackerName, combatSummary);
     } else if (effect === 'teleport_and_slow') {
-        result = await handleTeleportAndSlow(action, playerStats, campaignName, mapName);
+        result = await handleTeleportAndSlow(action, playerStats, campaignName, _mapName);
     } else {
         const targetInfo = await resolveTarget(campaignName, playerName);
         if (!targetInfo?.target) {
@@ -468,7 +468,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         attackerName = targetInfo.target.name;
         const rangeFt = auto.range ? parseInt(auto.range.replace(/[^0-9]/g, '')) || 60 : 60;
 
-        if (mapName && rangeFt != null) {
+        if (_mapName && rangeFt != null) {
             const positions = await resolveMapPositions(campaignName, playerName);
             if (positions?.attackerPos && positions?.targetPos) {
                 const inRange = await isWithinRange(playerName, attackerName, rangeFt);
@@ -507,9 +507,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
         }
 
         if (attackEvent?.damageTypes?.length || attackResult.totalDamage > 0) {
-            result = await handleDamageDebuff(action, playerStats, campaignName, mapName, attackerName, bardicDieSize, biDieRoll, combatSummary);
+            result = await handleDamageDebuff(action, playerStats, campaignName, _mapName, attackerName, bardicDieSize, biDieRoll, combatSummary);
         } else {
-            result = await handleAttackRollDebuff(action, playerStats, campaignName, mapName, attackerName, bardicDieSize, biDieRoll, combatSummary);
+            result = await handleAttackRollDebuff(action, playerStats, campaignName, _mapName, attackerName, bardicDieSize, biDieRoll, combatSummary);
         }
     }
 

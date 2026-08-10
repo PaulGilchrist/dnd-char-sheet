@@ -13,7 +13,7 @@ import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { toggleBuff } from '../../common/buffToggle.js';
 import { findAttackRollAgainstTarget } from '../../common/damageRollback.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
     if (auto.effect === 'miss_on_failed_save') {
@@ -21,7 +21,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     }
 
     if (auto.effect === 'bonus_or_penalty_choice') {
-        return handleBendFate(action, playerStats, campaignName, mapName);
+        return handleBendFate(action, playerStats, campaignName, _mapName);
     }
 
     if (auto.effect === 'ac_bonus') {
@@ -36,7 +36,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         return handleVeer(action, playerStats, campaignName);
     }
 
-    return handleInspiringMovement(action, playerStats, campaignName, mapName);
+    return handleInspiringMovement(action, playerStats, campaignName, _mapName);
 }
 
 async function handleBendFate(action, playerStats, campaignName, _mapName) {

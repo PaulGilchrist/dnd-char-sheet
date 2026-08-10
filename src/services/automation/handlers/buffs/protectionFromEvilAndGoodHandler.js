@@ -15,13 +15,13 @@ function getProtectionDuration(spell) {
     return spell.duration || 'Concentration, up to 10 minutes';
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const spell = action.spell || {};
     const casterName = playerStats.name;
 
     const rangeFt = rangeToFeet(spell.range || 'Touch');
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, casterName) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, casterName) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = getCombatSummary(campaignName);
@@ -47,7 +47,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyProtectionFromEvilAndGood(action, playerStats, campaignName, mapName, targetName) {
+export async function applyProtectionFromEvilAndGood(action, playerStats, campaignName, _mapName, targetName) {
     if (!targetName) {
         return null;
     }

@@ -22,7 +22,7 @@ import { breakConcentration } from '../../../combat/concentration/concentrationS
  * - DEX save on entry or start of turn — Prone + lose Concentration on failure
  */
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const dc = buildSaveDc(auto, playerStats);
     const casterName = playerStats.name;
@@ -66,7 +66,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     const trackingKey = `_sleetStorm_${casterName.replace(/\s+/g, '_')}`;
     setRuntimeValue(casterName, trackingKey, {
         caster: casterName,
-        mapName,
+        mapName: _mapName,
         campaignName,
         saveDc: dc,
         saveType: 'DEX',
@@ -286,7 +286,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function processSleetStormAreaSave(casterName, targetName, campaignName, mapName) {
+export async function processSleetStormAreaSave(casterName, targetName, campaignName, _mapName) {
     const trackingKey = `_sleetStorm_${casterName.replace(/\s+/g, '_')}`;
     const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
 
@@ -294,7 +294,7 @@ export async function processSleetStormAreaSave(casterName, targetName, campaign
         return null;
     }
 
-    if (mapName) {
+    if (_mapName) {
         try {
             const inArea = await isWithinRange(casterName, targetName, tracking.radius);
             if (!inArea) return null;

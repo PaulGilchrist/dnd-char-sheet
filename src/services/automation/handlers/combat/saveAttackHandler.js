@@ -71,7 +71,7 @@ function getRiderDescription(effect, effectValue) {
     }
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
     // Resolve per-option details if applicable
@@ -213,9 +213,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
         let attackerPos = null;
         let mapData = null;
         let attackerPlayer = null;
-        if (mapName) {
+        if (_mapName) {
             try {
-                mapData = await mapsService.loadMapData(campaignName, mapName);
+                mapData = await mapsService.loadMapData(campaignName, _mapName);
                 attackerPlayer = mapData?.players?.find(p => p.name === playerStats.name);
                 if (attackerPlayer) {
                     attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };
@@ -256,9 +256,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
             let attackerPos = null;
             let mapData = null;
             let attackerPlayer = null;
-            if (mapName) {
+            if (_mapName) {
                 try {
-                    mapData = await mapsService.loadMapData(campaignName, mapName);
+                    mapData = await mapsService.loadMapData(campaignName, _mapName);
                     attackerPlayer = mapData?.players?.find(p => p.name === playerStats.name);
                     if (attackerPlayer) {
                         attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };

@@ -8,7 +8,7 @@ import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 
 const USES_KEY = 'beguilingDefensesUses';
 
-export async function handle(action, playerStats, campaignName, _mapName, characters) {
+export async function handle(action, playerStats, campaignName, _mapName, _characters) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Beguiling Defenses';
@@ -161,7 +161,7 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
             // Apply psychic damage to attacker equal to halved damage
             let psychicDamage = 0;
             if (cs && halfDamage > 0) {
-                await applyDamageToTarget(cs, targetName, halfDamage, ['Psychic'], campaignName, characters || [], false, playerName);
+                await applyDamageToTarget(cs, targetName, halfDamage, ['Psychic'], campaignName, _characters || [], false, playerName);
                 psychicDamage = halfDamage;
             }
             addEntry(campaignName, {

@@ -19,7 +19,7 @@ function getGreaseTrackingKey(casterName) {
     return `_grease_${casterName.replace(/\s+/g, '_')}`;
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const saveDc = buildSaveDc(auto, playerStats);
     const conditionName = auto.conditionInflicted || 'Prone';
@@ -30,9 +30,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     let casterPos = null;
     let mapData = null;
-    if (mapName) {
+    if (_mapName) {
         try {
-            mapData = await mapsService.loadMapData(campaignName, mapName);
+            mapData = await mapsService.loadMapData(campaignName, _mapName);
             const casterPlayer = mapData?.players?.find(p => p.name === playerStats.name);
             if (casterPlayer) {
                 casterPos = { gridX: casterPlayer.gridX, gridY: casterPlayer.gridY };
@@ -52,7 +52,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     setRuntimeValue(playerStats.name, trackingKey, {
         caster: playerStats.name,
         center: casterPos,
-        mapName,
+        mapName: _mapName,
         campaignName,
         saveDc,
         saveType,
@@ -96,7 +96,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function processGreaseAreaSave(casterName, targetName, campaignName, mapName) {
+export async function processGreaseAreaSave(casterName, targetName, campaignName, _mapName) {
     const trackingKey = getGreaseTrackingKey(casterName);
     const tracking = getRuntimeValue(casterName, trackingKey, campaignName);
 
@@ -105,7 +105,7 @@ export async function processGreaseAreaSave(casterName, targetName, campaignName
     }
 
     // Check if target is still in the grease area
-    if (!mapName) return null;
+    if (!_mapName) return null;
 
     try {
         const inArea = await isWithinRange(casterName, targetName, tracking.radius);

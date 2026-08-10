@@ -21,7 +21,7 @@ async function fetchTargetCharacterData(targetName, campaignName) {
     return null;
 }
 
-export async function handle(action, playerStats, campaignName, _mapName, characters) {
+export async function handle(action, playerStats, campaignName, _mapName, _characters) {
     const auto = action.automation;
     const isSelf = auto.type === 'self_healing';
     const slotLevel = auto.slotLevel || 1;
@@ -50,8 +50,8 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
         const targetInfo = await resolveTarget(campaignName, playerStats.name);
         const targetName = targetInfo?.target?.name || playerStats.name;
 
-        // Try to find target in the characters prop first (player characters with computedStats)
-        const targetChar = (characters || []).find(c => c.name === targetName);
+        // Try to find target in the _characters prop first (player _characters with computedStats)
+        const targetChar = (_characters || []).find(c => c.name === targetName);
         const targetStats = targetChar?.computedStats || targetChar || playerStats;
         let hitDieSize = getHitDieSize(targetStats);
 

@@ -12,12 +12,12 @@ function getLongstriderDuration(spell) {
     return spell.duration || '1 hour';
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const spell = action.spell || {};
 
     const rangeFt = rangeToFeet(spell.range || 'Touch');
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerStats.name) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerStats.name) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = await getCombatContext(campaignName);
@@ -48,7 +48,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyLongstrider(action, playerStats, campaignName, mapName, targetNames) {
+export async function applyLongstrider(action, playerStats, campaignName, _mapName, targetNames) {
     if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
         return null;
     }

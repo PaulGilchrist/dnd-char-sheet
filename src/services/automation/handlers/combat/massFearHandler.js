@@ -5,12 +5,12 @@ import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-export async function handle(action, playerStats, campaignName, mapName, _characters) {
+export async function handle(action, playerStats, campaignName, _mapName, _characters) {
     const auto = action.automation || action;
     const cs = await getCombatContext(campaignName);
     const target = cs ? getTargetFromAttacker(cs, playerStats.name) : null;
     const targetName = target?.name || null;
-    return resolveMassFear(campaignName, playerStats.name, targetName, auto, playerStats, mapName);
+    return resolveMassFear(campaignName, playerStats.name, targetName, auto, playerStats, _mapName);
 }
 
 export async function resolveMassFear(campaignName, casterName, primaryTargetName, option, playerStats, _mapName) {

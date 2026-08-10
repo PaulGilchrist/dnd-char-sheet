@@ -1,6 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
     const maxFP = classLevel?.focus_points || 0;
     const storedFP = getRuntimeValue(playerStats.name, 'focusPoints', campaignName);
@@ -28,7 +28,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
             action,
             playerStats,
             campaignName,
-            mapName,
+            mapName: _mapName,
         },
     };
 }

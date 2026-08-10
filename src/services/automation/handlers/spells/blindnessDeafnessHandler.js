@@ -8,7 +8,7 @@ const BLINDNESS_DEAFNESS_OPTIONS = [
     { key: 'deafened', label: 'Deafened', condition: 'deafened' },
 ];
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const saveDc = buildSaveDc(auto, playerStats);
     if (saveDc == null || saveDc === 10) {
@@ -20,9 +20,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     let attackerPos = null;
     let mapData = null;
-    if (mapName) {
+    if (_mapName) {
         try {
-            mapData = await mapsService.loadMapData(campaignName, mapName);
+            mapData = await mapsService.loadMapData(campaignName, _mapName);
             const attackerPlayer = mapData?.players?.find(p => p.name === playerStats.name);
             if (attackerPlayer) {
                 attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };

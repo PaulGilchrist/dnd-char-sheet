@@ -22,7 +22,7 @@ function getAidDuration(spell) {
     return spell.duration || '8 hours';
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const spell = action.spell || {};
     const slotLevel = action.spellSlotLevel || spell.level || 2;
@@ -31,7 +31,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     const maxTargets = auto.maxTargets || 3;
     const hpIncrease = getAidHpMaxIncrease(spell, slotLevel);
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerStats.name) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerStats.name) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = await getCombatContext(campaignName);
@@ -65,7 +65,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyAid(action, playerStats, campaignName, mapName, targetNames) {
+export async function applyAid(action, playerStats, campaignName, _mapName, targetNames) {
     if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
         return null;
     }

@@ -4,7 +4,7 @@ import { handle as handleCelestialResilience } from '../class-warlock/celestialR
 
 const MAGICAL_CUNNING_KEY = 'magicalCunningUsed';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
@@ -103,7 +103,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     let celestText = '';
     let celestialModal = null;
-    const celestialResult = await handleCelestialResilience(action, playerStats, campaignName, mapName);
+    const celestialResult = await handleCelestialResilience(action, playerStats, campaignName, _mapName);
     if (celestialResult) {
         if (celestialResult.type === 'modal') {
             celestialModal = celestialResult;

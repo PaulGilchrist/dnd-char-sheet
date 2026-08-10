@@ -23,16 +23,16 @@ function rollDie(sides) {
     return Math.floor(Math.random() * sides) + 1;
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
     if (auto.craftCount && auto.tempHpExpression) {
-        return handleBolsteringTreats(action, playerStats, campaignName, mapName);
+        return handleBolsteringTreats(action, playerStats, campaignName, _mapName);
     }
 
     if (auto.bonusMovement && auto.tempHpExpression && auto.tempHpExpression.includes('bardic_inspiration_die')) {
-        return handleMantleOfInspiration(action, playerStats, campaignName, mapName);
+        return handleMantleOfInspiration(action, playerStats, campaignName, _mapName);
     }
 
     if (auto.multiTargetAlly) {
@@ -40,7 +40,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     }
 
     if (auto.ongoingHealingExpression && auto.healingStartOfTurn) {
-        return handleVitalityOfTheTree(action, playerStats, campaignName, mapName);
+        return handleVitalityOfTheTree(action, playerStats, campaignName, _mapName);
     }
 
     const tempHpExpression = auto.tempHpExpression || '';

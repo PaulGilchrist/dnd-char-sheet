@@ -5,13 +5,13 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { getEffectDefinition } from '../../../combat/conditions/targetEffectDefinitions.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
     const spell = action.spell || {};
 
     const rangeFt = rangeToFeet(auto.range || spell.range || '30 feet');
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerStats.name) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerStats.name) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = await getCombatContext(campaignName);
@@ -43,7 +43,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyBeaconOfHopeEffect(action, playerStats, campaignName, mapName, targetNames) {
+export async function applyBeaconOfHopeEffect(action, playerStats, campaignName, _mapName, targetNames) {
     if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
         return null;
     }

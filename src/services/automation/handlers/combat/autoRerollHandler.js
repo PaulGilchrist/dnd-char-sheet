@@ -132,13 +132,13 @@ async function consumeResourceCost(auto, playerStats, campaignName) {
     return null;
 }
 
-async function findAllyMissedAttack(playerStats, campaignName, mapName, rangeFt) {
+async function findAllyMissedAttack(playerStats, campaignName, _mapName, rangeFt) {
     const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
     if (!lastAttack) return null;
     if (lastAttack.rollType !== 'attack' || lastAttack.hit !== false) return null;
     if (lastAttack.attackerName === playerStats.name) return null;
 
-    if (mapName && rangeFt != null) {
+    if (_mapName && rangeFt != null) {
         const inRange = await isWithinRange(playerStats.name, lastAttack.attackerName, rangeFt);
         if (!inRange) return null;
     }
@@ -152,7 +152,7 @@ function getBardicDieSize(playerStats) {
     return classLevel?.bardic_die || 0;
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
@@ -425,7 +425,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
         if (auto.range) {
             const rangeFt = rangeToFeet(auto.range);
-            const ally = await findAllyMissedAttack(playerStats, campaignName, mapName, rangeFt);
+            const ally = await findAllyMissedAttack(playerStats, campaignName, _mapName, rangeFt);
             if (ally) {
                 const attackEvent = ally.attackEvent;
                 const ac = attackEvent.effectiveAc ?? attackEvent.targetAc;

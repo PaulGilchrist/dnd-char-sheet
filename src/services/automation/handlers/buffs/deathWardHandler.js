@@ -10,11 +10,11 @@ function getDeathWardDuration(spell) {
     return spell.duration || '8 hours';
 }
 
-export async function handle(action, playerStats, campaignName, mapName, _characters) {
+export async function handle(action, playerStats, campaignName, _mapName, _characters) {
     const spell = action.spell || {};
     const rangeFt = rangeToFeet(spell.range || 'Touch');
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerStats.name) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerStats.name) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = getCombatSummary(campaignName);
@@ -36,7 +36,7 @@ export async function handle(action, playerStats, campaignName, mapName, _charac
     };
 }
 
-export async function applyDeathWard(action, playerStats, campaignName, mapName, targetNames) {
+export async function applyDeathWard(action, playerStats, campaignName, _mapName, targetNames) {
     if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
         return null;
     }

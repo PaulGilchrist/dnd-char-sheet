@@ -28,7 +28,7 @@ function getEmanationRange(auto, playerStats, playerName, campaignName) {
     return fallback;
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Warping Implosion';
@@ -58,9 +58,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
     const cs = await getCombatContext(campaignName);
     const attackerPos = cs ? { gridX: 0, gridY: 0 } : null;
     let mapData = null;
-    if (mapName) {
+    if (_mapName) {
         try {
-            mapData = await mapsService.loadMapData(campaignName, mapName);
+            mapData = await mapsService.loadMapData(campaignName, _mapName);
         } catch { /* positions unavailable */ }
     }
 

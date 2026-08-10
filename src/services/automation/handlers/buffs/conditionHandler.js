@@ -6,7 +6,7 @@ import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { buildSaveDc } from '../../../automation/common/savePrompt.js';
 import { loadMonsters } from '../../../ui/dataLoader.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
     const autoWithDefaults = {
@@ -42,9 +42,9 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     let attackerPos = null;
     let mapData = null;
-    if (mapName) {
+    if (_mapName) {
         try {
-            mapData = await mapsService.loadMapData(campaignName, mapName);
+            mapData = await mapsService.loadMapData(campaignName, _mapName);
             const attackerPlayer = mapData?.players?.find(p => p.name === playerStats.name);
             if (attackerPlayer) {
                 attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };

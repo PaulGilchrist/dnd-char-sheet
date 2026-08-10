@@ -10,7 +10,7 @@ import { checkOncePerTurn, checkOncePerTurnWithSkip, markOncePerTurn } from '../
 import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
 import { resolveMassFear } from './massFearHandler.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || action;
     let options = auto.options || [];
 
@@ -263,7 +263,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
             await markOncePerTurn(action.name, usedKey, playerStats, campaignName);
         }
         const chosen = options[0];
-        const result = await applyRiderEffect(action, playerStats, campaignName, targetName, chosen, mapName);
+        const result = await applyRiderEffect(action, playerStats, campaignName, targetName, chosen, _mapName);
         return result;
     }
 
@@ -437,7 +437,7 @@ export async function applyRiderOption(action, playerStats, campaignName, target
     };
 }
 
-async function applyRiderEffect(action, playerStats, campaignName, targetName, option, mapName) {
+async function applyRiderEffect(action, playerStats, campaignName, targetName, option, _mapName) {
     const auto = action.automation || action;
     if (!targetName) {
         return {
@@ -484,7 +484,7 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             }
         }
 
-        return resolveMassFear(campaignName, playerStats.name, targetName, option, playerStats, mapName);
+        return resolveMassFear(campaignName, playerStats.name, targetName, option, playerStats, _mapName);
     }
 
     // Push effect: just log and popup, no targetEffect (push is instant)

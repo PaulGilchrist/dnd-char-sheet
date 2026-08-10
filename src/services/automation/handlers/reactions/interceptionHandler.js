@@ -7,7 +7,7 @@ import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { findLastAttack } from '../../common/damageRollback.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Feature';
@@ -34,7 +34,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     const rangeFt = auto.range ? parseInt(auto.range.replace(/[^0-9]/g, '')) || 5 : 5;
     if (rangeFt != null) {
-        const positions = mapName ? await resolveMapPositions(campaignName, playerName) : null;
+        const positions = _mapName ? await resolveMapPositions(campaignName, playerName) : null;
         if (positions?.attackerPos && positions?.targetPos) {
             const inRange = await isWithinRange(playerName, attackerName, rangeFt);
             if (!inRange) {

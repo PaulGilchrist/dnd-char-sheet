@@ -10,11 +10,11 @@ import { getCombatSummary } from '../../../encounters/combatData.js';
 import { resolveMapPositions } from '../../common/targetResolver.js';
 
 
-async function getCreatureTargets(excludeName, withinRangeFt, campaignName, mapName, attackerName) {
+async function getCreatureTargets(excludeName, withinRangeFt, campaignName, _mapName, attackerName) {
     const cs = getCombatSummary(campaignName);
     if (!cs?.creatures) return [];
 
-    const inRangeFilter = withinRangeFt != null && mapName && attackerName ? async (name) => {
+    const inRangeFilter = withinRangeFt != null && _mapName && attackerName ? async (name) => {
         return await isWithinRange(attackerName, name, withinRangeFt);
     } : null;
 
@@ -33,7 +33,7 @@ async function getCreatureTargets(excludeName, withinRangeFt, campaignName, mapN
         .map(c => c.name);
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Words of Creation';
@@ -68,15 +68,15 @@ export async function handle(action, playerStats, campaignName, mapName) {
 
     const firstTargetName = targetInfo.name;
 
-    if (mapName) {
-        await resolveMapPositions(campaignName, mapName, playerName);
+    if (_mapName) {
+        await resolveMapPositions(campaignName, _mapName, playerName);
     }
 
     const creatureTargets = await getCreatureTargets(
         firstTargetName,
         rangeFt,
         campaignName,
-        mapName,
+        _mapName,
         playerName
     );
 
@@ -98,7 +98,7 @@ export async function applyMultiTarget(
     action,
     playerStats,
     campaignName,
-    mapName,
+    _mapName,
     firstTargetName,
     secondTargetName,
     spell,
@@ -121,7 +121,7 @@ export async function applyMultiTarget(
     if (!firstTarget || !secondTarget) return null;
 
     if (rangeFt != null && firstTarget && secondTarget) {
-        if (mapName) {
+        if (_mapName) {
             const firstInRange = await isWithinRange(playerName, firstTarget.name, rangeFt);
             const secondInRange = await isWithinRange(playerName, secondTarget.name, rangeFt);
             if (!firstInRange || !secondInRange) {

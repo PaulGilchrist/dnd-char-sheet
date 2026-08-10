@@ -1,6 +1,6 @@
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const elementalAttunementActive = getRuntimeValue(playerStats.name, 'elementalAttunementActive', campaignName);
     if (elementalAttunementActive) {
         return {
@@ -52,7 +52,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
             action,
             playerStats,
             campaignName,
-            mapName,
+            mapName: _mapName,
             activeOverlay,
         },
     };

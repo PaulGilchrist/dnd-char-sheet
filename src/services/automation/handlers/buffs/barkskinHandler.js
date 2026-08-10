@@ -11,12 +11,12 @@ function getBarkskinDuration(spell) {
     return spell.duration || 'Up to 1 hour';
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const spell = action.spell || {};
 
     const rangeFt = rangeToFeet(spell.range || 'Touch');
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerStats.name) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerStats.name) : null;
     const attackerPos = positions?.attackerPos || null;
 
     const combatSummary = getCombatSummary(campaignName);
@@ -38,7 +38,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyBarkskin(action, playerStats, campaignName, mapName, targetNames, characters) {
+export async function applyBarkskin(action, playerStats, campaignName, _mapName, targetNames, characters) {
     if (!targetNames || !Array.isArray(targetNames) || targetNames.length === 0) {
         return null;
     }

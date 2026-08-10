@@ -7,7 +7,7 @@ import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibi
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { DEBUG_FORCE_CRIT } from '../../../ui/utils.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const numAttacks = auto.attacks || 3;
@@ -55,7 +55,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
             action,
             playerStats,
             campaignName,
-            mapName,
+            mapName: _mapName,
             attackBonus,
             damageFormula,
             damageType,
@@ -66,7 +66,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
     };
 }
 
-export async function applyFlurryOfBlows(action, playerStats, campaignName, mapName, distribution, numAttacks) {
+export async function applyFlurryOfBlows(action, playerStats, campaignName, _mapName, distribution, numAttacks) {
     const playerName = playerStats.name;
     const featureName = action.name;
 
@@ -151,7 +151,7 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, mapN
                         action: openHandFeature,
                         playerStats,
                         campaignName,
-                        mapName,
+                        mapName: _mapName,
                     });
                 }
             }

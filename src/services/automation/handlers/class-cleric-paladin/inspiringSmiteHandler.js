@@ -6,7 +6,7 @@ import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
 
@@ -71,8 +71,8 @@ export async function handle(action, playerStats, campaignName, mapName) {
     const rangeFt = rangeToFeet(auto.range || '30 ft');
     const creatureTargets = [];
 
-    if (mapName && rangeFt != null) {
-        const mapPlayers = (await loadMapData(campaignName, mapName))?.players || [];
+    if (_mapName && rangeFt != null) {
+        const mapPlayers = (await loadMapData(campaignName, _mapName))?.players || [];
 
         if (hasAllyList) {
             for (const allyName of allyList) {

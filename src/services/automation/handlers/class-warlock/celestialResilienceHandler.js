@@ -6,7 +6,7 @@ import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 
-export async function grantCelestialResilience(playerStats, campaignName, source, mapName) {
+export async function grantCelestialResilience(playerStats, campaignName, source, _mapName) {
     const isCelestial = playerStats.class?.major?.name === 'Celestial Patron'
         || playerStats.class?.subclass?.name === 'Celestial Patron';
 
@@ -37,7 +37,7 @@ export async function grantCelestialResilience(playerStats, campaignName, source
             const allies = [];
 
             if (rangeFt != null) {
-                const mapPlayers = mapName ? (await loadMapData(campaignName, mapName))?.players || [] : [];
+                const mapPlayers = _mapName ? (await loadMapData(campaignName, _mapName))?.players || [] : [];
                 const combatSummary = getCombatSummary(campaignName);
                 const allCreatures = combatSummary?.creatures || [];
                 const candidates = mapPlayers.length > 0
@@ -60,8 +60,8 @@ export async function grantCelestialResilience(playerStats, campaignName, source
     return result;
 }
 
-export async function handle(action, playerStats, campaignName, mapName) {
-    if (!mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
+    if (!_mapName) {
         return {
             type: 'popup',
             payload: {
@@ -73,7 +73,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
         };
     }
 
-    const result = await grantCelestialResilience(playerStats, campaignName, 'magical_cunning', mapName);
+    const result = await grantCelestialResilience(playerStats, campaignName, 'magical_cunning', _mapName);
     if (!result) return null;
 
     await addEntry(campaignName, {

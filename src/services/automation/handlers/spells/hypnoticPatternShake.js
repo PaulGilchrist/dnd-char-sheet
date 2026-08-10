@@ -5,14 +5,14 @@ import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { resolveMapPositions } from '../../common/targetResolver.js';
 
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Shake Out Stupor';
 
     const rangeFt = auto.range ? parseInt(auto.range.match(/(\d+)/)?.[1] || '5', 10) : 5;
 
-    const positions = mapName ? await resolveMapPositions(campaignName, mapName, playerName) : null;
+    const positions = _mapName ? await resolveMapPositions(campaignName, _mapName, playerName) : null;
 
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary?.creatures) {

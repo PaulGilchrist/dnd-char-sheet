@@ -4,7 +4,7 @@ import { addEntry } from '../../../../services/ui/logService.js';
 
 const EVOCATION_SCHOOL = 'evocation';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
     const featureName = action.name || 'Soulstitch Spells';
@@ -48,7 +48,7 @@ export async function handle(action, playerStats, campaignName, mapName) {
             action,
             playerStats,
             campaignName,
-            mapName,
+            mapName: _mapName,
             featureName,
             maxSelections,
             eligibleTargets,

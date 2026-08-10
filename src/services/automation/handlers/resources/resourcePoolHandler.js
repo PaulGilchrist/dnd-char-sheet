@@ -1,9 +1,9 @@
 import { handle as handleGiantAncestry } from '../class-other/giantAncestryHandler.js';
 
-export async function handle(action, playerStats, campaignName, mapName) {
+export async function handle(action, playerStats, campaignName, _mapName) {
     // Giant Ancestry has its own sub-option selection flow
     if (action.name === 'Giant Ancestry' || action.automation?.type === 'giant_ancestry') {
-        return await handleGiantAncestry(action, playerStats, campaignName, mapName);
+        return await handleGiantAncestry(action, playerStats, campaignName, _mapName);
     }
 
     const conversion = action.automation?.conversion || '';
