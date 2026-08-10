@@ -41,17 +41,17 @@ export default function useTravelManagement({
   monsters, playerLevels, roads = [], characters = [], campaignName = '',
   initialTravelState,
 }) {
-  const _init = initialTravelState || {};
+  const init = initialTravelState || {};
 
-  const [travelMode, setTravelMode] = useSyncedState(campaignName, 'travel-mode', _init.travelMode || MODES.INACTIVE, campaignName);
-  const [travelPace, setTravelPace] = useSyncedState(campaignName, 'travel-pace', _init.travelPace || 'normal', campaignName);
-  const [destination, setDestination] = useSyncedState(campaignName, 'travel-destination', _init.destination || null, campaignName);
-  const [path, setPath] = useSyncedState(campaignName, 'travel-path', _init.path || [], campaignName);
-  const [pathIndex, setPathIndex] = useSyncedState(campaignName, 'travel-pathIndex', _init.pathIndex || 0, campaignName);
-  const [accruedCost, setAccruedCost] = useSyncedState(campaignName, 'travel-accruedCost', typeof _init.accruedCost === 'number' ? _init.accruedCost : 0, campaignName);
-  const [dailyBudget, setDailyBudget] = useSyncedState(campaignName, 'travel-dailyBudget', typeof _init.dailyBudget === 'number' ? _init.dailyBudget : () => getDailyHexBudget('normal'), campaignName);
-  const [dayExhausted, setDayExhausted] = useSyncedState(campaignName, 'travel-dayExhausted', !!_init.dayExhausted, campaignName);
-  const [forcedMarchHours, setForcedMarchHours] = useSyncedState(campaignName, 'travel-forcedMarchHours', typeof _init.forcedMarchHours === 'number' ? _init.forcedMarchHours : 0, campaignName);
+  const [travelMode, setTravelMode] = useSyncedState(campaignName, 'travel-mode', init.travelMode || MODES.INACTIVE, campaignName);
+  const [travelPace, setTravelPace] = useSyncedState(campaignName, 'travel-pace', init.travelPace || 'normal', campaignName);
+  const [destination, setDestination] = useSyncedState(campaignName, 'travel-destination', init.destination || null, campaignName);
+  const [path, setPath] = useSyncedState(campaignName, 'travel-path', init.path || [], campaignName);
+  const [pathIndex, setPathIndex] = useSyncedState(campaignName, 'travel-pathIndex', init.pathIndex || 0, campaignName);
+  const [accruedCost, setAccruedCost] = useSyncedState(campaignName, 'travel-accruedCost', typeof init.accruedCost === 'number' ? init.accruedCost : 0, campaignName);
+  const [dailyBudget, setDailyBudget] = useSyncedState(campaignName, 'travel-dailyBudget', typeof init.dailyBudget === 'number' ? init.dailyBudget : () => getDailyHexBudget('normal'), campaignName);
+  const [dayExhausted, setDayExhausted] = useSyncedState(campaignName, 'travel-dayExhausted', !!init.dayExhausted, campaignName);
+  const [forcedMarchHours, setForcedMarchHours] = useSyncedState(campaignName, 'travel-forcedMarchHours', typeof init.forcedMarchHours === 'number' ? init.forcedMarchHours : 0, campaignName);
   const [travelLog, setTravelLog] = useSyncedState(campaignName, 'travel-log', [], campaignName);
   const [lastMessage, setLastMessage] = useSyncedState(campaignName, 'travel-lastMessage', null, campaignName);
   const [pendingEvent, setPendingEvent] = useSyncedState(campaignName, 'travel-pendingEvent', null, campaignName);
