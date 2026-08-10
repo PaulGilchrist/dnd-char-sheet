@@ -11,6 +11,13 @@ import { triggerBewitchingMagic, triggerPostCastRiderSaves, triggerSpellThief } 
 import { endSanctuary } from '../../../../automation/handlers/spells/sanctuaryHandler.js';
 import { getCombatContext } from '../../../combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../combat/applyHealing.js';
+import { getSilenceSource, isCreatureInSilenceZone } from '../../../features/silenceService.js';
+import { endFriendsOnHostileAction } from '../../../features/friendsService.js';
+import { endInvisibilityOnHostileAction } from '../../../features/invisibilityService.js';
+import { getPsychicSpellsConfig } from '../../../../automation/handlers/class-warlock/psychicSpellsHandler.js';
+import { isInnateSorceryActive } from '../../../../combat/buffs/buffService.js';
+import { resolveSpellDamageWithTypes } from '../../../core/spellDamageUtils.js';
+import { triggerConfusion } from '../../../features/confusionService.js';
 import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes } from '../../../../combat/automation/automationService.js';
 import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../../../dice/diceRoller.js';
 import { refundSpellBreakerSlot, applyHexEffects, applyPowerWordHealToTarget, applyPowerWordKillToTarget, triggerDispelMagic, setupSpellBreakerDispelRetention, triggerExpertDivination, triggerArcaneWard, applyRegenerateSpell } from './helpers.js';
@@ -26,6 +33,7 @@ import { handleMassHealingWord as handleMassHealingWordTrigger } from './trigger
 import { handlePrayerOfHealing as handlePrayerOfHealingTrigger } from './triggerSpells.js';
 import { handleFalseLife as handleFalseLifeTrigger } from './triggerSpells.js';
 import { handleRemoveCurse as handleRemoveCurseTrigger } from './triggerSpells.js';
+import { getCombatSummary } from '../../../../../services/encounters/combatData.js';
 
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
     // --- Block checks ---
@@ -77,14 +85,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     const hasInvisible = magicalAmbush && casterConditions.some(c => String(c).toLowerCase() === 'invisible');
 
     if (spell.components && spell.components.includes('V')) {
-        const { getSilenceSource, isCreatureInSilenceZone } = await import('../../../features/silenceService.js');
         const silenceCaster = getSilenceSource(playerStats.name, campaignName);
         if (silenceCaster && isCreatureInSilenceZone(playerStats.name, silenceCaster, campaignName)) {
             return;
         }
     }
 
-    const { getPsychicSpellsConfig } = await import('../../../../automation/handlers/class-warlock/psychicSpellsHandler.js');
     const psychicSpellsConfig = getPsychicSpellsConfig(playerStats);
     if (psychicSpellsConfig && spell.components) {
         const spellSchool = (spell.school || '').toLowerCase();
@@ -95,12 +101,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         }
     }
 
-    const { endFriendsOnHostileAction } = await import('../../../features/friendsService.js');
     if (spell.name && spell.name.toLowerCase() !== 'friends') {
         endFriendsOnHostileAction(playerStats.name, campaignName);
     }
-    const { endInvisibilityOnHostileAction: endInv } = await import('../../../features/invisibilityService.js');
-    endInv(playerStats.name, campaignName);
+    endInvisibilityOnHostileAction(playerStats.name, campaignName);
 
     if (spell.casting_time === '1 action') {
         setRuntimeValue(playerStats.name, 'lastActionSpellCast', 1, campaignName);
@@ -127,9 +131,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     }
 
     // Spell stats
-    const { isInnateSorceryActive } = await import('../../../../combat/buffs/buffService.js');
     const innateSorceryActive = isInnateSorceryActive(playerStats.name, campaignName);
-    const { resolveSpellDamageWithTypes } = await import('../../../core/spellDamageUtils.js');
     const damageInfo = resolveSpellDamageWithTypes(spell, spell.level || 1);
     const formula = damageInfo?.formula || null;
     const damageType = damageInfo?.primaryType || spell.damage?.damage_type || '';
@@ -199,7 +201,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     let hypnoticPatternEarlyResult = handleHypnoticPatternEarly(fullSpell, spellSaveDc, playerStats, campaignName, metaCtx, innateSorceryActive);
     if (hypnoticPatternEarlyResult.handled) return hypnoticPatternEarlyResult.result;
 
-    let confusionEarlyResult = handleConfusionEarly(fullSpell, spell, metaCtx, spellSaveDc, playerStats, campaignName, mapName, (s, m, p, c, mp) => import('../../../features/confusionService.js').then(x => x.triggerConfusion(s, m, p, c, mp)));
+    let confusionEarlyResult = handleConfusionEarly(fullSpell, spell, metaCtx, spellSaveDc, playerStats, campaignName, mapName, (s, m, p, c, mp) => triggerConfusion(s, m, p, c, mp));
     if (confusionEarlyResult.handled) return confusionEarlyResult.result?.result;
 
     let shapechangeResult = handleShapechange(fullSpell, metaCtx, playerStats, campaignName, mapName, characters);
@@ -310,7 +312,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         let forcecageResult = await handleForcecage(spell, metaCtx, playerStats, campaignName, mapName);
         if (forcecageResult.handled) return forcecageResult.result;
 
-        let silenceResult = handleSilence(spell, fullSpell, metaCtx, spellSaveDc, playerStats, campaignName, null, (cn) => import('../../../../../services/encounters/combatData.js').then(x => x.getCombatSummary(cn)));
+        let silenceResult = handleSilence(spell, fullSpell, metaCtx, spellSaveDc, playerStats, campaignName, null, (cn) => getCombatSummary(cn));
         if (silenceResult.handled) return silenceResult.result;
 
         let stinkingCloudResult = await handleStinkingCloud(spell, metaCtx, spellSaveDc, playerStats, campaignName, mapName);

@@ -5,55 +5,17 @@ import utils from '../../services/ui/utils.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js'
 import storage from '../../services/ui/storage.js'
-import { clearDeathSavePrompt, clearFleshToStonePrompt } from '../../services/combat/conditions/savePromptService.js'
-import { getMonsterImageUrl, getMonsterData } from '../../services/npcs/monsterUtils.js'
-import { loadMonsters } from '../../services/ui/dataLoader.js'
-import { getAbilityLabel, CONDITIONS } from '../../services/combat/conditions/conditionUtils.js'
-import { generateLootFromCombatSummary } from '../../services/items/lootGenerator.js'
-import * as logService from '../../services/ui/logService.js'
-
-// INITIATIVE RESET (initiative component): When advancing to a new round or rolling
-// initiative from the initiative panel, reset once-per-turn trackers for player creatures
-// using setRuntimeValue(creature.name, '_TrackerName_usedRound', null, campaignName)
-// inside the initiative-rolled handler and handleNextCreature round-increment block.
+import { getMonsterImageUrl } from '../../services/npcs/monsterUtils.js'
 import { loadNPCs } from '../../services/npcs/npcsService.js'
-import { npcToMonsterFormat, npcHasStatBlock } from '../../services/encounters/npcStatBlockUtils.js'
-import { expireStaleEffects, applyTurnStartEffects, clearExpirationEffects } from '../../services/rules/effects/expirations.js'
+import { npcHasStatBlock } from '../../services/encounters/npcStatBlockUtils.js'
 import { loadCombatSummary, getCombatSummary, getActiveCreatureName, setCombatSummaryCache } from '../../services/encounters/combatData.js'
-import { clearPerRoundMajestyTrackers } from '../../services/combat/auras/unbreakableMajesty.js'
+import { cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js'
+import { clearExpirationEffects } from '../../services/rules/effects/expirations.js'
 import {
     setupCreatures,
-    addNpc,
-    removeNpc,
-    getNextCreatureName,
-    getPreviousCreatureName,
-    isPreviousDisabled,
-    setInitiative,
-    renameNpc,
-    setTarget,
-    clearCombat,
     mergeCombatSummaryWithCharacters,
+    isPreviousDisabled,
 } from '../../services/encounters/initiativeService.js'
-import {
-    rollConditionSave,
-    removeCondition,
-    addCondition,
-    buildConditionPopup,
-} from '../../services/combat/conditions/conditionSaveService.js'
-import { removeForcecageEffect } from '../../services/automation/handlers/spells/forcecageHandler.js'
-import { removeMazeEffect } from '../../services/automation/handlers/spells/mazeHandler.js'
-import {
-    rollConcentrationSave,
-    breakConcentration,
-    addConcentration,
-    buildConcentrationPopup,
-    cleanupConcentrationEffects,
-} from '../../services/combat/concentration/concentrationService.js'
-import {
-    logConditionEvent,
-    logConcentrationSave,
-    logConditionSave,
-} from '../../services/encounters/combatLoggingService.js'
 import MonsterCardModal from '../encounter/MonsterCardModal.jsx'
 import Subscriber from '../common/Subscriber.jsx'
 import Popup from '../common/popup.jsx'
@@ -62,10 +24,21 @@ import CreatureCard from './CreatureCard.jsx'
 import EffectAdder from './EffectAdder.jsx'
 import './initiative.css'
 
+// Extracted modules
+import { createOverlayHandler, createSseEventHandler } from './initiative-sse-handlers.jsx'
+import { createNpcClickHandler } from './initiative-npc-click-handler.jsx'
+import { createFleshToStoneHandler, createPrismaticSprayIndigoHandler, createPrismaticSprayVioletHandler } from './initiative-save-result-handlers.jsx'
+import { useLootHandlers } from './initiative-loot.jsx'
+import { createNextCreatureHandler, createPreviousCreatureHandler } from './initiative-navigation.jsx'
+import { createCreatureHandlers } from './initiative-creature-ops.jsx'
+import { createRollConditionSaveHandler } from './initiative-condition-save.jsx'
+import { createConcentrationHandlers } from './initiative-concentration.jsx'
+import { createEffectAdderHandlers } from './initiative-effect-adder.jsx'
+import { createAutoBreakConditionHandler } from './initiative-auto-break.jsx'
+
 function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName }) {
     const [combatSummary, setCombatSummary] = React.useState(null)
     const setCombatSummaryG = useSSEEqualityGuard(setCombatSummary)
-    const [numOfNpc, setNumOfNpc] = React.useState(0)
     const [activeCreatureName, setActiveCreatureName] = React.useState(null)
     const activeCreatureNameRef = React.useRef(null)
     const lastAppliedTurnStartCreatureRef = React.useRef(null)
@@ -105,12 +78,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     const [overlays, setOverlays] = React.useState([])
 
     const [runtimeStateTick, setRuntimeStateTick] = React.useState(0)
-
-    const [lootData, setLootData] = React.useState({ lootEntries: [], totalEncounterXp: 0 })
-    const [generatingLoot, setGeneratingLoot] = React.useState(false)
-    const [lootTextValue, setLootTextValue] = React.useState('')
-    const [showAwardLoot, setShowAwardLoot] = React.useState(false)
-    const [awardingLoot, setAwardingLoot] = React.useState(false)
 
     const displayCreatures = React.useMemo(() => {
         if (!combatSummary || !combatSummary.creatures) return []
@@ -167,117 +134,27 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         }).catch((e) => { console.error("[initiative] Error:", e); throw e; })
     }, [campaignName])
 
-    const handleOverlayEvent = React.useCallback((event) => {
-        if (!event || !event.key || !event.key.startsWith('spell-overlay-')) return
-        if (event.key !== `spell-overlay-${campaignName}`) return
-        const { action, overlays: newOverlays, overlayId } = event.data || {}
-        switch (action) {
-            case 'add':
-                if (newOverlays?.length) {
-                    setOverlays(prev => {
-                        const existingIds = new Set(prev.map(o => o.id))
-                        const unique = newOverlays.filter(n => !existingIds.has(n.id))
-                        return unique.length ? [...prev, ...unique] : prev
-                    })
-                }
-                break
-            case 'update':
-                if (newOverlays?.length) {
-                    setOverlays(prev => prev.map(o => {
-                        const replacement = newOverlays.find(n => n.id === o.id)
-                        return replacement || o
-                    }))
-                }
-                break
-            case 'remove':
-                if (overlayId) {
-                    setOverlays(prev => prev.filter(o => o.id !== overlayId))
-                }
-                break
-            case 'clear':
-                setOverlays([])
-                break
-            default:
-                break
-        }
-    }, [campaignName])
+    // Create extracted handlers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handleOverlayEvent = React.useCallback(createOverlayHandler(campaignName), [campaignName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handleEvent = React.useCallback(createSseEventHandler({
+        campaignName,
+        characters,
+        combatSummaryRef,
+        activeCreatureNameRef,
+        lastAppliedTurnStartCreatureRef,
+        setCombatSummary,
+        setCombatSummaryG,
+        setActiveCreatureNameG,
+        setRuntimeStateTick,
+        setOverlays,
+        handleOverlayEvent,
+    }), [campaignName, characters, handleOverlayEvent, setCombatSummaryG, setActiveCreatureNameG])
 
-      /**
-       * WARNING: SSE re-render loop risk
-       * All setters in this handler use equality guards (useSSEEqualityGuard).
-       */
-    const handleEvent = React.useCallback((event) => {
-        if (event.key == null || event.data == null) return
-
-        if (event.key.startsWith('spell-overlay-')) {
-            handleOverlayEvent(event)
-            return
-        }
-
-        if (!event.key.startsWith(`change-${campaignName}-`)) return
-
-        const dataKey = event.key.slice(`change-${campaignName}-`.length)
-        if (dataKey === 'combatSummary') {
-            if (!event.data?.creatures) return
-            const merged = cloneDeep(event.data)
-            if (!merged.activeCreatureName) {
-                const activeName = getActiveCreatureName(campaignName)
-                if (activeName) {
-                    merged.activeCreatureName = activeName
-                }
-            }
-            const prevRound = combatSummaryRef.current?.round ?? 1
-            if (merged.round < prevRound) {
-                return
-            }
-            combatSummaryRef.current = merged
-            setCombatSummaryCache(merged, campaignName)
-            setCombatSummaryG(merged)
-            if (merged.round !== (combatSummaryRef.current?.round ?? 1)) {
-                expireStaleEffects(campaignName, merged.activeCreatureName || null)
-            }
-        } else if (dataKey === 'lastAttack') {
-            // lastAttack is now a root-level key — no in-memory cache needed
-            // The runtime store handles sync via getRuntimeValue/setRuntimeValue
-          } else if (dataKey === 'activeCreatureName') {
-               const prevActive = activeCreatureNameRef.current
-               const newActive = event.data
-               activeCreatureNameRef.current = newActive
-               const cs = combatSummaryRef.current || getCombatSummary(campaignName)
-               if (cs) {
-                   cs.activeCreatureName = newActive
-                   setCombatSummaryCache(cs, campaignName)
-               }
-               setActiveCreatureNameG(newActive)
-               expireStaleEffects(campaignName, newActive)
-              // Only apply turn-start effects when the active creature actually changes
-              // (not on SSE snapshot re-sync where the creature is the same)
-              const lastApplied = lastAppliedTurnStartCreatureRef.current
-              const shouldApply = prevActive !== event.data && lastApplied !== event.data
-               if (shouldApply) {
-                   lastAppliedTurnStartCreatureRef.current = event.data
-                  // Persist to runtime store so it survives remount (sync access)
-                  setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', event.data, campaignName)
-                  // Also persist to server so it syncs to all clients
-                  storage.set('lastAppliedTurnStartCreature', event.data, campaignName)
-                  const cs = combatSummaryRef.current
-                  if (cs && cs.lastAppliedTurnStartCreature !== event.data) {
-                      cs.lastAppliedTurnStartCreature = event.data
-                      setCombatSummary(cloneDeep(cs))
-                  }
-                  const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(event.data))
-                  applyTurnStartEffects(event.data, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                   setRuntimeStateTick(t => t + 1)
-               }
-           } else if (!['log', 'spell-overlay'].includes(dataKey)) {
-               // Any character-level change (vowOfEnmityTarget, activeBuffs, etc.) triggers a re-render
-               // so ConditionEffectBadges picks up the updated runtime state
-               setRuntimeStateTick(t => t + 1)
-           }
-        }, [campaignName, characters, handleOverlayEvent, setCombatSummaryG, setActiveCreatureNameG])
-
+    const [npcImagesLoaded, setNpcImagesLoaded] = React.useState(false)
     React.useEffect(() => {
-        if (!combatSummary) return
+        if (!combatSummary || npcImagesLoaded) return
         let cancelled = false
         const npcs = combatSummary.creatures.filter(c => c.type !== 'player' || c.wildShapeSource || c.polymorphSource || c.animalShapesSource || c.shapechangeSource)
         const promises = npcs.map(async (creature) => {
@@ -291,229 +168,210 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             const newImages = {}
             results.forEach(({ name, url }) => { newImages[name] = url })
             setNpcImages(newImages)
+            setNpcImagesLoaded(true)
         }).catch(err => {
             if (cancelled) return
             console.error('[initiative] NPC image resolution failed:', err)
         })
         return () => { cancelled = true }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [combatSummary, campaignNpcs, campaignName])
 
-    const handleAddNpc = React.useCallback(() => {
-        if (!combatSummary) return
-        const nextNum = addNpc(combatSummary)
-        setNumOfNpc(nextNum)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
+    // Extracted handlers
+    const isPrevDisabledValue = React.useMemo(() => {
+        return isPreviousDisabled(combatSummary, activeCreatureName)
+    }, [combatSummary, activeCreatureName])
+
+    const { handleNextCreature } = React.useMemo(() => {
+        const nextHandler = createNextCreatureHandler({
+            combatSummaryRef,
+            activeCreatureName,
+            campaignName,
+            characters,
+            roundRef,
+            lastAppliedTurnStartCreatureRef,
+            setCombatSummary,
+            setActiveCreatureName,
+            setRuntimeStateTick,
+        })
+        return { handleNextCreature: nextHandler }
+    }, [activeCreatureName, campaignName, characters])
+
+    const { handlePreviousCreature } = React.useMemo(() => {
+        const prevHandler = createPreviousCreatureHandler({
+            combatSummaryRef,
+            activeCreatureName,
+            campaignName,
+            characters,
+            roundRef,
+            lastAppliedTurnStartCreatureRef,
+            setCombatSummary,
+            setActiveCreatureName,
+            setRuntimeStateTick,
+            isPreviousDisabled: isPrevDisabledValue,
+        })
+        return { handlePreviousCreature: prevHandler }
+    }, [activeCreatureName, campaignName, isPrevDisabledValue, characters])
+
+    const {
+        handleCreatureHpChange,
+        handleClear,
+        handleInitiativeChange,
+        handleNameChange,
+        handleTargetChange,
+        handleRemoveNpc,
+        handleAddNpc,
+    } = React.useMemo(() => createCreatureHandlers({
+        combatSummary,
+        campaignName,
+        campaignNpcs,
+        setNpcImages,
+        overlays,
+        setCombatSummary,
+        setActiveCreatureName,
+        characters,
+        numOfNpc: combatSummary?.creatures?.filter(c => c.type === 'npc').length ?? 0,
+        isLocalhost,
+    }), [combatSummary, campaignName, campaignNpcs, overlays, isLocalhost, characters])
+
+    const { handleNpcClick } = React.useMemo(() => ({
+        handleNpcClick: createNpcClickHandler({
+            isLocalhost,
+            campaignNpcs,
+            campaignName,
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [isLocalhost, campaignNpcs, campaignName, characters])
+
+    const openEffectAdder = React.useCallback((creature, tab) => {
+        if (!isLocalhost) return
+        setEffectAdderTarget(creature)
+        setEffectAdderTab(tab)
+    }, [isLocalhost, setEffectAdderTarget])
+
+    const { handleApplyEffect } = React.useMemo(() => {
+        const handler = createEffectAdderHandlers({
+            campaignName,
+            characters,
+            combatSummary,
+            setEffectAdderTarget,
+            setCombatSummary,
+        })
+        return handler
+    }, [campaignName, characters, combatSummary, setEffectAdderTarget])
+
+    const { handleRollConditionSave } = React.useMemo(() => ({
+        handleRollConditionSave: createRollConditionSaveHandler({
+            combatSummary,
+            campaignName,
+            characters,
+            campaignNpcs,
+            mapName,
+            setConditionPopup,
+            setCombatSummary,
+        })
+    }), [combatSummary, campaignName, characters, campaignNpcs, mapName])
+
+    const { handleRollConcentrationSave, handleBreakConcentration } = React.useMemo(() => ({
+        ...createConcentrationHandlers({
+            combatSummary,
+            campaignName,
+            characters,
+            campaignNpcs,
+            mapName,
+            setConditionPopup,
+            setCombatSummary,
+        })
+    }), [combatSummary, campaignName, characters, campaignNpcs, mapName])
+
+    const { handleAutoBreakCondition } = React.useMemo(() => ({
+        handleAutoBreakCondition: createAutoBreakConditionHandler({
+            isLocalhost,
+            combatSummary,
+            campaignName,
+            setCombatSummary,
+        })
+    }), [isLocalhost, combatSummary, campaignName])
+
+    const {
+        lootData,
+        generatingLoot,
+        lootTextValue,
+        setLootTextValue,
+        showAwardLoot,
+        setShowAwardLoot,
+        awardingLoot,
+        handleGenerateLoot,
+        handleAwardLoot,
+        handleClearLoot,
+    } = useLootHandlers(campaignName, characters, combatSummary)
+
+    // Save result window event listeners
+    React.useEffect(() => {
+        const handler = createFleshToStoneHandler(campaignName, combatSummary, setCombatSummary)
+        window.addEventListener('flesh-to-stone-result', handler)
+        return () => window.removeEventListener('flesh-to-stone-result', handler)
     }, [combatSummary, campaignName])
-
-    const handleRemoveNpc = React.useCallback((creatureName) => {
-        if (!combatSummary) return
-        const creature = combatSummary.creatures.find(c => c.name === creatureName)
-        if (!creature || creature.type === 'player') return
-
-        const needsConfirmation = creature.currentHp > 0 || creature.initiative !== ''
-        if (needsConfirmation) {
-            const msg = creature.currentHp > 0
-                ? `${creature.name} has ${creature.currentHp} HP. Remove anyway?`
-                : `${creature.name} has initiative assigned. Remove anyway?`
-            if (!window.confirm(msg)) return
-        }
-
-        removeNpc(combatSummary, creatureName)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-    }, [combatSummary, campaignName])
-
-    const isPrevDisabled = isPreviousDisabled(combatSummary, activeCreatureName)
-
-      const handleNextCreature = React.useCallback(() => {
-            const cs = combatSummaryRef.current
-            if (!cs) return
-            const { newActiveName, roundIncrement } = getNextCreatureName(cs, activeCreatureName)
-            if (!roundIncrement) {
-                 storage.set('activeCreatureName', newActiveName, campaignName)
-                setActiveCreatureName(newActiveName)
-              } else {
-                const roundToSet = (roundRef.current ?? 1) + 1
-                const updatedSummary = cloneDeep(cs)
-                updatedSummary.round = roundToSet
-                storage.set('combatSummary', updatedSummary, campaignName)
-                setCombatSummary(updatedSummary)
-                storage.set('activeCreatureName', newActiveName, campaignName)
-                 setActiveCreatureName(newActiveName)
-                 for (const creature of cs.creatures) {
-                     clearPerRoundMajestyTrackers(creature.name, campaignName)
-                     if (creature.type === 'player') {
-                          setRuntimeValue(creature.name, '_cunningStrikeCostUsed', 0, campaignName);
-                          setRuntimeValue(creature.name, '_CunningStrike_usedRound', null, campaignName);
-                          setRuntimeValue(creature.name, '_Charge_Attack_usedRound', null, campaignName);
-                          setRuntimeValue(creature.name, '_FastHands_usedRound', null, campaignName);
-                          setRuntimeValue(creature.name, '_CunningAction_usedRound', null, campaignName);
-                          setRuntimeValue(creature.name, '_Cleave_UsedRound', null, campaignName);
-                          setRuntimeValue(creature.name, '_Nick_UsedRound', null, campaignName);
-                          setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName);
-                          setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName);
-                          setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName);
-                          setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName);
-                            setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName);
-                            setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName);
-                            setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName);
-                            setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName);
-                        }
-                   }
-                 expireStaleEffects(campaignName, newActiveName)
-                 const lastApplied = lastAppliedTurnStartCreatureRef.current
-                 if (lastApplied !== newActiveName) {
-                     lastAppliedTurnStartCreatureRef.current = newActiveName
-                     setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
-                     storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
-                     if (updatedSummary.lastAppliedTurnStartCreature !== newActiveName) {
-                         updatedSummary.lastAppliedTurnStartCreature = newActiveName
-                         setCombatSummary(cloneDeep(updatedSummary))
-                     }
-                     const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-                     applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                     setRuntimeStateTick(t => t + 1)
-                 }
-              }
-              }, [activeCreatureName, campaignName, characters])
-
-    const handlePreviousCreature = React.useCallback(() => {
-          if (isPrevDisabled) return
-          const cs = combatSummaryRef.current
-          if (!cs) return
-           const { newActiveName, roundDecrement } = getPreviousCreatureName(cs, activeCreatureName)
-           if (!roundDecrement) {
-               storage.set('activeCreatureName', newActiveName, campaignName)
-              setActiveCreatureName(newActiveName)
-             } else {
-              const currentRound = roundRef.current ?? 1
-              if (currentRound > 1) {
-                  const updatedSummary = cloneDeep(cs)
-                  updatedSummary.round = currentRound - 1
-                  storage.set('combatSummary', updatedSummary, campaignName)
-                  setCombatSummary(updatedSummary)
-                  expireStaleEffects(campaignName, newActiveName)
-                  const lastApplied = lastAppliedTurnStartCreatureRef.current
-                  if (lastApplied !== newActiveName) {
-                      lastAppliedTurnStartCreatureRef.current = newActiveName
-                      setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', newActiveName, campaignName)
-                      storage.set('lastAppliedTurnStartCreature', newActiveName, campaignName)
-                      if (updatedSummary.lastAppliedTurnStartCreature !== newActiveName) {
-                          updatedSummary.lastAppliedTurnStartCreature = newActiveName
-                          setCombatSummary(cloneDeep(updatedSummary))
-                      }
-                      const newActiveChar = characters.find(ch => utils.getName(ch.name) === utils.getName(newActiveName))
-                      applyTurnStartEffects(newActiveName, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
-                      setRuntimeStateTick(t => t + 1)
-                  }
-                  storage.set('activeCreatureName', newActiveName, campaignName)
-                  setActiveCreatureName(newActiveName)
-                  for (const creature of cs.creatures) {
-                      clearPerRoundMajestyTrackers(creature.name, campaignName)
-                  }
-              }
-             }
-              }, [activeCreatureName, campaignName, isPrevDisabled, characters])
 
     React.useEffect(() => {
-        let cancelled = false
-        ;(async () => {
-            const initialSummary = await loadCombatSummary(campaignName)
+        const handler = createPrismaticSprayIndigoHandler(campaignName, combatSummary, setCombatSummary)
+        window.addEventListener('prismatic-spray-indigo-result', handler)
+        return () => window.removeEventListener('prismatic-spray-indigo-result', handler)
+    }, [combatSummary, campaignName])
 
-            if (initialSummary && initialSummary.creatures) {
-                const merged = mergeCombatSummaryWithCharacters(initialSummary, characters, utils.getName)
+    React.useEffect(() => {
+        const handler = createPrismaticSprayVioletHandler(campaignName, combatSummary, setCombatSummary)
+        window.addEventListener('prismatic-spray-violet-result', handler)
+        return () => window.removeEventListener('prismatic-spray-violet-result', handler)
+    }, [combatSummary, campaignName])
 
-                if (cancelled) return
-                const npcCount = merged.creatures.filter(c => c.type === 'npc').length
-                setNumOfNpc(npcCount)
+    // Concentration-result listener
+    React.useEffect(() => {
+        const handler = (e) => {
+            if (!combatSummary) return
+            const creature = combatSummary.creatures.find(c =>
+                c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
+            )
+            if (creature && !e.detail.success) {
+                const concentrationSpell = creature.concentration?.spell
+                creature.concentration = null
+                storage.set('combatSummary', combatSummary, campaignName)
+                setCombatSummary(cloneDeep(combatSummary))
+                cleanupConcentrationEffects(creature.name, concentrationSpell, campaignName)
+            }
+        }
+        window.addEventListener('concentration-result', handler)
+        return () => window.removeEventListener('concentration-result', handler)
+    }, [combatSummary, campaignName])
 
-                storage.set('combatSummary', merged, campaignName)
-                setCombatSummary(merged)
-                combatSummaryRef.current = merged
-
-                if (!activeCreatureNameRef.current) {
-                    const activeName = getActiveCreatureName(campaignName)
-                    if (activeName) {
-                        setActiveCreatureName(activeName)
-                        activeCreatureNameRef.current = activeName
-                    } else {
-                        const firstCreature = merged.creatures[0]?.name || null
-                        setActiveCreatureName(firstCreature)
-                        activeCreatureNameRef.current = firstCreature
-                    }
+    // death-save-result listener
+    React.useEffect(() => {
+        const handler = (e) => {
+            if (!combatSummary || !e.detail.restoredToHp) return
+            const creature = combatSummary.creatures.find(c =>
+                c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
+            )
+            if (creature) {
+                setRuntimeValue(creature.name, 'currentHitPoints', e.detail.restoredToHp, campaignName)
+                if (creature.type === 'npc') {
+                    creature.currentHp = e.detail.restoredToHp
                 }
-            } else {
-                if (cancelled) return
-                const creatures = setupCreatures(characters, numOfNpc, utils.getName)
-                const newSummary = { round: 1, creatures }
-                const firstName = creatures[0]?.name
-                storage.set('combatSummary', newSummary, campaignName)
-                setCombatSummary(newSummary)
-                combatSummaryRef.current = newSummary
-                storage.set('activeCreatureName', firstName, campaignName)
-                setActiveCreatureName(firstName)
-                activeCreatureNameRef.current = firstName
-            }
-        })()
-        return () => { cancelled = true }
-    }, [campaignName]) // eslint-disable-line react-hooks/exhaustive-deps
-
-    React.useEffect(() => {
-        if (!combatSummary || !onNpcsChange) return
-        const npcList = combatSummary.creatures
-            .filter(c => c.type === 'npc')
-            .map(c => ({ name: c.name, type: 'npc', imageUrl: npcImages[c.name] || null }))
-        onNpcsChange(npcList)
-    }, [combatSummary, onNpcsChange, npcImages])
-
-    React.useEffect(() => {
-        if (!combatSummary) return
-        const handleKeyDown = (event) => {
-            if (event.key === 'ArrowRight') {
-                event.preventDefault()
-                handleNextCreature()
-              } else if (event.key === 'ArrowLeft' && !isPrevDisabled) {
-                event.preventDefault()
-                handlePreviousCreature()
-              } else if (event.key === '+') {
-                event.preventDefault()
-                handleAddNpc()
-              }
-          }
-
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-          }, [combatSummary, activeCreatureName]) // eslint-disable-line react-hooks/exhaustive-deps
-
-    React.useEffect(() => {
-        if (!carouselRef.current || !activeCreatureName) return
-        activeCreatureNameRef.current = activeCreatureName
-        const activeCard = carouselRef.current.querySelector('.creature-card.active')
-        if (activeCard) {
-            activeCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-        }
-    }, [activeCreatureName])
-
-    React.useEffect(() => {
-        const handler = () => {
-            const summary = getCombatSummary(campaignName)
-            if (summary && JSON.stringify(summary) !== JSON.stringify(combatSummaryRef.current)) {
-                combatSummaryRef.current = summary
-                setCombatSummary(summary)
+                storage.set('combatSummary', combatSummary, campaignName)
+                setCombatSummary(cloneDeep(combatSummary))
             }
         }
-        window.addEventListener('combat-summary-updated', handler)
-        return () => {
-            window.removeEventListener('combat-summary-updated', handler)
-          }
-      }, [campaignName])
+        window.addEventListener('death-save-result', handler)
+        return () => window.removeEventListener('death-save-result', handler)
+    }, [combatSummary, campaignName])
 
+    // initiative-rolled listener
     React.useEffect(() => {
         const handler = () => {
             const summary = getCombatSummary(campaignName)
             if (!summary) return
-            combatSummaryRef.current = summary
             let clearedHuntersMark = false
             for (const creature of (summary?.creatures || [])) {
                 if (creature.type === 'player') {
@@ -538,9 +396,9 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName)
                     setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName)
                     setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName)
-                     setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName)
-                     setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName)
-                     setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName)
                 }
                 if (creature.concentration?.spell === "Hunter's Mark") {
@@ -549,7 +407,6 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                     clearedHuntersMark = true
                 }
 
-                // Clear dominate expirations owned by this creature (initiative-based expiration)
                 const dominateList = getRuntimeValue(creature.name, 'pendingExpirations')
                 if (Array.isArray(dominateList) && dominateList.length > 0) {
                     for (const entry of dominateList) {
@@ -573,1100 +430,99 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
             }
         }
         window.addEventListener('initiative-rolled', handler)
-        return () => {
-            window.removeEventListener('initiative-rolled', handler)
-          }
-      }, [campaignName, setCombatSummaryG])
+        return () => window.removeEventListener('initiative-rolled', handler)
+    }, [campaignName, setCombatSummaryG])
 
+    // combat-summary-updated listener
     React.useEffect(() => {
-        const handler = (e) => {
-            if (!combatSummary) return
-            const creature = combatSummary.creatures.find(c =>
-                c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
-            )
-            if (creature && !e.detail.success) {
-                const concentrationSpell = creature.concentration?.spell
-                creature.concentration = null
-                storage.set('combatSummary', combatSummary, campaignName)
-                setCombatSummary(cloneDeep(combatSummary))
-                cleanupConcentrationEffects(creature.name, concentrationSpell, campaignName)
+        const handler = () => {
+            const summary = getCombatSummary(campaignName)
+            if (summary && JSON.stringify(summary) !== JSON.stringify(combatSummary)) {
+                setCombatSummary(summary)
             }
         }
-        window.addEventListener('concentration-result', handler)
-        return () => window.removeEventListener('concentration-result', handler)
-    }, [combatSummary, campaignName])
+        window.addEventListener('combat-summary-updated', handler)
+        return () => window.removeEventListener('combat-summary-updated', handler)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [campaignName])
 
     React.useEffect(() => {
-        const handler = (e) => {
-            if (!combatSummary || !e.detail.restoredToHp) return
-            const creature = combatSummary.creatures.find(c =>
-                c.name === e.detail.targetName || c.name.startsWith(e.detail.targetName + ' ')
-            )
-            if (creature) {
-                setRuntimeValue(creature.name, 'currentHitPoints', e.detail.restoredToHp, campaignName)
-                if (creature.type === 'npc') {
-                    creature.currentHp = e.detail.restoredToHp
-                }
-                storage.set('combatSummary', combatSummary, campaignName)
-                setCombatSummary(cloneDeep(combatSummary))
+        if (!combatSummary || !onNpcsChange) return
+        const npcList = combatSummary.creatures
+            .filter(c => c.type === 'npc')
+            .map(c => ({ name: c.name, type: 'npc', imageUrl: npcImages[c.name] || null }))
+        onNpcsChange(npcList)
+    }, [combatSummary, onNpcsChange, npcImages])
+
+    React.useEffect(() => {
+        if (!combatSummary) return
+        const handleKeyDown = (event) => {
+            if (event.key === 'ArrowRight') {
+                event.preventDefault()
+                handleNextCreature()
+            } else if (event.key === 'ArrowLeft' && !isPrevDisabledValue) {
+                event.preventDefault()
+                handlePreviousCreature()
+            } else if (event.key === '+') {
+                event.preventDefault()
+                handleAddNpc()
             }
         }
-        window.addEventListener('death-save-result', handler)
-        return () => window.removeEventListener('death-save-result', handler)
-    }, [combatSummary, campaignName])
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [combatSummary, activeCreatureName])
 
     React.useEffect(() => {
-        const handler = async (e) => {
-            const { campaignName: evtCampaign, targetName, result } = e.detail;
-            if (evtCampaign !== campaignName || !combatSummary || !result) return;
+        if (!carouselRef.current || !activeCreatureName) return
+        activeCreatureNameRef.current = activeCreatureName
+        const activeCard = carouselRef.current.querySelector('.creature-card.active')
+        if (activeCard) {
+            activeCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+        }
+    }, [activeCreatureName])
 
-            const creature = combatSummary.creatures.find(c => c.name === targetName);
-            if (!creature) return;
+    React.useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            const initialSummary = await loadCombatSummary(campaignName)
 
-            const saveTrackingKey = `_fleshToStone_${targetName.replace(/\s+/g, '_')}`;
-            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
-            if (!saveData) return;
+            if (initialSummary && initialSummary.creatures) {
+                const merged = mergeCombatSummaryWithCharacters(initialSummary, characters, utils.getName)
 
-            if (result.success) {
-                const newSuccesses = saveData.successes + 1;
-                if (newSuccesses >= 3) {
-                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
-                    setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
-                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'flesh_to_stone' && te.source === saveData.casterName));
-                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-                    clearFleshToStonePrompt(campaignName, targetName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-flesh-to-stone',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: true,
-                        description: `${targetName} collected 3 successful saves against Flesh to Stone. The spell ends.`,
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: targetName,
-                        condition: 'Restrained',
-                        reason: 'Flesh to Stone (3 successes)',
-                        note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                } else {
-                    setRuntimeValue('campaign', saveTrackingKey, {
-                        ...saveData,
-                        successes: newSuccesses,
-                    }, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-flesh-to-stone',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: true,
-                        description: `${targetName} succeeded on CON save against Flesh to Stone (${newSuccesses}/3 successes needed).`,
-                    }).catch(() => {});
+                if (cancelled) return
+
+                storage.set('combatSummary', merged, campaignName)
+                setCombatSummary(merged)
+                combatSummaryRef.current = merged
+
+                if (!activeCreatureNameRef.current) {
+                    const activeName = getActiveCreatureName(campaignName)
+                    if (activeName) {
+                        setActiveCreatureName(activeName)
+                        activeCreatureNameRef.current = activeName
+                    } else {
+                        const firstCreature = merged.creatures[0]?.name || null
+                        setActiveCreatureName(firstCreature)
+                        activeCreatureNameRef.current = firstCreature
+                    }
                 }
             } else {
-                const newFailures = saveData.failures + 1;
-                if (newFailures >= 3) {
-                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
-                    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'petrified'], campaignName);
-                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'flesh_to_stone' && te.source === saveData.casterName));
-                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-                    clearFleshToStonePrompt(campaignName, targetName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-flesh-to-stone',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: false,
-                        description: `${targetName} failed 3 CON saves against Flesh to Stone and is turned to stone (Petrified).`,
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: targetName,
-                        condition: 'Restrained',
-                        reason: 'Flesh to Stone (3 failures)',
-                        note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'applied',
-                        characterName: targetName,
-                        condition: 'Petrified',
-                        reason: 'Flesh to Stone',
-                        note: `${targetName} is Petrified by Flesh to Stone after failing 3 saves.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                } else {
-                    setRuntimeValue('campaign', saveTrackingKey, {
-                        ...saveData,
-                        failures: newFailures,
-                    }, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-flesh-to-stone',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: false,
-                        description: `${targetName} failed CON save against Flesh to Stone (${newFailures}/3 failures needed).`,
-                    }).catch(() => {});
-                }
+                if (cancelled) return
+                const creatures = setupCreatures(characters, 0, utils.getName)
+                const newSummary = { round: 1, creatures }
+                const firstName = creatures[0]?.name
+                storage.set('combatSummary', newSummary, campaignName)
+                setCombatSummary(newSummary)
+                combatSummaryRef.current = newSummary
+                storage.set('activeCreatureName', firstName, campaignName)
+                setActiveCreatureName(firstName)
+                activeCreatureNameRef.current = firstName
             }
-
-            setCombatSummary(cloneDeep(combatSummary));
-        };
-        window.addEventListener('flesh-to-stone-result', handler);
-        return () => window.removeEventListener('flesh-to-stone-result', handler);
-    }, [combatSummary, campaignName])
-
-    // Handle Prismatic Spray Indigo ray recurring CON saves (Restrained -> Petrified)
-    React.useEffect(() => {
-        const handler = async (e) => {
-            const { campaignName: evtCampaign, targetName, result } = e.detail;
-            if (evtCampaign !== campaignName || !combatSummary || !result) return;
-
-            const creature = combatSummary.creatures.find(c => c.name === targetName);
-            if (!creature) return;
-
-            const saveTrackingKey = `_prismaticSprayIndigo_${targetName.replace(/\s+/g, '_')}`;
-            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
-            if (!saveData) return;
-
-            if (result.success) {
-                const newSuccesses = saveData.successes + 1;
-                if (newSuccesses >= 3) {
-                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
-                    setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
-                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_indigo' && te.source === saveData.casterName));
-                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-prismatic-spray-indigo',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: true,
-                        description: `${targetName} collected 3 successful CON saves against Prismatic Spray (Indigo ray). Restrained ends.`,
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: targetName,
-                        condition: 'Restrained',
-                        reason: 'Prismatic Spray Indigo (3 successes)',
-                        note: `${targetName} collected 3 successful saves; Restrained condition removed.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                } else {
-                    setRuntimeValue('campaign', saveTrackingKey, {
-                        ...saveData,
-                        successes: newSuccesses,
-                    }, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-prismatic-spray-indigo',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: true,
-                        description: `${targetName} succeeded on CON save against Prismatic Spray Indigo ray (${newSuccesses}/3 successes needed).`,
-                    }).catch(() => {});
-                }
-            } else {
-                const newFailures = saveData.failures + 1;
-                if (newFailures >= 3) {
-                    const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'restrained');
-                    setRuntimeValue(targetName, 'activeConditions', [...filtered, 'petrified'], campaignName);
-                    const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                    const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_indigo' && te.source === saveData.casterName));
-                    setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                    setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-prismatic-spray-indigo',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: false,
-                        description: `${targetName} failed 3 CON saves against Prismatic Spray (Indigo ray) and is turned to stone (Petrified).`,
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: targetName,
-                        condition: 'Restrained',
-                        reason: 'Prismatic Spray Indigo (3 failures)',
-                        note: `${targetName} collected 3 failed saves; Restrained removed, Petrified applied.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                    await logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'applied',
-                        characterName: targetName,
-                        condition: 'Petrified',
-                        reason: 'Prismatic Spray Indigo',
-                        note: `${targetName} is Petrified by Prismatic Spray after failing 3 saves.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {});
-                } else {
-                    setRuntimeValue('campaign', saveTrackingKey, {
-                        ...saveData,
-                        failures: newFailures,
-                    }, campaignName);
-                    await logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: saveData.casterName,
-                        rollType: 'save-prismatic-spray-indigo',
-                        targetName,
-                        saveDc: saveData.dc,
-                        saveType: 'CON',
-                        success: false,
-                        description: `${targetName} failed CON save against Prismatic Spray Indigo ray (${newFailures}/3 failures needed).`,
-                    }).catch(() => {});
-                }
-            }
-
-            setCombatSummary(cloneDeep(combatSummary));
-        };
-        window.addEventListener('prismatic-spray-indigo-result', handler);
-        return () => window.removeEventListener('prismatic-spray-indigo-result', handler);
-    }, [combatSummary, campaignName])
-
-    // Handle Prismatic Spray Violet ray WIS save for banishment (caster's next turn)
-    React.useEffect(() => {
-        const handler = async (e) => {
-            const { campaignName: evtCampaign, targetName, result } = e.detail;
-            if (evtCampaign !== campaignName || !combatSummary || !result) return;
-
-            const creature = combatSummary.creatures.find(c => c.name === targetName);
-            if (!creature) return;
-
-            const saveTrackingKey = `_prismaticSprayViolet_${targetName.replace(/\s+/g, '_')}`;
-            const saveData = getRuntimeValue('campaign', saveTrackingKey, campaignName);
-            if (!saveData) return;
-
-            if (result.success) {
-                const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const filtered = conditions.filter(c => String(c).toLowerCase() !== 'blinded');
-                setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
-                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_violet' && te.source === saveData.casterName));
-                setRuntimeValue('campaign', 'targetEffects', cleanedEffects, campaignName);
-                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-                await logService.addEntry(campaignName, {
-                    type: 'save_result',
-                    characterName: saveData.casterName,
-                    rollType: 'save-prismatic-spray-violet',
-                    targetName,
-                    saveDc: saveData.dc,
-                    saveType: 'WIS',
-                    success: true,
-                    description: `${targetName} succeeded on WIS save against Prismatic Spray (Violet ray). Blindness ends.`,
-                }).catch(() => {});
-                await logService.addEntry(campaignName, {
-                    type: 'condition',
-                    action: 'removed',
-                    characterName: targetName,
-                    condition: 'Blinded',
-                    reason: 'Prismatic Spray Violet (WIS save success)',
-                    note: `${targetName} succeeded on WIS save; Blinded condition removed.`,
-                    timestamp: Date.now(),
-                }).catch(() => {});
-            } else {
-                // Banish the creature — apply existing banishment target effect
-                const conditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-                const filtered = conditions.filter(c => String(c).toLowerCase() !== 'blinded');
-                setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
-
-                const allTargetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-                const cleanedEffects = allTargetEffects.filter(te => !(te.target === targetName && te.effect === 'prismatic_spray_violet' && te.source === saveData.casterName));
-                const existingBanishment = cleanedEffects.filter(te => !(te.effect === 'banishment' || te.target === targetName && te.source === saveData.casterName));
-                setRuntimeValue('campaign', 'targetEffects', [
-                    ...existingBanishment,
-                    {
-                        effect: 'banishment',
-                        target: targetName,
-                        source: saveData.casterName,
-                        duration: 'Concentration, up to 1 minute',
-                        permanent: false,
-                    },
-                ], campaignName);
-
-                setRuntimeValue('campaign', saveTrackingKey, null, campaignName);
-
-                await logService.addEntry(campaignName, {
-                    type: 'save_result',
-                    characterName: saveData.casterName,
-                    rollType: 'save-prismatic-spray-violet',
-                    targetName,
-                    saveDc: saveData.dc,
-                    saveType: 'WIS',
-                    success: false,
-                    description: `${targetName} failed WIS save against Prismatic Spray (Violet ray) and is banished to another plane of existence.`,
-                }).catch(() => {});
-                await logService.addEntry(campaignName, {
-                    type: 'condition',
-                    action: 'removed',
-                    characterName: targetName,
-                    condition: 'Blinded',
-                    reason: 'Prismatic Spray Violet (banishment)',
-                    note: `${targetName} failed WIS save; Blinded removed, banished to another plane.`,
-                    timestamp: Date.now(),
-                }).catch(() => {});
-                await logService.addEntry(campaignName, {
-                    type: 'condition',
-                    action: 'applied',
-                    characterName: targetName,
-                    condition: 'Incapacitated',
-                    reason: 'Prismatic Spray Violet (banishment)',
-                    note: `${targetName} is Incapacitated by banishment.`,
-                    timestamp: Date.now(),
-                }).catch(() => {});
-                await logService.addEntry(campaignName, {
-                    type: 'ability_use',
-                    characterName: saveData.casterName,
-                    abilityName: 'Prismatic Spray (Violet ray)',
-                    description: `${targetName} was banished to another plane of existence by the Violet ray of Prismatic Spray.`,
-                    targetName,
-                    timestamp: Date.now(),
-                }).catch(() => {});
-            }
-
-            setCombatSummary(cloneDeep(combatSummary));
-        };
-        window.addEventListener('prismatic-spray-violet-result', handler);
-        return () => window.removeEventListener('prismatic-spray-violet-result', handler);
-    }, [combatSummary, campaignName])
-
-     const handleCreatureHpChange = React.useCallback((creatureName, newValue) => {
-         if (!combatSummary) return
-         const creature = combatSummary.creatures.find(c => c.name === creatureName)
-         if (!creature) return
-
-         const isPlayer = creature.type === 'player'
-         const oldHp = isPlayer ? (getRuntimeValue(creature.name, 'currentHitPoints') ?? 0) : creature.currentHp
-         const delta = newValue - oldHp
-         if (delta === 0) return
-
-          if (isPlayer) {
-             setRuntimeValue(creature.name, 'currentHitPoints', newValue, campaignName)
-              if (oldHp <= 0 && newValue > 0) {
-                  setRuntimeValue(creature.name, 'deathSaves', [false, false, false], campaignName)
-                  setRuntimeValue(creature.name, 'deathFailures', [false, false, false], campaignName)
-                  setRuntimeValue(creature.name, 'isDead', 0, campaignName)
-                  clearDeathSavePrompt(campaignName, creature.name)
-              }
-          }
-          else {
-              creature.currentHp = newValue
-          }
-          storage.set('combatSummary', combatSummary, campaignName)
-          setCombatSummary(cloneDeep(combatSummary))
-      }, [combatSummary, campaignName])
-
-    const handleClear = () => {
-        if (window.confirm('Are you sure you want to clear all combat status?')) {
-            const newSummary = clearCombat(characters, numOfNpc, utils.getName)
-            storage.set('combatSummary', newSummary, campaignName)
-            setCombatSummary(newSummary)
-            const firstCreatureName = newSummary.creatures[0].name
-            storage.set('activeCreatureName', firstCreatureName, campaignName)
-            setActiveCreatureName(firstCreatureName)
-        }
-    }
-
-    const handleInitiativeChange = (creatureName, value) => {
-        if (!combatSummary) return
-        setInitiative(combatSummary, creatureName, value)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-    }
-
-    const handleNameChange = (oldName, newName) => {
-        if (!combatSummary) return
-        renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcImages)
-            .then(() => {
-                storage.set('combatSummary', combatSummary, campaignName)
-                setCombatSummary(cloneDeep(combatSummary))
-            })
-            .catch((e) => { console.error("[initiative] Error:", e); throw e; })
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-    }
-
-    const handleTargetChange = (creatureName, targetName) => {
-        if (!combatSummary) return
-        if (targetName && targetName.startsWith('overlay-')) {
-            const overlayId = targetName.slice('overlay-'.length)
-            const overlay = overlays.find(o => o.id === overlayId)
-            if (overlay) {
-                setTarget(combatSummary, creatureName, targetName)
-                // AOE context is now managed via server/SSE only
-            }
-        } else {
-            setTarget(combatSummary, creatureName, targetName)
-        }
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-    }
-
-    const handleNpcClick = async (creature, options = {}) => {
-        const { allowNonLocalhost = false } = options
-        if (!isLocalhost && !allowNonLocalhost) return
-        const npc = campaignNpcs.find(n => n.name?.toLowerCase() === creature.name?.toLowerCase())
-        if (npc) {
-            const formatted = npcToMonsterFormat(npc)
-            if (formatted) {
-                setViewingMonster(formatted)
-                setViewingMonsterCreatureName(creature.name)
-                return
-            }
-        }
-        const combatSummary = getCombatSummary(campaignName)
-        const runtimeCreature = combatSummary?.creatures?.find(c => c.name === creature.name)
-        if (runtimeCreature?.wildShapeSource && runtimeCreature.beastIndex) {
-            const monsters = await loadMonsters()
-            const baseMonster = monsters.find(m => m.index === runtimeCreature.beastIndex)
-            if (baseMonster) {
-                const merged = cloneDeep(baseMonster)
-                merged.name = runtimeCreature.beastName || baseMonster.name
-                merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
-                const circleFormsAC = getRuntimeValue(creature.name, 'circleFormsAC') ?? null
-                if (circleFormsAC != null) {
-                    merged.armor_class = circleFormsAC
-                }
-                const druidCharacter = characters.find(c => utils.getName(c.name) === runtimeCreature.wildShapeSource)
-                if (druidCharacter) {
-                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
-                    const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
-                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
-                    const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
-                    if (intScore != null) merged.ability_scores.int = intScore
-                    if (wisScore != null) merged.ability_scores.wis = wisScore
-                    if (chaScore != null) merged.ability_scores.cha = chaScore
-                    const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
-                    if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
-                }
-                const isMoonDruid = druidCharacter?.computedStats?.class?.major?.name === 'Circle of the Moon' || druidCharacter?.computedStats?.class?.subclass?.name === 'Circle of the Moon'
-                const beastSaves = {}
-                for (const abbr of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-                    if (baseMonster.saving_throws?.[abbr]?.modifier != null) {
-                        beastSaves[abbr] = baseMonster.saving_throws[abbr].modifier
-                    } else if (baseMonster.ability_score_modifiers?.[abbr] != null) {
-                        beastSaves[abbr] = baseMonster.ability_score_modifiers[abbr]
-                    }
-                }
-                merged.saving_throws = {}
-                for (const [abbr, mod] of Object.entries(beastSaves)) {
-                    merged.saving_throws[abbr] = { modifier: mod }
-                }
-                if (isMoonDruid && druidCharacter) {
-                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
-                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
-                    const wisMod = Math.floor(((wisScore ?? 10) - 10) / 2)
-                    merged.saving_throws.con.modifier = beastSaves.con + wisMod
-                }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant';
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant';
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage');
-                        }
-                    }
-                }
-                if (runtimeCreature.lunarFormAction) {
-                    merged.actions = [...(merged.actions || []), runtimeCreature.lunarFormAction]
-                }
-                setViewingMonster(merged)
-                setViewingMonsterCreatureName(creature.name)
-                return
-            }
-        }
-        if (runtimeCreature && runtimeCreature.polymorphSource && runtimeCreature.polymorphBeast?.index) {
-            const monsters = await loadMonsters()
-            const baseMonster = monsters.find(m => m.index === runtimeCreature.polymorphBeast.index)
-            if (baseMonster) {
-                const merged = cloneDeep(baseMonster)
-                merged.name = runtimeCreature.beastName || baseMonster.name
-                merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
-                merged.armor_class = runtimeCreature.ac
-                merged.type = 'beast'
-                merged.size = runtimeCreature.size || baseMonster.size
-                merged.challenge_rating = runtimeCreature.polymorphBeast.challengeRating || baseMonster.challenge_rating
-                if (runtimeCreature.speed) {
-                    merged.speed = runtimeCreature.speed
-                }
-                const polymorphTempHp = getRuntimeValue(creature.name, 'polymorphTempHp', campaignName)
-                if (typeof polymorphTempHp === 'number' && polymorphTempHp > 0) {
-                    merged.hit_points_temp = polymorphTempHp
-                }
-                const casterName = runtimeCreature.polymorphSource
-                const druidCharacter = characters.find(c => utils.getName(c.name) === casterName)
-                if (druidCharacter) {
-                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
-                    const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
-                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
-                    const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
-                    if (intScore != null) merged.ability_scores.int = intScore
-                    if (wisScore != null) merged.ability_scores.wis = wisScore
-                    if (chaScore != null) merged.ability_scores.cha = chaScore
-                    const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
-                    if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
-                }
-                const beastSaves = {}
-                for (const abbr of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-                    if (baseMonster.saving_throws?.[abbr]?.modifier != null) {
-                        beastSaves[abbr] = baseMonster.saving_throws[abbr].modifier
-                    } else if (baseMonster.ability_score_modifiers?.[abbr] != null) {
-                        beastSaves[abbr] = baseMonster.ability_score_modifiers[abbr]
-                    }
-                }
-                merged.saving_throws = {}
-                for (const [abbr, mod] of Object.entries(beastSaves)) {
-                    merged.saving_throws[abbr] = { modifier: mod }
-                }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant';
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant';
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage');
-                        }
-                    }
-                }
-                setViewingMonster(merged)
-                setViewingMonsterCreatureName(creature.name)
-                return
-            }
-        }
-        if (runtimeCreature && runtimeCreature.shapechangeSource && runtimeCreature.shapechangeForm?.index) {
-            const monsters = await loadMonsters()
-            const baseMonster = monsters.find(m => m.index === runtimeCreature.shapechangeForm.index)
-            if (baseMonster) {
-                const merged = cloneDeep(baseMonster)
-                merged.name = runtimeCreature.formName || baseMonster.name
-                merged.hit_points = getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp
-                merged.armor_class = runtimeCreature.ac
-                merged.size = runtimeCreature.size || baseMonster.size
-                merged.challenge_rating = runtimeCreature.shapechangeForm.challengeRating || baseMonster.challenge_rating
-                if (runtimeCreature.speed) {
-                    merged.speed = runtimeCreature.speed
-                }
-                const shapechangeTempHp = getRuntimeValue(creature.name, 'shapechangeTempHp', campaignName)
-                if (typeof shapechangeTempHp === 'number' && shapechangeTempHp > 0) {
-                    merged.hit_points_temp = shapechangeTempHp
-                }
-                const casterName = runtimeCreature.shapechangeSource
-                const druidCharacter = characters.find(c => utils.getName(c.name) === casterName)
-                if (druidCharacter) {
-                    const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
-                    const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
-                    const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
-                    const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
-                    if (intScore != null) merged.ability_scores.int = intScore
-                    if (wisScore != null) merged.ability_scores.wis = wisScore
-                    if (chaScore != null) merged.ability_scores.cha = chaScore
-                    const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
-                    if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
-                }
-                const beastSaves = {}
-                for (const abbr of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-                    if (baseMonster.saving_throws?.[abbr]?.modifier != null) {
-                        beastSaves[abbr] = baseMonster.saving_throws[abbr].modifier
-                    } else if (baseMonster.ability_score_modifiers?.[abbr] != null) {
-                        beastSaves[abbr] = baseMonster.ability_score_modifiers[abbr]
-                    }
-                }
-                merged.saving_throws = {}
-                for (const [abbr, mod] of Object.entries(beastSaves)) {
-                    merged.saving_throws[abbr] = { modifier: mod }
-                }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant';
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant';
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage');
-                        }
-                    }
-                }
-                setViewingMonster(merged)
-                setViewingMonsterCreatureName(creature.name)
-                return
-            }
-        }
-        if (runtimeCreature && runtimeCreature.monsterIndex) {
-            const monsters = await loadMonsters()
-            const baseMonster = monsters.find(m => m.index === runtimeCreature.monsterIndex)
-            if (baseMonster) {
-                const merged = cloneDeep(baseMonster)
-                merged.name = runtimeCreature.name
-                merged.armor_class = runtimeCreature.ac
-                merged.hit_points = runtimeCreature.currentHp
-                merged.type = runtimeCreature.type
-                merged.size = runtimeCreature.size
-                if (runtimeCreature.speed) {
-                    merged.speed = runtimeCreature.speed
-                }
-                if (runtimeCreature.saveBonuses && baseMonster.saving_throws) {
-                    for (const [abbr, bonus] of Object.entries(runtimeCreature.saveBonuses)) {
-                        if (merged.saving_throws?.[abbr]) {
-                            merged.saving_throws[abbr].modifier = bonus
-                        }
-                    }
-                }
-                if (runtimeCreature.resistances) {
-                    merged.damage_resistances = runtimeCreature.resistances
-                }
-                if (runtimeCreature.immunities) {
-                    merged.damage_immunities = runtimeCreature.immunities
-                }
-                if (runtimeCreature.actions) {
-                    merged.actions = runtimeCreature.actions
-                }
-                if (runtimeCreature.wildShapeSource) {
-                    const druidCharacter = characters.find(c => utils.getName(c.name) === runtimeCreature.wildShapeSource)
-                    if (druidCharacter) {
-                        const druidAbilities = druidCharacter.computedStats?.abilities || druidCharacter.abilities || []
-                        const intScore = druidAbilities.find(a => a.name === 'Intelligence')?.score
-                        const wisScore = druidAbilities.find(a => a.name === 'Wisdom')?.score
-                        const chaScore = druidAbilities.find(a => a.name === 'Charisma')?.score
-                        if (intScore != null) merged.ability_scores.int = intScore
-                        if (wisScore != null) merged.ability_scores.wis = wisScore
-                        if (chaScore != null) merged.ability_scores.cha = chaScore
-                        const druidLanguages = druidCharacter.computedStats?.languages || druidCharacter.languages
-                        if (druidLanguages) merged.languages = Array.isArray(druidLanguages) ? druidLanguages.join(', ') : druidLanguages
-                    }
-                }
-                setViewingMonster(merged)
-                setViewingMonsterCreatureName(creature.name)
-                return
-            }
-        }
-        const monster = await getMonsterData(creature.name)
-        if (monster) {
-            setViewingMonster(monster)
-            setViewingMonsterCreatureName(creature.name)
-        }
-    }
-
-    const openEffectAdder = (creature, tab) => {
-        if (!isLocalhost) return
-        setEffectAdderTarget(creature)
-        setEffectAdderTab(tab)
-    }
-
-    const handleApplyEffect = (tab, data) => {
-        if (!effectAdderTarget || !combatSummary) return
-
-        if (tab === 'conditions') {
-            const conditionDef = CONDITIONS.find(c => c.key === data.conditionKey)
-            if (!conditionDef) return
-            const targetCharacter = characters.find(c => utils.getName(c.name) === effectAdderTarget.name)
-            const targetStats = targetCharacter?.computedStats || targetCharacter
-            addCondition(combatSummary, effectAdderTarget.name, conditionDef, data.dc, data.ability, getRuntimeValue, setRuntimeValue, campaignName, targetStats)
-            storage.set('combatSummary', combatSummary, campaignName)
-            setCombatSummary(cloneDeep(combatSummary))
-            logConditionEvent(campaignName, 'applied', effectAdderTarget.name, conditionDef.label, data.dc, data.ability)
-        } else if (tab === 'effects') {
-            const effectEntry = { target: effectAdderTarget.name, effect: data.effectKey }
-            if (data.source) effectEntry.source = data.source
-            if (data.value !== undefined) effectEntry.value = data.value
-            if (data.ability) effectEntry.ability = data.ability
-            if (data.dc !== undefined) {
-                effectEntry.saveDc = data.dc
-                effectEntry.saveAbility = data.ability || 'wis'
-            }
-            if (data.notes) effectEntry.notes = data.notes
-            const existing = getRuntimeValue('campaign', 'targetEffects') || []
-            const filtered = existing.filter(te => !(te.target === effectAdderTarget.name && te.effect === data.effectKey))
-            setRuntimeValue('campaign', 'targetEffects', [...filtered, effectEntry], campaignName)
-            logConditionEvent(campaignName, 'target-effect-applied', effectAdderTarget.name, data.effectKey, data.dc, data.ability)
-        } else if (tab === 'concentration') {
-            const targetBuffs = getRuntimeValue(effectAdderTarget.name, 'activeBuffs', campaignName)
-            if (Array.isArray(targetBuffs) && targetBuffs.some(b => b.name === 'Rage')) {
-                setEffectAdderTarget(null)
-                return
-            }
-            addConcentration(combatSummary, effectAdderTarget.name, data.spellName, data.dc)
-            storage.set('combatSummary', combatSummary, campaignName)
-            setCombatSummary(cloneDeep(combatSummary))
-            logConditionEvent(campaignName, 'concentration-started', effectAdderTarget.name, `Concentration: ${data.spellName}`, data.dc, 'con')
-        }
-
-        setEffectAdderTarget(null)
-    }
-
-    const handleRollConditionSave = async (creatureName, condition) => {
-        if (!combatSummary) return
-        const creature = combatSummary.creatures.find(c => c.name === creatureName)
-        if (!creature) return
-
-        const { roll: r1, success, bonus, bonusDetail, rolls, starryDragonFloor } = await rollConditionSave(
-            creature, condition, characters, campaignNpcs, campaignName, mapName, utils.getName
-        )
-
-        if (success) {
-            removeCondition(combatSummary, creatureName, condition, getRuntimeValue, setRuntimeValue, campaignName)
-
-            // Otto's Irresistible Dance: a successful WIS reroll on the Charmed
-            // badge ends the whole spell — remove Speed 0 and the spell badge too.
-            if (String(condition.key).toLowerCase() === 'charmed') {
-                const danceEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
-                    te => te.effect === 'ottos_irresistible_dance' && te.target === creatureName
-                )
-                if (danceEffect) {
-                    removeCondition(combatSummary, creatureName, { key: 'speed_zero' }, getRuntimeValue, setRuntimeValue, campaignName)
-                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
-                        te => !(te.target === creatureName && te.effect === 'ottos_irresistible_dance')
-                    )
-                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
-                    logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: danceEffect.source,
-                        rollType: 'save-ottos-dance',
-                        targetName: creatureName,
-                        saveDc: condition.dc,
-                        saveType: 'WIS',
-                        success: true,
-                        description: `${creatureName} succeeded on WIS save against Otto's Irresistible Dance. The spell ends; Charmed and Speed 0 removed.`,
-                    }).catch(() => {})
-                    logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: creatureName,
-                        condition: 'Charmed, Speed 0',
-                        reason: "Otto's Irresistible Dance (successful reroll)",
-                        note: `${creatureName} succeeded on the WIS reroll; Otto's Irresistible Dance ends.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {})
-                }
-            }
-
-            // Tasha's Hideous Laughter: a successful WIS reroll on the Prone/Incapacitated
-            // badge ends the whole spell — remove both conditions and the spell badge.
-            if (String(condition.key).toLowerCase() === 'prone' || String(condition.key).toLowerCase() === 'incapacitated') {
-                const laughterEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
-                    te => te.effect === 'tashas_hideous_laughter' && te.target === creatureName
-                )
-                if (laughterEffect) {
-                    removeCondition(combatSummary, creatureName, { key: 'prone' }, getRuntimeValue, setRuntimeValue, campaignName)
-                    removeCondition(combatSummary, creatureName, { key: 'incapacitated' }, getRuntimeValue, setRuntimeValue, campaignName)
-                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
-                        te => !(te.target === creatureName && te.effect === 'tashas_hideous_laughter')
-                    )
-                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
-                    logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: laughterEffect.source,
-                        rollType: 'save-tashas-laughter',
-                        targetName: creatureName,
-                        saveDc: condition.dc,
-                        saveType: 'WIS',
-                        success: true,
-                        description: `${creatureName} succeeded on WIS save against Tasha's Hideous Laughter. The spell ends; Prone and Incapacitated removed.`,
-                    }).catch(() => {})
-                    logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: creatureName,
-                        condition: 'Prone, Incapacitated',
-                        reason: "Tasha's Hideous Laughter (successful reroll)",
-                        note: `${creatureName} succeeded on the WIS reroll; Tasha's Hideous Laughter ends.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {})
-                }
-            }
-
-            // Confusion: a successful WIS reroll on the Confused badge ends the whole spell —
-            // remove Charmed + Speed 0 and the spell badge.
-            if (String(condition.key).toLowerCase() === 'confused') {
-                const confusionEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
-                    te => te.effect === 'confusion' && te.target === creatureName
-                )
-                if (confusionEffect) {
-                    removeCondition(combatSummary, creatureName, { key: 'charmed' }, getRuntimeValue, setRuntimeValue, campaignName)
-                    removeCondition(combatSummary, creatureName, { key: 'speed_zero' }, getRuntimeValue, setRuntimeValue, campaignName)
-                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
-                        te => !(te.target === creatureName && te.effect === 'confusion')
-                    )
-                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
-                    logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: confusionEffect.source,
-                        rollType: 'save-confusion',
-                        targetName: creatureName,
-                        saveDc: condition.dc,
-                        saveType: 'WIS',
-                        success: true,
-                        description: `${creatureName} succeeded on WIS save against Confusion. The spell ends; Charmed and Speed 0 removed.`,
-                    }).catch(() => {})
-                    logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: creatureName,
-                        condition: 'Charmed, Speed 0',
-                        reason: 'Confusion (successful reroll)',
-                        note: `${creatureName} succeeded on the WIS reroll; Confusion ends.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {})
-                }
-            }
-
-            // Forcecage: a successful CHA reroll on the Forcecaged badge lets the
-            // creature escape using teleportation or interplanar travel — remove
-            // the Forcecage target effect and log the escape.
-            if (String(condition.key).toLowerCase() === 'forcecaged') {
-                const forcecageEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
-                    te => te.effect === 'forcecage' && te.target === creatureName
-                )
-                if (forcecageEffect) {
-                    removeForcecageEffect(creatureName, forcecageEffect.source, campaignName)
-                    logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: forcecageEffect.source,
-                        rollType: 'save-forcecage',
-                        targetName: creatureName,
-                        saveDc: condition.dc,
-                        saveType: 'CHA',
-                        success: true,
-                        description: `${creatureName} succeeded on CHA save against Forcecage and escaped the prison using teleportation or interplanar travel.`,
-                    }).catch(() => {})
-                    logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: creatureName,
-                        condition: 'Forcecaged',
-                        reason: 'Forcecage escape (successful CHA save)',
-                        note: `${creatureName} succeeded on the CHA reroll; the Forcecage no longer traps them.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {})
-                }
-            }
-
-            // Maze: a successful INT (Investigation) reroll on the Incapacitated badge
-            // lets the creature escape the Maze — remove the maze target effect, clear
-            // mazeData, remove incapacitated condition, and log the escape.
-            if (String(condition.key).toLowerCase() === 'incapacitated') {
-                const mazeEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
-                    te => te.effect === 'maze' && te.target === creatureName
-                )
-                if (mazeEffect) {
-                    removeMazeEffect(creatureName, mazeEffect.source, campaignName)
-                    setRuntimeValue(creatureName, 'mazeData', null, campaignName)
-                    const storedConditions = getRuntimeValue(creatureName, 'activeConditions') || []
-                    const conditions = Array.isArray(storedConditions) ? storedConditions : []
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated')
-                    setRuntimeValue(creatureName, 'activeConditions', filtered, campaignName)
-                    logService.addEntry(campaignName, {
-                        type: 'save_result',
-                        characterName: mazeEffect.source,
-                        rollType: 'save-maze-escape',
-                        targetName: creatureName,
-                        saveDc: condition.dc,
-                        saveType: 'INT',
-                        success: true,
-                        description: `${creatureName} succeeded on INT (Investigation) check (${r1} + ${bonus} = ${r1 + bonus} vs DC ${condition.dc}) and escaped the Maze.`,
-                    }).catch(() => {})
-                    logService.addEntry(campaignName, {
-                        type: 'condition',
-                        action: 'removed',
-                        characterName: creatureName,
-                        condition: 'Incapacitated',
-                        reason: 'Maze escape (successful INT Investigation check)',
-                        note: `${creatureName} escaped the Maze and is no longer Incapacitated.`,
-                        timestamp: Date.now(),
-                    }).catch(() => {})
-                }
-            }
-        }
-
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-
-        setConditionPopup(buildConditionPopup(r1, bonus, bonusDetail, getAbilityLabel(condition.ability), condition.label, condition.dc, success, rolls, rolls && rolls.length > 1, starryDragonFloor))
-
-        logConditionSave(campaignName, creatureName, r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
-    }
-
-    const handleRollConcentrationSave = async (creatureName) => {
-        if (!combatSummary) return
-        const creature = combatSummary.creatures.find(c => c.name === creatureName)
-        if (!creature || !creature.concentration) return
-
-        const concentration = creature.concentration
-
-        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName)
-        const attackerName = lastAttack?.attackerName
-        const attacker = attackerName ? characters.find(c => c.name === attackerName || c.name.startsWith(attackerName + ' ')) : null
-        const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers
-        const hasConcentrationBreaker = attackerModifiers?.some(mod =>
-          mod.condition === 'concentration_breaker' && mod.effect === 'disadvantage'
-        ) ?? false
-
-        const targetCharacter = characters.find(c => c.name === creatureName || c.name.startsWith(creatureName + ' '))
-        const targetModifiers = targetCharacter?.saveModifiers || targetCharacter?.computedStats?.saveModifiers
-        const advantageSources = []
-        if (targetModifiers) {
-          targetModifiers.forEach(mod => {
-            if (mod.source && ((mod.target === 'concentration_saving_throws') || (mod.target === 'saving_throw' && mod.condition === 'concentration_spell_damage' && mod.effect === 'advantage' && mod.abilities && mod.abilities.includes('Constitution')))) {
-              if (!advantageSources.includes(mod.source)) {
-                advantageSources.push(mod.source)
-              }
-            }
-          })
-        }
-
-        const { roll: r1, success, bonus, bonusDetail, starryDragonFloor, displayRolls } = await rollConcentrationSave(
-            creature, concentration, characters, campaignNpcs, campaignName, mapName, utils.getName, hasConcentrationBreaker
-        )
-
-        if (!success) {
-            creature.concentration = null
-        }
-
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-
-        setConditionPopup(buildConcentrationPopup(r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, starryDragonFloor, displayRolls))
-
-        const mode = hasConcentrationBreaker ? 'disadvantage' : (advantageSources.length > 0 ? 'advantage' : 'normal')
-        logConcentrationSave(campaignName, creatureName, r1, bonus, bonusDetail, concentration.spell, concentration.dc, success, mode, advantageSources.length > 0 ? advantageSources : undefined)
-
-        if (!success) {
-            cleanupConcentrationEffects(creatureName, concentration.spell, campaignName)
-        }
-    }
-
-    const handleBreakConcentration = (creatureName) => {
-        if (!combatSummary) return
-        const spell = breakConcentration(combatSummary, creatureName)
-        if (!spell) return
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-        logConditionEvent(campaignName, 'removed', creatureName, `Concentration: ${spell}`)
-        cleanupConcentrationEffects(creatureName, spell, campaignName)
-    }
-
-    const handleGenerateLoot = async () => {
-        setGeneratingLoot(true)
-        try {
-            const lootResult = await generateLootFromCombatSummary(
-                combatSummaryRef.current || combatSummary,
-                characters,
-                campaignName
-            )
-            setLootData(lootResult || { lootEntries: [], totalEncounterXp: 0 })
-            setLootTextValue(lootResult.lootEntries.join('\n'))
-        } catch (error) {
-            console.error('Failed to generate loot:', error)
-        } finally {
-            setGeneratingLoot(false)
-        }
-    }
-
-    const handleAwardLoot = async () => {
-        if (awardingLoot) return
-        setAwardingLoot(true)
-        try {
-            const numChars = characters && characters.length > 0 ? characters.length : 1
-            const xpPerChar = Math.floor(lootData.totalEncounterXp / numChars)
-
-            const lootItems = lootTextValue
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0)
-
-            if (lootItems.length > 0 && lootItems.some(item => item !== 'No loot for these monsters')) {
-                await logService.addEntry(campaignName, {
-                    type: 'loot',
-                    encounterName: 'Combat',
-                    lootItems: lootItems.filter(item => item !== 'No loot for these monsters'),
-                    xpPerChar,
-                    totalEncounterXp: lootData.totalEncounterXp,
-                })
-            }
-
-            await logEntry({
-                type: 'encounter',
-                action: 'loot_awarded',
-                encounterName: 'Combat',
-                xpPerChar,
-                totalEncounterXp: lootData.totalEncounterXp,
-                lootItems,
-            })
-
-            for (const charData of (characters || [])) {
-                const currentXp = getRuntimeValue(charData.name, 'xp') || 0
-                setRuntimeValue(charData.name, 'xp', currentXp + xpPerChar, campaignName)
-            }
-
-            setShowAwardLoot(false)
-            setLootTextValue('')
-            setLootData({ lootEntries: [], totalEncounterXp: 0 })
-        } catch (error) {
-            console.error('Failed to award loot:', error)
-        } finally {
-            setAwardingLoot(false)
-        }
-    }
-
-    const handleClearLoot = () => {
-        setLootData({ lootEntries: [], totalEncounterXp: 0 })
-        setLootTextValue('')
-        setShowAwardLoot(false)
-    }
-
-    const logEntry = async (entry) => {
-        try { await logService.addEntry(campaignName, entry); } catch { /* ignore */ }
-    }
-
-    const handleAutoBreakCondition = (creatureName, condition) => {
-        if (!isLocalhost || !combatSummary) return
-        const conditionKey = String(condition.key || condition).toLowerCase()
-        const creature = combatSummary.creatures.find(c => c.name === creatureName)
-        if (creature?.conditions) {
-            creature.conditions = creature.conditions.filter(c => {
-                if (!c || typeof c !== 'object') return true
-                return String(c.key || c).toLowerCase() !== conditionKey
-            })
-        }
-        removeCondition(combatSummary, creatureName, condition, getRuntimeValue, setRuntimeValue, campaignName)
-        storage.set('combatSummary', combatSummary, campaignName)
-        setCombatSummary(cloneDeep(combatSummary))
-        logConditionEvent(campaignName, 'broken', creatureName, condition.label)
-    }
+        })()
+        return () => { cancelled = true }
+    }, [campaignName]) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className='initiative'>
@@ -1740,7 +596,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
               <div className='combat-controls'>
                   <button className='clear-button' onClick={handleClear}>Clear</button>
                   <button onClick={handleAddNpc}>+ NPC</button>
-                  <button onClick={handlePreviousCreature} disabled={isPrevDisabled}>← Prev</button>
+                  <button onClick={handlePreviousCreature} disabled={isPrevDisabledValue}>← Prev</button>
                   <button onClick={handleNextCreature}>Next →</button>
               </div>
               <div className='initiative-loot-section'>
