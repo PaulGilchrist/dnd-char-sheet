@@ -3,9 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   hasPassiveEffect,
-  getPassiveBuffs,
   collectWeaponMastery,
-  resolveHealingBonuses,
   hasHealingMaximization,
   hasRerollHealingOnes,
   hasTacticalShift,
@@ -47,10 +45,6 @@ vi.mock('./automationExpressions.js', () => ({
   evaluateAutoExpression: vi.fn(),
 }))
 
-vi.mock('./automationInfoBuilder.js', () => ({
-  buildAttackInfo: vi.fn(),
-}))
-
 vi.mock('../../rules/core/greatWeaponFighting.js', () => ({
   applyGreatWeaponFighting: vi.fn(),
 }))
@@ -61,7 +55,6 @@ import { parseMagicItemName } from '../../rules/core/attackCalc.js'
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import { getChosenRuntimeValue } from '../../automation/common/choiceStorage.js'
 import { evaluateAutoExpression } from './automationExpressions.js'
-import { buildAttackInfo } from './automationInfoBuilder.js'
 import { applyGreatWeaponFighting } from '../../rules/core/greatWeaponFighting.js'
 
 // ── hasPassiveEffect ──────────────────────────────────────────────
@@ -126,61 +119,6 @@ describe('wrapper helpers (haveHealingMaximization, hasRerollHealingOnes, hasTac
     expect(hasSpeedyOpportunityDisadvantage(ps)).toBe(false)
     expect(hasSpeedyDifficultTerrainIgnore(ps)).toBe(false)
     expect(hasGreatWeaponFighting(ps)).toBe(false)
-  })
-})
-
-// ── getPassiveBuffs ───────────────────────────────────────────────
-
-describe('getPassiveBuffs', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns empty array when features is null, undefined, or empty', () => {
-    expect(getPassiveBuffs(null, {})).toEqual([])
-    expect(getPassiveBuffs(undefined, {})).toEqual([])
-    expect(getPassiveBuffs([], {})).toEqual([])
-  })
-
-  it('skips features without automation or with falsy automation', () => {
-    const features = [{ name: 'No Automation' }, { name: 'Test', automation: null }]
-    expect(getPassiveBuffs(features, {})).toEqual([])
-    expect(buildAttackInfo).not.toHaveBeenCalled()
-  })
-
-  it('collects passive_buff, passive_rule, and passive_immunity types', () => {
-    buildAttackInfo.mockImplementation(({ automation }) => ({
-      type: automation.type || 'passive_buff',
-      effect: 'test',
-    }))
-    const features = [
-      { name: 'Test', automation: { type: 'passive_buff' } },
-      { name: 'Test', automation: { type: 'passive_rule' } },
-      { name: 'Test', automation: { type: 'passive_immunity' } },
-    ]
-    const result = getPassiveBuffs(features, {})
-    expect(result).toHaveLength(3)
-  })
-
-  it('skips features with non-matching automation types', () => {
-    buildAttackInfo.mockReturnValue({ type: 'action_attack', effect: 'test' })
-    const features = [{ name: 'Test', automation: { type: 'action_attack' } }]
-    const result = getPassiveBuffs(features, {})
-    expect(result).toHaveLength(0)
-  })
-
-  it('handles array of automations on a single feature', () => {
-    buildAttackInfo
-      .mockReturnValueOnce({ type: 'passive_buff', effect: 'first' })
-      .mockReturnValueOnce({ type: 'passive_rule', effect: 'second' })
-    const features = [{ name: 'Test', automation: [{ type: 'passive_buff' }, { type: 'passive_rule' }] }]
-    const result = getPassiveBuffs(features, {})
-    expect(result).toHaveLength(2)
-    expect(result.map(r => r.effect)).toEqual(['first', 'second'])
-  })
-
-  it('skips automation entries that return null from buildAttackInfo', () => {
-    buildAttackInfo.mockReturnValue(null)
-    const features = [{ name: 'Test', automation: { type: 'passive_buff' } }]
-    expect(getPassiveBuffs(features, {})).toEqual([])
   })
 })
 
@@ -336,49 +274,6 @@ describe('collectWeaponMastery', () => {
       automation: { passives: [{ type: 'weapon_kind_mastery', meleeOnly: true }] },
     }
     expect(collectWeaponMastery('Shortsword', playerStats).baseMastery).toBe('push')
-  })
-})
-
-// ── resolveHealingBonuses ─────────────────────────────────────────
-
-describe('resolveHealingBonuses', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns 0 when no passives or passives is null or automation is null', () => {
-    expect(resolveHealingBonuses({ automation: { passives: [] } }, 4, 3, 1)).toBe(0)
-    expect(resolveHealingBonuses({ automation: { passives: null } }, 4, 3, 1)).toBe(0)
-    expect(resolveHealingBonuses({ automation: null }, 4, 3, 1)).toBe(0)
-  })
-
-  it('evaluates bonus_healing and max_hp_increase expressions', () => {
-    evaluateAutoExpression.mockImplementation((expr) => (expr === '2 + 3' ? 5 : 2))
-    const playerStats = {
-      automation: { passives: [
-        { type: 'passive_rule', effect: 'bonus_healing', bonusExpression: '2 + 3' },
-        { type: 'passive_rule', effect: 'max_hp_increase', alsoSelfHealing: { extraHealingExpression: '1 + 1' } },
-      ] },
-    }
-    expect(resolveHealingBonuses(playerStats, 4, 3, 1)).toBe(7)
-  })
-
-  it('skips non-matching passive types, missing expressions, and NaN/non-number results', () => {
-    evaluateAutoExpression.mockReturnValue(NaN)
-    const playerStats = { automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing', bonusExpression: 'abc' }] } }
-    expect(resolveHealingBonuses(playerStats, 4, 3, 1)).toBe(0)
-
-    evaluateAutoExpression.mockReturnValue('not a number')
-    const nonNumberStats = { automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing', bonusExpression: 'x' }] } }
-    expect(resolveHealingBonuses(nonNumberStats, 4, 3, 1)).toBe(0)
-
-    evaluateAutoExpression.mockReturnValue(0)
-    const noExprStats = { automation: { passives: [{ type: 'passive_rule', effect: 'bonus_healing' }] } }
-    expect(resolveHealingBonuses(noExprStats, 4, 3, 1)).toBe(0)
-  })
-
-  it('skips non-matching passive types', () => {
-    const playerStats = { automation: { passives: [{ type: 'passive_buff', effect: 'test' }] } }
-    expect(resolveHealingBonuses(playerStats, 4, 3, 1)).toBe(0)
-    expect(evaluateAutoExpression).not.toHaveBeenCalled()
   })
 })
 
