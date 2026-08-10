@@ -4,23 +4,16 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
 import { rollD20 } from '../../../dice/diceRoller.js';
-import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import utils from '../../../ui/utils.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
-import { createSaveListener } from '../../../automation/common/savePrompt.js';
+import { createSaveListener, buildSaveDc } from '../../../automation/common/savePrompt.js';
 
 const AVENGING_ANGEL_KEY = 'avengingAngelActive';
 const AVENGING_ANGEL_AURA_KEY = 'avengingAngelAuraTargets';
 const AVENGING_ANGEL_REST_KEY = 'avengingAngelRestUsed';
 const AURA_RANGE_FT = 30;
-
-function buildSaveDc(playerStats) {
-    const chaBonus = getAbilityModifier(playerStats.abilities, 'Charisma');
-    const prof = playerStats.proficiency || 0;
-    return 8 + chaBonus + prof;
-}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -143,7 +136,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 }
 
 async function resolveFrightfulAura(action, playerStats, campaignName) {
-    const saveDc = buildSaveDc(playerStats);
+    const saveDc = buildSaveDc({ saveDc: 'ability', saveAbility: 'Charisma' }, playerStats);
     const playerName = playerStats.name;
 
     const combatSummary = await getCombatContext(campaignName);

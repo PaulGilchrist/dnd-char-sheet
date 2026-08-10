@@ -55,6 +55,7 @@ vi.mock('../../../automation/common/savePrompt.js', () => ({
     promptId: 'test-prompt-id',
     promise: Promise.resolve({ success: false, roll: 12, total: 15 }),
   }),
+  buildSaveDc: vi.fn().mockReturnValue(14),
 }));
 
 import {
