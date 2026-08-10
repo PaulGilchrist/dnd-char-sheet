@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -649,6 +648,193 @@ describe('buildAttackContextForDamage', () => {
             );
 
             expect(result.resistanceNotice).toBe("Goblin resists fire (Nature's Sanctuary)");
+        });
+    });
+
+    describe('nearbyThreats computation for melee proximity', () => {
+        const attackerPlayer = { name: playerName, gridX: 5, gridY: 10 };
+        const cs = { creatures: [{ name: 'Enemy' }] };
+
+        beforeEach(() => {
+            damageUtils.getCombatContext.mockResolvedValue(cs);
+            damageUtils.getTargetFromAttacker.mockReturnValue(null);
+            damageUtils.getAttackerTargetName.mockReturnValue('Enemy');
+            damageUtils.getResistanceNotice.mockReturnValue(null);
+            rangeValidation.rangeToFeet.mockReturnValue(60);
+            rangeValidation.computeRangeEffect.mockReturnValue({ mode: 'normal' });
+            rangeValidation.computeMeleeProximityEffect.mockReturnValue({ mode: 'normal' });
+            rangeValidation.getDistanceFeet.mockReturnValue(10);
+            coverService.computeCover.mockReturnValue({ level: 'none', acBonus: 0 });
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer]));
+            npcsService.loadNPCs.mockResolvedValue([]);
+        });
+
+        it('computes nearbyThreats from placedItems NPCs with hostile attitude', async () => {
+            const hostileNpc = { type: 'npc', name: 'Thug', gridX: 6, gridY: 11 };
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], [hostileNpc]));
+            npcsService.loadNPCs.mockResolvedValue([{ name: 'Thug', attitude: 'negative' }]);
+
+            rangeValidation.computeMeleeProximityEffect.mockReturnValue({ mode: 'disadvantage', reason: 'Flanked' });
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.forcedMode).toBe('disadvantage');
+            expect(result.rangeReason).toBe('Flanked');
+        });
+
+        it('filters out non-NPC placed items', async () => {
+            const nonNpcItem = { type: 'furniture', name: 'Table', gridX: 6, gridY: 11 };
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], [nonNpcItem]));
+            npcsService.loadNPCs.mockResolvedValue([]);
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+            expect(result.attackerName).toBe(playerName);
+        });
+
+        it('filters out friendly NPCs (positive attitude)', async () => {
+            const friendlyNpc = { type: 'npc', name: 'Ally', gridX: 6, gridY: 11 };
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], [friendlyNpc]));
+            npcsService.loadNPCs.mockResolvedValue([{ name: 'Ally', attitude: 'positive' }]);
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+            expect(result.attackerName).toBe(playerName);
+        });
+
+        it('matches NPC by name with number suffix replacement', async () => {
+            const npcWithNumber = { type: 'npc', name: 'Goblin 2', gridX: 6, gridY: 11 };
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], [npcWithNumber]));
+            npcsService.loadNPCs.mockResolvedValue([{ name: 'Goblin', attitude: 'negative' }]);
+
+            rangeValidation.computeMeleeProximityEffect.mockReturnValue({ mode: 'disadvantage', reason: 'Flanked' });
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.forcedMode).toBe('disadvantage');
+        });
+
+        it('skips NPCs not found in npcs service', async () => {
+            const orphanNpc = { type: 'npc', name: 'Mystery', gridX: 6, gridY: 11 };
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], [orphanNpc]));
+            npcsService.loadNPCs.mockResolvedValue([]);
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+        });
+
+        it('handles empty placedItems array', async () => {
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer], []));
+            npcsService.loadNPCs.mockResolvedValue([]);
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+        });
+    });
+
+    describe('map data edge cases', () => {
+        const attackerPlayer = { name: playerName, gridX: 5, gridY: 10 };
+        const targetPlayer = { name: 'Enemy', gridX: 10, gridY: 15 };
+        const cs = { creatures: [{ name: 'Enemy' }] };
+
+        beforeEach(() => {
+            damageUtils.getCombatContext.mockResolvedValue(cs);
+            damageUtils.getTargetFromAttacker.mockReturnValue(targetPlayer);
+            damageUtils.getResistanceNotice.mockReturnValue(null);
+            damageUtils.getAttackerTargetName.mockReturnValue(undefined);
+            rangeValidation.rangeToFeet.mockReturnValue(0);
+            rangeValidation.computeRangeEffect.mockReturnValue({ mode: 'normal' });
+            coverService.computeCover.mockReturnValue({ level: 'none', acBonus: 0 });
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer, targetPlayer]));
+            npcsService.loadNPCs.mockResolvedValue([]);
+        });
+
+        it('handles mapData without walls property', async () => {
+            mapsService.loadMapData.mockResolvedValue({
+                players: [attackerPlayer, targetPlayer],
+                placedItems: [],
+            });
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+            expect(result.attackerName).toBe(playerName);
+        });
+
+        it('handles mapData without placedItems property', async () => {
+            mapsService.loadMapData.mockResolvedValue({
+                players: [attackerPlayer, targetPlayer],
+                walls: new Set(),
+            });
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext({ range: '60 ft.' }),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+        });
+
+        it('handles combat context returning null inside map block', async () => {
+            damageUtils.getCombatContext
+                .mockResolvedValueOnce(cs)
+                .mockResolvedValueOnce(null);
+
+            mapsService.loadMapData.mockResolvedValue(makeMapData([attackerPlayer, targetPlayer]));
+
+            const result = await buildAttackContextForDamage(
+                makeAttackContext(),
+                playerName, campaignName, mapName,
+            );
+
+            expect(result.damageType).toBe('fire');
+            expect(result.attackerName).toBe(playerName);
+        });
+    });
+
+    describe('buildSyncCtx fallback', () => {
+        beforeEach(() => {
+            damageUtils.getCombatContext.mockResolvedValue(null);
+            damageUtils.getTargetFromAttacker.mockReturnValue(null);
+            damageUtils.getResistanceNotice.mockReturnValue(null);
+            damageUtils.getAttackerTargetName.mockReturnValue(undefined);
+        });
+
+        it('defaults saveDc to 0 when attackContext saveDc is undefined', async () => {
+            const attackContext = makeAttackContext({ saveDc: undefined });
+            const result = await buildAttackContextForDamage(attackContext, playerName, campaignName, null);
+            expect(result.saveDc).toBe(0);
+        });
+
+        it('defaults saveDc to 0 when attackContext saveDc is 0', async () => {
+            const attackContext = makeAttackContext({ saveDc: 0 });
+            const result = await buildAttackContextForDamage(attackContext, playerName, campaignName, null);
+            expect(result.saveDc).toBe(0);
         });
     });
 });

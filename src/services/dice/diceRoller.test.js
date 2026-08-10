@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
 import {
   rollD20,
@@ -10,6 +9,8 @@ import {
   rollExpression,
   rollExpressionDoubled,
   rollExpressionMaximized,
+  formatDamageFormula,
+  applyHealingRerollOnes,
 } from './diceRoller.js';
 
 describe('rollD20', () => {
@@ -156,6 +157,21 @@ describe('rollExpression', () => {
     expect(plusModResult.modifier).toBe(3);
   });
 
+  it('handles " or " where first part is invalid but second is valid', () => {
+    const result = rollExpression('invalid or 2d6');
+    expect(result).not.toBeNull();
+    expect(result.rolls).toHaveLength(2);
+    expect(result.modifier).toBe(0);
+  });
+
+  it('handles " plus " where one part is invalid', () => {
+    const result = rollExpression('1d8+3 plus invalid');
+    expect(result).not.toBeNull();
+    expect(result.rolls).toHaveLength(1);
+    expect(result.modifier).toBe(3);
+    expect(result.formula).toBe('1d8+3 plus invalid');
+  });
+
   it('strips brackets before evaluating', () => {
     const result = rollExpression('1d8+3[damage]');
     expect(result).not.toBeNull();
@@ -192,6 +208,33 @@ describe('rollExpressionDoubled', () => {
     expect(result.rolls).toHaveLength(1);
     expect(result.doubledRolls).toHaveLength(2);
     expect(result.modifier).toBe(3);
+  });
+
+  it('returns null when formula after stripping brackets is empty', () => {
+    const result = rollExpressionDoubled('[tag]');
+    expect(result).toBeNull();
+  });
+
+  it('handles " or " where first part is invalid', () => {
+    const result = rollExpressionDoubled('invalid or 2d6');
+    expect(result).not.toBeNull();
+    expect(result.rolls).toHaveLength(2);
+    expect(result.doubledRolls).toHaveLength(4);
+  });
+
+  it('handles " plus " where one part is invalid', () => {
+    const result = rollExpressionDoubled('1d8+3 plus invalid');
+    expect(result).not.toBeNull();
+    expect(result.rolls).toHaveLength(1);
+    expect(result.doubledRolls).toHaveLength(2);
+    expect(result.modifier).toBe(3);
+  });
+
+  it('handles " plus " where second part is invalid and uses result.rolls fallback', () => {
+    const result = rollExpressionDoubled('invalid plus 1d8');
+    expect(result).not.toBeNull();
+    expect(result.rolls).toHaveLength(1);
+    expect(result.doubledRolls).toHaveLength(2);
   });
 });
 
@@ -243,5 +286,158 @@ describe('rerollOnes option', () => {
     } finally {
       Math.random = originalRandom;
     }
+  });
+
+  it('keeps non-1 values unchanged when rerollOnes is true', () => {
+    const originalRandom = Math.random;
+    const results = [0.5, 0.5, 0.5];
+    let callCount = 0;
+    Math.random = () => {
+      const val = results[callCount] ?? 0.5;
+      callCount++;
+      return val;
+    };
+    try {
+      const result = rollExpression('3d6', { rerollOnes: true });
+      expect(result).not.toBeNull();
+      expect(result.rolls).toHaveLength(3);
+      for (const r of result.rolls) {
+        expect(r).toBeGreaterThanOrEqual(2);
+        expect(r).toBeLessThanOrEqual(6);
+      }
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+});
+
+describe('formatDamageFormula', () => {
+  it('returns the formula when formula is null/empty', () => {
+    expect(formatDamageFormula(null, [1, 2], false)).toBeNull();
+    expect(formatDamageFormula('', [1, 2], false)).toBe('');
+    expect(formatDamageFormula(undefined, [1, 2], false)).toBeUndefined();
+  });
+
+  it('returns original formula when stripped formula is empty', () => {
+    const result = formatDamageFormula('[tag]', [1, 2], false);
+    expect(result).toBe('[tag]');
+  });
+
+  it('returns original formula when parsing fails', () => {
+    const result = formatDamageFormula('not a formula', [1, 2], false);
+    expect(result).toBe('not a formula');
+  });
+
+  it('formats a basic damage formula without modifier or crit', () => {
+    const result = formatDamageFormula('1d8', [5], false);
+    expect(result).toBe('1d8 (5)');
+  });
+
+  it('formats with positive modifier', () => {
+    const result = formatDamageFormula('1d8+3', [5], false);
+    expect(result).toBe('1d8+3 (5)');
+  });
+
+  it('formats with negative modifier', () => {
+    const result = formatDamageFormula('1d8-2', [5], false);
+    expect(result).toBe('1d8-2 (5)');
+  });
+
+  it('formats with no rolls array', () => {
+    const result = formatDamageFormula('1d8+3', null, false);
+    expect(result).toBe('1d8+3');
+  });
+
+  it('formats with empty rolls array', () => {
+    const result = formatDamageFormula('1d8+3', [], false);
+    expect(result).toBe('1d8+3');
+  });
+
+  it('formats with crit suffix', () => {
+    const result = formatDamageFormula('1d8+3', [5, 6], true);
+    expect(result).toBe('1d8*2+3 (5, 6)');
+  });
+
+  it('formats without crit when not a crit', () => {
+    const result = formatDamageFormula('1d8+3', [5, 6], false);
+    expect(result).toBe('1d8+3 (5, 6)');
+  });
+
+  it('strips brackets before formatting', () => {
+    const result = formatDamageFormula('1d8+3[Fire]', [5], false);
+    expect(result).toBe('1d8+3 (5)');
+  });
+});
+
+describe('applyHealingRerollOnes', () => {
+  it('returns displayRolls as-is when rolls is null', () => {
+    const result = applyHealingRerollOnes(null, '1d8+3');
+    expect(result).toEqual({ displayRolls: null, originalRolls: null });
+  });
+
+  it('returns displayRolls as-is when rolls is not an array', () => {
+    const result = applyHealingRerollOnes('not an array', '1d8+3');
+    expect(result).toEqual({ displayRolls: 'not an array', originalRolls: null });
+  });
+
+  it('returns displayRolls as-is when parsing expression fails', () => {
+    const result = applyHealingRerollOnes([1, 2, 3], 'invalid');
+    expect(result).toEqual({ displayRolls: [1, 2, 3], originalRolls: null });
+  });
+
+  it('returns displayRolls as-is when no 1s are present', () => {
+    const result = applyHealingRerollOnes([3, 4, 5], '3d6');
+    expect(result).toEqual({ displayRolls: [3, 4, 5], originalRolls: null });
+  });
+
+  it('rerolls 1s and returns original rolls when rerolls occur', () => {
+    const originalRandom = Math.random;
+    const results = [0.5, 0.5, 0.5];
+    let callCount = 0;
+    Math.random = () => {
+      const val = results[callCount] ?? 0.5;
+      callCount++;
+      return val;
+    };
+    try {
+      const result = applyHealingRerollOnes([1, 4, 1], '3d6');
+      expect(result.displayRolls).toHaveLength(3);
+      expect(result.displayRolls[0]).toBeGreaterThanOrEqual(2);
+      expect(result.displayRolls[0]).toBeLessThanOrEqual(6);
+      expect(result.displayRolls[1]).toBe(4);
+      expect(result.displayRolls[2]).toBeGreaterThanOrEqual(2);
+      expect(result.displayRolls[2]).toBeLessThanOrEqual(6);
+      expect(result.originalRolls).toEqual([1, 4, 1]);
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  it('handles all 1s being rerolled', () => {
+    const originalRandom = Math.random;
+    const results = [0.5, 0.5, 0.5];
+    let callCount = 0;
+    Math.random = () => {
+      const val = results[callCount] ?? 0.5;
+      callCount++;
+      return val;
+    };
+    try {
+      const result = applyHealingRerollOnes([1, 1, 1], '2d6');
+      expect(result.displayRolls).toHaveLength(3);
+      expect(result.originalRolls).toEqual([1, 1, 1]);
+      for (const r of result.displayRolls) {
+        expect(r).toBeGreaterThanOrEqual(2);
+        expect(r).toBeLessThanOrEqual(6);
+      }
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+
+  it('returns originalRolls as null when no rerolls happened', () => {
+    const result = applyHealingRerollOnes([3, 5, 6], '3d6');
+    expect(result.originalRolls).toBeNull();
+    expect(result.displayRolls).toEqual([3, 5, 6]);
   });
 });

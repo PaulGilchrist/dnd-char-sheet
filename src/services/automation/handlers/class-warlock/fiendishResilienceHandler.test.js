@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, applyTypeChoice } from './fiendishResilienceHandler.js';
@@ -98,14 +97,22 @@ describe('fiendishResilienceHandler', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('uses custom damageTypes from feature automation', async () => {
+        it('uses default DAMAGE_TYPES when automation has no damageTypes', async () => {
             getChosenRuntimeValue.mockReturnValue(null);
             getRuntimeValue.mockReturnValue(null);
 
-            const customTypes = ['Fire', 'Cold'];
-            const result = await handle(makeFeature({ automation: { damageTypes: customTypes } }), makeStats(), CAMPAIGN);
+            const result = await handle(makeFeature({ automation: {} }), makeStats(), CAMPAIGN);
 
-            expect(result.payload.damageTypes).toEqual(customTypes);
+            expect(result.payload.damageTypes).toEqual(['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder']);
+        });
+
+        it('uses default DAMAGE_TYPES when automation is empty object in existingType branch', async () => {
+            getChosenRuntimeValue.mockReturnValue('Fire');
+            getRuntimeValue.mockReturnValue(null);
+
+            const result = await handle(makeFeature({ automation: {} }), makeStats(), CAMPAIGN);
+
+            expect(result.payload.damageTypes).toEqual(['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder']);
         });
     });
 
@@ -183,6 +190,34 @@ describe('fiendishResilienceHandler', () => {
             expect(addEntry).toHaveBeenCalledWith(CAMPAIGN, expect.objectContaining({
                 description: 'Fiendish Resilience — damage type changed to Cold',
             }));
+        });
+
+        it('uses default DAMAGE_TYPES when automation has no damageTypes', async () => {
+            getChosenRuntimeValue.mockReturnValue(null);
+
+            const result = await applyTypeChoice(
+                makeFeature({ automation: {} }),
+                makeStats(),
+                CAMPAIGN,
+                'Fire',
+            );
+
+            expect(result).not.toBeNull();
+            expect(setChosenRuntimeValue).toHaveBeenCalled();
+        });
+
+        it('uses default DAMAGE_TYPES when automation has no damageTypes in applyTypeChoice', async () => {
+            getChosenRuntimeValue.mockReturnValue(null);
+
+            const result = await applyTypeChoice(
+                makeFeature({ automation: {} }),
+                makeStats(),
+                CAMPAIGN,
+                'Fire',
+            );
+
+            expect(result).not.toBeNull();
+            expect(setChosenRuntimeValue).toHaveBeenCalled();
         });
     });
 });

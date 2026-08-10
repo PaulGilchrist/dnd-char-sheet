@@ -251,4 +251,51 @@ describe('falseLifeHandler.handle', () => {
       expect(logService.addEntry).not.toHaveBeenCalled();
     });
   });
+
+  describe('missing optional fields', () => {
+    it('uses default expression when action.automation is undefined', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'False Life' };
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('uses default expression when action.spell is undefined', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('works with action.automation being null', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'False Life', automation: null };
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('works with action.spell being null', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ spell: null });
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d4+4');
+    });
+
+    it('uses spell.level when spellSlotLevel is undefined and spell.level exists', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ spell: { level: 2, heal_at_slot_level: { 2: '3d6+6' } } });
+
+      await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('3d6+6');
+    });
+  });
 });

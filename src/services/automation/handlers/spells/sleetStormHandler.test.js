@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -328,6 +327,27 @@ describe('sleetStormHandler.handle', () => {
       );
     });
 
+    it('handles addEntry rejection in prone immunity path', async () => {
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'monster', weaknessesAndResistivities: { immunities: ['Prone'] } },
+          { name: casterName, type: 'player', gridX: 5, gridY: 10 },
+        ],
+      });
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, mapName);
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStorm] Error:', expect.any(Error));
+      expect(result.type).toBe('popup');
+      consoleError.mockRestore();
+    });
+
     it('handles case-insensitive prone immunity check', async () => {
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [
@@ -428,6 +448,28 @@ describe('sleetStormHandler.handle', () => {
           appliedDamage: 0,
         }),
       );
+    });
+
+    it('handles addEntry rejection in successful save path', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+      savePrompt.createSaveListener.mockReturnValue(successSaveListener());
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        mapName,
+      );
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStorm] Error:', expect.any(Error));
+      expect(result.type).toBe('popup');
+      consoleError.mockRestore();
     });
   });
 
@@ -1521,6 +1563,115 @@ describe('sleetStormHandler.processSleetStormAreaSave', () => {
         (c) => c[1].type === 'ability_use',
       );
       expect(abilityEntry[1].promptId).toBe('sleet-area-prompt-id');
+    });
+  });
+
+  describe('error handling in .catch() handlers', () => {
+    it('handles addEntry rejection in handle() save_result for failed save', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'sleet-error-handle',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        mapName,
+      );
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStorm] Error:', expect.any(Error));
+      consoleError.mockRestore();
+    });
+
+    it('handles addEntry rejection in processSleetStormAreaSave ability_use', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key.startsWith('_sleetStorm_')) {
+          return { saveDc: 15, saveType: 'DEX' };
+        }
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      damageUtils.getCombatContext.mockReturnValue({
+        creatures: [{ name: 'Goblin', type: 'monster' }],
+      });
+      rangeCheck.isWithinRange.mockResolvedValue(true);
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'sleet-area-error',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await processSleetStormAreaSave(casterName, 'Goblin', campaignName, mapName);
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStormAreaSave] Error:', expect.any(Error));
+      expect(result.type).toBe('popup');
+      consoleError.mockRestore();
+    });
+
+    it('handles addEntry rejection in processSleetStormAreaSave save_result on failure', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key.startsWith('_sleetStorm_')) {
+          return { saveDc: 15, saveType: 'DEX' };
+        }
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      damageUtils.getCombatContext.mockReturnValue({
+        creatures: [{ name: 'Goblin', type: 'monster' }],
+      });
+      rangeCheck.isWithinRange.mockResolvedValue(true);
+      logService.addEntry.mockRejectedValueOnce(new Error('log error'));
+      logService.addEntry.mockRejectedValue(new Error('log error 2'));
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'sleet-area-error-fail',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await processSleetStormAreaSave(casterName, 'Goblin', campaignName, mapName);
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStormAreaSave] Error:', expect.any(Error));
+      expect(result.type).toBe('popup');
+      consoleError.mockRestore();
+    });
+
+    it('handles addEntry rejection in processSleetStormAreaSave save_result on success', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key.startsWith('_sleetStorm_')) {
+          return { saveDc: 15, saveType: 'DEX' };
+        }
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      damageUtils.getCombatContext.mockReturnValue({
+        creatures: [{ name: 'Goblin', type: 'monster' }],
+      });
+      rangeCheck.isWithinRange.mockResolvedValue(true);
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'sleet-area-error-success',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      const consoleError = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await processSleetStormAreaSave(casterName, 'Goblin', campaignName, mapName);
+
+      expect(consoleError).toHaveBeenCalledWith('[sleetStormAreaSave] Error:', expect.any(Error));
+      expect(result.type).toBe('popup');
+      consoleError.mockRestore();
     });
   });
 });

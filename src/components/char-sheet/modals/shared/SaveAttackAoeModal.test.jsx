@@ -1,5 +1,4 @@
-// @cleaned-by-ai
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
 
@@ -48,6 +47,7 @@ vi.mock('../../../../services/encounters/combatData.js', () => ({
       { name: 'Player One', type: 'player', currentHp: 20, maxHp: 30, saveBonuses: { con: 4 } },
     ],
   })),
+  setCombatSummaryCache: vi.fn(),
 }));
 
 vi.mock('../../../../hooks/useAllySelection.js', () => ({
@@ -538,6 +538,217 @@ describe('SaveAttackAoeModal', () => {
     it('displays the damage type in instructions', () => {
       render(<SaveAttackAoeModal {...makeProps({ damageType: 'Cold' })} />);
       expect(screen.getByText(/Cold/)).toBeInTheDocument();
+    });
+  });
+
+  // ── CreatureSelectionModal confirm path ──
+
+  describe('creature selection confirm', () => {
+    it('calls storeSpellLastAttack when confirm is fired', async () => {
+      const { default: MockCSM } = await import('./CreatureSelectionModal.jsx');
+      expect(MockCSM).toBeDefined();
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      const { storeSpellLastAttack } = await import('../../../../services/automation/common/damageRollback.js');
+      expect(storeSpellLastAttack).toHaveBeenCalledWith('test-campaign', {
+        casterName: 'Cleric1',
+        spellName: 'Fireball',
+        saveType: 'DEX',
+        saveDc: 15,
+        attackScope: 'aoe',
+      });
+    });
+
+    it('shows results for NPC with failed save', async () => {
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0, formula: '1d20' });
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      const resultDiv = screen.getByText(/Goblin A/);
+      expect(resultDiv).toBeInTheDocument();
+    });
+
+    it('calls applyDamageToTarget when NPC takes damage after failed save', async () => {
+      const { applyDamageToTarget } = await import('../../../../services/rules/combat/applyDamage.js');
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      expect(applyDamageToTarget).toHaveBeenCalled();
+    });
+
+    it('calls sendSavePrompt for player targets', async () => {
+      const { sendSavePrompt } = await import('../../../../services/combat/conditions/savePromptService.js');
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Player One'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      expect(sendSavePrompt).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+        targetName: 'Player One',
+        saveType: 'DEX',
+        saveDc: 15,
+        sourceName: 'Cleric1',
+        disadvantage: false,
+      }));
+    });
+
+    it('calls addTargetResult for each NPC processed', async () => {
+      const { addTargetResult } = await import('../../../../services/automation/common/damageRollback.js');
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      expect(addTargetResult).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+        targetName: 'Goblin A',
+      }));
+    });
+
+    it('logs ability_use entry on confirm', async () => {
+      const { addEntry } = await import('../../../../services/ui/logService.js');
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      const abilityCalls = addEntry.mock.calls.filter(c => c[0]?.type === 'ability_use' || (c[1] && c[1].type === 'ability_use'));
+      expect(abilityCalls.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ── Overlay targeting path ──
+
+  describe('overlay targeting path', () => {
+    it('renders AreaEffectTargetModalBase when playerStats.targetName starts with overlay-', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('passes correct props to AreaEffectTargetModalBase in overlay mode', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-map1' }, range: 30 })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('renders target list in overlay mode via renderBody', () => {
+      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+  });
+
+  // ── Careful Spell with AreaEffectTargetModalBase ──
+
+  describe('careful spell with overlay', () => {
+    it('marks allies as carefully protected in overlay mode', () => {
+      allySelection.getAllyList.mockReturnValue(['Goblin A']);
+      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+  });
+
+  // ── Heighten with overlay ──
+
+  describe('heighten with overlay', () => {
+    it('passes heighten state through extraState in overlay mode', () => {
+      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+  });
+
+  // ── Clean up on unmount ──
+
+  describe('cleanup on unmount', () => {
+    it('clears summary, selected, pendingPrompts, and results on unmount', () => {
+      const { unmount } = render(<SaveAttackAoeModal {...makeProps()} />);
+      unmount();
+      expect(document.querySelector('.sp-overlay')).toBeNull();
+    });
+  });
+
+  // ── Target blocking effects ──
+
+  describe('target blocking effects', () => {
+    it('renders modal when forcecage effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('renders modal when maze effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('renders modal when banishment effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+
+    it('renders modal when imprisonment effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    });
+  });
+
+  // ── Scaling resolution ──
+
+  describe('scaling resolution', () => {
+    it('uses resolved scaling damage when available', async () => {
+      automationExpressions.resolveScaling.mockReturnValue({ damage: '10d6' });
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('10d6');
+    });
+
+    it('falls back to prop damage when scaling returns no damage', async () => {
+      automationExpressions.resolveScaling.mockReturnValue({});
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      fireEvent.click(getCheckboxByName('Goblin A'));
+      const confirmBtn = screen.getByRole('button', { name: /Fireball \(1\)/ });
+      await act(async () => {
+        fireEvent.click(confirmBtn);
+      });
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('8d6');
+    });
+  });
+
+  // ── toggleTarget ──
+
+  describe('toggleTarget', () => {
+    it('toggles target selection state', () => {
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      const checkbox = getCheckboxByName('Goblin A');
+      fireEvent.click(checkbox);
+      expect(checkbox.checked).toBe(true);
+      fireEvent.click(checkbox);
+      expect(checkbox.checked).toBe(false);
     });
   });
 });

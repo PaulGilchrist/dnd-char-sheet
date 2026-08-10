@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -37,7 +36,7 @@ import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import { sendDeathSavePrompt } from '../../../combat/conditions/savePromptService.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -356,6 +355,185 @@ describe('reactionSaveHealHandler', () => {
         });
       });
     });
+
+    it('handles death save result - natural 20 (clears saves/failures, sets HP to 1)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const hpCalls = calls.filter((c) => c[1] === 'currentHitPoints');
+        expect(hpCalls).toContainEqual(['TestBarbarian', 'currentHitPoints', 1, campaignName]);
+
+        const saveCalls = calls.filter((c) => c[1] === 'deathSaves');
+        expect(saveCalls).toContainEqual(['TestBarbarian', 'deathSaves', [false, false, false], campaignName]);
+
+        const failCalls = calls.filter((c) => c[1] === 'deathFailures');
+        expect(failCalls).toContainEqual(['TestBarbarian', 'deathFailures', [false, false, false], campaignName]);
+      });
+    });
+
+    it('handles death save result - success (marks first empty save slot)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: true, isNat20: false, roll: 15 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const saveCalls = calls.filter((c) => c[1] === 'deathSaves');
+        expect(saveCalls).toContainEqual(['TestBarbarian', 'deathSaves', [true, false, false], campaignName]);
+      });
+    });
+
+    it('handles death save result - failure with nat1 (double failure)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: false, isNat1: true, roll: 1 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const failCalls = calls.filter((c) => c[1] === 'deathFailures');
+        expect(failCalls).toContainEqual(['TestBarbarian', 'deathFailures', [true, true, false], campaignName]);
+      });
+    });
+
+    it('handles death save result - regular failure (single failure)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: false, isNat1: false, roll: 5 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const failCalls = calls.filter((c) => c[1] === 'deathFailures');
+        expect(failCalls).toContainEqual(['TestBarbarian', 'deathFailures', [true, false, false], campaignName]);
+      });
+    });
+
+    it('ignores death-save-result with mismatched promptId', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'wrong-prompt-id', success: true, isNat20: true, roll: 20 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const hpCalls = calls.filter((c) => c[1] === 'currentHitPoints' && c[2] === 1);
+        expect(hpCalls.length).toBe(0);
+      });
+    });
+
+    it('logs death_save entry with correct fields', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = logService.addEntry.mock.calls.filter(
+          (call) => call[1]?.type === 'death_save',
+        );
+        expect(calls.length).toBeGreaterThan(0);
+        expect(calls[0][1].characterName).toBe('TestBarbarian');
+        expect(calls[0][1].roll).toBe(20);
+        expect(calls[0][1].isNatural20).toBe(true);
+        expect(calls[0][1].success).toBe(true);
+      });
+    });
   });
 
   // ── Heal expression evaluation ──────────────────────────────
@@ -449,6 +627,78 @@ describe('reactionSaveHealHandler', () => {
         10,
         campaignName,
       );
+    });
+  });
+
+  // ── Error handling (.catch on addEntry) ─────────────────────
+
+  describe('error handling', () => {
+    function triggerSuccess() {
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: true, roll: 15, saveBonus: 7, total: 22 },
+      }));
+    }
+
+    function triggerFailure() {
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 8, saveBonus: 7, total: 15 },
+      }));
+    }
+
+    it('handles addEntry rejection on success path without throwing', async () => {
+      logService.addEntry.mockRejectedValue(new Error('db error'));
+
+      await handle(makeAction({ healExpression: '2 * barbarian_level' }), makePlayerStats(), campaignName, null);
+      triggerSuccess();
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'TestBarbarian',
+          'currentHitPoints',
+          10,
+          campaignName,
+        );
+      });
+    });
+
+    it('handles addEntry rejection on failure path without throwing', async () => {
+      logService.addEntry.mockRejectedValue(new Error('db error'));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+    });
+
+    it('handles addEntry rejection on death save logging without throwing', async () => {
+      logService.addEntry.mockRejectedValue(new Error('db error'));
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return 0;
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+      triggerFailure();
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: 'death-prompt-123', success: true, isNat20: true, roll: 20 },
+      }));
+
+      await vi.waitFor(() => {
+        const calls = runtimeState.setRuntimeValue.mock.calls;
+        const hpCalls = calls.filter((c) => c[1] === 'currentHitPoints');
+        expect(hpCalls).toContainEqual(['TestBarbarian', 'currentHitPoints', 1, campaignName]);
+      });
     });
   });
 });

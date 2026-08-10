@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ────────────────────────────────────────
@@ -173,6 +172,15 @@ describe('computeTrackedResources', () => {
     expect(result.bardicInspirationUses).toEqual({ current: 3, max: 3 });
   });
 
+  it('defaults charisma bonus to 0 when missing for Bard', () => {
+    const stats = basePlayerStats({ 
+      class: { name: 'Bard', class_levels: [], major: {}, subclass: {} },
+      abilities: [] 
+    });
+    const result = computeTrackedResources(stats);
+    expect(result.bardicInspirationUses).toEqual({ current: 0, max: 0 });
+  });
+
   // ── wildShapeUses ──
 
   it('sets wildShapeUses from features.maxWildShapeUses', () => {
@@ -278,6 +286,15 @@ describe('computeTrackedResources', () => {
       expect(result.ragePoints).toEqual({ current: 3, max: 3 });
     });
 
+    it('2024: defaults rages to 0 when missing', () => {
+      const stats = basePlayerStats({
+        rules: '2024',
+        class: { ...basePlayerStats().class, name: 'Barbarian', class_levels: [{ level: 5 }] },
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.ragePoints).toEqual({ current: 0, max: 0 });
+    });
+
     it('non-barbarian has 0 rage points', () => {
       const stats = basePlayerStats({
         class: { ...basePlayerStats().class, name: 'Cleric' },
@@ -297,6 +314,15 @@ describe('computeTrackedResources', () => {
       });
       const result = computeTrackedResources(stats);
       expect(result.layOnHandsPool).toEqual({ current: 25, max: 25 });
+    });
+
+    it('defaults level to 0 when missing for paladin', () => {
+      const stats = basePlayerStats({
+        class: { ...basePlayerStats().class, name: 'Paladin' },
+        level: undefined,
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.layOnHandsPool).toEqual({ current: 0, max: 0 });
     });
 
     it('non-paladin has 0 pool', () => {
@@ -394,6 +420,17 @@ describe('computeTrackedResources', () => {
       const result = computeTrackedResources(stats);
       expect(result.superiorityDice).toEqual({ current: 0, max: 0 });
     });
+
+    it('Fighter with Superior Technique fighting style gets 1 die', () => {
+      const stats = basePlayerStats({
+        rules: '5e',
+        class: { ...basePlayerStats().class, name: 'Fighter', major: { name: 'Champion' }, fightingStyles: ['Superior Technique'] },
+        level: 5,
+        class_levels: [{ level: 5 }],
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.superiorityDice).toEqual({ current: 1, max: 1 });
+    });
   });
 
   // ── psionicEnergy (Psi Warrior) ──
@@ -432,6 +469,34 @@ describe('computeTrackedResources', () => {
       const result = computeTrackedResources(stats);
       expect(result.psionicEnergy).toEqual({ current: 0, max: 0 });
     });
+
+    it('defaults energy_die_num to 0 when missing', () => {
+      const stats = basePlayerStats({
+        class: {
+          ...basePlayerStats().class,
+          name: 'Fighter',
+          major: { name: 'Psi Warrior' },
+          subclass: { name: 'Psi Warrior' },
+          class_levels: [{ level: 5, energy: { required_major: 'Psi Warrior' } }],
+        },
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.psionicEnergy).toEqual({ current: 0, max: 0 });
+    });
+
+    it('matches when energy required_major matches subclass name instead of major', () => {
+      const stats = basePlayerStats({
+        class: {
+          ...basePlayerStats().class,
+          name: 'Fighter',
+          major: {},
+          subclass: { name: 'Psi Warrior' },
+          class_levels: [{ level: 5, energy: { required_major: 'Psi Warrior', energy_die_num: 2 } }],
+        },
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.psionicEnergy).toEqual({ current: 2, max: 2 });
+    });
   });
 
   // ── arcaneRecoveryLevels ──
@@ -468,6 +533,15 @@ describe('computeTrackedResources', () => {
     it('non-warlock has 0 pact magic', () => {
       const stats = basePlayerStats({
         class: { ...basePlayerStats().class, name: 'Wizard' },
+      });
+      const result = computeTrackedResources(stats);
+      expect(result.warlockPactMagic).toEqual({ current: 0, max: 0 });
+    });
+
+    it('2024: defaults pact_slot_levels to 0 when missing', () => {
+      const stats = basePlayerStats({
+        rules: '2024',
+        class: { ...basePlayerStats().class, name: 'Warlock', class_levels: [{ level: 5 }] },
       });
       const result = computeTrackedResources(stats);
       expect(result.warlockPactMagic).toEqual({ current: 0, max: 0 });
@@ -524,6 +598,29 @@ describe('computeTrackedResources', () => {
       const result = computeTrackedResources(stats);
       expect(result.luckyPoints).toEqual({ current: 0, max: 0 });
     });
+    it('handles null/undefined values in feats array gracefully', () => {
+      const stats = basePlayerStats({ feats: [null, 'Alert', undefined] });
+      const result = computeTrackedResources(stats);
+      expect(result.luckyPoints).toEqual({ current: 0, max: 0 });
+    });
+    it('defaults proficiency to 0 when missing with Lucky feat', () => {
+      const stats = basePlayerStats({ feats: ['Lucky'], proficiency: undefined });
+      const result = computeTrackedResources(stats);
+      expect(result.luckyPoints).toEqual({ current: 0, max: 0 });
+    });
+
+    it('defaults feats to empty array when null', () => {
+      const stats = basePlayerStats({ feats: null });
+      const result = computeTrackedResources(stats);
+      expect(result.luckyPoints).toEqual({ current: 0, max: 0 });
+    });
+
+    it('defaults feats to empty array when undefined', () => {
+      const stats = basePlayerStats({ feats: undefined });
+      const result = computeTrackedResources(stats);
+      expect(result.luckyPoints).toEqual({ current: 0, max: 0 });
+    });
+
 
   });
 

@@ -582,6 +582,30 @@ describe('wrathOfTheSeaHandler', () => {
             }));
         });
 
+        it('handles addEntry rejection in NPC save/damage logging without crashing', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wrathOfTheSeaActive') return true;
+                return undefined;
+            });
+            rollExpression.mockReturnValue({ total: 12, rolls: [4, 4, 4], modifier: 0 });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: playerName, targetName: 'Enemy' }, { name: 'Enemy' }],
+            });
+            getTargetFromAttacker.mockReturnValue({ name: 'Enemy', type: 'npc', saveBonuses: { con: 0 } });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 12, newHp: 0 });
+            rollD20.mockReturnValue(3);
+            addEntry.mockRejectedValue(new Error('log write failed'));
+
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+            const result = await handle(mockNonAllyAttack(), makePlayerStats(), campaignName);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.results[0].damage).toBe(12);
+            expect(consoleSpy).toHaveBeenCalledWith('[wrathOfTheSea] Log error:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+
         it('registers and sends save prompt for player targets', async () => {
             getRuntimeValue.mockImplementation((name, key) => {
                 if (name === playerName && key === 'wrathOfTheSeaActive') return true;
@@ -761,6 +785,18 @@ describe('wrathOfTheSeaHandler', () => {
             const result = await handle(mockNonAllyAttack(), makePlayerStats(), campaignName);
 
             expect(result.type).toBe('popup');
+        });
+
+        it('returns null when rollExpression returns no result', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wrathOfTheSeaActive') return true;
+                return undefined;
+            });
+            rollExpression.mockReturnValue(null);
+
+            const result = await handle(mockNonAllyAttack(), makePlayerStats(), campaignName);
+
+            expect(result).toBeNull();
         });
     });
 });

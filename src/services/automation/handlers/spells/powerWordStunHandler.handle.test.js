@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -8,10 +7,6 @@ vi.mock('../../common/savePrompt.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -44,7 +39,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 const casterName = 'TestCaster';
 
 function makePlayerStats(overrides = {}) {
@@ -388,6 +383,99 @@ describe('powerWordStunHandler.handle - condition metadata storage', () => {
       call => call[1] === 'activeConditionMeta'
     );
     expect(metaCall).toBeUndefined();
+  });
+});
+
+describe('powerWordStunHandler.handle - addEntry error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle addEntry rejection in stunned path', async () => {
+    getCombatContext.mockResolvedValue(lowHpCombatContext);
+    buildSaveDc.mockReturnValue(15);
+    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
+      if (key === 'activeConditions') return [];
+      if (key === 'activeConditionMeta') return {};
+      return null;
+    });
+    addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.payload.description).toContain('Stunned');
+  });
+
+  it('should handle addEntry rejection in speed_zero path', async () => {
+    getCombatContext.mockResolvedValue(highHpCombatContext);
+    buildSaveDc.mockReturnValue(15);
+    resolveTarget.mockResolvedValue({ target: { name: 'Dragon' } });
+    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+    addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.payload.description).toContain('Speed is 0');
+  });
+
+  it('should handle addEntry rejection for save_result entry', async () => {
+    getCombatContext.mockResolvedValue(lowHpCombatContext);
+    buildSaveDc.mockReturnValue(15);
+    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
+      if (key === 'activeConditions') return [];
+      if (key === 'activeConditionMeta') return {};
+      return null;
+    });
+    addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.type).toBe('popup');
+  });
+});
+
+describe('powerWordStunHandler.handle - edge cases', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle action without automation property', async () => {
+    getCombatContext.mockResolvedValue(lowHpCombatContext);
+    buildSaveDc.mockReturnValue(15);
+    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
+      if (key === 'activeConditions') return [];
+      if (key === 'activeConditionMeta') return {};
+      return null;
+    });
+
+    const action = { name: 'Power Word Stun' };
+    const result = await handle(action, makePlayerStats(), campaignName, null);
+
+    expect(result.payload.description).toContain('Stunned');
+  });
+
+  it('should handle non-array activeConditions truthy value (Array.isArray false branch)', async () => {
+    getCombatContext.mockResolvedValue(lowHpCombatContext);
+    buildSaveDc.mockReturnValue(15);
+    resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
+    getRuntimeValue.mockImplementation((_entity, key, _camp) => {
+      if (key === 'activeConditions') return 'stunned';
+      if (key === 'activeConditionMeta') return {};
+      return null;
+    });
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    const condCall = setRuntimeValue.mock.calls.find(
+      call => call[0] === 'Goblin' && call[1] === 'activeConditions'
+    );
+    expect(condCall[2]).toContain('stunned');
   });
 });
 

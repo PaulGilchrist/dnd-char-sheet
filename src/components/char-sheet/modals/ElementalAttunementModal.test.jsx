@@ -615,6 +615,52 @@ aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', 
         });
     });
 
+    // ── Processing phase rendering ──
+
+    describe('processing phase rendering', () => {
+        it('shows processing overlay that does not close on click', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(screen.getByText(/Resolving/)).toBeInTheDocument());
+            const overlay = document.querySelector('.sp-overlay');
+            fireEvent.click(overlay);
+            expect(handleClose).not.toHaveBeenCalled();
+        });
+
+        it('calls stopPropagation when modal content is clicked during processing', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            const { handleClose } = renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(screen.getByText(/Resolving/)).toBeInTheDocument());
+            const modal = document.querySelector('.sp-modal');
+            const spy = vi.spyOn(Event.prototype, 'stopPropagation');
+            fireEvent.click(modal);
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
+            expect(handleClose).not.toHaveBeenCalled();
+        });
+
+        it('shows individual result lines in processing phase', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => {
+                const body = document.querySelector('.sp-body');
+                expect(body.textContent).toContain('Goblin1');
+            });
+        });
+    });
+
     // ── NPC save resolution ──
 
     describe('NPC save resolution', () => {
@@ -710,6 +756,26 @@ aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', 
                 expect(body.textContent).toContain('Failed');
             });
         });
+
+        it('logs thunder save-damage entry for NPC with push effect', async () => {
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { con: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Thunder'));
+            await waitFor(() => {
+                expect(logService.addEntry).toHaveBeenCalledWith(
+                    'test-campaign',
+                    expect.objectContaining({
+                        type: 'roll',
+                        rollType: 'save-damage',
+                        saveType: 'con',
+                        damageType: 'thunder',
+                    })
+                );
+            });
+        });
     });
 
     // ── save-result event listener ──
@@ -734,6 +800,58 @@ aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', 
             await waitFor(() => expect(screen.getByText(/Results/)).toBeInTheDocument());
         });
 
+        it('handles save-result event for Cold speed_reduction on player failure', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue([]);
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: -10, total: -5, rawDamage: 0 },
+                }));
+            });
+            await waitFor(() => {
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    'Player1',
+                    'activeConditions',
+                    expect.arrayContaining(['speed_reduction']),
+                    'test-campaign'
+                );
+            });
+        });
+
+        it('handles save-result event for Cold speed_reduction on player success', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue([]);
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: true, roll: 15, saveBonus: 10, total: 25, rawDamage: 0 },
+                }));
+            });
+            await waitFor(() => {
+                expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                    'Player1',
+                    'activeConditions',
+                    expect.arrayContaining(['speed_reduction']),
+                    'test-campaign'
+                );
+            });
+        });
+
         it('removes save-result listener on unmount', async () => {
             combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
                 { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
@@ -746,6 +864,53 @@ aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', 
             unmount();
             expect(spy).toHaveBeenCalledWith('save-result', expect.any(Function));
             spy.mockRestore();
+        });
+
+        it('handles save-result error for player damage path', async () => {
+            logService.addEntry.mockRejectedValue(new Error('network error'));
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: 3 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: 3, total: 8, rawDamage: 5 },
+                }));
+            });
+            await waitFor(() => {
+                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging player save:', expect.any(Error));
+            });
+            consoleSpy.mockRestore();
+        });
+
+        it('handles save-result error for player effect path (Cold speed_reduction)', async () => {
+            logService.addEntry.mockRejectedValue(new Error('network error'));
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            runtimeState.getRuntimeValue.mockReturnValue([]);
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Player1', type: 'player', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Player1', type: 'player', currentHp: 10, maxHp: 10 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => expect(savePromptService.sendSavePrompt).toHaveBeenCalled());
+            const promptId = savePromptService.sendSavePrompt.mock.calls[0][1].promptId;
+            await waitFor(() => expect(screen.getByText(/Waiting for save roll/)).toBeInTheDocument());
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('save-result', {
+                    detail: { promptId, targetName: 'Player1', success: false, roll: 5, saveBonus: -10, total: -5, rawDamage: 0 },
+                }));
+            });
+            await waitFor(() => {
+                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging player effect:', expect.any(Error));
+            });
+            consoleSpy.mockRestore();
         });
     });
 
@@ -832,6 +997,38 @@ aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', 
             fireEvent.click(screen.getByText('Fire'));
             await waitFor(() => {
                 expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error loading map data:', expect.any(Error));
+            });
+            consoleSpy.mockRestore();
+        });
+
+        it('does not throw when addEntry rejects for speed_reduction on NPC', async () => {
+            logService.addEntry.mockRejectedValue(new Error('network error'));
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            runtimeState.getRuntimeValue.mockReturnValue([]);
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: -10 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Cold'));
+            await waitFor(() => {
+                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging speed reduction:', expect.any(Error));
+            });
+            consoleSpy.mockRestore();
+        });
+
+        it('does not throw when addEntry rejects for expiration logging', async () => {
+            logService.addEntry.mockRejectedValue(new Error('network error'));
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            combatData.getCombatSummary.mockReturnValue(makeCombatSummary([
+                { name: 'Goblin1', type: 'npc', saveBonuses: { dex: 2 }, resistances: [], immunities: [] },
+            ]));
+            aoeService.getAffectedCreatures.mockReturnValue([{ creature: { name: 'Goblin1', type: 'npc', currentHp: 7, maxHp: 7 } }]);
+            renderModal({ activeOverlay: { type: 'sphere' } });
+            fireEvent.click(screen.getByText('Fire'));
+            await waitFor(() => fireEvent.click(screen.getByRole('button', { name: /Close/ })));
+            await waitFor(() => {
+                expect(consoleSpy).toHaveBeenCalledWith('[ElementalAttunementModal] Error logging expiration:', expect.any(Error));
             });
             consoleSpy.mockRestore();
         });

@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerHealingWord } from './healingWordService.js';
 
@@ -24,6 +23,15 @@ vi.mock('../../ui/logService.js', () => ({
 
 vi.mock('../../dice/diceRoller.js', () => ({
     rollExpression: vi.fn(),
+    rollExpressionMaximized: vi.fn(),
+    applyHealingRerollOnes: vi.fn(),
+}));
+
+vi.mock('../../combat/automation/automationService.js', () => ({
+    resolveHealingBonusesWithDetails: vi.fn(),
+    hasHealingMaximizationForTarget: vi.fn(),
+    hasRerollHealingOnes: vi.fn(),
+    markFortifiedHealthUsed: vi.fn(),
 }));
 
 // ── Imports ────────────────────────────────────────────────────
@@ -32,13 +40,14 @@ import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.j
 import { applyHealingToTarget } from '../combat/applyHealing.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../ui/logService.js';
-import { rollExpression } from '../../dice/diceRoller.js';
+import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../dice/diceRoller.js';
+import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes, markFortifiedHealthUsed } from '../../combat/automation/automationService.js';
 
 // ── Globals ────────────────────────────────────────────────────
 
 global.fetch = vi.fn(() => new Promise(() => {}));
 
-const CAMPAIGN = 'TestCampaign';
+const CAMPAIGN = 'test-campaign';
 
 function makeSpell(name, level, range, healAtSlotLevel) {
     return {
@@ -70,11 +79,17 @@ function makeCombatSummary(creatures) {
 
 describe('triggerHealingWord', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
         getCombatContext.mockResolvedValue(null);
-        getTargetFromAttacker.mockReturnValue(null);
+        getTargetFromAttacker.mockImplementation(() => null);
         rollExpression.mockReturnValue(null);
         getRuntimeValue.mockReturnValue(null);
+        resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 0, details: [] });
+        hasHealingMaximizationForTarget.mockReturnValue(false);
+        hasRerollHealingOnes.mockReturnValue(false);
+        markFortifiedHealthUsed.mockResolvedValue(undefined);
+        applyHealingRerollOnes.mockReturnValue({ displayRolls: null, originalRolls: null });
+        rollExpressionMaximized.mockReturnValue(null);
     });
 
     describe('early returns (null)', () => {
@@ -364,6 +379,262 @@ describe('triggerHealingWord', () => {
 
             expect(result).not.toBeNull();
             expect(result.formula).toBe('2d4 + 0');
+        });
+
+        it('uses spellAbilities.modifier when spellCastingAbility is not set on spell but spellAbilities exists', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            rollExpression.mockReturnValueOnce({ total: 7, rolls: [[2, 4]], modifier: 2 });
+            getRuntimeValue.mockReturnValue('10');
+
+            const spell = { name: 'Healing Word', level: 1, heal_at_slot_level: { '1': '2d4 + MOD' } };
+            const playerStats = {
+                name: 'Cleric',
+                hitPoints: 30,
+                spellAbilities: { modifier: 2, spellCastingAbility: undefined, saveDc: 12, toHit: 7 },
+                abilities: [{ name: 'Charisma', bonus: 2 }],
+                proficiency: 2,
+                level: 1,
+            };
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.formula).toBe('2d4 + 2');
+        });
+    });
+
+    describe('maximize healing', () => {
+        it('uses rollExpressionMaximized when hasHealingMaximizationForTarget returns true', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            hasHealingMaximizationForTarget.mockReturnValueOnce(true);
+            rollExpressionMaximized.mockReturnValueOnce({ total: 11, rolls: [4, 4], modifier: 3, maximized: true });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(3);
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.targetName).toBe('Ally');
+            expect(result.healAmount).toBe(11);
+            expect(result.formula).toBe('2d4 + 3');
+            expect(rollExpressionMaximized).toHaveBeenCalledWith('2d4 + 3');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Ally', 11, CAMPAIGN);
+        });
+
+        it('does not call rerollOnes when maximized', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            hasHealingMaximizationForTarget.mockReturnValueOnce(true);
+            rollExpressionMaximized.mockReturnValueOnce({ total: 11, rolls: [4, 4], modifier: 3, maximized: true });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(3);
+            await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(applyHealingRerollOnes).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('reroll healing ones', () => {
+        it('applies rerollOnes when hasRerollHealingOnes returns true and not maximized', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            hasHealingMaximizationForTarget.mockReturnValueOnce(false);
+            hasRerollHealingOnes.mockReturnValueOnce(true);
+            rollExpression.mockReturnValueOnce({ total: 6, rolls: [1, 5], modifier: 0 });
+            applyHealingRerollOnes.mockReturnValueOnce({ displayRolls: [3, 5], originalRolls: [1, 5] });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(0);
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.targetName).toBe('Ally');
+            // healAmount uses result.total (6), not the rerolled total
+            expect(result.healAmount).toBe(6);
+            expect(result.healingRerollOriginalRolls).toEqual([1, 5]);
+            expect(result.healingRerollDisplayRolls).toEqual([3, 5]);
+            expect(applyHealingRerollOnes).toHaveBeenCalledWith([1, 5], '2d4 + 0');
+        });
+
+        it('uses original roll total when no ones were rerolled', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            hasHealingMaximizationForTarget.mockReturnValueOnce(false);
+            hasRerollHealingOnes.mockReturnValueOnce(true);
+            rollExpression.mockReturnValueOnce({ total: 6, rolls: [3, 3], modifier: 0 });
+            applyHealingRerollOnes.mockReturnValueOnce({ displayRolls: [3, 3], originalRolls: null });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(0);
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.healingRerollOriginalRolls).toBeNull();
+            expect(result.healingRerollDisplayRolls).toEqual([3, 3]);
+        });
+    });
+
+    describe('healing bonuses and fortified health', () => {
+        it('includes bonus details in formula and calls markFortifiedHealthUsed when Fortified Health is present', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            rollExpression.mockReturnValueOnce({ total: 5, rolls: [3, 2], modifier: 0 });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({
+                totalBonus: 3,
+                details: [{ name: 'Fortified Health', amount: 3 }],
+            });
+            markFortifiedHealthUsed.mockResolvedValueOnce(undefined);
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(0);
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.healAmount).toBe(8);
+            expect(result.rawTotal).toBe(8);
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Ally', 8, CAMPAIGN);
+            expect(markFortifiedHealthUsed).toHaveBeenCalledWith(playerStats, CAMPAIGN);
+            expect(addEntry).toHaveBeenCalledWith(CAMPAIGN, expect.objectContaining({
+                formula: '2d4 + 0 + (3 Fortified Health)',
+                bonusDetails: [{ name: 'Fortified Health', amount: 3 }],
+            }));
+        });
+
+        it('includes multiple bonus details in formula', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            rollExpression.mockReturnValueOnce({ total: 5, rolls: [3, 2], modifier: 0 });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({
+                totalBonus: 5,
+                details: [
+                    { name: 'Fortified Health', amount: 3 },
+                    { name: 'Healing Spike', amount: 2 },
+                ],
+            });
+            markFortifiedHealthUsed.mockResolvedValueOnce(undefined);
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(0);
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.healAmount).toBe(10);
+            expect(addEntry).toHaveBeenCalledWith(CAMPAIGN, expect.objectContaining({
+                formula: '2d4 + 0 + (3 Fortified Health + 2 Healing Spike)',
+                bonusDetails: [
+                    { name: 'Fortified Health', amount: 3 },
+                    { name: 'Healing Spike', amount: 2 },
+                ],
+            }));
+        });
+
+        it('omits bonusDetails from log entry when empty', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            rollExpression.mockReturnValueOnce({ total: 5, rolls: [3, 2], modifier: 0 });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(0);
+            await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            const logCall = addEntry.mock.calls[0][1];
+            expect(logCall.bonusDetails).toBeUndefined();
+        });
+    });
+
+    describe('target HP fallback', () => {
+        it('falls back to playerStats.hitPoints when target not found in combatSummary', async () => {
+            const cs = makeCombatSummary([]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockImplementationOnce(() => ({ name: 'Unknown Ally' }));
+            rollExpression.mockReturnValueOnce({ total: 5, rolls: [3, 2], modifier: 0 });
+            getRuntimeValue.mockReturnValue('0');
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = { ...makePlayerStats(0), hitPoints: 25 };
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.targetName).toBe('Unknown Ally');
+            expect(result.healAmount).toBe(5);
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Unknown Ally', 5, CAMPAIGN);
+        });
+
+        it('falls back to playerStats.hitPoints for maxHp when storedHp equals maxHp', async () => {
+            const cs = makeCombatSummary([]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockImplementationOnce(() => ({ name: 'Unknown Ally' }));
+            rollExpression.mockReturnValueOnce({ total: 8, rolls: [3, 5], modifier: 0 });
+            getRuntimeValue.mockReturnValue('25');
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = { ...makePlayerStats(0), hitPoints: 25 };
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.healAmount).toBe(0);
+            expect(applyHealingToTarget).not.toHaveBeenCalled();
+        });
+
+        it('handles storedHp as empty string as full HP', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockImplementationOnce(() => ({ name: 'Ally' }));
+            rollExpression.mockReturnValueOnce({ total: 8, rolls: [2, 6], modifier: 3 });
+            getRuntimeValue.mockReturnValue('');
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(3);
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+            const result = await triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap');
+
+            expect(result).not.toBeNull();
+            expect(result.healAmount).toBe(0);
+            expect(applyHealingToTarget).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('addEntry error handling', () => {
+        it('does not throw when addEntry rejects', async () => {
+            const cs = makeCombatSummary([{ name: 'Ally', maxHp: 30, currentHp: 10 }]);
+            getCombatContext.mockResolvedValueOnce(cs);
+            getTargetFromAttacker.mockReturnValueOnce({ name: 'Ally' });
+            rollExpression.mockReturnValueOnce({ total: 8, rolls: [[2, 6]], modifier: 3 });
+            getRuntimeValue.mockReturnValue('10');
+            resolveHealingBonusesWithDetails.mockReturnValueOnce({ totalBonus: 0, details: [] });
+            addEntry.mockReturnValueOnce(Promise.reject(new Error('disk error')));
+
+            const spell = makeSpell('Healing Word', 1);
+            const playerStats = makePlayerStats(3);
+
+            await expect(triggerHealingWord(spell, {}, playerStats, CAMPAIGN, 'testMap')).resolves.not.toThrow();
         });
     });
 });

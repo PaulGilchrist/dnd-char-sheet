@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import WizardStepRaceClass from './WizardStepRaceClass.jsx';
@@ -15,7 +14,11 @@ vi.mock('./CascadingSelect.jsx', () => {
       errors,
       onInputChange,
       fieldName,
+      formData,
+      subOptionsSelector,
     } = props;
+    const selectedParentValue = formData?.[fieldName]?.name || '';
+    const availableSubOptions = subOptionsSelector ? subOptionsSelector(selectedParentValue) : [];
     return (
       <div data-testid={`cascading-select-${fieldName}`}>
         <label>{label} *</label>
@@ -24,6 +27,11 @@ vi.mock('./CascadingSelect.jsx', () => {
           data-testid={`input-${fieldName}`}
           onChange={(e) => onInputChange(fieldName, { name: e.target.value })}
         />
+        {availableSubOptions.length > 0 && (
+          <div>
+            <span data-testid={`sub-options-count-${fieldName}`}>{availableSubOptions.length}</span>
+          </div>
+        )}
         {errorKey && errors?.[errorKey] && (
           <span className="error-message">{errors[errorKey]}</span>
         )}
@@ -226,6 +234,38 @@ describe('WizardStepRaceClass', () => {
       );
       expect(screen.queryByText('Divine Order')).not.toBeInTheDocument();
       expect(screen.queryByText('Primal Order')).not.toBeInTheDocument();
+    });
+
+    it('handles subOptionsSelector returning empty array when selected value not found in data', () => {
+      const racesData = [{ name: 'Human', subraces: ['Variant'] }];
+      const classSubtypes = [{ className: 'Cleric', subtypes: ['Order'] }];
+      render(
+        <WizardStepRaceClass
+          {...makeProps({
+            racesData,
+            classSubtypes,
+            formData: { race: 'Nonexistent', subrace: '', class: { name: 'Nonexistent' } },
+          })}
+        />
+      );
+      expect(screen.getByText('Step 3: Race & Class')).toBeInTheDocument();
+    });
+
+    it('handles subOptionsSelector returning subraces when selected race exists in data', () => {
+      const racesData = [{ name: 'Human', subraces: ['Variant', 'Standard'] }];
+      const classSubtypes = [{ className: 'Cleric', subtypes: ['Order of the Keeper'] }];
+      render(
+        <WizardStepRaceClass
+          {...makeProps({
+            racesData,
+            classSubtypes,
+            formData: { race: { name: 'Human' }, subrace: 'Variant', class: { name: 'Cleric', divineOrder: '' } },
+            ruleset: '2024',
+          })}
+        />
+      );
+      expect(screen.getByText('Step 3: Race & Class')).toBeInTheDocument();
+      expect(screen.getByText('Divine Order *')).toBeInTheDocument();
     });
   });
 

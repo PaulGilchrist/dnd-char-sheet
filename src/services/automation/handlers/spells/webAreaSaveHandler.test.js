@@ -509,6 +509,155 @@ describe('webAreaSaveHandler.handle', () => {
     });
   });
 
+  describe('error handling - addEntry rejection', () => {
+    it('handles addEntry rejection in ability_use log gracefully', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+      logService.addEntry.mockRejectedValueOnce(new Error('Log error'));
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-catch1',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith('[web] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in save_result success log gracefully', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-catch2',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      logService.addEntry
+        .mockRejectedValueOnce(new Error('First log error'))
+        .mockRejectedValueOnce(new Error('Second log error'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith('[web] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in condition log gracefully', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-catch3',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      logService.addEntry
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Condition log error'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith('[web] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in save_result failure log gracefully', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-catch4',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      logService.addEntry
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Save result failure log error'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith('[web] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('filter callback coverage - existing conditions', () => {
+    it('filters out existing restrained condition before re-applying', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      combatData.getCombatSummary.mockReturnValue({});
+      storage.default.set.mockReturnValue(undefined);
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'activeConditions') return ['restrained', 'blinded'];
+        if (key === 'activeConditionMeta') return { restrained: { dc: 10 } };
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-save-filter',
+        promise: Promise.resolve({ success: false, roll: 5, total: 5 }),
+      });
+
+      await handle(
+        { ...makeAction(), metaCtx: { targets: ['Goblin'] } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['blinded', 'restrained'],
+        campaignName,
+      );
+    });
+  });
+
   describe('edge cases', () => {
     it('returns popup with no targets when selectedTargetNames yields no matches', async () => {
       damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
@@ -828,6 +977,144 @@ describe('webAreaSaveHandler.processWebAreaSave', () => {
       await processWebAreaSave('TestCaster', 'Goblin', campaignName, 'test-map');
 
       expect(automationImmunities.playerIsImmuneToCondition).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('error handling - addEntry rejection', () => {
+    it('handles addEntry rejection in ability_use log gracefully', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      logService.addEntry.mockRejectedValueOnce(new Error('Log error'));
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-catch1',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
+      });
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[webAreaSave] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in save_result failure log gracefully', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-catch2',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
+      });
+
+      logService.addEntry
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Save result error'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[webAreaSave] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection in save_result success log gracefully', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-catch3',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      logService.addEntry
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Success log error'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue(undefined);
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[webAreaSave] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('filter callback coverage - existing conditions', () => {
+    it('filters out existing restrained condition before re-applying on failed save', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return ['blinded'];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-filter',
+        promise: Promise.resolve({ success: false, roll: 8, total: 8 }),
+      });
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['blinded', 'restrained'],
+        campaignName,
+      );
+    });
+  });
+
+  describe('mapName with isWithinRange error', () => {
+    it('proceeds with save when isWithinRange throws', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      rangeCheck.isWithinRange.mockRejectedValueOnce(new Error('Map error'));
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-map-error',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      await processWebAreaSave('TestCaster', 'Goblin', campaignName, 'test-map');
+
+      expect(savePrompt.createSaveListener).toHaveBeenCalled();
+    });
+  });
+
+  describe('processWebAreaSave return value', () => {
+    it('returns popup with success description on successful save', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === '_web_TestCaster') return { saveDc: 15, saveType: 'STR' };
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'web-pws-success-desc',
+        promise: Promise.resolve({ success: true, roll: 14, total: 14 }),
+      });
+
+      const result = await processWebAreaSave('TestCaster', 'Goblin', campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.name).toBe('Web');
+      expect(result.payload.description).toContain('succeeded');
+      expect(result.payload.description).toContain('Unaffected');
     });
   });
 });

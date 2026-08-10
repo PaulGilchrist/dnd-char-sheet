@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './postCastRiderHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
@@ -37,7 +36,7 @@ describe('postCastRiderHandler.handle', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        campaignName = 'TestCampaign';
+        campaignName = 'test-campaign';
 
         action = {
             name: 'Control Spell',
@@ -306,6 +305,149 @@ describe('postCastRiderHandler.handle', () => {
 
         dispatchSaveResult('test-prompt-id', true);
         expect(setRuntimeValue).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles failed save with condition choice skipped: removes listener and applies no condition', async () => {
+        getRuntimeValue.mockImplementation((_char, key) => {
+            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
+            return [];
+        });
+
+        await handle(action, playerStats, campaignName);
+
+        const choiceShowPromise = new Promise(resolve => {
+            window.addEventListener('condition-choice-show', resolve, { once: true });
+        });
+
+        dispatchSaveResult('test-prompt-id', false);
+
+        const choiceEvent = await choiceShowPromise;
+        const choiceDetail = choiceEvent.detail;
+        expect(choiceDetail.targetName).toBe('Enemy');
+        expect(choiceDetail.conditions).toEqual(['charmed', 'frightened']);
+
+        window.dispatchEvent(new CustomEvent('condition-choice-skipped', {
+            detail: { promptId: choiceDetail.promptId },
+        }));
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        const usesKey = usesKeyFor(action.name);
+        expect(setRuntimeValue).not.toHaveBeenCalledWith(
+            playerStats.name,
+            usesKey,
+            expect.anything(),
+            campaignName,
+        );
+
+        expect(setRuntimeValue).not.toHaveBeenCalledWith(
+            'Enemy',
+            'activeConditions',
+            expect.anything(),
+            campaignName,
+        );
+
+        expect(addExpiration).not.toHaveBeenCalled();
+
+        expect(addEntry).not.toHaveBeenCalledWith(campaignName, expect.objectContaining({
+            type: 'save_result',
+            success: false,
+            targetName: 'Enemy',
+        }));
+    });
+
+    it('handles addEntry rejection in initial ability_use log without throwing', async () => {
+        addEntry.mockRejectedValue(new Error('disk write failed'));
+
+        const result = await handle(action, playerStats, campaignName);
+
+        expect(result).toEqual({
+            type: 'popup',
+            payload: expect.objectContaining({
+                name: action.name,
+                targetName: 'Enemy',
+            }),
+        });
+    });
+
+    it('handles addEntry rejection in successful save log without throwing', async () => {
+        addEntry.mockRejectedValue(new Error('disk write failed'));
+
+        await handle(action, playerStats, campaignName);
+
+        dispatchSaveResult('test-prompt-id', true);
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            playerStats.name,
+            usesKeyFor(action.name),
+            0,
+            campaignName,
+        );
+    });
+
+    it('handles addEntry rejection in failed save log without throwing', async () => {
+        getRuntimeValue.mockImplementation((_char, key) => {
+            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'activeConditions' && _char === 'Enemy') return ['blinded'];
+            return [];
+        });
+
+        addEntry.mockRejectedValue(new Error('disk write failed'));
+
+        await handle(action, playerStats, campaignName);
+
+        const choiceShowPromise = new Promise(resolve => {
+            window.addEventListener('condition-choice-show', resolve, { once: true });
+        });
+
+        dispatchSaveResult('test-prompt-id', false);
+
+        const choiceEvent = await choiceShowPromise;
+
+        window.dispatchEvent(new CustomEvent('condition-choice-selected', {
+            detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
+        }));
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            playerStats.name,
+            usesKeyFor(action.name),
+            0,
+            campaignName,
+        );
+    });
+
+    it('handles non-array activeConditions by falling back to empty array', async () => {
+        getRuntimeValue.mockImplementation((_char, key) => {
+            if (key === usesKeyFor(action.name)) return 1;
+            if (key === 'activeConditions' && _char === 'Enemy') return 'not-an-array';
+            return [];
+        });
+
+        await handle(action, playerStats, campaignName);
+
+        const choiceShowPromise = new Promise(resolve => {
+            window.addEventListener('condition-choice-show', resolve, { once: true });
+        });
+
+        dispatchSaveResult('test-prompt-id', false);
+
+        const choiceEvent = await choiceShowPromise;
+
+        window.dispatchEvent(new CustomEvent('condition-choice-selected', {
+            detail: { promptId: choiceEvent.detail.promptId, condition: 'charmed' },
+        }));
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+            'Enemy',
+            'activeConditions',
+            ['charmed'],
+            campaignName,
+        );
     });
 
 });

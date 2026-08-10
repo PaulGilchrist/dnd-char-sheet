@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -15,10 +14,6 @@ vi.mock('../../common/damageRollback.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -502,6 +497,135 @@ describe('fearHandler.handle', () => {
       expect(createSaveListener).not.toHaveBeenCalled();
       expect(addEntry).not.toHaveBeenCalled();
       expect(result.payload.description).toContain('No creatures affected by Fear');
+    });
+  });
+
+  describe('when action has no automation', () => {
+    it('uses empty object fallback for auto', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'Fear' };
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(13);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue(failSaveListener());
+
+      await handle(action, ps, campaignName, null);
+
+      expect(buildSaveDc).toHaveBeenCalledWith({}, ps);
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        saveType: 'WIS',
+        saveDc: 13,
+      }));
+    });
+  });
+
+  describe('when heightenTarget is set', () => {
+    it('applies disadvantage to the heightened target', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Fear',
+        automation: { type: 'fear', saveType: 'WIS', saveDc: 13 },
+        metaCtx: { heightenTarget: 'Orc' },
+      };
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+        { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(13);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue(failSaveListener());
+
+      await handle(action, ps, campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledTimes(2);
+      const orcCall = createSaveListener.mock.calls.find(
+        call => call[1].targetName === 'Orc',
+      );
+      expect(orcCall[1].disadvantage).toBe(true);
+      const goblinCall = createSaveListener.mock.calls.find(
+        call => call[1].targetName === 'Goblin',
+      );
+      expect(goblinCall[1].disadvantage).toBe(false);
+    });
+  });
+
+  describe('when updating existing fear effect', () => {
+    it('replaces the existing fear_end_on_los effect instead of pushing a new one', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(10);
+      createSaveListener.mockReturnValue(failSaveListener());
+
+      const existingEffects = [
+        { target: 'Goblin', effect: 'fear_end_on_los', source: 'OldCaster', condition: 'frightened', dc: 12, duration: '1 minute' },
+        { target: 'Orc', effect: 'fear_end_on_los', source: 'OldCaster', condition: 'frightened', dc: 12, duration: '1 minute' },
+      ];
+      getRuntimeValue
+        .mockReturnValueOnce([])
+        .mockReturnValueOnce(existingEffects);
+
+      await handle(action, ps, campaignName, null);
+
+      const effectCalls = setRuntimeValue.mock.calls.filter(
+        call => call[1] === 'targetEffects',
+      );
+      expect(effectCalls.length).toBeGreaterThan(0);
+      const effects = effectCalls[effectCalls.length - 1][2];
+      const goblinEffect = effects.find(e => e.target === 'Goblin' && e.effect === 'fear_end_on_los');
+      expect(goblinEffect).toBeDefined();
+      expect(goblinEffect.source).toBe(casterName);
+      expect(goblinEffect.dc).toBe(10);
+      expect(goblinEffect.duration).toBe('concentration');
+      expect(effects.length).toBe(2);
+    });
+  });
+
+  describe('when addEntry rejects', () => {
+    it('catches errors from ability_use addEntry without crashing', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => { });
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(10);
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+      createSaveListener.mockReturnValue(failSaveListener());
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[fear] Error:', expect.any(Error));
+    });
+
+    it('catches errors from save_result addEntry without crashing', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => { });
+      const ps = makePlayerStats();
+      const action = makeAction();
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(20);
+      addEntry
+        .mockReturnValueOnce(Promise.resolve({}))
+        .mockRejectedValueOnce(new Error('save result log error'));
+      createSaveListener.mockReturnValue(successSaveListener());
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[fear] Error:', expect.any(Error));
     });
   });
 });

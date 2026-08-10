@@ -68,6 +68,12 @@ vi.mock('../utils/changeData.js', () => ({
     activeMaps: new Map(),
     saveFile: vi.fn(),
     markDirty: vi.fn(),
+    publish: vi.fn(),
+    readFile: vi.fn(),
+}));
+
+vi.mock('./log.js', () => ({
+    logCache: new Map(),
 }));
 
 function ensureCampaign(name) {
@@ -159,6 +165,7 @@ describe('campaignsAdmin - PUT /api/campaigns/:campaign', () => {
         removeCampaign('rename-test');
         removeCampaign('existing-name');
         removeCampaign('new-name');
+        vi.clearAllMocks();
     });
 
     it('should return 400 when newName is missing', async () => {
@@ -221,13 +228,45 @@ describe('campaignsAdmin - PUT /api/campaigns/:campaign', () => {
     it('should return 500 on filesystem error', async () => {
         const app = createTestApp();
         ensureCampaign('old-campaign');
-        const fsMock = (await import('fs')).default;
-        fsMock.renameSync = () => {
+        const fsMock = await import('fs');
+        const originalRenameSync = fsMock.default.renameSync;
+        fsMock.default.renameSync = () => {
             throw new Error('Permission denied');
         };
         const res = await request(app).put('/api/campaigns/old-campaign').send({ newName: 'new-campaign' });
         expect(res.status).toBe(500);
         expect(res.body.error).toBe('Permission denied');
+        fsMock.default.renameSync = originalRenameSync;
+    });
+
+    it('should migrate in-memory change data maps', async () => {
+        const app = createTestApp();
+        const { characterChangeData, spellOverlayData, activeMaps } = await import('../utils/changeData.js');
+        ensureCampaign('old-campaign');
+        characterChangeData.set('old-campaign', { key: 'value' });
+        spellOverlayData.set('old-campaign', { overlay: true });
+        activeMaps.set('old-campaign', 'map1');
+        const res = await request(app).put('/api/campaigns/old-campaign').send({ newName: 'new-campaign' });
+        expect(res.status).toBe(200);
+        expect(characterChangeData.has('old-campaign')).toBe(false);
+        expect(characterChangeData.has('new-campaign')).toBe(true);
+        expect(spellOverlayData.has('old-campaign')).toBe(false);
+        expect(spellOverlayData.has('new-campaign')).toBe(true);
+        expect(activeMaps.has('old-campaign')).toBe(false);
+        expect(activeMaps.has('new-campaign')).toBe(true);
+    });
+
+    it('should skip in-memory map migration when old campaign has no data', async () => {
+        const app = createTestApp();
+        const { characterChangeData, spellOverlayData, activeMaps } = await import('../utils/changeData.js');
+        characterChangeData.clear();
+        spellOverlayData.clear();
+        activeMaps.clear();
+        ensureCampaign('old-campaign');
+        const res = await request(app).put('/api/campaigns/old-campaign').send({ newName: 'new-campaign' });
+        expect(res.status).toBe(200);
+        expect(characterChangeData.has('old-campaign')).toBe(false);
+        expect(characterChangeData.has('new-campaign')).toBe(false);
     });
 });
 

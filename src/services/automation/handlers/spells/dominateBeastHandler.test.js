@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -49,7 +48,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { sendSaveResult } from '../../../combat/conditions/savePromptService.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -178,6 +177,26 @@ describe('dominateBeastHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(sendSaveResult).toHaveBeenCalled();
+    });
+
+    it('uses fallback roll with advantage when creature not found and advantage is true', async () => {
+      resolveTarget.mockResolvedValue({
+        target: { name: 'Goblin', type: 'npc' },
+        cs: { creatures: [] },
+      });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction({ advantage: true }), makePlayerStats(), campaignName, null);
+
+      expect(sendSaveResult).toHaveBeenCalled();
+      const saveDetail = sendSaveResult.mock.calls[0][2];
+      expect(saveDetail.rawRolls).toHaveLength(2);
+      expect(saveDetail.roll).toBe(Math.max(saveDetail.rawRolls[0], saveDetail.rawRolls[1]));
     });
   });
 
@@ -353,6 +372,60 @@ describe('dominateBeastHandler.handle', () => {
       const result = await handle(makeAction(), ps, campaignName, null);
 
       expect(result.payload.description).toContain('WizardX');
+    });
+
+    it('handles addEntry rejection on ability_use log entry', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(consoleSpy).toHaveBeenCalledWith('[Dominate Beast] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on successful save_result log entry', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('log write failed'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(consoleSpy).toHaveBeenCalledWith('[Dominate Beast] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on condition log entry (failed save)', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('log write failed'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(consoleSpy).toHaveBeenCalledWith('[Dominate Beast] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on failed save_result log entry', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockResolvedValueOnce({}).mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('log write failed'));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(consoleSpy).toHaveBeenCalledWith('[Dominate Beast] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
     });
   });
 });

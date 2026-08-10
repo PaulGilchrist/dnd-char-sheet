@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './superiorHunterDefenseHandler.js';
 import * as damageRollback from '../../common/damageRollback.js';
@@ -350,6 +349,187 @@ describe('superiorHunterDefenseHandler', () => {
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 description: expect.stringContaining('Retroactively healed for 7 HP'),
             }));
+        });
+
+        it('handles addEntry rejection for heal logging without breaking', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            applyHealingToTarget.mockResolvedValue({ actualHeal: 5, oldHp: 10, newHp: 15 });
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 10, targetName: 'Test Ranger' },
+                attackerName: 'Fire Elemental',
+                targetName: 'Test Ranger',
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: ['fire'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Resistance to fire damage');
+            expect(result.payload.description).toContain('Retroactively healed for 5 HP');
+        });
+
+        it('handles addEntry rejection for ability_use logging without breaking', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            applyHealingToTarget.mockResolvedValue({ actualHeal: 0, oldHp: 10, newHp: 10 });
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'cold', primaryDamage: 8, targetName: 'Test Ranger' },
+                attackerName: 'Frost Giant',
+                targetName: 'Test Ranger',
+                primaryDamage: 8,
+                secondaryDamage: 0,
+                totalDamage: 8,
+                damageTypes: ['cold'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Resistance to cold damage');
+        });
+
+        it('uses custom action name when provided', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 5, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 5,
+                secondaryDamage: 0,
+                totalDamage: 5,
+                damageTypes: ['fire'],
+            });
+
+            const customAction = makeAction({ name: 'Custom Feature Name' });
+            const result = await handle(customAction, makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.name).toBe('Custom Feature Name');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Test Ranger',
+                'activeBuffs',
+                expect.arrayContaining([
+                    expect.objectContaining({ name: 'Custom Feature Name' }),
+                ]),
+                'test-campaign'
+            );
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                abilityName: 'Custom Feature Name',
+            }));
+        });
+
+        it('handles when combat context is null', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            getCombatContext.mockResolvedValue(null);
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 12, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 12,
+                secondaryDamage: 0,
+                totalDamage: 12,
+                damageTypes: ['fire'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Resistance to fire damage');
+            expect(result.payload.description).not.toContain('healed');
+            expect(applyHealingToTarget).not.toHaveBeenCalled();
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+            }));
+        });
+
+        it('handles healResult with no actualHeal property', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            applyHealingToTarget.mockResolvedValue({ oldHp: 10, newHp: 10 });
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 10, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: ['fire'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).not.toContain('healed');
+            expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'hp_change',
+            }));
+        });
+
+        it('handles attack with no totalDamage falling back to 0', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 10, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 0,
+                damageTypes: ['fire'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('0 fire');
+        });
+
+        it('uses playerStats computedStats as fallback for HP values', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === 'activeBuffs') return [];
+                return undefined;
+            });
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            getCombatContext.mockResolvedValue({});
+            applyHealingToTarget.mockResolvedValue({ actualHeal: 3, oldHp: 10, newHp: 13 });
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 6, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: ['fire'],
+            });
+
+            const playerStats = makePlayerStats({
+                computedStats: { currentHp: 10, maxHp: 20 },
+            });
+
+            await handle(makeAction(), playerStats, 'test-campaign');
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                currentHp: 10,
+                maxHp: 20,
+            }));
+        });
+
+        it('handles primaryDamage being 0 with no secondary damage', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { damageType: 'fire', primaryDamage: 0, targetName: 'Test Ranger' },
+                attackerName: 'Goblin',
+                targetName: 'Test Ranger',
+                primaryDamage: 0,
+                secondaryDamage: 0,
+                totalDamage: 0,
+                damageTypes: ['fire'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('Resistance to fire damage');
+            expect(result.payload.description).toContain('0 fire');
         });
     });
 });

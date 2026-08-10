@@ -100,6 +100,21 @@ describe('expeditiousRetreatService', () => {
                 expect(result).not.toBeNull();
                 expect(result.type).toBe('popup');
             });
+
+            it('handles spell with no name property', async () => {
+                const cs = { creatures: [{ name: 'Wizard' }] };
+                getCombatSummary.mockReturnValue(cs);
+
+                const result = await triggerExpeditiousRetreat(
+                    {},
+                    {},
+                    { ...playerStats, name: 'Wizard' },
+                    campaignName,
+                    mapName,
+                );
+
+                expect(result).toBeNull();
+            });
         });
 
         describe('concentration badge', () => {
@@ -155,6 +170,26 @@ describe('expeditiousRetreatService', () => {
                 );
             });
 
+            it('defaults proficiency to 2 when missing', async () => {
+                const cs = { creatures: [{ name: 'Wizard' }] };
+                getCombatSummary.mockReturnValue(cs);
+
+                const statsNoProf = {
+                    name: 'Wizard',
+                    proficiency: undefined,
+                    abilities: { CON: { bonus: 0 } },
+                };
+
+                await callTrigger({ name: 'Expeditious Retreat', level: 1 }, {}, statsNoProf);
+
+                expect(addConcentration).toHaveBeenCalledWith(
+                    cs,
+                    'Wizard',
+                    'Expeditious Retreat',
+                    10, // 8 + 2 (defaulted proficiency) + 0
+                );
+            });
+
             it('dispatches combat-summary-updated event', async () => {
                 const cs = { creatures: [{ name: 'Wizard' }] };
                 getCombatSummary.mockReturnValue(cs);
@@ -197,6 +232,23 @@ describe('expeditiousRetreatService', () => {
                     spellLevel: 1,
                     description: expect.stringContaining('casts Expeditious Retreat on themself'),
                 }));
+            });
+
+            it('handles addEntry rejection gracefully', async () => {
+                const cs = { creatures: [{ name: 'Wizard' }] };
+                getCombatSummary.mockReturnValue(cs);
+                addEntry.mockRejectedValue(new Error('DB error'));
+
+                const consoleErrSpy = vi.spyOn(console, 'error');
+
+                const result = await callTrigger();
+
+                expect(result).not.toBeNull();
+                expect(result.type).toBe('popup');
+                expect(consoleErrSpy).toHaveBeenCalledWith(
+                    '[expeditiousRetreat] Error logging:',
+                    expect.any(Error),
+                );
             });
         });
 

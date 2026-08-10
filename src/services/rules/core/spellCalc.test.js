@@ -1,6 +1,6 @@
-// @improved-by-ai
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { getSpellAbilities } from './spellCalc.js';
+import { getStore, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const makePlayerStats = (overrides = {}) => {
   const level = overrides.level || 5;
@@ -62,6 +62,11 @@ const expectSpellcastingResult = (result) => {
 };
 
 describe('spellCalc', () => {
+  beforeEach(() => {
+    const storeKeys = Array.from(getStore('TestWizard').keys());
+    storeKeys.forEach(key => getStore('TestWizard').delete(key));
+  });
+
   describe('getSpellAbilities', () => {
     describe('null spellcasting', () => {
       it('returns null when class has no spellcasting ability', () => {
@@ -667,6 +672,282 @@ describe('spellCalc', () => {
         const result = getSpellAbilities(allSpells, playerStats);
         expect(result.maxPreparedSpells).toBeUndefined();
         expect(result.spells[0].prepared).toBe('Always');
+      });
+    });
+
+    describe('spell thief - caster blocklist', () => {
+      it('removes blocked spells from spellAbilities', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Magic Missile', level: 1, classes: ['Wizard'] },
+          { name: 'Shield', level: 1, classes: ['Wizard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt', 'Magic Missile', 'Shield'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const blockList = JSON.stringify([
+          { spellName: 'Magic Missile' },
+          { spellName: 'Shield' },
+        ]);
+        setRuntimeValue('TestWizard', '_spellThiefCasterBlock', blockList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).not.toContain('Magic Missile');
+        expect(spellNames).not.toContain('Shield');
+      });
+
+      it('handles blocked spells with null spellName gracefully', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Magic Missile', level: 1, classes: ['Wizard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard2',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt', 'Magic Missile'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const blockList = JSON.stringify([
+          { spellName: null },
+          { spellName: 'Magic Missile' },
+        ]);
+        setRuntimeValue('TestWizard2', '_spellThiefCasterBlock', blockList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).not.toContain('Magic Missile');
+      });
+
+      it('does nothing when blocklist is empty array', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Magic Missile', level: 1, classes: ['Wizard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard3',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt', 'Magic Missile'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const blockList = JSON.stringify([]);
+        setRuntimeValue('TestWizard3', '_spellThiefCasterBlock', blockList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).toContain('Magic Missile');
+      });
+
+      it('does nothing when blocklist is not an array', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Magic Missile', level: 1, classes: ['Wizard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard4',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt', 'Magic Missile'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const blockList = JSON.stringify({ spellName: 'Magic Missile' });
+        setRuntimeValue('TestWizard4', '_spellThiefCasterBlock', blockList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).toContain('Magic Missile');
+      });
+    });
+
+    describe('spell thief - stolen spells', () => {
+      it('adds stolen spells to spellAbilities', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Charm Person', level: 1, classes: ['Bard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard5',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const stolenList = JSON.stringify([
+          { spellName: 'Charm Person' },
+        ]);
+        setRuntimeValue('TestWizard5', '_spellThiefStolenList', stolenList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).toContain('Charm Person');
+        expect(result.spells_known).toBe(0);
+        const stolenSpell = result.spells.find(s => s.name === 'Charm Person');
+        expect(stolenSpell.prepared).toBe('Always');
+      });
+
+      it('does not add stolen spell that is already known', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Charm Person', level: 1, classes: ['Bard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard6',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt', 'Charm Person'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const stolenList = JSON.stringify([
+          { spellName: 'Charm Person' },
+        ]);
+        setRuntimeValue('TestWizard6', '_spellThiefStolenList', stolenList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames.filter(n => n === 'Charm Person').length).toBe(1);
+        expect(result.spells_known).toBe(0);
+      });
+
+      it('handles stolen spells with null/missing spellName gracefully', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Charm Person', level: 1, classes: ['Bard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard7',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const stolenList = JSON.stringify([
+          { spellName: null },
+          { spellName: undefined },
+          { spellName: 'Charm Person' },
+        ]);
+        setRuntimeValue('TestWizard7', '_spellThiefStolenList', stolenList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Charm Person');
+        expect(result.spells_known).toBe(0);
+      });
+
+      it('does nothing when stolen list is not an array', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard8',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: 0, spellCastingAbility: 'Intelligence' }));
+
+        const stolenList = JSON.stringify({ spellName: 'Charm Person' });
+        setRuntimeValue('TestWizard8', '_spellThiefStolenList', stolenList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Fire Bolt');
+        expect(spellNames).not.toContain('Charm Person');
+      });
+
+      it('increments spells_known only when spells_known is a number', () => {
+        const allSpells = [
+          { name: 'Fire Bolt', level: 0, classes: ['Wizard'] },
+          { name: 'Charm Person', level: 1, classes: ['Bard'] },
+        ];
+        const playerStats = makePlayerStats({
+          name: 'TestWizard9',
+          class: {
+            name: 'Wizard',
+            subclass: null,
+            class_levels: [],
+            spell_casting_ability: 'Intelligence',
+          },
+          spells: ['Fire Bolt'],
+        });
+        playerStats.class.class_levels = [];
+        for (let i = 0; i < 5; i++) playerStats.class.class_levels[i] = { spellcasting: null };
+        setSpellcasting(playerStats, buildSpellcasting({ cantrips_known: 3, spells_known: null, spellCastingAbility: 'Intelligence' }));
+
+        const stolenList = JSON.stringify([
+          { spellName: 'Charm Person' },
+        ]);
+        setRuntimeValue('TestWizard9', '_spellThiefStolenList', stolenList, 'test-campaign');
+
+        const result = getSpellAbilities(allSpells, playerStats);
+        const spellNames = result.spells.map(s => s.name);
+        expect(spellNames).toContain('Charm Person');
+        expect(result.spells_known).toBeNull();
       });
     });
   });

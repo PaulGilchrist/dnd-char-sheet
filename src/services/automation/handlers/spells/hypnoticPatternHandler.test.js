@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -8,10 +7,6 @@ vi.mock('../../common/savePrompt.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -41,12 +36,6 @@ vi.mock('../../../ui/storage.js', () => ({
   },
 }));
 
-vi.mock('../../../ui/storage.js', () => ({
-  default: {
-    set: vi.fn(),
-  },
-}));
-
 vi.spyOn(window, 'dispatchEvent').mockImplementation(() => {});
 
 import { handle } from './hypnoticPatternHandler.js';
@@ -59,7 +48,7 @@ import { addConcentration } from '../../../combat/concentration/concentrationSer
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -212,6 +201,42 @@ describe('hypnoticPatternHandler.handle', () => {
         campaignName,
       );
     });
+
+    it('filters out charmed, incapacitated, and speed_zero from existing conditions before re-adding', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(10);
+      getRuntimeValue.mockReturnValue(['charmed', 'Stunned', 'speed_zero', 'incapacitated']);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-dedup',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin', 'activeConditions',
+        ['Stunned', 'charmed', 'incapacitated', 'speed_zero'],
+        campaignName,
+      );
+    });
+
+    it('handles non-array activeConditions value gracefully', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(10);
+      getRuntimeValue.mockReturnValue(null);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-nonarray',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin', 'activeConditions',
+        ['charmed', 'incapacitated', 'speed_zero'],
+        campaignName,
+      );
+    });
   });
 
   describe('concentration registration', () => {
@@ -252,6 +277,31 @@ describe('hypnoticPatternHandler.handle', () => {
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(addConcentration).not.toHaveBeenCalled();
+    });
+
+    it('uses spellAbilities.saveDc when available instead of computing from proficiency', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      getCombatSummary.mockReturnValue({
+        creatures: [
+          { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+          { name: 'TestCaster', gridX: 5, gridY: 10 },
+        ],
+      });
+      const ps = makePlayerStats({ spellAbilities: { saveDc: 17 } });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-spell-dc',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      await handle(makeAction(), ps, campaignName, null);
+
+      expect(addConcentration).toHaveBeenCalledWith(
+        expect.any(Object),
+        'TestCaster',
+        'Hypnotic Pattern',
+        17,
+      );
     });
   });
 
@@ -314,6 +364,111 @@ describe('hypnoticPatternHandler.handle', () => {
       expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         abilityName: 'My Hypno',
       }));
+    });
+  });
+
+  describe('disadvantage handling', () => {
+    it('passes disadvantage=true when target matches heightenTarget in metaCtx', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      const actionWithHeighten = {
+        name: 'Hypnotic Pattern',
+        automation: { type: 'hypnotic_pattern', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { heightenTarget: 'Goblin' },
+      };
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-disadv',
+        promise: Promise.resolve({ success: false, roll: 12, total: 14 }),
+      });
+
+      await handle(actionWithHeighten, makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          targetName: 'Goblin',
+          disadvantage: true,
+        }),
+      );
+      expect(createSaveListener).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          targetName: 'Orc',
+          disadvantage: false,
+        }),
+      );
+    });
+  });
+
+  describe('save result logging with addEntry rejection', () => {
+    it('triggers .catch() error handler on addEntry rejection for success save path', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(20);
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-reject-success',
+        promise: Promise.resolve({ success: true, roll: 18, total: 22 }),
+      });
+
+      await expect(handle(makeAction(), makePlayerStats(), campaignName, null)).resolves.toBeDefined();
+
+      // The .catch() should have been called (no unhandled rejection)
+      expect(addEntry).toHaveBeenCalledTimes(4);
+    });
+
+    it('triggers .catch() error handler on addEntry rejection for condition application path', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(10);
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-reject-condition',
+        promise: Promise.resolve({ success: false, roll: 5, total: 7 }),
+      });
+
+      await expect(handle(makeAction(), makePlayerStats(), campaignName, null)).resolves.toBeDefined();
+
+      // The .catch() should have been called (no unhandled rejection)
+      expect(addEntry).toHaveBeenCalledTimes(4);
+    });
+
+    it('handles save result with missing roll and total fields', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-no-roll',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('creature(s)');
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin', 'activeConditions',
+        ['charmed', 'incapacitated', 'speed_zero'],
+        campaignName,
+      );
+    });
+  });
+
+  describe('targetEffects and rollback integration', () => {
+    it('stores spell lastAttack and target results for each creature', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue({
+        promptId: 'hypno-lastattack',
+        promise: Promise.resolve({ success: false, roll: 8, total: 10 }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', expect.any(Object), campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', expect.any(Object), campaignName);
+      expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', expect.any(Object), campaignName);
     });
   });
 });

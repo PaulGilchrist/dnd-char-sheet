@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -17,16 +16,23 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../../ui/storage.js', () => ({
+  default: {
+    set: vi.fn(),
+  },
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle } from './revivificationHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as logPoster from '../../../ui/logService.js';
+import storage from '../../../ui/storage.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 const playerName = 'TestHero';
 
 function makePlayerStats(overrides = {}) {
@@ -311,6 +317,124 @@ describe('revivificationHandler', () => {
         'TestHero uses Revivification to save Ally, setting their Hit Points to 5 and expending 1 Rage.',
       );
       expect(result.payload.name).toBe('Revivification');
+    });
+  });
+
+  // ── NPC target healing ─────────────────────────────────────
+
+  describe('NPC target healing', () => {
+    function makeNPCTarget(name) {
+      return { name, type: 'npc', currentHp: 0 };
+    }
+
+    it('sets target.currentHp for NPC target and saves combat summary', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((target, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        return null;
+      });
+      const combatCtx = { creatures: [] };
+      damageUtils.getCombatContext.mockResolvedValue(combatCtx);
+      damageUtils.getTargetFromAttacker.mockReturnValue(makeNPCTarget('Goblin'));
+
+      const result = await handle(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        playerName,
+        'ragePoints',
+        0,
+        campaignName,
+      );
+      expect(storage.set).toHaveBeenCalledWith(
+        'combatSummary',
+        combatCtx,
+        campaignName,
+      );
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe(
+        'TestHero uses Revivification to save Goblin, setting their Hit Points to 5 and expending 1 Rage.',
+      );
+    });
+
+    it('uses default heal amount of 1 when level is 0 for NPC', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((target, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        return null;
+      });
+      const combatCtx = { creatures: [] };
+      damageUtils.getCombatContext.mockResolvedValue(combatCtx);
+      damageUtils.getTargetFromAttacker.mockReturnValue(makeNPCTarget('Ogre'));
+
+      const ps = makePlayerStats({ level: 0 });
+
+      await handle(
+        makeAction(),
+        ps,
+        campaignName,
+        null,
+      );
+
+      expect(storage.set).toHaveBeenCalledWith(
+        'combatSummary',
+        combatCtx,
+        campaignName,
+      );
+    });
+
+    it('handles negative rage value for player target (converts to 0)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((target, key) => {
+        if (key === 'ragePoints') return -1;
+        if (key === 'currentHitPoints') return 0;
+        return null;
+      });
+
+      const result = await handle(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe(
+        'No Rage remaining to power Revivification.',
+      );
+    });
+  });
+
+  // ── Log error handling ─────────────────────────────────────
+
+  describe('log error handling', () => {
+    it('catches and logs addEntry errors', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((target, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'currentHitPoints') return 0;
+        return null;
+      });
+      damageUtils.getCombatContext.mockResolvedValue({});
+      damageUtils.getTargetFromAttacker.mockReturnValue(makePlayerTarget('Ally'));
+      logPoster.addEntry.mockRejectedValue(new Error('Log service unavailable'));
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await handle(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[revivification] Error:',
+        expect.any(Error),
+      );
+      consoleErrorSpy.mockRestore();
     });
   });
 });

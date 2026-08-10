@@ -986,5 +986,259 @@ describe('faerieFireHandler.handle', () => {
         appliedDamage: 0,
       });
     });
+
+    it('should compute concentration DC from proficiency when spellAbilities.saveDc is missing', async () => {
+      const summary = { creatures: [{ name: 'TestCaster' }, { name: 'Goblin' }] };
+      combatData.getCombatSummary.mockReturnValue(summary);
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: true }));
+
+      const playerStats = makePlayerStats({ spellAbilities: undefined });
+      await handle(makeAction(), playerStats, campaignName, null);
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        summary,
+        'TestCaster',
+        'Faerie Fire',
+        11,
+      );
+    });
+
+    it('should exercise addEntry .catch() error handler for immune creature', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      const combatWithImmune = {
+        ...baseCombatContext,
+        creatures: [
+          { name: 'IronGolem', type: 'monster', weaknessesAndResistivities: { immunities: ['DEX'] } },
+          { name: 'TestCaster', gridX: 5, gridY: 10 },
+        ],
+      };
+      damageUtils.getCombatContext.mockResolvedValue(combatWithImmune);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should exercise addEntry .catch() error handler for ability_use log', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should exercise addEntry .catch() error handler for save_result on success', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(20);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: true }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should exercise addEntry .catch() error handler for invisible condition removal', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return ['invisible'];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should exercise addEntry .catch() error handler for condition applied log', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should exercise addEntry .catch() error handler for save_result on failure', async () => {
+      const { addEntry } = await import('../../../ui/logService.js');
+      addEntry.mockRejectedValue(new Error('log error'));
+
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(consoleSpy).toHaveBeenCalledWith('[faerieFire] Error:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should use empty object when automation is falsy', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(10);
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: true }));
+
+      const result = await handle({ name: 'Faerie Fire', automation: null }, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(savePrompt.buildSaveDc).toHaveBeenCalledWith({}, makePlayerStats());
+    });
+
+    it('should use empty array fallback when targetEffects is not an array', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return 'not-an-array';
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        expect.arrayContaining([
+          expect.objectContaining({
+            target: 'Goblin',
+            effect: 'faerie_fire',
+          }),
+        ]),
+        campaignName,
+      );
+    });
+
+    it('should use empty array fallback when activeConditions is not an array', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return 'not-an-array';
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        expect.any(Array),
+        campaignName,
+      );
+    });
+
+    it('should process creature with non-DEX immunities array normally', async () => {
+      const combatWithOtherImmunities = {
+        ...baseCombatContext,
+        creatures: [
+          { name: 'Goblin', type: 'monster', weaknessesAndResistivities: { immunities: ['fire'] } },
+          { name: 'TestCaster', gridX: 5, gridY: 10 },
+        ],
+      };
+      damageUtils.getCombatContext.mockResolvedValue(combatWithOtherImmunities);
+      savePrompt.buildSaveDc.mockReturnValue(14);
+      runtimeState.getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'targetEffects') return [];
+        if (key === 'activeBuffs') return [];
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: false }));
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(savePrompt.createSaveListener).toHaveBeenCalledTimes(1);
+      expect(savePrompt.createSaveListener).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({ targetName: 'Goblin' }),
+      );
+    });
+
+    it('should use proficiency fallback of 2 when proficiency is 0 for concentration DC', async () => {
+      const summary = { creatures: [{ name: 'TestCaster' }, { name: 'Goblin' }] };
+      combatData.getCombatSummary.mockReturnValue(summary);
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue(makeSaveListener({ success: true }));
+
+      const playerStats = makePlayerStats({ spellAbilities: undefined, proficiency: 0 });
+      await handle(makeAction(), playerStats, campaignName, null);
+
+      expect(concentrationService.addConcentration).toHaveBeenCalledWith(
+        summary,
+        'TestCaster',
+        'Faerie Fire',
+        10,
+      );
+    });
   });
 });

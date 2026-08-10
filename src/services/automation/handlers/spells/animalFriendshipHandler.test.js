@@ -1,4 +1,4 @@
-// @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -426,6 +426,140 @@ describe('animalFriendshipHandler', () => {
             const result = isAnimalFriendshipActive('TestCaster', 'Wolf', campaignName);
 
             expect(result).toBe(false);
+        });
+    });
+
+    describe('error handling', () => {
+        it('handles addEntry rejection on ability_use log (success path)', async () => {
+            setupBaseMocks({ success: true });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Wolf', type: 'npc', saveBonuses: { WIS: 2 } },
+                ],
+            });
+            rollSaveForCreature.mockReturnValue({
+                roll: 15,
+                total: 17,
+                bonus: 2,
+                success: true,
+                rawRolls: [15],
+            });
+            addEntry.mockRejectedValue(new Error('log error'));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+        });
+
+        it('handles addEntry rejection on save_result log (success path)', async () => {
+            setupBaseMocks({ success: true });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Wolf', type: 'npc', saveBonuses: { WIS: 2 } },
+                ],
+            });
+            rollSaveForCreature.mockReturnValue({
+                roll: 15,
+                total: 17,
+                bonus: 2,
+                success: true,
+                rawRolls: [15],
+            });
+            addEntry.mockRejectedValue(new Error('log error'));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+        });
+
+        it('handles addEntry rejection on condition log (failure path)', async () => {
+            const { setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
+            setupBaseMocks({ success: false });
+            getRuntimeValue.mockReturnValue([]);
+            addEntry.mockRejectedValue(new Error('log error'));
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Wolf',
+                'activeConditions',
+                expect.arrayContaining(['charmed']),
+                campaignName,
+            );
+        });
+
+        it('handles addEntry rejection on save_result log (failure path)', async () => {
+            const { setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
+            setupBaseMocks({ success: false });
+            getRuntimeValue.mockReturnValue([]);
+            addEntry.mockRejectedValue(new Error('log error'));
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                '_animalFriendship_TestCaster_Wolf',
+                true,
+                campaignName,
+            );
+        });
+
+        it('handles action without automation property', async () => {
+            setupBaseMocks({ success: true });
+
+            const action = {
+                name: 'Animal Friendship',
+                automation: undefined,
+            };
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(buildSaveDc).toHaveBeenCalled();
+        });
+
+        it('handles targetNames without automation property', async () => {
+            setupBaseMocks({ success: true });
+
+            const action = {
+                name: 'Animal Friendship',
+                automation: undefined,
+                targetNames: ['Wolf'],
+            };
+
+            const result = await handle(action, makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+        });
+
+        it('handles null activeConditions on failed save', async () => {
+            const { setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
+            setupBaseMocks({ success: false });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Wolf', type: 'npc', saveBonuses: { WIS: 2 } },
+                ],
+            });
+            rollSaveForCreature.mockReturnValue({
+                roll: 5,
+                total: 7,
+                bonus: 2,
+                success: false,
+                rawRolls: [5],
+            });
+            getRuntimeValue.mockImplementation((store, key) => {
+                if (key === 'activeConditions') return null;
+                return null;
+            });
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Wolf',
+                'activeConditions',
+                expect.arrayContaining(['charmed']),
+                campaignName,
+            );
         });
     });
 });

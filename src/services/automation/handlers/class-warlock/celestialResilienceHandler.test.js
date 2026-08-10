@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, grantCelestialResilience, confirmCelestialResilience, skipCelestialResilience } from './celestialResilienceHandler.js';
@@ -31,6 +30,10 @@ vi.mock('../../../rules/combat/rangeCheck.js', () => ({
     isWithinRange: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock('../../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => null),
+}));
+
 // ── Re-import mocks after mocking ──────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -39,6 +42,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { loadMapData } from '../../../maps/mapsService.js';
 import { getDistanceFeet, rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -442,6 +446,62 @@ describe('celestialResilienceHandler', () => {
 
             expect(result.maxAllies).toBe(5);
         });
+
+        it('uses allCreatures from combatSummary when mapPlayers is empty', async () => {
+            evaluateAutoExpression
+                .mockReturnValueOnce(5)
+                .mockReturnValueOnce(2);
+            getRuntimeValue.mockReturnValue(0);
+            rangeToFeet.mockReturnValue(60);
+            loadMapData.mockResolvedValue({
+                players: [],
+            });
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Ally1', type: 'player', currentHp: 10, maxHp: 20 },
+                    { name: 'Ally2', type: 'npc', currentHp: 5, maxHp: 10 },
+                ],
+            });
+            isWithinRange.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+            const result = await grantCelestialResilience(
+                makeCelestialStats(),
+                CAMPAIGN,
+                'magical_cunning',
+                MAP,
+            );
+
+            expect(result.allyTempHp).toBe(2);
+            expect(result.allies).toHaveLength(1);
+            expect(result.allies[0].name).toBe('Ally1');
+            expect(result.allies[0].type).toBe('player');
+        });
+
+        it('uses allCreatures when mapPlayers is undefined', async () => {
+            evaluateAutoExpression
+                .mockReturnValueOnce(5)
+                .mockReturnValueOnce(2);
+            getRuntimeValue.mockReturnValue(0);
+            rangeToFeet.mockReturnValue(60);
+            loadMapData.mockResolvedValue({});
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Ally1', type: 'player', currentHp: 10, maxHp: 20 },
+                ],
+            });
+            isWithinRange.mockResolvedValueOnce(true);
+
+            const result = await grantCelestialResilience(
+                makeCelestialStats(),
+                CAMPAIGN,
+                'short_rest',
+                MAP,
+            );
+
+            expect(result.allyTempHp).toBe(2);
+            expect(result.allies).toHaveLength(1);
+            expect(result.allies[0].name).toBe('Ally1');
+        });
     });
 
     describe('handle', () => {
@@ -550,6 +610,25 @@ describe('celestialResilienceHandler', () => {
                 }),
             );
         });
+
+        it('handles addEntry rejection in handle without throwing', async () => {
+            evaluateAutoExpression
+                .mockReturnValueOnce(7)
+                .mockReturnValueOnce(0);
+            getRuntimeValue.mockReturnValue(0);
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await handle(makeAction(), makeCelestialStats(), CAMPAIGN, MAP);
+
+            expect(result).not.toBe(null);
+            expect(result.type).toBe('popup');
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[celestialResilience] Error:',
+                expect.any(Error),
+            );
+            errorSpy.mockRestore();
+        });
     });
 
     describe('confirmCelestialResilience', () => {
@@ -648,6 +727,65 @@ describe('celestialResilienceHandler', () => {
                 expect.any(Number),
                 CAMPAIGN,
             );
+        });
+
+        it('handles addEntry rejection in skipCelestialResilience without throwing', async () => {
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await skipCelestialResilience(
+                makeAction(),
+                makeCelestialStats(),
+                CAMPAIGN,
+            );
+
+            expect(result.type).toBe('popup');
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[celestialResilience] Error:',
+                expect.any(Error),
+            );
+            errorSpy.mockRestore();
+        });
+    });
+
+    describe('confirmCelestialResilience error paths', () => {
+        it('handles addEntry rejection when no targets selected', async () => {
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await confirmCelestialResilience(
+                makeAction(),
+                makeCelestialStats(),
+                CAMPAIGN,
+                [],
+            );
+
+            expect(result.type).toBe('popup');
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[celestialResilience] Error:',
+                expect.any(Error),
+            );
+            errorSpy.mockRestore();
+        });
+
+        it('handles addEntry rejection when granting to allies', async () => {
+            evaluateAutoExpression.mockReturnValue(3);
+            addEntry.mockImplementation(() => Promise.reject(new Error('log error')));
+            const errorSpy = vi.spyOn(console, 'error');
+
+            const result = await confirmCelestialResilience(
+                makeAction(),
+                makeCelestialStats(),
+                CAMPAIGN,
+                ['Ally1', 'Ally2'],
+            );
+
+            expect(result.type).toBe('popup');
+            expect(errorSpy).toHaveBeenCalledWith(
+                '[celestialResilience] Error:',
+                expect.any(Error),
+            );
+            errorSpy.mockRestore();
         });
     });
 });

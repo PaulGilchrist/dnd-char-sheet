@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { handle } from './illusorySelfHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as damageRollback from '../../common/damageRollback.js';
@@ -285,6 +284,55 @@ describe('illusorySelfHandler', () => {
             const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
 
             expect(result.payload.description).toContain('0 / 1');
+        });
+    });
+
+    describe('error handling', () => {
+        it('handles addEntry rejection in spell slot restore path', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            mockUsesAndSlots(1, { spell_slots_level_2: 4 });
+            addEntry.mockRejectedValue(new Error('DB error'));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('automatically misses');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'spell_slots_level_2',
+                3,
+                campaignName,
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'illusorySelfUses',
+                0,
+                campaignName,
+            );
+        });
+
+        it('handles addEntry rejection in normal path (no damage)', async () => {
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: makeAttackEvent(),
+                attackerName: 'Goblin',
+            });
+            damageRollback.rollbackDamage.mockResolvedValue(0);
+            mockUses(0);
+            addEntry.mockRejectedValue(new Error('DB error'));
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, 'test-map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('automatically misses');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                'illusorySelfUses',
+                1,
+                campaignName,
+            );
         });
     });
 });

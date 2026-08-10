@@ -1,4 +1,4 @@
-// @cleaned-by-ai
+
 import {
     handle,
     onArcaneWardRestore,
@@ -451,6 +451,25 @@ describe('arcaneWardHandler', () => {
 
             expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 2, campaignName);
         });
+
+        it('throws when addEntry rejects', async () => {
+            setWardMocks((player, key) => {
+                if (key === 'arcaneWardActive') return true;
+                if (key === 'arcaneWardHp') return 5;
+                if (key === 'arcaneWardMax') return 13;
+                return undefined;
+            });
+            addEntry.mockRejectedValueOnce(new Error('log failure'));
+
+            await expect(
+                onArcaneWardRestore(
+                    { name: 'Arcane Ward', automation: { type: 'passive_rule' } },
+                    makeWizardStats('TestWizard', 5, 3),
+                    2,
+                    campaignName,
+                ),
+            ).rejects.toThrow('log failure');
+        });
     });
 
     describe('onArcaneWardBonusActionRestore', () => {
@@ -837,6 +856,41 @@ describe('arcaneWardHandler', () => {
             );
 
             expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 10, campaignName);
+        });
+
+        it('throws when addEntry rejects during ward creation', async () => {
+            setWardMocks(() => false);
+            addEntry.mockRejectedValueOnce(new Error('log failure'));
+
+            await expect(
+                onAbjurationSpellCast(
+                    { name: 'Arcane Ward' },
+                    makeWizardStats('TestWizard', 5, 3),
+                    'Shield',
+                    1,
+                    campaignName,
+                ),
+            ).rejects.toThrow('log failure');
+        });
+
+        it('throws when addEntry rejects during ward restoration', async () => {
+            setWardMocks((player, key) => {
+                if (key === 'arcaneWardActive') return true;
+                if (key === 'arcaneWardHp') return 8;
+                if (key === 'arcaneWardMax') return 13;
+                return undefined;
+            });
+            addEntry.mockRejectedValueOnce(new Error('log failure'));
+
+            await expect(
+                onAbjurationSpellCast(
+                    { name: 'Arcane Ward' },
+                    makeWizardStats('TestWizard', 5, 3),
+                    'Mage Armor',
+                    1,
+                    campaignName,
+                ),
+            ).rejects.toThrow('log failure');
         });
     });
 });

@@ -195,4 +195,64 @@ describe('POIPanel', () => {
             expect(content).toBeInTheDocument();
         });
     });
+
+    describe('drag ghost fallback behavior', () => {
+        function createDataTransfer() {
+            const data = {};
+            return {
+                data,
+                setData: vi.fn((format, value) => {
+                    data[format] = value;
+                }),
+                setDragImage: vi.fn(),
+            };
+        }
+
+        it('uses fallback dimensions of 36 when SVG width attribute is missing', () => {
+            renderPanel();
+            const items = document.querySelectorAll('.poi-panel-item');
+            const firstItem = items[0];
+            const svg = firstItem.querySelector('svg');
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
+            const dataTransfer = createDataTransfer();
+
+            fireEvent.dragStart(firstItem, { dataTransfer, currentTarget: firstItem });
+
+            expect(dataTransfer.setDragImage).toHaveBeenCalled();
+            const callArgs = dataTransfer.setDragImage.mock.calls[0];
+            expect(callArgs[1]).toBe(18);
+            expect(callArgs[2]).toBe(18);
+        });
+
+        it('uses fallback dimensions when SVG width attribute parses to 0', () => {
+            renderPanel();
+            const items = document.querySelectorAll('.poi-panel-item');
+            const firstItem = items[0];
+            const svg = firstItem.querySelector('svg');
+            svg.setAttribute('width', '0');
+            svg.setAttribute('height', '0');
+            const dataTransfer = createDataTransfer();
+
+            fireEvent.dragStart(firstItem, { dataTransfer, currentTarget: firstItem });
+
+            expect(dataTransfer.setDragImage).toHaveBeenCalled();
+            const callArgs = dataTransfer.setDragImage.mock.calls[0];
+            expect(callArgs[1]).toBe(18);
+            expect(callArgs[2]).toBe(18);
+        });
+
+        it('returns early without creating ghost when SVG element is not found', () => {
+            renderPanel();
+            const items = document.querySelectorAll('.poi-panel-item');
+            const firstItem = items[0];
+            const svg = firstItem.querySelector('svg');
+            svg.remove();
+            const dataTransfer = createDataTransfer();
+
+            fireEvent.dragStart(firstItem, { dataTransfer, currentTarget: firstItem });
+
+            expect(dataTransfer.setDragImage).not.toHaveBeenCalled();
+        });
+    });
 });

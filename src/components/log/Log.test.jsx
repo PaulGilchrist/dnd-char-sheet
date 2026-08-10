@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -581,6 +580,7 @@ describe('Log', () => {
       cleanup();
       setup([roll({ rollType: 'save-damage', saveResult: 'failure', targetName: 'Gob' })]);
       expect(screen.getByText(/SAVE FAILURE/i)).toBeInTheDocument();
+      expect(q('.log-save-result.log-condition-failure')).toBeInTheDocument();
       cleanup();
       setup([roll({ rollType: 'save-damage' })]);
       expect(q('.log-save-result')).not.toBeInTheDocument();
@@ -589,6 +589,42 @@ describe('Log', () => {
         roll({ rollType: 'save-damage', mode: 'disadvantage', saveDc: 13, saveType: 'wis' }),
       ]);
       expect(screen.getByText(/DISADVANTAGE/i)).toBeInTheDocument();
+    });
+
+    it('shows saveRoll and saveBonus in save result', () => {
+      setup([roll({
+        rollType: 'save-damage',
+        saveResult: 'success',
+        saveRoll: 14,
+        saveBonus: 3,
+      })]);
+      expect(screen.getByText(/d20 14\+3/i)).toBeInTheDocument();
+    });
+
+    it('shows saveRoll without bonus when bonus is null', () => {
+      setup([roll({
+        rollType: 'save-damage',
+        saveResult: 'failure',
+        saveRoll: 8,
+        saveBonus: null,
+      })]);
+      expect(screen.getByText(/d20 8\)/i)).toBeInTheDocument();
+    });
+
+    it('shows saveSuccess path (not saveResult)', () => {
+      setup([roll({
+        rollType: 'save-damage',
+        saveResult: null,
+        saveSuccess: true,
+      })]);
+      expect(screen.getByText(/SAVE SUCCESS/i)).toBeInTheDocument();
+      cleanup();
+      setup([roll({
+        rollType: 'save-damage',
+        saveResult: null,
+        saveSuccess: false,
+      })]);
+      expect(screen.getByText(/SAVE FAILURE/i)).toBeInTheDocument();
     });
   });
 
@@ -605,6 +641,21 @@ describe('Log', () => {
       setup([roll({ rollType: 'save-damage', damageType: 'fire' })]);
       expect(screen.getByText(/fire/)).toBeInTheDocument();
     });
+
+    it('shows resistanceDetails with immune/resistant badges', () => {
+      setup([roll({
+        rollType: 'damage',
+        damageType: 'fire',
+        resistanceDetails: [
+          { damageType: 'fire', status: 'immune' },
+          { damageType: 'cold', status: 'resistant' },
+        ],
+      })]);
+      expect(screen.getByText(/Immune to fire/i)).toBeInTheDocument();
+      expect(screen.getByText(/Resistant to cold/i)).toBeInTheDocument();
+      expect(q('.log-immune')).toBeInTheDocument();
+      expect(q('.log-resistant')).toBeInTheDocument();
+    });
   });
 
   // ── ICON CLASSES mapping getRollIconType ───────────────
@@ -619,9 +670,18 @@ describe('Log', () => {
       ['save-confusion', 'fa-shield-halved'],
       ['save-forcecage', 'fa-shield-halved'],
       ['save-forcecage-escape', 'fa-shield-halved'],
+      ['save-maze', 'fa-shield-halved'],
+      ['save-maze-escape', 'fa-shield-halved'],
       ['initiative', 'fa-bolt'],
       ['damage', 'fa-skull'],
       ['attack', 'fa-crosshairs'],
+      ['save-banishment', 'fa-shield-halved'],
+      ['save-polymorph', 'fa-paw'],
+      ['save-animal-shapes', 'fa-paw'],
+      ['save-prismatic-spray', 'fa-wand-magic-sparkles'],
+      ['save-prismatic-spray-indigo', 'fa-eye'],
+      ['save-prismatic-spray-violet', 'fa-door-open'],
+      ['unknown_type', 'fa-dice-d20'],
     ])('%s -> .%s', (tp, cls) => {
       setup([roll({ rollType: tp })]);
       expect(q(`.log-roll i.${cls}`)).toBeInTheDocument();
@@ -634,6 +694,58 @@ describe('Log', () => {
       setup([roll({ rolls: [17, 9], mode: 'advantage' })]);
       expect(screen.getByText(/selected/i)).toBeInTheDocument();
       expect(screen.getByText(/discarded/i)).toBeInTheDocument();
+    });
+
+    it('disadvantage mode shows both dice with selected/discarded when rolls[0] <= rolls[1]', () => {
+      setup([roll({ rolls: [3, 15], mode: 'disadvantage' })]);
+      expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/15 discarded/i)).toBeInTheDocument();
+    });
+
+    it('disadvantage mode shows both dice with selected/discarded when rolls[1] < rolls[0]', () => {
+      setup([roll({ rolls: [15, 3] })]);
+      expect(document.querySelectorAll('.log-die-selected').length).toBeGreaterThan(0);
+    });
+
+    it('shows negative bonus', () => {
+      setup([roll({ bonus: -2 })]);
+      expect(q('.log-total').textContent).toContain('-2');
+    });
+
+    it('shows GWF with displayRolls', () => {
+      setup([roll({
+        gwfApplied: true,
+        gwfOriginalRolls: [12, 8],
+        gwfDisplayRolls: [15, 10],
+      })]);
+      expect(screen.getByText(/GWF: 12, 8 → 15, 10/i)).toBeInTheDocument();
+    });
+
+    it('shows secondary damage with all fields', () => {
+      setup([roll({
+        secondaryFormula: '2d6',
+        secondaryTotal: 7,
+        secondaryDamageType: 'cold',
+        secondarySaveResult: 'success',
+        secondarySaveRoll: 14,
+        secondarySaveBonus: 2,
+      })]);
+      expect(screen.getByText(/Secondary:/i)).toBeInTheDocument();
+      expect(screen.getByText(/2d6/)).toBeInTheDocument();
+      expect(screen.getByText(/cold/i)).toBeInTheDocument();
+      expect(screen.getByText(/SAVE SUCCESS/i)).toBeInTheDocument();
+      expect(screen.getByText(/d20 14\+2/i)).toBeInTheDocument();
+    });
+
+    it('shows advantage with advantageSources', () => {
+      setup([roll({
+        condition: 'charmed',
+        dc: 15,
+        success: true,
+        mode: 'advantage',
+        advantageSources: ['Bard', 'Paladin'],
+      })]);
+      expect(screen.getByText(/ADVANTAGE \(Bard, Paladin\)/i)).toBeInTheDocument();
     });
   });
 });

@@ -103,16 +103,48 @@ describe('livingLegendHandler', () => {
 
       expect(result.type).toBe('popup');
     });
+
+    it('returns warning popup when Living Legend is already active', async () => {
+      getRuntimeValue.mockReturnValue(true);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('warning');
+      expect(result.payload.description).toContain('already active');
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(addEntry).not.toHaveBeenCalled();
+    });
+
+    it('does not set runtime value or log when already active', async () => {
+      getRuntimeValue.mockReturnValue(true);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(addEntry).not.toHaveBeenCalled();
+    });
   });
 
   describe('setUnerringStrikeUsed', () => {
-    it('sets the runtime value', async () => {
+    it('sets the runtime value to true', async () => {
       await setUnerringStrikeUsed(playerName, campaignName, true);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
         playerName,
         unerringStrikeKey,
         true,
+        campaignName,
+      );
+    });
+
+    it('sets the runtime value to false', async () => {
+      await setUnerringStrikeUsed(playerName, campaignName, false);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        playerName,
+        unerringStrikeKey,
+        false,
         campaignName,
       );
     });

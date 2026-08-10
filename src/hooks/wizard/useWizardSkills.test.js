@@ -1,8 +1,8 @@
-// @cleaned-by-ai
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardSkills from './useWizardSkills.js';
 import useWizardConfig from './useWizardConfig.js';
+import * as skillValidation from '../../services/character/skillValidation.js';
 
 vi.mock('./useWizardConfig.js', () => ({
   default: vi.fn(),
@@ -27,8 +27,8 @@ const DEFAULT_FORM_DATA = {
 
 const MOCK_SET_FORM_DATA = vi.fn();
 
-function renderSkills(formData = DEFAULT_FORM_DATA, setFormData = MOCK_SET_FORM_DATA) {
-  return renderHook(() => useWizardSkills(formData, setFormData));
+function renderSkills(formData = DEFAULT_FORM_DATA, setFormData = MOCK_SET_FORM_DATA, allFeats = null) {
+  return renderHook(() => useWizardSkills(formData, setFormData, allFeats));
 }
 
 describe('useWizardSkills', () => {
@@ -286,6 +286,111 @@ describe('useWizardSkills', () => {
       });
       const { result } = renderSkills();
       expect(result.current.skillWarnings).toEqual(warnings);
+    });
+  });
+
+  describe('callback invocation', () => {
+    it('validateFn callback invokes validateSkills with formData, using allFeats from closure', async () => {
+      const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.validateSkills.mockResolvedValue(['test warning']);
+      await config.validateFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.validateSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+    });
+
+    it('slot[0] get callback invokes getSkillLimits with formData, using allFeats from closure', async () => {
+      const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.getSkillLimits.mockResolvedValue({ allowed: 5, fromClass: { count: 2 } });
+      await config.slots[0].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getSkillLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+    });
+
+    it('slot[1] get callback invokes getExpertiseLimits with formData, using allFeats from closure', async () => {
+      const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.getExpertiseLimits.mockResolvedValue({ allowed: true, count: 2 });
+      await config.slots[1].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getExpertiseLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+    });
+
+    it('preSelect.getFn callback invokes getPreSelectedSkills with formData, using allFeats from closure', async () => {
+      const mockFeats = [{ name: 'Skill Expert', benefits: [] }];
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.getPreSelectedSkills.mockResolvedValue(['Athletics', 'Stealth']);
+      await config.preSelect.getFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+    });
+
+    it('all callbacks use the same allFeats from closure', async () => {
+      const mockFeats = [
+        { name: 'Skill Expert', benefits: [] },
+        { name: 'Skilled', benefits: [] },
+      ];
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, mockFeats);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.validateSkills.mockResolvedValue([]);
+      skillValidation.getSkillLimits.mockResolvedValue({ allowed: 3 });
+      skillValidation.getExpertiseLimits.mockResolvedValue({ allowed: true, count: 1 });
+      skillValidation.getPreSelectedSkills.mockResolvedValue([]);
+
+      await config.validateFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.validateSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+
+      await config.slots[0].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getSkillLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+
+      await config.slots[1].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getExpertiseLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+
+      await config.preSelect.getFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, mockFeats);
+    });
+
+    it('callbacks work with null allFeats', async () => {
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, null);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.validateSkills.mockResolvedValue([]);
+      skillValidation.getSkillLimits.mockResolvedValue({ allowed: 3 });
+      skillValidation.getExpertiseLimits.mockResolvedValue({ allowed: true, count: 1 });
+      skillValidation.getPreSelectedSkills.mockResolvedValue([]);
+
+      await config.validateFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.validateSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, null);
+
+      await config.slots[0].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getSkillLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, null);
+
+      await config.slots[1].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getExpertiseLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, null);
+
+      await config.preSelect.getFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, null);
+    });
+
+    it('callbacks work with empty allFeats array', async () => {
+      renderSkills(DEFAULT_FORM_DATA, MOCK_SET_FORM_DATA, []);
+      const config = useWizardConfig.mock.calls[0][0];
+      skillValidation.validateSkills.mockResolvedValue([]);
+      skillValidation.getSkillLimits.mockResolvedValue({ allowed: 3 });
+      skillValidation.getExpertiseLimits.mockResolvedValue({ allowed: true, count: 1 });
+      skillValidation.getPreSelectedSkills.mockResolvedValue([]);
+
+      await config.validateFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.validateSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, []);
+
+      await config.slots[0].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getSkillLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, []);
+
+      await config.slots[1].get(DEFAULT_FORM_DATA);
+      expect(skillValidation.getExpertiseLimits).toHaveBeenCalledWith(DEFAULT_FORM_DATA, []);
+
+      await config.preSelect.getFn(DEFAULT_FORM_DATA);
+      expect(skillValidation.getPreSelectedSkills).toHaveBeenCalledWith(DEFAULT_FORM_DATA, []);
     });
   });
 });

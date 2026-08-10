@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './tashasLaughterHandler.js';
@@ -6,6 +5,7 @@ import * as savePrompt from '../../common/savePrompt.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
+import { addEntry } from '../../../ui/logService.js';
 
 vi.mock('../../common/savePrompt.js', () => ({
   buildSaveDc: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -350,6 +350,123 @@ describe('tashasLaughterHandler.handle', () => {
         'activeConditions',
         expect.any(Array),
       );
+    });
+  });
+
+  describe('error handling - addEntry rejection', () => {
+    it('should handle addEntry rejection on ability_use log without throwing', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-catch',
+        promise: Promise.resolve({ success: true }),
+      });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log write failed')));
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('should handle addEntry rejection on save_result success log without throwing', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-catch-success',
+        promise: Promise.resolve({ success: true }),
+      });
+      addEntry.mockImplementation((_camp, entry) => {
+        if (entry.type === 'save_result' && entry.saveType === 'WIS') {
+          return Promise.reject(new Error('log write failed'));
+        }
+        return Promise.resolve();
+      });
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('should handle addEntry rejection on condition log without throwing', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      mockGetRuntimeValue((playerName, key) => {
+        if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-catch-fail',
+        promise: Promise.resolve({ success: false }),
+      });
+      addEntry.mockImplementation((_camp, entry) => {
+        if (entry.type === 'condition') {
+          return Promise.reject(new Error('log write failed'));
+        }
+        return Promise.resolve();
+      });
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('should handle addEntry rejection on save_result failure log without throwing', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      mockGetRuntimeValue((playerName, key) => {
+        if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-catch-fail-save',
+        promise: Promise.resolve({ success: false }),
+      });
+      addEntry.mockImplementation((_camp, entry) => {
+        if (entry.type === 'save_result' && entry.success === false) {
+          return Promise.reject(new Error('log write failed'));
+        }
+        return Promise.resolve();
+      });
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
+    });
+
+    it('should handle missing automation object on action', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-no-automation',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const action = { name: "Tasha's Hideous Laughter" };
+      const result = await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('creature(s) saved');
+    });
+
+    it('should handle non-array activeConditions gracefully', async () => {
+      damageUtils.getCombatContext.mockResolvedValue(baseCombatContext);
+      savePrompt.buildSaveDc.mockReturnValue(15);
+      mockGetRuntimeValue((playerName, key) => {
+        if (key === 'activeConditions') return 'not-an-array';
+        if (key === 'activeConditionMeta') return {};
+        if (key === 'targetEffects') return [];
+        return null;
+      });
+      savePrompt.createSaveListener.mockReturnValue({
+        promptId: 'laughter-non-array-conditions',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await expect(
+        handle(makeAction(), makePlayerStats(), campaignName, null)
+      ).resolves.toBeDefined();
     });
   });
 });

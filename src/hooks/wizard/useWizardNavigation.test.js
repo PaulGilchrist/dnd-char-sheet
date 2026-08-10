@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardNavigation from './useWizardNavigation.js';
@@ -182,6 +181,269 @@ describe('useWizardNavigation', () => {
       await waitFor(() => {
         expect(result.current.getStepEnabled(4)).toBe(true);
         expect(result.current.getStepEnabled(5)).toBe(true);
+      });
+    });
+  });
+
+  describe('step4Valid - subrace selection', () => {
+    it('allows step 4 when race has subraces and subrace is selected', async () => {
+      const formDataWithSubrace = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human', subrace: { name: 'Lightfoot' } },
+        class: { name: 'Fighter' },
+      };
+      const racesWithSubraces = [{ name: 'Human', subraces: [{ name: 'Lightfoot' }, { name: 'Mountain' }] }];
+      const { result } = renderWizard(1, formDataWithSubrace, racesWithSubraces, mockClassSubtypes, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(4)).toBe(true);
+      });
+    });
+
+    it('blocks step 4 when race has subraces but no subrace selected', async () => {
+      const formDataNoSubrace = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const racesWithSubraces = [{ name: 'Human', subraces: [{ name: 'Lightfoot' }, { name: 'Mountain' }] }];
+      const { result } = renderWizard(1, formDataNoSubrace, racesWithSubraces, mockClassSubtypes, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(4)).toBe(false);
+      });
+    });
+
+    it('disables next on step 4 when subrace is selected', async () => {
+      const formDataWithSubrace = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human', subrace: { name: 'Lightfoot' } },
+        class: { name: 'Fighter' },
+      };
+      const racesWithSubraces = [{ name: 'Human', subraces: [{ name: 'Lightfoot' }, { name: 'Mountain' }] }];
+      const { result } = renderWizard(4, formDataWithSubrace, racesWithSubraces, mockClassSubtypes, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(false);
+      });
+    });
+
+    it('disables next on step 4 when subrace is not selected', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 4) return { subrace: 'Required' };
+        return {};
+      });
+      const formDataNoSubrace = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const racesWithSubraces = [{ name: 'Human', subraces: [{ name: 'Lightfoot' }, { name: 'Mountain' }] }];
+      const { result } = renderWizard(4, formDataNoSubrace, racesWithSubraces, mockClassSubtypes, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(true);
+      });
+    });
+  });
+
+  describe('step5Valid - 2024 ruleset background', () => {
+    it('allows step 5 when 2024 ruleset and background is provided', async () => {
+      const formDataWithBackground = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        background: 'Soldier',
+        class: { name: 'Fighter' },
+      };
+      const { result } = renderWizard(1, formDataWithBackground, mockRacesData, mockClassSubtypes, '2024');
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(true);
+      });
+    });
+
+    it('blocks step 5 when 2024 ruleset and no background provided', async () => {
+      const formDataNoBackground = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const { result } = renderWizard(1, formDataNoBackground, mockRacesData, mockClassSubtypes, '2024');
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(false);
+      });
+    });
+
+    it('allows step 5 for 5e ruleset regardless of background', async () => {
+      const formDataNoBackground = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const { result } = renderWizard(1, formDataNoBackground, mockRacesData, mockClassSubtypes, '5e');
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(true);
+      });
+    });
+
+    it('disables next on step 5 for 2024 without background', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 5) return { background: 'Required' };
+        return {};
+      });
+      const formDataNoBackground = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const { result } = renderWizard(5, formDataNoBackground, mockRacesData, mockClassSubtypes, '2024');
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(true);
+      });
+    });
+
+    it('allows next on step 5 for 2024 with background', async () => {
+      const formDataWithBackground = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        background: 'Soldier',
+        class: { name: 'Fighter' },
+      };
+      const { result } = renderWizard(5, formDataWithBackground, mockRacesData, mockClassSubtypes, '2024');
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(false);
+      });
+    });
+  });
+
+  describe('step7Valid - subclass selection', () => {
+    it('allows step 7 when class has subclasses and subclass is selected', async () => {
+      const formDataWithSubclass = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter', subclass: { name: 'Champion' } },
+      };
+      const classesWithSubclasses = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+      const { result } = renderWizard(1, formDataWithSubclass, mockRacesData, classesWithSubclasses, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(7)).toBe(true);
+      });
+    });
+
+    it('blocks step 7 when class has subclasses but no subclass selected', async () => {
+      const formDataNoSubclass = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const classesWithSubclasses = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+      const { result } = renderWizard(1, formDataNoSubclass, mockRacesData, classesWithSubclasses, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(7)).toBe(false);
+      });
+    });
+
+    it('disables next on step 7 when subclass is selected', async () => {
+      const formDataWithSubclass = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter', subclass: { name: 'Champion' } },
+      };
+      const classesWithSubclasses = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+      const { result } = renderWizard(7, formDataWithSubclass, mockRacesData, classesWithSubclasses, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(false);
+      });
+    });
+
+    it('disables next on step 7 when subclass is not selected', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 7) return { subclass: 'Required' };
+        return {};
+      });
+      const formDataNoSubclass = {
+        name: 'Test Character',
+        level: 1,
+        race: { name: 'Human' },
+        class: { name: 'Fighter' },
+      };
+      const classesWithSubclasses = [{ className: 'Fighter', subtypes: [{ name: 'Champion' }, { name: 'Battle Master' }] }];
+      const { result } = renderWizard(7, formDataNoSubclass, mockRacesData, classesWithSubclasses, mockRuleset);
+      await waitFor(() => {
+        expect(result.current.isNextDisabled).toBe(true);
+      });
+    });
+  });
+
+  describe('getStepEnabled - steps 5, 6, 7', () => {
+    it('allows step 5 when all previous steps are valid', async () => {
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(true);
+      });
+    });
+
+    it('allows step 6 when all previous steps are valid', async () => {
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(6)).toBe(true);
+      });
+    });
+
+    it('allows step 7 when all previous steps are valid', async () => {
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(7)).toBe(true);
+      });
+    });
+
+    it('blocks step 5 when step 4 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 4) return { subrace: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(5)).toBe(false);
+      });
+    });
+
+    it('blocks step 6 when step 5 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 5) return { background: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(6)).toBe(false);
+      });
+    });
+
+    it('blocks step 7 when step 6 prerequisites are not met', async () => {
+      validateStep.mockImplementation((step) => {
+        if (step === 6) return { class: 'Required' };
+        return {};
+      });
+
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(7)).toBe(false);
+      });
+    });
+
+    it('uses fallback for unknown step numbers', async () => {
+      const { result } = renderWizard(1);
+      await waitFor(() => {
+        expect(result.current.getStepEnabled(8)).toBe(true);
       });
     });
   });

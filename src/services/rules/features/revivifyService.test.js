@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -735,6 +734,50 @@ describe('triggerRevivify', () => {
             );
 
             expect(result.payload.formula).toBe('1 HP (revived)');
+        });
+    });
+
+    describe('error handling', () => {
+        it('logs console.error when addEntry rejects but still returns success', async () => {
+            vi.mocked(consumeMaterial).mockResolvedValue(true);
+            global.fetch.mockResolvedValueOnce({
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
+                    ]),
+                ),
+            });
+            vi.mocked(addEntry).mockReturnValue(Promise.reject(new Error('DB error')));
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats('Cleric'),
+                'test-campaign',
+                'Ally',
+            );
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                '[revivify] Error logging heal:',
+                expect.any(Error),
+            );
+            expect(result).toEqual({
+                type: 'popup',
+                payload: {
+                    type: 'heal',
+                    name: 'Revivify',
+                    targetName: 'Ally',
+                    finalHeal: 1,
+                    total: 1,
+                    formula: '1 HP (revived)',
+                    rolls: [],
+                    rawTotal: 1,
+                },
+            });
+
+            consoleErrorSpy.mockRestore();
         });
     });
 

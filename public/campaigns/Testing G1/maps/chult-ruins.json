@@ -254,7 +254,8 @@
       "gridY": 7,
       "type": "door",
       "visible": true,
-      "rotation": 90
+      "rotation": 90,
+      "open": false
     },
     {
       "id": "door-27-4",
@@ -262,7 +263,8 @@
       "gridY": 7,
       "type": "door",
       "visible": true,
-      "rotation": 90
+      "rotation": 90,
+      "open": false
     },
     {
       "id": "35881b9d-1af9-46c3-8399-1cfa76ad75a6",
@@ -871,26 +873,26 @@
     {
       "id": "elarielle",
       "name": "Elarielle",
-      "gridX": 26,
+      "gridX": 18,
       "gridY": 3
     },
     {
       "id": "grommok",
       "name": "Grommok",
-      "gridX": 13,
-      "gridY": 3
+      "gridX": 15,
+      "gridY": 4
     },
     {
       "id": "liora",
       "name": "Liora",
-      "gridX": 15,
-      "gridY": 3
+      "gridX": 16,
+      "gridY": 1
     },
     {
       "id": "vexiron",
       "name": "Vexiron",
       "gridX": 13,
-      "gridY": 1
+      "gridY": 2
     }
   ],
   "zoom": 1,

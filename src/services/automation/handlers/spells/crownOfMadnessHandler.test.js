@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -652,6 +651,58 @@ describe('crownOfMadnessHandler.handle', () => {
         expect.objectContaining({ saveDc: 18 }),
         makePlayerStats(),
       );
+    });
+
+    it('uses proficiency fallback (2) when proficiency is missing for concentration DC', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      getCombatSummary.mockReturnValue({ creatures: [] });
+
+      const ps = makePlayerStats({ proficiency: undefined });
+      const result = await handle(makeAction(), ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('Charmed');
+      expect(addConcentration).toHaveBeenCalledWith(
+        expect.any(Object),
+        'TestCaster',
+        'Crown of Madness',
+        10,
+      );
+    });
+  });
+
+  describe('error handlers', () => {
+    it('handles addEntry rejection for ability_use without crashing', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('Goblin');
+    });
+
+    it('handles addEntry rejection on successful save without crashing', async () => {
+      setupBaseMocks({ success: true });
+      addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('succeeded');
+    });
+
+    it('handles addEntry rejection for condition log without crashing', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockImplementation(() => Promise.reject(new Error('log failure')));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('Charmed');
     });
   });
 });

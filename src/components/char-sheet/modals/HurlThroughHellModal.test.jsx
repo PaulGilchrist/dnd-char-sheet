@@ -1367,8 +1367,9 @@ describe('HurlThroughHellModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Hurl Through Hell/ }));
 
-      // Dispatch with wrong promptId - should be ignored
+      // Wait for the event listener to be registered, then dispatch with wrong promptId
       await act(async () => {
+        await new Promise(r => setTimeout(r, 50));
         window.dispatchEvent(new CustomEvent('save-result', {
           detail: {
             promptId: 'wrong-prompt-id',

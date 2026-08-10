@@ -198,5 +198,100 @@ describe('bonusAttacksHandler', () => {
       expect(result.payload.description).toContain('d20: 1 + 6 = 7');
       expect(result.payload.description).toContain('d20: 20 + 6 = 26');
     });
+
+    it('includes openHandTargets when player has open_hand_technique and hits', async () => {
+      getCombatSummary.mockReturnValue(combatSummary);
+      vi.mocked(rollD20).mockReturnValueOnce(18);
+
+      const actionWithOpenHand = {
+        name: 'Flurry of Blows',
+        automation: {
+          type: 'bonus_attacks',
+          attacks: 1,
+        },
+      };
+
+      const playerStatsWithOpenHand = {
+        name: 'TestMonk',
+        attacks: [{ hitBonus: 6, damage: '1d4+0', damageType: 'Bludgeoning' }],
+        automation: {
+          actions: [
+            { type: 'open_hand_technique', name: 'Open Hand Technique' },
+          ],
+        },
+      };
+
+      const result = await applyFlurryOfBlows(
+        actionWithOpenHand,
+        playerStatsWithOpenHand,
+        'test-campaign',
+        'test-map',
+        { Goblin: 1 },
+        1
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.openHandTargets).toEqual([
+        {
+          targetName: 'Goblin',
+          action: { type: 'open_hand_technique', name: 'Open Hand Technique' },
+          playerStats: playerStatsWithOpenHand,
+          campaignName: 'test-campaign',
+          mapName: 'test-map',
+        },
+      ]);
+    });
+
+    it('does not include openHandTargets when player lacks open_hand_technique', async () => {
+      getCombatSummary.mockReturnValue(combatSummary);
+      vi.mocked(rollD20).mockReturnValueOnce(18);
+
+      const result = await applyFlurryOfBlows(
+        action,
+        playerStats,
+        'test-campaign',
+        null,
+        { Goblin: 1 },
+        1
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.openHandTargets).toBeUndefined();
+    });
+
+    it('does not include openHandTargets when attack misses', async () => {
+      getCombatSummary.mockReturnValue(combatSummary);
+      vi.mocked(rollD20).mockReturnValueOnce(1);
+
+      const actionWithOpenHand = {
+        name: 'Flurry of Blows',
+        automation: {
+          type: 'bonus_attacks',
+          attacks: 1,
+        },
+      };
+
+      const playerStatsWithOpenHand = {
+        name: 'TestMonk',
+        attacks: [{ hitBonus: 6, damage: '1d4+0', damageType: 'Bludgeoning' }],
+        automation: {
+          actions: [
+            { type: 'open_hand_technique', name: 'Open Hand Technique' },
+          ],
+        },
+      };
+
+      const result = await applyFlurryOfBlows(
+        actionWithOpenHand,
+        playerStatsWithOpenHand,
+        'test-campaign',
+        'test-map',
+        { Goblin: 1 },
+        1
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.openHandTargets).toBeUndefined();
+    });
   });
 });

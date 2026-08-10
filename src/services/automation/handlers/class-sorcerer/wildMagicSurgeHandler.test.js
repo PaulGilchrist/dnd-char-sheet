@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import {
     handle,
     handleTamedSurge,
@@ -6,6 +5,7 @@ import {
     handleFeatsOfChaos,
     onDoubleRollSelected,
     onSurgeSelected,
+    onFeatsOfChaosConsume,
 } from './wildMagicSurgeHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
@@ -75,6 +75,7 @@ const makePlayerStats = (overrides = {}) => ({
 
 describe('wildMagicSurgeHandler', () => {
     beforeEach(() => {
+        vi.restoreAllMocks();
         vi.clearAllMocks();
         runtimeState.getRuntimeValue.mockReturnValue(null);
         damageUtils.getCombatContext.mockResolvedValue({ round: 1, activeCreatureName: 'TestSorcerer' });
@@ -164,6 +165,115 @@ describe('wildMagicSurgeHandler', () => {
             expect(result.modalName).toBe('wildMagicSurge');
             expect(result.payload.surgeTable).toEqual([]);
         });
+
+        it('should skip once-per-turn check when autoSurge is true', async () => {
+            damageUtils.getCombatContext.mockResolvedValue({ round: 3, activeCreatureName: 'TestSorcerer' });
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'surgeUsedRound') return { round: 3, activeCreature: 'TestSorcerer' };
+                return null;
+            });
+            vi.spyOn(global.Math, 'random').mockReturnValue(0.5);
+
+            const result = await handle(
+                { ...makeAction({ autoSurge: true }), name: 'Wild Magic Surge' },
+                makePlayerStats(),
+                'campaign',
+                'map',
+            );
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.mode).toBe('roll');
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                'TestSorcerer',
+                'surgeUsedRound',
+                expect.anything(),
+                'campaign',
+            );
+        });
+
+        it('should skip markOncePerTurn when autoSurge is true in roll path', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+            vi.spyOn(global.Math, 'random').mockReturnValue(0.99);
+
+            const result = await handle(
+                { ...makeAction({ autoSurge: true }), name: 'Wild Magic Surge' },
+                makePlayerStats(),
+                'campaign',
+                'map',
+            );
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.mode).toBe('roll');
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                'TestSorcerer',
+                'surgeUsedRound',
+                expect.anything(),
+                'campaign',
+            );
+        });
+
+        it('should skip markOncePerTurn when autoSurge=true with doubleRoll', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'wildMagicDoubleRoll') return true;
+                return null;
+            });
+            vi.spyOn(global.Math, 'random').mockReturnValue(0.99);
+
+            const result = await handle(
+                { ...makeAction({ autoSurge: true }), name: 'Wild Magic Surge' },
+                makePlayerStats(),
+                'campaign',
+                'map',
+            );
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.mode).toBe('controlledChaos');
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                'TestSorcerer',
+                'surgeUsedRound',
+                expect.anything(),
+                'campaign',
+            );
+        });
+
+        it('should detect hasRollOnTableEffect from active effects', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'wildMagicSurgeEffects') {
+                    return [{ effect: 'Roll on the surge table at the start of each turn' }];
+                }
+                return null;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.mode).toBe('roll');
+        });
+
+        it('should use passives array to trigger double roll instead of flag', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+            vi.spyOn(global.Math, 'random').mockReturnValue(0.99);
+
+            const playerStats = makePlayerStats({
+                automation: {
+                    passives: [
+                        { type: 'auto_effect', effect: 'wild_magic_double_roll' },
+                    ],
+                },
+            });
+
+            const result = await handle(makeAction(), playerStats, 'campaign', 'map');
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.mode).toBe('controlledChaos');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'wildMagicDoubleRoll',
+                false,
+                'campaign',
+                true,
+            );
+        });
     });
 
     describe('handleTamedSurge', () => {
@@ -189,6 +299,15 @@ describe('wildMagicSurgeHandler', () => {
 
             expect(result.type).toBe('modal');
             expect(result.modalName).toBe('wildMagicSurge');
+            expect(result.payload.mode).toBe('tamedSurge');
+        });
+
+        it('should default to 1 use when runtime value is null', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+
+            const result = await handleTamedSurge(makeAction(), makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('modal');
             expect(result.payload.mode).toBe('tamedSurge');
         });
     });
@@ -229,6 +348,34 @@ describe('wildMagicSurgeHandler', () => {
                 abilityName: 'Wild Magic Surge',
             }));
         });
+
+        it('should use default automation when action.automation is null', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'tamedSurgeUses') return 1;
+                return null;
+            });
+
+            const action = { name: 'Tamed Surge', automation: null };
+            const result = await onTamedSurgeSelected(action, makePlayerStats(), 'campaign', { effect: 'Test effect' });
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.automation.type).toBe('wild_magic_tamed');
+        });
+
+        it('should default uses to 1 when runtime value is null/undefined', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+
+            const result = await onTamedSurgeSelected(makeAction(), makePlayerStats(), 'campaign', { effect: 'Test effect' });
+
+            expect(result.type).toBe('popup');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'tamedSurgeUses',
+                0,
+                'campaign',
+                true,
+            );
+        });
     });
 
     describe('onSurgeSelected', () => {
@@ -264,6 +411,42 @@ describe('wildMagicSurgeHandler', () => {
                 description: expect.stringContaining('42'),
             }));
         });
+
+        it('should return null when surge already applied with same roll and effect', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'wildMagicSurgeEffects') {
+                    return [
+                        { roll: 42, effect: 'Test surge effect', duration: null, timestamp: 1000 },
+                    ];
+                }
+                return null;
+            });
+
+            const result = await onSurgeSelected(
+                'Wild Magic Surge',
+                makePlayerStats(),
+                'campaign',
+                42,
+                { min: 41, max: 44, effect: 'Test surge effect' }
+            );
+
+            expect(result).toBeNull();
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should use default auto when featureName is falsy', async () => {
+            const result = await onSurgeSelected(
+                null,
+                makePlayerStats(),
+                'campaign',
+                50,
+                { min: 49, max: 52, effect: 'Another effect' }
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('SURGE');
+            expect(result.payload.automation.type).toBe('wild_magic_surge');
+        });
     });
 
     describe('handleFeatsOfChaos', () => {
@@ -296,6 +479,16 @@ describe('wildMagicSurgeHandler', () => {
     describe('onDoubleRollSelected', () => {
         it('should return info popup when no surge table', async () => {
             const action = { featureName: 'Wild Magic Surge', surgeTable: [] };
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+
+            const result = await onDoubleRollSelected(action, makePlayerStats(), 'campaign', 20);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No Wild Magic Surge table');
+        });
+
+        it('should return info popup when surge table is undefined', async () => {
+            const action = { featureName: 'Wild Magic Surge', surgeTable: undefined };
             runtimeState.getRuntimeValue.mockReturnValue(null);
 
             const result = await onDoubleRollSelected(action, makePlayerStats(), 'campaign', 20);
@@ -383,6 +576,135 @@ describe('wildMagicSurgeHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('no uses remaining');
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('should default uses to 1 when runtime value is null/undefined', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+
+            const result = await handleFeatsOfChaos(makeFoCAction(), makePlayerStats(), 'campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Advantage');
+        });
+    });
+
+    describe('onFeatsOfChaosConsume', () => {
+        it('should deactivate FoC and return true flag when uses are 0', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'featsOfChaosUses') return 0;
+                return null;
+            });
+
+            const result = await onFeatsOfChaosConsume(makeAction(), makePlayerStats(), 'campaign');
+
+            expect(result.featsOfChaosConsumed).toBe(true);
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'featsOfChaosActive',
+                false,
+                'campaign',
+                true,
+            );
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+                'TestSorcerer',
+                'featsOfChaosUses',
+                expect.anything(),
+                'campaign',
+                true,
+            );
+        });
+
+        it('should decrement uses when > 0 and deactivate FoC', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'featsOfChaosUses') return 2;
+                return null;
+            });
+
+            const result = await onFeatsOfChaosConsume(makeAction(), makePlayerStats(), 'campaign');
+
+            expect(result.featsOfChaosConsumed).toBe(true);
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'featsOfChaosUses',
+                1,
+                'campaign',
+                true,
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'featsOfChaosActive',
+                false,
+                'campaign',
+                true,
+            );
+        });
+
+        it('should default uses to 0 when runtime value is null', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+
+            const result = await onFeatsOfChaosConsume(makeAction(), makePlayerStats(), 'campaign');
+
+            expect(result.featsOfChaosConsumed).toBe(true);
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'featsOfChaosActive',
+                false,
+                'campaign',
+                true,
+            );
+        });
+    });
+
+    describe('error handling - addEntry rejection', () => {
+        it('should handle addEntry rejection in onSurgeSelected', async () => {
+            logService.addEntry.mockRejectedValue(new Error('DB error'));
+
+            const result = await onSurgeSelected(
+                'Wild Magic Surge',
+                makePlayerStats(),
+                'campaign',
+                42,
+                { min: 41, max: 44, effect: 'Test surge effect' }
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('SURGE');
+        });
+
+        it('should handle addEntry rejection in onDoubleRollSelected', async () => {
+            logService.addEntry.mockRejectedValue(new Error('DB error'));
+            const action = { featureName: 'Wild Magic Surge', surgeTable: [{ min: 18, max: 20, effect: 'Big surge!' }] };
+
+            const result = await onDoubleRollSelected(action, makePlayerStats(), 'campaign', 20);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('SURGE');
+        });
+
+        it('should handle addEntry rejection in onTamedSurgeSelected', async () => {
+            logService.addEntry.mockRejectedValue(new Error('DB error'));
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'tamedSurgeUses') return 1;
+                return null;
+            });
+
+            const result = await onTamedSurgeSelected(makeAction(), makePlayerStats(), 'campaign', { effect: 'Test effect' });
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Tamed Surge');
+        });
+
+        it('should handle addEntry rejection in handleFeatsOfChaos', async () => {
+            logService.addEntry.mockRejectedValue(new Error('DB error'));
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'featsOfChaosUses') return 1;
+                return null;
+            });
+
+            const result = await handleFeatsOfChaos(makeFoCAction(), makePlayerStats(), 'campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Advantage');
         });
     });
 });

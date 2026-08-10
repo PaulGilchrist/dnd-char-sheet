@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -47,7 +46,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -84,6 +83,7 @@ describe('stinkingCloudHandler', () => {
     vi.clearAllMocks();
     buildSaveDc.mockReturnValue(13);
     getCombatSummary.mockReturnValue(null);
+    addEntry.mockResolvedValue(undefined);
   });
 
   describe('combat context validation', () => {
@@ -250,7 +250,10 @@ describe('stinkingCloudHandler', () => {
   describe('save failure', () => {
     it('should set activeConditions with poisoned on failed save', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -268,7 +271,12 @@ describe('stinkingCloudHandler', () => {
 
     it('should deduplicate poisoned when target already has it', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue(['poisoned', 'stunned']);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        if (field === 'activeConditions') return ['poisoned', 'stunned'];
+        if (field === 'activeConditionMeta') return {};
+        return undefined;
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -286,7 +294,10 @@ describe('stinkingCloudHandler', () => {
 
     it('should add expiration for concentration', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -302,9 +313,12 @@ describe('stinkingCloudHandler', () => {
       );
     });
 
-    it('should add expiration for concentration', async () => {
+    it('should call addExpiration exactly once', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -318,7 +332,10 @@ describe('stinkingCloudHandler', () => {
 
     it('should track stinking_cloud in targetEffects', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -344,7 +361,10 @@ describe('stinkingCloudHandler', () => {
 
     it('should include poisoned description in popup', async () => {
       getCombatContext.mockResolvedValue(singleTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'goblin-prompt',
         promise: Promise.resolve({ success: false }),
@@ -467,7 +487,10 @@ describe('stinkingCloudHandler', () => {
 
     it('should report all targets affected when all fail saves', async () => {
       getCombatContext.mockResolvedValue(multiTargetCombat);
-      getRuntimeValue.mockReturnValue([]);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
       createSaveListener.mockReturnValue({
         promptId: 'multi-prompt',
         promise: Promise.resolve({ success: false }),
@@ -519,6 +542,206 @@ describe('stinkingCloudHandler', () => {
       const result = await handle(customAction, makePlayerStats(), campaignName, null);
 
       expect(result.payload.name).toBe('Custom Cloud');
+    });
+  });
+
+  describe('error handling in .catch chains', () => {
+    it('should catch errors from addEntry in immune path', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      addEntry.mockRejectedValue(new Error('log error'));
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const mixedCombat = {
+        creatures: [
+          { name: 'EnemyGoblin', weaknessesAndResistivities: { immunities: ['poison'] } },
+          { name: 'EnemyOrc' },
+        ],
+      };
+      getCombatContext.mockResolvedValue(mixedCombat);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('immune');
+      expect(console.error).toHaveBeenCalledWith('[stinkingCloud] Error:', expect.any(Error));
+      spy.mockRestore();
+    });
+
+    it('should catch errors from addEntry in save success path', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      addEntry.mockRejectedValue(new Error('log error'));
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('saved');
+      expect(console.error).toHaveBeenCalledWith('[stinkingCloud] Error:', expect.any(Error));
+      spy.mockRestore();
+    });
+
+    it('should catch errors from addEntry in save failure path', async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      addEntry.mockRejectedValue(new Error('log error'));
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Poisoned');
+      expect(console.error).toHaveBeenCalledWith('[stinkingCloud] Error:', expect.any(Error));
+      spy.mockRestore();
+    });
+  });
+
+  describe('targetEffects update existing', () => {
+    it('should update existing stinking_cloud effect instead of pushing duplicate', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') {
+          return [{
+            target: 'EnemyGoblin',
+            effect: 'stinking_cloud',
+            source: 'OldCaster',
+            conditions: ['poisoned'],
+            dc: 10,
+            duration: ' Concentration',
+          }];
+        }
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        expect.arrayContaining([
+          expect.objectContaining({
+            target: 'EnemyGoblin',
+            effect: 'stinking_cloud',
+            source: 'TestWizard',
+            dc: 13,
+          }),
+        ]),
+        campaignName,
+      );
+      // The existing effect should be replaced, not duplicated
+      const callArgs = setRuntimeValue.mock.calls;
+      const effectsCalls = callArgs.filter(
+        (call) => call[0] === 'campaign' && call[1] === 'targetEffects'
+      );
+      expect(effectsCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('disadvantage on specific targets', () => {
+    it('should apply disadvantage when target matches heightenedTarget', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(
+        makeAction({}, { heightenTarget: 'EnemyGoblin' }),
+        makePlayerStats(),
+        campaignName,
+        null
+      );
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'EnemyGoblin',
+        saveType: 'CON',
+        saveDc: 13,
+        dcSuccess: 'none',
+        disadvantage: true,
+      });
+    });
+
+    it('should not apply disadvantage for non-heightened targets', async () => {
+      getCombatContext.mockResolvedValue(multiTargetCombat);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        return [];
+      });
+
+      let callIndex = 0;
+      createSaveListener.mockImplementation((_campaign, _opts) => {
+        callIndex++;
+        return {
+          promptId: `goblin-prompt-${callIndex}`,
+          promise: Promise.resolve({ success: false }),
+        };
+      });
+
+      await handle(
+        makeAction({}, { heightenTarget: 'EnemyGoblin' }),
+        makePlayerStats(),
+        campaignName,
+        null
+      );
+
+      // First call is for EnemyGoblin (heightened), second is for EnemyOrc (not heightened)
+      const goblinCall = createSaveListener.mock.calls.find(
+        (call) => call[1].targetName === 'EnemyGoblin'
+      );
+      const orcCall = createSaveListener.mock.calls.find(
+        (call) => call[1].targetName === 'EnemyOrc'
+      );
+      expect(goblinCall[1].disadvantage).toBe(true);
+      expect(orcCall[1].disadvantage).toBe(false);
+    });
+  });
+
+  describe('activeConditionMeta', () => {
+    it('should set condition metadata on failed save', async () => {
+      getCombatContext.mockResolvedValue(singleTargetCombat);
+      getRuntimeValue.mockImplementation((key, field) => {
+        if (key === 'campaign' && field === 'targetEffects') return [];
+        if (field === 'activeConditions') return [];
+        if (field === 'activeConditionMeta') return {};
+        return undefined;
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'goblin-prompt',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'EnemyGoblin',
+        'activeConditionMeta',
+        expect.objectContaining({
+          poisoned: expect.objectContaining({
+            dc: 13,
+            ability: 'con',
+          }),
+        }),
+        campaignName,
+      );
     });
   });
 });

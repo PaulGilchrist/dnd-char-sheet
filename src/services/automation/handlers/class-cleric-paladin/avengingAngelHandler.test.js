@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -61,6 +60,7 @@ vi.mock('../../../automation/common/savePrompt.js', () => ({
 import {
   handle,
   isAuraTarget,
+  isActive,
   cleanupAuraTargetOnDamage,
 } from './avengingAngelHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -75,7 +75,7 @@ import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { createSaveListener } from '../../../automation/common/savePrompt.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -573,6 +573,7 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
       if (key === 'avengingAngelAuraTargets') return ['Goblin'];
       return null;
     });
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
 
     await cleanupAuraTargetOnDamage('TestPaladin', 'Goblin', campaignName);
 
@@ -583,6 +584,7 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
       characterName: 'Goblin',
       condition: 'Frightened',
       reason: 'took damage (Frightful Aura)',
+      timestamp: 1000,
     }));
   });
 
@@ -607,5 +609,445 @@ describe('avengingAngelHandler.cleanupAuraTargetOnDamage', () => {
 
     expect(setRuntimeValue).not.toHaveBeenCalled();
     expect(addEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('avengingAngelHandler.isActive', () => {
+  it('should return true when avengingAngelActive is true', () => {
+    getRuntimeValue.mockReturnValue(true);
+    expect(isActive('TestPaladin', campaignName)).toBe(true);
+  });
+
+  it('should return false when avengingAngelActive is false', () => {
+    getRuntimeValue.mockReturnValue(false);
+    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  });
+
+  it('should return false when avengingAngelActive is null', () => {
+    getRuntimeValue.mockReturnValue(null);
+    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  });
+
+  it('should return false when avengingAngelActive is undefined', () => {
+    getRuntimeValue.mockReturnValue(undefined);
+    expect(isActive('TestPaladin', campaignName)).toBe(false);
+  });
+});
+
+describe('avengingAngelHandler.resolveFrightfulAura - self skipping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should skip creature that matches the player name', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'TestPaladin', type: 'npc', saveBonuses: { wis: 0 }, conditions: [] },
+        { name: 'Goblin', type: 'npc', saveBonuses: { wis: 0 }, conditions: [] },
+      ],
+    });
+    rollD20.mockReturnValue(1);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(sendSaveResult).not.toHaveBeenCalledWith(campaignName, 'TestPaladin', expect.anything());
+    expect(sendSaveResult).toHaveBeenCalledWith(campaignName, 'Goblin', expect.anything());
+  });
+});
+
+describe('avengingAngelHandler - player save success', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should log save_result entry when player succeeds on WIS save', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'EnemyPlayer', type: 'player' },
+      ],
+    });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    const successResult = { success: true, roll: 15, total: 18 };
+    vi.mocked(createSaveListener).mockReturnValue({
+      promptId: 'test-prompt-id',
+      promise: Promise.resolve(successResult),
+    });
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+      targetName: 'EnemyPlayer',
+      saveType: 'WIS',
+      saveDc: 14,
+      dcSuccess: false,
+    }));
+    expect(sendSaveResult).not.toHaveBeenCalled();
+    expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+      type: 'save_result',
+      targetName: 'EnemyPlayer',
+      success: true,
+      saveType: 'WIS',
+      saveDc: 14,
+    }));
+    expect(addExpiration).not.toHaveBeenCalled();
+  });
+});
+
+describe('avengingAngelHandler.resolveFrightfulAura - early return', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should return early when getCombatContext returns null', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue(null);
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.type).toBe('popup');
+    expect(sendSaveResult).not.toHaveBeenCalled();
+    expect(addExpiration).not.toHaveBeenCalled();
+  });
+
+  it('should return early when getCombatContext returns no creatures', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ creatures: undefined });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.type).toBe('popup');
+    expect(sendSaveResult).not.toHaveBeenCalled();
+  });
+});
+
+describe('avengingAngelHandler - addEntry rejection handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should handle addEntry rejection in initial activation gracefully', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+    addEntry.mockRejectedValue(new Error('disk error'));
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('activated');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelActive', true, campaignName);
+  });
+
+  it('should handle addEntry rejection in spell-slot reactivation gracefully', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'avengingAngelRestUsed') return true;
+      if (key === 'spell_slots_level_5') return 1;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+    addEntry.mockRejectedValue(new Error('disk error'));
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('expending a level 5 spell slot');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelActive', true, campaignName);
+  });
+});
+
+describe('avengingAngelHandler - buff deduplication', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should not duplicate buff when Avenging Angel already in activeBuffs (first use)', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestPaladin',
+      'activeBuffs',
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Avenging Angel', effect: 'avenging_angel_flight' }),
+      ]),
+      campaignName,
+    );
+  });
+
+  it('should not duplicate buff when Avenging Angel already in activeBuffs (spell slot reactivation)', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'avengingAngelRestUsed') return true;
+      if (key === 'spell_slots_level_5') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestPaladin',
+      'activeBuffs',
+      [{ name: 'Avenging Angel', effect: 'avenging_angel_flight' }],
+      campaignName,
+    );
+  });
+});
+
+describe('avengingAngelHandler - player save with addEntry rejection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should handle addEntry rejection in player fail save path', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'EnemyPlayer', type: 'player' },
+      ],
+    });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    vi.mocked(createSaveListener).mockReturnValue({
+      promptId: 'test-prompt-id',
+      promise: Promise.resolve({ success: false, roll: 5, total: 8 }),
+    });
+    addEntry.mockRejectedValue(new Error('save entry error'));
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(addEntry).toHaveBeenCalled();
+  });
+
+  it('should handle addEntry rejection in player success save path', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'EnemyPlayer', type: 'player' },
+      ],
+    });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    vi.mocked(createSaveListener).mockReturnValue({
+      promptId: 'test-prompt-id',
+      promise: Promise.resolve({ success: true, roll: 15, total: 18 }),
+    });
+    addEntry.mockRejectedValue(new Error('save entry error'));
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(addEntry).toHaveBeenCalled();
+  });
+});
+
+describe('avengingAngelHandler - cleanup with addEntry rejection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getRuntimeValue.mockReset();
+    getCombatContext.mockReset();
+    setRuntimeValue.mockReset();
+  });
+
+  it('should handle addEntry rejection in cleanupAuraTargetOnDamage', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelAuraTargets') return ['Goblin'];
+      return null;
+    });
+    addEntry.mockRejectedValue(new Error('cleanup entry error'));
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+
+    await cleanupAuraTargetOnDamage('TestPaladin', 'Goblin', campaignName);
+
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestPaladin', 'avengingAngelAuraTargets', [], campaignName);
+    expect(addEntry).toHaveBeenCalled();
+  });
+});
+
+describe('avengingAngelHandler - applyFrightenedToCreature conditions iteration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should iterate conditions array when checking for duplicate frightened', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      if (key === 'activeConditions') return ['frightened', 'blinded'];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'Goblin', type: 'npc', saveBonuses: { wis: 0 }, conditions: [] },
+      ],
+    });
+    rollD20.mockReturnValue(1);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    expect(sendSaveResult).toHaveBeenCalledWith(campaignName, 'Goblin', expect.objectContaining({
+      success: false,
+    }));
+    expect(addExpiration).toHaveBeenCalledWith(
+      'TestPaladin',
+      'Goblin',
+      expect.any(Array),
+      campaignName,
+    );
+  });
+});
+
+describe('avengingAngelHandler - player save promise rejection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllyList.mockReturnValue([]);
+    isWithinRange.mockResolvedValue(true);
+  });
+
+  it('should handle createSaveListener promise rejection', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'EnemyPlayer', type: 'player' },
+      ],
+    });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+
+    vi.mocked(createSaveListener).mockReturnValue({
+      promptId: 'test-prompt-id',
+      promise: Promise.reject(new Error('save listener error')),
+    });
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+  });
+
+  it('should handle then callback throwing error', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'avengingAngelActive') return false;
+      if (key === 'activeBuffs') return [];
+      if (key === 'avengingAngelAuraTargets') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'EnemyPlayer', type: 'player' },
+      ],
+    });
+    rollD20.mockReturnValue(20);
+    getAbilityModifier.mockReturnValue(3);
+    utils.guid.mockReturnValue('test-guid');
+    addExpiration.mockImplementation(() => { throw new Error('expiration error'); });
+
+    vi.mocked(createSaveListener).mockReturnValue({
+      promptId: 'test-prompt-id',
+      promise: Promise.resolve({ success: false, roll: 5, total: 8 }),
+    });
+
+    await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+    await new Promise(resolve => setTimeout(resolve, 10));
   });
 });

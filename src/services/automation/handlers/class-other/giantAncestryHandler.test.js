@@ -1423,5 +1423,241 @@ describe('giantAncestryHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('recent attack');
         });
+
+        it('returns popup when no attackerName in lastAttack', async () => {
+            makeUsesMock('stormsThunderUses', 3);
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack' },
+                attackerName: null,
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+
+            const result = await handleStormsThunderDirect(directAction, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('requires a target');
+        });
+    });
+
+    describe('filter callbacks with combat context', () => {
+        it('handleFiresBurn filters creatures from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const option = { name: "Fire's Burn", type: 'damage', damage: '1d10', damageType: 'Fire' };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'firesBurnUses') return 3;
+                return null;
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Goblin' },
+                ],
+            });
+
+            const result = await handleFiresBurn(makeAction(), makePlayerStats(), 'campaign', option);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Goblin');
+        });
+
+        it('handleFrostsChill filters creatures and targetEffects from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const option = { name: "Frost's Chill", type: 'damage_with_condition', damage: '1d6', damageType: 'Cold', value: '10_ft' };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'frostsChillUses') return 3;
+                if (key === 'targetEffects') return [{ target: 'Goblin', effect: 'speed_reduction', value: 5 }];
+                return null;
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Goblin' },
+                ],
+            });
+
+            const result = await handleFrostsChill(makeAction(), makePlayerStats(), 'campaign', option);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Goblin');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        });
+
+        it('handleStormsThunder filters creatures from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const option = { name: "Storm's Thunder", type: 'reaction_damage', damage: '1d8', damageType: 'Thunder', range: '60_ft' };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'stormsThunderUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack', attackerName: 'Orc' },
+                attackerName: 'Orc',
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Orc' },
+                ],
+            });
+
+            const result = await handleStormsThunder(makeAction(), makePlayerStats(), 'campaign', 'map', option);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Orc');
+        });
+
+        it('handleHillsTumble passes storedConds array check', async () => {
+            const option = { name: "Hill's Tumble", type: 'auto_effect', trigger: 'melee_hit', effect: 'prone' };
+            getRuntimeValue.mockImplementation((_name, key, campaign) => {
+                if (key === 'hillsTumbleUses') return 3;
+                if (campaign && key === 'activeConditions') return [];
+                return null;
+            });
+
+            const result = await handleHillsTumble(makeAction(), makePlayerStats(), 'campaign', option);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('prone');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', ['prone'], 'campaign');
+        });
+
+        it('handleFiresBurnDirect filters creatures from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const directAction = {
+                name: "Fire's Burn",
+                automation: {
+                    type: 'fire_burn',
+                    damage: '1d10',
+                    damageType: 'Fire',
+                },
+            };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'firesBurnUses') return 3;
+                return null;
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Goblin' },
+                ],
+            });
+
+            const result = await handleFiresBurnDirect(directAction, makePlayerStats(), 'campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Goblin');
+        });
+
+        it('handleFrostsChillDirect filters creatures and targetEffects from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const directAction = {
+                name: "Frost's Chill",
+                automation: {
+                    type: 'frosts_chill',
+                    damage: '1d6',
+                    damageType: 'Cold',
+                    value: '10_ft',
+                },
+            };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'frostsChillUses') return 3;
+                if (key === 'targetEffects') return [{ target: 'Goblin', effect: 'speed_reduction', value: 5 }];
+                return null;
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Goblin' },
+                ],
+            });
+
+            const result = await handleFrostsChillDirect(directAction, makePlayerStats(), 'campaign');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Goblin');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'campaign');
+        });
+
+        it('handleStormsThunderDirect filters creatures from combat context', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            const directAction = {
+                name: "Storm's Thunder",
+                automation: {
+                    type: 'storms_thunder',
+                    damage: '1d8',
+                    damageType: 'Thunder',
+                },
+            };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'stormsThunderUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack', attackerName: 'Orc' },
+                attackerName: 'Orc',
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { type: 'player', name: 'TestHero' },
+                    { type: 'npc', name: 'Orc' },
+                ],
+            });
+
+            const result = await handleStormsThunderDirect(directAction, makePlayerStats(), 'campaign', 'map');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('damage');
+            expect(result.payload.targetName).toBe('Orc');
+        });
+
+        it('handleStormsThunder returns popup when no attackerName in lastAttack', async () => {
+            const option = { name: "Storm's Thunder", type: 'reaction_damage', damage: '1d8', damageType: 'Thunder', range: '60_ft' };
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'stormsThunderUses') return 3;
+                return null;
+            });
+            findLastAttack.mockResolvedValue({
+                attackEvent: { rollType: 'attack' },
+                attackerName: null,
+                targetName: 'TestHero',
+                totalDamage: 10,
+            });
+
+            const result = await handleStormsThunder(makeAction(), makePlayerStats(), 'campaign', 'map', option);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('requires a target');
+        });
+    });
+
+    describe('handleDirectType default case', () => {
+        it('returns info popup with unknown option type in switch', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+                if (key === 'giantAncestrySelection') return "Stone's Endurance";
+                return null;
+            });
+
+            const result = await handleDirectType(
+                makeAction({ automation: { type: 'unknown_type' } }),
+                makePlayerStats(),
+                'campaign',
+                'map'
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain("Stone's Endurance");
+            expect(result.payload.description).toContain('unknown');
+        });
     });
 });

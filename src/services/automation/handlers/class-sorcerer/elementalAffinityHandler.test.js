@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, applyTypeChoice } from './elementalAffinityHandler.js';
 
@@ -11,8 +10,14 @@ vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../class-warlock/fiendishResilienceHandler.js', () => ({
+    handle: vi.fn(),
+    applyTypeChoice: vi.fn(),
+}));
+
 const { setChosenRuntimeValue, getChosenRuntimeValue } = await import('../../common/choiceStorage.js');
 const { addEntry } = await import('../../../ui/logService.js');
+const { handle: handleFiendishResilience, applyTypeChoice: applyFiendishResilience } = await import('../class-warlock/fiendishResilienceHandler.js');
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -90,6 +95,16 @@ describe('elementalAffinityHandler', () => {
             expect(result.type).toBe('modal');
             expect(result.payload.existingType).toBeUndefined();
         });
+
+        it('delegates to Fiendish Resilience handler when action name is Fiendish Resilience', async () => {
+            handleFiendishResilience.mockResolvedValue({ type: 'modal', payload: {} });
+
+            const action = makeAction({ name: 'Fiendish Resilience' });
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(handleFiendishResilience).toHaveBeenCalledWith(action, makePlayerStats(), 'test-campaign', null);
+            expect(result).toEqual({ type: 'modal', payload: {} });
+        });
     });
 
     describe('applyTypeChoice', () => {
@@ -166,6 +181,45 @@ describe('elementalAffinityHandler', () => {
                 description: 'Elemental Affinity — damage type set to Poison',
             });
         });
+
+        it('delegates to Fiendish Resilience handler when action name is Fiendish Resilience', async () => {
+            applyFiendishResilience.mockResolvedValue({ type: 'popup', payload: {} });
+
+            const action = makeAction({ name: 'Fiendish Resilience' });
+            const result = await applyTypeChoice(action, makePlayerStats(), 'test-campaign', 'Fire');
+
+            expect(applyFiendishResilience).toHaveBeenCalledWith(action, makePlayerStats(), 'test-campaign', 'Fire');
+            expect(result).toEqual({ type: 'popup', payload: {} });
+        });
+
+        it('returns popup with Elemental Adept description when action.effect is elemental_adept', async () => {
+            const action = makeAction({ effect: 'elemental_adept' });
+            const result = await applyTypeChoice(action, makePlayerStats(), 'test-campaign', 'Fire');
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Fire selected');
+            expect(result.payload.description).toContain('ignore Resistance');
+            expect(result.payload.description).toContain('treat any 1 on a damage die as a 2');
+            expect(result.payload.description).not.toContain('resistance to Fire damage');
+        });
+
+        it('handles addEntry rejection in handle() via .catch()', async () => {
+            getChosenRuntimeValue.mockReturnValue('Fire');
+            addEntry.mockImplementation(() => Promise.reject(new Error('log fail')));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('modal');
+            expect(result.payload.existingType).toBe('Fire');
+        });
+
+        it('handles addEntry rejection in applyTypeChoice() via .catch()', async () => {
+            getChosenRuntimeValue.mockReturnValue(undefined);
+            addEntry.mockImplementation(() => Promise.reject(new Error('log fail')));
+
+            const result = await applyTypeChoice(makeAction(), makePlayerStats(), 'test-campaign', 'Fire');
+
+            expect(result.type).toBe('popup');
+        });
     });
 });
-// @cleaned-by-ai

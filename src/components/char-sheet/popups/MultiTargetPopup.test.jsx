@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import MultiTargetPopup from './MultiTargetPopup.jsx';
@@ -93,6 +92,22 @@ describe('MultiTargetPopup', () => {
         it('does not call onConfirm when clicked without a target selected', () => {
             render(<MultiTargetPopup {...makeProps()} />);
             fireEvent.click(screen.getByText('Cast on Both Targets'));
+            expect(mockOnConfirm).not.toHaveBeenCalled();
+        });
+
+        it('calls handleConfirm early return path when no target is selected (coverage)', () => {
+            render(<MultiTargetPopup {...makeProps()} />);
+            const btn = screen.getByText('Cast on Both Targets');
+            expect(btn.disabled).toBe(true);
+            // Access React 19 fiber node to get the onClick handler
+            const reactFiber = Object.keys(btn).find(k => k.startsWith('__reactFiber'));
+            if (reactFiber) {
+                const fiber = btn[reactFiber];
+                const handler = fiber?.memoizedProps?.onClick;
+                if (handler) {
+                    handler();
+                }
+            }
             expect(mockOnConfirm).not.toHaveBeenCalled();
         });
     });

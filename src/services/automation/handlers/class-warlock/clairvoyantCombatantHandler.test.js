@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -18,7 +17,7 @@ vi.mock('../../common/savePrompt.js', () => ({
 import { handle } from './clairvoyantCombatantHandler.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -218,5 +217,237 @@ describe('clairvoyantCombatantHandler.handle', () => {
       expect(result.payload.pactSlotLevel).toBe(3);
       expect(result.payload.pactSlotsAvailable).toBe(true);
     });
+
+    it('should use default feature name when action.name is falsy', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, uses: 1 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.action.name).toBeUndefined();
+    });
+
+    it('should return popup with default name when no uses and no action name', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 1;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, uses: 1 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.name).toBe('Clairvoyant Combatant');
+    });
+
+    it('should fallback to 0 when getRuntimeValue returns null for uses', async () => {
+      getRuntimeValue.mockReturnValue(null);
+
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return null;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.currentUses).toBe(0);
+      expect(result.payload.maxUses).toBe(1);
+    });
+
+    it('should fallback to 1 when auto.uses is not provided', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.maxUses).toBe(1);
+    });
+
+    it('should compute save DC when auto.saveDc is not provided', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const stats = makePlayerStats();
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS' } },
+        stats,
+        campaignName,
+        null,
+      );
+
+      // WIS ability not found, so bonus falls back to 3: 8 + 4 + 3 = 15
+      expect(result.payload.saveDc).toBe(15);
+    });
+
+    it('should fallback to bonus 3 when no matching ability found', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const statsNoMatchingAbility = {
+        name: 'TestWarlock',
+        level: 10,
+        proficiency: 4,
+        abilities: [{ name: 'Charisma', bonus: 3 }],
+        spellAbilities: {},
+      };
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'INT' } },
+        statsNoMatchingAbility,
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.saveDc).toBe(8 + 4 + 3);
+    });
+
+    it('should fallback to WIS saveType when auto.saveType is not provided', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveDc: 14 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.saveType).toBe('WIS');
+    });
+
+    it('should fallback to 0 when slot runtime value and playerStats are both null', async () => {
+      const stats = {
+        name: 'TestWarlock',
+        level: 10,
+        proficiency: 4,
+        abilities: [{ name: 'Charisma', bonus: 3 }],
+        spellAbilities: {},
+      };
+
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 1;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, pactMagicRecharge: true } },
+        stats,
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No Pact Magic slots available');
+    });
+
+    it('should use pactMagicRecharge false in payload when not set', async () => {
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, uses: 1 } },
+        makePlayerStats(),
+        campaignName,
+        null,
+      );
+
+      expect(result.payload.pactMagicRecharge).toBe(false);
+    });
+
+    it('should include pactSlotLevel 0 when no spell slots exist', async () => {
+      const noSlotsStats = {
+        name: 'TestWarlock',
+        level: 1,
+        proficiency: 2,
+        abilities: [{ name: 'Charisma', bonus: 0 }],
+        spellAbilities: {},
+      };
+
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 0;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(makeAction(), noSlotsStats, campaignName, null);
+
+      expect(result.payload.pactSlotLevel).toBe(0);
+    });
+
+    it('should fallback to 0 when both runtime and playerStats have no slots for pact magic', async () => {
+      const zeroSlotsStats = {
+        name: 'TestWarlock',
+        level: 10,
+        proficiency: 4,
+        abilities: [{ name: 'Charisma', bonus: 3 }],
+        spellAbilities: {
+          spell_slots_level_1: 0,
+          spell_slots_level_2: 0,
+          spell_slots_level_3: 0,
+          spell_slots_level_4: 0,
+          spell_slots_level_5: 0,
+        },
+      };
+
+      getRuntimeValue.mockImplementation((playerName, key) => {
+        if (key === 'clairvoyantCombatantUses') return 1;
+        if (key === 'awakenedMindTarget') return 'AwakenedTarget';
+        return null;
+      });
+
+      const result = await handle(
+        { automation: { type: 'clairvoyant_combatant', saveType: 'WIS', saveDc: 15, pactMagicRecharge: true } },
+        zeroSlotsStats,
+        campaignName,
+        null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No Pact Magic slots available');
+    });
+
   });
 });

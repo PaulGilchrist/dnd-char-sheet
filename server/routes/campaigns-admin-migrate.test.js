@@ -190,6 +190,7 @@ describe('campaignsAdmin - POST /api/campaigns/migrate-image-paths', () => {
         ensureRealCampaignsDir(['test-campaign']);
         mockFsState.exists.add(realCampaignPath);
         const charPath = `${realCampaignPath}/character1.json`;
+        mockFsState.exists.add(charPath);
         const imageData = JSON.stringify({
             name: 'Hero',
             imagePath: 'campaigns/test-campaign/images/hero.png',
@@ -205,5 +206,173 @@ describe('campaignsAdmin - POST /api/campaigns/migrate-image-paths', () => {
         const written = mockFsState.files.get(charPath);
         const parsed = JSON.parse(written);
         expect(parsed.imagePath).toBe('images/hero.png');
+    });
+
+    it('should skip character JSON files without imagePath', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        const charPath = `${realCampaignPath}/character1.json`;
+        const imageData = JSON.stringify({
+            name: 'Hero',
+            level: 5,
+        });
+        mockFsState.files.set(charPath, imageData);
+        mockFsState.readdir.set(realCampaignPath, ['character1.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
+    });
+
+    it('should skip character JSON files with imagePath that does not include campaigns/', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        const charPath = `${realCampaignPath}/character1.json`;
+        const imageData = JSON.stringify({
+            name: 'Hero',
+            imagePath: 'images/hero.png',
+        });
+        mockFsState.files.set(charPath, imageData);
+        mockFsState.readdir.set(realCampaignPath, ['character1.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
+    });
+
+    it('should migrate imagePath in NPC data files', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        mockFsState.exists.add(`${realCampaignPath}/data`);
+        const npcsPath = `${realCampaignPath}/data/npcs.json`;
+        mockFsState.exists.add(npcsPath);
+        const npcData = JSON.stringify([
+            { name: 'Goblin', imagePath: 'campaigns/test-campaign/images/goblin.png' },
+            { name: 'Dragon', imagePath: 'campaigns/test-campaign/images/dragon.png' },
+            { name: 'NPC without image' },
+        ]);
+        mockFsState.files.set(npcsPath, npcData);
+        mockFsState.readdir.set(realCampaignPath, ['data']);
+        mockFsState.readdir.set(`${realCampaignPath}/data`, ['npcs.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 2 imagePath fields.');
+
+        // Verify NPCs were rewritten
+        const written = mockFsState.files.get(npcsPath);
+        const parsed = JSON.parse(written);
+        expect(parsed[0].imagePath).toBe('images/goblin.png');
+        expect(parsed[1].imagePath).toBe('images/dragon.png');
+        expect(parsed[2].imagePath).toBeUndefined();
+    });
+
+    it('should not write npc file if no changes needed', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        const npcPath = `${realCampaignPath}/data/npcs.json`;
+        const npcData = JSON.stringify([
+            { name: 'Goblin' },
+        ]);
+        mockFsState.files.set(npcPath, npcData);
+        mockFsState.readdir.set(realCampaignPath, ['data']);
+        mockFsState.readdir.set(`${realCampaignPath}/data`, ['npcs.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
+
+        // File should not have been rewritten
+        const written = mockFsState.files.get(npcPath);
+        expect(written).toBe(npcData);
+    });
+
+    it('should handle campaign with no npcs.json', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        mockFsState.readdir.set(realCampaignPath, ['character1.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
+    });
+
+    it('should handle multiple campaigns', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath1 = `${realCampaignsDir}/campaign-a`;
+        const realCampaignPath2 = `${realCampaignsDir}/campaign-b`;
+        ensureRealCampaignsDir(['campaign-a', 'campaign-b']);
+        mockFsState.exists.add(realCampaignPath1);
+        mockFsState.exists.add(realCampaignPath2);
+
+        const charPath1 = `${realCampaignPath1}/char1.json`;
+        const charData1 = JSON.stringify({ name: 'Hero1', imagePath: 'campaigns/campaign-a/images/hero1.png' });
+        mockFsState.files.set(charPath1, charData1);
+        mockFsState.readdir.set(realCampaignPath1, ['char1.json']);
+
+        const charPath2 = `${realCampaignPath2}/char2.json`;
+        const charData2 = JSON.stringify({ name: 'Hero2', imagePath: 'campaigns/campaign-b/images/hero2.png' });
+        mockFsState.files.set(charPath2, charData2);
+        mockFsState.readdir.set(realCampaignPath2, ['char2.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 2 imagePath fields.');
+
+        const written1 = mockFsState.files.get(charPath1);
+        const parsed1 = JSON.parse(written1);
+        expect(parsed1.imagePath).toBe('images/hero1.png');
+
+        const written2 = mockFsState.files.get(charPath2);
+        const parsed2 = JSON.parse(written2);
+        expect(parsed2.imagePath).toBe('images/hero2.png');
+    });
+
+    it('should skip non-json files in campaign directory', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        mockFsState.readdir.set(realCampaignPath, ['character1.json', 'readme.txt', 'map.png']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
+    });
+
+    it('should handle character with non-string imagePath', async () => {
+        const app = createTestApp();
+        const realCampaignsDir = `${process.cwd()}/public/campaigns`;
+        const realCampaignPath = `${realCampaignsDir}/test-campaign`;
+        ensureRealCampaignsDir(['test-campaign']);
+        mockFsState.exists.add(realCampaignPath);
+        const charPath = `${realCampaignPath}/character1.json`;
+        const imageData = JSON.stringify({
+            name: 'Hero',
+            imagePath: 123,
+        });
+        mockFsState.files.set(charPath, imageData);
+        mockFsState.readdir.set(realCampaignPath, ['character1.json']);
+
+        const res = await request(app).post('/api/campaigns/migrate-image-paths').set('Host', 'localhost');
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Migration complete. Migrated 0 imagePath fields.');
     });
 });

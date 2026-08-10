@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle, applyConstellationOption } from './starryFormHandler.js';
@@ -9,7 +8,11 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeValue: vi.fn(),
 }));
 
-const campaignName = 'TestCampaign';
+vi.mock('../../../../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -243,6 +246,44 @@ describe('starryFormHandler', () => {
       expect(result.payload.automationType).toBe('starry_form');
     });
 
+    it('should replace existing Starry Form buff when one already exists', async () => {
+      const existingBuffs = [
+        { name: 'Starry Form', effect: 'starry_form', constellation: 'Archer' },
+        { name: 'Mage Armor', effect: 'mage_armor' },
+      ];
+      getRuntimeValue.mockImplementation((caster, key) => {
+        if (key === 'activeBuffs') return existingBuffs;
+        if (key === 'targetEffects') return [];
+        return null;
+      });
+
+      const result = await applyConstellationOption(
+        makeAction(),
+        makePlayerStats(),
+        campaignName,
+        'Chalice',
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('Chalice');
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestSorcerer',
+        'activeBuffs',
+        expect.arrayContaining([
+          expect.objectContaining({ effect: 'starry_form', constellation: 'Chalice' }),
+        ]),
+        campaignName,
+      );
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestSorcerer',
+        'activeBuffs',
+        expect.arrayContaining([
+          expect.objectContaining({ constellation: 'Archer' }),
+        ]),
+        campaignName,
+      );
+    });
+
     it('should apply Archer buff and decrement uses', async () => {
       getRuntimeValue.mockReturnValue([]);
 
@@ -268,6 +309,23 @@ describe('starryFormHandler', () => {
         ]),
         campaignName,
       );
+    });
+
+    it('should apply Archer buff with 1d8 at low levels', async () => {
+      getRuntimeValue.mockReturnValue([]);
+      const lowLevelStats = makePlayerStats({ level: 5 });
+
+      const result = await applyConstellationOption(
+        makeAction(),
+        lowLevelStats,
+        campaignName,
+        'Archer',
+      );
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('Archer');
+      expect(result.payload.description).toContain('1d8');
+      expect(result.payload.description).not.toContain('2d8');
     });
 
     it('should apply Chalice buff and decrement uses', async () => {

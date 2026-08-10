@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 // Redundant, brittle, and low-value tests removed.
 // Consolidated guard clauses, removed implementation-specific tests,
 // and eliminated duplicate behavioral coverage.
@@ -304,6 +303,31 @@ describe('expertDivinationHandler.handle', () => {
       );
 
       expect(result.payload.automation).toEqual({ type: 'expert_divination' });
+    });
+
+    it('does not throw when addEntry rejects', async () => {
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'spell_slots_level_1') return 1;
+        return null;
+      });
+
+      addEntry.mockRejectedValue(new Error('log write failed'));
+
+      const consoleErr = console.error;
+      console.error = vi.fn();
+
+      const result = await handle(
+        makeAction({ level: 3, name: 'Scrying' }),
+        makePlayerStats(), campaignName, null,
+      );
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith(
+        '[expertDivination] Error:',
+        expect.any(Error),
+      );
+
+      console.error = consoleErr;
     });
   });
 });

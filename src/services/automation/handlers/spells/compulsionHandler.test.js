@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -50,7 +49,7 @@ import { sendSaveResult } from '../../../combat/conditions/savePromptService.js'
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -595,6 +594,90 @@ describe('compulsionHandler.handle', () => {
       expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         advantage: false,
       }));
+    });
+  });
+
+  describe('error handling', () => {
+    it('handles addEntry rejection on ability_use log (covers .catch at line 83)', async () => {
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValueOnce(new Error('log error'));
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[compulsion] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on save_result success log (covers .catch at line 122)', async () => {
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+      });
+      addEntry
+        .mockReturnValueOnce(Promise.resolve())
+        .mockRejectedValueOnce(new Error('log error'));
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[compulsion] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on condition log (covers .catch at line 160)', async () => {
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry
+        .mockReturnValueOnce(Promise.resolve())
+        .mockRejectedValueOnce(new Error('log error'));
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[compulsion] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles addEntry rejection on save_result failure log (covers .catch at line 171)', async () => {
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'player' } });
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: false }),
+      });
+      getRuntimeValue.mockReturnValue([]);
+      addEntry
+        .mockReturnValueOnce(Promise.resolve())
+        .mockReturnValueOnce(Promise.resolve())
+        .mockRejectedValueOnce(new Error('log error'));
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+      const handleReturn = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(handleReturn.type).toBe('popup');
+      expect(console.error).toHaveBeenCalledWith('[compulsion] Error:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
     });
   });
 });

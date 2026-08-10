@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { handle } from './shieldHandler.js';
@@ -194,6 +193,36 @@ describe('shieldHandler', () => {
             await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
 
             expect(logService.addEntry).not.toHaveBeenCalled();
+        });
+
+        it('should handle rawDamage being undefined by defaulting to 0 and skipping rollback', async () => {
+            buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+            damageUtils.getCombatContext.mockResolvedValue({});
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: { d20: 2, bonus: 3, targetAc: 15, rawDamage: undefined },
+                attackerName: 'Goblin',
+            });
+
+            await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
+
+            expect(damageRollback.rollbackDamage).not.toHaveBeenCalled();
+            expect(logService.addEntry).not.toHaveBeenCalled();
+        });
+
+        it('should catch and log errors from addEntry without throwing', async () => {
+            buffToggle.toggleBuff.mockReturnValue({ wasActive: false });
+            damageUtils.getCombatContext.mockResolvedValue({});
+            damageRollback.findAttackRollAgainstTarget.mockResolvedValue({
+                attackEvent: { d20: 2, bonus: 3, targetAc: 15, rawDamage: 10 },
+                attackerName: 'Goblin',
+            });
+            damageRollback.rollbackDamage.mockResolvedValue(10);
+            logService.addEntry.mockRejectedValue(new Error('log failure'));
+
+            const result = await handle(makeAction(), mockPlayerStats, mockCampaignName, null);
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain('activated');
         });
 
         it('should return an activation popup with +5 AC and Magic Missile immunity description', async () => {

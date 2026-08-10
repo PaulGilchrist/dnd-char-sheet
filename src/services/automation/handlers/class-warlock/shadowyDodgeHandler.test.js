@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { handle } from './shadowyDodgeHandler.js';
 import * as damageRollback from '../../common/damageRollback.js';
 import * as logService from '../../../ui/logService.js';
@@ -295,6 +294,109 @@ describe('shadowyDodgeHandler', () => {
             await handle(action, makePlayerStats(), 'test-campaign', null);
 
             expect(infoPopupModule.infoPopup).toHaveBeenCalledWith('Shadowy Dodge', expect.any(String), action.automation);
+        });
+
+        it('should handle addEntry rejection gracefully without throwing', async () => {
+            mockRandom([0.5]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
+                attackerName: 'Goblin',
+                targetName: 'Test Rogue',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: [],
+            });
+            logService.addEntry.mockRejectedValue(new Error('log write failed'));
+
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.name).toBe('Shadowy Dodge');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'Test Rogue',
+                abilityName: 'Shadowy Dodge',
+            }));
+            expect(consoleSpy).toHaveBeenCalledWith('[shadowyDodge] Error:', expect.any(Error));
+
+            consoleSpy.mockRestore();
+        });
+
+        it('should use default featureName when action.name is falsy', async () => {
+            mockRandom([0.5]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
+                attackerName: 'Goblin',
+                targetName: 'Test Rogue',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: [],
+            });
+
+            const result = await handle({ automation: {} }, makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.name).toBe('Shadowy Dodge');
+            expect(result.payload.description).toContain('<b>Shadowy Dodge</b>');
+        });
+
+        it('should use "Unknown creature" when attackerName is missing', async () => {
+            mockRandom([0.5]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, targetAc: 13, hit: true },
+                targetName: 'Test Rogue',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: [],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.description).toContain('Attacker: Unknown creature');
+        });
+
+        it('should handle null AC (effectiveAc and targetAc both absent)', async () => {
+            mockRandom([0.05]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 10, bonus: 5, hit: true },
+                attackerName: 'Goblin',
+                targetName: 'Test Rogue',
+                primaryDamage: 6,
+                secondaryDamage: 0,
+                totalDamage: 6,
+                damageTypes: [],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.description).toContain('vs AC —');
+            expect(result.payload.description).toContain('N/A');
+        });
+
+        it('should show HIT when finalHit is true', async () => {
+            mockRandom([0.95]);
+            const freshTimestamp = Date.now();
+            damageRollback.findLastAttack.mockResolvedValue({
+                attackEvent: { timestamp: freshTimestamp, d20: 20, bonus: 7, targetAc: 14, hit: true, effectiveAc: 14 },
+                attackerName: 'Orc',
+                targetName: 'Test Rogue',
+                primaryDamage: 12,
+                secondaryDamage: 0,
+                totalDamage: 12,
+                damageTypes: ['bludgeoning'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.description).toContain('still hits');
         });
     });
 });

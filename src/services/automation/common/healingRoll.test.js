@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     rollHealingForAction,
@@ -50,11 +49,15 @@ const { getCombatContext, getTargetFromAttacker } = await import(
     '../../rules/combat/damageUtils.js'
 );
 
+const { applyHealingToTarget } = await import(
+    '../../rules/combat/applyHealing.js'
+);
+
 const { addEntry } = await import('../../ui/logService.js');
 
 // ── Test fixtures ─────────────────────────────────────────────────
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
     return {
@@ -79,6 +82,7 @@ function makeAuto(overrides = {}) {
 function defaultMocks() {
     hasHealingMaximizationForTarget.mockReturnValue(false);
     getCombatContext.mockResolvedValue(null);
+    applyHealingToTarget.mockReturnValue(null);
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
@@ -208,6 +212,106 @@ describe('rollHealingForAction', () => {
             );
 
             expect(getTargetFromAttacker).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('healing application', () => {
+        it('calls applyHealingToTarget and addEntry when isSelf is true', async () => {
+            hasHealingMaximizationForTarget.mockReturnValue(false);
+            rollExpression.mockReturnValue({ total: 5, rolls: [5] });
+            const cs = { creatures: [] };
+            getCombatContext.mockResolvedValue(cs);
+            applyHealingToTarget.mockReturnValue({ delta: 5, newHp: 25, maxHp: 30 });
+
+            await rollHealingForAction(
+                makeAuto(),
+                makePlayerStats({ name: 'Ally' }),
+                campaignName,
+                true,
+            );
+
+            await new Promise(r => setTimeout(r, 0));
+
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Ally', 5, campaignName);
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'hp_change',
+                targetName: 'Ally',
+                delta: 5,
+                currentHp: 25,
+                maxHp: 30,
+                isHealing: true,
+                isUnconscious: false,
+            });
+        });
+
+        it('calls applyHealingToTarget with target from getTargetFromAttacker when isSelf is false', async () => {
+            hasHealingMaximizationForTarget.mockReturnValue(false);
+            rollExpression.mockReturnValue({ total: 6, rolls: [2, 4] });
+            const cs = { creatures: [{ name: 'Goblin' }] };
+            getCombatContext.mockResolvedValue(cs);
+            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            applyHealingToTarget.mockReturnValue({ delta: 6, newHp: 20, maxHp: 30 });
+
+            await rollHealingForAction(
+                makeAuto(),
+                makePlayerStats({ name: 'Paladin' }),
+                campaignName,
+                false,
+            );
+
+            await new Promise(r => setTimeout(r, 0));
+
+            expect(applyHealingToTarget).toHaveBeenCalledWith(cs, 'Goblin', 6, campaignName);
+            expect(addEntry).toHaveBeenCalledWith(campaignName, {
+                type: 'hp_change',
+                targetName: 'Goblin',
+                delta: 6,
+                currentHp: 20,
+                maxHp: 30,
+                isHealing: true,
+                isUnconscious: false,
+            });
+        });
+
+        it('does not call applyHealingToTarget when it returns null', async () => {
+            hasHealingMaximizationForTarget.mockReturnValue(false);
+            rollExpression.mockReturnValue({ total: 3, rolls: [3] });
+            const cs = { creatures: [] };
+            getCombatContext.mockResolvedValue(cs);
+            applyHealingToTarget.mockReturnValue(null);
+
+            await rollHealingForAction(
+                makeAuto(),
+                makePlayerStats({ name: 'Healer' }),
+                campaignName,
+                true,
+            );
+
+            await new Promise(r => setTimeout(r, 0));
+
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('logs error to console when addEntry rejects', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+            hasHealingMaximizationForTarget.mockReturnValue(false);
+            rollExpression.mockReturnValue({ total: 4, rolls: [4] });
+            const cs = { creatures: [] };
+            getCombatContext.mockResolvedValue(cs);
+            applyHealingToTarget.mockReturnValue({ delta: 4, newHp: 24, maxHp: 30 });
+            addEntry.mockReturnValue(Promise.reject(new Error('log fail')));
+
+            await rollHealingForAction(
+                makeAuto(),
+                makePlayerStats({ name: 'Healer' }),
+                campaignName,
+                true,
+            );
+
+            await new Promise(r => setTimeout(r, 0));
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith('[healingRoll] Error:', expect.any(Error));
+            consoleErrorSpy.mockRestore();
         });
     });
 });
@@ -387,6 +491,155 @@ describe('logHealingToSSE', () => {
         expect(popupEvent).toBeDefined();
         expect(popupEvent[1].detail.popupText).toContain('Cure Wounds on Ally');
         expect(popupEvent[1].detail.popupText).toContain('Regained 8 HP');
+        customEventSpy.mockRestore();
+    });
+
+    it('includes bonusDetails in popup text when provided', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Divine Favor',
+            actualHeal: 8,
+            newHp: 28,
+            maxHp: 30,
+            rollInfo: '1d8=8',
+            maximize: false,
+            healingName: 'Divine Favor',
+            bonusDetails: [{ amount: 3, name: 'Divine Favor' }],
+        });
+
+        expect(addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'hp_change',
+            targetName: 'Ally',
+            sourceName: 'Divine Favor',
+            delta: 8,
+            currentHp: 28,
+            maxHp: 30,
+            isHealing: true,
+            isUnconscious: false,
+            rollInfo: '1d8=8',
+            maximizeHealingDice: false,
+            bonusDetails: [{ amount: 3, name: 'Divine Favor' }],
+        });
+
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent).toBeDefined();
+        expect(popupEvent[1].detail.popupText).toContain('plus 3 [Divine Favor]');
+        customEventSpy.mockRestore();
+    });
+
+    it('shows "uses remaining" (singular) when remainingUses is 1', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Lay on Hands',
+            actualHeal: 5,
+            newHp: 25,
+            maxHp: 30,
+            healingName: 'Lay on Hands',
+            remainingUses: 1,
+        });
+
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent[1].detail.popupText).toContain('(1 use remaining)');
+        customEventSpy.mockRestore();
+    });
+
+    it('shows "uses remaining" (plural) when remainingUses > 1', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Lay on Hands',
+            actualHeal: 5,
+            newHp: 25,
+            maxHp: 30,
+            healingName: 'Lay on Hands',
+            remainingUses: 3,
+        });
+
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent[1].detail.popupText).toContain('(3 uses remaining)');
+        customEventSpy.mockRestore();
+    });
+
+    it('skips popup when skipPopup is true', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Cure Wounds',
+            actualHeal: 7,
+            newHp: 27,
+            maxHp: 30,
+            healingName: 'Cure Wounds',
+            skipPopup: true,
+        });
+
+        expect(addEntry).toHaveBeenCalledTimes(1);
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent).toBeUndefined();
+        customEventSpy.mockRestore();
+    });
+
+    it('logs error when addEntry rejects', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+        addEntry.mockReturnValue(Promise.reject(new Error('log fail')));
+
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Cure Wounds',
+            actualHeal: 5,
+            newHp: 25,
+            maxHp: 30,
+        });
+
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith('[healingRoll] Error:', expect.any(Error));
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('shows "Already at full HP" when actualHeal is 0', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Cure Wounds',
+            actualHeal: 0,
+            newHp: 30,
+            maxHp: 30,
+            healingName: 'Cure Wounds',
+        });
+
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent[1].detail.popupText).toContain('Already at full HP');
+        customEventSpy.mockRestore();
+    });
+
+    it('passes rollInfo as null when not provided in popup detail', () => {
+        const customEventSpy = vi.spyOn(window, 'CustomEvent');
+        logHealingToSSE(campaignName, {
+            targetName: 'Ally',
+            sourceName: 'Cure Wounds',
+            actualHeal: 5,
+            newHp: 25,
+            maxHp: 30,
+            healingName: 'Cure Wounds',
+        });
+
+        const popupEvent = customEventSpy.mock.calls.find(
+            call => call[0] === 'healing-popup'
+        );
+        expect(popupEvent[1].detail.rollInfo).toBeNull();
+        expect(popupEvent[1].detail.maximizeHealingDice).toBe(false);
         customEventSpy.mockRestore();
     });
 });

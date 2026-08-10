@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -15,10 +14,6 @@ vi.mock('../../common/damageRollback.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../../ui/logService.js', () => ({
@@ -45,7 +40,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -363,6 +358,82 @@ describe('massSuggestionHandler.handle', () => {
           abilityName: 'My Mass Suggestion',
         }),
       );
+    });
+
+    it('should handle action with no automation object', async () => {
+      const ps = makePlayerStats();
+      const action = { name: 'Mass Suggestion' };
+
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(16);
+      createSaveListener.mockReturnValue(makeFailedSaveMock());
+
+      const result = await handle(action, ps, campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(createSaveListener).toHaveBeenCalledTimes(4);
+    });
+
+    it('should default to 12 maxTargets when maxTargets is undefined', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ maxTargets: undefined });
+
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(16);
+      createSaveListener.mockReturnValue(makeFailedSaveMock());
+
+      await handle(action, ps, campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledTimes(4);
+    });
+
+    it('should apply charmed when storedConditions is not an array', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction();
+
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(16);
+      getRuntimeValue.mockReturnValue('charmed');
+      createSaveListener.mockReturnValue(makeFailedSaveMock());
+
+      await handle(action, ps, campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'activeConditions',
+        ['charmed'],
+        campaignName,
+      );
+    });
+
+    it('should apply disadvantage when heightenTarget matches targetName', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Mass Suggestion',
+        automation: {
+          type: 'mass_suggestion',
+          saveType: 'WIS',
+          saveDc: 'spell_save_dc',
+          range: '60 feet',
+          duration: '24 hours',
+          maxTargets: 12,
+        },
+        metaCtx: { heightenTarget: 'Goblin' },
+      };
+
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(16);
+      getRuntimeValue.mockReturnValue([]);
+      createSaveListener.mockReturnValue(makeFailedSaveMock());
+
+      await handle(action, ps, campaignName, null);
+
+      const callConfigs = createSaveListener.mock.calls.map(call => call[1]);
+      const goblinCall = callConfigs.find(c => c.targetName === 'Goblin');
+      expect(goblinCall.disadvantage).toBe(true);
+
+      const orcCall = callConfigs.find(c => c.targetName === 'Orc');
+      expect(orcCall.disadvantage).toBe(false);
     });
   });
 });

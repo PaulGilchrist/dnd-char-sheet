@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/savePrompt.js', () => ({
@@ -35,7 +34,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 
-const campaignName = 'TestCampaign';
+const campaignName = 'test-campaign';
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -482,6 +481,20 @@ describe('sleepHandler.handle', () => {
       expect(result.type).toBe('popup');
     });
 
+    it('should handle missing automation on action object', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(10);
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-no-auto',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle({ name: 'Sleep' }, makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(buildSaveDc).toHaveBeenCalledWith({}, expect.any(Object));
+    });
+
     it('should handle playerStats with no proficiency', async () => {
       const ps = makePlayerStats({ proficiency: 0, abilities: [] });
       const action = makeAction();
@@ -499,6 +512,20 @@ describe('sleepHandler.handle', () => {
       expect(buildSaveDc).toHaveBeenCalledWith(action.automation, ps);
     });
 
+    it('should handle non-array activeConditions from runtime store', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockReturnValue('not-an-array');
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-non-array',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Incapacitated');
+    });
+
     it('should use action.name in ability_use log entries', async () => {
       const customAction = { name: 'My Sleep', automation: { type: 'sleep', saveType: 'WIS', saveDc: 15 } };
 
@@ -514,6 +541,80 @@ describe('sleepHandler.handle', () => {
       expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         abilityName: 'My Sleep',
       }));
+    });
+
+    it('should handle addEntry rejection for immune creature log', async () => {
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Undead', type: 'monster', immunities: ['Magical Sleep'] },
+          { name: 'TestCaster', gridX: 5, gridY: 10 },
+        ],
+        players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
+        placedItems: [],
+      });
+      addEntry.mockRejectedValue(new Error('log failure'));
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('immune');
+    });
+
+    it('should handle addEntry rejection for save prompt log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      addEntry.mockRejectedValue(new Error('log failure'));
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-reject',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+    });
+
+    it('should handle addEntry rejection for successful save result log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(20);
+      addEntry.mockRejectedValue(new Error('log failure'));
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-save-reject',
+        promise: Promise.resolve({ success: true }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('saved');
+    });
+
+    it('should handle addEntry rejection for condition application log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log failure'));
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-cond-reject',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Incapacitated');
+    });
+
+    it('should handle addEntry rejection for failed save result log', async () => {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(15);
+      getRuntimeValue.mockReturnValue([]);
+      addEntry.mockRejectedValue(new Error('log failure'));
+      createSaveListener.mockReturnValue({
+        promptId: 'sleep-fail-reject',
+        promise: Promise.resolve({ success: false }),
+      });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Incapacitated');
     });
   });
 });

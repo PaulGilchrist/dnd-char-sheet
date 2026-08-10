@@ -1,4 +1,4 @@
-import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 
 const LIVING_LEGEND_KEY = 'livingLegendActive';
@@ -34,9 +34,19 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     };
 }
 
-async function activateLivingLegend(_action, _playerStats, _campaignName) {
-    // Living Legend has no explicit resource cost in the description - it activates
-    // and provides passive effects for its duration. No charge check needed.
+async function activateLivingLegend(action, playerStats, campaignName) {
+    const playerName = playerStats.name;
+    const isActive = await getRuntimeValue(playerName, LIVING_LEGEND_KEY, campaignName);
+    if (isActive) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'warning',
+                name: action.name,
+                description: `${action.name} is already active.`,
+            },
+        };
+    }
     return null;
 }
 
