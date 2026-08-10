@@ -1152,7 +1152,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
                 console.error('[spellCast] Post-cast ally-heal failed:', e);
                 return null;
             });
-            console.log(`[spellCast] chaliceResult for ${spell.name} (${playerStats.name}):`, JSON.stringify(chaliceResult));
             if (chaliceResult?.needsModal) {
                 const pending = getRuntimeValue('campaign', 'pendingStarryChaliceHeal', campaignName);
                 return {

@@ -40,8 +40,6 @@ function getPostCastAllyHeals(playerStats, campaignName) {
     const allyHealPassives = passives.filter(p => p.type === 'post_cast_ally_heal');
     const starryBuffs = activeBuffs.filter(b => b.name === 'Starry Form');
     const starryFormActive = starryBuffs.some(b => b.constellation === 'Chalice');
-    console.log(`[postCastHealService] getPostCastAllyHeals for ${playerStats.name} (campaign=${campaignName}): totalPassives=${passives.length}, allyHealPassives=${allyHealPassives.length}`, allyHealPassives.map(p => ({ type: p.type, name: p.name, healExpression: p.healExpression })));
-    console.log(`[postCastHealService] getPostCastAllyHeals buffs for ${playerStats.name}: storedBuffs=${Array.isArray(storedBuffs) ? storedBuffs.length : 'N/A'} (used ${Array.isArray(storedBuffs) ? 'runtime' : 'playerStats.activeBuffs'}), starryBuffs=${JSON.stringify(starryBuffs.map(b => ({ name: b.name, constellation: b.constellation })))}, starryFormActive=${starryFormActive}`);
     if (!starryFormActive) {
         return [];
     }
@@ -121,7 +119,6 @@ export async function triggerPostCastAllyHeals(spell, metaCtx, playerStats, camp
     }
 
     const allyHeals = getPostCastAllyHeals(playerStats, campaignName);
-    console.log(`[postCastHealService] triggerPostCastAllyHeals allyHeals.length=${allyHeals.length}`);
     if (allyHeals.length === 0) {
         return null;
     }

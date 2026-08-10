@@ -449,7 +449,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
 
       // Check for Death Ward (4th level abjuration spell)
       const deathWardResult = checkDeathWard(creature, playerComputed, campaignName);
-      console.log('[applyDamage] Death Ward result for', creature.name, ':', JSON.stringify(deathWardResult));
       if (deathWardResult.intercepted) {
         return { ...deathWardResult, damageDealt: finalDamage, oldHp, interceptedFeature: 'Death Ward' };
       }

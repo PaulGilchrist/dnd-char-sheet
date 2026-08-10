@@ -31,7 +31,6 @@ export async function resolveAttackDamageStandalone(attack, ctxOverrides, { play
             metamagicTwinTarget: o.metamagicTwinTarget || null,
             metamagicHeighten: o.metamagicHeighten || false,
         };
-        console.log('[proceedWithDamage] calling rollDamage:', { attackName: minimalCtx.attackName, damageType: minimalCtx.damageType, targetName: minimalCtx.targetName, attackerName: minimalCtx.attackerName, name: a.name, formula, total, rolls, modifier });
         rollDamage(a.name, formula, total, rolls, modifier, minimalCtx);
     };
 
