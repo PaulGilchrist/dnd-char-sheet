@@ -2,6 +2,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
+import { buildResultMessage } from '../../common/buildResultMessage.js';
 import storage from '../../../../services/ui/storage.js';
 import { addCondition } from '../../../combat/conditions/conditionSaveService.js';
 
@@ -135,19 +136,4 @@ async function applyThrustEffect(action, playerStats, campaignName, targetName, 
         description: `${playerStats.name} knocked ${targetName} Prone and pushed ${pushValue} feet away.`,
         targetName: targetName,
     }).catch(() => {});
-}
-
-function buildResultMessage(actionName, targetName, option, saveDc, saveType, success) {
-    const effectDesc = getEffectDescription(option);
-    if (success) {
-        return `${targetName} rolled a ${saveType} save (DC ${saveDc}): <strong>Success</strong>.<br/>No effect applied.`;
-    }
-    return `${targetName} rolled a ${saveType} save (DC ${saveDc}): <strong>Failure</strong>.<br/>${effectDesc} applied to ${targetName}.`;
-}
-
-function getEffectDescription(option) {
-    if (option.effect === 'prone_and_push' || option.effect === 'push') {
-        return `${option.name} — target falls Prone and is pushed ${option.value || 10} ft away`;
-    }
-    return option.name;
 }
