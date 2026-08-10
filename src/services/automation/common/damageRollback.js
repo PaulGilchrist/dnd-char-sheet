@@ -140,26 +140,6 @@ export async function findMostRecentRollAcrossCreatures(campaignName) {
 }
 
 /**
- * Store damage rolls in the root-level lastAttack for later access by features like Piercer.
- * Called after damage resolves for plain weapon attacks.
- *
- * @param {string} campaignName - Campaign name
- * @param {Object} lastAttack - The lastAttack object to update
- */
-export async function storeDamageRolls(campaignName, lastAttack) {
-    if (!lastAttack) return;
-    const existing = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-    if (!existing) return;
-
-    const updatedLastAttack = {
-        ...existing,
-        ...lastAttack,
-    };
-
-    await setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
-}
-
-/**
  * Create a lastAttack entry for a save-based spell (single-target or AoE).
  * Call this at the start of a spell handler before the target loop.
  *
@@ -347,23 +327,4 @@ export async function rollbackSpellEffects(lastAttack, campaignName, featureName
     return rolledBack;
 }
 
-/**
- * Update lastAttack with statusEffects for counterspell rollback.
- * Call this from automation handlers after applying conditions on failed save.
- *
- * @param {string} campaignName - Campaign name
- * @param {Array} statusEffects - Array of condition keys applied
- * @param {string} [targetName] - Target name (defaults to lastAttack.targetName)
- */
-export async function updateLastAttackWithEffects(campaignName, statusEffects, targetName) {
-    const existingLastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-    if (!existingLastAttack) return;
 
-    const updatedLastAttack = {
-        ...existingLastAttack,
-        statusEffects: statusEffects,
-        affectedTargets: existingLastAttack.affectedTargets || [targetName || existingLastAttack.targetName],
-    };
-
-    setRuntimeValue('campaign', 'lastAttack', updatedLastAttack, campaignName);
-}
