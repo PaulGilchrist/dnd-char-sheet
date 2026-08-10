@@ -71,21 +71,17 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
 
     // Reactive cover refresh — triggers re-render when any cover-relevant runtime value changes
     // Subscribe to all character stores that might have cover-relevant values
-    const _coverRefresh = useSyncedState(playerStats.name, 'smiteOfProtectionActive', null, campaignName);
-    const _bulwarkOfForceActive = useSyncedState(playerStats.name, 'bulwarkOfForceActive', null, campaignName);
-    const _naturesSanctuaryActive = useSyncedState(playerStats.name, 'naturesSanctuaryActive', null, campaignName);
-    const _bulwarkOfForceTargets = useSyncedState(playerStats.name, 'bulwarkOfForceTargets', null, campaignName);
-    const _naturesSanctuaryCreatures = useSyncedState(playerStats.name, 'naturesSanctuaryCreatures', null, campaignName);
-    const _wrathOfTheSeaActive = useSyncedState(playerStats.name, 'wrathOfTheSeaActive', null, campaignName);
-    const _mantleOfMajestyActive = useSyncedState(playerStats.name, 'mantleOfMajestyActive', null, campaignName);
-    const _innerRadianceActive = useSyncedState(playerStats.name, 'innerRadianceActive', null, campaignName);
-    const _unbreakableMajestyActive = useSyncedState(playerStats.name, 'unbreakableMajestyActive', null, campaignName);
-    const _baitAndSwitchActive = useSyncedState(playerStats.name, 'baitAndSwitchActive', null, campaignName);
-    const _baitAndSwitchBonus = useSyncedState(playerStats.name, 'baitAndSwitchBonus', null, campaignName);
-    const _activeBuffs = useSyncedState(playerStats.name, 'activeBuffs', null, campaignName);
+    const coverRefresh = useSyncedState(playerStats.name, 'smiteOfProtectionActive', null, campaignName);
+    const bulwarkOfForceActive = useSyncedState(playerStats.name, 'bulwarkOfForceActive', null, campaignName);
+    const naturesSanctuaryActive = useSyncedState(playerStats.name, 'naturesSanctuaryActive', null, campaignName);
+    const bulwarkOfForceTargets = useSyncedState(playerStats.name, 'bulwarkOfForceTargets', null, campaignName);
+    const naturesSanctuaryCreatures = useSyncedState(playerStats.name, 'naturesSanctuaryCreatures', null, campaignName);
+    const mantleOfMajestyActive = useSyncedState(playerStats.name, 'mantleOfMajestyActive', null, campaignName);
+    const innerRadianceActive = useSyncedState(playerStats.name, 'innerRadianceActive', null, campaignName);
+    const unbreakableMajestyActive = useSyncedState(playerStats.name, 'unbreakableMajestyActive', null, campaignName);
     // Also subscribe to campaign-level cover refresh to catch changes from other characters
-    const _coverRefreshCampaign = useSyncedState('campaign', 'coverRefresh', 0, campaignName);
-    void [_coverRefresh, _bulwarkOfForceActive, _naturesSanctuaryActive, _bulwarkOfForceTargets, _naturesSanctuaryCreatures, _wrathOfTheSeaActive, _mantleOfMajestyActive, _innerRadianceActive, _unbreakableMajestyActive, _baitAndSwitchActive, _baitAndSwitchBonus, _activeBuffs, _coverRefreshCampaign];
+    const coverRefreshCampaign = useSyncedState('campaign', 'coverRefresh', 0, campaignName);
+    void [coverRefresh, bulwarkOfForceActive, naturesSanctuaryActive, bulwarkOfForceTargets, naturesSanctuaryCreatures, mantleOfMajestyActive, innerRadianceActive, unbreakableMajestyActive, coverRefreshCampaign];
 
     const { current: hasInspiration, update: setHasInspiration } = useTrackedResource(
         'hasInspiration',
