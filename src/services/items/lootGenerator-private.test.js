@@ -12,6 +12,7 @@ import {
   generateLootSuggestions,
   generateLootFromCombatSummary,
 } from './lootGenerator.js';
+import { clearDataCache } from '../ui/dataLoader.js';
 
 function createMockResponse(json) {
   return new Response(JSON.stringify(json), {
@@ -31,6 +32,7 @@ const magicItems = [
 
 beforeEach(() => {
   global.fetch = vi.fn();
+  clearDataCache();
 });
 
 afterEach(() => {

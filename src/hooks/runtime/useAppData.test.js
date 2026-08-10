@@ -8,6 +8,7 @@ vi.mock('../../services/ui/dataLoader.js', () => ({
   loadClassData: vi.fn(),
   loadEquipment: vi.fn(),
   loadMagicItems: vi.fn(),
+  loadMonsters: vi.fn(),
   loadWildMagicSurgeTable: vi.fn(async () => []),
   loadRaceData: vi.fn(),
   loadSpells: vi.fn(),
@@ -19,6 +20,7 @@ import {
   loadClassData,
   loadEquipment,
   loadMagicItems,
+  loadMonsters,
   loadRaceData,
   loadSpells,
 } from '../../services/ui/dataLoader.js';
@@ -28,6 +30,7 @@ const mockClasses = [{ name: 'Fighter' }];
 const mockClasses2024 = [{ name: 'Fighter 2024' }];
 const mockEquipment = [{ name: 'Sword' }];
 const mockMagicItems = [{ name: 'Wand' }];
+const mockMonsters = [{ name: 'Goblin' }];
 const mockRaces = [{ name: 'Human' }];
 const mockRaces2024 = [{ name: 'Human 2024' }];
 const mockSpells = [{ name: 'Fireball' }];
@@ -42,6 +45,7 @@ function setupDefaults() {
   );
   loadEquipment.mockResolvedValue(mockEquipment);
   loadMagicItems.mockResolvedValue(mockMagicItems);
+  loadMonsters.mockResolvedValue(mockMonsters);
   loadRaceData.mockImplementation((version) =>
     version === '2024'
       ? Promise.resolve(mockRaces2024)
@@ -68,6 +72,7 @@ describe('useAppData', () => {
       loadClassData.mockReturnValue(neverResolving);
       loadEquipment.mockReturnValue(neverResolving);
       loadMagicItems.mockReturnValue(neverResolving);
+      loadMonsters.mockReturnValue(neverResolving);
       loadRaceData.mockReturnValue(neverResolving);
       loadSpells.mockReturnValue(neverResolving);
 
@@ -78,6 +83,7 @@ describe('useAppData', () => {
       expect(result.current.classes2024).toEqual([]);
       expect(result.current.equipment).toEqual([]);
       expect(result.current.magicItems).toEqual([]);
+      expect(result.current.monsters).toEqual([]);
       expect(result.current.races).toEqual([]);
       expect(result.current.races2024).toEqual([]);
       expect(result.current.spells).toEqual([]);
@@ -102,6 +108,7 @@ describe('useAppData', () => {
       expect(result.current.classes2024).toEqual(mockClasses2024);
       expect(result.current.equipment).toEqual(mockEquipment);
       expect(result.current.magicItems).toEqual(mockMagicItems);
+      expect(result.current.monsters).toEqual(mockMonsters);
       expect(result.current.races).toEqual(mockRaces);
       expect(result.current.races2024).toEqual(mockRaces2024);
       expect(result.current.spells).toEqual(mockSpells);
@@ -175,6 +182,7 @@ describe('useAppData', () => {
       expect(result.current.classes2024).toEqual([]);
       expect(result.current.equipment).toEqual([]);
       expect(result.current.magicItems).toEqual([]);
+      expect(result.current.monsters).toEqual([]);
       expect(result.current.races).toEqual([]);
       expect(result.current.races2024).toEqual([]);
       expect(result.current.spells).toEqual([]);

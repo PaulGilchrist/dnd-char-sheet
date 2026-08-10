@@ -4,6 +4,7 @@ import {
   loadClassData,
   loadEquipment,
   loadMagicItems,
+  loadMonsters,
   loadRaceData,
   loadSpells
 } from '../../services/ui/dataLoader.js';
@@ -14,6 +15,7 @@ function useAppData() {
   const [classes2024, setClasses2024] = useState([]);
   const [equipment, setEquipment] = useState([]);
   const [magicItems, setMagicItems] = useState([]);
+  const [monsters, setMonsters] = useState([]);
   const [races, setRaces] = useState([]);
   const [races2024, setRaces2024] = useState([]);
   const [spells, setSpells] = useState([]);
@@ -29,6 +31,7 @@ function useAppData() {
           classes2024Data,
           equipmentData,
           magicItemsData,
+          monstersData,
           racesData,
           races2024Data,
           spellsData,
@@ -39,6 +42,7 @@ function useAppData() {
           loadClassData('2024'),
           loadEquipment(),
           loadMagicItems(),
+          loadMonsters(),
           loadRaceData('5e'),
           loadRaceData('2024'),
           loadSpells('5e'),
@@ -50,6 +54,7 @@ function useAppData() {
         setClasses2024(classes2024Data);
         setEquipment(equipmentData);
         setMagicItems(magicItemsData);
+        setMonsters(monstersData);
         setRaces(racesData);
         setRaces2024(races2024Data);
         setSpells(spellsData);
@@ -70,6 +75,7 @@ function useAppData() {
     classes2024,
     equipment,
     magicItems,
+    monsters,
     races,
     races2024,
     spells,

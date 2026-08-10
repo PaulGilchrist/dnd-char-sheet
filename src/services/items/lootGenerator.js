@@ -1,4 +1,5 @@
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { loadEquipment, loadMagicItems, loadMonsters } from '../ui/dataLoader.js';
 
 const treasureTierMap = [
   { minCR: 0, maxCR: 1.5, tier: 'none', valueRange: [0, 0], cpWeight: 1, spWeight: 0, gpWeight: 0, ppWeight: 0 },
@@ -256,10 +257,12 @@ function formatMagicItemEntry(item) {
 
 async function loadJSONData(file) {
   try {
+    if (file === 'monsters.json') return loadMonsters();
+    if (file === 'magic-items.json') return loadMagicItems();
+    if (file === 'equipment.json') return loadEquipment();
     const res = await fetch(`/data/${file}`);
     if (!res.ok) return [];
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch {
     console.error('[lootGenerator] Error loading /data/', file)
     return [];
