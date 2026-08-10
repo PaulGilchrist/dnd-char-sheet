@@ -77,20 +77,20 @@ describe('encounterGenerator', () => {
       expect(getDifficultyLabel(30, 2, 100, 2)).toBe('Easy');
     });
 
-    it('should return Medium for moderate effective XP ratio', () => {
-      expect(getDifficultyLabel(120, 2, 100, 2)).toBe('Medium');
+    it('should return Medium for moderate effective XP ratio after multiplier', () => {
+      expect(getDifficultyLabel(50, 2, 100, 2)).toBe('Medium');
     });
 
-    it('should return Hard for high effective XP ratio', () => {
-      expect(getDifficultyLabel(150, 2, 100, 2)).toBe('Hard');
+    it('should return Hard for high effective XP ratio after multiplier', () => {
+      expect(getDifficultyLabel(80, 2, 100, 2)).toBe('Hard');
     });
 
-    it('should return Deadly for very high effective XP ratio', () => {
-      expect(getDifficultyLabel(300, 2, 100, 2)).toBe('Deadly');
+    it('should return Deadly for very high effective XP ratio after multiplier', () => {
+      expect(getDifficultyLabel(150, 2, 100, 2)).toBe('Deadly');
     });
 
     it('should account for difficulty multiplier when labeling', () => {
-      expect(getDifficultyLabel(200, 4, 100, 2)).toBe('Hard');
+      expect(getDifficultyLabel(60, 4, 100, 2)).toBe('Hard');
     });
   });
 

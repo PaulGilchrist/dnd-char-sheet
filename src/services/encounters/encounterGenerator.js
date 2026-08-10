@@ -41,7 +41,7 @@ function shuffle(arr) {
 
 export function getDifficultyLabel(totalXP, monsterCount, threshold, partySize) {
   const multiplier = calculateDifficultyMultiplier(monsterCount, partySize);
-  const effectiveXP = totalXP / multiplier;
+  const effectiveXP = totalXP * multiplier;
   const ratio = effectiveXP / threshold;
   if (ratio < ENCOUNTER_CONFIG.difficultyRatios.easyMax) return 'Easy';
   if (ratio < ENCOUNTER_CONFIG.difficultyRatios.mediumMax) return 'Medium';
@@ -126,7 +126,7 @@ export function generateEncounterSuggestions({
         const newTotalXP = totalXP + wm.monster.xp;
         const newCount = totalCount + 1;
         const newMultiplier = calculateDifficultyMultiplier(newCount, partySize);
-        const newEffective = newTotalXP / newMultiplier;
+        const newEffective = newTotalXP * newMultiplier;
 
          // Don't go over deadly threshold * safety cap
         const deadlyThreshold = calculateXPThreshold(playerLevels, 3);
