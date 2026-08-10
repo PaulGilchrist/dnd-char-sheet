@@ -77,6 +77,7 @@ Read-only inspection only: `git log`, `git show`, `git diff`, `git status`, `git
 
 - **Server-first state:** All game state flows through the runtime store (`useRuntimeState` / `useSyncedState`). Never use localStorage for game data. ESLint rules enforce this (`no-window-access`, `no-local-game-state` = ERROR; `require-synced-state` = WARN).
 - **SSE re-render loop:** Always use `skipSync=true` in `setRuntimeObject` when applying SSE-echoed data. The server already has the data; re-POSTing causes loops.
+- **ONE shared SSE connection per campaign:** Never `new EventSource` directly. Use `subscribeToSSE(campaignName, handler)` from `src/services/ui/sseClient.js` (or the `Subscriber` component / `useLog` hook). Multiple EventSources exhaust the browser's ~6-connection-per-host pool, starving normal fetches — map create/delete showed as endless spinners + `TypeError: Load failed` in prod (dev masks it because Vite's proxy on :5173 has its own pool).
 - **PlayerStats is single source of truth:** `rulesFactory.getPlayerStats()` → `PlayerStats` is the canonical character data. Don't derive state from elsewhere.
 - **Route order matters in Express:** `campaigns-changedata.js` must be mounted after `campaigns-character.js` in `server.js` so `.json` character file routes aren't captured by the `:key` wildcard.
 - **Dual ruleset data paths:** 5e data lives in `/data/`, 2024 data in `/data/2024/`. Shared data (equipment, monsters) is only in `/data/`. See `src/services/ui/dataLoader.js` `getDataPath()`.

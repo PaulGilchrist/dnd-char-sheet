@@ -20,39 +20,29 @@ export const loadMaps = async (campaignName) => {
 };
 
 export const createMap = async (campaignName, mapName, options = {}) => {
-   console.log('[mapsService.createMap] Starting, campaignName=', campaignName, 'mapName=', mapName, 'options.keys=', Object.keys(options))
-   try {
-     const url = `/api/campaigns/${encodeURIComponent(campaignName)}/maps`;
-     console.log('[mapsService.createMap] POST to', url)
-     const response = await fetch(url, {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ name: mapName, type: 'indoor', ...options }),
-      });
-     console.log('[mapsService.createMap] response status=', response.status, 'ok=', response.ok)
-     if (!response.ok) {
-        // If map already exists, resolve the existing map instead of throwing
-        let data;
-        try {
-          data = await response.json();
-        } catch {
-          data = {};
-        }
-        console.log('[mapsService.createMap] non-OK response data=', data)
-        if (data.error && /map.*already exists/i.test(data.error)) {
-          return { name: mapName, fileName: sanitizeMapName(mapName), alreadyExists: true };
-        }
-        const error = new Error(data.error || 'Failed to create map');
-       throw error;
-       }
-     const result = await response.json();
-     console.log('[mapsService.createMap] success, result=', result)
-     return result;
-     } catch (error) {
-      console.error('[mapsService.createMap] catch block, error=', error.message || error)
-      throw error;
+   const url = `/api/campaigns/${encodeURIComponent(campaignName)}/maps`;
+   const response = await fetch(url, {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ name: mapName, type: 'indoor', ...options }),
+    });
+   if (!response.ok) {
+      // If map already exists, resolve the existing map instead of throwing
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+      if (data.error && /map.*already exists/i.test(data.error)) {
+        return { name: mapName, fileName: sanitizeMapName(mapName), alreadyExists: true };
+      }
+      const error = new Error(data.error || 'Failed to create map');
+     throw error;
      }
-   };
+   const result = await response.json();
+   return result;
+ };	
 
 export const deleteMap = async (campaignName, mapName) => {
   try {

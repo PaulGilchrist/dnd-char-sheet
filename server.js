@@ -91,8 +91,12 @@ const server = app.listen(PORT, () => {
     // Start keep-alive health check
     keepAlive();
 
-    // Prevent Node.js HTTP keepAliveTimeout (5s default) from closing long-lived SSE connections
-    server.keepAliveTimeout = 120000;
+    // Short keep-alive timeout so browsers (Safari in particular) don't hold
+    // stale idle connections and silently fail POST/DELETE fetches on them
+    // ("Load failed"). Long-lived SSE connections are unaffected — they never
+    // finish their response, so keepAliveTimeout doesn't apply, and the SSE
+    // route sends its own 15s pings.
+    server.keepAliveTimeout = 15000;
     server.headersTimeout = 120000;
 });
 // ====== API ROUTES (mounted in original order) ======

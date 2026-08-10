@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
+import { subscribeToSSE } from '../../services/ui/sseClient.js';
 
 /**
   * WARNING: SSE re-render loop risk
@@ -16,26 +17,10 @@ const Subscriber = ({ handleEvent, campaignName }) => {
     handleEventRef.current = handleEvent;
 
     useEffect(() => {
-        const host = window.location.hostname;
-        const urlParams = new URLSearchParams();
-        if (campaignName) {
-            urlParams.set('campaign', campaignName);
-         }
-        const url = `http://${host}/subscribe?${urlParams.toString()}`;
-        const eventSource = new EventSource(url);
-        eventSource.onmessage = (e) => {
-            try {
-                const event = JSON.parse(e.data);
-                handleEventRef.current(event);
-              } catch (parseErr) {
-                console.error('[Subscriber] SSE parse error:', parseErr, 'data=', e.data.substring(0, 200))
-              }
-          };
-        eventSource.onerror = (err) => console.error('[Subscriber] SSE error', err);
-        return () => {
-            eventSource.close();
-         };
-     }, [campaignName]);
+        return subscribeToSSE(campaignName, (event) => {
+            handleEventRef.current(event);
+        });
+    }, [campaignName]);
 
     return (
          <React.Fragment></React.Fragment>

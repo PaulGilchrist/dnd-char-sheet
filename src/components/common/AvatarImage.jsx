@@ -6,7 +6,7 @@ function AvatarImage({ name, imagePath, size = 60, onClick, campaignName }) {
     if (src) {
         return (
             <div className="avatar-wrapper" style={{ width: size, height: size, ...cursorStyle }} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}>
-                <img src={src} alt={name} className="avatar-image" onError={(e) => { console.error('[AvatarImage] load FAILED:', src, '| resolved:', e.currentTarget?.src, '| time:', new Date().toISOString()) }} onLoad={() => { console.log('[AvatarImage] loaded:', src) }} />
+                <img src={src} alt={name} className="avatar-image" />
             </div>
         );
     }

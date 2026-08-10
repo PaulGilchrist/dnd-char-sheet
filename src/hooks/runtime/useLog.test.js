@@ -9,10 +9,12 @@ vi.mock('../../services/ui/logService.js', () => ({
 
 import useLog from './useLog.js';
 import * as logService from '../../services/ui/logService.js';
+import { resetSSEClient } from '../../services/ui/sseClient.js';
 
 let mockEventSource;
 
 beforeEach(() => {
+  resetSSEClient();
   vi.clearAllMocks();
   localStorage.clear();
   mockEventSource = { onmessage: null, close: vi.fn() };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as logService from '../../services/ui/logService.js';
+import { subscribeToSSE } from '../../services/ui/sseClient.js';
 
 const MAX_LOG_ENTRIES = 200;
 
@@ -25,31 +26,17 @@ export default function useLog(campaignName) {
       // Subscribe to SSE events for new log entries
     useEffect(() => {
          if (!campaignName) return;
-        const host = window.location.hostname;
-        const urlParams = new URLSearchParams({
-            campaign: campaignName,
-          });
-        const url = `http://${host}/subscribe?${urlParams.toString()}`;
-         const eventSource = new EventSource(url);
-
-      eventSource.onmessage = (e) => {
-          try {
-                const event = JSON.parse(e.data);
-               if (!event.key.startsWith('log-')) return;
-               if (event.data === null) {
-                   setLogEntries([]);
-                   return;
-               }
-              setLogEntries(prev => {
-                   const updated = [...prev, event.data];
-                  return updated.slice(-MAX_LOG_ENTRIES);
-                  });
-             } catch (_err) {
-               // Ignore parse errors for non-log events
+         return subscribeToSSE(campaignName, (event) => {
+             if (!event.key.startsWith('log-')) return;
+             if (event.data === null) {
+                 setLogEntries([]);
+                 return;
              }
-           };
-
-        return () => eventSource.close();
+             setLogEntries(prev => {
+                 const updated = [...prev, event.data];
+                 return updated.slice(-MAX_LOG_ENTRIES);
+             });
+         });
         }, [campaignName]);
 
     const addEntry = useCallback(async (entry) => {

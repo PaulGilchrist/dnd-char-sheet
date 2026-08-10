@@ -10,15 +10,17 @@ export default defineConfig({
         chunkSizeWarningLimit: 10000,
         rollupOptions: {
             output: {
-                entryFileNames: 'assets/index.js',
-                chunkFileNames: 'assets/[name].js',
+                // Content-hash JS/CSS so browsers never serve a stale bundle —
+                // the server caches hashed assets with immutable 1-year headers.
+                entryFileNames: 'assets/[name]-[hash].js',
+                chunkFileNames: 'assets/[name]-[hash].js',
                 codeSplitting: true,
                 assetFileNames: (chunkInfo) => {
                     // Don't hash image files - keep original names for faster deployments
                     if (chunkInfo.type === 'asset' && chunkInfo.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(chunkInfo.name)) {
                         return `assets/${chunkInfo.name}`;
                     }
-                    return 'assets/[name].[ext]';
+                    return 'assets/[name]-[hash].[ext]';
                 }
             }
         },

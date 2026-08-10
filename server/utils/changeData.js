@@ -185,6 +185,8 @@ export const keepAlive = () => {
             if (res.statusCode !== 200) {
                 console.warn(`Keep-alive: server returned status ${res.statusCode}`);
              }
+            // Drain the body so the keep-alive connection is reusable/closed cleanly
+            res.resume();
          }).on('error', (err) => {
             console.error('Keep-alive health check failed:', err.message);
          });

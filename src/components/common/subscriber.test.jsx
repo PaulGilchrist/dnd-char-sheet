@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 
 import Subscriber from './subscriber.jsx';
+import { resetSSEClient } from '../../services/ui/sseClient.js';
 
 let mockEventSources;
 
 beforeEach(() => {
+  resetSSEClient();
   vi.clearAllMocks();
   localStorage.clear();
   mockEventSources = [];
@@ -73,6 +75,23 @@ describe('Subscriber', () => {
         'http://localhost/subscribe?'
       );
     });
+
+    it('shares a single EventSource across multiple Subscribers for the same campaign', () => {
+      render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
+      render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
+      expect(mockEventSources).toHaveLength(1);
+      expect(global.EventSource).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('event handling', () => {
@@ -118,6 +137,33 @@ describe('Subscriber', () => {
       });
 
       expect(handleEvent).toHaveBeenCalledWith(complexData);
+    });
+
+    it('dispatches a shared SSE event to all subscribed handlers', () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+      render(
+        <Subscriber
+          handleEvent={firstHandler}
+          campaignName="test-campaign"
+        />
+      );
+      render(
+        <Subscriber
+          handleEvent={secondHandler}
+          campaignName="test-campaign"
+        />
+      );
+
+      const eventData = { key: 'some-event', data: 42 };
+      act(() => {
+        mockEventSources[0].onmessage({
+          data: JSON.stringify(eventData),
+        });
+      });
+
+      expect(firstHandler).toHaveBeenCalledWith(eventData);
+      expect(secondHandler).toHaveBeenCalledWith(eventData);
     });
   });
 
@@ -173,6 +219,27 @@ describe('Subscriber', () => {
       const es = getLatestMockEventSource();
       expect(es.close).not.toHaveBeenCalled();
       unmount();
+      expect(es.close).toHaveBeenCalled();
+    });
+
+    it('closes the shared EventSource only after the last subscriber unmounts', () => {
+      const { unmount: unmountFirst } = render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
+      const { unmount: unmountSecond } = render(
+        <Subscriber
+          handleEvent={vi.fn()}
+          campaignName="test-campaign"
+        />
+      );
+
+      const es = mockEventSources[0];
+      unmountFirst();
+      expect(es.close).not.toHaveBeenCalled();
+      unmountSecond();
       expect(es.close).toHaveBeenCalled();
     });
   });
