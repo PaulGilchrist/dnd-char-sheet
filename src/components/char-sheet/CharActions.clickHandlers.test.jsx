@@ -123,6 +123,7 @@ vi.mock('./CharBonusActions.jsx', () => ({
 vi.mock('../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({ creatures: [] })),
   getCurrentCombatRound: vi.fn(() => 1),
+  loadCombatSummary: vi.fn(() => Promise.resolve({ lastAttack: null })),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({

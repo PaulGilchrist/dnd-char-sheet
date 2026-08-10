@@ -84,6 +84,7 @@ vi.mock('../../services/ui/sanitize.js', () => ({
 vi.mock('../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({ creatures: [] })),
   getCurrentCombatRound: vi.fn(() => 1),
+  loadCombatSummary: vi.fn(() => Promise.resolve({ lastAttack: null })),
 }));
 
 vi.mock('../../services/rules/core/attackCalc.js', () => ({

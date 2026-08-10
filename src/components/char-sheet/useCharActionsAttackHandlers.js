@@ -1,0 +1,172 @@
+import { getActiveCreatureName } from '../../services/encounters/combatData.js'
+import { toggleBuff } from '../../services/automation/common/buffToggle.js'
+import { addExpiration } from '../../services/rules/effects/expirations.js'
+import { addEntry } from '../../services/ui/logService.js'
+import { markOncePerTurn } from '../../services/automation/common/oncePerTurn.js'
+import { endFriendsOnHostileAction } from '../../services/rules/features/friendsService.js'
+import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js'
+
+export default function useCharActionsAttackHandlers({
+    cannotAct,
+    buildCtx,
+    rollAttack,
+    exhaustionPenalty,
+    playerName,
+    campaignName,
+    setModalState,
+    specialActions,
+    passives,
+    playerStats,
+    getRuntimeValue,
+    setRuntimeValue,
+}) {
+    function handleAttackClick(attack) {
+        if (cannotAct) return;
+        endFriendsOnHostileAction(playerName, campaignName);
+        endInvisibilityOnHostileAction(playerName, campaignName);
+
+        const hasRecklessFeature = specialActions?.some(
+            a => a.effect === 'advantage_attacks_advantage_against' && a.trigger === 'first_attack_of_turn'
+        );
+        const activeBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName) || [];
+        const isRecklessActive = activeBuffs.some(b => b.effect === 'advantage_attacks_advantage_against');
+        const offeredKey = '_recklessAttack_offeredThisTurn';
+        const offeredValue = getRuntimeValue(playerName, offeredKey);
+        const currentCreature = getActiveCreatureName(campaignName);
+        const isOfferedThisTurn = offeredValue && offeredValue.activeCreature === currentCreature;
+
+        const brutalStrikePassives = (passives || []).filter(
+            p => p.type === 'attack_rider' && p.trigger === 'strength_attack_hit_after_reckless'
+        ).sort((a, b) => {
+            const exprA = a.damageExpression || '';
+            const exprB = b.damageExpression || '';
+            const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
+            const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
+            return countB - countA;
+        });
+        const brutalStrikePassive = brutalStrikePassives[0];
+        const hasBrutalStrike = !!brutalStrikePassive;
+        const brutalStrikeOptions = brutalStrikePassive?.options || [];
+        const maxEffects = brutalStrikePassive?.maxEffects || 1;
+
+        const brutalStrikeUsedKey = '_BrutalStrike_usedRound';
+        const brutalStrikeUsedValue = getRuntimeValue(playerName, brutalStrikeUsedKey, campaignName);
+        const brutalStrikeUsedThisTurn = brutalStrikeUsedValue && brutalStrikeUsedValue.activeCreature === currentCreature;
+
+        if (hasRecklessFeature && !isRecklessActive && !isOfferedThisTurn) {
+            setModalState({ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike, brutalStrikeOptions, maxEffects } });
+            return;
+        }
+
+        if (hasRecklessFeature && isRecklessActive && hasBrutalStrike && !brutalStrikeUsedThisTurn) {
+            setModalState({ recklessAttackModal: { attack, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions, maxEffects } });
+            return;
+        }
+
+        buildCtx(attack).then(ctx => {
+            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
+            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
+        }).catch((e) => { console.error("[CharActions] Error:", e); });
+    }
+
+    function handleRecklessAttackConfirm(attack, brutalStrikeChoice) {
+        toggleBuff(
+            playerName,
+            'Reckless Attack',
+            { effect: 'advantage_attacks_advantage_against', duration: 'until_start_of_next_turn' },
+            campaignName,
+            playerName
+        );
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: 'Reckless Attack',
+            description: `${playerName} uses Reckless Attack, granting advantage on the first attack roll on this turn`,
+        }).catch(() => {});
+        addExpiration(playerName, playerName, [
+            { type: 'remove_active_buff', buffName: 'Reckless Attack' }
+        ], campaignName, undefined, playerName);
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const hasRecklessEffect = storedEffects.some(te => te.effect === 'reckless_attack' && te.target === playerName);
+        if (!hasRecklessEffect) {
+            const newEffects = [...storedEffects, { target: playerName, source: playerName, effect: 'reckless_attack', duration: 'until_start_of_next_turn' }];
+            setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
+        }
+        const currentCreature = getActiveCreatureName(campaignName);
+        setRuntimeValue(playerName, '_recklessAttack_offeredThisTurn', { round: 1, activeCreature: currentCreature }, campaignName);
+
+        if (brutalStrikeChoice?.useBrutalStrike) {
+            setRuntimeValue(playerName, '_brutalStrikeActive', true, campaignName);
+            setRuntimeValue(playerName, '_brutalStrikeEffects', brutalStrikeChoice.effectChoices, campaignName);
+            markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
+            setRuntimeValue(playerName, '_brutalStrikeNoAdvantage', true, campaignName);
+            const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerName,
+                abilityName: 'Brutal Strike',
+                description: `${playerName} uses Brutal Strike on ${attack.name} — ${effectNames}`,
+            }).catch(() => {});
+        }
+
+        setModalState({ recklessAttackModal: null });
+        buildCtx(attack).then(ctx => {
+            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
+            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
+        }).catch((e) => { console.error("[CharActions] Error:", e); }).finally(() => {
+            if (brutalStrikeChoice?.useBrutalStrike) {
+                setRuntimeValue(playerName, '_brutalStrikeNoAdvantage', null, campaignName);
+            }
+        });
+    }
+
+    function handleRecklessAttackCancel(attack) {
+        const currentCreature = getActiveCreatureName(campaignName);
+        setRuntimeValue(playerName, '_recklessAttack_offeredThisTurn', { round: 1, activeCreature: currentCreature }, campaignName);
+        setModalState({ recklessAttackModal: null });
+        buildCtx(attack).then(ctx => {
+            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
+            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
+        }).catch((e) => { console.error("[CharActions] Error:", e); });
+    }
+
+    function handleBrutalStrikeConfirm(brutalStrikeChoice, attack) {
+        if (brutalStrikeChoice?.useBrutalStrike) {
+            setRuntimeValue(playerName, '_brutalStrikeActive', true, campaignName);
+            setRuntimeValue(playerName, '_brutalStrikeEffects', brutalStrikeChoice.effectChoices, campaignName);
+            markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
+            const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerName,
+                abilityName: 'Brutal Strike',
+                description: `${playerName} uses Brutal Strike on ${attack?.name || 'attack'} — ${effectNames}`,
+            }).catch(() => {});
+        }
+        setModalState({ recklessAttackModal: null });
+        if (attack) {
+            buildCtx(attack).then(ctx => {
+                const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
+                rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
+            }).catch((e) => { console.error("[CharActions] Error:", e); });
+        }
+    }
+
+    function handleBrutalStrikeCancel(attack) {
+        setModalState({ recklessAttackModal: null });
+        if (attack) {
+            buildCtx(attack).then(ctx => {
+                const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
+                rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
+            }).catch((e) => { console.error("[CharActions] Error:", e); });
+        }
+    }
+
+    return {
+        handleAttackClick,
+        handleRecklessAttackConfirm,
+        handleRecklessAttackCancel,
+        handleBrutalStrikeConfirm,
+        handleBrutalStrikeCancel,
+    };
+}

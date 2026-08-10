@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js'
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
-import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { getCategories } from '../../services/character/featureCategories.js'
 import { getActionSpellNames } from '../../services/ui/spellSectionUtils.js'
 import { formatRange, signFormatter, getAttackSpellLevel } from '../../services/ui/formatUtils.js'
@@ -11,55 +10,36 @@ import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js'
 import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js'
 import { showWeaponMasteryPopup, buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js'
 import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js'
-import { rollExpression } from '../../services/dice/diceRoller.js';
 import { computeFeatRangeEffects } from '../../services/character/featRangeService.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js'
-import { toggleBuff } from '../../services/automation/common/buffToggle.js';
-import { addExpiration } from '../../services/rules/effects/expirations.js';
-import { addEntry } from '../../services/ui/logService.js';
-import { markOncePerTurn } from '../../services/automation/common/oncePerTurn.js';
-import CharActionModals from './CharActionModals.jsx'
-import CharActionSpellPopups from './CharActionSpellPopups.jsx'
-import CharBonusActions from './CharBonusActions.jsx'
-import { executeHandler } from '../../services/automation/index.js';
-import { onSpellSelected as onDivineInterventionSpellSelected } from '../../services/automation/handlers/class-cleric-paladin/divineInterventionHandler.js';
-import { confirmZealousPresence } from '../../services/automation/handlers/class-barbarian/zealousPresenceHandler.js';
-import { confirmMassHeal } from '../../services/automation/handlers/healing/massHealHandler.js';
-import { confirmMassCureWounds } from '../../services/automation/handlers/healing/massCureWoundsHandler.js';
-import { confirmPrayerOfHealing } from '../../services/automation/handlers/healing/prayerOfHealingHandler.js';
-import { confirmPowerWordFortify } from '../../services/automation/handlers/buffs/powerWordFortifyHandler.js';
-import { confirmMassHealingWord } from '../../services/automation/handlers/healing/massHealingWordHandler.js';
-import { confirmClockworkCavalcadeHeal, confirmClockworkCavalcadeDispel, confirmClockworkCavalcadeRepair } from '../../services/automation/handlers/class-sorcerer/clockworkCavalcadeHandler.js';
-import { getClassFeatures } from '../../services/character/classFeatures.js';
-import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js'
-import { executeSpellCast } from '../../services/rules/spells/spellCastService.js'
-import { getTargetFromAttacker, getCombatContext, getAttackerTargetName } from '../../services/rules/combat/damageUtils.js';
-import { getActiveCreatureName, loadCombatSummary } from '../../services/encounters/combatData.js';
-import { getMonsterData } from '../../services/npcs/monsterUtils.js';
-import { executeSweepingAttack, executeBaitAndSwitchChoice, executeCommanderStrikeChoice, executeRallyChoice } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
-import { activateBulwarkOfForce } from '../../services/automation/handlers/class-sorcerer/bulwarkOfForceHandler.js';
-import { confirmTelepathicSpeech } from '../../services/automation/handlers/buffs/buffHandler.js';
-import { activateNaturesSanctuary, moveNaturesSanctuary } from '../../services/automation/handlers/class-ranger/naturesSanctuaryHandler.js';
-import { activateCoronaOfLight } from '../../services/automation/handlers/class-cleric-paladin/coronaOfLightHandler.js';
-import { confirmRadianceOfDawn } from '../../services/automation/handlers/class-cleric-paladin/radianceOfDawnHandler.js';
-import { applyBardicInspiration } from '../../services/automation/handlers/class-bard/bardicInspirationHandler.js';
-import { applyInspiringMovement } from '../../services/automation/handlers/reactions/reactionBonusHandler.js';
- import { confirmMantleOfInspiration, confirmVitalityOfTheTree } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
- import { confirmCelestialResilience, skipCelestialResilience } from '../../services/automation/handlers/class-warlock/celestialResilienceHandler.js';
-import { confirmOceanicGift } from '../../services/automation/handlers/class-druid/oceanicGiftHandler.js';
-import { endFriendsOnHostileAction } from '../../services/rules/features/friendsService.js';
-import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
 import { getInnateSorceryBonus } from '../../services/combat/buffs/buffService.js';
 import { buildAttackContext, buildAttackContextSync } from '../../services/automation/contextBuilder.js';
 import { getEmpoweredSpellDescription } from '../../services/rules/spells/empoweredSpellService.js';
 import { useActionSpellMetamagic } from '../../hooks/combat/useActionSpellMetamagic.js';
+import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js';
 import { useSimpleDamageRoll } from '../../hooks/combat/useSimpleDamageRoll.js';
 import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
 import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
 import { getWeaponMastery } from '../../services/combat/weaponMasteryUtils.js';
+import { getTargetFromAttacker, getCombatContext, getAttackerTargetName } from '../../services/rules/combat/damageUtils.js';
+import { loadCombatSummary } from '../../services/encounters/combatData.js';
+import { getMonsterData } from '../../services/npcs/monsterUtils.js';
+import { executeHandler } from '../../services/automation/index.js';
+import { addEntry } from '../../services/ui/logService.js';
+import { toggleBuff } from '../../services/automation/common/buffToggle.js';
+import { addExpiration } from '../../services/rules/effects/expirations.js';
 import { createSaveListener } from '../../services/automation/common/savePrompt.js';
+import CharActionModals from './CharActionModals.jsx';
+import CharActionSpellPopups from './CharActionSpellPopups.jsx';
+import CharBonusActions from './CharBonusActions.jsx';
 import useCharActionModals from './useCharActionModals.js';
 import useInitiativeEffects from './useInitiativeEffects.js';
+import useCharActionsAttackHandlers from './useCharActionsAttackHandlers.js';
+import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
+import useCharActionsBaseActions from './useCharActionsBaseActions.js';
+import useCharActionsEventListeners from './useCharActionsEventListeners.js';
+import useCharActionsAutomation from './useCharActionsAutomation.js';
+import useCharActionsCleave from './useCharActionsCleave.js';
 import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx';
 import TacticalMasterModal from './modals/TacticalMasterModal.jsx';
 import { applyMasteryEffect } from '../../services/automation/handlers/combat/weaponMasteryHandler.js';
@@ -166,56 +146,143 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
 
     const mergedModalState = React.useMemo(() => ({ ...modalState, ...spellModalState }), [modalState, spellModalState]);
 
-    // Handle damage type choice popup (e.g. Blessed Strikes: Necrotic or Radiant)
-    useEffect(() => {
-        const handleHealingPopup = (e) => {
-            const { targetName, healingName, rollInfo, maximizeHealingDice, popupText } = e.detail || {};
-            const diceRoll = rollInfo ? ` [${rollInfo}]` : '';
-            const maximizeNote = maximizeHealingDice ? ' (maximized)' : '';
-            setPopupHtml(`<b>${healingName}</b> on ${targetName}${diceRoll}${maximizeNote}<br/><br/>${popupText}`);
-        };
-        const handleDamagePopup = (e) => {
-            const { targetName, spellName, popupText, rollInfo } = e.detail || {};
-            const diceRoll = rollInfo ? ` [${rollInfo}]` : '';
-            setPopupHtml(`<b>${spellName}</b> on ${targetName}${diceRoll}<br/><br/>${popupText}`);
-        };
-        const handleInspiringSmite = (e) => {
-            setModalState({ inspiringSmiteModal: e.detail });
-        };
-        window.addEventListener('healing-popup', handleHealingPopup);
-        window.addEventListener('damage-popup', handleDamagePopup);
-        window.addEventListener('inspiring-smite-pending', handleInspiringSmite);
-        return () => {
-            window.removeEventListener('healing-popup', handleHealingPopup);
-            window.removeEventListener('damage-popup', handleDamagePopup);
-            window.removeEventListener('inspiring-smite-pending', handleInspiringSmite);
-        };
-    }, [setPopupHtml, setModalState]);
+    const [showCleaveTargetSelection, setShowCleaveTargetSelection] = useSyncedState(campaignName, 'cleavePending', false, campaignName);
+    const [cleaveSecondTargets, setCleaveSecondTargets] = useSyncedState(campaignName, 'cleaveSecondTargets', [], campaignName);
+    const [tacticalMasterModal, setTacticalMasterModal] = useSyncedState(campaignName, 'tacticalMasterPending', null, campaignName);
 
-    useEffect(() => {
-        if (popupHtml?.type === 'damage_type_choice') {
-            const handleChoice = (chosenType) => {
-                const { bonusFormula, bonusRolls, bonusTotal, usedKey, currentRound, targetName, attackerName, name } = popupHtml;
-                const context = {
-                    damageType: chosenType,
-                    targetName,
-                    attackerName,
-                };
-                rollDamage(name, bonusFormula, bonusTotal, bonusRolls, 0, context);
-                if (usedKey) {
-                    setRuntimeValue(playerStats.name, usedKey, currentRound, campaignName);
-                }
-                setPopupHtml(null);
-            };
-            const handleSkip = () => {
-                setPopupHtml(null);
-            };
-            window.addEventListener('damage-type-choice', (e) => {
-                handleChoice(e.detail.chosenType);
-            });
-            window.addEventListener('damage-type-skip', handleSkip);
-        }
-    }, [popupHtml, playerStats.name, campaignName, rollDamage, setPopupHtml]);
+    // Event listeners extracted to hook
+    useCharActionsEventListeners({
+        setPopupHtml,
+        setModalState,
+        rollDamage,
+        playerName: playerStats.name,
+        campaignName,
+        popupHtml,
+        setRuntimeValue,
+    });
+
+    // Attack handlers extracted to hook
+    const {
+        handleAttackClick,
+        handleRecklessAttackConfirm,
+        handleRecklessAttackCancel,
+        handleBrutalStrikeConfirm,
+        handleBrutalStrikeCancel,
+    } = useCharActionsAttackHandlers({
+        cannotAct,
+        buildCtx,
+        rollAttack,
+        exhaustionPenalty,
+        playerName: playerStats.name,
+        campaignName,
+        setModalState,
+        specialActions: playerStats.automation?.specialActions,
+        passives: playerStats.automation?.passives,
+        playerStats,
+        getRuntimeValue,
+        setRuntimeValue,
+    });
+
+    // Modal handlers extracted to hook
+    const {
+        handleSweepingAttackConfirm,
+        handleBaitAndSwitchChoiceConfirm,
+        handleCommanderStrikeChoiceConfirm,
+        handleRallyChoiceConfirm,
+        handleBulwarkOfForceConfirm,
+        handleZealousPresenceConfirm,
+        handleMassHealConfirm,
+        handleClockworkCavalcadeHealConfirm,
+        handleClockworkCavalcadeDispelConfirm,
+        handleClockworkCavalcadeRepairConfirm,
+        handleMassCureWoundsConfirm,
+        handlePrayerOfHealingConfirm,
+        handlePowerWordFortifyConfirm,
+        handleMassHealingWordConfirm,
+        handleNaturesSanctuaryConfirm,
+        handleCoronaEnemySelectionConfirm,
+        handleRadianceOfDawnConfirm,
+        handleMantleOfInspirationConfirm,
+        handleCelestialResilienceConfirm,
+        handleCelestialResilienceSkip,
+        handleInspiringSmiteConfirm,
+        handleVitalityOfTheTreeConfirm,
+        handleTricksterBlessingConfirm,
+        handleBardicInspirationConfirm,
+        handleInspiringMovementConfirm,
+        handleOceanicGiftConfirm,
+    } = useCharActionsModalHandlers({
+        setPopupHtml,
+        setModalState,
+        modalState,
+        mergedModalState,
+    });
+
+    // Automation handlers extracted to hook
+    const {
+        handleAutomationAction,
+        handleDivineInterventionCast,
+    } = useCharActionsAutomation({
+        cannotAct,
+        playerStats,
+        campaignName,
+        mapName,
+        characters,
+        getRuntimeValue,
+        setRuntimeValue,
+        setPopupHtml,
+        setModalState,
+        modalState,
+        rollDamage,
+        rollAttack,
+        executeHandler,
+        addEntry,
+        onBuffsChange,
+    });
+
+    /* eslint-disable no-unused-vars */
+    // Base actions (Hide, Dodge, Grapple) extracted to hook — not yet used in JSX (inline handlers still in place)
+    const {
+        handleHideAction,
+        handleDodgeAction,
+        handleGrappleAction,
+    } = useCharActionsBaseActions({
+        cannotAct,
+        getRuntimeValue,
+        setRuntimeValue,
+        rollSkillCheck,
+        rollAbilityCheck,
+        addEntry,
+        setPopupHtml,
+        playerStats,
+        campaignName,
+        exhaustionPenalty,
+        conditionEffects,
+        toggleBuff,
+        loadCombatSummary,
+        getMonsterData,
+    });
+    /* eslint-enable no-unused-vars */
+
+    // Cleave/Tactical Master handlers extracted to hook — not yet used in JSX
+    const {
+        handleCleaveAttack,
+        handleTacticalMasterConfirm,
+        handleTacticalMasterDismiss,
+    } = useCharActionsCleave({
+        setShowCleaveTargetSelection,
+        setCleaveSecondTargets,
+        setTacticalMasterModal,
+        campaignName,
+        playerStats,
+        rollDamage,
+        getRuntimeValue,
+        setRuntimeValue,
+        addEntry,
+        getCombatContext,
+        createSaveListener,
+        applyMasteryEffect,
+    });
 
     useInitiativeEffects(playerStats, campaignName, rollDamage);
 
@@ -228,396 +295,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         if (overlayTargetName) return { name: overlayTargetName };
         return null;
     }, [playerStats.name, campaignName]);
-
-    const [showCleaveTargetSelection, setShowCleaveTargetSelection] = useSyncedState(campaignName, 'cleavePending', false, campaignName);
-    const [cleaveSecondTargets, setCleaveSecondTargets] = useSyncedState(campaignName, 'cleaveSecondTargets', [], campaignName);
-    const [tacticalMasterModal, setTacticalMasterModal] = useSyncedState(campaignName, 'tacticalMasterPending', null, campaignName);
-
-    const handleCleaveAttack = React.useCallback(async (cleaveTargetName) => {
-        if (!cleaveTargetName) {
-            setShowCleaveTargetSelection(false);
-            return;
-        }
-        setShowCleaveTargetSelection(false);
-
-        const combatSummary = await getCombatContext(campaignName);
-        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-        if (!lastAttack) return;
-
-        const abilityName = playerStats?.abilities?.[0]?.name || 'STR';
-        const ability = playerStats?.abilities?.find(a => a.name === abilityName);
-        const abilityMod = ability?.bonus || 0;
-        const attackBonus = abilityMod + (playerStats.proficiency || 0);
-
-        const target = combatSummary?.creatures?.find(c => c.name === cleaveTargetName);
-        const targetAc = target?.ac || 0;
-
-        const d20Roll = Math.floor(Math.random() * 20) + 1;
-        const totalRoll = d20Roll + attackBonus;
-        const hit = totalRoll >= targetAc;
-
-        // Cleave deals weapon damage without ability modifier to damage
-        let cleaveDamageFormula = lastAttack.damageFormula
-            .replace(/\+\s*\d+/g, '')
-            .trim();
-        if (!cleaveDamageFormula || !/d\d/.test(cleaveDamageFormula)) {
-            cleaveDamageFormula = lastAttack.damageFormula;
-        }
-
-        let damageResult = null;
-        if (hit) {
-            damageResult = rollExpression(cleaveDamageFormula);
-        }
-
-        if (hit && damageResult) {
-            const context = {
-                targetName: cleaveTargetName,
-                damageType: lastAttack.damageType || 'same_as_weapon',
-                attackerName: playerStats.name,
-            };
-            rollDamage(`${lastAttack.attackName} (Cleave)`, cleaveDamageFormula, damageResult.total, damageResult.rolls, 0, context);
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: 'Cleave',
-                description: `${playerStats.name} used Cleave on ${lastAttack.attackName} against ${cleaveTargetName}`,
-                targetName: cleaveTargetName,
-            }).catch(() => { });
-        } else {
-            const context = {
-                targetName: cleaveTargetName,
-                damageType: lastAttack.damageType || 'same_as_weapon',
-                attackerName: playerStats.name,
-                isAutoMiss: true,
-            };
-            rollDamage(`${lastAttack.attackName} (Cleave)`, cleaveDamageFormula || '0', 0, [], 0, context);
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: 'Cleave',
-                description: `${playerStats.name} used Cleave on ${lastAttack.attackName} against ${cleaveTargetName} — Miss`,
-                targetName: cleaveTargetName,
-            }).catch(() => { });
-        }
-    }, [campaignName, playerStats, rollDamage, setShowCleaveTargetSelection]);
-
-    const handleTacticalMasterConfirm = React.useCallback(async (chosenMastery) => {
-        const oldMastery = tacticalMasterModal?.baseMastery;
-        const attackName = tacticalMasterModal?.attackName;
-        const targetName = tacticalMasterModal?.targetName;
-        setTacticalMasterModal(null);
-        if (!chosenMastery) return;
-        if (targetName) {
-            await addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: 'Tactical Master',
-                description: `${playerStats.name} used Tactical Master on ${attackName} against ${targetName} — changed mastery from ${oldMastery} to ${chosenMastery}`,
-                targetName: targetName,
-            }).catch(() => { });
-        }
-        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-        const actualTargetName = lastAttack?.targetName;
-        if (!actualTargetName) return;
-        if (chosenMastery === 'Topple') {
-            const weaponAttack = playerStats.attacks?.find(a => a.name === attackName);
-            const abilityName = weaponAttack?.abilityName || 'Strength';
-            const ability = playerStats.abilities?.find(a => a.name === abilityName);
-            const abilityMod = ability?.bonus || 0;
-            const prof = playerStats.proficiency || 0;
-            const saveDc = 8 + abilityMod + prof;
-            const { promise } = createSaveListener(campaignName, {
-                targetName: actualTargetName,
-                saveType: 'CON',
-                saveDc,
-            });
-            await addEntry(campaignName, {
-                type: 'save_result',
-                characterName: playerStats.name,
-                targetName: actualTargetName,
-                saveType: 'CON',
-                saveDc,
-                description: `Topple: ${actualTargetName} must make a DC ${saveDc} CON save (weapon ${abilityName}) or fall Prone.`,
-                success: null,
-            }).catch(() => {});
-            const result = await promise;
-            if (result && !result.success) {
-                const storedConditions = getRuntimeValue(actualTargetName, 'activeConditions') || [];
-                const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-                if (!conditions.includes('prone')) {
-                    await setRuntimeValue(actualTargetName, 'activeConditions', [...conditions, 'prone'], campaignName);
-                }
-                await addEntry(campaignName, {
-                    type: 'save_result',
-                    characterName: playerStats.name,
-                    rollType: 'save-topple',
-                    targetName: actualTargetName,
-                    saveDc,
-                    saveType: 'CON',
-                    success: false,
-                    description: `${actualTargetName} failed CON save vs Topple. Gains Prone condition.`,
-                }).catch(() => {});
-                await addEntry(campaignName, {
-                    type: 'ability_use',
-                    characterName: playerStats.name,
-                    abilityName: 'Topple',
-                    description: `${playerStats.name} used Topple on ${actualTargetName} — target failed CON save (DC ${saveDc}, weapon ${abilityName}), fell Prone.`,
-                    targetName: actualTargetName,
-                }).catch(() => {});
-            }
-        } else {
-            await applyMasteryEffect(chosenMastery, playerStats, campaignName, actualTargetName);
-        }
-    }, [campaignName, playerStats, tacticalMasterModal, setTacticalMasterModal]);
-
-    const handleTacticalMasterDismiss = () => {
-        setTacticalMasterModal(null);
-    };
-
-    useEffect(() => {
-        const handler = (event) => {
-            setModalState({ soulstitchSpellsModal: event.detail });
-        };
-        window.addEventListener('soulstitch-modal-show', handler);
-        return () => window.removeEventListener('soulstitch-modal-show', handler);
-    }, [setModalState]);
-
-    useEffect(() => {
-        const handler = async (event) => {
-            const { title, tempHp, campaignName: evtCampaignName, attackerName, confirmLabel: evtConfirmLabel } = event.detail;
-            const cs = await getCombatContext(evtCampaignName);
-            const allAllies = cs?.creatures?.filter(c =>
-                c.type === 'player' || c.type === 'npc' || c.type === 'monster'
-            ) || [];
-            const allyTargets = allAllies.map(c => ({
-                name: c.name,
-                currentHp: c.currentHp,
-                maxHp: c.maxHp,
-                size: c.size,
-                type: c.type,
-            }));
-            setModalState({ secondaryTargetModal: {
-                title,
-                targets: allyTargets,
-                confirmLabel: evtConfirmLabel || 'Grant Temp HP',
-                onTargetSelected: async (targetName) => {
-                    setTempHp(targetName, tempHp, evtCampaignName);
-                    addEntry(evtCampaignName, {
-                        type: 'roll',
-                        characterName: attackerName,
-                        rollType: 'temp-hp',
-                        name: 'Potent Spellcasting',
-                        targetName,
-                        note: `Gained ${tempHp} temporary hit points from Potent Spellcasting`,
-                        total: tempHp,
-                    }).catch((e) => { console.error("[CharActions] Error:", e); });
-                    setModalState({ secondaryTargetModal: null });
-                },
-                onSkip: () => {
-                    setTempHp(attackerName, tempHp, evtCampaignName);
-                    addEntry(evtCampaignName, {
-                        type: 'roll',
-                        characterName: attackerName,
-                        rollType: 'temp-hp',
-                        name: 'Potent Spellcasting',
-                        targetName: attackerName,
-                        note: `Gained ${tempHp} temporary hit points from Potent Spellcasting`,
-                        total: tempHp,
-                    });
-                    setModalState({ secondaryTargetModal: null });
-                },
-                featureDescription: `Grant ${tempHp} temporary hit points to a creature within 60 feet.`,
-                description: 'Choose a creature to grant temporary hit points from Potent Spellcasting.',
-            }});
-        };
-        window.addEventListener('potent-spellcasting-temp-hp', handler);
-        return () => window.removeEventListener('potent-spellcasting-temp-hp', handler);
-    }, [setModalState]);
-
-    useEffect(() => {
-        const handler = (event) => {
-            setModalState({ sweepingAttackTargetModal: event.detail });
-        };
-        window.addEventListener('sweeping-attack-modal-show', handler);
-        return () => window.removeEventListener('sweeping-attack-modal-show', handler);
-    }, [setModalState]);
-
-    useEffect(() => {
-        const handler = (event) => {
-            setModalState({ baitAndSwitchChoiceModal: event.detail });
-        };
-        window.addEventListener('bait-and-switch-modal-show', handler);
-        return () => window.removeEventListener('bait-and-switch-modal-show', handler);
-    }, [setModalState]);
-
-    useEffect(() => {
-        const handler = (event) => {
-            setModalState({ commanderStrikeChoiceModal: event.detail });
-        };
-        window.addEventListener('commander-strike-modal-show', handler);
-        return () => window.removeEventListener('commander-strike-modal-show', handler);
-    }, [setModalState]);
-
-    useEffect(() => {
-        const handler = (event) => {
-            setModalState({ rallyChoiceModal: event.detail });
-        };
-        window.addEventListener('rally-choice-modal-show', handler);
-        return () => window.removeEventListener('rally-choice-modal-show', handler);
-    }, [setModalState]);
-
-    const handleAttackClick = React.useCallback((attack) => {
-        if (cannotAct) return;
-        // Making an attack roll ends any active Friends spell early
-        endFriendsOnHostileAction(playerStats.name, campaignName);
-        endInvisibilityOnHostileAction(playerStats.name, campaignName);
-
-        const hasRecklessFeature = playerStats.automation?.specialActions?.some(
-            a => a.effect === 'advantage_attacks_advantage_against' && a.trigger === 'first_attack_of_turn'
-        );
-        const activeBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
-        const isRecklessActive = activeBuffs.some(b => b.effect === 'advantage_attacks_advantage_against');
-        const offeredKey = '_recklessAttack_offeredThisTurn';
-        const offeredValue = getRuntimeValue(playerStats.name, offeredKey);
-        const currentCreature = getActiveCreatureName(campaignName);
-        const isOfferedThisTurn = offeredValue && offeredValue.activeCreature === currentCreature;
-
-        // Detect Brutal Strike from passives — pick the highest-level one (2d10 > 1d10)
-        const brutalStrikePassives = (playerStats.automation?.passives || []).filter(
-            p => p.type === 'attack_rider' && p.trigger === 'strength_attack_hit_after_reckless'
-        ).sort((a, b) => {
-            const exprA = a.damageExpression || '';
-            const exprB = b.damageExpression || '';
-            const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
-            const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
-            return countB - countA;
-        });
-        const brutalStrikePassive = brutalStrikePassives[0];
-        const hasBrutalStrike = !!brutalStrikePassive;
-        const brutalStrikeOptions = brutalStrikePassive?.options || [];
-        const maxEffects = brutalStrikePassive?.maxEffects || 1;
-
-        // Check if Brutal Strike was used this turn
-        const brutalStrikeUsedKey = '_BrutalStrike_usedRound';
-        const brutalStrikeUsedValue = getRuntimeValue(playerStats.name, brutalStrikeUsedKey, campaignName);
-        const brutalStrikeUsedThisTurn = brutalStrikeUsedValue && brutalStrikeUsedValue.activeCreature === currentCreature;
-
-        // Case 1: Full modal (Reckless not yet active)
-        if (hasRecklessFeature && !isRecklessActive && !isOfferedThisTurn) {
-            setModalState({ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike, brutalStrikeOptions, maxEffects } });
-            return;
-        }
-
-        // Case 2: Brutal-only modal (Reckless active, Brutal Strike remaining)
-        if (hasRecklessFeature && isRecklessActive && hasBrutalStrike && !brutalStrikeUsedThisTurn) {
-            setModalState({ recklessAttackModal: { attack, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions, maxEffects } });
-            return;
-        }
-
-        buildCtx(attack).then(ctx => {
-            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
-            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
-        }).catch((e) => { console.error("[CharActions] Error:", e); });
-    }, [cannotAct, buildCtx, rollAttack, exhaustionPenalty, playerStats.name, campaignName, setModalState, playerStats.automation?.specialActions, playerStats.automation?.passives]);
-
-    const handleRecklessAttackConfirm = React.useCallback((attack, brutalStrikeChoice) => {
-        toggleBuff(
-            playerStats.name,
-            'Reckless Attack',
-            { effect: 'advantage_attacks_advantage_against', duration: 'until_start_of_next_turn' },
-            campaignName,
-            playerStats.name
-        );
-        addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerStats.name,
-            abilityName: 'Reckless Attack',
-            description: `${playerStats.name} uses Reckless Attack, granting advantage on the first attack roll on this turn`,
-        }).catch(() => {});
-        addExpiration(playerStats.name, playerStats.name, [
-            { type: 'remove_active_buff', buffName: 'Reckless Attack' }
-        ], campaignName, undefined, playerStats.name);
-        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-        const hasRecklessEffect = storedEffects.some(te => te.effect === 'reckless_attack' && te.target === playerStats.name);
-        if (!hasRecklessEffect) {
-            const newEffects = [...storedEffects, { target: playerStats.name, source: playerStats.name, effect: 'reckless_attack', duration: 'until_start_of_next_turn' }];
-            setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
-        }
-        const currentCreature = getActiveCreatureName(campaignName);
-        setRuntimeValue(playerStats.name, '_recklessAttack_offeredThisTurn', { round: 1, activeCreature: currentCreature }, campaignName);
-
-        // Handle Brutal Strike if chosen
-        if (brutalStrikeChoice?.useBrutalStrike) {
-            setRuntimeValue(playerStats.name, '_brutalStrikeActive', true, campaignName);
-            setRuntimeValue(playerStats.name, '_brutalStrikeEffects', brutalStrikeChoice.effectChoices, campaignName);
-            markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
-            setRuntimeValue(playerStats.name, '_brutalStrikeNoAdvantage', true, campaignName);
-            const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: 'Brutal Strike',
-                description: `${playerStats.name} uses Brutal Strike on ${attack.name} — ${effectNames}`,
-            }).catch(() => {});
-        }
-
-        setModalState({ recklessAttackModal: null });
-        buildCtx(attack).then(ctx => {
-            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
-            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
-        }).catch((e) => { console.error("[CharActions] Error:", e); }).finally(() => {
-            if (brutalStrikeChoice?.useBrutalStrike) {
-                setRuntimeValue(playerStats.name, '_brutalStrikeNoAdvantage', null, campaignName);
-            }
-        });
-    }, [buildCtx, rollAttack, exhaustionPenalty, playerStats, campaignName, setModalState]);
-
-    const handleRecklessAttackCancel = React.useCallback((attack) => {
-        const currentCreature = getActiveCreatureName(campaignName);
-        setRuntimeValue(playerStats.name, '_recklessAttack_offeredThisTurn', { round: 1, activeCreature: currentCreature }, campaignName);
-        setModalState({ recklessAttackModal: null });
-        buildCtx(attack).then(ctx => {
-            const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
-            rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
-        }).catch((e) => { console.error("[CharActions] Error:", e); });
-    }, [buildCtx, rollAttack, exhaustionPenalty, playerStats.name, campaignName, setModalState]);
-
-    const handleBrutalStrikeConfirm = React.useCallback((brutalStrikeChoice) => {
-        if (brutalStrikeChoice?.useBrutalStrike) {
-            setRuntimeValue(playerStats.name, '_brutalStrikeActive', true, campaignName);
-            setRuntimeValue(playerStats.name, '_brutalStrikeEffects', brutalStrikeChoice.effectChoices, campaignName);
-            markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
-            const attack = modalState?.recklessAttackModal?.attack;
-            const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: 'Brutal Strike',
-                description: `${playerStats.name} uses Brutal Strike on ${attack?.name || 'attack'} — ${effectNames}`,
-            }).catch(() => {});
-        }
-        setModalState({ recklessAttackModal: null });
-        // Proceed with the attack - get the attack from the modal state
-        const attack = modalState?.recklessAttackModal?.attack;
-        if (attack) {
-            buildCtx(attack).then(ctx => {
-                const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
-                rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
-            }).catch((e) => { console.error("[CharActions] Error:", e); });
-        }
-    }, [buildCtx, rollAttack, exhaustionPenalty, playerStats, campaignName, setModalState, modalState?.recklessAttackModal?.attack]);
-
-    const handleBrutalStrikeCancel = React.useCallback(() => {
-        setModalState({ recklessAttackModal: null });
-        // Proceed with the attack without Brutal Strike
-        const attack = modalState?.recklessAttackModal?.attack;
-        if (attack) {
-            buildCtx(attack).then(ctx => {
-                const effectiveHitBonus = ctx?.hitBonus ?? attack.hitBonus;
-                rollAttack(attack.name, effectiveHitBonus - exhaustionPenalty, ctx);
-            }).catch((e) => { console.error("[CharActions] Error:", e); });
-        }
-    }, [buildCtx, rollAttack, exhaustionPenalty, setModalState, modalState?.recklessAttackModal?.attack]);
 
     const handleSimpleDamageRoll = useSimpleDamageRoll(playerStats.name, campaignName, popupHtml, setPopupHtml);
 
@@ -644,784 +321,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         setModalState,
         characters,
     });
-
-    const MONK_KI_FEATURES = ['Flurry of Blows', 'Patient Defense', 'Step of the Wind', 'Heightened Flurry of Blows', 'Heightened Patient Defense', 'Heightened Step of the Wind', 'Hand of Healing', 'Stunning Strike'];
-
-    const HAS_FLURRY_HEALING_HARM = playerStats.specialActions?.some(f => f.name === "Flurry of Healing and Harm");
-
-    const handleSweepingAttackConfirm = React.useCallback(async (targetName, modalData) => {
-        if (!targetName || !modalData) return;
-        const result = await executeSweepingAttack(
-            { automation: { secondaryTargetName: targetName } },
-            modalData.playerStats,
-            modalData.campaignName,
-            targetName
-        );
-        if (result.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ sweepingAttackTargetModal: null });
-    }, [setPopupHtml, setModalState]);
-
-    const handleBaitAndSwitchChoiceConfirm = React.useCallback(async (targetName, modalData) => {
-        if (!targetName || !modalData) return;
-        const result = await executeBaitAndSwitchChoice(
-            {
-                dieValue: modalData.dieValue,
-                maneuverName: modalData.maneuverName,
-            },
-            modalData.playerStats,
-            modalData.campaignName,
-            targetName
-        );
-        if (result.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ baitAndSwitchChoiceModal: null });
-    }, [setPopupHtml, setModalState]);
-
-    const handleCommanderStrikeChoiceConfirm = React.useCallback(async (targetName, modalData) => {
-        if (!targetName || !modalData) return;
-        const result = await executeCommanderStrikeChoice(
-            {
-                dieValue: modalData.dieValue,
-                maneuverName: modalData.maneuverName,
-            },
-            modalData.playerStats,
-            modalData.campaignName,
-            targetName
-        );
-        if (result.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ commanderStrikeChoiceModal: null });
-    }, [setPopupHtml, setModalState]);
-
-    const handleRallyChoiceConfirm = React.useCallback(async (targetName, modalData) => {
-        if (!targetName || !modalData) return;
-        const result = await executeRallyChoice(
-            {
-                dieValue: modalData.dieValue,
-                maneuverName: modalData.maneuverName,
-            },
-            modalData.playerStats,
-            modalData.campaignName,
-            targetName,
-            modalData.totalHp,
-            modalData.extraHp,
-            modalData.description
-        );
-        if (result.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ rallyChoiceModal: null });
-    }, [setPopupHtml, setModalState]);
-
-    const handleBulwarkOfForceConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.bulwarkOfForceModal) return;
-        const result = await activateBulwarkOfForce(
-            modalState.bulwarkOfForceModal.action,
-            modalState.bulwarkOfForceModal.playerStats,
-            modalState.bulwarkOfForceModal.campaignName,
-            targetNames
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ bulwarkOfForceModal: null });
-    }, [setPopupHtml, modalState.bulwarkOfForceModal, setModalState]);
-
-    const handleZealousPresenceConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.zealousPresenceModal) return;
-        const result = await confirmZealousPresence(
-            modalState.zealousPresenceModal.action,
-            modalState.zealousPresenceModal.playerStats,
-            modalState.zealousPresenceModal.campaignName,
-            targetNames
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ zealousPresenceModal: null });
-    }, [setPopupHtml, modalState.zealousPresenceModal, setModalState]);
-
-    const handleMassHealConfirm = React.useCallback(async (distribution) => {
-        if (!distribution || !modalState.massHealModal) return;
-        const { action, playerStats, campaignName } = modalState.massHealModal;
-        const result = await confirmMassHeal(action, playerStats, campaignName, distribution, modalState.massHealModal.totalPool, modalState.massHealModal.bonusHeal, modalState.massHealModal.bonusDetails);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ massHealModal: null });
-    }, [setPopupHtml, modalState.massHealModal, setModalState]);
-
-    const handleClockworkCavalcadeHealConfirm = React.useCallback(async (distribution) => {
-        if (!distribution || !mergedModalState.clockworkCavalcadeHealModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeHealModal;
-        const result = await confirmClockworkCavalcadeHeal(action, playerStats, campaignName, distribution, mergedModalState.clockworkCavalcadeHealModal.maxHeal);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ clockworkCavalcadeHealModal: null });
-    }, [setPopupHtml, mergedModalState.clockworkCavalcadeHealModal, setModalState]);
-
-    const handleClockworkCavalcadeDispelConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !mergedModalState.clockworkCavalcadeDispelModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeDispelModal;
-        const result = await confirmClockworkCavalcadeDispel(action, playerStats, campaignName, targetNames);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ clockworkCavalcadeDispelModal: null });
-    }, [setPopupHtml, mergedModalState.clockworkCavalcadeDispelModal, setModalState]);
-
-    const handleClockworkCavalcadeRepairConfirm = React.useCallback(async () => {
-        if (!mergedModalState.clockworkCavalcadeRepairModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.clockworkCavalcadeRepairModal;
-        const result = await confirmClockworkCavalcadeRepair(action, playerStats, campaignName);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ clockworkCavalcadeRepairModal: null });
-    }, [setPopupHtml, mergedModalState.clockworkCavalcadeRepairModal, setModalState]);
-
-    const handleMassCureWoundsConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !mergedModalState.massCureWoundsModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.massCureWoundsModal;
-        const result = await confirmMassCureWounds(action, playerStats, campaignName, targetNames, mergedModalState.massCureWoundsModal.healExpression, mergedModalState.massCureWoundsModal.maximize, mergedModalState.massCureWoundsModal.bonusHeal, mergedModalState.massCureWoundsModal.bonusDetails, mergedModalState.massCureWoundsModal.slotLevel);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ massCureWoundsModal: null });
-    }, [setPopupHtml, mergedModalState.massCureWoundsModal, setModalState]);
-
-    const handlePrayerOfHealingConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !mergedModalState.prayerOfHealingModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.prayerOfHealingModal;
-        const result = await confirmPrayerOfHealing(action, playerStats, campaignName, targetNames, mergedModalState.prayerOfHealingModal.healExpression, mergedModalState.prayerOfHealingModal.maximize, mergedModalState.prayerOfHealingModal.bonusHeal, mergedModalState.prayerOfHealingModal.bonusDetails, mergedModalState.prayerOfHealingModal.slotLevel, mergedModalState.prayerOfHealingModal.currentRound);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ prayerOfHealingModal: null });
-    }, [setPopupHtml, mergedModalState.prayerOfHealingModal, setModalState]);
-
-    const handlePowerWordFortifyConfirm = React.useCallback(async (distribution) => {
-        if (!distribution || !mergedModalState.powerWordFortifyModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.powerWordFortifyModal;
-        const result = await confirmPowerWordFortify(action, playerStats, campaignName, distribution, mergedModalState.powerWordFortifyModal.totalTempHp, mergedModalState.powerWordFortifyModal.tempHpExpression);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ powerWordFortifyModal: null });
-    }, [setPopupHtml, mergedModalState.powerWordFortifyModal, setModalState]);
-
-    const handleMassHealingWordConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !mergedModalState.massHealingWordModal) return;
-        const { action, playerStats, campaignName } = mergedModalState.massHealingWordModal;
-        const result = await confirmMassHealingWord(action, playerStats, campaignName, targetNames, mergedModalState.massHealingWordModal.healExpression, mergedModalState.massHealingWordModal.maximize, mergedModalState.massHealingWordModal.bonusHeal, mergedModalState.massHealingWordModal.bonusDetails, mergedModalState.massHealingWordModal.slotLevel);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ massHealingWordModal: null });
-    }, [setPopupHtml, mergedModalState.massHealingWordModal, setModalState]);
-
-    const handleNaturesSanctuaryConfirm = React.useCallback(async (targetNames) => {
-        if (!targetNames || !modalState.naturesSanctuaryCreaturesModal) return;
-        const { action, isMove } = modalState.naturesSanctuaryCreaturesModal;
-        let result;
-        if (isMove) {
-            result = await moveNaturesSanctuary(
-                action,
-                modalState.naturesSanctuaryCreaturesModal.playerStats,
-                modalState.naturesSanctuaryCreaturesModal.campaignName,
-                targetNames
-            );
-        } else {
-            result = await activateNaturesSanctuary(
-                action,
-                modalState.naturesSanctuaryCreaturesModal.playerStats,
-                modalState.naturesSanctuaryCreaturesModal.campaignName,
-                mapName,
-                targetNames
-            );
-        }
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ naturesSanctuaryCreaturesModal: null });
-    }, [setPopupHtml, modalState.naturesSanctuaryCreaturesModal, setModalState, mapName]);
-
-    const handleCoronaEnemySelectionConfirm = React.useCallback(async (selectedEnemies) => {
-        if (!selectedEnemies || !modalState.coronaEnemySelectionModal) return;
-        const result = await activateCoronaOfLight(
-            modalState.coronaEnemySelectionModal.action,
-            modalState.coronaEnemySelectionModal.playerStats,
-            modalState.coronaEnemySelectionModal.campaignName,
-            selectedEnemies
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ coronaEnemySelectionModal: null });
-    }, [setPopupHtml, modalState.coronaEnemySelectionModal, setModalState]);
-
-    const handleRadianceOfDawnConfirm = React.useCallback(async (selectedTargets) => {
-        if (!selectedTargets || !modalState.radianceOfDawnModal) return;
-        const result = await confirmRadianceOfDawn(
-            modalState.radianceOfDawnModal.action,
-            modalState.radianceOfDawnModal.playerStats,
-            modalState.radianceOfDawnModal.campaignName,
-            selectedTargets
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ radianceOfDawnModal: null });
-    }, [setPopupHtml, modalState.radianceOfDawnModal, setModalState]);
-
-    const handleMantleOfInspirationConfirm = React.useCallback(async (selectedTargets) => {
-        if (!selectedTargets || !modalState.mantleOfInspirationTarget) return;
-        const result = await confirmMantleOfInspiration(
-            modalState.mantleOfInspirationTarget.action,
-            modalState.mantleOfInspirationTarget.playerStats,
-            modalState.mantleOfInspirationTarget.campaignName,
-            selectedTargets,
-            modalState.mantleOfInspirationTarget.dieRoll,
-            modalState.mantleOfInspirationTarget.bardicDieSize,
-            modalState.mantleOfInspirationTarget.tempHp
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ mantleOfInspirationTarget: null });
-    }, [setPopupHtml, modalState.mantleOfInspirationTarget, setModalState]);
-
-    const handleCelestialResilienceConfirm = React.useCallback(async (selectedTargets) => {
-        if (!selectedTargets || !modalState.celestialResilienceModal) return;
-        const result = await confirmCelestialResilience(
-            modalState.celestialResilienceModal.action,
-            modalState.celestialResilienceModal.playerStats,
-            modalState.celestialResilienceModal.campaignName,
-            selectedTargets
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ celestialResilienceModal: null });
-    }, [setPopupHtml, modalState.celestialResilienceModal, setModalState]);
-
-    const handleCelestialResilienceSkip = React.useCallback(async () => {
-        if (!modalState.celestialResilienceModal) return;
-        const result = await skipCelestialResilience(
-            modalState.celestialResilienceModal.action,
-            modalState.celestialResilienceModal.playerStats,
-            modalState.celestialResilienceModal.campaignName
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ celestialResilienceModal: null });
-    }, [setPopupHtml, modalState.celestialResilienceModal, setModalState]);
-
-    const handleInspiringSmiteConfirm = React.useCallback(async (distribution) => {
-        if (!distribution || !modalState.inspiringSmiteModal) return;
-        const { action, playerStats: ps, campaignName: cn, channelDivinityCharges } = modalState.inspiringSmiteModal;
-        const playerName = ps.name;
-
-        const targetNames = Object.keys(distribution);
-        if (targetNames.length === 0) return;
-
-        for (const targetName of targetNames) {
-            const amount = distribution[targetName];
-            setTempHp(targetName, amount, cn);
-        }
-
-        setRuntimeValue(playerName, 'channelDivinityCharges', channelDivinityCharges - 1, cn);
-
-        const totalDistributed = Object.values(distribution).reduce((sum, v) => sum + v, 0);
-        addEntry(cn, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: action.name,
-            description: `${playerName} used ${action.name} (${totalDistributed} temp HP). Distribution: ${targetNames.map(n => `${n}=${distribution[n]}`).join(', ')}`,
-        }).catch(() => {});
-
-        const distributionStr = targetNames.map(n => `${n} (${distribution[n]} HP)`).join(', ');
-        const html = `<b>${action.name}</b><br/>Granted ${totalDistributed} temporary hit points: ${distributionStr}.`;
-        setPopupHtml(html);
-        setModalState({ inspiringSmiteModal: null });
-    }, [setPopupHtml, setModalState, modalState.inspiringSmiteModal]);
-
-    const handleVitalityOfTheTreeConfirm = React.useCallback(async (selectedTargets) => {
-        if (!selectedTargets || !modalState.vitalityOfTheTreeTarget) return;
-        const result = await confirmVitalityOfTheTree(
-            modalState.vitalityOfTheTreeTarget.action,
-            modalState.vitalityOfTheTreeTarget.playerStats,
-            modalState.vitalityOfTheTreeTarget.campaignName,
-            selectedTargets,
-            modalState.vitalityOfTheTreeTarget.tempHp,
-            modalState.vitalityOfTheTreeTarget.maxTargets
-        );
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-        setModalState({ vitalityOfTheTreeTarget: null });
-    }, [setPopupHtml, modalState.vitalityOfTheTreeTarget, setModalState]);
-
-    const handleTricksterBlessingConfirm = React.useCallback(async (targetName) => {
-        if (!modalState.tricksterBlessingModal) return;
-        const { action, playerStats, campaignName: evtCampaignName } = modalState.tricksterBlessingModal;
-        const auto = action.automation;
-        const featureName = action.name || 'Blessing of the Trickster';
-
-        const resolvedTarget = targetName || playerStats.name;
-
-        const { wasActive } = toggleBuff(
-            resolvedTarget,
-            featureName,
-            auto,
-            evtCampaignName,
-            resolvedTarget
-        );
-
-        if (!wasActive) {
-            addEntry(evtCampaignName, {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: featureName,
-                description: `Blessing granted to ${resolvedTarget} with advantage on Stealth checks.`,
-            });
-        }
-
-        setPopupHtml({
-            type: 'automation_info',
-            name: featureName,
-            automationType: auto?.type,
-            description: wasActive
-                ? `${featureName} toggled OFF`
-                : `${featureName} activated on ${resolvedTarget === playerStats.name ? 'yourself' : resolvedTarget} (${auto?.duration || '1 hour'})`,
-            automation: auto,
-        });
-        setModalState({ tricksterBlessingModal: null });
-    }, [setPopupHtml, modalState.tricksterBlessingModal, setModalState]);
-
-    const handleBardicInspirationConfirm = React.useCallback(async (targetName) => {
-        if (!modalState.bardicInspirationTargetModal) return;
-        const { action, playerStats: biPlayerStats, campaignName: biCampaignName, dieSize, hasCombatOptions } = modalState.bardicInspirationTargetModal;
-        setModalState({ bardicInspirationTargetModal: null });
-        if (!targetName) return;
-        const result = await applyBardicInspiration(action, biPlayerStats, biCampaignName, targetName, dieSize, hasCombatOptions);
-        if (!result) return;
-        if (result.type === 'popup') {
-            setPopupHtml(result.payload);
-        }
-    }, [modalState.bardicInspirationTargetModal, setModalState, setPopupHtml]);
-
-    const handleInspiringMovementConfirm = React.useCallback(async (allyName) => {
-        if (!modalState.inspiringMovementAllyModal) return;
-        const { action, playerStats: imPlayerStats, campaignName: imCampaignName, halfSpeed, noOAs } = modalState.inspiringMovementAllyModal;
-        setModalState({ inspiringMovementAllyModal: null });
-        if (!allyName) return;
-        const result = await applyInspiringMovement(action, imPlayerStats, imCampaignName, allyName, halfSpeed, noOAs);
-        if (!result) return;
-        if (result.type === 'popup') {
-            setPopupHtml(result.payload);
-        }
-    }, [modalState.inspiringMovementAllyModal, setModalState, setPopupHtml]);
-
-    const handleOceanicGiftConfirm = React.useCallback(async (selectedAllyName) => {
-        if (!modalState.oceanicGiftTargetModal) return;
-        const { action, playerStats: ogPlayerStats, campaignName: ogCampaignName, spellSaveDc, wisMod, doubleEmanation } = modalState.oceanicGiftTargetModal;
-        setModalState({ oceanicGiftTargetModal: null });
-        if (!selectedAllyName) return;
-        const result = await confirmOceanicGift(action, ogPlayerStats, ogCampaignName, selectedAllyName, spellSaveDc, wisMod, doubleEmanation);
-        if (!result) return;
-        if (result.type === 'popup') {
-            setPopupHtml(result.payload);
-        }
-    }, [modalState.oceanicGiftTargetModal, setModalState, setPopupHtml]);
-
-    async function handleAutomationAction(action) {
-        if (cannotAct) return;
-
-        const playerName = playerStats.name;
-        const activeBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName) || [];
-        const cloakActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'cloak_of_shadows');
-
-        const auto = action.automation;
-
-        // If feature has options that need choosing (e.g. Blessed Strikes), present choice
-        if (auto?.type === 'damage_bonus' && auto?.options?.length > 0) {
-            const optionKey = `_${action.name.replace(/\s+/g, '_')}_option`;
-            const chosenOption = getRuntimeValue(playerStats.name, optionKey, campaignName);
-            if (!chosenOption) {
-                setModalState({ featureChoice: { action, options: auto.options, optionKey } });
-                return;
-            }
-        }
-
-        // Defensive Tactics: present choice between Escape the Horde and Multiattack Defense
-        if (auto?.type === 'defensive_tactics') {
-            const optionKey = `_${action.name.replace(/\s+/g, '_')}_choice`;
-            const chosenOption = getRuntimeValue(playerStats.name, optionKey, campaignName);
-            if (!chosenOption) {
-                setModalState({ featureChoice: { action, options: ['Escape the Horde', 'Multiattack Defense'], optionKey } });
-                return;
-            }
-        }
-
-        // Spend 1 focus point for monk Ki features before dispatching
-        // Skip FP cost for Hand of Healing and Flurry of Blows when Flurry of Healing and Harm is active
-        // Skip FP cost for Flurry of Blows when Cloak of Shadows (Shadow Flurry) is active
-        if (MONK_KI_FEATURES.includes(action.name)) {
-            const skipFP = (HAS_FLURRY_HEALING_HARM && (action.name === 'Hand of Healing' || action.name === 'Flurry of Blows' || action.name === 'Heightened Flurry of Blows'))
-                || (cloakActive && (action.name === 'Flurry of Blows' || action.name === 'Heightened Flurry of Blows'));
-            if (!skipFP) {
-                const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
-                const maxFP = classLevel?.focus_points || getClassFeatures(playerStats)?.maxFocusPoints || 0;
-                const storedFP = getRuntimeValue(playerStats.name, 'focusPoints', campaignName);
-                const currentFP = storedFP != null ? Number(storedFP) : (playerStats._trackedResources?.focusPoints?.current ?? maxFP);
-                if (currentFP <= 0) {
-                    setPopupHtml(`<b>${action.name}</b><br/>No ${playerStats.rules === '2024' ? "Focus Points" : 'ki points'} remaining.`);
-                    return;
-                }
-                await setRuntimeValue(playerStats.name, 'focusPoints', currentFP - 1, campaignName);
-                window.dispatchEvent(new CustomEvent('focus-points-updated'));
-            }
-        }
-
-        // Check trigger conditions for gated actions
-        if (auto?.trigger && auto.trigger !== '') {
-            if (auto.trigger === 'after_casting_action_spell') {
-                const lastCast = getRuntimeValue(playerStats.name, 'lastActionSpellCast', campaignName);
-                if (!lastCast) {
-                    setPopupHtml(`<b>${action.name}</b><br/>You must cast a spell with a casting time of an action first.`);
-                    return;
-                }
-                await setRuntimeValue(playerStats.name, 'lastActionSpellCast', 0, campaignName);
-            }
-        }
-
-        const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
-        if (!result) return;
-
-        switch (result.type) {
-            case 'popup':
-                setPopupHtml(result.payload);
-                break;
-            case 'modal':
-                switch (result.modalName) {
-                    case 'healingPool': setModalState({ healingPoolModal: result.payload }); break;
-                    case 'handOfHealing': setModalState({ handOfHealingModal: result.payload }); break;
-                    case 'fontOfMagic': setModalState({ fontOfMagicModal: true }); break;
-                    case 'resourcePool': setModalState({ resourcePoolModal: result.payload }); break;
-                    case 'wildCompanion': setModalState({ wildCompanionModal: result.payload }); break;
-                    case 'setCondition': setModalState({ setConditionModal: result.payload }); break;
-                    case 'blindnessDeafness': setModalState({ blindnessDeafnessModal: result.payload }); break;
-                    case 'eyebiteEffect': setModalState({ eyebiteEffectModal: result.payload }); break;
-                    case 'attackRider': setModalState({ attackRiderModal: result.payload }); break;
-                    case 'openHandTechnique': setModalState({ openHandTechniqueModal: result.payload }); break;
-                    case 'shieldBash': setModalState({ shieldBashModal: result.payload }); break;
-                    case 'quiveringPalm': setModalState({ quiveringPalmModal: result.payload }); break;
-                    case 'combatStance': setModalState({ combatStanceModal: result.payload }); break;
-                    case 'teleport': setModalState({ teleportModal: result.payload }); break;
-                    case 'healingIllusion': setModalState({ healingIllusionModal: result.payload }); break;
-                    case 'invokeDuplicity': setModalState({ invokeDuplicityModal: result.payload }); break;
-                    case 'saveAttackHeal':
-                        setModalState({ saveAttackHealModal: result.payload });
-                        break;
-                    case 'saveAttackAoe':
-                        setModalState({ saveAttackAoeModal: result.payload });
-                        break;
-                    case 'aoeCondition':
-                        setModalState({ aoeConditionModal: result.payload });
-                        break;
-                    case 'elementalAttunement': setModalState({ elementalAttunementModal: result.payload }); break;
-                    case 'elementalBurst': setModalState({ elementalBurstModal: result.payload }); break;
-                    case 'divineSpark': setModalState({ divineSparkModal: result.payload }); break;
-                    case 'divineIntervention':
-                        setModalState({ divineInterventionAction: action, divineInterventionModal: result.payload });
-                        break;
-                    case 'moonlightStepResource': setModalState({ moonlightStepResourceModal: result.payload }); break;
-                    case 'moonlightStepFallback': setModalState({ moonlightStepFallbackModal: result.payload }); break;
-                    case 'starryFormConstellation': setModalState({ starryFormConstellationModal: result.payload }); break;
-                    case 'twinklingConstellation': setModalState({ twinklingConstellationModal: result.payload }); break;
-                    case 'arcaneCharge': setModalState({ arcaneChargeModal: result.payload }); break;
-                    case 'warMagicCantrip': setModalState({ warMagicCantripModal: result.payload }); break;
-                    case 'warMagicSpell': setModalState({ warMagicSpellModal: result.payload }); break;
-                    case 'sacredWeaponDamageType': setModalState({ sacredWeaponModal: result.payload }); break;
-                    case 'primalCompanionBonusActionCommand': setModalState({ primalCompanionBonusActionModal: result.payload }); break;
-                    case 'primalCompanionSummon': setModalState({ primalCompanionSummonModal: result.payload }); break;
-                    case 'mistyWanderer': setModalState({ mistyWandererModal: result.payload }); break;
-                    case 'feyReinforcements': setModalState({ feyReinforcementsModal: result.payload }); break;
-                    case 'stepsOfTheFeyTaunt': setModalState({ stepsOfTheFeyTauntModal: result.payload }); break;
-                    case 'bonusActionChoice': setModalState({ bonusActionChoiceModal: result.payload }); break;
-                    case 'stealthAttack': setModalState({ stealthAttackModal: result.payload }); break;
-                    case 'revelationInFlesh': setModalState({ revelationInFleshModal: result.payload }); break;
-                    case 'bastionOfLaw': setModalState({ bastionOfLawModal: result.payload }); break;
-                    case 'elementalAffinity': {
-                        const affPayload = result.payload;
-                        const affAction = affPayload?.action;
-                        const affTypes = affPayload?.damageTypes || ['Acid', 'Cold', 'Fire', 'Lightning', 'Poison'];
-                        setModalState({ elementalAffinityModal: { action: affAction, playerStats, campaignName, damageTypes: affTypes, existingType: affPayload?.existingType } });
-                        break;
-                    }
-                    case 'fiendishResilience': {
-                        const frPayload = result.payload;
-                        const frAction = frPayload?.action;
-                        const frTypes = frPayload?.damageTypes || ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
-                        setModalState({ fiendishResilienceModal: { action: frAction, playerStats, campaignName, damageTypes: frTypes, existingType: frPayload?.existingType } });
-                        break;
-                    }
-                    case 'dragonCompanion':
-                        setModalState({ dragonCompanionModal: result.payload });
-                        break;
-                    case 'wildMagicSurge':
-                        setModalState({ wildMagicSurgeModal: result.payload });
-                        break;
-                    case 'weaponMasteryChoice':
-                        setModalState({ weaponMasteryChoiceModal: result.payload });
-                        break;
-                    case 'weaponKindMastery':
-                        setModalState({ weaponKindMasteryModal: result.payload });
-                        break;
-                    case 'bendFateChoice':
-                        setModalState({ bendFateModal: result.payload });
-                        break;
-                    case 'thirdEye':
-                        setModalState({ thirdEyeModal: result.payload });
-                        break;
-                    case 'soulstitchSpells':
-                        setModalState({ soulstitchSpellsModal: result.payload });
-                        break;
-                    case 'illusoryReality':
-                        setModalState({ illusoryRealityModal: result.payload });
-                        break;
-                    case 'celestialRevelation':
-                        setModalState({ celestialRevelationModal: result.payload });
-                        break;
-                    case 'celestialResilienceModal':
-                        setModalState({ celestialResilienceModal: { ...result.payload, playerStats, campaignName } });
-                        break;
-                    case 'elfishLineage':
-                        setModalState({ elfishLineageModal: result.payload });
-                        break;
-                    case 'gnomishLineage':
-                        setModalState({ gnomishLineageModal: result.payload });
-                        break;
-                    case 'fiendishLegacy':
-                        setModalState({ fiendishLegacyModal: result.payload });
-                        break;
-                    case 'giantAncestry':
-                        setModalState({ giantAncestryModal: result.payload });
-                        break;
-                    case 'breathWeaponShape': {
-                        const bwPayload = result.payload;
-                        setModalState({ breathWeaponShapeModal: { action: bwPayload.action, playerStats, campaignName, options: bwPayload.options } });
-                        break;
-                    }
-                    case 'hypnoticPatternShake': {
-                        const shakePayload = result.payload;
-                        setModalState({ hypnoticPatternShakeModal: shakePayload });
-                        break;
-                    }
-                    case 'combatSuperiority':
-                        setModalState({ combatSuperiorityModal: result.payload });
-                        break;
-                    case 'sweepingAttackTarget':
-                        setModalState({ sweepingAttackTargetModal: result.payload });
-                        break;
-                    case 'baitAndSwitchChoice':
-                        setModalState({ baitAndSwitchChoiceModal: result.payload });
-                        break;
-                    case 'bulwarkOfForceTarget':
-                        setModalState({ bulwarkOfForceModal: result.payload });
-                        break;
-                    case 'zealousPresenceTarget':
-                        setModalState({ zealousPresenceModal: result.payload });
-                        break;
-                    case 'clockworkCavalcade':
-                        setModalState({ clockworkCavalcadeModal: result.payload });
-                        break;
-                    case 'naturesSanctuaryCreatures':
-                        setModalState({ naturesSanctuaryCreaturesModal: result.payload });
-                        break;
-                    case 'coronaEnemySelection':
-                        setModalState({ coronaEnemySelectionModal: result.payload });
-                        break;
-                    case 'radianceOfDawn':
-                        setModalState({ radianceOfDawnModal: result.payload });
-                        break;
-                    case 'mantleOfInspirationTarget':
-                        setModalState({ mantleOfInspirationTarget: result.payload });
-                        break;
-                    case 'vitalityOfTheTreeTarget':
-                        setModalState({ vitalityOfTheTreeTarget: result.payload });
-                        break;
-                    case 'tricksterBlessing':
-                        setModalState({ tricksterBlessingModal: result.payload });
-                        break;
-                    case 'bardicInspirationTarget':
-                        setModalState({ bardicInspirationTargetModal: result.payload });
-                        break;
-                    case 'inspiringMovementAlly':
-                        setModalState({ inspiringMovementAllyModal: result.payload });
-                        break;
-                    case 'arcaneWardRestore':
-                        setModalState({ arcaneWardRestoreModal: result.payload });
-                        break;
-                    case 'oceanicGiftTarget':
-                        setModalState({ oceanicGiftTargetModal: result.payload });
-                        break;
-                    case 'telepathicSpeech': {
-                        const { action, playerStats, campaignName, creatureTargets } = result.payload;
-                        setModalState({ secondaryTargetModal: {
-                            title: action.name || 'Telepathic Speech',
-                            icon: 'fa-brain',
-                            targets: creatureTargets,
-                            confirmLabel: 'Establish Link',
-                            confirmIcon: 'fa-brain',
-                            description: 'Choose one creature within 30 feet to communicate with telepathically.',
-                            featureDescription: `Range: ${Math.max(1, playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 1)} mile(s) | Duration: ${playerStats.level} minute(s)`,
-                            onTargetSelected: async (targetName) => {
-                                const confirmResult = await confirmTelepathicSpeech(action, playerStats, campaignName, targetName);
-                                if (confirmResult?.payload) {
-                                    setPopupHtml(confirmResult.payload);
-                                }
-                                setModalState({ secondaryTargetModal: null });
-                            },
-                            onSkip: () => {
-                                setModalState({ secondaryTargetModal: null });
-                            },
-                        }});
-                        break;
-                    }
-                    case 'flurryOfBlows':
-                        setModalState({ flurryOfBlowsModal: result.payload });
-                        break;
-                    case 'elementalEpitome':
-                        setModalState({ epitomeModal: result.payload });
-                        break;
-                    case 'destructiveStride':
-                        setModalState({ destructiveStrideModal: result.payload });
-                        break;
-                    case 'destructiveStrideTarget':
-                        setModalState({ destructiveStrideTargetModal: result.payload });
-                        break;
-                    case 'animateDead':
-                        setModalState({ animateDeadModal: result.payload });
-                        break;
-                    case 'createUndead':
-                        setModalState({ createUndeadModal: result.payload });
-                        break;
-                    case 'summonSpirit':
-                        setModalState({ summonSpiritModal: result.payload });
-                        break;
-                }
-                break;
-            case 'roll':
-                if (result.payload.rollType === 'damage') {
-                    rollDamage(
-                        result.payload.name,
-                        result.payload.formula,
-                        result.payload.total,
-                        result.payload.rolls,
-                        result.payload.modifier,
-                        result.payload.contextConfig || {}
-                    );
-                }
-                break;
-            case 'attack_roll':
-                {
-                    const { attack, targetName } = result.payload;
-                    const autoDamageFormula = attack?.autoDamageFormula || null;
-                    const autoDamageName = attack?.autoDamageName || attack?.name;
-                    const damageType = attack?.damageType || 'Slashing';
-                    rollAttack(attack.name, attack.hitBonus, { targetName, forcedMode: undefined, isOpportunityAttack: false, autoDamageFormula, autoDamageName, damageType });
-                }
-                break;
-            case 'notify_buffs_changed':
-                if (onBuffsChange) onBuffsChange();
-                break;
-        }
-
-        if (result.logEntries) {
-            result.logEntries.forEach(entry => addEntry(campaignName, entry).catch(() => { }));
-        }
-
-        if (result.type === 'popup' && (auto?.type === 'temp_buff' || auto?.type === 'combat_stance')) {
-            if (onBuffsChange) onBuffsChange();
-        }
-    }
-
-    const handleDivineInterventionCast = React.useCallback(async (selectedSpell) => {
-        setModalState({ divineInterventionModal: null, divineInterventionAction: null });
-        const action = modalState.divineInterventionAction;
-        if (!action) return;
-
-        const result = await onDivineInterventionSpellSelected(action, playerStats, campaignName, selectedSpell);
-        if (!result) return;
-
-        if (result.type === 'spell_selected') {
-            const spell = result.spell;
-            const getTargetInfoFn = async () => {
-                const cs = await getCombatContext(campaignName);
-                return cs ? getTargetFromAttacker(cs, playerStats.name) : null;
-            };
-            executeSpellCast(spell, {}, {
-                rollAttack,
-                rollDamage,
-                playerStats,
-                getTargetInfo: getTargetInfoFn,
-                campaignName,
-                mapName,
-                characters,
-            }).then((healResult) => {
-                if (healResult?.triggerResult) {
-                    const tr = healResult.triggerResult;
-                    if (tr.type === 'modal') {
-                        if (tr.modalName === 'wildMagicSurge') {
-                            setModalState({ wildMagicSurgeModal: tr.payload });
-                        }
-                    } else if (tr.type === 'popup') {
-                        const payload = tr.payload;
-                        const name = payload?.name || spell.name || 'Automation';
-                        const description = payload?.description || '';
-                        setPopupHtml({
-                            type: 'automation_info',
-                            name,
-                            description,
-                        });
-                    }
-                }
-                if (healResult && healResult.healAmount > 0) {
-                    const bonusHealDetail = healResult.bonusDetails?.length > 0
-                        ? healResult.bonusDetails.map(d => `${d.amount} ${d.name}`).join(', ')
-                        : '';
-                    const rawTotal = healResult.rawTotal ?? healResult.healAmount;
-                    setPopupHtml({
-                        type: 'heal',
-                        name: spell.name,
-                        formula: healResult.formula,
-                        rolls: healResult.rolls || [],
-                        total: rawTotal,
-                        targetName: healResult.targetName,
-                        finalHeal: healResult.healAmount,
-                        bonusHeal: healResult.bonusHeal || 0,
-                        bonusHealDetail,
-                        healingRerollOriginalRolls: healResult.healingRerollOriginalRolls || null,
-                        healingRerollDisplayRolls: healResult.healingRerollDisplayRolls || null,
-                    });
-                }
-            }).catch((e) => { console.error('[CharActions] executeSpellCast error:', e); });
-
-            setPopupHtml({
-                type: 'automation_info',
-                name: result.name,
-                description: `Divine Intervention cast ${spell.name}. Divine Intervention recharges ${result.rechargeMessage}`,
-            });
-        }
-    }, [modalState.divineInterventionAction, playerStats, campaignName, rollAttack, rollDamage, mapName, setPopupHtml, setModalState, characters]);
 
 
     const { buildUpcastLevels } = useSpellUpcastFlow(playerStats, campaignName);
