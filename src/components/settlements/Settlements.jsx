@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useCrudList } from '../../hooks/useCrudList.js';
 import { useEntityManagement } from '../../hooks/useEntityManagement.js';
-import { loadSettlements, saveSettlements, deleteSettlement } from '../../services/campaign/settlementsService.js';
+import { loadSettlements, saveSettlement, deleteSettlement } from '../../services/campaign/settlementsService.js';
 import PreviewToggle from '../common/PreviewToggle.jsx';
 import { generateSettlement } from '../../services/campaign/settlementGenerator.js';
 import './Settlements.css';
@@ -44,8 +44,8 @@ const SERVICE_TYPE_LABELS = {
 };
 
 function Settlements({ campaignName, onBack }) {
-  const { items: settlements, loading, loadItems, saveItems: saveSettlementAction, deleteItem: deleteSettlementAction } =
-    useEntityManagement(campaignName, { load: loadSettlements, save: saveSettlements, delete: deleteSettlement }, { responseKey: 'settlements', loadOnMount: false });
+  const { items: settlements, loading, loadItems, deleteItem: deleteSettlementAction } =
+    useEntityManagement(campaignName, { load: loadSettlements, save: saveSettlement, delete: deleteSettlement }, { responseKey: 'settlements', loadOnMount: false });
 
   const {
     searchQuery, setSearchQuery, filteredItems,
@@ -217,7 +217,8 @@ function Settlements({ campaignName, onBack }) {
     if (!formData || !formData.name.trim()) return;
     setSaving(true);
     try {
-      await saveSettlementAction(formData, editingSettlement?.name);
+      await saveSettlement(campaignName, formData, editingSettlement?.name);
+      await loadItems();
       handleCloseModal();
     } catch (error) {
       console.error('Failed to save settlement:', error);

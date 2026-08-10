@@ -6,13 +6,21 @@ import Settlements from './Settlements.jsx';
 const settlementMockReturn = {
   items: [],
   loading: false,
-  loadItems: () => {},
-  saveItems: async () => {},
-  deleteItem: async () => {},
+  loadItems: async () => {},
+  deleteItem: (...args) => mockDeleteSettlement(...args),
 };
 
 vi.mock('../../hooks/useEntityManagement.js', () => ({
   useEntityManagement: () => ({ ...settlementMockReturn }),
+}));
+
+const mockSaveSettlement = vi.fn();
+const mockDeleteSettlement = vi.fn();
+
+vi.mock('../../services/campaign/settlementsService.js', () => ({
+  loadSettlements: vi.fn(),
+  saveSettlement: (...args) => mockSaveSettlement(...args),
+  deleteSettlement: (...args) => mockDeleteSettlement(...args),
 }));
 
 vi.mock('../common/PreviewToggle.jsx', () => ({
@@ -53,17 +61,18 @@ describe('Settlements - save and delete behavior', () => {
   const mockUseSettlements = {
     items: [],
     loading: false,
-    saveItems: vi.fn(),
     deleteItem: vi.fn(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSaveSettlement.mockResolvedValue({ success: true });
+    mockDeleteSettlement.mockResolvedValue({ success: true });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({}),
     });
-    Object.assign(settlementMockReturn, mockUseSettlements);
+    Object.assign(settlementMockReturn, mockUseSettlements, { deleteItem: (...args) => mockDeleteSettlement(...args) });
   });
 
   afterEach(() => {
@@ -79,7 +88,7 @@ describe('Settlements - save and delete behavior', () => {
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
     await waitFor(() => {
-      expect(mockUseSettlements.saveItems).toHaveBeenCalled();
+      expect(mockSaveSettlement).toHaveBeenCalled();
     });
     expect(screen.queryByRole('heading', { name: 'New Settlement' })).not.toBeInTheDocument();
   });
@@ -99,7 +108,8 @@ describe('Settlements - save and delete behavior', () => {
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
     await waitFor(() => {
-      expect(mockUseSettlements.saveItems).toHaveBeenCalledWith(
+      expect(mockSaveSettlement).toHaveBeenCalledWith(
+        'test',
         expect.objectContaining({ name: 'New Name' }),
         'Old Name'
       );
@@ -107,7 +117,7 @@ describe('Settlements - save and delete behavior', () => {
   });
 
   it('shows save button disabled during save', async () => {
-    mockUseSettlements.saveItems = vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockSaveSettlement.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
     render(<Settlements campaignName="test" onBack={() => {}} />);
     const modalOpen = screen.getByRole('button', { name: /new settlement/i });
     fireEvent.click(modalOpen);
@@ -130,7 +140,7 @@ describe('Settlements - save and delete behavior', () => {
     const settlementItem = screen.getByRole('button', { name: /edit settlement/i });
     fireEvent.click(settlementItem);
     const deleteBtn = screen.getByRole('button', { name: 'Delete' });
-    mockUseSettlements.deleteItem = vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    mockDeleteSettlement.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
     fireEvent.click(deleteBtn);
     expect(deleteBtn).toBeDisabled();
   });
@@ -143,12 +153,11 @@ describe('Settlements - save and delete behavior', () => {
     fireEvent.change(nameInput, { target: { value: '   ' } });
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
-    expect(mockUseSettlements.saveItems).not.toHaveBeenCalled();
+    expect(mockSaveSettlement).not.toHaveBeenCalled();
   });
 
   it('logs error and keeps modal open when save fails', async () => {
-    mockUseSettlements.saveItems = vi.fn().mockRejectedValue(new Error('Save failed'));
-    Object.assign(settlementMockReturn, mockUseSettlements);
+    mockSaveSettlement.mockRejectedValue(new Error('Save failed'));
     render(<Settlements campaignName="test" onBack={() => {}} />);
     const modalOpen = screen.getByRole('button', { name: /new settlement/i });
     fireEvent.click(modalOpen);
@@ -157,16 +166,17 @@ describe('Settlements - save and delete behavior', () => {
     const saveBtn = screen.getByRole('button', { name: /save/i });
     fireEvent.click(saveBtn);
     await waitFor(() => {
-      expect(mockUseSettlements.saveItems).toHaveBeenCalled();
+      expect(mockSaveSettlement).toHaveBeenCalled();
     });
     expect(screen.getByRole('heading', { name: 'New Settlement' })).toBeInTheDocument();
   });
 
   it('logs error and keeps modal open when delete fails', async () => {
     global.window.confirm = vi.fn(() => true);
-    mockUseSettlements.deleteItem = vi.fn().mockRejectedValue(new Error('Delete failed'));
+    mockDeleteSettlement.mockRejectedValue(new Error('Delete failed'));
     Object.assign(settlementMockReturn, {
       ...mockUseSettlements,
+      deleteItem: (...args) => mockDeleteSettlement(...args),
       items: [
         { name: 'Keep Me', size: 'village', population: '', tags: '', services: [], description: '', atmosphere: '', government: '', notableNPCs: [], rumors: [], notes: '', threat: '' },
       ],
@@ -177,7 +187,7 @@ describe('Settlements - save and delete behavior', () => {
     const deleteBtn = screen.getByRole('button', { name: 'Delete' });
     fireEvent.click(deleteBtn);
     await waitFor(() => {
-      expect(mockUseSettlements.deleteItem).toHaveBeenCalled();
+      expect(mockDeleteSettlement).toHaveBeenCalled();
     });
     expect(screen.getByRole('heading', { name: 'Edit Settlement' })).toBeInTheDocument();
   });

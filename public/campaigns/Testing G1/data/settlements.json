@@ -136,5 +136,94 @@
     "tags": "town, dwarven-culture, temple",
     "notes": "",
     "threat": "The town's isolation has bred suspicion of outsiders, making trade and diplomacy nearly impossible."
+  },
+  {
+    "name": "Petranwe Prime",
+    "size": "city",
+    "description": "A grand city with a great arena, its games drawing crowds of thousands. A stone aqueduct bringing fresh water from the mountains. A great waterwheel powering the city's industry.",
+    "atmosphere": "The city's many pigeons coo from the rooftops, their droppings whitewashing the cobblestones below.",
+    "government": "A charter government operates under a royal charter.",
+    "population": "12,000-25,000 souls",
+    "services": [
+      {
+        "type": "butcher",
+        "name": "Wren's Curer",
+        "description": "The local butcher also sells leather and bones for craft projects."
+      },
+      {
+        "type": "magic_shop",
+        "name": "The Twilight Potion",
+        "description": "A front for magical research. The owner is more interested in acquiring rare components than selling."
+      },
+      {
+        "type": "tailor",
+        "name": "Kellan's Leathers",
+        "description": "A small clothing shop with ready-made items in common sizes."
+      },
+      {
+        "type": "blacksmith",
+        "name": "The Thundering Nail",
+        "description": "A small but busy smithy serving the local farming community. Repairs and tools are their specialty."
+      },
+      {
+        "type": "bakery",
+        "name": "Crustymill",
+        "description": "A baker's shop that serves as an informal gathering place for morning gossip."
+      },
+      {
+        "type": "guild",
+        "name": "BalladChain",
+        "description": "A discreet guild office tucked behind an unassuming door. Serious inquiries only."
+      },
+      {
+        "type": "inn",
+        "name": "The Mystic Storm",
+        "description": "A converted manor house now serving as an inn. The interior is surprisingly elegant."
+      }
+    ],
+    "notableNPCs": [
+      {
+        "name": "Johann",
+        "role": "Butcher",
+        "description": "The Butcher of Wren's Curer. Known for fair dealing and a dry sense of humor."
+      },
+      {
+        "name": "Laelith",
+        "role": "Mage",
+        "description": "The Mage of The Twilight Potion. Friendly but forgetful, writing everything down in a ledger."
+      },
+      {
+        "name": "Derik",
+        "role": "Seamstress",
+        "description": "The Seamstress of Kellan's Leathers. Hardworking and tired, but always has time for a conversation."
+      },
+      {
+        "name": "Filibert",
+        "role": "Smith",
+        "description": "The Smith of The Thundering Nail. Suspicious of outsiders but can be won over with coin or charm."
+      },
+      {
+        "name": "Jocelyn",
+        "role": "shopkeeper",
+        "description": "The shopkeeper of Crustymill. Quiet and observant, seems to know everything happening in town."
+      },
+      {
+        "name": "Mulek",
+        "role": "Lieutenant",
+        "description": "The Lieutenant of The Ruby Warden. Generous beyond their means, often gives credit to regulars."
+      },
+      {
+        "name": "Pansey",
+        "role": "Innkeeper",
+        "description": "The Innkeeper of The Mystic Storm. Eccentric but knowledgeable, prone to rambling stories."
+      }
+    ],
+    "rumors": [
+      "An abandoned siege weapon has begun activating on its own each night at midnight.",
+      "A series of small fires have broken out in the warehouse district."
+    ],
+    "tags": "city, elven-culture, butcher, many-services",
+    "notes": "",
+    "threat": "A serial arsonist has been targeting warehouses, and the merchant guild is offering a reward."
   }
 ]
