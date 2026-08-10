@@ -1,72 +1,281 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { setTempHp } from '../buffs/tempHpService.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
-import { loadManeuvers } from '../../../ui/dataLoader.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
-import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
-import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
-import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { loadManeuvers } from '../../../ui/dataLoader.js';
+import {
+    applyConditionToTarget,
+    hasRelentless,
+    getRelentlessUsedRound,
+    setRelentlessUsed,
+    getKnownManeuvers,
+    getSuperiorityDice,
+    computeMaxOptions,
+    rollManeuverDie,
+    executeBaitAndSwitchChoice,
+    executeCommanderStrikeChoice,
+    executeRallyChoice,
+    executeSweepingAttack,
+} from './combatSuperiorityUtils.js';
+import {
+    getManeuversForRules,
+    getManeuversByType,
+    getAvailableAttackRiderManeuvers,
+    getAvailableAttackRiderManeuversByTrigger,
+    getAvailableSkillCheckManeuvers,
+    getSkillCheckManeuversForSkill,
+    handleAttackRiderPrompt,
+    handleSkillCheckPrompt,
+} from './combatSuperiorityQueries.js';
 
-function applyConditionToTarget(targetName, conditionKey, campaignName, combatSummary, saveDc, saveType, playerStats) {
-    if (!combatSummary) {
-        console.error(`[combatSuperiority] Failed to get combatSummary for applying ${conditionKey} to ${targetName}`);
-        return;
+// Re-export everything for consumers
+export {
+    applyConditionToTarget,
+    hasRelentless,
+    getRelentlessUsedRound,
+    setRelentlessUsed,
+    getKnownManeuvers,
+    getSuperiorityDice,
+    computeMaxOptions,
+    rollManeuverDie,
+    executeBaitAndSwitchChoice,
+    executeCommanderStrikeChoice,
+    executeRallyChoice,
+    executeSweepingAttack,
+    getManeuversForRules,
+    getManeuversByType,
+    getAvailableAttackRiderManeuvers,
+    getAvailableAttackRiderManeuversByTrigger,
+    getAvailableSkillCheckManeuvers,
+    getSkillCheckManeuversForSkill,
+    handleAttackRiderPrompt,
+    handleSkillCheckPrompt,
+};
+
+export async function handle(action, playerStats, campaignName, _mapName) {
+    const auto = action.automation;
+
+    if (auto?.maneuverName) {
+        return executeManeuver(action, playerStats, campaignName, auto.maneuverName);
     }
-    const conditionDef = { key: conditionKey, label: conditionKey.charAt(0).toUpperCase() + conditionKey.slice(1) };
-    addCondition(combatSummary, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
-}
 
-const SELECTION_KEY = 'BattleMasterManeuvers_selection';
+    if (auto?.actionType === 'bonus_action') {
+        return handleCombatSuperiorityBonusAction(action, playerStats, campaignName, _mapName);
+    }
 
-function computeMaxOptions(playerStats, auto) {
-    const base = auto.maxOptions || 3;
-    const scaling = auto.maxOptionsScaling || {};
-    let total = base;
-    const level = playerStats.level || 0;
-    const sortedLevels = Object.keys(scaling)
-        .map(Number)
-        .filter(l => !isNaN(l))
-        .sort((a, b) => a - b);
-    for (const scaleLevel of sortedLevels) {
-        if (level >= scaleLevel) {
-            total += scaling[scaleLevel];
+    if (auto?.actionType === 'reaction') {
+        if (auto?.reactionType === 'grant_attack') {
+            return handleCombatSuperiorityGrantAttack(action, playerStats, campaignName, _mapName);
         }
+        if (auto?.reactionType === 'commanding_presence') {
+            return handleCombatSuperiorityCommandingPresenceReaction(action, playerStats, campaignName, _mapName);
+        }
+        return handleCombatSuperiorityReaction(action, playerStats, campaignName, _mapName);
     }
-    return total;
-}
 
-function getKnownManeuvers(playerStats, campaignName) {
-    const stored = getRuntimeValue(playerStats.name, SELECTION_KEY, campaignName);
-    return Array.isArray(stored) ? stored : [];
-}
+    if (auto?.actionType === 'sweeping_attack') {
+        return handleCombatSuperioritySweepingAttack(action, playerStats, campaignName, _mapName);
+    }
 
-function hasRelentless(playerStats) {
-    return (playerStats.automation?.passives || []).some(p => p.type === 'passive_rule' && p.effect === 'relentless');
-}
+    if (auto?.actionType === 'movement') {
+        return handleCombatSuperiorityMovement(action, playerStats, campaignName, _mapName);
+    }
 
-function getRelentlessUsedRound(playerStats, campaignName) {
-    return getRuntimeValue(playerStats.name, 'relentlessUsedRound', campaignName);
-}
+    if (auto?.actionType === 'skill_check') {
+        return handleCombatSuperioritySkillCheck(action, playerStats, campaignName, _mapName);
+    }
 
-function setRelentlessUsed(playerStats, campaignName) {
+    if (auto?.trigger === 'attack_rider') {
+        return handleAttackRiderPrompt(action, playerStats, campaignName, _mapName);
+    }
+
+    if (auto?.trigger === 'skill_check') {
+        return handleSkillCheckPrompt(action, playerStats, campaignName, _mapName);
+    }
+
+    const allManeuvers = await loadManeuvers(playerStats.rules || '2024');
+
+    if (allManeuvers.length === 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No maneuver data available.',
+            },
+        };
+    }
+
+    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
+    const relentless = hasRelentless(playerStats);
+    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
     const currentRound = getCurrentCombatRound();
-    setRuntimeValue(playerStats.name, 'relentlessUsedRound', currentRound, campaignName);
+    const relentlessUsed = relentless && storedRound === currentRound;
+
+    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No Superiority Dice remaining. Recharges on a Short or Long Rest.',
+            },
+        };
+    }
+
+    const knownManeuvers = getKnownManeuvers(playerStats, campaignName);
+    const availableForAction = allManeuvers.filter(m => knownManeuvers.includes(m.name));
+    const forceSelectionMode = auto?.forceSelectionMode === true;
+    const selectionMode = forceSelectionMode || knownManeuvers.length !== allManeuvers.length;
+
+    return {
+        type: 'modal',
+        modalName: 'combatSuperiority',
+        payload: {
+            action,
+            playerStats,
+            campaignName,
+            allManeuvers,
+            knownManeuvers: availableForAction.map(m => m.name),
+            maxOptions: computeMaxOptions(playerStats, auto),
+            selectionMode,
+            saveDc: auto?.saveDc || 'ability',
+            saveType: auto?.saveType || 'WIS',
+            dieExpression: auto?.dieExpression || 'superiority_die',
+        },
+    };
 }
 
-export function getSuperiorityDice(playerStats, campaignName) {
-    const usesKey = 'superiorityDice';
-    const defaultMax = 4;
-    return Number(getRuntimeValue(playerStats.name, usesKey, campaignName) ?? defaultMax);
+export async function onCombatSuperioritySelected(action, playerStats, campaignName, selectedManeuverNames, singleUseManeuverName) {
+    const auto = action.automation;
+
+    if (Array.isArray(selectedManeuverNames) && selectedManeuverNames.length === 0 && !singleUseManeuverName) {
+        await setRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', [], campaignName);
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'Battle Master selection cleared.',
+            },
+        };
+    }
+
+    if (Array.isArray(selectedManeuverNames) && selectedManeuverNames.length > 0 && !singleUseManeuverName) {
+        const allManeuvers = await loadManeuvers(playerStats.rules || '2024');
+        const allNames = allManeuvers.map(m => m.name);
+        const validManeuvers = selectedManeuverNames.filter(name => allNames.includes(name));
+
+        await setRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', validManeuvers, campaignName);
+
+        if (validManeuvers.length === 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    description: 'No valid maneuvers selected.',
+                },
+            };
+        }
+
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `Maneuvers selected: ${validManeuvers.join(', ')}.`,
+            },
+        };
+    }
+
+    const selectedName = singleUseManeuverName || (selectedManeuverNames && selectedManeuverNames[0]);
+
+    if (!selectedName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No maneuver selected.',
+            },
+        };
+    }
+
+    const stored = getRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', campaignName);
+    const knownManeuvers = Array.isArray(stored) ? stored : [];
+
+    if (auto?.singleUseManeuver === selectedName && !auto?.isReload) {
+        const newKnown = knownManeuvers.filter(n => n !== selectedName);
+        await setRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', newKnown, campaignName);
+    }
+
+    if (auto?.actionType === 'attack_rider') {
+        return executeAttackRiderManeuver(action, playerStats, campaignName, selectedName, auto?.attackContext || null);
+    }
+
+    if (auto?.actionType === 'skill_check') {
+        return executeSkillCheckManeuver(action, playerStats, campaignName, selectedName);
+    }
+
+    if (auto?.actionType === 'grant_attack') {
+        return executeGrantAttackManeuver(action, playerStats, campaignName, selectedName);
+    }
+
+    if (auto?.actionType === 'movement') {
+        return executeMovementManeuver(action, playerStats, campaignName, selectedName);
+    }
+
+    if (auto?.actionType === 'reaction') {
+        return executeReactionManeuver(action, playerStats, campaignName, selectedName);
+    }
+
+    if (auto?.actionType === 'bonus_action') {
+        return executeBonusActionManeuver(action, playerStats, campaignName, selectedName);
+    }
+
+    return executeManeuver(action, playerStats, campaignName, selectedName);
 }
 
-async function validateSizeLimit(maneuver, targetName, campaignName, playerStats) {
+export async function getAttackRiderOptions(playerStats, campaignName, attackInfo) {
+    const maneuvers = getAvailableAttackRiderManeuvers(playerStats, campaignName, attackInfo);
+    return maneuvers.map(m => ({
+        name: m.name,
+        effect: m.effect || null,
+        damageBonus: m.damageBonus || false,
+        saveType: m.saveType || null,
+        saveAbility: m.saveAbility || null,
+        conditionInflicted: m.conditionInflicted || null,
+        value: m.value || null,
+        range: m.range || null,
+        dieExpression: m.dieExpression || 'superiority_die',
+    }));
+}
+
+export async function getAttackRiderOptionsByContext(playerStats, campaignName, attackInfo, context) {
+    const maneuvers = getAvailableAttackRiderManeuversByTrigger(playerStats, campaignName, attackInfo);
+    return maneuvers.map(m => ({
+        name: m.name,
+        dieExpression: m.dieExpression || 'superiority_die',
+        trigger: m.trigger || 'any',
+        actionType: m.actionType,
+        context,
+        saveType: m.saveType || null,
+        saveDc: m.saveDc || null,
+        saveAbility: m.saveAbility || null,
+        conditionInflicted: m.conditionInflicted || null,
+        value: m.value || null,
+        range: m.range || null,
+    }));
+}
+
+export async function validateSizeLimit(maneuver, targetName, campaignName, playerStats) {
     if (!maneuver.sizeLimit || !targetName) return { valid: true };
     const sizeOrder = ['Fine', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'];
     let maxAllowed;
@@ -99,390 +308,8 @@ async function validateSizeLimit(maneuver, targetName, campaignName, playerStats
     return { valid: true };
 }
 
-export function getAvailableAttackRiderManeuvers(playerStats, campaignName, attackInfo) {
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) return [];
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) return [];
-
-    return getManeuversByType(playerStats, campaignName, knownNames, 'attack_rider', attackInfo);
-}
-
-export function getAvailableAttackRiderManeuversByTrigger(playerStats, campaignName, attackInfo) {
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) return [];
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) return [];
-
-    const allManeuvers = getManeuversByType(playerStats, campaignName, knownNames, 'attack_rider', attackInfo);
-
-    const isWeaponAttack = attackInfo?.weaponType === 'melee' || attackInfo?.weaponType === 'ranged' || attackInfo?.isUnarmedStrike;
-    const isMeleeAttack = attackInfo?.weaponType === 'melee' || attackInfo?.isUnarmedStrike;
-
-    return allManeuvers.filter(m => {
-        if (!m.trigger || m.trigger === 'any') return true;
-        if (m.trigger === 'weapon_attack_hit') {
-            return isWeaponAttack;
-        }
-        if (m.trigger === 'melee_weapon_attack_hit') {
-            return isMeleeAttack;
-        }
-        if (m.trigger === 'attack_roll_miss') {
-            return attackInfo?.hit === false;
-        }
-        if (m.trigger === 'melee_attack_miss') {
-            return isMeleeAttack && attackInfo?.hit === false;
-        }
-        if (m.trigger === 'melee_damage_taken') {
-            return isMeleeAttack;
-        }
-        if (m.trigger === 'melee_attack_straight_line') {
-            return isMeleeAttack;
-        }
-        if (m.trigger === 'replace_attack') {
-            return attackInfo?.replacingAttack === true;
-        }
-        return true;
-    });
-}
-
-export function getAvailableSkillCheckManeuvers(playerStats, campaignName, skillName, isInitiative) {
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) return [];
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) return [];
-
-    const allManeuvers = allManeuversCache.get(`${playerStats.rules || '2024'}`) || [];
-
-    return allManeuvers.filter(m => {
-        if (!knownNames.includes(m.name)) return false;
-        if (m.actionType !== 'skill_check') return false;
-        if (m.initiativeBonus && isInitiative) return true;
-        if (m.skills && m.skills.length > 0) {
-            const skillLower = skillName?.toLowerCase() || '';
-            return m.skills.some(s => s.toLowerCase().includes(skillLower) || skillLower.includes(s.toLowerCase()));
-        }
-        return false;
-    });
-}
-
-export function getSkillCheckManeuversForSkill(playerStats, campaignName, skillName, isInitiative) {
-    const maneuvers = getAvailableSkillCheckManeuvers(playerStats, campaignName, skillName, isInitiative);
-    return maneuvers.map(m => ({
-        name: m.name,
-        dieExpression: m.dieExpression || 'superiority_die',
-        skills: m.skills || [],
-        isInitiative: !!m.initiativeBonus,
-    }));
-}
-
-export async function handleAttackRiderPrompt(action, playerStats, campaignName, _mapName) {
-    const pending = getRuntimeValue(playerStats.name, 'pendingCombatSuperiorityPrompt', campaignName);
-    if (!pending || !pending.attackContext) { return null; }
-
-    const attackContext = pending.attackContext;
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) {
-        setRuntimeValue(playerStats.name, 'pendingCombatSuperiorityPrompt', null, campaignName);
-        return null;
-    }
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) {
-        setRuntimeValue(playerStats.name, 'pendingCombatSuperiorityPrompt', null, campaignName);
-        return null;
-    }
-
-    await getManeuversForRules(playerStats.rules || '2024');
-
-    const available = getAvailableAttackRiderManeuversByTrigger(playerStats, campaignName, attackContext);
-    if (available.length === 0) {
-        setRuntimeValue(playerStats.name, 'pendingCombatSuperiorityPrompt', null, campaignName);
-        return null;
-    }
-
-    return {
-        type: 'modal',
-        modalName: 'combatSuperiority',
-        payload: {
-            action: {
-                automation: {
-                    type: 'combat_superiority',
-                    dieExpression: 'superiority_die',
-                },
-            },
-            playerStats,
-            campaignName,
-            knownManeuvers: available.map(m => m.name),
-            availableManeuvers: available,
-            maxOptions: available.length,
-            selectionMode: false,
-            attackContext,
-            saveDc: attackContext?.saveDc || null,
-            saveType: attackContext?.saveType || null,
-        },
-    };
-}
-
-export async function handleSkillCheckPrompt(action, playerStats, campaignName, _mapName) {
-    const pending = getRuntimeValue(playerStats.name, 'pendingCombatSuperiorityPrompt', campaignName);
-    if (!pending || !pending.skillContext) return null;
-
-    const skillContext = pending.skillContext;
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) return null;
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) return null;
-
-    await getManeuversForRules(playerStats.rules || '2024');
-
-    const available = getAvailableSkillCheckManeuvers(playerStats, campaignName, skillContext?.skillName, skillContext?.isInitiative);
-    if (available.length === 0) return null;
-
-    return {
-        type: 'modal',
-        modalName: 'combatSuperiority',
-        payload: {
-            action: {
-                automation: {
-                    type: 'combat_superiority',
-                    dieExpression: 'superiority_die',
-                },
-            },
-            playerStats,
-            campaignName,
-            knownManeuvers: available.map(m => m.name),
-            availableManeuvers: available,
-            maxOptions: available.length,
-            selectionMode: false,
-            skillContext,
-            saveDc: null,
-            saveType: null,
-        },
-    };
-}
-
-function getManeuversByType(playerStats, campaignName, knownNames, actionType, attackInfo) {
-    const allManeuvers = allManeuversCache.get(`${playerStats.rules || '2024'}`) || [];
-    return allManeuvers.filter(m => {
-        if (!knownNames.includes(m.name)) return false;
-        if (actionType && m.actionType !== actionType) return false;
-        if (attackInfo && m.trigger && m.trigger !== 'any') {
-            const isWeaponAttack = attackInfo.weaponType === 'melee' || attackInfo.weaponType === 'ranged' || attackInfo.isUnarmedStrike;
-            const isMeleeAttack = attackInfo.weaponType === 'melee' || attackInfo.isUnarmedStrike;
-            if (m.trigger === 'weapon_attack_hit' && !isWeaponAttack) return false;
-            if (m.trigger === 'melee_weapon_attack_hit' && !isMeleeAttack) return false;
-        }
-        return true;
-    });
-}
-
-const allManeuversCache = new Map();
-
-export async function getManeuversForRules(rules) {
-    const key = rules || '2024';
-    if (!allManeuversCache.has(key)) {
-        const maneuvers = await loadManeuvers(key);
-        allManeuversCache.set(key, maneuvers);
-    }
-    return allManeuversCache.get(key);
-}
-
-export async function handle(action, playerStats, campaignName, _mapName) {
-    const auto = action.automation;
-    const forceSelectionMode = auto?.forceSelectionMode === true;
-    const knownManeuvers = getKnownManeuvers(playerStats, campaignName);
-    const allManeuvers = await loadManeuvers(playerStats.rules || '2024');
-
-    if (!allManeuvers.length) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: 'No maneuver data available.',
-                automation: auto,
-            },
-            logEntries: [],
-        };
-    }
-
-    const maxOptions = computeMaxOptions(playerStats, auto);
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
-    if (superiorityDice <= 0 && !(relentless && !relentlessUsed)) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: 'No Superiority Dice remaining. Recharges on a Short or Long Rest.',
-                automation: auto,
-            },
-        };
-    }
-
-    const unknownManeuvers = allManeuvers.filter(m => !knownManeuvers.includes(m.name));
-    const known = allManeuvers.filter(m => knownManeuvers.includes(m.name));
-
-    const needsSelection = forceSelectionMode || (known.length < maxOptions && unknownManeuvers.length > 0);
-
-    const nonAttackRiderKnown = known.filter(m => m.actionType !== 'attack_rider' && m.actionType !== 'skill_check');
-    const hasNonAttackRiderManeuvers = nonAttackRiderKnown.length > 0;
-
-    const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-
-    const modalPayload = {
-        action,
-        playerStats,
-        campaignName,
-        allManeuvers,
-        knownManeuvers: known.map(m => m.name),
-        maxOptions,
-        selectionMode: needsSelection || (!hasNonAttackRiderManeuvers && !needsSelection),
-        saveDc: auto.saveDc,
-        saveType: auto.saveType || 'WIS',
-        dieExpression: auto.dieExpression || 'superiority_die',
-        lastAttack,
-    };
-
-    return {
-        type: 'modal',
-        modalName: 'combatSuperiority',
-        payload: modalPayload,
-    };
-}
-
-export async function onCombatSuperioritySelected(action, playerStats, campaignName, selectedManeuverNames, singleUseManeuverName) {
-    const auto = action.automation;
-
-    if (Array.isArray(selectedManeuverNames)) {
-        const allManeuvers = await loadManeuvers(playerStats.rules || '2024');
-
-        if (selectedManeuverNames.length === 0) {
-            await setRuntimeValue(playerStats.name, SELECTION_KEY, [], campaignName);
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: action.name,
-                    description: 'Combat Superiority selection cleared.',
-                    automation: auto,
-                },
-            };
-        }
-
-        const validNames = selectedManeuverNames.filter(n =>
-            allManeuvers.some(m => m.name === n)
-        );
-
-        await setRuntimeValue(playerStats.name, SELECTION_KEY, validNames, campaignName);
-
-        const namesHtml = validNames.map(n => `<b>${n}</b>`).join(', ');
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `Maneuvers selected: ${namesHtml}. You can now use these by using Combat Superiority during combat.`,
-                automation: auto,
-            },
-        };
-    }
-
-    if (singleUseManeuverName) {
-        return executeManeuver(action, playerStats, campaignName, singleUseManeuverName);
-    }
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: action.name,
-            description: 'No maneuver selected.',
-            automation: auto,
-        },
-    };
-}
-
-export async function getAttackRiderOptions(playerStats, campaignName, attackInfo) {
-    return getAttackRiderOptionsByContext(playerStats, campaignName, attackInfo, 'hit');
-}
-
-export async function getAttackRiderOptionsByContext(playerStats, campaignName, attackInfo, context) {
-    const knownNames = getKnownManeuvers(playerStats, campaignName);
-    if (knownNames.length === 0) return [];
-
-    const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-    if (superiorityDice <= 0) return [];
-
-    const allManeuvers = await getManeuversForRules(playerStats.rules);
-    const knownManeuvers = allManeuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'attack_rider');
-
-    if (knownManeuvers.length === 0) return [];
-
-    const isWeaponAttack = attackInfo?.weaponType === 'melee' || attackInfo?.weaponType === 'ranged' || attackInfo?.isUnarmedStrike;
-    const isMeleeAttack = attackInfo?.weaponType === 'melee' || attackInfo?.isUnarmedStrike;
-
-    const available = knownManeuvers.filter(m => {
-        if (!m.trigger) return true;
-        if (m.trigger === 'attack_roll_miss') {
-            return context === 'miss';
-        }
-        if (m.trigger === 'weapon_attack_hit') return isWeaponAttack;
-        if (m.trigger === 'melee_weapon_attack_hit') return isMeleeAttack;
-        return true;
-    });
-
-    return available.map(m => ({
-        name: m.name,
-        effect: m.effect,
-        damageBonus: m.damageBonus || false,
-        saveType: m.saveType || null,
-        saveAbility: m.saveAbility || null,
-        conditionInflicted: m.conditionInflicted || null,
-        value: m.value || null,
-        range: m.range || null,
-        dieExpression: m.dieExpression || 'superiority_die',
-    }));
-}
-
-export function rollManeuverDie(maneuver, playerStats, campaignName) {
-    const relentless = hasRelentless(playerStats);
-    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
-
-    let dieValue;
-    let dieDescription;
-    let expendedDie = true;
-
-    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-
-    if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
-        expendedDie = false;
-    } else {
-        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = dieRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
-    }
-
-    return { dieValue, dieDescription, expendedDie, relentlessUsed };
-}
-
 export async function executeAttackRiderManeuver(action, playerStats, campaignName, maneuverName, attackInfo) {
+    const auto = action.automation || {};
     const allManeuvers = await getManeuversForRules(playerStats.rules);
     const maneuver = allManeuvers.find(m => m.name === maneuverName);
 
@@ -547,38 +374,50 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
     // Handle attack_rider maneuvers with options (Brutal Strike)
     const riderOptions = maneuver.automation?.options || [];
     if (riderOptions.length > 0 && maneuver.automation?.type === 'attack_rider') {
-        // Show modal for option selection
+        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const newEffect = {
+            target: targetName,
+            source: maneuver.name,
+            effect: 'secondary_damage',
+            value: dieValue,
+            damageType: maneuver.damageType || 'force',
+            duration: 'instant',
+            saveType: null,
+            saveDc: null,
+            saveAbility: null,
+        };
+        const updatedEffects = [...storedEffects, newEffect];
+        setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+
+        const cs = await getCombatContext(campaignName);
+        const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
+        if (cs && targetName) {
+            const result = applyDamageToTarget(cs, targetName, dieValue, [maneuver.damageType || 'force'], campaignName, characters, false, playerStats.name);
+            if (result.finalDamage > 0) {
+                description += ` ${targetName} takes ${result.finalDamage} ${maneuver.damageType || 'force'} damage.`;
+            }
+        }
+
+        const logEntry = {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: maneuver.name,
+            description: `${maneuver.name}: ${dieDescription} ${targetName} takes ${dieValue} ${maneuver.damageType || 'force'} damage.`,
+        };
+
         return {
-            type: 'modal',
-            modalName: 'attackRiderOptions',
+            type: 'popup',
             payload: {
-                maneuver,
-                riderOptions,
-                targetName,
-                playerStats,
-                campaignName,
+                type: 'automation_info',
+                name: maneuver.name,
                 description,
             },
+            logEntries: [logEntry],
         };
     }
 
-    if (maneuver.damageBonus) {
-        description += ` Added ${dieValue} to the damage roll.`;
-        if (targetName) {
-            const damageType = attackInfo?.damageType || 'force';
-            const combatSummary = await getCombatContext(campaignName);
-            if (combatSummary) {
-                const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
-                const result = applyDamageToTarget(combatSummary, targetName, dieValue, [damageType], campaignName, characters, false, playerStats.name);
-                if (result.finalDamage > 0) {
-                    description += ` Dealt ${result.finalDamage} damage to ${targetName}.`;
-                }
-            }
-        }
-    }
-
     if (maneuver.saveType && targetName) {
-        const saveDc = buildSaveDc(action?.automation || {}, playerStats);
+        const saveDc = buildSaveDc(auto, playerStats);
         const { promise } = createSaveListener(campaignName, {
             targetName,
             saveType: maneuver.saveType,
@@ -631,8 +470,9 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
                 description += ` The effect was applied to ${targetName}.`;
             }
         }
-    } else if (maneuver.saveType) {
-        const saveDc = buildSaveDc(action?.automation || {}, playerStats);
+    }
+    else if (maneuver.saveType) {
+        const saveDc = buildSaveDc(auto, playerStats);
         description += ` Target must make a ${maneuver.saveType} save DC ${saveDc}`;
         if (maneuver.conditionInflicted) {
             description += ` or gain ${maneuver.conditionInflicted} condition`;
@@ -642,8 +482,6 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
             description += ` or be pushed ${maneuver.value || 15} feet away (no lingering effect)`;
         } else if (maneuver.effect === 'goad') {
             description += ` or have Disadvantage on attacks against targets other than you`;
-        } else if (maneuver.effect === 'prone') {
-            description += ` or fall Prone`;
         } else {
             description += ` or suffer the effect`;
         }
@@ -669,67 +507,74 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
         description += ` An ally can use its Reaction to move up to half its Speed without provoking Opportunity Attacks.`;
     }
 
-    if (maneuver.actionType === 'grant_attack') {
-        description += ` An ally can use its Reaction to make an attack, adding ${dieValue} to the damage roll.`;
+    if (maneuver.effect === 'secondary_damage') {
+        description += ` A second creature within 5 feet of the target takes ${dieValue} damage (same type as the original attack).`;
+        const cs = await getCombatContext(campaignName);
+        const secondaryTargets = cs?.creatures?.filter(c =>
+            c.name !== targetName && c.name !== playerStats.name
+        ) || [];
+        const options = secondaryTargets.map(t => ({ label: t.name, value: t.name }));
+
+        if (options.length === 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: maneuver.name,
+                    description,
+                    automation: auto,
+                },
+            };
+        }
+
+        const logEntry = {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: maneuver.name,
+            description,
+        };
+        return {
+            type: 'modal',
+            modalName: 'sweepingAttackTarget',
+            payload: {
+                playerStats,
+                campaignName,
+                dieValue,
+                damageType: attackInfo?.damageType || 'slashing',
+                targetName,
+                secondaryTargets: options,
+                description,
+            },
+            logEntries: [logEntry],
+        };
+    }
+
+    if (maneuver.damageBonus) {
+        description += ` Added ${dieValue} to the damage roll.`;
+        const logEntry = {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: maneuver.name,
+            description: `${maneuver.name}: ${dieDescription} Added ${dieValue} to the damage roll.`,
+        };
+
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: maneuver.name,
+                description,
+            },
+            logEntries: [logEntry],
+        };
     }
 
     const logEntry = {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: maneuver.name,
-        description,
+        description: `${maneuver.name}: ${dieDescription}`,
     };
-
-    if (maneuver.effect === 'secondary_damage') {
-        const cs = await getCombatContext(campaignName);
-        if (cs && cs.creatures && targetName) {
-            const targetIndex = cs.creatures.findIndex(c => c.name === targetName);
-            let secondaryTargets = [];
-
-            if (targetIndex >= 0 && cs.creatures[targetIndex]?.position) {
-                const rangeFt = rangeToFeet(maneuver.range || '8_ft') || 8;
-                secondaryTargets = [];
-                for (let i = 0; i < cs.creatures.length; i++) {
-                    if (i === targetIndex) continue;
-                    const c = cs.creatures[i];
-                    const inRange = await isWithinRange(cs.creatures[targetIndex].name, c.name, rangeFt);
-                    if (inRange) secondaryTargets.push(c);
-                }
-
-                if (secondaryTargets.length === 0) {
-                    description += ` No valid secondary targets within 5 feet of ${targetName}.`;
-                }
-            } else if (targetIndex >= 0) {
-                secondaryTargets = cs.creatures.filter((c, i) => i !== targetIndex);
-            }
-
-            if (secondaryTargets.length > 0) {
-                setRuntimeValue(playerStats.name, 'pendingSweepingAttack', {
-                    dieValue,
-                    damageType: attackInfo?.damageType || 'bludgeoning',
-                    weaponType: attackInfo?.weaponType || 'melee',
-                    isUnarmedStrike: attackInfo?.isUnarmedStrike || false,
-                    targetName,
-                    secondaryTargets,
-                    primaryTargetPos: targetIndex >= 0 ? cs.creatures[targetIndex]?.position : null,
-                }, campaignName);
-
-                return {
-                    type: 'modal',
-                    modalName: 'sweepingAttackTarget',
-                    payload: {
-                        playerStats,
-                        campaignName,
-                        secondaryTargets,
-                        primaryTarget: targetName,
-                        dieValue,
-                    },
-                    logEntries: [logEntry],
-                };
-            }
-        }
-        description += ` A second creature within 5 feet of the target takes ${dieValue} damage (same type as the original attack).`;
-    }
 
     return {
         type: 'popup',
@@ -1058,84 +903,6 @@ export async function handleCombatSuperioritySweepingAttack(action, playerStats,
         };
     }
     return executeSweepingAttack(action, playerStats, campaignName, secondaryTargetName);
-}
-
-export async function executeSweepingAttack(action, playerStats, campaignName, secondaryTargetName) {
-    const pendingData = getRuntimeValue(playerStats.name, 'pendingSweepingAttack', campaignName);
-
-    if (!pendingData) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Sweeping Attack',
-                description: 'Sweeping Attack: No pending data. Use from an attack rider.',
-            },
-        };
-    }
-
-    const { dieValue, damageType, targetName, secondaryTargets } = pendingData;
-
-    const secondaryTarget = secondaryTargets.find(t => t.name === secondaryTargetName);
-    if (!secondaryTarget) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Sweeping Attack',
-                description: `Sweeping Attack: ${secondaryTargetName} is not a valid secondary target.`,
-            },
-        };
-    }
-
-    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
-    const newEffect = {
-        target: secondaryTargetName,
-        source: 'Sweeping Attack',
-        option: 'Sweeping Attack',
-        effect: 'secondary_damage',
-        value: dieValue,
-        damageType: damageType,
-        duration: 'instant',
-        saveType: null,
-        saveDc: null,
-        saveAbility: null,
-    };
-    const updatedEffects = [...storedEffects, newEffect];
-    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
-
-    const logEntry = {
-        type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: 'Sweeping Attack',
-        description: `Sweeping Attack: ${secondaryTargetName} takes ${dieValue} ${damageType} damage (same type as original attack against ${targetName}).`,
-    };
-
-    let actualDamage = dieValue;
-    const cs = await getCombatContext(campaignName);
-    const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
-    if (cs) {
-        const result = applyDamageToTarget(cs, secondaryTargetName, dieValue, [damageType], campaignName, characters, false, playerStats.name);
-        if (result.finalDamage > 0) {
-            actualDamage = result.finalDamage;
-            logEntry.description = `Sweeping Attack: ${secondaryTargetName} takes ${actualDamage} ${damageType} damage (same type as original attack against ${targetName}).`;
-        }
-    }
-
-    await setRuntimeValue(playerStats.name, 'pendingSweepingAttack', null, campaignName);
-    await addEntry(campaignName, logEntry).catch(() => {});
-
-    const description = `<b>Sweeping Attack</b><br/>${secondaryTargetName} takes ${actualDamage} ${damageType} damage (same type as the original attack).`;
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: 'Sweeping Attack',
-            description,
-        },
-        logEntries: [logEntry],
-    };
 }
 
 export async function handleCombatSuperiorityMovement(action, playerStats, campaignName, _mapName) {
@@ -2029,127 +1796,6 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
             name: maneuver.name,
             description,
             automation: auto,
-        },
-        logEntries: [logEntry],
-    };
-}
-
-export async function executeBaitAndSwitchChoice(action, playerStats, campaignName, chosenName) {
-    if (!chosenName || !playerStats || !campaignName) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Bait and Switch',
-                description: 'No target selected for Bait and Switch AC bonus.',
-            },
-        };
-    }
-
-    const dieValue = action.dieValue;
-    const maneuverName = action.maneuverName || 'Bait and Switch';
-
-    await setRuntimeValue(chosenName, 'baitAndSwitchActive', true, campaignName);
-    await setRuntimeValue(chosenName, 'baitAndSwitchBonus', dieValue, campaignName);
-    await setRuntimeValue(chosenName, 'baitAndSwitchSource', maneuverName, campaignName);
-    await addExpiration(playerStats.name, chosenName, [
-        { type: 'bait_and_switch_clear' }
-    ], campaignName, undefined, playerStats.name);
-
-    const description = `${maneuverName}: ${chosenName} gains +${dieValue} AC until the start of ${playerStats.name}'s next turn.`;
-
-    const logEntry = {
-        type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: maneuverName,
-        description,
-    };
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: maneuverName,
-            description,
-        },
-        logEntries: [logEntry],
-    };
-}
-
-export async function executeCommanderStrikeChoice(action, playerStats, campaignName, chosenName) {
-    if (!chosenName || !playerStats || !campaignName) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: "Commander's Strike",
-                description: 'No target selected for Commander\'s Strike damage bonus.',
-            },
-        };
-    }
-
-    const dieValue = action.dieValue;
-    const maneuverName = action.maneuverName || "Commander's Strike";
-
-    await setRuntimeValue(chosenName, 'commanderStrikeActive', true, campaignName);
-    await setRuntimeValue(chosenName, 'commanderStrikeBonus', dieValue, campaignName);
-    await setRuntimeValue(chosenName, 'commanderStrikeSource', maneuverName, campaignName);
-
-    const description = `${maneuverName}: ${chosenName} will add ${dieValue} to their next attack's damage roll.`;
-
-    const logEntry = {
-        type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: maneuverName,
-        description,
-    };
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: maneuverName,
-            description,
-        },
-        logEntries: [logEntry],
-    };
-}
-
-export async function executeRallyChoice(action, playerStats, campaignName, chosenName, totalHp, extraHp, description) {
-    if (!chosenName || !playerStats || !campaignName) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Rally',
-                description: 'No target selected for Rally.',
-            },
-        };
-    }
-
-    const dieValue = action.dieValue;
-    const maneuverName = action.maneuverName || 'Rally';
-
-    setTempHp(chosenName, totalHp, campaignName);
-
-    await addExpiration(playerStats.name, chosenName, [
-        { type: 'rally_clear' }
-    ], campaignName, undefined, playerStats.name);
-
-    const logEntry = {
-        type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: maneuverName,
-        description: `${maneuverName}: ${chosenName} gains ${totalHp} temporary hit points.`,
-        d10Roll: dieValue,
-    };
-
-    return {
-        type: 'popup',
-        payload: {
-            type: 'automation_info',
-            name: maneuverName,
-            description,
         },
         logEntries: [logEntry],
     };

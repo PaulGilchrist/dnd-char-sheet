@@ -1,0 +1,286 @@
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setTempHp } from '../buffs/tempHpService.js';
+import { rollExpression } from '../../../dice/diceRoller.js';
+import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
+import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
+import { addEntry } from '../../../ui/logService.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
+import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
+import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+
+export function applyConditionToTarget(targetName, conditionKey, campaignName, combatSummary, saveDc, saveType, playerStats) {
+    if (!combatSummary) {
+        console.error(`[combatSuperiority] Failed to get combatSummary for applying ${conditionKey} to ${targetName}`);
+        return;
+    }
+    const conditionDef = { key: conditionKey, label: conditionKey.charAt(0).toUpperCase() + conditionKey.slice(1) };
+    addCondition(combatSummary, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
+}
+
+export function hasRelentless(playerStats) {
+    return (playerStats.automation?.passives || []).some(p => p.type === 'passive_rule' && p.effect === 'relentless');
+}
+
+export function getRelentlessUsedRound(playerStats, campaignName) {
+    return getRuntimeValue(playerStats.name, 'relentlessUsedRound', campaignName);
+}
+
+export function setRelentlessUsed(playerStats, campaignName) {
+    const currentRound = getCurrentCombatRound();
+    setRuntimeValue(playerStats.name, 'relentlessUsedRound', currentRound, campaignName);
+}
+
+export function getKnownManeuvers(playerStats, campaignName) {
+    const stored = getRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', campaignName);
+    return Array.isArray(stored) ? stored : [];
+}
+
+export function getSuperiorityDice(playerStats, campaignName) {
+    const usesKey = 'superiorityDice';
+    const defaultMax = 4;
+    return Number(getRuntimeValue(playerStats.name, usesKey, campaignName) ?? defaultMax);
+}
+
+export function computeMaxOptions(playerStats, auto) {
+    const base = auto.maxOptions || 3;
+    const scaling = auto.maxOptionsScaling || {};
+    let total = base;
+    const level = playerStats.level || 0;
+    const sortedLevels = Object.keys(scaling)
+        .map(Number)
+        .filter(l => !isNaN(l))
+        .sort((a, b) => a - b);
+    for (const scaleLevel of sortedLevels) {
+        if (level >= scaleLevel) {
+            total += scaling[scaleLevel];
+        }
+    }
+    return total;
+}
+
+export function rollManeuverDie(maneuver, playerStats, campaignName) {
+    const relentless = hasRelentless(playerStats);
+    const storedRound = getRelentlessUsedRound(playerStats, campaignName);
+    const currentRound = getCurrentCombatRound();
+    const relentlessUsed = relentless && storedRound === currentRound;
+
+    let dieValue;
+    let dieDescription;
+    let expendedDie = true;
+
+    const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
+
+    if (relentless && !relentlessUsed) {
+        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
+        dieValue = relentlessRoll?.total || superiorityDieSize;
+        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
+        setRelentlessUsed(playerStats, campaignName);
+        expendedDie = false;
+    } else {
+        const dieRoll = rollExpression(`1d${superiorityDieSize}`);
+        dieValue = dieRoll?.total || superiorityDieSize;
+        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue}.`;
+    }
+
+    return { dieValue, dieDescription, expendedDie, relentlessUsed };
+}
+
+export async function executeBaitAndSwitchChoice(action, playerStats, campaignName, chosenName) {
+    if (!chosenName || !playerStats || !campaignName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Bait and Switch',
+                description: 'No target selected for Bait and Switch AC bonus.',
+            },
+        };
+    }
+
+    const dieValue = action.dieValue;
+    const maneuverName = action.maneuverName || 'Bait and Switch';
+
+    await setRuntimeValue(chosenName, 'baitAndSwitchActive', true, campaignName);
+    await setRuntimeValue(chosenName, 'baitAndSwitchBonus', dieValue, campaignName);
+    await setRuntimeValue(chosenName, 'baitAndSwitchSource', maneuverName, campaignName);
+    await addExpiration(playerStats.name, chosenName, [
+        { type: 'bait_and_switch_clear' }
+    ], campaignName, undefined, playerStats.name);
+
+    const description = `${maneuverName}: ${chosenName} gains +${dieValue} AC until the start of ${playerStats.name}'s next turn.`;
+
+    const logEntry = {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: maneuverName,
+        description,
+    };
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: maneuverName,
+            description,
+        },
+        logEntries: [logEntry],
+    };
+}
+
+export async function executeCommanderStrikeChoice(action, playerStats, campaignName, chosenName) {
+    if (!chosenName || !playerStats || !campaignName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: "Commander's Strike",
+                description: 'No target selected for Commander\'s Strike damage bonus.',
+            },
+        };
+    }
+
+    const dieValue = action.dieValue;
+    const maneuverName = action.maneuverName || "Commander's Strike";
+
+    await setRuntimeValue(chosenName, 'commanderStrikeActive', true, campaignName);
+    await setRuntimeValue(chosenName, 'commanderStrikeBonus', dieValue, campaignName);
+    await setRuntimeValue(chosenName, 'commanderStrikeSource', maneuverName, campaignName);
+
+    const description = `${maneuverName}: ${chosenName} will add ${dieValue} to their next attack's damage roll.`;
+
+    const logEntry = {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: maneuverName,
+        description,
+    };
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: maneuverName,
+            description,
+        },
+        logEntries: [logEntry],
+    };
+}
+
+export async function executeRallyChoice(action, playerStats, campaignName, chosenName, totalHp, extraHp, description) {
+    if (!chosenName || !playerStats || !campaignName) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Rally',
+                description: 'No target selected for Rally.',
+            },
+        };
+    }
+
+    const dieValue = action.dieValue;
+    const maneuverName = action.maneuverName || 'Rally';
+
+    setTempHp(chosenName, totalHp, campaignName);
+
+    await addExpiration(playerStats.name, chosenName, [
+        { type: 'rally_clear' }
+    ], campaignName, undefined, playerStats.name);
+
+    const logEntry = {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: maneuverName,
+        description: `${maneuverName}: ${chosenName} gains ${totalHp} temporary hit points.`,
+        d10Roll: dieValue,
+    };
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: maneuverName,
+            description,
+        },
+        logEntries: [logEntry],
+    };
+}
+
+export async function executeSweepingAttack(action, playerStats, campaignName, secondaryTargetName) {
+    const pendingData = getRuntimeValue(playerStats.name, 'pendingSweepingAttack', campaignName);
+
+    if (!pendingData) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Sweeping Attack',
+                description: 'Sweeping Attack: No pending data. Use from an attack rider.',
+            },
+        };
+    }
+
+    const { dieValue, damageType, targetName, secondaryTargets } = pendingData;
+
+    const secondaryTarget = secondaryTargets.find(t => t.name === secondaryTargetName);
+    if (!secondaryTarget) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Sweeping Attack',
+                description: `Sweeping Attack: ${secondaryTargetName} is not a valid secondary target.`,
+            },
+        };
+    }
+
+    const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const newEffect = {
+        target: secondaryTargetName,
+        source: 'Sweeping Attack',
+        option: 'Sweeping Attack',
+        effect: 'secondary_damage',
+        value: dieValue,
+        damageType: damageType,
+        duration: 'instant',
+        saveType: null,
+        saveDc: null,
+        saveAbility: null,
+    };
+    const updatedEffects = [...storedEffects, newEffect];
+    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
+
+    const logEntry = {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: 'Sweeping Attack',
+        description: `Sweeping Attack: ${secondaryTargetName} takes ${dieValue} ${damageType} damage (same type as original attack against ${targetName}).`,
+    };
+
+    let actualDamage = dieValue;
+    const cs = await getCombatContext(campaignName);
+    const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
+    if (cs) {
+        const result = applyDamageToTarget(cs, secondaryTargetName, dieValue, [damageType], campaignName, characters, false, playerStats.name);
+        if (result.finalDamage > 0) {
+            actualDamage = result.finalDamage;
+            logEntry.description = `Sweeping Attack: ${secondaryTargetName} takes ${actualDamage} ${damageType} damage (same type as original attack against ${targetName}).`;
+        }
+    }
+
+    await setRuntimeValue(playerStats.name, 'pendingSweepingAttack', null, campaignName);
+    await addEntry(campaignName, logEntry).catch(() => {});
+
+    const description = `<b>Sweeping Attack</b><br/>${secondaryTargetName} takes ${actualDamage} ${damageType} damage (same type as the original attack).`;
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: 'Sweeping Attack',
+            description,
+        },
+        logEntries: [logEntry],
+    };
+}
