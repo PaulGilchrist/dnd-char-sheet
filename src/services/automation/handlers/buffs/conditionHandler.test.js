@@ -134,9 +134,12 @@ describe('conditionHandler.handle', () => {
       const ps = makePlayerStats();
       const action = makeAction({});
 
+      getAbilityModifier.mockReturnValue(2);
+
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(result.payload.saveDc).toBe(13);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'WIS');
     });
   });
 
@@ -293,6 +296,7 @@ describe('conditionHandler.handle', () => {
 
       getRuntimeValue.mockReturnValue(2);
       rangeToFeet.mockReturnValue(30);
+      getAbilityModifier.mockReturnValue(2);
 
       await handle(action, ps, CAMPAIGN_NAME, null);
 
@@ -388,6 +392,7 @@ describe('conditionHandler.handle', () => {
       const action = makeAction({});
 
       getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(2);
 
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 

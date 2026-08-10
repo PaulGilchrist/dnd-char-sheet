@@ -3,27 +3,18 @@ import { addEntry } from '../../../ui/logService.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
-import { getAbilityModifier } from '../../../shared/abilityLookup.js';
+import { buildSaveDc } from '../../../automation/common/savePrompt.js';
 import { loadMonsters } from '../../../ui/dataLoader.js';
-
-function buildSaveDc(auto, playerStats) {
-    if (auto.saveDc === 'ability') {
-        const ability = auto.saveAbility || 'WIS';
-        const abilityBonus = getAbilityModifier(playerStats.abilities, ability);
-        const prof = playerStats.proficiency || 0;
-        return 8 + abilityBonus + prof;
-    }
-    if (auto.saveDc) return auto.saveDc;
-    const wis = playerStats.abilities?.find(a => a.name === 'Wisdom');
-    const wisBonus = wis?.bonus || 0;
-    const prof = playerStats.proficiency || 0;
-    return 8 + wisBonus + prof;
-}
 
 export async function handle(action, playerStats, campaignName, mapName) {
     const auto = action.automation;
 
-    const saveDc = buildSaveDc(auto, playerStats);
+    const autoWithDefaults = {
+        ...auto,
+        saveDc: auto.saveDc || 'ability',
+        saveAbility: auto.saveAbility || 'WIS',
+    };
+    const saveDc = buildSaveDc(autoWithDefaults, playerStats);
     const conditionName = auto.condition || 'frightened';
     const additionalCondition = auto.additionalCondition || null;
     const saveType = auto.saveType || 'WIS';
