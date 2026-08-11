@@ -306,3 +306,155 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
         expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('attackerName', 'EnemyMage');
     });
 });
+
+describe('handlePlayerSaveDamage - gwf (Great Weapon Fighting) tracking', () => {
+    const deps = {
+        characterName: 'TestWizard',
+        campaignName: 'test-campaign',
+        characters: [{ name: 'TestWizard' }],
+        charactersRef: { current: [] },
+        setPopupHtml: vi.fn(),
+        logEntry: vi.fn(),
+        pendingSaves: {},
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getRuntimeValue.mockReset().mockReturnValue(null);
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: false,
+            autoRerollForSaves: false,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
+        });
+        getHolyAuraTargets.mockReturnValue([]);
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
+    });
+
+    it('tracks gwfApplied when displayRolls differ from baseRolls', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 13,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            damageType: 'Fire',
+            targetName: 'TestWizard',
+        };
+
+        await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            context,
+            5,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] },
+            [6],
+            undefined,
+            [3] // gwfDisplayRolls differs from gwfBaseRolls (default undefined)
+        );
+
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                gwfApplied: true,
+                gwfOriginalRolls: undefined,
+            })
+        );
+    });
+
+    it('tracks gwfApplied when gwfDisplayRolls equals gwfBaseRolls', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 13,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            damageType: 'Fire',
+            targetName: 'TestWizard',
+        };
+
+        await handler(
+            'Fire Bolt',
+            '1d10',
+            5,
+            [6],
+            0,
+            context,
+            5,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] },
+            [6],
+            [6, 6], // gwfBaseRolls
+            [6, 6]  // gwfDisplayRolls same content but different object reference
+        );
+
+        // Arrays are compared by reference, not value, so [6,6] !== [6,6] is true
+        expect(deps.setPopupHtml).toHaveBeenCalledWith(
+            expect.objectContaining({
+                gwfApplied: true,
+                gwfOriginalRolls: [6, 6],
+            })
+        );
+    });
+});
+
+describe('handlePlayerSaveDamage - status effects and player stats', () => {
+    const deps = {
+        characterName: 'TestWizard',
+        campaignName: 'test-campaign',
+        characters: [{ name: 'TestWizard' }],
+        charactersRef: { current: [] },
+        setPopupHtml: vi.fn(),
+        logEntry: vi.fn(),
+        pendingSaves: {},
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getRuntimeValue.mockReset().mockReturnValue(null);
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: false,
+            autoRerollForSaves: false,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
+        });
+        getHolyAuraTargets.mockReturnValue([]);
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
+    });
+
+    it('stores statusEffects and playerStats in pending data', async () => {
+        const handler = createPlayerSaveDamageHandler(deps);
+        const context = {
+            saveDc: 15,
+            saveType: 'CON',
+            dcSuccess: 'half',
+            damageType: 'Poison',
+            targetName: 'TestWizard',
+            statusEffects: ['exhaustion', 'poisoned'],
+            playerStats: { level: 10, class: { name: 'Wizard' } },
+        };
+
+        await handler(
+            'Acid Arrow',
+            '4d4',
+            10,
+            [3, 4, 2, 1],
+            0,
+            context,
+            10,
+            { creatures: [{ name: 'TestWizard', type: 'player' }] },
+            [3, 4, 2, 1]
+        );
+
+        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('statusEffects', ['exhaustion', 'poisoned']);
+        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('playerStats', {
+            level: 10,
+            class: { name: 'Wizard' },
+        });
+    });
+});

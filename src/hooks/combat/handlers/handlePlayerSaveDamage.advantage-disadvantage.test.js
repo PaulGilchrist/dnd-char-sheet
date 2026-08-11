@@ -92,14 +92,14 @@ vi.mock('../../useAllySelection.js', () => ({
 }));
 
 import { getRuntimeValue } from '../../runtime/useRuntimeState.js';
-import { getHolyAuraTargets } from '../../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { getHolyAuraTargets } from '../../../services/automation/handlers/buffs/holyAuraHandler.js';
 import { createPlayerSaveDamageHandler } from './handlePlayerSaveDamage.js';
 import { computeConditionEffects } from '../../../services/combat/conditions/conditionEffects.js';
 
-describe('handlePlayerSaveDamage - main save prompt path', () => {
+describe('handlePlayerSaveDamage - advantage/disadvantage calculation', () => {
     const deps = {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
@@ -126,7 +126,9 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
         isCircleOfPowerActive.mockReturnValue(false);
     });
 
-    it('sends a save prompt when no special paths apply', async () => {
+    it('calculates saveDisadvantage from corona aura', async () => {
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: true });
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 13,
@@ -134,49 +136,6 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             dcSuccess: 'half',
             damageType: 'Fire',
             targetName: 'TestWizard',
-        };
-
-        const result = await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(result).toBe(true);
-        expect(deps.pendingSaves).toHaveProperty('test-guid-1234');
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'save-damage',
-                waitingForPlayerSave: true,
-                promptId: 'test-guid-1234',
-                rawDamage: 5,
-                gwfApplied: false,
-                gwfOriginalRolls: null,
-            })
-        );
-        expect(deps.logEntry).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'roll',
-                rollType: 'save-prompt',
-            })
-        );
-    });
-
-    it('sets metamagicHeighten disadvantage in pending data', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-            metamagicHeighten: true,
         };
 
         await handler(
@@ -191,10 +150,19 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             [6]
         );
 
+        expect(getCoronaSaveDisadvantage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                targetName: 'TestWizard',
+                damageType: 'Fire',
+                skipRangeCheck: true,
+            })
+        );
         expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('metamagicHeighten', true);
     });
 
-    it('sets isCantrip in pending data', async () => {
+    it('calculates saveDisadvantage from elder champion aura', async () => {
+        vi.mocked(getElderChampionSaveDisadvantage).mockResolvedValue({ disadvantage: true });
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 13,
@@ -202,7 +170,6 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             dcSuccess: 'half',
             damageType: 'Fire',
             targetName: 'TestWizard',
-            isCantrip: true,
         };
 
         await handler(
@@ -217,10 +184,17 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             [6]
         );
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('isCantrip', true);
+        expect(getElderChampionSaveDisadvantage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                attackerName: 'TestWizard',
+                targetName: 'TestWizard',
+            })
+        );
     });
 
-    it('sets overchannel fields in pending data', async () => {
+    it('calculates saveAdvantage from circle of power', async () => {
+        vi.mocked(isCircleOfPowerActive).mockReturnValue(true);
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 13,
@@ -228,9 +202,6 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             dcSuccess: 'half',
             damageType: 'Fire',
             targetName: 'TestWizard',
-            overchannelActive: true,
-            overchannelUseCount: 2,
-            overchannelSpellLevel: 3,
         };
 
         await handler(
@@ -245,12 +216,20 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             [6]
         );
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelActive', true);
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelUseCount', 2);
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('overchannelSpellLevel', 3);
+        expect(isCircleOfPowerActive).toHaveBeenCalledWith('TestWizard', 'test-campaign');
+        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('saveAdvantage', true);
     });
 
-    it('sets autoDamage fields in pending data', async () => {
+    it('handles restoreBalance reducing disadvantage sources', async () => {
+        vi.mocked(getCoronaSaveDisadvantage).mockResolvedValue({ disadvantage: true });
+        computeConditionEffects.mockReturnValue({
+            restoreBalance: true,
+            autoRerollForSaves: false,
+            autoRerollBonus: null,
+            saveAdvantageCount: 0,
+            saveAdvantageAbilities: null,
+        });
+
         const handler = createPlayerSaveDamageHandler(deps);
         const context = {
             saveDc: 13,
@@ -258,9 +237,6 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             dcSuccess: 'half',
             damageType: 'Fire',
             targetName: 'TestWizard',
-            autoDamageSecondaryFormula: '2d6',
-            autoDamageSecondaryName: 'Radiant',
-            autoDamageSecondaryDamageType: 'Radiant',
         };
 
         await handler(
@@ -275,34 +251,8 @@ describe('handlePlayerSaveDamage - main save prompt path', () => {
             [6]
         );
 
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryFormula', '2d6');
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryName', 'Radiant');
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('autoDamageSecondaryDamageType', 'Radiant');
-    });
-
-    it('uses attackerName when provided in pending data', async () => {
-        const handler = createPlayerSaveDamageHandler(deps);
-        const context = {
-            saveDc: 13,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            damageType: 'Fire',
-            targetName: 'TestWizard',
-            attackerName: 'EnemyMage',
-        };
-
-        await handler(
-            'Fire Bolt',
-            '1d10',
-            5,
-            [6],
-            0,
-            context,
-            5,
-            { creatures: [{ name: 'TestWizard', type: 'player' }] },
-            [6]
-        );
-
-        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('attackerName', 'EnemyMage');
+        // With restoreBalance and only 1 disadvantage source (corona),
+        // the net should be false (sources > 1 is false when only 1 source)
+        expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('metamagicHeighten', false);
     });
 });
