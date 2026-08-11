@@ -220,18 +220,7 @@ import { executeSpellCast } from './index.js';
 
 const { resolveSpellDamageWithTypes } = await import('../../../core/spellDamageUtils.js');
 const { getRuntimeValue } = await import('../../../../../hooks/runtime/useRuntimeState.js');
-const {
-  handlePowerWordHeal: mockPwh,
-  handlePowerWordKill: mockPwk,
-  handleMassSuggestion: mockMassSuggestion,
-  handleCalmEmotions: mockCalmEmotions,
-  handleHypnoticPatternEarly: mockHypnoticEarly,
-  handleConfusionEarly: mockConfusionEarly,
-  handleShapechange: mockShapechange,
-  handleFear: mockFear,
-  handleConjureVolley: mockConjureVolley,
-  handleSilence: mockSilence,
-} = await import('./modalSpells.js');
+const { handleFear: mockFear, handleConjureVolley: mockConjureVolley, handleSilence: mockSilence } = await import('./modalSpells.js');
 const {
   handleRegenerate: mockRegenerate,
   handleSeeInvisibility: mockSeeInvisibility,
@@ -281,7 +270,6 @@ const {
   handleProtectionFromEnergy: mockProtectionFromEnergy,
   handleProtectionFromPoison: mockProtectionFromPoison,
   handleResistance: mockResistance,
-  handleGenericAutomation: mockGenericAutomation,
 } = await import('./triggerSpells.js');
 
 /* ------------------------------------------------------------------ */
@@ -336,17 +324,10 @@ describe('executeSpellCast — early returns', () => {
     vi.clearAllMocks();
     getRuntimeValue.mockReturnValue([]);
     resolveSpellDamageWithTypes.mockReturnValue({ formula: '1d8', primaryType: 'Fire' });
-    mockPwh.mockResolvedValue({ handled: false });
-    mockPwk.mockResolvedValue({ handled: false });
-    mockMassSuggestion.mockReturnValue({ handled: false });
-    mockCalmEmotions.mockReturnValue({ handled: false });
-    mockHypnoticEarly.mockReturnValue({ handled: false });
-    mockConfusionEarly.mockReturnValue({ handled: false });
-    mockShapechange.mockReturnValue({ handled: false });
-    mockGenericAutomation.mockResolvedValue({ handled: false });
     mockRegenerate.mockResolvedValue({ handled: false });
     mockFear.mockReturnValue({ handled: false });
     mockConjureVolley.mockReturnValue({ handled: false });
+    mockSilence.mockReturnValue({ handled: false });
     mockSeeInvisibility.mockResolvedValue({ handled: false });
     mockFleshToStone.mockResolvedValue({ handled: false });
     mockHoldMonster.mockResolvedValue({ handled: false });
@@ -394,195 +375,6 @@ describe('executeSpellCast — early returns', () => {
     mockProtectionFromEnergy.mockResolvedValue({ handled: false });
     mockProtectionFromPoison.mockResolvedValue({ handled: false });
     mockResistance.mockResolvedValue({ handled: false });
-    mockSilence.mockReturnValue({ handled: false });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  Power Word Heal early return                                    */
-  /* ---------------------------------------------------------------- */
-
-  describe('Power Word Heal early return', () => {
-    it('returns early when Power Word Heal is handled', async () => {
-      mockPwh.mockResolvedValue({ handled: true, result: { type: 'modal' } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Power Word Heal' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ type: 'modal' });
-    });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  Power Word Kill early return                                    */
-  /* ---------------------------------------------------------------- */
-
-  describe('Power Word Kill early return', () => {
-    it('returns early when Power Word Kill is handled', async () => {
-      mockPwk.mockResolvedValue({ handled: true, result: { type: 'modal' } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Power Word Kill' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ type: 'modal' });
-    });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  Modal spells early returns                                      */
-  /* ---------------------------------------------------------------- */
-
-  describe('modal spells early returns', () => {
-    it('returns early for Mass Suggestion', async () => {
-      mockMassSuggestion.mockReturnValue({ handled: true, result: { automationPopup: { type: 'modal', modalName: 'massSuggestion' } } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Mass Suggestion' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ automationPopup: { type: 'modal', modalName: 'massSuggestion' } });
-    });
-
-    it('returns early for Calm Emotions', async () => {
-      mockCalmEmotions.mockReturnValue({ handled: true, result: { automationPopup: { type: 'modal', modalName: 'calmEmotions' } } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Calm Emotions' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ automationPopup: { type: 'modal', modalName: 'calmEmotions' } });
-    });
-
-    it('returns early for Hypnotic Pattern (early)', async () => {
-      mockHypnoticEarly.mockReturnValue({ handled: true, result: { automationPopup: { type: 'modal', modalName: 'hypnoticPattern' } } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Hypnotic Pattern' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ automationPopup: { type: 'modal', modalName: 'hypnoticPattern' } });
-    });
-
-    it('returns early for Confusion (early)', async () => {
-      mockConfusionEarly.mockReturnValue({ handled: true, result: { result: { handled: true } } });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Confusion' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ handled: true });
-    });
-
-    it('returns early for Shapechange', async () => {
-      mockShapechange.mockReturnValue({ handled: true, result: Promise.resolve({ automationPopup: { type: 'popup' } }) });
-
-      const result = await executeSpellCast(
-        makeSpell({ name: 'Shapechange' }),
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ automationPopup: { type: 'popup' } });
-    });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  Generic automation early return                                 */
-  /* ---------------------------------------------------------------- */
-
-  describe('generic automation early return', () => {
-    it('returns early when generic automation is handled with result', async () => {
-      mockGenericAutomation.mockResolvedValue({ handled: true, result: { automationPopup: { type: 'popup' } } });
-
-      const spell = { name: 'TestSpell', automation: { type: 'test_type', effects: ['damage'] } };
-      const result = await executeSpellCast(
-        spell,
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toEqual({ automationPopup: { type: 'popup' } });
-    });
-
-    it('returns undefined when generic automation is handled without result', async () => {
-      mockGenericAutomation.mockResolvedValue({ handled: true });
-
-      const spell = { name: 'TestSpell', automation: { type: 'test_type', effects: ['damage'] } };
-      const result = await executeSpellCast(
-        spell,
-        makeMetaCtx(),
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
-      );
-
-      expect(result).toBeUndefined();
-    });
   });
 
   /* ---------------------------------------------------------------- */
