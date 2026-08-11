@@ -69,23 +69,6 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-function makeWarlockStats(overrides = {}) {
-  return makePlayerStats({
-    name: 'TestWarlock',
-    class: { name: 'Warlock', arcanums: [] },
-    spellAbilities: {
-      spellCastingAbility: 'Charisma',
-      toHit: 9,
-      saveDc: 15,
-      modifier: 4,
-      spell_slots_level_1: 2,
-      spell_slots_level_2: 2,
-      spell_slots_level_3: 2,
-    },
-    ...overrides,
-  });
-}
-
 function makeMetaCtx(overrides = {}) {
   return { slotLevel: 3, ...overrides };
 }
@@ -463,71 +446,6 @@ describe('prepareSpellCast — resource consumption', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'spell_slots_level_5', 1, 'camp');
     expect(result.modifiedSpell.level).toBe(5);
     expect(result.modifiedSpell.baseLevel).toBe(3);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// prepareSpellCast — Warlock slot substitution
-// ---------------------------------------------------------------------------
-
-describe('prepareSpellCast — Warlock slot substitution', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getRuntimeValue.mockReturnValue(undefined);
-    getCombatSummary.mockReturnValue(null);
-  });
-
-  it('uses a higher-level warlock slot when the matching level has none', async () => {
-    getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === 'spell_slots_level_2') return 0;
-      if (key2 === 'spell_slots_level_3') return 1;
-      return undefined;
-    });
-
-    const spell = makeSpell({ name: 'Fireball', level: 2 });
-    const result = await prepareSpellCast(spell, makeMetaCtx(), {
-      playerName: 'TestWarlock',
-      playerStats: makeWarlockStats(),
-      campaignName: 'camp',
-    });
-
-    expect(result.slotConsumed).toBe(true);
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_3', 0, 'camp');
-  });
-
-  it('does not use warlock slot substitution when matching level has slots', async () => {
-    getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === 'spell_slots_level_2') return 1;
-      if (key2 === 'spell_slots_level_3') return 1;
-      return undefined;
-    });
-
-    const spell = makeSpell({ name: 'Fireball', level: 2 });
-    const result = await prepareSpellCast(spell, makeMetaCtx(), {
-      playerName: 'TestWarlock',
-      playerStats: makeWarlockStats(),
-      campaignName: 'camp',
-    });
-
-    expect(result.slotConsumed).toBe(true);
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_2', 0, 'camp');
-    expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_3', 0, 'camp');
-  });
-
-  it('does not substitute when all warlock slots are exhausted', async () => {
-    getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === 'spell_slots_level_1' || key2 === 'spell_slots_level_2' || key2 === 'spell_slots_level_3') return 0;
-      return undefined;
-    });
-
-    const spell = makeSpell({ name: 'Fireball', level: 2 });
-    const result = await prepareSpellCast(spell, makeMetaCtx(), {
-      playerName: 'TestWarlock',
-      playerStats: makeWarlockStats(),
-      campaignName: 'camp',
-    });
-
-    expect(result.slotConsumed).toBe(false);
   });
 });
 

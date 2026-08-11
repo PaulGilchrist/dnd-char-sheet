@@ -790,6 +790,68 @@ describe('prepareSpellCast — Warlock slot substitution', () => {
     expect(result.slotConsumed).toBe(true);
     expect(setRuntimeValue).toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_3', 0, 'test-campaign');
   });
+
+  it('does not use warlock slot substitution when matching level has slots', async () => {
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === 'spell_slots_level_2') return 1;
+      if (key2 === 'spell_slots_level_3') return 1;
+      return undefined;
+    });
+
+    const warlockStats = makePlayerStats({
+      name: 'TestWarlock',
+      class: { name: 'Warlock' },
+      spellAbilities: {
+        spellCastingAbility: 'Charisma',
+        toHit: 9,
+        saveDc: 15,
+        modifier: 4,
+        spell_slots_level_2: 2,
+        spell_slots_level_3: 2,
+      },
+      automation: { actions: [], bonusActions: [], specialActions: [], passives: [] },
+    });
+    const spell = makeSpell({ name: 'Fireball', level: 2 });
+    const result = await prepareSpellCast(spell, makeMetaCtx(), {
+      playerName: 'TestWarlock',
+      playerStats: warlockStats,
+      campaignName: 'test-campaign',
+    });
+
+    expect(result.slotConsumed).toBe(true);
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_2', 0, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWarlock', 'spell_slots_level_3', 0, 'test-campaign');
+  });
+
+  it('does not substitute when all warlock slots are exhausted', async () => {
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === 'spell_slots_level_1' || key2 === 'spell_slots_level_2' || key2 === 'spell_slots_level_3') return 0;
+      return undefined;
+    });
+
+    const warlockStats = makePlayerStats({
+      name: 'TestWarlock',
+      class: { name: 'Warlock' },
+      spellAbilities: {
+        spellCastingAbility: 'Charisma',
+        toHit: 9,
+        saveDc: 15,
+        modifier: 4,
+        spell_slots_level_1: 2,
+        spell_slots_level_2: 2,
+        spell_slots_level_3: 2,
+      },
+      automation: { actions: [], bonusActions: [], specialActions: [], passives: [] },
+    });
+    const spell = makeSpell({ name: 'Fireball', level: 2 });
+    const result = await prepareSpellCast(spell, makeMetaCtx(), {
+      playerName: 'TestWarlock',
+      playerStats: warlockStats,
+      campaignName: 'test-campaign',
+    });
+
+    expect(result.slotConsumed).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
