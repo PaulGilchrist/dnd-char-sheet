@@ -39,9 +39,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 import { addEntry } from '../../../../services/ui/logService.js';
-import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Test fixtures ──
 
@@ -95,6 +93,7 @@ function getApplyButton() {
     return screen.getByRole('button', { name: /Blinding Darkness/ });
 }
 
+// ── Tests ──
 
 describe('AOEConditionModal', () => {
     beforeEach(() => {

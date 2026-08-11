@@ -79,7 +79,6 @@ import { getCombatSummary } from '../../../../services/encounters/combatData.js'
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { addEntry } from '../../../../services/ui/logService.js';
 import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
 
 // ── Test fixtures ──
 
@@ -121,6 +120,8 @@ function makeProps(overrides = {}) {
 }
 
 // ── Tests ──
+
+describe('AOEConditionModal Overlay', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         getCombatSummary.mockReturnValue(baseCombatSummary);
@@ -131,7 +132,6 @@ function makeProps(overrides = {}) {
         getAllyList.mockReturnValue(null);
     });
 
-    describe('overlay targeting path', () => {
     describe('overlay targeting path', () => {
         it('renders AreaEffectTargetModalBase when player is overlay targeted with active overlay', () => {
             render(<AOEConditionModal {...makeProps({
@@ -408,8 +408,15 @@ function makeProps(overrides = {}) {
 
     // ── Processing state rendering ──
 
+    describe('processing state rendering in renderBody', () => {
+        it('shows selection message in normal mode', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(screen.getByText(/Select creatures in the area of effect/)).toBeInTheDocument();
+        });
     });
-    describe('getCreatureTargets', () => {
+
+    // ── Blocking effects - both attacker and target trapped ──
+
     describe('getCreatureTargets', () => {
         it('returns creature targets with correct shape', async () => {
             render(<AOEConditionModal {...makeProps()} />);
@@ -432,8 +439,6 @@ function makeProps(overrides = {}) {
     });
 
     // ── Combat summary null handling in resolveAllSaves ──
-    });
-    describe('combat summary null handling in resolveAllSaves', () => {
     describe('combat summary null handling in resolveAllSaves', () => {
         it('returns empty results when combatSummary is null', async () => {
             getCombatSummary.mockReturnValue(null);
@@ -449,8 +454,6 @@ function makeProps(overrides = {}) {
     });
 
     // ── Target not found in combatSummary ──
-    });
-    describe('target not found in combatSummary', () => {
     describe('target not found in combatSummary', () => {
         it('skips targets not found in combatSummary creatures', async () => {
             getCombatSummary.mockReturnValue({
@@ -481,5 +484,4 @@ function makeProps(overrides = {}) {
     });
 
     // ── addTargetResult calls ──
-    });
 });

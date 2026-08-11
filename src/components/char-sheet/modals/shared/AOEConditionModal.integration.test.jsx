@@ -97,7 +97,7 @@ function getApplyButton() {
 
 // ── Tests ──
 
-describe('AOEConditionModal Integration', () => {
+describe('AOEConditionModal', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         getCombatSummary.mockReturnValue(baseCombatSummary);
@@ -107,6 +107,261 @@ describe('AOEConditionModal Integration', () => {
         persistAndNotify.mockReturnValue(undefined);
         getAllyList.mockReturnValue(null);
     });
+
+    // ── Initial render ──
+
+    describe('initial render', () => {
+        it('renders the modal with action name as title', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(screen.getByText('Blinding Darkness')).toBeInTheDocument();
+        });
+
+        it('renders all eligible creatures in the target list', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(screen.getByText('Goblin')).toBeInTheDocument();
+            expect(screen.getByText('Orc')).toBeInTheDocument();
+            expect(screen.getByText('PlayerAlly')).toBeInTheDocument();
+        });
+
+        it('renders the description with save type and DC', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(screen.getByText(/Select creatures in the area of effect/)).toBeInTheDocument();
+            expect(screen.getByText(/CON/)).toBeInTheDocument();
+            expect(screen.getByText(/DC 12/)).toBeInTheDocument();
+        });
+
+        it('renders the note about failed save condition', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            const noteEl = document.querySelector('.sp-note');
+            expect(noteEl).toHaveTextContent(/On a failed save/);
+            expect(noteEl).toHaveTextContent('Blinded');
+        });
+
+        it('disables the apply button when no target is selected', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(getApplyButton()).toBeDisabled();
+        });
+
+        it('renders the skip button', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+        });
+
+        it('renders target count in apply button', () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            expect(getApplyButton()).toHaveTextContent('Blinding Darkness (0)');
+        });
+    });
+
+    // ── Target selection ──
+
+    describe('target selection', () => {
+        it('selects a target when its row is clicked', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[0]); });
+            await waitFor(() => {
+                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                expect(checkboxes[0].checked).toBe(true);
+            });
+        });
+
+        it('enables the apply button when a target is selected', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            await act(async () => selectTargetRow(0));
+            await waitFor(() => {
+                expect(getApplyButton()).toBeEnabled();
+            });
+        });
+
+        it('updates target count in apply button when targets are selected', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            await act(async () => selectTargetRow(0));
+            await waitFor(() => {
+                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
+            });
+            await act(async () => selectTargetRow(1));
+            await waitFor(() => {
+                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (2)');
+            });
+        });
+
+        it('toggles target selection off when row is clicked again', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            const labels = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(labels[0]); });
+            await waitFor(() => {
+                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (1)');
+            });
+            await act(async () => { fireEvent.click(labels[0]); });
+            await waitFor(() => {
+                expect(getApplyButton()).toHaveTextContent('Blinding Darkness (0)');
+            });
+        });
+
+        it('highlights selected targets with the selected class', async () => {
+            render(<AOEConditionModal {...makeProps()} />);
+            const rows = document.querySelectorAll('.secondary-target-row');
+            await act(async () => { fireEvent.click(rows[0]); });
+            await waitFor(() => {
+                expect(rows[0]).toHaveClass('secondary-target-selected');
+                expect(rows[1]).not.toHaveClass('secondary-target-selected');
+            });
+        });
+    });
+
+    // ── Metamagic Heighten ──
+
+    describe('metamagic heighten', () => {
+        it('does not show heighten note when metamagicHeighten is false', () => {
+            render(<AOEConditionModal {...makeProps({ metamagicHeighten: false })} />);
+            const noteEl = document.querySelector('.sp-note');
+            expect(noteEl.textContent).not.toContain('Heightened Spell');
+        });
+
+        it('shows heighten note when metamagicHeighten is true', () => {
+            render(<AOEConditionModal {...makeProps({ metamagicHeighten: true })} />);
+            const notes = document.querySelectorAll('.sp-note');
+            const heightenNote = [...notes].find(n => n.textContent.includes('Heightened Spell'));
+            expect(heightenNote).toBeTruthy();
+        });
+
+        it('renders heighten radio buttons when metamagicHeighten is true', () => {
+            render(<AOEConditionModal {...makeProps({ metamagicHeighten: true })} />);
+            const radios = document.querySelectorAll('input[name="heightenTarget"]');
+            expect(radios.length).toBeGreaterThan(0);
+        });
+
+        it('does not render heighten radio buttons when metamagicHeighten is false', () => {
+            render(<AOEConditionModal {...makeProps({ metamagicHeighten: false })} />);
+            const radios = document.querySelectorAll('input[name="heightenTarget"]');
+            expect(radios).toHaveLength(0);
+        });
+
+        it('toggles heighten target selection', async () => {
+            render(<AOEConditionModal {...makeProps({ metamagicHeighten: true })} />);
+            const radios = document.querySelectorAll('input[name="heightenTarget"]');
+            expect(radios.length).toBeGreaterThan(0);
+            await act(async () => { fireEvent.click(radios[0]); });
+            await waitFor(() => {
+                expect(radios[0].checked).toBe(true);
+            });
+        });
+    });
+
+    // ── Metamagic Careful ──
+
+    describe('metamagic careful', () => {
+        it('does not show careful spell protection when metamagicCareful is false', () => {
+            getRuntimeValue.mockReturnValue([]);
+            render(<AOEConditionModal {...makeProps({ metamagicCareful: false })} />);
+            const rows = document.querySelectorAll('.secondary-target-row');
+            rows.forEach(row => {
+                expect(row.textContent).not.toContain('Careful Spell');
+            });
+        });
+
+        it('shows careful spell protection for allies when metamagicCareful is true', () => {
+            getAllyList.mockReturnValue(['PlayerAlly']);
+            getRuntimeValue.mockReturnValue([]);
+            render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
+            const rows = document.querySelectorAll('.secondary-target-row');
+            const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
+            expect(playerRow.textContent).toContain('Careful Spell protected');
+        });
+
+        it('does not show careful spell for non-ally', () => {
+            getAllyList.mockReturnValue(['OtherAlly']);
+            getRuntimeValue.mockReturnValue([]);
+            render(<AOEConditionModal {...makeProps({ metamagicCareful: true })} />);
+            const rows = document.querySelectorAll('.secondary-target-row');
+            const playerRow = [...rows].find(row => row.textContent.includes('PlayerAlly'));
+            expect(playerRow.textContent).not.toContain('Careful Spell Protected');
+        });
+    });
+    describe('player save result logging in handleSaveResult', () => {
+        it('logs condition entry when player fails save via handleSaveResult', async () => {
+            getRuntimeValue.mockReturnValue([]);
+            const onClose = vi.fn();
+            render(<AOEConditionModal {...makeProps({ onClose })} />);
+
+            await act(async () => {
+                const labels = document.querySelectorAll('.secondary-target-row');
+                fireEvent.click(labels[2]);
+            });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
+            });
+
+            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
+            const actualPromptId = savePromptCall[1].promptId;
+
+            await act(async () => {
+                const event = new CustomEvent('save-result', {
+                    detail: {
+                        promptId: actualPromptId,
+                        success: false,
+                        roll: 5,
+                        total: 6,
+                        saveBonus: 1,
+                    },
+                });
+                window.dispatchEvent(event);
+            });
+
+            await waitFor(() => {
+                const conditionEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'condition'
+                );
+                expect(conditionEntries.length).toBeGreaterThan(0);
+                expect(conditionEntries[0][1].condition).toBe('Blinded');
+            });
+        });
+
+        it('logs save_result success entry when player passes save via handleSaveResult', async () => {
+            const onClose = vi.fn();
+            render(<AOEConditionModal {...makeProps({ onClose })} />);
+
+            await act(async () => {
+                const labels = document.querySelectorAll('.secondary-target-row');
+                fireEvent.click(labels[2]);
+            });
+            await waitFor(() => {
+                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
+            });
+
+            const savePromptCall = vi.mocked(sendSavePrompt).mock.calls[0];
+            const actualPromptId = savePromptCall[1].promptId;
+
+            await act(async () => {
+                const event = new CustomEvent('save-result', {
+                    detail: {
+                        promptId: actualPromptId,
+                        success: true,
+                        roll: 18,
+                        total: 19,
+                        saveBonus: 1,
+                    },
+                });
+                window.dispatchEvent(event);
+            });
+
+            await waitFor(() => {
+                const saveEntries = addEntry.mock.calls.filter(
+                    call => call[1]?.type === 'save_result' && call[1]?.success === true
+                );
+                expect(saveEntries.length).toBeGreaterThan(0);
+            });
+        });
+    });
+
+    // ── renderTargetList sub-functions ──
 
     describe('renderTargetList sub-functions', () => {
         it('renders HP percentage for non-player creatures with valid HP values', () => {
@@ -213,80 +468,6 @@ describe('AOEConditionModal Integration', () => {
     });
 
     // ── Conditions with type field instead of condition ──
-
-    describe('conditions with type field fallback', () => {
-        it('applies condition when only type field is present in effects', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({
-                    effects: [{ type: 'paralyzed' }],
-                    conditionLabel: 'Paralyzed',
-                })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions' && call[0] === 'Goblin'
-                    );
-                    expect(conditionCalls.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── Heighten targeting in resolveAllSaves ──
-
-    describe('heighten targeting in resolveAllSaves', () => {
-        it('uses double roll for heighten target', async () => {
-            let callCount = 0;
-            vi.spyOn(Math, 'random').mockImplementation(() => {
-                callCount++;
-                if (callCount <= 2) return 0.01; // First two rolls for double roll
-                return 0.99; // Third roll for other target
-            });
-            try {
-                render(<AOEConditionModal {...makeProps({
-                    metamagicHeighten: true,
-                })} />);
-
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await act(async () => { fireEvent.click(labels[1]); });
-
-                // Select first target for heighten
-                const radios = document.querySelectorAll('input[name="heightenTarget"]');
-                await act(async () => { fireEvent.click(radios[0]); });
-
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                // Both should have been processed
-                await waitFor(() => {
-                    const conditionCalls = setRuntimeValue.mock.calls.filter(
-                        call => call[1] === 'activeConditions'
-                    );
-                    expect(conditionCalls.length).toBeGreaterThanOrEqual(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── getCreatureTargets ──
 
     describe('addTargetResult calls', () => {
         it('calls addTargetResult with failure result when NPC fails save', async () => {
@@ -483,143 +664,4 @@ describe('AOEConditionModal Integration', () => {
 
     // ── Save bonus handling ──
 
-    describe('save bonus handling', () => {
-        it('uses save bonus from target saveBonuses for NPC', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.5);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[1]); }); // Orc with CON +2
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Orc'
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                    expect(saveEntries[0][1].saveBonus).toBe(2);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('defaults save bonus to 0 when saveBonuses is undefined', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 7 },
-                ],
-            });
-            vi.spyOn(Math, 'random').mockReturnValue(0.5);
-            try {
-                render(<AOEConditionModal {...makeProps()} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const saveEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'save_result' && call[1]?.targetName === 'Goblin'
-                    );
-                    expect(saveEntries.length).toBeGreaterThan(0);
-                    expect(saveEntries[0][1].saveBonus).toBe(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-
-    // ── storeSpellLastAttack calls ──
-
-    describe('storeSpellLastAttack calls', () => {
-        it('calls storeSpellLastAttack with correct parameters', async () => {
-            render(<AOEConditionModal {...makeProps()} />);
-            const labels = document.querySelectorAll('.secondary-target-row');
-            await act(async () => { fireEvent.click(labels[0]); });
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-            });
-            await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-            });
-
-            expect(damageRollback.storeSpellLastAttack).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-                casterName: 'Wizard1',
-                spellName: 'Blinding Darkness',
-                saveType: 'CON',
-                saveDc: 12,
-                attackScope: 'aoe',
-            }));
-        });
-    });
-
-    // ── conditionLabel fallback to effects array ──
-
-    describe('conditionLabel fallback to effects array', () => {
-        it('uses effects array when conditionLabel is null', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({
-                    conditionLabel: null,
-                    effects: [{ type: 'paralyzed', condition: 'paralyzed' }],
-                })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-
-        it('uses effects array when conditionLabel is empty string', async () => {
-            vi.spyOn(Math, 'random').mockReturnValue(0.01);
-            try {
-                render(<AOEConditionModal {...makeProps({
-                    conditionLabel: '',
-                    effects: [{ type: 'paralyzed', condition: 'paralyzed' }],
-                })} />);
-                const labels = document.querySelectorAll('.secondary-target-row');
-                await act(async () => { fireEvent.click(labels[0]); });
-                await waitFor(() => {
-                    expect(screen.getByRole('button', { name: /Blinding Darkness/ })).toBeInTheDocument();
-                });
-                await act(async () => {
-                    fireEvent.click(screen.getByRole('button', { name: /Blinding Darkness/ }));
-                });
-
-                await waitFor(() => {
-                    const conditionEntries = addEntry.mock.calls.filter(
-                        call => call[1]?.type === 'condition'
-                    );
-                    expect(conditionEntries.length).toBeGreaterThan(0);
-                });
-            } finally {
-                vi.restoreAllMocks();
-            }
-        });
-    });
-});
 });
