@@ -46,7 +46,7 @@ export default defineConfig({
                 '**/*.eot'
             ],
         },
-        include: ['src/**/*.{test,spec}.{js,jsx}', 'server/**/*.{test,spec}.{js,jsx}'],
-        exclude: ['node_modules', 'dist', '.git', '**/*.test.helpers.js']
+        include: ['src/**/*.{test,spec}.{js,jsx}', 'src/**/*.{test,spec}.*.{js,jsx}', 'server/**/*.{test,spec}.{js,jsx}', 'server/**/*.{test,spec}.*.{js,jsx}'],
+        exclude: ['node_modules', 'dist', '.git', '**/*.test.helpers.js', '**/*.test.setup.js', '**/useCharActionsAutomation.test.js']
     },
 });
