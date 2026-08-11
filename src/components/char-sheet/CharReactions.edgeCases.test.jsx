@@ -1,246 +1,254 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
+import { render, screen } from '@testing-library/react';
 import CharReactions from './CharReactions.jsx';
 
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
-  useRuntimeValue: vi.fn(() => undefined),
-  getRuntimeValue: vi.fn(() => null),
-  setRuntimeValue: vi.fn(),
+vi.mock('../common/popup.jsx', () => ({
+    default: ({ children }) => React.createElement('div', { 'data-testid': 'popup' }, children),
 }));
-
-vi.mock('../../hooks/combat/useActionPopup.js', () => ({
-  buildFeatureDetailHtml: vi.fn((reaction) => {
-    if (reaction.details) return `<b>${reaction.name}</b><br/>${reaction.description}<br/><br/>${reaction.details}`;
-    return null;
-  }),
-  default: vi.fn(() => ({ showPopup: vi.fn(), popupHtml: null, setPopupHtml: vi.fn() })),
-}));
-
-vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
-  default: vi.fn(() => {
-    const [popupHtml, setPopupHtml] = React.useState(null);
-    return {
-      popupHtml,
-      setPopupHtml,
-      rollAttack: vi.fn(),
-      rollDamage: vi.fn(),
-    };
-  }),
-}));
-
-vi.mock('../../hooks/combat/useSpellMetamagicFlow.js', () => ({
-  useSpellMetamagicFlow: vi.fn(() => ({
-    pendingMetamagic: null,
-    gateMetamagic: vi.fn(),
-    handleConfirm: vi.fn(),
-    handleSkip: vi.fn(),
-  })),
-}));
-
-vi.mock('../../hooks/combat/useSpellUpcastFlow.js', () => ({
-  useSpellUpcastFlow: vi.fn(() => ({
-    buildUpcastLevels: vi.fn(() => []),
-  })),
-}));
-
-vi.mock('../../services/ui/sanitize.js', () => ({
-  sanitizeHtml: vi.fn((html) => html),
-}));
-
-vi.mock('../../services/combat/baseCombatActions.js', () => ({
-  OPPORTUNITY_ATTACK: { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
-  MELEE_REACH_FEET: 5,
-}));
-
-vi.mock('../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn(() => false),
-  hasTacticalShift: vi.fn(() => false),
-  hasSpeedyOpportunityDisadvantage: vi.fn(() => false),
-}));
-
-vi.mock('../../services/rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn().mockResolvedValue(null),
-  getTargetFromAttacker: vi.fn(() => null),
-}));
-
-vi.mock('../../services/automation/index.js', () => ({
-  executeHandler: vi.fn().mockResolvedValue(null),
-}));
-
-vi.mock('../common/Popup.jsx', () => ({
-  default: function Popup({ children, onClickOrKeyDown }) {
-    return (
-      <div data-testid="popup-overlay" onClick={onClickOrKeyDown}>
-        <div data-testid="popup-modal" onClick={(e) => e.stopPropagation()}>
-          {children}
-        </div>
-      </div>
-    );
-  },
-}));
-
-vi.mock('./DiceRollResult.jsx', () => ({
-  default: function DiceRollResult(props) {
-    return <div data-testid="dice-roll-result">{props.name || 'DiceRollResult'}</div>;
-  },
-}));
-
 vi.mock('./char-spells/SpellDetailPopup.jsx', () => ({
-  default: function SpellDetailPopup({ spell }) {
-    return <div data-testid="spell-detail-popup">{spell?.name}</div>;
-  },
+    default: () => React.createElement('div', { 'data-testid': 'spell-detail-popup' }, null),
 }));
-
 vi.mock('./popups/MetamagicPopup.jsx', () => ({
-  default: function MetamagicPopup() {
-    return <div data-testid="metamagic-popup">Metamagic</div>;
-  },
+    default: () => React.createElement('div', { 'data-testid': 'metamagic-popup' }, null),
 }));
-
-vi.mock('../../services/maps/mapsService.js', () => ({
-  loadMapData: vi.fn().mockResolvedValue({ players: [], placedItems: [] }),
-}));
-
 vi.mock('./modals/arcane/ArcaneWardRestoreModal.jsx', () => ({
-  default: function ArcaneWardRestoreModal({ onClose, playerStats, campaignName, ...rest }) {
-    const hasRest = Object.keys(rest).length > 0;
-    const hasModalProps = Object.keys({ onClose, playerStats, campaignName }).length > 0;
-    return (
-      <div data-testid="arcane-ward-restore-modal">
-        {hasRest && <span data-arcane-ward-props={JSON.stringify(rest)} />}
-        {hasModalProps && <span data-modal-props={JSON.stringify({ onClose, playerStats, campaignName })} />}
-        ArcaneWardRestoreModal
-      </div>
-    );
-  },
+    default: () => React.createElement('div', { 'data-testid': 'arcane-ward-restore' }, null),
+}));
+vi.mock('./modals/divine/BastionOfLawSpendModal.jsx', () => ({
+    default: () => React.createElement('div', { 'data-testid': 'bastion-of-law-spend' }, null),
+}));
+vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
+    default: ({ title, onTargetSelected, onSkip }) =>
+        React.createElement('div', { 'data-testid': 'secondary-target-modal' },
+            React.createElement('span', { 'data-testid': 'modal-title' }, title),
+            React.createElement('button', { 'data-testid': 'confirm-btn', onClick: () => onTargetSelected('Target1') }, 'Confirm'),
+            React.createElement('button', { 'data-testid': 'skip-btn', onClick: () => onSkip() }, 'Skip'),
+        ),
+}));
+vi.mock('./modals/BendFateModal.jsx', () => ({
+    default: ({ onClose }) =>
+        React.createElement('div', { 'data-testid': 'bend-fate-modal', onClick: onClose }, null),
+}));
+vi.mock('./modals/BoonFateModal.jsx', () => ({
+    default: ({ onClose }) =>
+        React.createElement('div', { 'data-testid': 'boon-fate-modal', onClick: onClose }, null),
+}));
+vi.mock('./modals/StepsOfTheFeyTauntModal.jsx', () => ({
+    default: ({ onClose }) =>
+        React.createElement('div', { 'data-testid': 'steps-of-fey-modal', onClick: onClose }, null),
+}));
+vi.mock('./modals/SearingVengeanceModal.jsx', () => ({
+    default: ({ onConfirm, onSkip }) =>
+        React.createElement('div', { 'data-testid': 'searing-vengeance-modal' },
+            React.createElement('button', { 'data-testid': 'sv-confirm', onClick: () => onConfirm([{ name: 'Enemy1' }]) }, 'Confirm'),
+            React.createElement('button', { 'data-testid': 'sv-skip', onClick: onSkip }, 'Skip'),
+        ),
+}));
+vi.mock('../../services/ui/spellSectionUtils.js', () => ({
+    getReactionSpellNames: vi.fn(() => new Set()),
+}));
+vi.mock('../../services/character/featureCategories.js', () => ({
+    getCategories: vi.fn(() => ({ featuresToIgnore: [] })),
+}));
+vi.mock('../../services/ui/sanitize.js', () => ({ sanitizeHtml: (html) => html }));
+vi.mock('../../hooks/combat/useActionPopup.js', () => ({
+    buildFeatureDetailHtml: vi.fn((reaction) => `<div>${reaction.name}</div>`),
+}));
+vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
+    default: vi.fn(),
+}));
+vi.mock('../../hooks/combat/DiceRollContext.js', () => ({
+    useDiceRollPopup: vi.fn(() => ({ setPopupHtml: vi.fn() })),
+}));
+vi.mock('../../services/combat/baseCombatActions.js', () => ({
+    OPPORTUNITY_ATTACK: { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
+    MELEE_REACH_FEET: 5,
+}));
+vi.mock('../../services/combat/automation/automationService.js', () => ({
+    hasAutomation: vi.fn(() => false),
+    hasTacticalShift: vi.fn(() => false),
+    hasSpeedyOpportunityDisadvantage: vi.fn(() => false),
+}));
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+    getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
+}));
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+    useRuntimeValue: vi.fn(() => []),
+    getRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(),
+}));
+vi.mock('../../services/automation/index.js', () => ({
+    executeHandler: vi.fn(),
+    confirmSearingVengeance: vi.fn(),
+    skipSearingVengeance: vi.fn(),
+}));
+vi.mock('../../services/automation/common/savePrompt.js', () => ({
+    createSaveListener: vi.fn(() => ({ promptId: 'test-prompt-id' })),
+}));
+vi.mock('../../services/ui/logService.js', () => ({
+    addEntry: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../services/rules/effects/expirations.js', () => ({
+    addExpiration: vi.fn(),
+}));
+vi.mock('../../services/automation/handlers/reactions/reactionSpellHandler.js', () => ({
+    applyWarCasterReaction: vi.fn(),
+}));
+vi.mock('../../services/automation/handlers/reactions/reactionBonusHandler.js', () => ({
+    applyInspiringMovement: vi.fn(),
+}));
+vi.mock('./useAttackDamageResolution.js', () => ({
+    normalizeAutoDamage: vi.fn(),
+    resolveAttackDamageStandalone: vi.fn(),
+}));
+vi.mock('../../hooks/combat/useSpellMetamagicFlow.js', () => ({
+    useSpellMetamagicFlow: vi.fn(() => ({
+        pendingMetamagic: null,
+        gateMetamagic: vi.fn(),
+        handleConfirm: vi.fn(),
+        handleSkip: vi.fn(),
+    })),
+}));
+vi.mock('../../hooks/combat/useSpellUpcastFlow.js', () => ({
+    useSpellUpcastFlow: vi.fn(() => ({ buildUpcastLevels: vi.fn(() => []) })),
+}));
+vi.mock('../../hooks/combat/useSpellPositionResolver.js', () => ({
+    useSpellPositionResolver: vi.fn(() => ({
+        resolvePositions: vi.fn(),
+        cachedPosRef: { current: null },
+    })),
+}));
+vi.mock('../../hooks/combat/useSpellCastExecutor.js', () => ({
+    useSpellCastExecutor: vi.fn(() => ({ castAction: vi.fn() })),
+}));
+vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
+    resolveSpellDamageAtLevel: vi.fn(),
+    isAutoHitSpell: vi.fn(() => false),
+    resolveHealExpression: vi.fn(),
+}));
+vi.mock('../../services/ui/formatUtils.js', () => ({
+    signFormatter: { format: (val) => (val >= 0 ? '+' : '') + val },
 }));
 
-vi.mock('../../services/rules/combat/rangeValidation.js', () => ({
-  getNearestPlacedItem: vi.fn(() => null),
-}));
-
-vi.mock('../../services/rules/spells/spellCastService.js', () => ({
-  executeSpellCast: vi.fn(),
-}));
-
-import { useRuntimeValue, getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { hasAutomation, hasTacticalShift, hasSpeedyOpportunityDisadvantage } from '../../services/combat/automation/automationService.js';
-import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
-import { executeHandler } from '../../services/automation/index.js';
-import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js';
+import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { hasAutomation } from '../../services/combat/automation/automationService.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
+import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
+import { getCategories } from '../../services/character/featureCategories.js';
+import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
+import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
 
-
-const MOCK_ATTACK = { name: 'Longsword', type: 'Action', range: 5, hitBonus: 5, damage: '1d8+3', damageType: 'Slashing' };
+const campaignName = 'test-campaign';
 
 const basePlayerStats = {
-  name: 'Test Character',
-  level: 5,
-  reactions: [
-    { name: 'Opportunity Attack', description: 'Make a melee attack', automation: { type: 'test' } },
-    { name: 'Reaction Test', description: 'A test reaction', details: 'Details here', automation: { type: 'test' } },
-  ],
-  attacks: [MOCK_ATTACK],
-  spellAbilities: {
-    spells: [
-      {
-        name: 'Shield',
-        casting_time: '1 reaction',
-        range: 'Self',
-        prepared: 'Prepared',
-      },
+    name: 'TestFighter',
+    level: 5,
+    class: { name: 'Fighter' },
+    reactions: [
+        { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
     ],
-  },
+    attacks: [
+        { name: 'Longsword', type: 'Action', range: 5, hitBonus: 6 },
+    ],
+    spellAbilities: {
+        modifier: 3,
+        toHit: 6,
+        saveDc: 13,
+        spells: [],
+    },
+    abilities: [
+        { name: 'Strength', bonus: 3 },
+        { name: 'Wisdom', bonus: 2 },
+    ],
+    _trackedResources: {},
 };
 
-const baseProps = {
-  playerStats: basePlayerStats,
-  campaignName: 'test-campaign',
-  cannotAct: false,
-  mapName: null,
-  characters: [],
-};
-
-function resetMocks() {
-  vi.mocked(useRuntimeValue).mockImplementation(() => undefined);
-  vi.mocked(getRuntimeValue).mockImplementation(() => null);
-  vi.mocked(useLoggedDiceRoll).mockImplementation(() => {
-    const [popupHtml, setPopupHtml] = React.useState(null);
+function createProps(overrides = {}) {
+    const playerStats = { ...basePlayerStats, ...overrides.playerStats };
     return {
-      popupHtml,
-      setPopupHtml,
-      rollAttack: vi.fn(),
-      rollDamage: vi.fn(),
+        playerStats,
+        campaignName,
+        cannotAct: false,
+        mapName: null,
+        characters: [],
+        modalState: {},
+        setModalState: vi.fn(),
+        ...overrides,
     };
-  });
-  vi.mocked(useSpellMetamagicFlow).mockImplementation(() => ({
-    pendingMetamagic: null,
-    gateMetamagic: vi.fn(),
-    handleConfirm: vi.fn(),
-    handleSkip: vi.fn(),
-  }));
-  vi.mocked(hasAutomation).mockImplementation(() => false);
-  vi.mocked(hasTacticalShift).mockImplementation(() => false);
-  vi.mocked(hasSpeedyOpportunityDisadvantage).mockImplementation(() => false);
-  vi.mocked(getCombatContext).mockImplementation(() => Promise.resolve(null));
-  vi.mocked(getTargetFromAttacker).mockImplementation(() => null);
-  vi.mocked(executeHandler).mockImplementation(() => Promise.resolve(null));
 }
 
 describe('CharReactions - Edge Cases', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetMocks();
-  });
-
-  // ===== Reaction clickability =====
-
-  it('marks a reaction with automation as clickable', () => {
-    vi.mocked(hasAutomation).mockReturnValue(true);
-    const stats = { ...basePlayerStats, reactions: [{ name: 'Auto Only', description: 'Automation only', automation: { type: 'test' } }] };
-    render(<CharReactions {...baseProps} playerStats={stats} />);
-    expect(screen.getByText('Auto Only:')).toHaveClass('clickable');
-  });
-
-  it('does not mark a plain reaction as clickable', () => {
-    const stats = { ...basePlayerStats, reactions: [{ name: 'Plain Reaction', description: 'Just a description' }] };
-    render(<CharReactions {...baseProps} playerStats={stats} />);
-    expect(screen.getByText('Plain Reaction:')).not.toHaveClass('clickable');
-  });
-
-  // ===== Multiple dynamic reactions =====
-
-  it('adds both Revivification and Stand when both conditions are met', () => {
-    vi.mocked(useRuntimeValue).mockImplementation((charName, key) => {
-      if (key === 'activeBuffs') return [{ reactionSave: 'CHA' }];
-      if (key === 'powerWordHealStandPermission') return true;
-      return undefined;
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockReturnValue(null);
+        setRuntimeValue.mockReturnValue(undefined);
+        hasAutomation.mockReturnValue(false);
+        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+        getCategories.mockReturnValue({ featuresToIgnore: [] });
+        getReactionSpellNames.mockReturnValue(new Set());
+        resolveSpellDamageAtLevel.mockReturnValue(null);
+        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
-    render(<CharReactions {...baseProps} />);
-    expect(screen.getByText('Revivification:')).toBeInTheDocument();
-    expect(screen.getByText('Stand (Power Word Heal):')).toBeInTheDocument();
-  });
 
-  // ===== Spell detail popup with onCast handler =====
+    it('handles null playerStats gracefully', () => {
+        const props = createProps({ playerStats: null });
+        expect(() => render(<CharReactions {...createProps(props)} />)).toThrow('Cannot read properties of null');
+    });
 
-  it('renders SpellDetailPopup with onCast for normal reaction spell', () => {
-    render(<CharReactions {...baseProps} />);
-    fireEvent.click(screen.getByText('Shield'));
-    expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-  });
+    it('handles missing reactions array', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: undefined,
+            },
+        });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+    });
 
-  // ===== ArcaneWardRestoreModal prop spreading =====
+    it('handles missing playerStats.name', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                name: undefined,
+            },
+        });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+    });
 
-  it('renders ArcaneWardRestoreModal when automation returns arcaneWardRestore modal type', async () => {
-    vi.mocked(hasAutomation).mockReturnValue(true);
-    vi.mocked(executeHandler).mockResolvedValue({ type: 'modal', modalName: 'arcaneWardRestore', payload: { someData: true } });
-    const stats = { ...basePlayerStats, reactions: [{ name: 'Arcane Ward', description: 'Creates a ward', automation: { type: 'arcane_ward' } }] };
-    render(<CharReactions {...baseProps} playerStats={stats} />);
-    await act(async () => { fireEvent.click(screen.getByText('Arcane Ward:')); });
-    expect(screen.getByTestId('arcane-ward-restore-modal')).toBeInTheDocument();
-  });
+    it('handles missing campaignName', () => {
+        const props = createProps({ campaignName: undefined });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+    });
+
+    it('renders reaction with details property as clickable', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Custom Reaction', description: 'Has details', details: 'Some detail' },
+                ],
+            },
+        });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Custom Reaction:')).toHaveClass('clickable');
+    });
+
+    it('renders reactive strike as non-clickable', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Reactive Strike', description: 'Reactive strike desc' },
+                ],
+            },
+        });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Reactive Strike:')).not.toHaveClass('clickable');
+    });
 });

@@ -46,7 +46,7 @@ vi.mock('./modals/SearingVengeanceModal.jsx', () => ({
         ),
 }));
 vi.mock('../../services/ui/spellSectionUtils.js', () => ({
-    getReactionSpellNames: vi.fn(() => new Set()),
+    getReactionSpellNames: vi.fn(() => new Set(['Shield', 'Hellish Rebuke'])),
 }));
 vi.mock('../../services/character/featureCategories.js', () => ({
     getCategories: vi.fn(() => ({ featuresToIgnore: [] })),
@@ -138,7 +138,8 @@ import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
-import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
+import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
+import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js';
 
 const campaignName = 'test-campaign';
 
@@ -156,7 +157,10 @@ const basePlayerStats = {
         modifier: 3,
         toHit: 6,
         saveDc: 13,
-        spells: [],
+        spells: [
+            { name: 'Shield', casting_time: '1 reaction', level: 1, range: 'Self', prepared: 'Always', damage: null, heal_at_slot_level: false },
+            { name: 'Hellish Rebuke', casting_time: '1 reaction', level: 1, range: '60 ft.', prepared: 'Always', damage: { expression: '1d10', damage_type: 'fire' }, heal_at_slot_level: false },
+        ],
     },
     abilities: [
         { name: 'Strength', bonus: 3 },
@@ -179,7 +183,7 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - handleReactionClick', () => {
+describe('CharReactions - Spell Click Handlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useRuntimeValue.mockReturnValue([]);
@@ -188,92 +192,123 @@ describe('CharReactions - handleReactionClick', () => {
         hasAutomation.mockReturnValue(false);
         buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
         getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
+        getReactionSpellNames.mockReturnValue(new Set(['Shield', 'Hellish Rebuke']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d10');
+        resolveHealExpression.mockReturnValue('2d8+3');
+        isAutoHitSpell.mockReturnValue(false);
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('does nothing when cannotAct is true', () => {
-        const props = createProps({ cannotAct: true });
-        render(<CharReactions {...createProps(props)} />);
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
+    it('calls gateMetamagic when clicking reaction spell damage', () => {
+        const gateMetamagic = vi.fn();
+        useSpellMetamagicFlow.mockReturnValue({
+            pendingMetamagic: null,
+            gateMetamagic,
+            handleConfirm: vi.fn(),
+            handleSkip: vi.fn(),
+        });
+        render(<CharReactions {...createProps()} />);
+        const damageCells = screen.getAllByText('1d10');
+        fireEvent.click(damageCells[0]);
+        expect(gateMetamagic).toHaveBeenCalled();
     });
 
-    it('calls buildFeatureDetailHtml for reactions without automation or special handlers', () => {
+    it('does not call gateMetamagic when cannotAct is true on damage click', () => {
+        const gateMetamagic = vi.fn();
+        useSpellMetamagicFlow.mockReturnValue({
+            pendingMetamagic: null,
+            gateMetamagic,
+            handleConfirm: vi.fn(),
+            handleSkip: vi.fn(),
+        });
+        const props = createProps({ cannotAct: true });
+        render(<CharReactions {...createProps(props)} />);
+        const damageCells = screen.getAllByText('1d10');
+        fireEvent.click(damageCells[0]);
+        expect(gateMetamagic).not.toHaveBeenCalled();
+    });
+
+    it('renders clickable attack for spells with attack_type and no cannotAct', () => {
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
-                reactions: [
-                    { name: 'Custom Reaction', description: 'Custom desc', details: 'some details' },
-                ],
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: 5,
+                    spells: [attackSpell],
+                },
             },
         });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
         render(<CharReactions {...createProps(props)} />);
-        const reaction = screen.getByText('Custom Reaction:');
-        fireEvent.click(reaction);
-        expect(buildFeatureDetailHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Custom Reaction' })
-        );
+        const attackCell = screen.getByText('+5');
+        expect(attackCell).toHaveClass('clickable');
+        expect(attackCell).not.toHaveClass('disabled-attack');
     });
 
-    it('handles Stand (Power Word Heal) reaction - removes prone condition', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
+    it('renders disabled attack for spells with attack_type when cannotAct', () => {
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            cannotAct: true,
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: 5,
+                    spells: [attackSpell],
+                },
+            },
         });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Prone', 'Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'activeConditions',
-            ['Poisoned'],
-            campaignName
-        );
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
+        render(<CharReactions {...createProps(props)} />);
+        const attackCell = screen.getByText('+5');
+        expect(attackCell).toHaveClass('disabled-attack');
     });
 
-    it('handles Stand (Power Word Heal) reaction - sets permission to false', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
+    it('renders auto-hit spell without attack bonus column', () => {
+        isAutoHitSpell.mockReturnValue(true);
+        const autoHitSpell = {
+            name: 'Guiding Bolt',
+            casting_time: '1 reaction',
+            level: 2,
+            range: '120 ft.',
+            prepared: 'Always',
+            damage: '4d6 radiant',
+            damage_type: 'radiant',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [autoHitSpell],
+                },
+            },
         });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return [];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'powerWordHealStandPermission',
-            false,
-            campaignName
-        );
-    });
-
-    it('does not set activeConditions if no change (no prone)', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        const conditionCalls = setRuntimeValue.mock.calls.filter(c => c[1] === 'activeConditions');
-        expect(conditionCalls.length).toBe(0);
+        getReactionSpellNames.mockReturnValue(new Set(['Guiding Bolt']));
+        resolveSpellDamageAtLevel.mockReturnValue('4d6+3 radiant');
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Guiding Bolt')).toBeInTheDocument();
     });
 });

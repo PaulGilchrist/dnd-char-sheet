@@ -66,7 +66,7 @@ import * as storageService from '../../../services/ui/storage.js'
 
 const CAMPAIGN = 'test-campaign'
 
-describe('restRules', () => {
+describe('restRules utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {

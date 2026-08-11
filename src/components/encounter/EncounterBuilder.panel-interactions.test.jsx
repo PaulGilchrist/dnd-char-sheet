@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import EncounterBuilder from './EncounterBuilder.jsx';
 
 vi.mock('../../hooks/ui/useMonstersData.js', () => ({
   useMonstersData: vi.fn(() => ({ monsters: [], loading: false })),
@@ -340,159 +341,201 @@ vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
-import { mount } from './EncounterBuilder.test-utils.jsx';
+import { mount, sampleMonsters } from './EncounterBuilder.test-utils.jsx';
 
-describe('EncounterBuilder interactions - core', () => {
+describe('EncounterBuilder interactions - panels', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  describe('monster selection', () => {
-    it('toggles a monster on when checkbox is clicked', async () => {
+  describe('clear all monsters', () => {
+    it('clears all selected monsters when Clear All button is clicked', async () => {
       await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      expect(checkbox.checked).toBe(false);
+      const goblinCheckbox = screen.getByTestId('monster-checkbox-goblin');
+      const orcCheckbox = screen.getByTestId('monster-checkbox-orc');
 
-      fireEvent.click(checkbox);
-      expect(checkbox.checked).toBe(true);
-      expect(screen.getByTestId('monster-row-goblin').classList.contains('monster-row-selected')).toBe(true);
-    });
-
-    it('toggles a monster off when checkbox is clicked again', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-      expect(checkbox.checked).toBe(true);
-
-      fireEvent.click(checkbox);
-      expect(checkbox.checked).toBe(false);
-    });
-
-    it('shows selected monsters in the selected monsters panel', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
+      fireEvent.click(goblinCheckbox);
+      fireEvent.click(orcCheckbox);
 
       expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
-      expect(screen.getByTestId('selected-name-goblin')).toHaveTextContent('Goblin');
-    });
+      expect(screen.getByTestId('selected-item-orc')).toBeInTheDocument();
 
-    it('removes selected monster from panel when toggled off', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-      expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
+      const clearBtn = screen.getByTestId('clear-all');
+      fireEvent.click(clearBtn);
 
-      fireEvent.click(checkbox);
       expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('selected-item-orc')).not.toBeInTheDocument();
+      expect(goblinCheckbox.checked).toBe(false);
+      expect(orcCheckbox.checked).toBe(false);
     });
 
-    it('toggles monster when row is clicked', async () => {
+    it('hides Clear All button when no monsters are selected', async () => {
       await mount();
-      const row = screen.getByTestId('monster-row-orc');
-      fireEvent.click(row);
-
-      expect(screen.getByTestId('monster-checkbox-orc').checked).toBe(true);
+      expect(screen.queryByTestId('clear-all')).not.toBeInTheDocument();
     });
   });
 
-  describe('quantity controls', () => {
-    it('increases quantity when + button is clicked', async () => {
+  describe('summary panel updates', () => {
+    it('updates total XP when monsters are selected', async () => {
+      await mount();
+      const totalXpBefore = screen.getByTestId('total-xp');
+      expect(totalXpBefore).toHaveTextContent('0');
+
+      const checkbox = screen.getByTestId('monster-checkbox-goblin');
+      fireEvent.click(checkbox);
+
+      const totalXpAfter = screen.getByTestId('total-xp');
+      expect(totalXpAfter).toHaveTextContent('50');
+    });
+
+    it('updates monster count when monsters are selected', async () => {
+      await mount();
+      expect(screen.getByTestId('monster-count')).toHaveTextContent('0');
+
+      const checkbox = screen.getByTestId('monster-checkbox-goblin');
+      fireEvent.click(checkbox);
+      fireEvent.click(screen.getByTestId('increase-qty-goblin'));
+
+      expect(screen.getByTestId('monster-count')).toHaveTextContent('2');
+    });
+
+    it('updates effective XP when monsters are selected', async () => {
+      await mount();
+      const effectiveBefore = screen.getByTestId('effective-xp');
+      expect(effectiveBefore).toHaveTextContent('0');
+
+      const checkbox = screen.getByTestId('monster-checkbox-goblin');
+      fireEvent.click(checkbox);
+
+      const effectiveAfter = screen.getByTestId('effective-xp');
+      expect(effectiveAfter).toHaveTextContent('50');
+    });
+
+    it('updates difficulty label based on effective XP', async () => {
+      await mount();
+      const checkbox = screen.getByTestId('monster-checkbox-dragon');
+      fireEvent.click(checkbox);
+
+      const difficultyLabel = screen.getByTestId('difficulty-label');
+      // Young Dragon XP=120, threshold=100, ratio=1.2 -> Hard (index 2)
+      expect(difficultyLabel).toHaveTextContent('Hard');
+    });
+  });
+
+  describe('selected monsters total count', () => {
+    it('shows correct total count for multiple monsters', async () => {
+      await mount();
+      const goblinCheckbox = screen.getByTestId('monster-checkbox-goblin');
+      const orcCheckbox = screen.getByTestId('monster-checkbox-orc');
+
+      fireEvent.click(goblinCheckbox);
+      fireEvent.click(orcCheckbox);
+      fireEvent.click(screen.getByTestId('increase-qty-goblin'));
+
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('3');
+    });
+
+    it('updates total count when quantity changes', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
-      const incBtn = screen.getByTestId('increase-qty-goblin');
-      fireEvent.click(incBtn);
-      expect(screen.getByTestId('monster-qty-goblin')).toHaveTextContent('2');
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('1');
 
-      fireEvent.click(incBtn);
-      expect(screen.getByTestId('monster-qty-goblin')).toHaveTextContent('3');
+      fireEvent.click(screen.getByTestId('increase-qty-goblin'));
+      fireEvent.click(screen.getByTestId('increase-qty-goblin'));
+
+      expect(screen.getByTestId('selected-count')).toHaveTextContent('3');
     });
+  });
 
-    it('decreases quantity when - button is clicked', async () => {
+  describe('XP display in selected monsters', () => {
+    it('shows correct total XP for a monster with qty > 1', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
       fireEvent.click(screen.getByTestId('increase-qty-goblin'));
-      fireEvent.click(screen.getByTestId('increase-qty-goblin'));
-      expect(screen.getByTestId('monster-qty-goblin')).toHaveTextContent('3');
 
-      const decBtn = screen.getByTestId('decrease-qty-goblin');
-      fireEvent.click(decBtn);
-      expect(screen.getByTestId('monster-qty-goblin')).toHaveTextContent('2');
-    });
-
-    it('removes monster when remove button is clicked', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const removeBtn = screen.getByTestId('remove-monster-goblin');
-      fireEvent.click(removeBtn);
-
-      expect(checkbox.checked).toBe(false);
-      expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
-    });
-
-    it('removes monster from selected panel when remove is clicked there', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const removeSelected = screen.getByTestId('remove-selected-goblin');
-      fireEvent.click(removeSelected);
-
-      expect(checkbox.checked).toBe(false);
-      expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
-    });
-
-    it('hides qty controls for unselected monsters', async () => {
-      await mount();
-      expect(screen.queryByTestId('increase-qty-orc')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('decrease-qty-orc')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('remove-monster-orc')).not.toBeInTheDocument();
+      expect(screen.getByTestId('selected-xp-goblin')).toHaveTextContent('100 XP');
     });
   });
 
-  describe('search functionality', () => {
-    it('filters monsters by name when search query is entered', async () => {
+  describe('encounter title display', () => {
+    it('shows "Encounter Builder" as default title', async () => {
       await mount();
-      const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: 'orc' } });
-
-      expect(screen.getByTestId('monster-name-orc')).toBeInTheDocument();
-      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
+      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
     });
 
-    it('updates search query in real time', async () => {
+    it('shows dragon icon next to title', async () => {
       await mount();
-      const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: 'dra' } });
-
-      expect(screen.getByTestId('monster-name-dragon')).toBeInTheDocument();
-      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
-    });
-
-    it('shows all monsters when search is cleared', async () => {
-      await mount();
-      const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: 'goblin' } });
-      expect(screen.queryByTestId('monster-name-orc')).not.toBeInTheDocument();
-
-      fireEvent.change(searchInput, { target: { value: '' } });
-      expect(screen.getByTestId('monster-name-orc')).toBeInTheDocument();
+      const icon = document.querySelector('.fa-solid.fa-dragon');
+      expect(icon).toBeInTheDocument();
     });
   });
 
-  describe('sort functionality', () => {
-    it('sorts by name ascending by default', async () => {
+  describe('party summary display', () => {
+    it('shows party members with levels', async () => {
       await mount();
-      const sortField = screen.getByTestId('sort-field');
-      expect(sortField).toHaveTextContent('name');
-      const sortDirection = screen.getByTestId('sort-direction');
-      expect(sortDirection).toHaveTextContent('asc');
+      expect(screen.getByText('Thorin')).toBeInTheDocument();
+      expect(screen.getByText('Lv5')).toBeInTheDocument();
+      expect(screen.getByText('Elara')).toBeInTheDocument();
+      expect(screen.getByText('Lv3')).toBeInTheDocument();
+    });
+
+    it('shows party icon', async () => {
+      await mount();
+      const icon = document.querySelector('.fa-solid.fa-users');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('shows no characters message when characters array is empty', async () => {
+      await mount();
+      // Need to re-render with empty characters
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName="test-campaign" characters={[]} onJoinEncounter={vi.fn()} />);
+      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
+    });
+
+    it('shows no characters message when characters is null', async () => {
+      await mount();
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName="test-campaign" characters={null} onJoinEncounter={vi.fn()} />);
+      expect(screen.getByText(/No characters in this campaign/)).toBeInTheDocument();
+    });
+  });
+
+  describe('encounter actions visibility', () => {
+    it('renders all action buttons by default', async () => {
+      await mount();
+      expect(screen.getByText('Save')).toBeInTheDocument();
+      expect(screen.getByText('Load')).toBeInTheDocument();
+      expect(screen.getByText('Generate')).toBeInTheDocument();
+    });
+
+    it('hides reset button when no encounter is loaded', async () => {
+      await mount();
+      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
     });
   });
 });

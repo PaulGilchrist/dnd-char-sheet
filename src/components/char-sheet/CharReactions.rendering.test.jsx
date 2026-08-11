@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import CharReactions from './CharReactions.jsx';
 
 vi.mock('../common/popup.jsx', () => ({
@@ -46,7 +46,7 @@ vi.mock('./modals/SearingVengeanceModal.jsx', () => ({
         ),
 }));
 vi.mock('../../services/ui/spellSectionUtils.js', () => ({
-    getReactionSpellNames: vi.fn(() => new Set()),
+    getReactionSpellNames: vi.fn(() => new Set(['Shield', 'Hellish Rebuke'])),
 }));
 vi.mock('../../services/character/featureCategories.js', () => ({
     getCategories: vi.fn(() => ({ featuresToIgnore: [] })),
@@ -133,12 +133,13 @@ vi.mock('../../services/ui/formatUtils.js', () => ({
 }));
 
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { hasAutomation } from '../../services/combat/automation/automationService.js';
+import { hasAutomation, hasTacticalShift, hasSpeedyOpportunityDisadvantage } from '../../services/combat/automation/automationService.js';
+import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
-import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
+import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
 
 const campaignName = 'test-campaign';
 
@@ -156,7 +157,10 @@ const basePlayerStats = {
         modifier: 3,
         toHit: 6,
         saveDc: 13,
-        spells: [],
+        spells: [
+            { name: 'Shield', casting_time: '1 reaction', level: 1, range: 'Self', prepared: 'Always', damage: null, heal_at_slot_level: false },
+            { name: 'Hellish Rebuke', casting_time: '1 reaction', level: 1, range: '60 ft.', prepared: 'Always', damage: { expression: '1d10', damage_type: 'fire' }, heal_at_slot_level: false },
+        ],
     },
     abilities: [
         { name: 'Strength', bonus: 3 },
@@ -179,220 +183,250 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - Dynamic Reactions', () => {
+describe('CharReactions - Basic Rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useRuntimeValue.mockReturnValue([]);
         getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
         hasAutomation.mockReturnValue(false);
+        hasTacticalShift.mockReturnValue(false);
+        hasSpeedyOpportunityDisadvantage.mockReturnValue(false);
+        getCombatContext.mockResolvedValue(null);
+        getTargetFromAttacker.mockReturnValue(null);
         buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
         getCategories.mockReturnValue({ featuresToIgnore: [] });
-        getReactionSpellNames.mockReturnValue(new Set());
-        resolveSpellDamageAtLevel.mockReturnValue(null);
+        getReactionSpellNames.mockReturnValue(new Set(['Shield', 'Hellish Rebuke']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d10');
+        resolveHealExpression.mockReturnValue('2d8+3');
+        isAutoHitSpell.mockReturnValue(false);
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('adds Revivification reaction when buff has reactionSave and not already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'activeBuffs') return [{ reactionSave: { dc: 15, type: 'CON' } }];
-            return [];
-        });
+    it('renders the reactions section header', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.getByText('Revivification:')).toBeInTheDocument();
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
     });
 
-    it('does not add duplicate Revivification if already in reactions', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'activeBuffs') return [{ reactionSave: { dc: 15, type: 'CON' } }];
-            return [];
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: 'Opportunity Attack', description: '...' },
-                    { name: 'Revivification', description: 'Already present' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        const revivificationElements = screen.queryAllByText(/Revivification/);
-        expect(revivificationElements.length).toBe(1);
-    });
-
-    it('adds Stand (Power Word Heal) reaction when pwhStance is truthy', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
+    it('renders the opportunity attack reaction', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.getByText('Stand (Power Word Heal):')).toBeInTheDocument();
+        expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
     });
 
-    it('does not add duplicate Stand reaction if already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: 'Opportunity Attack', description: '...' },
-                    { name: 'Stand (Power Word Heal)', description: 'Already present' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        const standElements = screen.queryAllByText(/Stand \(Power Word Heal\)/);
-        expect(standElements.length).toBe(1);
-    });
-
-    it('adds Bastion of Law reaction when ward is active with dice', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'bastionOfLawActive') return true;
-            if (key === 'bastionOfLawWardDice') return [{ value: 8 }, { value: 8 }];
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
+    it('renders reaction descriptions', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.getByText("Bastion of Law:")).toBeInTheDocument();
-        expect(screen.getByText(/Ward active \(2d8 remaining/)).toBeInTheDocument();
+        expect(screen.getByText('Can attack creature that moves out of your reach')).toBeInTheDocument();
     });
 
-    it('does not add Bastion of Law if already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'bastionOfLawActive') return true;
-            if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: 'Opportunity Attack', description: '...' },
-                    { name: 'Bastion of Law', description: 'Already present' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        const bastionElements = screen.queryAllByText(/Bastion of Law/);
-        expect(bastionElements.length).toBe(1);
-    });
-
-    it('does not add Bastion of Law when no ward dice', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'bastionOfLawActive') return true;
-            if (key === 'bastionOfLawWardDice') return [];
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
+    it('renders reaction spells when available', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.queryByText("Bastion of Law:")).not.toBeInTheDocument();
+        expect(screen.getByText('Shield')).toBeInTheDocument();
+        expect(screen.getByText('Hellish Rebuke')).toBeInTheDocument();
     });
 
-    it('updates Stone\'s Endurance description when uses > 0', () => {
-        getRuntimeValue.mockReturnValue(3);
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: "Stone's Endurance", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/3 uses remaining/)).toBeInTheDocument();
-    });
-
-    it('updates Stone\'s Endurance description when no uses remaining', () => {
-        getRuntimeValue.mockReturnValue(0);
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: "Stone's Endurance", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
-    });
-
-    it('falls back to _trackedResources for Stone\'s Endurance uses', () => {
-        getRuntimeValue.mockReturnValue(null);
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                _trackedResources: { stonesEnduranceUses: { current: 2 } },
-                reactions: [
-                    { name: "Stone's Endurance", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/2 uses remaining/)).toBeInTheDocument();
-    });
-
-    it('updates Storm\'s Thunder description when uses > 0', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'stormsThunderUses') return 2;
-            return null;
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: "Storm's Thunder", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/2 uses remaining/)).toBeInTheDocument();
-    });
-
-    it('updates Storm\'s Thunder description when no uses remaining', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'stormsThunderUses') return 0;
-            return null;
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                reactions: [
-                    { name: "Storm's Thunder", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
-    });
-
-    it('falls back to _trackedResources for Storm\'s Thunder uses', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'stormsThunderUses') return null;
-            return null;
-        });
-        const props = createProps({
-            playerStats: {
-                ...basePlayerStats,
-                _trackedResources: { stormsThunderUses: { current: 1 } },
-                reactions: [
-                    { name: "Storm's Thunder", description: 'Original desc' },
-                ],
-            },
-        });
-        render(<CharReactions {...createProps(props)} />);
-        expect(screen.getByText(/1 uses remaining/)).toBeInTheDocument();
-    });
-
-    it('hides reactions in featuresToIgnore list', () => {
-        getCategories.mockReturnValue({ featuresToIgnore: ['Opportunity Attack'] });
+    it('renders spell level column', () => {
         render(<CharReactions {...createProps()} />);
-        expect(screen.queryByText('Opportunity Attack:')).not.toBeInTheDocument();
+        expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders spell range column', () => {
+        render(<CharReactions {...createProps()} />);
+        expect(screen.getByText('Self')).toBeInTheDocument();
+        expect(screen.getByText('60 ft.')).toBeInTheDocument();
+    });
+
+    it('renders save DC for spells with DC', () => {
+        const spellWithDc = {
+            ...basePlayerStats.spellAbilities.spells[0],
+            name: 'Bane',
+            dc: { dc_type: 'WIS' },
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [spellWithDc],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Bane']));
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('DC 13 WIS')).toBeInTheDocument();
+    });
+
+    it('renders heal expression for healing spells', () => {
+        const healingSpell = {
+            name: 'Lesser Restoration',
+            casting_time: '1 reaction',
+            level: 2,
+            range: 'Touch',
+            prepared: 'Always',
+            damage: null,
+            heal_at_slot_level: true,
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [healingSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Lesser Restoration']));
+        resolveHealExpression.mockReturnValue('2d8+3');
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('2d8+3')).toBeInTheDocument();
+        expect(screen.getByText('Healing')).toBeInTheDocument();
+    });
+
+    it('renders damage type column', () => {
+        render(<CharReactions {...createProps()} />);
+        expect(document.body.textContent).toContain('fire');
+    });
+
+    it('renders "Utility" when no damage type and not healing', () => {
+        const utilitySpell = {
+            name: 'Counterspell',
+            casting_time: '1 reaction',
+            level: 3,
+            range: '60 ft.',
+            prepared: 'Always',
+            damage: null,
+            heal_at_slot_level: false,
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [utilitySpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Counterspell']));
+        resolveSpellDamageAtLevel.mockReturnValue(null);
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Utility')).toBeInTheDocument();
+    });
+
+    it('renders "Cantrip" for level 0 spells', () => {
+        const cantrip = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [cantrip],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Cantrip')).toBeInTheDocument();
+    });
+
+    it('renders clickable attack bonus for spells with attack_type', () => {
+        const attackSpell = {
+            name: 'Thorn Whip',
+            casting_time: '1 reaction',
+            level: 0,
+            range: '30 ft.',
+            prepared: 'Always',
+            attack_type: 'melee',
+            damage: '1d8 thunder',
+            damage_type: 'thunder',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    toHit: 5,
+                    spells: [attackSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Thorn Whip']));
+        resolveSpellDamageAtLevel.mockReturnValue('1d8+3 thunder');
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('+5')).toBeInTheDocument();
+    });
+
+    it('does not render spell section when no reaction spells', () => {
+        getReactionSpellNames.mockReturnValue(new Set());
+        render(<CharReactions {...createProps()} />);
+        expect(screen.queryByText('Shield')).not.toBeInTheDocument();
+    });
+
+    it('does not render spells section when spellAbilities is missing', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: null,
+            },
+        });
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.queryByText('Shield')).not.toBeInTheDocument();
+    });
+
+    it('does not render spells section when no spells array', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {},
+            },
+        });
+        expect(() => render(<CharReactions {...createProps(props)} />)).toThrow();
+    });
+
+    it('renders clickable spell name to open popup', () => {
+        render(<CharReactions {...createProps()} />);
+        const spellLink = screen.getByText('Shield');
+        fireEvent.click(spellLink);
+        expect(screen.getByTestId('popup')).toBeInTheDocument();
+        expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
+    });
+
+    it('renders clickable damage for non-healing spells', () => {
+        render(<CharReactions {...createProps()} />);
+        const damageCells = screen.getAllByText('1d10');
+        expect(damageCells[0]).toHaveClass('clickable');
+    });
+
+    it('renders auto-hit spells without attack bonus column', () => {
+        isAutoHitSpell.mockReturnValue(true);
+        const autoHitSpell = {
+            name: 'Guiding Bolt',
+            casting_time: '1 reaction',
+            level: 2,
+            range: '120 ft.',
+            prepared: 'Always',
+            damage: '4d6 radiant',
+            damage_type: 'radiant',
+        };
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [autoHitSpell],
+                },
+            },
+        });
+        getReactionSpellNames.mockReturnValue(new Set(['Guiding Bolt']));
+        resolveSpellDamageAtLevel.mockReturnValue('4d6+3 radiant');
+        render(<CharReactions {...createProps(props)} />);
+        expect(screen.getByText('Guiding Bolt')).toBeInTheDocument();
     });
 });

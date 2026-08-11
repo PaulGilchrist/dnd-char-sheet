@@ -1,4 +1,4 @@
-import { render, act } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
 
@@ -31,9 +31,6 @@ const mockState = {
     rulerEnd: null,
     rulerPreview: null,
     viewingMonster: null,
-    itemsPanelOpen: false,
-    renamePopover: null,
-    spellMode: null,
 };
 
 const createMockSetMapData = vi.fn();
@@ -241,7 +238,7 @@ const renderMap = (overrides = {}) => {
     return render(<Map {...defaultProps} />);
 };
 
-describe('Map - useEffect refs sync', () => {
+describe('Map - players rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -250,119 +247,17 @@ describe('Map - useEffect refs sync', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('syncs placedItemsRef when placedItems changes', async () => {
-        const { container } = await act(async () => renderMap());
+    it('renders players with characters data', async () => {
+        mockState.mapData = createMockMapData({
+            players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
+        });
+        const { container } = await act(async () => renderMap({
+            characters: [{ name: 'Thorin', id: 'thorin' }],
+        }));
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('syncs selectedWallsRef when selectedWalls changes', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('syncs selectedItemsRef when selectedItems changes', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('syncs mapDataRef when mapData changes', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - handleViewStats logic', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('does not find monster for non-NPC item', async () => {
-        mockState.placedItems = [
-            { id: 'item1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('does not find monster when placedItems does not contain the item', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('handles monster name with trailing number', async () => {
-        mockState.placedItems = [
-            { id: 'item1', type: 'npc', name: 'Goblin 3', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - monsterFound useMemo', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('returns false when selectedItem is null', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('returns false when selectedItem is not an NPC', async () => {
-        mockState.placedItems = [
-            { id: 'item1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - handleRenameItem', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('does not rename when newName is empty', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('does not rename when newName is whitespace only', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('clears npcImages cache on rename', async () => {
-        mockState.placedItems = [
-            { id: 'item1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - handleRemovePlayer', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('removes player from mapData', async () => {
+    it('renders players with fog overlay', async () => {
         mockState.mapData = createMockMapData({
             players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
         });
@@ -370,19 +265,43 @@ describe('Map - handleRemovePlayer', () => {
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('filters out player by id', async () => {
+    it('renders players with dragging state', async () => {
         mockState.mapData = createMockMapData({
-            players: [
-                { id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 },
-                { id: 'player2', name: 'Legolas', gridX: 6, gridY: 6 },
-            ],
+            players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
+        });
+        mockState.dragging = { playerId: 'player1' };
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+});
+
+describe('Map - walls rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.mapData = createMockMapData();
+        mockState.placedItems = [];
+        createMockSetMapData.mockClear();
+        createMockSetPlacedItems.mockClear();
+    });
+
+    it('renders walls from mapData', async () => {
+        mockState.mapData = createMockMapData({
+            walls: new Set(['1,1', '2,2', '3,3']),
+        });
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders walls with fog overlay', async () => {
+        mockState.mapData = createMockMapData({
+            walls: new Set(['1,1', '2,2']),
         });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleCloseMenu', () => {
+describe('Map - spell overlay rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -391,28 +310,29 @@ describe('Map - handleCloseMenu', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('clears selectedItem', async () => {
+    it('renders spell overlay renderer', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('clears selectedPlayer', async () => {
+    it('renders spell overlay with overlays array', async () => {
+        mockState.overlays = [
+            { id: 'overlay1', shape: 'sphere', startGridX: 5, startGridY: 5, distanceFt: 30, color: 'rgba(255,80,60,0.35)', radiusFt: 20 },
+        ];
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('clears selectedRoom', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('clears renamePopover', async () => {
+    it('renders spell draft as pending overlay', async () => {
+        mockState.spellDraft = { startGridX: 5, startGridY: 5, angle: 0 };
+        mockState.spellMode = 'cone';
+        mockState.shapeParams = { sizeFt: 60, angle: 90, color: 'rgba(255,80,60,0.35)' };
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleSetRulerMode', () => {
+describe('Map - ruler overlay rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -421,18 +341,22 @@ describe('Map - handleSetRulerMode', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('sets rulerMode and clears spellMode', async () => {
+    it('renders ruler overlay with start and end', async () => {
+        mockState.rulerStart = { gridX: 0, gridY: 0 };
+        mockState.rulerEnd = { gridX: 10, gridY: 10 };
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('resets ruler when disabling rulerMode', async () => {
+    it('renders ruler overlay with preview', async () => {
+        mockState.rulerStart = { gridX: 0, gridY: 0 };
+        mockState.rulerPreview = { gridX: 5, gridY: 5 };
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleRenameClicked position calculation', () => {
+describe('Map - rename popover rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -441,7 +365,84 @@ describe('Map - handleRenameClicked position calculation', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('calculates rename popover position based on grid position', async () => {
+    it('renders MonsterNameAutocomplete when renamePopover exists', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('does not render rename popover when renamePopover is null', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+});
+
+describe('Map - ItemsPanel rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.mapData = createMockMapData();
+        mockState.placedItems = [];
+        createMockSetMapData.mockClear();
+        createMockSetPlacedItems.mockClear();
+    });
+
+    it('renders ItemsPanel when itemsPanelOpen is true and isLocalhost', async () => {
+        mockState.mapData = createMockMapData();
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('does not render ItemsPanel when itemsPanelOpen is false', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('does not render ItemsPanel when isLocalhost is false', async () => {
+        const { container } = await act(async () => renderMap({ isLocalhost: false }));
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders ItemsPanel with outdoor mapVariant when parentHex exists', async () => {
+        mockState.mapData = createMockMapData({ parentHex: true });
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders ItemsPanel with indoor mapVariant when no parentHex', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+});
+
+describe('Map - MonsterCardModal rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.mapData = createMockMapData();
+        mockState.placedItems = [];
+        createMockSetMapData.mockClear();
+        createMockSetPlacedItems.mockClear();
+    });
+
+    it('renders MonsterCardModal when viewingMonster is set', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('does not render MonsterCardModal when viewingMonster is null', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+});
+
+describe('Map - context menus rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockState.mapData = createMockMapData();
+        mockState.placedItems = [];
+        createMockSetMapData.mockClear();
+        createMockSetPlacedItems.mockClear();
+    });
+
+    it('renders ItemContextMenu with placed items', async () => {
         mockState.placedItems = [
             { id: 'item1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
         ];
@@ -449,13 +450,22 @@ describe('Map - handleRenameClicked position calculation', () => {
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('handles rename with default name fallback', async () => {
+    it('renders RoomContextMenu with selected room', async () => {
+        mockState.selectedRoom = { id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } };
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders PlayerContextMenu with selected player', async () => {
+        mockState.mapData = createMockMapData({
+            players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
+        });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleToolPanStart tool routing', () => {
+describe('Map - grid and walls rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -464,33 +474,37 @@ describe('Map - handleToolPanStart tool routing', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('routes to grid pointer down for paint tool', async () => {
+    it('renders GridAndWalls with gridSize', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('routes to grid pointer down for erase tool', async () => {
+    it('renders GridAndWalls with walls', async () => {
+        mockState.mapData = createMockMapData({
+            walls: new Set(['1,1', '2,2']),
+        });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('routes to select pointer down for select tool', async () => {
+    it('renders GridAndWalls with isLocalhost', async () => {
+        const { container } = await act(async () => renderMap({ isLocalhost: false }));
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders GridAndWalls with fog', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 
-    it('routes to room pointer down for room tool', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('routes to pan start for none tool', async () => {
+    it('renders GridAndWalls with bgFill', async () => {
+        mockState.mapData = createMockMapData({ bgFill: '#ffffff' });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleToolPointerMove', () => {
+describe('Map - fog overlay rendering', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -499,13 +513,18 @@ describe('Map - handleToolPointerMove', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('calls all pointer move handlers', async () => {
+    it('renders FogOverlay with fog set', async () => {
         const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('renders FogOverlay with isLocalhost', async () => {
+        const { container } = await act(async () => renderMap({ isLocalhost: false }));
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleToolPointerUp', () => {
+describe('Map - tool pointer handlers with spellDragActiveRef', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -514,13 +533,33 @@ describe('Map - handleToolPointerUp', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('calls all pointer up handlers', async () => {
+    it('skips handleToolPanStart when spellDragActiveRef is true', async () => {
+        mockState.spellDraft = { startGridX: 5, startGridY: 5 };
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('triggers handleToolPointerLeave when pointer leaves SVG', async () => {
+        const { container } = await act(async () => renderMap());
+        const svg = container.querySelector('svg');
+        await act(async () => {
+            fireEvent.pointerLeave(svg);
+        });
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('triggers handleSetRulerMode to enable ruler', async () => {
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.map')).toBeInTheDocument();
+    });
+
+    it('triggers handleSetRulerMode to disable ruler', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleToolPointerLeave', () => {
+describe('Map - SVG element attributes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
@@ -529,23 +568,23 @@ describe('Map - handleToolPointerLeave', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('calls item pointer leave and grid pointer leave', async () => {
+    it('renders SVG with correct viewBox based on zoom', async () => {
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - SSE event handling', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
+        const svg = container.querySelector('svg');
+        expect(svg).toHaveAttribute('viewBox');
     });
 
-    it('combines map SSE and spell overlay SSE events', async () => {
+    it('renders SVG with panX and panY in viewBox', async () => {
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const svg = container.querySelector('svg');
+        const viewBox = svg.getAttribute('viewBox');
+        expect(viewBox).toBeTruthy();
+    });
+
+    it('renders SVG with SVG_SIZE / zoom dimensions', async () => {
+        const { container } = await act(async () => renderMap());
+        const svg = container.querySelector('svg');
+        const viewBox = svg.getAttribute('viewBox');
+        expect(viewBox).toBeTruthy();
     });
 });

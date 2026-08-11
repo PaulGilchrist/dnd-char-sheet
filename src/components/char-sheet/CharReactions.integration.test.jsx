@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import CharReactions from './CharReactions.jsx';
 
 vi.mock('../common/popup.jsx', () => ({
@@ -138,7 +138,9 @@ import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
-import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
+import { useSpellCastExecutor } from '../../hooks/combat/useSpellCastExecutor.js';
+import { useSpellPositionResolver } from '../../hooks/combat/useSpellPositionResolver.js';
+import { resolveSpellDamageAtLevel, isAutoHitSpell, resolveHealExpression } from '../../services/rules/core/spellDamageUtils.js';
 
 const campaignName = 'test-campaign';
 
@@ -179,7 +181,7 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - handleReactionClick', () => {
+describe('CharReactions - useSpellCastExecutor integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useRuntimeValue.mockReturnValue([]);
@@ -193,87 +195,127 @@ describe('CharReactions - handleReactionClick', () => {
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('does nothing when cannotAct is true', () => {
-        const props = createProps({ cannotAct: true });
-        render(<CharReactions {...createProps(props)} />);
-        const reaction = screen.getByText('Opportunity Attack:');
-        fireEvent.click(reaction);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
+    it('calls useSpellCastExecutor with campaignName and characters', () => {
+        const castAction = vi.fn();
+        vi.mocked(useSpellCastExecutor).mockReturnValue({ castAction });
+        render(<CharReactions {...createProps()} />);
+        expect(useSpellCastExecutor).toHaveBeenCalledTimes(1);
+        expect(useSpellCastExecutor.mock.calls[0][4]).toBe(campaignName);
+        expect(useSpellCastExecutor.mock.calls[0][6]).toEqual([]);
+    });
+});
+
+describe('CharReactions - useSpellPositionResolver integration', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockReturnValue(null);
+        setRuntimeValue.mockReturnValue(undefined);
+        hasAutomation.mockReturnValue(false);
+        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+        getCategories.mockReturnValue({ featuresToIgnore: [] });
+        getReactionSpellNames.mockReturnValue(new Set());
+        resolveSpellDamageAtLevel.mockReturnValue(null);
+        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('calls buildFeatureDetailHtml for reactions without automation or special handlers', () => {
+    it('calls useSpellPositionResolver with correct arguments', () => {
+        const resolvePositions = vi.fn();
+        vi.mocked(useSpellPositionResolver).mockReturnValue({ resolvePositions: resolvePositions, cachedPosRef: { current: null } });
+        render(<CharReactions {...createProps()} />);
+        expect(useSpellPositionResolver).toHaveBeenCalledWith(campaignName, null, 'TestFighter');
+    });
+});
+
+describe('CharReactions - useRuntimeValue hooks', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getRuntimeValue.mockReturnValue(null);
+        setRuntimeValue.mockReturnValue(undefined);
+        hasAutomation.mockReturnValue(false);
+        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+        getCategories.mockReturnValue({ featuresToIgnore: [] });
+        getReactionSpellNames.mockReturnValue(new Set());
+        resolveSpellDamageAtLevel.mockReturnValue(null);
+        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+    });
+
+    it('uses activeBuffs from runtime when available', () => {
+        useRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'activeBuffs') return [{ effect: 'test_buff' }];
+            return [];
+        });
+        render(<CharReactions {...createProps()} />);
+        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'activeBuffs', campaignName);
+    });
+
+    it('defaults to empty array when activeBuffs is null', () => {
+        useRuntimeValue.mockReturnValue(null);
+        render(<CharReactions {...createProps()} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+    });
+
+    it('reads powerWordHealStandPermission from runtime', () => {
+        useRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'powerWordHealStandPermission') return true;
+            if (key === 'activeBuffs') return [];
+            return [];
+        });
+        render(<CharReactions {...createProps()} />);
+        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'powerWordHealStandPermission', campaignName);
+    });
+
+    it('reads bastionOfLawActive and bastionOfLawWardDice from runtime', () => {
+        useRuntimeValue.mockImplementation((charKey, key) => {
+            if (key === 'bastionOfLawActive') return true;
+            if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
+            if (key === 'activeBuffs') return [];
+            return [];
+        });
+        render(<CharReactions {...createProps()} />);
+        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'bastionOfLawActive', campaignName);
+        expect(useRuntimeValue).toHaveBeenCalledWith('TestFighter', 'bastionOfLawWardDice', campaignName);
+    });
+});
+
+describe('CharReactions - getReactionSpellDamageDisplay logic', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        useRuntimeValue.mockReturnValue([]);
+        getRuntimeValue.mockReturnValue(null);
+        setRuntimeValue.mockReturnValue(undefined);
+        hasAutomation.mockReturnValue(false);
+        buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
+        getCategories.mockReturnValue({ featuresToIgnore: [] });
+        getReactionSpellNames.mockReturnValue(new Set());
+        resolveSpellDamageAtLevel.mockReturnValue(null);
+        resolveHealExpression.mockReturnValue('2d8+3');
+        isAutoHitSpell.mockReturnValue(false);
+        useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
+    });
+
+    it('calls resolveHealExpression for healing spells in render', () => {
+        resolveHealExpression.mockReturnValue('3d8+4');
+        const healingSpell = {
+            name: 'Lesser Restoration',
+            casting_time: '1 reaction',
+            level: 2,
+            range: 'Touch',
+            prepared: 'Always',
+            damage: null,
+            heal_at_slot_level: true,
+        };
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
-                reactions: [
-                    { name: 'Custom Reaction', description: 'Custom desc', details: 'some details' },
-                ],
+                spellAbilities: {
+                    ...basePlayerStats.spellAbilities,
+                    spells: [healingSpell],
+                },
             },
         });
+        getReactionSpellNames.mockReturnValue(new Set(['Lesser Restoration']));
         render(<CharReactions {...createProps(props)} />);
-        const reaction = screen.getByText('Custom Reaction:');
-        fireEvent.click(reaction);
-        expect(buildFeatureDetailHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Custom Reaction' })
-        );
-    });
-
-    it('handles Stand (Power Word Heal) reaction - removes prone condition', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Prone', 'Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'activeConditions',
-            ['Poisoned'],
-            campaignName
-        );
-    });
-
-    it('handles Stand (Power Word Heal) reaction - sets permission to false', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return [];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'powerWordHealStandPermission',
-            false,
-            campaignName
-        );
-    });
-
-    it('does not set activeConditions if no change (no prone)', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        const conditionCalls = setRuntimeValue.mock.calls.filter(c => c[1] === 'activeConditions');
-        expect(conditionCalls.length).toBe(0);
+        expect(resolveHealExpression).toHaveBeenCalled();
     });
 });

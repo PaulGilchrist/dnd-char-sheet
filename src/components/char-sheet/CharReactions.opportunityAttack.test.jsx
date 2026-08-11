@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CharReactions from './CharReactions.jsx';
 
 vi.mock('../common/popup.jsx', () => ({
@@ -133,7 +133,8 @@ vi.mock('../../services/ui/formatUtils.js', () => ({
 }));
 
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { hasAutomation } from '../../services/combat/automation/automationService.js';
+import { hasAutomation, hasTacticalShift, hasSpeedyOpportunityDisadvantage } from '../../services/combat/automation/automationService.js';
+import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
 import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
@@ -179,101 +180,139 @@ function createProps(overrides = {}) {
     };
 }
 
-describe('CharReactions - handleReactionClick', () => {
+describe('CharReactions - handleOpportunityAttack', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         useRuntimeValue.mockReturnValue([]);
         getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
         hasAutomation.mockReturnValue(false);
+        hasTacticalShift.mockReturnValue(false);
+        hasSpeedyOpportunityDisadvantage.mockReturnValue(false);
         buildFeatureDetailHtml.mockImplementation((r) => `<div>${r.name}</div>`);
         getCategories.mockReturnValue({ featuresToIgnore: [] });
         getReactionSpellNames.mockReturnValue(new Set());
         resolveSpellDamageAtLevel.mockReturnValue(null);
+        getCombatContext.mockResolvedValue(null);
         useLoggedDiceRoll.mockReturnValue({ rollAttack: vi.fn(), rollDamage: vi.fn() });
     });
 
-    it('does nothing when cannotAct is true', () => {
-        const props = createProps({ cannotAct: true });
-        render(<CharReactions {...createProps(props)} />);
+    it('falls through to normal OA when no combat context', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        render(<CharReactions {...createProps()} />);
         const reaction = screen.getByText('Opportunity Attack:');
         fireEvent.click(reaction);
-        expect(setRuntimeValue).not.toHaveBeenCalled();
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        expect(rollAttack).toHaveBeenCalledWith(
+            'Longsword',
+            6,
+            expect.objectContaining({ isOpportunityAttack: true })
+        );
     });
 
-    it('calls buildFeatureDetailHtml for reactions without automation or special handlers', () => {
+    it('shows popup when target has inspiring movement protection', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Ally1' });
+        const mockGrv = vi.fn((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return true;
+            return null;
+        });
+        getRuntimeValue.mockImplementation(mockGrv);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(mockGrv).toHaveBeenCalledWith('Ally1', 'inspiringMovementNoOA');
+    });
+
+    it('shows popup when target has tactical shift', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
+        const mockGrv = vi.fn((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return false;
+            return null;
+        });
+        getRuntimeValue.mockImplementation(mockGrv);
+        hasTacticalShift.mockReturnValue(true);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(hasTacticalShift).toHaveBeenCalledWith({ name: 'Enemy1' });
+    });
+
+    it('shows popup when target has speedy disadvantage', async () => {
+        getCombatContext.mockResolvedValue({});
+        getTargetFromAttacker.mockReturnValue({ name: 'Enemy1' });
+        const mockGrv = vi.fn((charKey, key) => {
+            if (key === 'inspiringMovementNoOA') return false;
+            return null;
+        });
+        getRuntimeValue.mockImplementation(mockGrv);
+        hasTacticalShift.mockReturnValue(false);
+        hasSpeedyOpportunityDisadvantage.mockReturnValue(true);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 100));
+        expect(hasSpeedyOpportunityDisadvantage).toHaveBeenCalledWith({ name: 'Enemy1' });
+    });
+
+    it('uses first melee attack for OA roll', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockResolvedValue(null);
+        render(<CharReactions {...createProps()} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        expect(rollAttack).toHaveBeenCalledWith('Longsword', 6, expect.any(Object));
+    });
+
+    it('uses first attack when no melee attacks available', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
         const props = createProps({
             playerStats: {
                 ...basePlayerStats,
-                reactions: [
-                    { name: 'Custom Reaction', description: 'Custom desc', details: 'some details' },
+                attacks: [
+                    { name: 'Ranged Bolt', type: 'Action', range: 120, hitBonus: 6 },
                 ],
             },
         });
+        getCombatContext.mockResolvedValue(null);
         render(<CharReactions {...createProps(props)} />);
-        const reaction = screen.getByText('Custom Reaction:');
+        const reaction = screen.getByText('Opportunity Attack:');
         fireEvent.click(reaction);
-        expect(buildFeatureDetailHtml).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'Custom Reaction' })
-        );
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
+        expect(rollAttack).toHaveBeenCalledWith('Ranged Bolt', 6, expect.any(Object));
     });
 
-    it('handles Stand (Power Word Heal) reaction - removes prone condition', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
+    it('does nothing when no attacks available', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                attacks: [],
+            },
         });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Prone', 'Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'activeConditions',
-            ['Poisoned'],
-            campaignName
-        );
+        getCombatContext.mockResolvedValue(null);
+        render(<CharReactions {...createProps(props)} />);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await new Promise(r => setTimeout(r, 50));
+        expect(rollAttack).not.toHaveBeenCalled();
     });
 
-    it('handles Stand (Power Word Heal) reaction - sets permission to false', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return [];
-            return null;
-        });
+    it('handles getCombatContext rejection gracefully', async () => {
+        const rollAttack = vi.fn();
+        useLoggedDiceRoll.mockImplementation(() => ({ rollAttack, rollDamage: vi.fn() }));
+        getCombatContext.mockRejectedValue(new Error('network error'));
         render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'TestFighter',
-            'powerWordHealStandPermission',
-            false,
-            campaignName
-        );
-    });
-
-    it('does not set activeConditions if no change (no prone)', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
-            if (key === 'powerWordHealStandPermission') return true;
-            if (key === 'activeBuffs') return [];
-            return [];
-        });
-        getRuntimeValue.mockImplementation((charKey, key, _cn) => {
-            if (key === 'activeConditions') return ['Poisoned'];
-            return null;
-        });
-        render(<CharReactions {...createProps()} />);
-        const standReaction = screen.getByText('Stand (Power Word Heal):');
-        fireEvent.click(standReaction);
-        const conditionCalls = setRuntimeValue.mock.calls.filter(c => c[1] === 'activeConditions');
-        expect(conditionCalls.length).toBe(0);
+        const reaction = screen.getByText('Opportunity Attack:');
+        fireEvent.click(reaction);
+        await waitFor(() => expect(rollAttack).toHaveBeenCalled());
     });
 });
