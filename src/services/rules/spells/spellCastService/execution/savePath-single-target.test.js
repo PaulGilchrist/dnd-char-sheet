@@ -65,17 +65,6 @@ function makeSpell(overrides = {}) {
   };
 }
 
-function makeFullSpell(overrides = {}) {
-  return {
-    name: 'Fireball',
-    level: 3,
-    area_of_effect: { type: 'cone', size: 60 },
-    damage: { damage_type: 'Fire', damage_at_slot_level: { 3: '8d6' } },
-    dc: { dc_type: 'dex', dc_success: 'half' },
-    ...overrides,
-  };
-}
-
 function makePlayerStats(overrides = {}) {
   return {
     name: 'TestWizard',

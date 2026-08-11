@@ -44,7 +44,6 @@ vi.mock('../../../features/viciousMockeryService.js', () => ({
 
 const { handleSavePath } = await import('./savePath.js');
 const { rollExpression, rollExpressionMaximized } = await import('../../../../dice/diceRoller.js');
-const { triggerViciousMockeryForGeneric } = await import('../../../features/viciousMockeryService.js');
 const { triggerSoulstitchSpells } = await import('../../postCastRiderService.js');
 const { getCombatContext } = await import('../../../combat/damageUtils.js');
 

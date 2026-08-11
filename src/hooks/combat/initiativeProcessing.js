@@ -1,0 +1,46 @@
+import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
+import utils from '../../services/ui/utils.js';
+import storage from '../../services/ui/storage.js';
+import { loadCombatSummary } from '../../services/encounters/combatData.js';
+import { clearAllExpirationEffects } from '../../services/rules/effects/expirations.js';
+import { clearHuntersMarkConcentration } from '../../services/rules/effects/restRules.js';
+
+export async function processInitiativeRoll(characterName, campaignName, context, bonus, effectiveD20Roll, r1, r2, setPopupHtml, availableSuperiorityManeuvers, cosmicOmenAppliedBonus) {
+    const firstName = utils.getName(characterName);
+    const tandemFtBonus = Number(getRuntimeValue(firstName, 'tandemFootworkBonus', campaignName) ?? 0);
+    if (tandemFtBonus > 0) {
+        setRuntimeValue(firstName, 'tandemFootworkBonus', 0, campaignName);
+    }
+    const totalBonus = bonus + tandemFtBonus;
+    const combatSummary = await loadCombatSummary(campaignName);
+    if (combatSummary) {
+        const creature = combatSummary.creatures.find(
+            c => c.type === 'player' && c.name === firstName
+        );
+        if (creature) {
+            creature.initiative = String(effectiveD20Roll + totalBonus);
+            combatSummary.creatures.sort((a, b) => b.initiative - a.initiative);
+            storage.set('combatSummary', combatSummary, campaignName);
+        }
+    }
+    clearAllExpirationEffects(characterName, campaignName);
+    setRuntimeValue(characterName, 'uncannyMetabolismUsed', false, campaignName);
+
+    setPopupHtml({
+        type: 'd20',
+        rollType: 'initiative',
+        name: 'Initiative',
+        rolls: [r1, r2],
+        bonus: totalBonus,
+        characterName,
+        campaignName,
+        availableSuperiorityManeuvers,
+        forcedMode: context?.forcedMode,
+        strokeOfLuck: context?.strokeOfLuck,
+        bardicInspiration: context?.bardicInspiration,
+        bardicInspirationDie: context?.bardicInspirationDie,
+        cosmicOmenAppliedBonus,
+    });
+    window.dispatchEvent(new CustomEvent('initiative-rolled', { detail: { characterName: firstName, roll: effectiveD20Roll + totalBonus } }));
+    clearHuntersMarkConcentration(firstName, campaignName);
+}
