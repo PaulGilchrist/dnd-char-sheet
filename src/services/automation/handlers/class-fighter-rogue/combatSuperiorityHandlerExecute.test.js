@@ -103,6 +103,10 @@ vi.mock('../../../../services/ui/logService.js', () => ({
     addEntry: vi.fn(async () => {}),
 }));
 
+vi.mock('../../../../services/automation/handlers/buffs/tempHpService.js', () => ({
+    setTempHp: vi.fn(async () => {}),
+}));
+
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
 const makePlayerStats = (overrides = {}) => ({
@@ -714,12 +718,36 @@ describe('executeBaitAndSwitchChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when no target selected', async () => {
+    it('returns error when chosenName is null', async () => {
         const result = await executeBaitAndSwitchChoice(
             { dieValue: 4, maneuverName: 'Bait and Switch' },
             makePlayerStats(),
             'test-campaign',
             null
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns error when playerStats is null', async () => {
+        const result = await executeBaitAndSwitchChoice(
+            { dieValue: 4, maneuverName: 'Bait and Switch' },
+            null,
+            'test-campaign',
+            'Ally1'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns error when campaignName is null', async () => {
+        const result = await executeBaitAndSwitchChoice(
+            { dieValue: 4, maneuverName: 'Bait and Switch' },
+            makePlayerStats(),
+            null,
+            'Ally1'
         );
 
         expect(result.type).toBe('popup');
@@ -738,6 +766,20 @@ describe('executeBaitAndSwitchChoice', () => {
         expect(result.payload.description).toContain('Ally1 gains +4 AC');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchActive', true, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchBonus', 4, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'baitAndSwitchSource', 'Bait and Switch', 'test-campaign');
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+    });
+
+    it('uses default maneuver name when not provided', async () => {
+        const result = await executeBaitAndSwitchChoice(
+            { dieValue: 6 },
+            makePlayerStats(),
+            'test-campaign',
+            'Ally1'
+        );
+
+        expect(result.logEntries[0].description).toContain('Bait and Switch');
     });
 });
 
@@ -748,12 +790,36 @@ describe('executeCommanderStrikeChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when no target selected', async () => {
+    it('returns error when chosenName is null', async () => {
         const result = await executeCommanderStrikeChoice(
             { dieValue: 4, maneuverName: "Commander's Strike" },
             makePlayerStats(),
             'test-campaign',
             null
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns error when playerStats is null', async () => {
+        const result = await executeCommanderStrikeChoice(
+            { dieValue: 4, maneuverName: "Commander's Strike" },
+            null,
+            'test-campaign',
+            'Ally1'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns error when campaignName is null', async () => {
+        const result = await executeCommanderStrikeChoice(
+            { dieValue: 4, maneuverName: "Commander's Strike" },
+            makePlayerStats(),
+            null,
+            'Ally1'
         );
 
         expect(result.type).toBe('popup');
@@ -772,6 +838,20 @@ describe('executeCommanderStrikeChoice', () => {
         expect(result.payload.description).toContain('Ally1 will add 4 to their next attack');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeActive', true, 'test-campaign');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeBonus', 4, 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'commanderStrikeSource', "Commander's Strike", 'test-campaign');
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+    });
+
+    it('uses default maneuver name when not provided', async () => {
+        const result = await executeCommanderStrikeChoice(
+            { dieValue: 6 },
+            makePlayerStats(),
+            'test-campaign',
+            'Ally1'
+        );
+
+        expect(result.payload.description).toContain("Commander's Strike");
     });
 });
 
@@ -782,7 +862,7 @@ describe('executeRallyChoice', () => {
         vi.clearAllMocks();
     });
 
-    it('returns error when no target selected', async () => {
+    it('returns error when chosenName is null', async () => {
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
@@ -797,7 +877,39 @@ describe('executeRallyChoice', () => {
         expect(result.payload.description).toContain('No target selected');
     });
 
+    it('returns error when playerStats is null', async () => {
+        const result = await executeRallyChoice(
+            { dieValue: 4, maneuverName: 'Rally' },
+            null,
+            'test-campaign',
+            'Ally1',
+            8,
+            4,
+            'Rally description'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
+    it('returns error when campaignName is null', async () => {
+        const result = await executeRallyChoice(
+            { dieValue: 4, maneuverName: 'Rally' },
+            makePlayerStats(),
+            null,
+            'Ally1',
+            8,
+            4,
+            'Rally description'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No target selected');
+    });
+
     it('sets temp HP on chosen ally', async () => {
+        const { setTempHp } = await import('../../../../services/automation/handlers/buffs/tempHpService.js');
+
         const result = await executeRallyChoice(
             { dieValue: 4, maneuverName: 'Rally' },
             makePlayerStats(),
@@ -809,9 +921,24 @@ describe('executeRallyChoice', () => {
         );
 
         expect(result.type).toBe('popup');
+        expect(result.logEntries).toHaveLength(1);
         expect(result.logEntries[0].type).toBe('ability_use');
         expect(result.logEntries[0].description).toContain('gains 8 temporary hit points');
-        expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'tempHp', 8, 'test-campaign');
+        expect(setTempHp).toHaveBeenCalledWith('Ally1', 8, 'test-campaign');
+    });
+
+    it('uses default maneuver name when not provided', async () => {
+        const result = await executeRallyChoice(
+            { dieValue: 6 },
+            makePlayerStats(),
+            'test-campaign',
+            'Ally1',
+            10,
+            4,
+            'Rally description'
+        );
+
+        expect(result.logEntries[0].description).toContain('Rally');
     });
 });
 
