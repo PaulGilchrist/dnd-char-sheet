@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, isActive, deactivate } from './tranceOfOrderHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -171,6 +170,92 @@ describe('Trance of Order Handler', () => {
                 duration: '1_minute',
                 restoreCost: 5,
             });
+        });
+
+        it('should use default feature name when action.name is undefined', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === activeKey) return false;
+                if (key === usesKey) return 1;
+                return null;
+            });
+            classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+
+            const result = await handle({ automation: makeAction().automation }, makePlayerStats(), campaignName, null);
+
+            expect(result.payload.name).toBe('Trance of Order');
+            expect(result.payload.description).toContain('Trance of Order');
+        });
+
+        it('should handle null getClassFeatures returning maxSorceryPoints=0', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === activeKey) return false;
+                if (key === usesKey) return 1;
+                return null;
+            });
+            classFeatures.getClassFeatures.mockReturnValue(null);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain('activated');
+            expect(metamagic.spendSorceryPoints).not.toHaveBeenCalled();
+        });
+
+        it('should treat null stored value as having uses remaining (usesMax)', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(null);
+            classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('activated');
+            expect(metamagic.spendSorceryPoints).not.toHaveBeenCalled();
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                playerName,
+                usesKey,
+                0,
+                campaignName,
+            );
+        });
+
+        it('should handle addEntry rejection in SP spend path', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === activeKey) return false;
+                if (key === usesKey) return 0;
+                return null;
+            });
+            classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+            metamagic.getCurrentSorceryPoints.mockReturnValue(10);
+            logService.addEntry.mockReturnValue(Promise.reject(new Error('log failed')));
+
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('5 SP');
+            expect(consoleSpy).toHaveBeenCalledWith('[tranceOfOrder] Error:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+
+        it('should handle addEntry rejection in normal activation path', async () => {
+            runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === activeKey) return false;
+                if (key === usesKey) return 1;
+                return null;
+            });
+            classFeatures.getClassFeatures.mockReturnValue({ maxSorceryPoints: 10 });
+            logService.addEntry.mockReturnValue(Promise.reject(new Error('log failed')));
+
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('activated');
+            expect(consoleSpy).toHaveBeenCalledWith('[tranceOfOrder] Error:', expect.any(Error));
+            consoleSpy.mockRestore();
         });
     });
 

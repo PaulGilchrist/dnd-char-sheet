@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';

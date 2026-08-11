@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
     executeManeuver,
     executeReactionManeuver,
+    executeBonusActionManeuver,
     handleCombatSuperioritySkillCheck,
     handleCombatSuperiorityCommandingPresenceReaction,
     onCombatSuperioritySelected,
@@ -964,14 +965,852 @@ describe('executeBaitAndSwitchChoice', () => {
     });
 
     it('uses default maneuver name when not provided', async () => {
-        const result = await executeBaitAndSwitchChoice(
+        const result = await executeRallyChoice(
             { dieValue: 6 },
             makePlayerStats(),
             'test-campaign',
             'Ally1'
         );
 
-        expect(result.payload.description).toContain('Bait and Switch');
+        expect(result.logEntries[0].description).toContain('Rally');
+    });
+});
+
+// ── executeBonusActionManeuver - relentless ────────────────────────────
+
+describe('executeBonusActionManeuver - relentless', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('uses Relentless when passive exists and not used this round', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 0;
+            if (key === SELECTION_KEY) return ['Evasive Footwork'];
+            if (key === 'relentlessUsedRound') return undefined;
+            return undefined;
+        });
+
+        const result = await executeBonusActionManeuver(
+            { name: 'Evasive Footwork', automation: { type: 'combat_superiority' } },
+            makePlayerStats({
+                automation: { passives: [{ type: 'passive_rule', effect: 'relentless' }] },
+            }),
+            'test-campaign',
+            'Evasive Footwork'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Relentless');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'relentlessUsedRound', 1, 'test-campaign');
+    });
+});
+
+// ── executeBonusActionManeuver - advantage_and_damage ──────────────────
+
+describe('executeBonusActionManeuver - advantage_and_damage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles advantage_and_damage effect with targetName', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Feinting Attack'];
+            return undefined;
+        });
+
+        const result = await executeBonusActionManeuver(
+            { name: 'Feinting Attack', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Feinting Attack'
+        );
+
+        expect(result.payload.description).toContain('Advantage on your next attack roll');
+        expect(result.payload.description).toContain('add 4 to the damage roll');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'feintingAttackDieValue', 4, 'test-campaign');
+    });
+});
+
+// ── executeBonusActionManeuver - dash_and_damage ───────────────────────
+
+describe('executeBonusActionManeuver - dash_and_damage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles dash_and_damage effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Lunging Attack'];
+            return undefined;
+        });
+
+        const result = await executeBonusActionManeuver(
+            { name: 'Lunging Attack', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Lunging Attack'
+        );
+
+        expect(result.payload.description).toContain('Dash action');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'lungingAttackDieValue', 4, 'test-campaign');
+    });
+});
+
+// ── executeBonusActionManeuver - ac_bonus_disengage ────────────────────
+
+describe('executeBonusActionManeuver - ac_bonus_disengage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles ac_bonus_disengage effect with expiration', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Evasive Footwork'];
+            return undefined;
+        });
+
+        const result = await executeBonusActionManeuver(
+            { name: 'Evasive Footwork', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Evasive Footwork'
+        );
+
+        expect(result.payload.description).toContain('Disengage action');
+        expect(result.payload.description).toContain('+4 AC');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'baitAndSwitchActive', true, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - saveType without target ─────────────────────────
+
+describe('executeManeuver - saveType without target', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('shows save description when maneuver has saveType but no target', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.type).toBe('popup');
+    });
+});
+
+// ── executeManeuver - frightened effect ────────────────────────────────
+
+describe('executeManeuver - frightened effect', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles frightened effect with save failure and expiration', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Menacing Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Menacing Attack'
+        );
+
+        expect(result.payload.description).toContain('Frightened');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - goad effect ──────────────────────────────────────
+
+describe('executeManeuver - goad effect', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles goad effect with save failure', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Goading Attack'];
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Goading Attack'
+        );
+
+        expect(result.payload.description).toContain('Disadvantage on attacks against targets other than you');
+    });
+});
+
+// ── executeManeuver - attack_roll_bonus ────────────────────────────────
+
+describe('executeManeuver - attack_roll_bonus', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles attack_roll_bonus effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Precision Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Precision Attack'
+        );
+
+        expect(result.payload.description).toContain('Add 4 to the attack roll');
+    });
+});
+
+// ── executeManeuver - secondary_damage ─────────────────────────────────
+
+describe('executeManeuver - secondary_damage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles secondary_damage effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Sweeping Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Sweeping Attack'
+        );
+
+        expect(result.payload.description).toContain('second creature within 5 feet');
+    });
+});
+
+// ── executeManeuver - ac_bonus_and_swap ────────────────────────────────
+
+describe('executeManeuver - ac_bonus_and_swap', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles ac_bonus_and_swap by showing bait and switch modal', async () => {
+        const combatContext = {
+            creatures: [
+                { name: 'TestFighter' },
+                { name: 'Ally1' },
+            ],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Bait and Switch'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Bait and Switch', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Bait and Switch'
+        );
+
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('baitAndSwitchChoice');
+        expect(result.payload.options).toHaveLength(2);
+    });
+});
+
+// ── executeManeuver - melee_attack_reaction ────────────────────────────
+
+describe('executeManeuver - melee_attack_reaction', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles melee_attack_reaction (Riposte) with attack_roll return', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Riposte'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Riposte', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Riposte'
+        );
+
+        expect(result.type).toBe('attack_roll');
+        expect(result.payload.attack).toBeDefined();
+        expect(result.context).toBeDefined();
+        expect(result.context.superiorityDieValue).toBe(4);
+    });
+
+    it('handles melee_attack_reaction when no attacks available', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Riposte'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Riposte', automation: { type: 'combat_superiority' } },
+            makePlayerStats({ attacks: [] }),
+            'test-campaign',
+            'Riposte'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No melee attack available');
+    });
+});
+
+// ── executeManeuver - damage_reduction ─────────────────────────────────
+
+describe('executeManeuver - damage_reduction', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles damage_reduction effect with Parry', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Parry'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Parry', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Parry'
+        );
+
+        expect(result.payload.description).toContain('Damage reduced by');
+        expect(result.payload.description).toContain('HP restored');
+    });
+});
+
+// ── executeManeuver - skill_check actionType ───────────────────────────
+
+describe('executeManeuver - skill_check actionType', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles skill_check actionType', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Tactical Assessment'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Tactical Assessment', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Tactical Assessment'
+        );
+
+        expect(result.payload.description).toContain('Add 4 to the ability check');
+    });
+});
+
+// ── executeManeuver - sizeLimit validation ─────────────────────────────
+
+describe('executeManeuver - sizeLimit validation', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns size limit error popup when target is too large', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const combatContext = {
+            creatures: [{ name: 'Ogre', size: 'Large' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats({ size: 'Medium' }),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.type).toBe('popup');
+    });
+});
+
+// ── executeManeuver - relentless ───────────────────────────────────────
+
+describe('executeManeuver - relentless', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('uses Relentless when passive exists and not used this round', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 0;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'relentlessUsedRound') return undefined;
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Trip Attack', automation: { type: 'combat_superiority' } },
+            makePlayerStats({
+                automation: { passives: [{ type: 'passive_rule', effect: 'relentless' }] },
+            }),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Relentless');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'relentlessUsedRound', 1, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - frightened save success ──────────────────────────
+
+describe('executeManeuver - frightened save success', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles save success (no frightened applied)', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Menacing Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Menacing Attack'
+        );
+
+        expect(result.payload.description).toContain('Target made WIS save DC 15: Success');
+    });
+});
+
+// ── executeManeuver - ally_movement ────────────────────────────────────
+
+describe('executeManeuver - ally_movement', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles ally_movement effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Maneuvering Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Maneuvering Attack'
+        );
+
+        expect(result.payload.description).toContain('Reaction to move');
+    });
+});
+
+// ── executeManeuver - next_attack_advantage ────────────────────────────
+
+describe('executeManeuver - next_attack_advantage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles next_attack_advantage effect with targetName', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Distracting Strike'];
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Distracting Strike'
+        );
+
+        expect(result.payload.description).toContain('next attack against');
+        expect(result.payload.description).toContain('Advantage');
+    });
+});
+
+// ── executeManeuver - push effect ──────────────────────────────────────
+
+describe('executeManeuver - push effect', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles push effect with save failure', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: false }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Pushing Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Pushing Attack'
+        );
+
+        expect(result.payload.description).toContain('was pushed 15 feet');
+    });
+});
+
+// ── executeManeuver - disarm effect ────────────────────────────────────
+
+describe('executeManeuver - disarm effect', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles disarm effect with save failure', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: false }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Disarming Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Disarming Attack'
+        );
+
+        expect(result.payload.description).toContain('dropped the object');
+    });
+});
+
+// ── executeManeuver - prone effect ─────────────────────────────────────
+
+describe('executeManeuver - prone effect', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles prone effect with save failure', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: false }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack'
+        );
+
+        expect(result.payload.description).toContain('fell Prone');
+    });
+});
+
+// ── executeManeuver - ac_bonus_disengage ───────────────────────────────
+
+describe('executeManeuver - ac_bonus_disengage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles ac_bonus_disengage effect with expiration', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Evasive Footwork'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Evasive Footwork'
+        );
+
+        expect(result.payload.description).toContain('Disengage action');
+        expect(result.payload.description).toContain('+4 AC');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'baitAndSwitchActive', true, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - advantage_and_damage ─────────────────────────────
+
+describe('executeManeuver - advantage_and_damage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles advantage_and_damage effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Feinting Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Feinting Attack'
+        );
+
+        expect(result.payload.description).toContain('Advantage on your next attack roll');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'feintingAttackDieValue', 4, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - dash_and_damage ──────────────────────────────────
+
+describe('executeManeuver - dash_and_damage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles dash_and_damage effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Lunging Attack'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Lunging Attack'
+        );
+
+        expect(result.payload.description).toContain('Dash action');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'lungingAttackDieValue', 4, 'test-campaign');
+    });
+});
+
+// ── executeManeuver - temp_hp (Rally) ──────────────────────────────────
+
+describe('executeManeuver - temp_hp (Rally)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles temp_hp (Rally) by showing ally selection modal', async () => {
+        const combatContext = {
+            creatures: [
+                { name: 'TestFighter' },
+                { name: 'Ally1' },
+            ],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Rally'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Rally', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Rally'
+        );
+
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('rallyChoice');
+        expect(result.payload.allyOptions).toHaveLength(1);
+    });
+
+    it('handles temp_hp when no allies available', async () => {
+        const combatContext = {
+            creatures: [{ name: 'TestFighter' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Rally'];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Rally', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Rally'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No allies available to receive Rally');
+    });
+});
+
+// ── executeManeuver - grant_attack ─────────────────────────────────────
+
+describe('executeManeuver - grant_attack', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles grant_attack by showing ally selection modal', async () => {
+        const combatContext = {
+            creatures: [
+                { name: 'TestFighter' },
+                { name: 'Ally1' },
+            ],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ["Commander's Strike"];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: "Commander's Strike", automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            "Commander's Strike"
+        );
+
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('commanderStrikeChoice');
+        expect(result.payload.options).toHaveLength(1);
+    });
+
+    it('handles grant_attack when no allies available', async () => {
+        const combatContext = {
+            creatures: [{ name: 'TestFighter' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ["Commander's Strike"];
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: "Commander's Strike", automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            "Commander's Strike"
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No allies available to receive the attack');
+    });
+});
+
+// ── executeManeuver - damage_reduction ─────────────────────────────────
+
+describe('executeManeuver - damage_reduction with HP at max', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles damage_reduction when HP already at max', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Parry'];
+            if (key === 'hitPoints') return 20;
+            if (key === 'currentHitPoints') return 20;
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Parry', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Parry'
+        );
+
+        expect(result.payload.description).toContain('Damage reduced by');
+        expect(result.payload.description).toContain('HP restored');
     });
 });
 

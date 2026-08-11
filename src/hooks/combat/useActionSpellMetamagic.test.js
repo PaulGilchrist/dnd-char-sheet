@@ -746,6 +746,28 @@ describe('useActionSpellMetamagic', () => {
       );
     });
 
+    it('handles saveSuccess 0 as none', async () => {
+      const setModalState = vi.fn();
+      const props = makeHookProps({ setModalState });
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: { shape: 'sphere', size: '20-foot-radius' },
+        saveSuccess: 0,
+      });
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(setModalState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          saveAttackAoeModal: expect.objectContaining({ dcSuccess: 'none' }),
+        }),
+      );
+    });
+
     it('handles all recognized area shapes', async () => {
       const setModalState = vi.fn();
       const props = makeHookProps({ setModalState });
@@ -835,6 +857,71 @@ describe('useActionSpellMetamagic', () => {
       expect(executeSpellCast).toHaveBeenCalled();
       expect(prepareSpellCast).toHaveBeenCalled();
       expect(isFreeCastAuthorized).toHaveBeenCalled();
+    });
+
+    it('non-sorcerer resolveSpellDamage calls setPopupHtml when automationPopup popup returned (no spell)', async () => {
+      const setModalState = vi.fn();
+      const props = makeHookProps({
+        setModalState,
+        playerStats: makeNonSorcererStats({
+          spellAbilities: { spells: [] },
+        }),
+        setPopupHtml: vi.fn(),
+      });
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      executeSpellCast.mockResolvedValue({
+        automationPopup: {
+          type: 'popup',
+          payload: '<div>Spell cast!</div>',
+        },
+      });
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(props.setPopupHtml).toHaveBeenCalledWith('<div>Spell cast!</div>');
+    });
+
+    it('non-sorcerer resolveSpellDamage does not call setPopupHtml when automationPopup type is modal (no spell)', async () => {
+      const setModalState = vi.fn();
+      const props = makeHookProps({
+        setModalState,
+        playerStats: makeNonSorcererStats({
+          spellAbilities: { spells: [] },
+        }),
+        setPopupHtml: vi.fn(),
+      });
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      executeSpellCast.mockResolvedValue({
+        automationPopup: {
+          type: 'modal',
+          modalName: 'testModal',
+          payload: { action: { name: 'Test' } },
+        },
+      });
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
     });
 
     it('calls executeSpellCast for non-sorcerer with spell found', async () => {
@@ -1575,6 +1662,212 @@ describe('useActionSpellMetamagic', () => {
       });
 
       expect(result.current.pendingActionMetamagic.spellLevel).toBe(5);
+    });
+
+    it('sorcerer handleSpellAttackClick passes targetName from buildCtx to getTargetInfo', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Goblin A' }));
+      const props = makeHookProps({
+        playerStats: makePlayerStats({
+          spellAbilities: { spells: [spell] },
+        }),
+        buildCtx,
+      });
+      const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      isPsionicSpell.mockReturnValue(false);
+      hasPsionicSorcery.mockReturnValue(false);
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      expect(result.current.pendingActionMetamagic).not.toBeNull();
+
+      await act(async () => {
+        result.current.handleActionMetamagicConfirm({});
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toEqual({ name: 'Goblin A' });
+    });
+
+    it('sorcerer handleSpellAttackClick getTargetInfo returns null when buildCtx has no targetName', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({}));
+      const props = makeHookProps({
+        playerStats: makePlayerStats({
+          spellAbilities: { spells: [spell] },
+        }),
+        buildCtx,
+      });
+      const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      isPsionicSpell.mockReturnValue(false);
+      hasPsionicSorcery.mockReturnValue(false);
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      expect(result.current.pendingActionMetamagic).not.toBeNull();
+
+      await act(async () => {
+        result.current.handleActionMetamagicConfirm({});
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toBeNull();
+    });
+
+    it('non-sorcerer resolveSpellDamage with spell passes targetName from buildCtx to getTargetInfo', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Orc B' }));
+      const props = makeHookProps({
+        playerStats: makeNonSorcererStats({
+          spellAbilities: { spells: [spell] },
+        }),
+        buildCtx,
+      });
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toEqual({ name: 'Orc B' });
+    });
+
+    it('non-sorcerer handleSpellAttackClick with spell passes targetName from buildCtx to getTargetInfo', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Orc B' }));
+      const props = makeHookProps({
+        playerStats: makeNonSorcererStats({
+          spellAbilities: { spells: [spell] },
+        }),
+        buildCtx,
+      });
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toEqual({ name: 'Orc B' });
+    });
+
+    it('non-sorcerer resolveSpellDamage no spell passes targetName from buildCtx to getTargetInfo', async () => {
+      const buildCtx = vi.fn(async () => ({ targetName: 'Skeleton C' }));
+      const props = makeHookProps({
+        playerStats: makeNonSorcererStats({
+          spellAbilities: { spells: [] },
+        }),
+        buildCtx,
+      });
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toEqual({ name: 'Skeleton C' });
+    });
+
+    it('sorcerer resolveSpellDamage pending action passes targetName from buildCtx to getTargetInfo', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Dragon D' }));
+      const props = makeHookProps({
+        playerStats: makePlayerStats({
+          spellAbilities: { spells: [spell] },
+        }),
+        buildCtx,
+      });
+      const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+      const { executeSpellCast } = await import('../../services/rules/spells/spellCastService.js');
+
+      isPsionicSpell.mockReturnValue(false);
+      hasPsionicSorcery.mockReturnValue(false);
+      executeSpellCast.mockResolvedValue(null);
+
+      const attack = makeAttack({
+        name: 'Fireball',
+        area_of_effect: null,
+      });
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleActionSpellDamageClick(attack);
+      });
+
+      expect(result.current.pendingActionMetamagic).not.toBeNull();
+
+      await act(async () => {
+        result.current.handleActionMetamagicConfirm({});
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
+      const targetInfo = await getTargetInfo();
+      expect(targetInfo).toEqual({ name: 'Dragon D' });
     });
   });
 });

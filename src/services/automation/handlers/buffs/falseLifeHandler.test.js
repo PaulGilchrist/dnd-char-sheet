@@ -199,6 +199,18 @@ describe('falseLifeHandler.handle', () => {
 
       expect(logService.addEntry).not.toHaveBeenCalled();
     });
+
+    it('succeeds even when addEntry rejects', async () => {
+      logService.addEntry.mockRejectedValue(new Error('disk write failed'));
+
+      const ps = makePlayerStats({ name: 'TestHero' });
+      const result = await handle(makeAction(), ps, CAMPAIGN_NAME, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('Gained 10 temporary hit points');
+      expect(tempHpService.setTempHp).toHaveBeenCalled();
+    });
   });
 
   describe('return payload structure', () => {

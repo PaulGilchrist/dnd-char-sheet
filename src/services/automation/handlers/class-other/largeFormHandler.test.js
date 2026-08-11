@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { handle } from './largeFormHandler.js';
+import { handle, isLargeFormActive } from './largeFormHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn((_name, _key, _campaign) => null),
@@ -180,6 +180,136 @@ describe('largeFormHandler', () => {
             );
             expect(restUsedCalls).toHaveLength(1);
             expect(restUsedCalls[0][2]).toBe(true);
+        });
+
+        it('handles non-array activeBuffs when toggling off', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'largeFormActive') return true;
+                if (key === 'activeBuffs') return 'not-an-array';
+                return null;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('Large Form ended.');
+            const buffsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'activeBuffs',
+            );
+            expect(buffsCalls).toHaveLength(1);
+            expect(buffsCalls[0][2]).toEqual([]);
+        });
+
+        it('handles non-array activeBuffs when activating', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'largeFormActive') return false;
+                if (key === 'activeBuffs') return 'not-an-array';
+                return null;
+            });
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            const buffsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'activeBuffs',
+            );
+            expect(buffsCalls).toHaveLength(1);
+            expect(buffsCalls[0][2]).toEqual([{ name: 'Large Form', effect: 'large_form', duration: '10_minutes', hasAutomation: true }]);
+        });
+
+        it('uses default duration when auto.duration is undefined', async () => {
+            const actionNoDuration = {
+                name: 'Large Form',
+                automation: {
+                    type: 'large_form',
+                    casting_time: '1_bonus_action',
+                    resourceCost: 'long_rest',
+                },
+            };
+
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'largeFormActive') return false;
+                if (key === 'activeBuffs') return [];
+                return null;
+            });
+
+            await handle(actionNoDuration, makePlayerStats(), campaignName, null);
+
+            const buffsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'activeBuffs',
+            );
+            expect(buffsCalls).toHaveLength(1);
+            expect(buffsCalls[0][2][0].duration).toBe('10_minutes');
+        });
+
+        it('uses custom duration when provided', async () => {
+            const actionWithDuration = {
+                name: 'Large Form',
+                automation: {
+                    type: 'large_form',
+                    duration: '1_hour',
+                    casting_time: '1_bonus_action',
+                    resourceCost: 'long_rest',
+                },
+            };
+
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'largeFormActive') return false;
+                if (key === 'activeBuffs') return [];
+                return null;
+            });
+
+            await handle(actionWithDuration, makePlayerStats(), campaignName, null);
+
+            const buffsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'activeBuffs',
+            );
+            expect(buffsCalls).toHaveLength(1);
+            expect(buffsCalls[0][2][0].duration).toBe('1_hour');
+        });
+
+        it('logs error when addEntry rejects', async () => {
+            const { addEntry } = await import('../../../ui/logService.js');
+            addEntry.mockRejectedValue(new Error('db error'));
+
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'largeFormActive') return false;
+                if (key === 'activeBuffs') return [];
+                return null;
+            });
+
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+            expect(consoleSpy).toHaveBeenCalledWith('[largeForm] Error:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+    });
+
+    describe('isLargeFormActive', () => {
+        it('returns true when largeFormActive is true', () => {
+            getRuntimeValue.mockReturnValue(true);
+            const result = isLargeFormActive(playerName, campaignName);
+            expect(result).toBe(true);
+            expect(getRuntimeValue).toHaveBeenCalledWith(playerName, 'largeFormActive', campaignName);
+        });
+
+        it('returns false when largeFormActive is false', () => {
+            getRuntimeValue.mockReturnValue(false);
+            const result = isLargeFormActive(playerName, campaignName);
+            expect(result).toBe(false);
+        });
+
+        it('returns false when largeFormActive is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+            const result = isLargeFormActive(playerName, campaignName);
+            expect(result).toBe(false);
+        });
+
+        it('returns false when largeFormActive is undefined', () => {
+            getRuntimeValue.mockReturnValue(undefined);
+            const result = isLargeFormActive(playerName, campaignName);
+            expect(result).toBe(false);
         });
     });
 });

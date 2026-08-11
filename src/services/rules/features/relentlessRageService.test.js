@@ -920,5 +920,248 @@ describe('relentlessRageService', () => {
         );
       });
     });
+
+    it('handles death save success when all deathSaves slots are already filled (uses default array)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'currentHitPoints') return -1;
+        if (key === 'deathSaves') return [true, true, true];
+        if (key === 'deathFailures') return [false, false, false];
+        return null;
+      });
+      const creature = makeCreature();
+      checkRelentlessRage(creature, makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 5, saveBonus: 8, total: 13 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      const deathPromptId = sendDeathSavePrompt.mock.calls[0][1].promptId;
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: deathPromptId, success: true, roll: 15 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'TestBarbarian',
+          'deathSaves',
+          [true, true, true],
+          campaignName,
+        );
+      });
+    });
+
+    it('handles death save with null deathSaves from runtime (uses default array)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'currentHitPoints') return -1;
+        if (key === 'deathSaves') return null;
+        if (key === 'deathFailures') return null;
+        return null;
+      });
+      const creature = makeCreature();
+      checkRelentlessRage(creature, makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 5, saveBonus: 8, total: 13 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      const deathPromptId = sendDeathSavePrompt.mock.calls[0][1].promptId;
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: deathPromptId, success: true, roll: 15 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'TestBarbarian',
+          'deathSaves',
+          [true, false, false],
+          campaignName,
+        );
+      });
+    });
+
+    it('handles death save with null deathFailures from runtime (uses default array)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'currentHitPoints') return -1;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return null;
+        return null;
+      });
+      const creature = makeCreature();
+      checkRelentlessRage(creature, makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 5, saveBonus: 8, total: 13 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      const deathPromptId = sendDeathSavePrompt.mock.calls[0][1].promptId;
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: deathPromptId, success: false, roll: 3 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+          'TestBarbarian',
+          'deathFailures',
+          [true, false, false],
+          campaignName,
+        );
+      });
+    });
+  });
+
+  // ── Branch coverage: feature without automation ──────────────
+
+  describe('checkRelentlessRage - feature without automation', () => {
+    it('returns intercepted: false when feature has no automation', () => {
+      const computed = makePlayerComputed({
+        allFeatures: [
+          {
+            name: 'Relentless Rage',
+            automation: null,
+          },
+        ],
+      });
+      const result = checkRelentlessRage(makeCreature(), computed, campaignName);
+      expect(result.intercepted).toBe(false);
+    });
+  });
+
+  // ── evaluateHealExpression - remaining branch coverage ────────
+
+  describe('evaluateHealExpression - remaining branches', () => {
+    it('falls back to 1 inside the expression when barbarian_level has no class_levels and no level', () => {
+      const computed = { allFeatures: [] };
+      expect(evaluateHealExpression('2 * barbarian_level', computed)).toBe(2);
+    });
+
+    it('falls back to 1 inside the expression when level has no level property', () => {
+      const computed = { allFeatures: [] };
+      expect(evaluateHealExpression('2 * level', computed)).toBe(2);
+    });
+  });
+
+  // ── Error handling in addEntry .catch() callbacks ─────────────
+
+  describe('addEntry error handling', () => {
+    it('handles addEntry rejection on initial trigger', async () => {
+      logService.addEntry.mockRejectedValue(new Error('log error'));
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        return null;
+      });
+      checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
+      await vi.waitFor(() => {
+        expect(logService.addEntry).toHaveBeenCalled();
+      });
+    });
+
+    it('handles addEntry rejection on success path', async () => {
+      logService.addEntry.mockReset();
+      logService.addEntry.mockImplementation(() => {
+        const p = new Promise((resolve, reject) => {
+          reject(new Error('log error'));
+        });
+        p.catch(() => { });
+        return p;
+      });
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        return null;
+      });
+      checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: true, roll: 15, saveBonus: 8, total: 23 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalled();
+      });
+    });
+
+    it('handles addEntry rejection on failure path', async () => {
+      logService.addEntry.mockReset();
+      logService.addEntry.mockImplementation(() => {
+        const p = new Promise((resolve, reject) => {
+          reject(new Error('log error'));
+        });
+        p.catch(() => { });
+        return p;
+      });
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'currentHitPoints') return 10;
+        return null;
+      });
+      const creature = makeCreature();
+      checkRelentlessRage(creature, makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 5, saveBonus: 8, total: 13 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).not.toHaveBeenCalled();
+      });
+    });
+
+    it('handles addEntry rejection on death save path', async () => {
+      logService.addEntry.mockReset();
+      logService.addEntry.mockImplementation(() => {
+        const p = new Promise((resolve, reject) => {
+          reject(new Error('log error'));
+        });
+        p.catch(() => { });
+        return p;
+      });
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 1;
+        if (key === 'relentlessrageUses') return 0;
+        if (key === 'currentHitPoints') return -1;
+        if (key === 'deathSaves') return [false, false, false];
+        if (key === 'deathFailures') return [false, false, false];
+        return null;
+      });
+      const creature = makeCreature();
+      checkRelentlessRage(creature, makePlayerComputed(), campaignName);
+
+      window.dispatchEvent(new CustomEvent('save-result', {
+        detail: { promptId: 'prompt-123', success: false, roll: 5, saveBonus: 8, total: 13 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(sendDeathSavePrompt).toHaveBeenCalled();
+      });
+
+      const deathPromptId = sendDeathSavePrompt.mock.calls[0][1].promptId;
+      window.dispatchEvent(new CustomEvent('death-save-result', {
+        detail: { promptId: deathPromptId, success: false, roll: 3 },
+      }));
+
+      await vi.waitFor(() => {
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalled();
+      });
+    });
   });
 });

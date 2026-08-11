@@ -6,6 +6,7 @@ import {
     executeSweepingAttack,
     executeMovementManeuver,
     executeSkillCheckManeuver,
+    executeReactionManeuver,
     executeCommandingPresenceReaction,
     executeBaitAndSwitchChoice,
     executeCommanderStrikeChoice,
@@ -811,5 +812,594 @@ describe('executeRallyChoice', () => {
         expect(result.logEntries[0].type).toBe('ability_use');
         expect(result.logEntries[0].description).toContain('gains 8 temporary hit points');
         expect(setRuntimeValue).toHaveBeenCalledWith('Ally1', 'tempHp', 8, 'test-campaign');
+    });
+});
+
+// ── validateSizeLimit ──────────────────────────────────────────────────
+
+describe('validateSizeLimit', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns valid when maneuver has no sizeLimit', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+
+        const result = await validateSizeLimit(
+            {},
+            'Goblin',
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when targetName is null', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'large_or_smaller' },
+            null,
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when combat context is null', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(null);
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'large_or_smaller' },
+            'Goblin',
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when target not found in combat context', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({ creatures: [{ name: 'Other' }] });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'large_or_smaller' },
+            'Goblin',
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when target size is within limit (large_or_smaller)', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Goblin', size: 'Small' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'large_or_smaller', name: 'Trip Attack' },
+            'Goblin',
+            'test-campaign',
+            makePlayerStats()
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when target size is within limit (medium_or_smaller)', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Goblin', size: 'Small' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'medium_or_smaller', name: 'Trip Attack' },
+            'Goblin',
+            'test-campaign',
+            makePlayerStats({ size: 'Medium' })
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns valid when target size is within limit (one_size_larger)', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Hobgoblin', size: 'Large' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'one_size_larger', name: 'Trip Attack' },
+            'Hobgoblin',
+            'test-campaign',
+            makePlayerStats({ size: 'Medium' })
+        );
+
+        expect(result).toEqual({ valid: true });
+    });
+
+    it('returns invalid when target is too large for large_or_smaller', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Ogre', size: 'Large' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'medium_or_smaller', name: 'Trip Attack' },
+            'Ogre',
+            'test-campaign',
+            makePlayerStats({ size: 'Medium' })
+        );
+
+        expect(result.valid).toBe(false);
+        expect(result.description).toContain('Target is Large');
+        expect(result.description).toContain('Medium or smaller');
+    });
+
+    it('returns invalid when target is too large for one_size_larger', async () => {
+        const { validateSizeLimit } = await import('./combatSuperiorityHandler.js');
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue({
+            creatures: [{ name: 'Huge Beast', size: 'Huge' }]
+        });
+
+        const result = await validateSizeLimit(
+            { sizeLimit: 'one_size_larger', name: 'Trip Attack' },
+            'Huge Beast',
+            'test-campaign',
+            makePlayerStats({ size: 'Medium' })
+        );
+
+        expect(result.valid).toBe(false);
+        expect(result.description).toContain('Target is Huge');
+        expect(result.description).toContain('up to one size larger than you');
+    });
+});
+
+// ── executeBonusActionManeuver - temp_hp no allies ─────────────────────
+
+describe('executeBonusActionManeuver - temp_hp edge cases', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns error popup when temp_hp maneuver has no allies', async () => {
+        const combatContext = {
+            creatures: [{ name: 'TestFighter' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeBonusActionManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Rally'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No allies available to receive Rally');
+    });
+});
+
+// ── executeGrantAttackManeuver - no allies ─────────────────────────────
+
+describe('executeGrantAttackManeuver - no allies', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns error popup when no allies available', async () => {
+        const combatContext = {
+            creatures: [{ name: 'TestFighter' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeGrantAttackManeuver(
+            { name: "Commander's Strike", automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            "Commander's Strike"
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No allies available');
+    });
+});
+
+// ── executeMovementManeuver - relentless ───────────────────────────────
+
+describe('executeMovementManeuver - relentless', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('uses Relentless when passive exists and not used this round', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 0;
+            if (key === SELECTION_KEY) return ['Bait and Switch'];
+            if (key === 'relentlessUsedRound') return undefined;
+            return undefined;
+        });
+
+        const result = await executeMovementManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats({
+                automation: { passives: [{ type: 'passive_rule', effect: 'relentless' }] },
+            }),
+            'test-campaign',
+            'Bait and Switch'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Relentless');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'relentlessUsedRound', 1, 'test-campaign');
+    });
+});
+
+// ── executeReactionManeuver - relentless ───────────────────────────────
+
+describe('executeReactionManeuver - relentless', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('uses Relentless when passive exists and not used this round', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 0;
+            if (key === SELECTION_KEY) return ['Parry'];
+            if (key === 'relentlessUsedRound') return undefined;
+            return undefined;
+        });
+
+        const result = await executeReactionManeuver(
+            { name: 'Parry', automation: { type: 'combat_superiority' } },
+            makePlayerStats({
+                automation: { passives: [{ type: 'passive_rule', effect: 'relentless' }] },
+            }),
+            'test-campaign',
+            'Parry'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Relentless');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'relentlessUsedRound', 1, 'test-campaign');
+    });
+});
+
+// ── executeReactionManeuver - melee_attack_reaction no attacks ─────────
+
+describe('executeReactionManeuver - melee_attack_reaction no attacks', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns error popup when no attacks available', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Riposte'];
+            return undefined;
+        });
+
+        const result = await executeReactionManeuver(
+            { name: 'Riposte', automation: { type: 'combat_superiority' } },
+            makePlayerStats({ attacks: [] }),
+            'test-campaign',
+            'Riposte'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('No melee attack available');
+        expect(result.logEntries).toHaveLength(1);
+    });
+});
+
+// ── executeSkillCheckManeuver - initiativeBonus ────────────────────────
+
+describe('executeSkillCheckManeuver - initiativeBonus', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('references initiative/stealth in description when initiativeBonus is true', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Ambush'];
+            return undefined;
+        });
+
+        const result = await executeSkillCheckManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Ambush'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Initiative roll or Dexterity (Stealth)');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', 4, 'test-campaign');
+    });
+});
+
+// ── executeCommandingPresenceReaction - save_disadvantage ──────────────
+
+describe('executeCommandingPresenceReaction - save_disadvantage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles save_disadvantage reaction effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Commanding Presence'];
+            return undefined;
+        });
+
+        const result = await executeCommandingPresenceReaction(
+            {
+                name: 'Test',
+                automation: {
+                    type: 'combat_superiority',
+                    targetName: 'Goblin',
+                    reactionEffect: 'save_disadvantage',
+                },
+            },
+            makePlayerStats(),
+            'test-campaign',
+            'Commanding Presence'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Disadvantage on their next saving throw');
+    });
+});
+
+// ── executeCommandingPresenceReaction - attack_roll_disadvantage ───────
+
+describe('executeCommandingPresenceReaction - attack_roll_disadvantage', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles attack_roll_disadvantage reaction effect', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Commanding Presence'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeCommandingPresenceReaction(
+            {
+                name: 'Test',
+                automation: {
+                    type: 'combat_superiority',
+                    targetName: 'Goblin',
+                    reactionEffect: 'attack_roll_disadvantage',
+                },
+            },
+            makePlayerStats(),
+            'test-campaign',
+            'Commanding Presence'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Disadvantage on their next attack roll');
+        expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', expect.arrayContaining(['disadvantage']), 'test-campaign');
+    });
+});
+
+// ── executeAttackRiderManeuver - attack_rider options (Brutal Strike) ─
+
+describe('executeAttackRiderManeuver - attack_rider options', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles attack_rider options with secondary_damage effect and targetEffects', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'targetEffects') return [];
+            return undefined;
+        });
+
+        const combatContext = {
+            creatures: [{ name: 'Goblin' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Goblin' }
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Added 4 to the damage roll');
+    });
+
+    it('returns popup with description when no targetName for sizeLimit check', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true }
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Added 4 to the damage roll');
+    });
+
+    it('returns size limit error popup when target is too large', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const combatContext = {
+            creatures: [{ name: 'Ogre', size: 'Large' }],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats({ size: 'Medium' }),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Ogre' }
+        );
+
+        expect(result.type).toBe('popup');
+    });
+});
+
+// ── executeAttackRiderManeuver - saveType without target ───────────────
+
+describe('executeAttackRiderManeuver - saveType without target', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('shows save description when maneuver has saveType but no target', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true }
+        );
+
+        expect(result.type).toBe('popup');
+    });
+});
+
+// ── executeAttackRiderManeuver - conditionInflicted ────────────────────
+
+describe('executeAttackRiderManeuver - conditionInflicted', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles conditionInflicted on save failure', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            if (key === 'activeConditions') return [];
+            return undefined;
+        });
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Goblin' }
+        );
+
+        expect(result.payload.description).toContain('Target made STR save DC 15: Failure');
+    });
+});
+
+// ── executeAttackRiderManeuver - save success ──────────────────────────
+
+describe('executeAttackRiderManeuver - save success', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('handles save success (no effect applied)', async () => {
+        const savePrompt = await import('../../../../services/automation/common/savePrompt.js');
+        savePrompt.createSaveListener.mockReturnValue({
+            promise: Promise.resolve({ success: true }),
+        });
+
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Trip Attack'];
+            return undefined;
+        });
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Trip Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Goblin' }
+        );
+
+        expect(result.payload.description).toContain('Target made STR save DC 15: Success');
+    });
+});
+
+// ── executeAttackRiderManeuver - no target for secondary_damage ────────
+
+describe('executeAttackRiderManeuver - no secondary targets', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns popup when no secondary targets available', async () => {
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Sweeping Attack'];
+            return undefined;
+        });
+
+        const combatContext = {
+            creatures: [
+                { name: 'Goblin' },
+                { name: 'TestFighter' },
+            ],
+        };
+
+        const damageUtils = await import('../../../../services/rules/combat/damageUtils.js');
+        damageUtils.getCombatContext.mockResolvedValue(combatContext);
+
+        const result = await executeAttackRiderManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Sweeping Attack',
+            { weaponType: 'melee', hit: true, targetName: 'Goblin', damageType: 'slashing' }
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('second creature within 5 feet');
     });
 });

@@ -528,6 +528,55 @@ describe('mapTestUtils', () => {
             const { getLog, addEntry } = await import('../../services/ui/logService.js');
             expect(getLog).toBeDefined();
             expect(addEntry).toBeDefined();
+
+            const useLog = await import('../../hooks/runtime/useLog.js');
+            expect(useLog.default).toBeDefined();
+
+            const useMapLoader = (await import('./hooks/useMapLoader.js')).default;
+            expect(useMapLoader).toBeDefined();
+
+            const useZoomPan = (await import('./hooks/useZoomPan.js')).default;
+            expect(useZoomPan).toBeDefined();
+
+            const useWallDrawing = (await import('./hooks/useWallDrawing.js')).default;
+            expect(useWallDrawing).toBeDefined();
+
+            const useRoomDrawing = (await import('./hooks/useRoomDrawing.js')).default;
+            expect(useRoomDrawing).toBeDefined();
+
+            const useSelectMove = (await import('./hooks/useSelectMove.js')).default;
+            expect(useSelectMove).toBeDefined();
+
+            const useRuler = (await import('./hooks/useRuler.js')).default;
+            expect(useRuler).toBeDefined();
+
+            const useSpellOverlay = (await import('./hooks/useSpellOverlay.js')).default;
+            expect(useSpellOverlay).toBeDefined();
+
+            const useSpellHandlers = (await import('./hooks/useSpellHandlers.js')).default;
+            expect(useSpellHandlers).toBeDefined();
+
+            const usePlayerDragging = (await import('./hooks/usePlayerDragging.js')).default;
+            expect(usePlayerDragging).toBeDefined();
+
+            const useItemDragging = (await import('./hooks/useItemDragging.js')).default;
+            expect(useItemDragging).toBeDefined();
+
+            const useNpcImageCache = (await import('./hooks/useNpcImageCache.js')).default;
+            expect(useNpcImageCache).toBeDefined();
+            expect(vi.isMockFunction(useNpcImageCache)).toBe(true);
+
+            const useSSESync = (await import('./hooks/useSSESync.js')).default;
+            expect(useSSESync).toBeDefined();
+            expect(vi.isMockFunction(useSSESync)).toBe(true);
+
+            const fogModule = await import('./hooks/useFogOfWar.js');
+            expect(fogModule.default).toBeDefined();
+            expect(vi.isMockFunction(fogModule.default)).toBe(true);
+
+            const useMapDrops = (await import('./hooks/useMapDrops.js')).default;
+            expect(useMapDrops).toBeDefined();
+            expect(vi.isMockFunction(useMapDrops)).toBe(true);
         });
     });
 });

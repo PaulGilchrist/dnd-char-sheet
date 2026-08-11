@@ -380,4 +380,152 @@ describe('combatSuperiorityHandler.handle', () => {
             expect(result.type).toBe('modal');
         });
     });
+
+    describe('early return paths via automation routing', () => {
+        it('delegates to handleCombatSuperiorityBonusAction when actionType is bonus_action', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'bonus_action' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleCombatSuperiorityReaction when actionType is reaction', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'reaction' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleCombatSuperiorityGrantAttack when reactionType is grant_attack', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'reaction', reactionType: 'grant_attack' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleCombatSuperiorityCommandingPresenceReaction when reactionType is commanding_presence', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'reaction', reactionType: 'commanding_presence' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleCombatSuperioritySweepingAttack when actionType is sweeping_attack', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'sweeping_attack' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('Sweeping Attack: No secondary target selected.');
+        });
+
+        it('delegates to handleCombatSuperiorityMovement when actionType is movement', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'movement' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleCombatSuperioritySkillCheck when actionType is skill_check', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { actionType: 'skill_check' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toBe('No maneuver specified.');
+        });
+
+        it('delegates to handleAttackRiderPrompt when trigger is attack_rider', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { trigger: 'attack_rider' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('delegates to handleSkillCheckPrompt when trigger is skill_check', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([]);
+
+            const result = await handle(
+                { name: 'Test', automation: { trigger: 'skill_check' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('executes maneuver directly when maneuverName is provided in automation', async () => {
+            dataLoader.loadManeuvers.mockResolvedValue([
+                { name: 'Trip Attack', effect: 'knock_prone', saveType: 'STR' },
+            ]);
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'superiorityDice') return 4;
+                if (key === SELECTION_KEY) return ['Trip Attack'];
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            const result = await handle(
+                { name: 'Test', automation: { maneuverName: 'Trip Attack', type: 'combat_superiority' } },
+                makePlayerStats(),
+                'test-campaign',
+                null
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Trip Attack');
+        });
+    });
 });

@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Sidebar from './Sidebar.jsx';
@@ -216,6 +215,62 @@ describe('Sidebar', () => {
       render(<Sidebar {...props} />);
       expect(screen.getByText('Characters')).toBeInTheDocument();
       expect(screen.getByText('Aragorn')).toBeInTheDocument();
+    });
+
+    it('should call onCharacterClick with the character when a character button is clicked', () => {
+      const props = {
+        ...defaultProps,
+        characters: [{ name: 'Gandalf' }, { name: 'Saruman' }],
+      };
+      render(<Sidebar {...props} />);
+      fireEvent.click(screen.getByText('Gandalf'));
+      expect(props.onCharacterClick).toHaveBeenCalledWith({ name: 'Gandalf' });
+      expect(props.onCharacterClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onCharacterClick with the correct character when multiple characters exist', () => {
+      const props = {
+        ...defaultProps,
+        characters: [{ name: 'Gimli' }, { name: 'Legolas' }],
+      };
+      render(<Sidebar {...props} />);
+      fireEvent.click(screen.getByText('Legolas'));
+      expect(props.onCharacterClick).toHaveBeenCalledWith({ name: 'Legolas' });
+    });
+  });
+
+  describe('dice tray and popup', () => {
+    it('should render DicePopup when diceResult is set', () => {
+      const mockOnRoll = vi.fn();
+      const props = { ...defaultProps, onRoll: mockOnRoll };
+      const { container } = render(<Sidebar {...props} />);
+      // DiceTray renders dice buttons
+      const d20Btn = screen.getByTitle('Roll d20');
+      fireEvent.click(d20Btn);
+      // After clicking, the DiceTray calls onRoll which sets diceResult
+      // The DicePopup should render
+      expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
+    });
+
+    it('should close DicePopup when overlay is clicked', () => {
+      const mockOnRoll = vi.fn();
+      const props = { ...defaultProps, onRoll: mockOnRoll };
+      const { container } = render(<Sidebar {...props} />);
+      const d20Btn = screen.getByTitle('Roll d20');
+      fireEvent.click(d20Btn);
+      expect(container.querySelector('.dice-tray-popup-overlay')).toBeInTheDocument();
+      const overlay = container.querySelector('.dice-tray-popup-overlay');
+      fireEvent.click(overlay);
+      expect(container.querySelector('.dice-tray-popup-overlay')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('settlements', () => {
+    it('should show active class on settlements button when activeView is settlements', () => {
+      render(<Sidebar {...defaultProps} activeView="settlements" />);
+      const settlementsBtns = screen.getAllByText('Settlements').map(el => el.closest('button'));
+      const sectionHeaderBtn = settlementsBtns.find(btn => btn && btn.classList.contains('sidebar-section-header'));
+      expect(sectionHeaderBtn).toHaveClass('active');
     });
   });
 });

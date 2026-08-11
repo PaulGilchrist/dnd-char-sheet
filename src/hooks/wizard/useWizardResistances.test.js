@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useWizardResistances from './useWizardResistances.js';
@@ -129,6 +128,78 @@ describe('useWizardResistances', () => {
       await waitFor(() => {
         expect(result.current.preSelectedResistancesList).toEqual({ resistances: [], immunities: [] });
       });
+    });
+
+    it('merges when prev has no resistances property (undefined)', async () => {
+      getPreSelectedResistances.mockResolvedValue({
+        resistances: ['Poison', 'Cold'],
+        immunities: ['Disease'],
+      });
+
+      const formDataNoResistances = {
+        ...baseFormData,
+        resistances: undefined,
+        immunities: undefined,
+      };
+
+      renderHookWithResistances(formDataNoResistances);
+
+      await waitFor(() => {
+        expect(mockSetFormData).toHaveBeenCalled();
+      });
+
+      const mergeFn = mockSetFormData.mock.calls[0][0];
+      const merged = mergeFn({ ...formDataNoResistances, resistances: undefined, immunities: undefined });
+      expect(merged.resistances).toEqual(['Poison', 'Cold']);
+      expect(merged.immunities).toEqual(['Disease']);
+    });
+
+    it('merges when prev has null resistances and immunities', async () => {
+      getPreSelectedResistances.mockResolvedValue({
+        resistances: ['Fire'],
+        immunities: ['Psychic'],
+      });
+
+      const formDataNull = {
+        ...baseFormData,
+        resistances: null,
+        immunities: null,
+      };
+
+      renderHookWithResistances(formDataNull);
+
+      await waitFor(() => {
+        expect(mockSetFormData).toHaveBeenCalled();
+      });
+
+      const mergeFn = mockSetFormData.mock.calls[0][0];
+      const merged = mergeFn({ ...formDataNull, resistances: null, immunities: null });
+      expect(merged.resistances).toEqual(['Fire']);
+      expect(merged.immunities).toEqual(['Psychic']);
+    });
+
+    it('merges when prev has empty arrays for resistances and immunities', async () => {
+      getPreSelectedResistances.mockResolvedValue({
+        resistances: ['Lightning'],
+        immunities: ['Force'],
+      });
+
+      const formDataEmpty = {
+        ...baseFormData,
+        resistances: [],
+        immunities: [],
+      };
+
+      renderHookWithResistances(formDataEmpty);
+
+      await waitFor(() => {
+        expect(mockSetFormData).toHaveBeenCalled();
+      });
+
+      const mergeFn = mockSetFormData.mock.calls[0][0];
+      const merged = mergeFn({ ...formDataEmpty, resistances: [], immunities: [] });
+      expect(merged.resistances).toEqual(['Lightning']);
+      expect(merged.immunities).toEqual(['Force']);
     });
   });
 

@@ -843,4 +843,77 @@ describe('beguilingTwistHandler', () => {
             expect(result.payload.description).toContain('DC 17');
         });
     });
+
+    describe('addEntry error handling', () => {
+        it('should handle addEntry rejection on ability_use logging', async () => {
+            findLastAttack.mockResolvedValue({
+                attackEvent: { hit: true },
+                attackerName: 'Goblin',
+                targetName: playerName,
+                hit: true,
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: [],
+            });
+            addEntry.mockRejectedValue(new Error('log failed'));
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+            const result = await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
+
+            expect(result.type).toBe('popup');
+            expect(consoleErrorSpy).toHaveBeenCalledWith('[beguilingTwist] Error:', expect.any(Error));
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should handle addEntry rejection on save failure logging', async () => {
+            findLastAttack.mockResolvedValue({
+                attackEvent: { hit: true },
+                attackerName: 'Goblin',
+                targetName: playerName,
+                hit: true,
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: [],
+            });
+            addEntry.mockRejectedValue(new Error('log failed'));
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
+
+            const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
+            handler({ detail: { promptId: 'test-prompt-id', success: false } });
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith('[beguilingTwist] Error:', expect.any(Error));
+            addEventListenerSpy.mockRestore();
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should handle addEntry rejection on save success logging', async () => {
+            findLastAttack.mockResolvedValue({
+                attackEvent: { hit: true },
+                attackerName: 'Goblin',
+                targetName: playerName,
+                hit: true,
+                primaryDamage: 10,
+                secondaryDamage: 0,
+                totalDamage: 10,
+                damageTypes: [],
+            });
+            addEntry.mockRejectedValue(new Error('log failed'));
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+            const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+            await handle(makeAction({ target: 'self' }), makePlayerStats(), campaignName, null);
+
+            const handler = addEventListenerSpy.mock.calls.find(c => c[0] === 'save-result')[1];
+            handler({ detail: { promptId: 'test-prompt-id', success: true } });
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith('[beguilingTwist] Error:', expect.any(Error));
+            addEventListenerSpy.mockRestore();
+            consoleErrorSpy.mockRestore();
+        });
+    });
 });

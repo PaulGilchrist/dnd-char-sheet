@@ -250,6 +250,69 @@ describe('Initiative - Save Result Handlers', () => {
                 }));
             });
         });
+
+        it('should handle <3 failures for flesh to stone', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_fleshToStone_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 0, failures: 1 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['restrained'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('flesh-to-stone-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_fleshToStone_Alice', expect.objectContaining({ failures: 2 }), 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'save_result', rollType: 'save-flesh-to-stone', targetName: 'Alice', success: false,
+            }));
+        });
+
+        it('should handle 3 failures with null targetEffects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_fleshToStone_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 0, failures: 2 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['restrained'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return null;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('flesh-to-stone-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(clearFleshToStonePrompt).toHaveBeenCalledWith('test-campaign', 'Alice');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'condition', action: 'applied', condition: 'Petrified',
+            }));
+        });
     });
 
     describe('prismatic-spray-indigo-result handler', () => {
@@ -311,6 +374,136 @@ describe('Initiative - Save Result Handlers', () => {
 
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'condition', action: 'applied', condition: 'Petrified',
+            }));
+        });
+
+        it('should handle 3 successful prismatic spray indigo saves with null conditions and effects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayIndigo_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 2, failures: 0 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return null;
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return null;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-indigo-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: true } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_prismaticSprayIndigo_Alice', null, 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'save_result', rollType: 'save-prismatic-spray-indigo', targetName: 'Alice', success: true,
+            }));
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'condition', action: 'removed', condition: 'Restrained',
+            }));
+        });
+
+        it('should handle 3 successful prismatic spray indigo saves with non-matching targetEffects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayIndigo_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 2, failures: 0 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['restrained'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return [{ target: 'Bob', effect: 'prismatic_spray_indigo', source: 'Goblin' }];
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-indigo-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: true } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_prismaticSprayIndigo_Alice', null, 'test-campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+                expect.objectContaining({ target: 'Bob', effect: 'prismatic_spray_indigo', source: 'Goblin' })
+            ]), 'test-campaign');
+        });
+
+        it('should handle 3 failed prismatic spray indigo saves with null conditions', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayIndigo_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 0, failures: 2 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return null;
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return null;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-indigo-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeConditions', ['petrified'], 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'condition', action: 'applied', condition: 'Petrified',
+            }));
+        });
+
+        it('should handle <3 failures for prismatic spray indigo', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayIndigo_Alice') {
+                    return { casterName: 'Goblin', dc: 15, successes: 0, failures: 1 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['restrained'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-indigo-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_prismaticSprayIndigo_Alice', expect.objectContaining({ failures: 2 }), 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'save_result', rollType: 'save-prismatic-spray-indigo', targetName: 'Alice', success: false,
             }));
         });
     });
@@ -378,6 +571,104 @@ describe('Initiative - Save Result Handlers', () => {
             }));
             expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'condition', action: 'applied', condition: 'Incapacitated',
+            }));
+        });
+
+        it('should handle successful violet save with non-matching targetEffects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayViolet_Alice') {
+                    return { casterName: 'Goblin', dc: 15 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['blinded'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return [{ target: 'Bob', effect: 'prismatic_spray_violet', source: 'Goblin' }];
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-violet-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: true } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', '_prismaticSprayViolet_Alice', null, 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'save_result', rollType: 'save-prismatic-spray-violet', targetName: 'Alice', saveType: 'WIS', success: true,
+            }));
+        });
+
+        it('should handle banishment with non-matching targetEffects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayViolet_Alice') {
+                    return { casterName: 'Goblin', dc: 15 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return ['blinded'];
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return [{ target: 'Bob', effect: 'prismatic_spray_violet', source: 'Goblin' }, { effect: 'banishment', target: 'Bob', source: 'OtherCaster' }];
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-violet-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use', characterName: 'Goblin', abilityName: 'Prismatic Spray (Violet ray)',
+            }));
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'condition', action: 'applied', condition: 'Incapacitated',
+            }));
+        });
+
+        it('should handle violet banishment with null conditions and effects', async () => {
+            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === '_prismaticSprayViolet_Alice') {
+                    return { casterName: 'Goblin', dc: 15 };
+                }
+                if (key === 'Alice' && prop === 'activeConditions') return null;
+                if (key === 'Alice' && prop === 'currentHitPoints') return 10;
+                if (key === 'Alice' && prop === 'hitPoints') return 20;
+                if (key === 'campaign' && prop === 'targetEffects') return null;
+                if (prop === 'currentHitPoints') return 10;
+                if (prop === 'hitPoints') return 10;
+                if (prop === 'activeConditions') return [];
+                if (prop === 'activeBuffs') return [];
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
+            await act(async () => { render(<Initiative {...props} />); });
+            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
+
+            await act(async () => {
+                window.dispatchEvent(new CustomEvent('prismatic-spray-violet-result', {
+                    detail: { campaignName: 'test-campaign', targetName: 'Alice', result: { success: false } },
+                }));
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'activeConditions', ['incapacitated'], 'test-campaign');
+            expect(logService.addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'save_result', rollType: 'save-prismatic-spray-violet', targetName: 'Alice', success: false,
             }));
         });
     });

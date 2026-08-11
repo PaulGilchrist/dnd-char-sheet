@@ -14,9 +14,14 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
     addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../encounters/combatData.js', () => ({
+    getCombatSummary: vi.fn(() => null),
+}));
+
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { addEntry } = await import('../../../ui/logService.js');
 const { addExpiration } = await import('../../../rules/effects/expirations.js');
+const { getCombatSummary } = await import('../../../encounters/combatData.js');
 
 function makePlayerStats(overrides = {}) {
     return {
@@ -191,6 +196,288 @@ describe('naturesVeilHandler', () => {
                 characterName: 'RangerGirl',
                 abilityName: "Nature's Veil",
             }));
+        });
+    });
+
+    describe('combat summary expiration', () => {
+        it('sets expireOnCreatureName when player is in combat summary', async () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'RangerGirl' },
+                    { name: 'Goblin1' },
+                    { name: 'Goblin2' },
+                ],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                'Goblin1'
+            );
+        });
+
+        it('wraps to start of list when player is last in combat summary', async () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Goblin1' },
+                    { name: 'RangerGirl' },
+                ],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                'Goblin1'
+            );
+        });
+
+        it('sets expireOnCreatureName to null when player is not in combat summary', async () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [
+                    { name: 'Goblin1' },
+                    { name: 'Goblin2' },
+                ],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                null
+            );
+        });
+
+        it('sets expireOnCreatureName to null when combat summary has no creatures', async () => {
+            getCombatSummary.mockReturnValue({
+                creatures: [],
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                null
+            );
+        });
+
+        it('sets expireOnCreatureName to null when combat summary is null', async () => {
+            getCombatSummary.mockReturnValue(null);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                null
+            );
+        });
+
+        it('sets expireOnCreatureName to null when combat summary is undefined', async () => {
+            getCombatSummary.mockReturnValue(undefined);
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                'RangerGirl',
+                'RangerGirl',
+                [{ type: 'condition', condition: 'invisible' }],
+                'test-campaign',
+                undefined,
+                null
+            );
+        });
+    });
+
+    describe('tracked resources', () => {
+        it('uses tracked resource max when no stored uses', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return null;
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            const playerStats = makePlayerStats({
+                _trackedResources: {
+                    naturesVeilUses: { current: 5 },
+                },
+            });
+
+            await handle(makeAction(), playerStats, 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'naturesVeilUses',
+                4,
+                'test-campaign'
+            );
+        });
+
+        it('falls back to Wisdom bonus when no stored uses and no tracked resources', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return null;
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            const playerStats = makePlayerStats({
+                _trackedResources: null,
+            });
+
+            await handle(makeAction(), playerStats, 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'naturesVeilUses',
+                2,
+                'test-campaign'
+            );
+        });
+
+        it('uses min 1 for Wisdom bonus fallback when Wisdom bonus is 0', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return null;
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            const playerStats = makePlayerStats({
+                abilities: [],
+                _trackedResources: null,
+            });
+
+            await handle(makeAction(), playerStats, 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'naturesVeilUses',
+                0,
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('custom resource key', () => {
+        it('uses custom resourceKey from automation config', async () => {
+            const action = makeAction({
+                automation: {
+                    resourceKey: 'customVeilUses',
+                },
+            });
+
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'customVeilUses') return 3;
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'customVeilUses',
+                2,
+                'test-campaign'
+            );
+        });
+
+        it('uses default resource key when no automation config', async () => {
+            const action = makeAction({ automation: {} });
+
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return 3;
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'naturesVeilUses',
+                2,
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('stored uses as string', () => {
+        it('converts string stored uses to number', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return '3';
+                if (key === 'activeConditions') return [];
+                return undefined;
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.description).toContain('Uses remaining: 2');
+        });
+    });
+
+    describe('no action name fallback', () => {
+        it('uses default feature name when action has no name', async () => {
+            const action = makeAction({ name: undefined });
+
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(result.payload.name).toBe("Nature's Veil");
+        });
+    });
+
+    describe('edge cases for activeConditions', () => {
+        it('handles null activeConditions from runtime store', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return 3;
+                if (key === 'activeConditions') return null;
+                return undefined;
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'activeConditions',
+                ['invisible'],
+                'test-campaign'
+            );
+        });
+
+        it('handles non-array activeConditions from runtime store', async () => {
+            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+                if (key === 'naturesVeilUses') return 3;
+                if (key === 'activeConditions') return 'invisible';
+                return undefined;
+            });
+
+            await handle(makeAction(), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'RangerGirl',
+                'activeConditions',
+                ['invisible'],
+                'test-campaign'
+            );
         });
     });
 });

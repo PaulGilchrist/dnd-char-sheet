@@ -1,4 +1,3 @@
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks BEFORE imports ───────────────────────────────────────
@@ -122,6 +121,52 @@ describe('handle', () => {
             "Cannot read properties of undefined (reading 'masteryProperties')",
         );
     });
+
+    it('returns a modal with empty masteryProperties when auto has no masteryProperties', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue(null);
+
+        const action = { automation: { type: 'weapon_mastery_choice' } };
+        const ps = makePlayerStats();
+
+        const result = await handle(action, ps, campaignName, null);
+
+        expect(result).toEqual({
+            type: 'modal',
+            modalName: 'weaponMasteryChoice',
+            payload: {
+                action,
+                playerStats: ps,
+                campaignName,
+                masteryProperties: [],
+            },
+        });
+    });
+
+    it('returns a popup and logs even when addEntry rejects', async () => {
+        useRuntimeState.getRuntimeValue.mockReturnValue('Push');
+        logService.addEntry.mockRejectedValue(new Error('log failed'));
+
+        const action = makeAction();
+        const ps = makePlayerStats();
+
+        const result = await handle(action, ps, campaignName, null);
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.type).toBe('automation_info');
+        expect(result.payload.description).toContain('Push');
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+            ps.name,
+            WEAPON_MASTER_KEY,
+            'Push',
+            campaignName,
+        );
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: ps.name,
+            abilityName: 'Weapon Master - Mastery Property',
+            description: expect.stringContaining('Push'),
+        });
+    });
 });
 
 // ── applyMasterySelection ──────────────────────────────────────
@@ -166,5 +211,33 @@ describe('applyMasterySelection', () => {
             expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
             expect(logService.addEntry).not.toHaveBeenCalled();
         }
+    });
+
+    it('stores mastery and returns popup even when addEntry rejects', async () => {
+        logService.addEntry.mockRejectedValue(new Error('log failed'));
+        const ps = makePlayerStats();
+
+        const result = await applyMasterySelection('Sap', ps, campaignName);
+
+        expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+            ps.name,
+            WEAPON_MASTER_KEY,
+            'Sap',
+            campaignName,
+        );
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, {
+            type: 'ability_use',
+            characterName: ps.name,
+            abilityName: 'Weapon Master - Mastery Property',
+            description: 'Selected mastery property: Sap',
+        });
+        expect(result).toEqual({
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Weapon Master',
+                description: 'Mastery property set to: Sap. This will be applied to your next attack.',
+            },
+        });
     });
 });

@@ -1,4 +1,3 @@
-// @improved-by-ai
 import { triggerPassWithoutTraceSpell, applyPassWithoutTraceEffect } from './passWithoutTraceService.js'
 import { executeHandler } from '../../automation/index.js'
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
@@ -53,6 +52,61 @@ describe('passWithoutTraceService', () => {
             expect(result).toBeNull()
         })
 
+        it('returns null when spell name is empty string', async () => {
+            const result = await triggerPassWithoutTraceSpell(
+                { name: '' },
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+            expect(result).toBeNull()
+        })
+
+        it('uses default slotLevel of 1 when neither metaCtx nor spell has level', async () => {
+            executeHandler.mockResolvedValue({ type: 'popup' })
+
+            await triggerPassWithoutTraceSpell(
+                { name: 'Pass Without Trace' },
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    spellSlotLevel: 1,
+                }),
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+        })
+
+        it('uses default auraRange of 30 when automation has no auraRange', async () => {
+            executeHandler.mockResolvedValue({ type: 'popup' })
+
+            await triggerPassWithoutTraceSpell(
+                { name: 'Pass Without Trace', level: 2, automation: { type: 'pass_without_trace' } },
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    automation: expect.objectContaining({
+                        auraRange: 30,
+                    }),
+                }),
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+        })
+
         it('calls executeHandler with correct action for Pass Without Trace', async () => {
             executeHandler.mockResolvedValue({ type: 'popup', payload: { type: 'automation_info' } })
 
@@ -92,6 +146,27 @@ describe('passWithoutTraceService', () => {
 
             expect(result).toEqual(expected)
         })
+
+        it('returns null when executeHandler throws', async () => {
+            executeHandler.mockRejectedValue(new Error('Handler failed'))
+            const consoleSpy = vi.spyOn(console, 'error')
+
+            const result = await triggerPassWithoutTraceSpell(
+                makeSpell(),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                null
+            )
+
+            expect(result).toBeNull()
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[passWithoutTrace] Failed to execute handler:'),
+                expect.any(Error)
+            )
+
+            consoleSpy.mockRestore()
+        })
     })
 
     describe('applyPassWithoutTraceEffect', () => {
@@ -115,6 +190,94 @@ describe('passWithoutTraceService', () => {
                 []
             )
             expect(result).toBeNull()
+        })
+
+        it('uses default slotLevel of 1 when spell has no level', async () => {
+            getRuntimeValue.mockReturnValue([])
+
+            await applyPassWithoutTraceEffect(
+                { name: 'Pass Without Trace' },
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        slotLevel: 1,
+                    }),
+                ]),
+                CAMPAIGN
+            )
+        })
+
+        it('uses default targetEffects when getRuntimeValue returns falsy', async () => {
+            getRuntimeValue.mockReturnValue(null)
+
+            await applyPassWithoutTraceEffect(
+                makeSpell(),
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Druid',
+                    }),
+                ]),
+                CAMPAIGN
+            )
+        })
+
+        it('handles non-array storedEffects gracefully', async () => {
+            getRuntimeValue.mockReturnValue('not-an-array')
+
+            await applyPassWithoutTraceEffect(
+                makeSpell(),
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Druid',
+                    }),
+                ]),
+                CAMPAIGN
+            )
+        })
+
+        it('uses default casting_time when spell has no casting_time', async () => {
+            getRuntimeValue.mockReturnValue([])
+
+            await applyPassWithoutTraceEffect(
+                { name: 'Pass Without Trace', level: 2 },
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(addEntry).toHaveBeenCalledWith(
+                CAMPAIGN,
+                expect.objectContaining({
+                    castingTime: '1 action',
+                })
+            )
         })
 
         it('stores per-target effects in targetEffects', async () => {
@@ -243,6 +406,67 @@ describe('passWithoutTraceService', () => {
                 })],
                 CAMPAIGN
             )
+        })
+
+        it('handles addEntry rejection for spell log and logs error', async () => {
+            getRuntimeValue.mockReturnValue([])
+            addEntry.mockRejectedValue(new Error('DB error'))
+            const consoleSpy = vi.spyOn(console, 'error')
+
+            const result = await applyPassWithoutTraceEffect(
+                makeSpell(),
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Pass Without Trace',
+                    description: 'Pass Without Trace cast: 1 creature(s) affected — Druid. Each has +10 to Dexterity (Stealth) checks and leaves no tracks.',
+                },
+            })
+
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[passWithoutTrace] Error logging cast:'),
+                expect.any(Error)
+            )
+
+            consoleSpy.mockRestore()
+        })
+
+        it('handles addEntry rejection for automation log and logs error', async () => {
+            getRuntimeValue.mockReturnValue([])
+            addEntry.mockRejectedValueOnce(undefined)
+            addEntry.mockRejectedValue(new Error('DB error'))
+            const consoleSpy = vi.spyOn(console, 'error')
+
+            const result = await applyPassWithoutTraceEffect(
+                makeSpell(),
+                makePlayerStats(),
+                CAMPAIGN,
+                null,
+                ['Druid']
+            )
+
+            expect(result).toEqual({
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Pass Without Trace',
+                    description: 'Pass Without Trace cast: 1 creature(s) affected — Druid. Each has +10 to Dexterity (Stealth) checks and leaves no tracks.',
+                },
+            })
+
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[passWithoutTrace] Error logging automation:'),
+                expect.any(Error)
+            )
+
+            consoleSpy.mockRestore()
         })
     })
 })
