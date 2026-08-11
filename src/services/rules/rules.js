@@ -9,9 +9,7 @@ import * as proficiencyUtils from '../character/proficiencyUtils.js';
 import * as proficiencyUtils2024 from '../character/proficiencyUtils2024.js';
 import { getAbilities as getAbilities5e, getHitPoints as getHitPoints5e, getCarryingCapacity as getCarryingCapacity5e } from './core/abilityCalc.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import { loadManeuvers } from '../ui/dataLoader.js';
 import { getAbilities as getAbilities2024, getHitPoints as getHitPoints2024, getCarryingCapacity as getCarryingCapacity2024 } from './core/abilityCalc2024.js';
-import { getElfisLineageSelection } from '../automation/handlers/class-other/elfishLineageHandler.js';
 import { getSpellAbilities as getSpellAbilities5e } from './core/spellCalc.js';
 import { getSpellAbilities as getSpellAbilities2024 } from './core/spellCalc2024.js';
 import { getAttacks as getAttacks5e } from './core/attackCalc.js';
@@ -31,6 +29,13 @@ import {
     evaluateAutoExpression,
     buildAttackInfo,
 } from '../combat/automation/automationService.js';
+
+// Core modules
+import { applyThirdEyeDarkvision, applyUmbralSightDarkvision, applyBlindsightSenses, applyTruesightSenses } from './core/senseUtils.js';
+import { applyElfisLineageSpeed, applySpeedIncreasePassives } from './core/speedUtils.js';
+import { applyPowerfulBuild, applyHalflingNimbleness } from './core/raceTraits.js';
+import { renameMagicInitiateFeatures } from './core/magicSpells.js';
+import { processManeuvers } from './core/maneuvers.js';
 
 /**
  * Determine which ruleset to use. Checks playerStats.rules first,
@@ -59,243 +64,6 @@ function mergeAutomationSpecialActions(playerStats) {
             playerStats.specialActions.push({ name: sa.name, description: sa.description || '', automation: sa, hasAutomation: true });
         }
     }
-}
-
-/**
- * Rename Magic Initiate "Level 1 Spell" features with instance indices
- * to avoid runtime key collisions for repeatable instances.
- */
-function renameMagicInitiateFeatures(playerStats, playerSummary) {
-    const campaignName = playerSummary?.campaignName;
-    const instances = getRuntimeValue(playerStats.name, '_magicInitiateInstances', campaignName) || playerStats.magicInitiateInstances;
-    if (!instances || !Array.isArray(instances) || instances.length === 0) return;
-
-    const automation = playerStats.automation;
-    if (!automation) return;
-
-    // Collect all "Level 1 Spell" features across all automation arrays
-    const level1Features = [];
-    ['actions', 'bonusActions', 'reactions', 'passives', 'specialActions'].forEach(arrayName => {
-        const arr = automation[arrayName];
-        if (!Array.isArray(arr)) return;
-        arr.forEach(feature => {
-            if (!feature || !feature.name || feature.name !== 'Level 1 Spell') return;
-            const auto = feature.automation;
-            if (!auto || auto.type !== 'free_spell') return;
-            level1Features.push({ feature, auto, arrayName });
-        });
-    });
-
-    // Rename them in order to match instances
-    level1Features.forEach((item, i) => {
-        if (i >= instances.length) return;
-        const newName = `Level 1 Spell [Instance ${i + 1}]`;
-        item.feature.name = newName;
-        if (item.auto.name) item.auto.name = newName;
-    });
-}
-
-/**
- * Apply The Third Eye darkvision enhancement from active buffs.
- * Sets Darkvision to 120 ft if the Third Eye buff with darkvision_120 effect is active.
- */
-function applyThirdEyeDarkvision(playerStats, senses, campaignName) {
-    const stored = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
-    const activeBuffs = Array.isArray(stored) ? stored : [];
-    const thirdEyeBuff = activeBuffs.find(b => b.name === 'The Third Eye' && b.effect === 'darkvision_120');
-    if (!thirdEyeBuff) return senses;
-
-    const darkvisionIndex = senses.findIndex(s => s.name === 'Darkvision');
-    if (darkvisionIndex !== -1) {
-        const currentFeet = extractDarkvisionFeet(senses[darkvisionIndex].value);
-        if (currentFeet >= 120) return senses;
-        senses[darkvisionIndex] = { ...senses[darkvisionIndex], value: '120 ft.' };
-    } else {
-        senses.push({ name: 'Darkvision', value: '120 ft.' });
-    }
-
-    return senses;
-}
-
-function extractDarkvisionFeet(value) {
-    if (!value) return 0;
-    const match = String(value).match(/(\d+)\s*ft/i);
-    return match ? parseInt(match[1], 10) : 0;
-}
-
-/**
- * Apply Umbral Sight darkvision enhancement for Gloom Stalkers.
- * Adds 60 feet to existing Darkvision range, or sets Darkvision to 60ft if not present.
- */
-function applyUmbralSightDarkvision(playerStats, senses) {
-    const isGloomStalker = playerStats.class?.major?.name === 'Stalker';
-    if (!isGloomStalker) return senses;
-
-    const darkvisionIndex = senses.findIndex(s => s.name === 'Darkvision');
-    const extractDarkvisionFeet = (value) => {
-        if (!value) return 0;
-        const match = String(value).match(/(\d+)\s*ft/i);
-        return match ? parseInt(match[1], 10) : 0;
-    };
-
-    if (darkvisionIndex !== -1) {
-        const currentFeet = extractDarkvisionFeet(senses[darkvisionIndex].value);
-        const newFeet = currentFeet + 60;
-        senses[darkvisionIndex] = { ...senses[darkvisionIndex], value: `${newFeet} ft.` };
-    } else {
-        senses.push({ name: 'Darkvision', value: '60 ft.' });
-    }
-
-    return senses;
-}
-
-/**
- * Apply Blindsight from passive_buff automation (e.g., Skulker feat in 2024).
- * Adds Blindsight with the specified range to player senses.
- */
-function applyBlindsightSenses(playerStats, senses) {
-    const passives = playerStats.automation?.passives;
-    if (!Array.isArray(passives)) {
-        console.error('rules: expected passives to be an array for', playerStats.name);
-        throw new Error('Missing array: passives for ' + playerStats.name);
-    }
-    const blindsightPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'blindsight');
-    if (!blindsightPassive) return senses;
-
-    const rangeMatch = String(blindsightPassive.range || '').match(/(\d+)\s*ft/i);
-    const range = rangeMatch ? `${rangeMatch[1]} ft.` : '10 ft.';
-
-    if (!senses.some(s => s.name === 'Blindsight')) {
-        senses.push({ name: 'Blindsight', value: range });
-    }
-
-    return senses;
-}
-
-/**
- * Apply Truesight from passive_buff automation (e.g., Boon of Truesight feat).
- * Adds Truesense with the specified range to player senses.
- */
-function applyTruesightSenses(playerStats, senses) {
-    const passives = playerStats.automation?.passives;
-    if (!Array.isArray(passives)) {
-        console.error('rules: expected passives to be an array for', playerStats.name);
-        throw new Error('Missing array: passives for ' + playerStats.name);
-    }
-    const truesightPassive = passives.find(p => p.type === 'passive_buff' && p.effect === 'truesight');
-    if (!truesightPassive) return senses;
-
-    const rangeMatch = String(truesightPassive.range || '').match(/(\d+)\s*ft/i);
-    const range = rangeMatch ? `${rangeMatch[1]} ft.` : '60 ft.';
-
-    if (!senses.some(s => s.name === 'Truesight')) {
-        senses.push({ name: 'Truesight', value: range });
-    }
-
-    return senses;
-}
-
-/**
- * Apply Elfish Lineage Wood Elf speed bonus.
- * Adds 5 ft. to base speed when Wood Elf lineage is selected.
- */
-function applyElfisLineageSpeed(playerStats, playerSummary) {
-    const lineage = getElfisLineageSelection(playerStats, playerSummary?.campaignName);
-    if (lineage === 'Wood Elf' && playerStats.speed != null) {
-        return playerStats.speed + 5;
-    }
-    return playerStats.speed;
-}
-
-/**
- * Apply speed increase bonuses from passive_buff features (e.g., Boon of Speed, Speedy feat).
- */
-function applySpeedIncreasePassives(playerStats) {
-    const passives = playerStats.automation?.passives;
-    if (!Array.isArray(passives)) {
-        console.error('rules: expected passives to be an array for', playerStats.name);
-        throw new Error('Missing array: passives for ' + playerStats.name);
-    }
-    let bonus = 0;
-    const equippedItems = playerStats.inventory?.equipped || [];
-    const allEquipment = playerStats.equipment || [];
-    let isWearingHeavyArmor = false;
-    for (const itemName of equippedItems) {
-        const parsedName = itemName.includes('(') ? itemName.substring(0, itemName.indexOf('(')).trim() : itemName;
-        const item = allEquipment.find(eq => eq.name === parsedName || eq.name === itemName);
-        if (item && item.armor_category === 'Heavy') {
-            isWearingHeavyArmor = true;
-            break;
-        }
-    }
-    const isWearingArmor = allEquipment.some(eq => equippedItems.includes(eq.name) && eq.equipment_category === 'Armor');
-    const isWieldingShield = equippedItems.some(name => {
-        const parsedName = name.includes('(') ? name.substring(0, name.indexOf('(')).trim() : name;
-        return parsedName === 'Shield';
-    });
-    for (const passive of passives) {
-        if (passive.type === 'passive_buff' && passive.effect === 'speed_increase' && passive.bonusExpression) {
-            const parsed = parseInt(passive.bonusExpression, 10);
-            if (!isNaN(parsed)) bonus += parsed;
-        }
-        if (passive.type === 'passive_buff' && passive.effect === 'speed_bonus' && passive.bonusExpression) {
-            const parsed = parseInt(passive.bonusExpression, 10);
-            if (isNaN(parsed)) continue;
-            if (passive.condition === 'no_heavy_armor') {
-                if (!isWearingHeavyArmor) {
-                    bonus += parsed;
-                }
-            } else if (passive.condition === 'no_armor_no_shield') {
-                if (!isWearingArmor && !isWieldingShield) {
-                    bonus += parsed;
-                }
-            } else {
-                bonus += parsed;
-            }
-        }
-    }
-    if (bonus > 0 && playerStats.speed != null) {
-        return playerStats.speed + bonus;
-    }
-    return playerStats.speed;
-}
-
-/**
- * Detect Powerful Build trait and set sizeMultiplier on playerStats.
- * Powerful Build: "count as one size larger when determining your carrying capacity."
- * One size larger = 2x carrying capacity.
- * Also grants advantage on ability checks to end the grappled condition.
- */
-function applyPowerfulBuild(playerStats) {
-    const traits = playerStats.race?.traits;
-    if (!Array.isArray(traits)) {
-        console.error('rules: expected race.traits to be an array for', playerStats.name);
-        throw new Error('Missing array: race.traits for ' + playerStats.name);
-    }
-    const hasPowerfulBuild = traits.some(t => t.name === 'Powerful Build');
-    if (hasPowerfulBuild) {
-        playerStats.sizeMultiplier = 2;
-        playerStats.hasPowerfulBuild = true;
-    }
-    return playerStats;
-}
-
-/**
- * Detect Halfling Nimbleness trait and set canMoveThroughCreatureSpace on playerStats.
- * Halfling Nimbleness: "You can move through the space of any creature that is a size larger than you,
- * but you can't stop in the same space."
- */
-function applyHalflingNimbleness(playerStats) {
-    const traits = playerStats.race?.traits;
-    if (!Array.isArray(traits)) {
-        console.error('rules: expected race.traits to be an array for', playerStats.name);
-        throw new Error('Missing array: race.traits for ' + playerStats.name);
-    }
-    const hasHalflingNimbleness = traits.some(t => t.name === 'Halfling Nimbleness');
-    if (hasHalflingNimbleness) {
-        playerStats.canMoveThroughCreatureSpace = true;
-    }
-    return playerStats;
 }
 
 const rules = {
@@ -1528,171 +1296,15 @@ const rules = {
           playerStats.specialActions = uniqBy(playerStats.specialActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
           playerStats.characterAdvancement = uniqBy(playerStats.characterAdvancement, 'name').sort((a, b) => a.name.localeCompare(b.name));
 
-          try {
-             const maneuverSelection = getRuntimeValue(playerStats.name, 'BattleMasterManeuvers_selection', playerSummary.campaignName);
-             const knownNames = Array.isArray(maneuverSelection) ? maneuverSelection : [];
-             if (knownNames.length > 0) {
-                 const maneuvers = await loadManeuvers(playerStats.rules || '2024');
-                  const bonusActionManeuvers = maneuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'bonus_action');
-                   if (bonusActionManeuvers.length > 0) {
-                       bonusActionManeuvers.forEach(m => {
-                           const feature = {
-                               name: m.name,
-                               description: m.description || '',
-                               automation: {
-                                   type: 'combat_superiority_bonus_action',
-                                   maneuverName: m.name,
-                                   actionType: 'bonus_action',
-                                   effect: m.effect,
-                                   saveType: m.saveType || null,
-                                   saveAbility: m.saveAbility || null,
-                                   conditionInflicted: m.conditionInflicted || null,
-                                   value: m.value || null,
-                                   range: m.range || null,
-                                   damageBonus: m.damageBonus || false,
-                                   dieExpression: m.dieExpression || 'superiority_die',
-                                   hasAutomation: true,
-                               },
-                               hasAutomation: true,
-                           };
-                           allFeatures.push(feature);
-                           playerStats.bonusActions.push(feature);
-                       });
-                        playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
-                        mergeAutomationSpecialActions(playerStats);
-                    }
+          await processManeuvers(playerStats, playerSummary, allFeatures, collectAutomationFromFeatures, mergeAutomationSpecialActions);
 
-                    const reactionManeuvers = maneuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'reaction');
-                   if (reactionManeuvers.length > 0) {
-                       reactionManeuvers.forEach(m => {
-                           const feature = {
-                               name: m.name,
-                               description: m.description || '',
-                               automation: {
-                                   type: 'combat_superiority_reaction',
-                                   maneuverName: m.name,
-                                   actionType: 'reaction',
-                                   trigger: m.trigger || null,
-                                   effect: m.effect,
-                                   modifierAbility: m.modifierAbility || null,
-                                   damageBonus: m.damageBonus || false,
-                                   dieExpression: m.dieExpression || 'superiority_die',
-                                   hasAutomation: true,
-                               },
-                               hasAutomation: true,
-                           };
-                           allFeatures.push(feature);
-                           playerStats.reactions.push(feature);
-                       });
-                        playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
-                        renameMagicInitiateFeatures(playerStats, playerSummary);
-                        mergeAutomationSpecialActions(playerStats);
-                    }
-
-                   const grantAttackManeuvers = maneuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'grant_attack');
-                  if (grantAttackManeuvers.length > 0) {
-                      grantAttackManeuvers.forEach(m => {
-                          allFeatures.push({
-                              name: m.name,
-                              description: m.description || '',
-                              automation: {
-                                  type: 'combat_superiority_grant_attack',
-                                  maneuverName: m.name,
-                                  actionType: 'grant_attack',
-                                  trigger: m.trigger || null,
-                                  effect: m.effect,
-                                  damageBonus: m.damageBonus || false,
-                                  dieExpression: m.dieExpression || 'superiority_die',
-                                  range: m.range || '30_ft',
-                                  oncePerTurn: true,
-                                  hasAutomation: true,
-                              },
-                              hasAutomation: true,
-                          });
-                      });
-                        playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
-                        renameMagicInitiateFeatures(playerStats, playerSummary);
-                        mergeAutomationSpecialActions(playerStats);
-                   }
-
-                    const movementManeuvers = maneuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'movement');
-                   if (movementManeuvers.length > 0) {
-                       movementManeuvers.forEach(m => {
-                           allFeatures.push({
-                               name: m.name,
-                               description: m.description || '',
-                               automation: {
-                                   type: 'combat_superiority_movement',
-                                   maneuverName: m.name,
-                                   actionType: 'movement',
-                                   trigger: m.trigger || null,
-                                   effect: m.effect,
-                                   damageBonus: m.damageBonus || false,
-                                   dieExpression: m.dieExpression || 'superiority_die',
-                                   range: m.range || '5_ft',
-                                   hasAutomation: true,
-                               },
-                               hasAutomation: true,
-                           });
-                       });
-                        playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
-                        renameMagicInitiateFeatures(playerStats, playerSummary);
-                        mergeAutomationSpecialActions(playerStats);
-                    }
-
-                     const skillCheckManeuvers = maneuvers.filter(m => knownNames.includes(m.name) && m.actionType === 'skill_check');
-                    if (skillCheckManeuvers.length > 0) {
-                        skillCheckManeuvers.forEach(m => {
-                            allFeatures.push({
-                                name: m.name,
-                                description: m.description || '',
-                                automation: {
-                                    type: 'combat_superiority_skill_check',
-                                    maneuverName: m.name,
-                                    actionType: 'skill_check',
-                                    skills: m.skills || [],
-                                    ability: m.ability || null,
-                                    initiativeBonus: m.initiativeBonus || false,
-                                    damageBonus: m.damageBonus || false,
-                                    dieExpression: m.dieExpression || 'superiority_die',
-                                    hasAutomation: true,
-                                },
-                                hasAutomation: true,
-                            });
-                            if (m.reactionSaveType) {
-                                allFeatures.push({
-                                    name: m.name + ' (Reaction)',
-                                    description: m.description || '',
-                                    automation: {
-                                        type: 'combat_superiority_commanding_presence_reaction',
-                                        maneuverName: m.name,
-                                        reactionSaveType: m.reactionSaveType,
-                                        reactionEffect: m.reactionEffect || 'disadvantage_next_attack',
-                                        reactionDuration: m.reactionDuration || 'until_end_of_next_turn',
-                                        reactionRange: m.reactionRange || '30_ft',
-                                        saveDc: 'ability',
-                                        saveAbility: 'CHA',
-                                        hasAutomation: true,
-                                    },
-                                    hasAutomation: true,
-                                });
-                            }
-                        });
-                        playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
-                        renameMagicInitiateFeatures(playerStats, playerSummary);
-                        mergeAutomationSpecialActions(playerStats);
-                    }
-                }
-            } catch (_e) {
-              // Maneuver data not available, skip
-          }
-            playerStats.actions = uniqBy(playerStats.actions, 'name').sort((a, b) => a.name.localeCompare(b.name));
-            playerStats.bonusActions = uniqBy(playerStats.bonusActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
-            playerStats.reactions = uniqBy(playerStats.reactions, 'name').sort((a, b) => a.name.localeCompare(b.name));
-            playerStats.specialActions = uniqBy(playerStats.specialActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
-            playerStats.characterAdvancement = uniqBy(playerStats.characterAdvancement, 'name').sort((a, b) => a.name.localeCompare(b.name));
-            playerStats.saveModifiers = collectSaveModifiers(allFeatures);
-        }
+          playerStats.actions = uniqBy(playerStats.actions, 'name').sort((a, b) => a.name.localeCompare(b.name));
+          playerStats.bonusActions = uniqBy(playerStats.bonusActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
+          playerStats.reactions = uniqBy(playerStats.reactions, 'name').sort((a, b) => a.name.localeCompare(b.name));
+          playerStats.specialActions = uniqBy(playerStats.specialActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
+          playerStats.characterAdvancement = uniqBy(playerStats.characterAdvancement, 'name').sort((a, b) => a.name.localeCompare(b.name));
+          playerStats.saveModifiers = collectSaveModifiers(allFeatures);
+      }
 
         playerStats.allFeatures = allFeatures;
 
