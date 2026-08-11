@@ -33,7 +33,7 @@ vi.mock('../../services/ui/utils.js', () => ({
 
 vi.mock('../runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
-    setRuntimeValue: vi.fn(),
+    setRuntimeValue: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../services/encounters/combatData.js', () => ({
@@ -46,6 +46,11 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
     playerIsImmuneToCondition: vi.fn(),
     hasGreatWeaponFighting: vi.fn(),
     applyGreatWeaponFightingToDamage: vi.fn((rolls) => rolls),
+    evaluateAutoExpression: vi.fn((expr) => {
+        const match = expr.match(/^(\d+)d(\d+)\+(\d+)/);
+        if (match) return parseInt(match[1]) + parseInt(match[3]);
+        return 0;
+    }),
 }));
 
 vi.mock('../../services/rules/features/invisibilityService.js', () => ({
@@ -83,17 +88,74 @@ vi.mock('../../services/rules/combat/applyDamage.js', () => ({
     normalizeSaveType: (type) => type,
 }));
 
-import { rollExpression } from '../../services/dice/diceRoller.js';
-import { getRuntimeValue } from '../runtime/useRuntimeState.js';
+vi.mock('../../services/combat/auras/coronaAuraUtils.js', () => ({
+    getCoronaSaveDisadvantage: vi.fn(),
+}));
+
+vi.mock('../../services/combat/auras/elderChampionAuraUtils.js', () => ({
+    getElderChampionSaveDisadvantage: vi.fn(),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', () => ({
+    isCircleOfPowerActive: vi.fn(),
+}));
+
+vi.mock('../../services/combat/auras/bardicInspirationState.js', () => ({
+    hasBardicInspirationOffense: vi.fn(),
+    getBardicInspirationDieSize: vi.fn(),
+    getBardicInspirationDieSizeFromClass: vi.fn(),
+}));
+
+vi.mock('../../services/rules/spells/empoweredSpellService.js', () => ({
+    hasEmpoweredSpell: vi.fn(),
+}));
+
+vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
+    getChaModifier: vi.fn(),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/holyAuraHandler.js', () => ({
+    getHolyAuraTargets: vi.fn(),
+}));
+
+vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
+    computeConditionEffects: vi.fn(() => ({
+        restoreBalance: false,
+        autoRerollForSaves: false,
+        autoRerollBonus: null,
+        autoRerollCondition: null,
+        saveAdvantageCount: 0,
+        saveAdvantageAbilities: [],
+    })),
+}));
+
+vi.mock('../../services/combat/auras/pendingSaveRegistry.js', () => ({
+    registerPendingSavePrompt: vi.fn(),
+}));
+
+vi.mock('../../hooks/useAllySelection.js', () => ({
+    getAllyList: vi.fn(),
+}));
+
+import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { hasIgnoreResistance, playerIsImmuneToCondition } from '../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
 import { addEntry } from '../../services/ui/logService.js';
-import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
-import { computeDamageAfterSave, rollSaveForCreature, applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
+import { hasPotentCantrip, isMagicMissileImmune, hasSoulstitchProtection, applyMinDamageAdjustment, readAoeContext } from './loggedDiceRollUtils.js';
+import { computeDamageAfterSave, rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
-
-describe('NPC save damage edge cases', () => {
+import { getCoronaSaveDisadvantage } from '../../services/combat/auras/coronaAuraUtils.js';
+import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/elderChampionAuraUtils.js';
+import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { hasBardicInspirationOffense, getBardicInspirationDieSize, getBardicInspirationDieSizeFromClass } from '../../services/combat/auras/bardicInspirationState.js';
+import { hasEmpoweredSpell } from '../../services/rules/spells/empoweredSpellService.js';
+import { getChaModifier } from '../../services/rules/spells/metamagicRules.js';
+import { getAllyList } from '../../hooks/useAllySelection.js';
+import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
+import { rollExpression } from '../../services/dice/diceRoller.js';
+import { getAffectedCreatures, processAoeNpcs, sendAoePlayerSaves } from '../../services/rules/combat/aoeService.js';
+describe('Corona and Elder Champion save disadvantages', () => {
     const deps = {
         characterName: 'TestWizard',
         campaignName: 'test-campaign',
@@ -110,7 +172,6 @@ describe('NPC save damage edge cases', () => {
         getRuntimeValue.mockReturnValue(null);
         applyMinDamageAdjustment.mockImplementation((d) => d);
         hasIgnoreResistance.mockReturnValue(false);
-        hasPotentCantrip.mockReturnValue(false);
         hasSoulstitchProtection.mockReturnValue(false);
         playerIsImmuneToCondition.mockReturnValue(false);
         endInvisibilityOnHostileAction.mockReturnValue(undefined);
@@ -128,9 +189,10 @@ describe('NPC save damage edge cases', () => {
         return createLogDamageAndShow(deps);
     }
 
-    it('handles soulstitch protection on NPC save damage', async () => {
-        hasSoulstitchProtection.mockReturnValue(true);
-        applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 13, damageReduced: true });
+    it('applies corona save disadvantage on NPC save damage', async () => {
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: true });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
 
         const fn = createFn();
         await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
@@ -139,36 +201,27 @@ describe('NPC save damage edge cases', () => {
             saveDc: 15,
             saveType: 'DEX',
             dcSuccess: 'half',
+            attackerName: 'TestWizard',
         });
 
-        expect(deps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
-            saveResult: 'soulstitch_auto_success',
+        expect(getCoronaSaveDisadvantage).toHaveBeenCalledWith(expect.objectContaining({
+            targetName: 'Goblin',
+            damageType: 'fire',
+            skipRangeCheck: true,
         }));
-        expect(applyDamageToTarget).toHaveBeenCalledWith(
+        expect(rollSaveForCreature).toHaveBeenCalledWith(
             expect.any(Object),
-            'Goblin',
-            0,
-            ['fire'],
-            'test-campaign',
-            expect.any(Array),
-            false,
-            'TestWizard',
-            true
+            'DEX',
+            15,
+            true, // disadvantage from corona
+            false
         );
     });
 
-    it('handles advantage on save from saveModifiers', async () => {
-        rollSaveForCreature.mockReturnValue({ success: true, roll: 18, total: 21, bonus: 3, rawRolls: [18] });
-        applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 3, damageReduced: false });
-        deps.characters = [
-            {
-                name: 'Goblin',
-                computedStats: { saveBonuses: { DEX: 3 }, armorClass: 12 },
-                saveModifiers: [
-                    { target: 'saving_throw', effect: 'advantage', condition: 'against_spell' },
-                ],
-            },
-        ];
+    it('applies elder champion save disadvantage when corona does not', async () => {
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: true });
+        isCircleOfPowerActive.mockReturnValue(false);
 
         const fn = createFn();
         await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
@@ -177,106 +230,48 @@ describe('NPC save damage edge cases', () => {
             saveDc: 15,
             saveType: 'DEX',
             dcSuccess: 'half',
+            attackerName: 'TestWizard',
+            playerStats: { automation: { actions: [], passives: [] } },
         });
 
+        expect(getElderChampionSaveDisadvantage).toHaveBeenCalledWith(expect.objectContaining({
+            attackerName: 'TestWizard',
+            targetName: 'Goblin',
+        }));
+        expect(rollSaveForCreature).toHaveBeenCalledWith(
+            expect.any(Object),
+            'DEX',
+            15,
+            true, // disadvantage from elder champion
+            false
+        );
+    });
+
+    it('checks corona first, then elder champion for disadvantage', async () => {
+        getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
+        getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
+        isCircleOfPowerActive.mockReturnValue(false);
+
+        const fn = createFn();
+        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
+            targetName: 'Goblin',
+            damageType: 'fire',
+            saveDc: 15,
+            saveType: 'DEX',
+            dcSuccess: 'half',
+            attackerName: 'TestWizard',
+            playerStats: { automation: { actions: [], passives: [] } },
+        });
+
+        expect(getCoronaSaveDisadvantage).toHaveBeenCalled();
+        expect(getElderChampionSaveDisadvantage).toHaveBeenCalled();
         expect(rollSaveForCreature).toHaveBeenCalledWith(
             expect.any(Object),
             'DEX',
             15,
             false,
-            true // advantage
+            false
         );
     });
-
-    it('applies ignoreResistance flag to secondary damage', async () => {
-        hasIgnoreResistance.mockReturnValue(true);
-        rollExpression.mockReturnValueOnce({ total: 10, rolls: [6, 4], modifier: 0 });
-        rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 8, bonus: 3, rawRolls: [5] });
-        applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 3, damageReduced: false });
-
-        const fn = createFn();
-        await fn('Eldritch Blast', '2d10', 10, [6, 4], 0, {
-            targetName: 'Goblin',
-            damageType: 'force',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            autoDamageSecondaryFormula: '1d10',
-            autoDamageSecondaryDamageType: 'fire',
-            playerStats: { automation: { passives: [] } },
-        });
-
-        expect(hasIgnoreResistance).toHaveBeenCalledWith(
-            expect.any(Object),
-            'fire'
-        );
-    });
-
-    it('logs hp_change threshold when target dies', async () => {
-        applyDamageToTarget.mockReturnValue({ finalDamage: 13, newHp: 0, damageReduced: false });
-
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Goblin',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-        });
-
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            type: 'hp_change',
-            targetName: 'Goblin',
-            currentHp: 0,
-            isUnconscious: true,
-        }));
-    });
-
-    it('logs hp_change threshold when target becomes bloodied', async () => {
-        applyDamageToTarget.mockReturnValue({ finalDamage: 5, newHp: 8, damageReduced: false });
-
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Goblin',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-        });
-
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            type: 'hp_change',
-            threshold: 'bloodied',
-        }));
-    });
-
-    it('handles twin target save damage for NPCs', async () => {
-        rollSaveForCreature.mockReturnValue({ success: false, roll: 5, total: 8, bonus: 3, rawRolls: [5] });
-        applyDamageToTarget
-            .mockReturnValueOnce({ finalDamage: 10, newHp: 3, damageReduced: false })
-            .mockReturnValueOnce({ finalDamage: 10, newHp: 5, damageReduced: false });
-        loadCombatSummary.mockResolvedValue({
-            creatures: [
-                { name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 },
-                { name: 'Orc', type: 'npc', ac: 14, currentHp: 15, maxHp: 15 },
-            ],
-        });
-
-        const fn = createFn();
-        await fn('Fireball', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, {
-            targetName: 'Goblin',
-            damageType: 'fire',
-            saveDc: 15,
-            saveType: 'DEX',
-            dcSuccess: 'half',
-            metamagicTwinTarget: 'Orc',
-        });
-
-        expect(applyDamageToTarget.mock.calls.length).toBeGreaterThanOrEqual(2);
-        expect(deps.setPopupHtml.mock.calls.length).toBeGreaterThanOrEqual(2);
-        const secondCallArg = deps.setPopupHtml.mock.calls[1][0];
-        expect(typeof secondCallArg).toBe('function');
-    });
-
-
 });
+

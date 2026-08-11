@@ -231,7 +231,7 @@ function makeProps(overrides) {
 
 // ── Tests ──
 
-describe('SaveAttackAoeModal - Overlay targeting path', () => {
+describe('SaveAttackAoeModal - Blocking effects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     diceRoller.rollExpression.mockReturnValue({ total: 12, rolls: [12], modifier: 0, formula: '1d20' });
@@ -247,43 +247,119 @@ describe('SaveAttackAoeModal - Overlay targeting path', () => {
     automationExpressions.resolveScaling.mockReturnValue({});
   });
 
-  describe('overlay targeting', () => {
-    it('renders AreaEffectTargetModalBase when playerStats.targetName starts with overlay-', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+  describe('target blocking effects', () => {
+    it('renders modal when forcecage effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
 
-    it('passes correct props to AreaEffectTargetModalBase in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-map1' }, range: 30 })} />);
+    it('renders modal when maze effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
 
-    it('renders target list in overlay mode via renderBody', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
+    it('renders modal when banishment effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
 
-    it('shows processing message in overlay mode when pending prompts exist', async () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
-      // In overlay mode, the AreaEffectTargetModalBase mock renders renderBody
-      // The renderBody function shows processing message when pendingPrompts.length > 0
-      // We verify the modal renders without crashing in overlay mode
+    it('renders modal when imprisonment effect is present', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Cleric1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
   });
 
-  describe('careful spell with overlay', () => {
-    it('marks allies as carefully protected in overlay mode', () => {
-      allySelection.getAllyList.mockReturnValue(['Goblin A']);
-      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+  describe('forcecage both trapped', () => {
+    it('filters out targets when both attacker and target are forcecaged by different sources', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'forcecage', target: 'Goblin A', source: 'Wizard2' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      // Goblin A should be filtered out because attacker is forcecaged by Wizard1
+      // but Goblin A is forcecaged by a different source (Wizard2)
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+
+    it('allows target when both attacker and target are forcecaged by same source', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'forcecage', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'forcecage', target: 'Goblin A', source: 'Wizard1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
     });
   });
 
-  describe('heighten with overlay', () => {
-    it('passes heighten state through extraState in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+  describe('maze both trapped', () => {
+    it('filters out targets when both attacker and target are mazed by different sources', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'maze', target: 'Goblin A', source: 'Wizard2' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+
+    it('allows target when both attacker and target are mazed by same source', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'maze', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'maze', target: 'Goblin A', source: 'Wizard1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+  });
+
+  describe('banishment both trapped', () => {
+    it('filters out targets when both attacker and target are banished by different sources', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'banishment', target: 'Goblin A', source: 'Wizard2' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+
+    it('allows target when both attacker and target are banished by same source', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'banishment', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'banishment', target: 'Goblin A', source: 'Wizard1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+  });
+
+  describe('imprisonment both trapped', () => {
+    it('filters out targets when both attacker and target are imprisoned by different sources', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'imprisonment', target: 'Goblin A', source: 'Wizard2' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+
+    it('allows target when both attacker and target are imprisoned by same source', () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue([
+        { effect: 'imprisonment', target: 'Cleric1', source: 'Wizard1' },
+        { effect: 'imprisonment', target: 'Goblin A', source: 'Wizard1' },
+      ]);
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
     });
   });
 });

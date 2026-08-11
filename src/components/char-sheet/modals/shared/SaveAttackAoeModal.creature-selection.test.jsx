@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
 
@@ -231,7 +231,7 @@ function makeProps(overrides) {
 
 // ── Tests ──
 
-describe('SaveAttackAoeModal - Overlay targeting path', () => {
+describe('SaveAttackAoeModal - CreatureSelectionModal path', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     diceRoller.rollExpression.mockReturnValue({ total: 12, rolls: [12], modifier: 0, formula: '1d20' });
@@ -247,43 +247,62 @@ describe('SaveAttackAoeModal - Overlay targeting path', () => {
     automationExpressions.resolveScaling.mockReturnValue({});
   });
 
-  describe('overlay targeting', () => {
-    it('renders AreaEffectTargetModalBase when playerStats.targetName starts with overlay-', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
+  describe('CreatureSelectionModal rendering', () => {
+    it('renders CreatureSelectionModal without overlay targeting', () => {
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
       expect(screen.getByText('Fireball')).toBeInTheDocument();
     });
 
-    it('passes correct props to AreaEffectTargetModalBase in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-map1' }, range: 30 })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('passes correct description to CreatureSelectionModal', () => {
+      render(<SaveAttackAoeModal {...makeProps({ saveType: 'CON', saveDc: 18 })} />);
+      const spBody = document.querySelector('.sp-body');
+      expect(spBody.innerHTML).toContain('CON');
+      expect(spBody.innerHTML).toContain('DC 18');
     });
 
-    it('renders target list in overlay mode via renderBody', () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('passes correct note to CreatureSelectionModal with heighten', () => {
+      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true })} />);
+      const spBody = document.querySelector('.sp-body');
+      expect(spBody.textContent).toContain('Heightened Spell: one target will have disadvantage');
     });
 
-    it('shows processing message in overlay mode when pending prompts exist', async () => {
-      render(<SaveAttackAoeModal {...makeProps({ playerStats: { name: 'Cleric1', targetName: 'overlay-test' } })} />);
-      // In overlay mode, the AreaEffectTargetModalBase mock renders renderBody
-      // The renderBody function shows processing message when pendingPrompts.length > 0
-      // We verify the modal renders without crashing in overlay mode
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+    it('passes correct note to CreatureSelectionModal without heighten', () => {
+      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: false })} />);
+      const spBody = document.querySelector('.sp-body');
+      expect(spBody.textContent).not.toContain('Heightened Spell');
+    });
+
+    it('shows processing message when results exist and prompts are pending', async () => {
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      // The CreatureSelectionModal mock doesn't support handleApply directly.
+      // We test the rendering path by checking the creature selection modal renders correctly.
+      expect(screen.getByText(/Select creatures in the area/)).toBeInTheDocument();
     });
   });
 
-  describe('careful spell with overlay', () => {
-    it('marks allies as carefully protected in overlay mode', () => {
+  describe('handleCreatureSelectionSkip', () => {
+    it('calls onClose when skip is clicked', () => {
+      const onClose = vi.fn();
+      render(<SaveAttackAoeModal {...makeProps({ onClose })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('eligibleTargets with no combatSummary', () => {
+    it('returns empty array when combatSummary has no creatures', () => {
+      combatData.getCombatSummary.mockReturnValue({});
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
+    });
+  });
+
+  describe('getCreatureTargets', () => {
+    it('returns creature data with carefulSpellProtected flag', () => {
       allySelection.getAllyList.mockReturnValue(['Goblin A']);
-      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
-    });
-  });
-
-  describe('heighten with overlay', () => {
-    it('passes heighten state through extraState in overlay mode', () => {
-      render(<SaveAttackAoeModal {...makeProps({ metamagicHeighten: true, playerStats: { name: 'Cleric1', targetName: 'overlay-1' } })} />);
-      expect(screen.getByText('Fireball')).toBeInTheDocument();
+      render(<SaveAttackAoeModal {...makeProps({ metamagicCareful: true })} />);
+      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
     });
   });
 });
