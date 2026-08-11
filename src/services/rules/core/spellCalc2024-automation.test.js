@@ -1,0 +1,299 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getSpellAbilities } from './spellCalc2024.js';
+
+// ── Module-level mocks for all ESM dependencies ──
+vi.mock('../../character/classRules2024.js', () => ({
+  default: {
+    getHighestMajorLevel: vi.fn(() => undefined),
+  },
+}));
+
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn((_key, _prop) => null),
+}));
+
+// ── Helpers ──
+
+function makePlayerStats(overrides = {}) {
+  return {
+    name: 'TestCharacter',
+    level: 1,
+    proficiency: 2,
+    class: {
+      name: 'Wizard',
+      class_levels: [{ level: 1, spellcasting: { cantrips_known: 3, spell_slots_level_1: 2, spell_slots_level_2: 0, spell_slots_level_3: 0, spell_slots_level_4: 0, spell_slots_level_5: 0, spell_slots_level_6: 0, spell_slots_level_7: 0, spell_slots_level_8: 0, spell_slots_level_9: 0, spell_type: 'prepared' } }],
+      spell_casting_ability: 'Intelligence',
+      ...overrides.class,
+    },
+    abilities: [
+      { name: 'Intelligence', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 },
+    ],
+    spells: [],
+    automation: {},
+    ...overrides,
+  };
+}
+
+function makeSpell(name, level = 0, extra = {}) {
+  return { name, level, damage: {}, casting_time: '1 action', range: 'Self', ...extra };
+}
+
+describe('spellCalc2024-automation', () => {
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    await import('../../../hooks/runtime/useRuntimeState.js');
+    await import('../../character/classRules2024.js');
+  });
+
+  describe('getSpellAbilities', () => {
+    // ── Automation: passive_rule (always_prepared_spells) ──
+
+    it('adds always_prepared_spells from automation passives when feature name matches a major feature', () => {
+      const allSpells = [makeSpell('Light', 0)];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Sorcerer',
+          class_levels: [{ level: 1, spellcasting: { cantrips_known: 4, spell_slots: { '1': 2 } } }],
+          spell_casting_ability: 'Charisma',
+          major: {
+            name: 'Draconic Sorcery',
+            features: [{ name: 'Draconic Spells' }],
+          },
+        },
+        abilities: [{ name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+      });
+      stats.spells = ['Fire Bolt'];
+      stats.automation = {
+        passives: [{ type: 'passive_rule', effect: 'always_prepared_spells', name: 'Draconic Spells', spells: ['Light'] }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).toEqual(['Fire Bolt', 'Light']);
+    });
+
+    it('skips always_prepared_spells when feature name does not match major features', () => {
+      const allSpells = [makeSpell('Light', 0)];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Sorcerer',
+          class_levels: [{ level: 1, spellcasting: { cantrips_known: 4, spell_slots: { '1': 2 } } }],
+          spell_casting_ability: 'Charisma',
+          major: {
+            name: 'Draconic Sorcery',
+            features: [{ name: 'Draconic Spells' }],
+          },
+        },
+        abilities: [{ name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+      });
+      stats.spells = ['Fire Bolt'];
+      stats.automation = {
+        passives: [{ type: 'passive_rule', effect: 'always_prepared_spells', name: 'Psionic Spells', spells: ['Light'] }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).toEqual(['Fire Bolt']);
+    });
+
+    it('skips passive_rule when spells array is missing', () => {
+      const stats = makePlayerStats();
+      stats.automation = {
+        passives: [{ type: 'passive_rule', effect: 'always_prepared_spells' }],
+      };
+
+      const result = getSpellAbilities([], stats);
+
+      expect(result.spells).toHaveLength(0);
+    });
+
+    // ── Automation: free_spell and fey_reinforcements ──
+
+    it('adds a free_spell from automation passives', () => {
+      const allSpells = [makeSpell('Prestidigitation', 0)];
+      const stats = makePlayerStats();
+      stats.automation = {
+        passives: [{ type: 'free_spell', spell: 'Prestidigitation' }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).toContain('Prestidigitation');
+    });
+
+    it('adds multiple spells from an array free_spell', () => {
+      const allSpells = [
+        makeSpell('Shield of Faith', 1),
+        makeSpell('Spiritual Weapon', 2),
+      ];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Cleric',
+          class_levels: [{ level: 1, spellcasting: { cantrips_known: 4, spell_slots: { '1': 4 } } }],
+          spell_casting_ability: 'Wisdom',
+        },
+        abilities: [{ name: 'Wisdom', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+        proficiency: 3,
+      });
+      stats.automation = {
+        passives: [{ type: 'free_spell', spell: ['Shield of Faith', 'Spiritual Weapon'] }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).toEqual(['Shield of Faith', 'Spiritual Weapon']);
+    });
+
+    // ── Automation: spell_breaker ──
+
+    it('adds alwaysPreparedSpells from spell_breaker', () => {
+      const allSpells = [makeSpell('Shield', 1)];
+      const stats = makePlayerStats();
+      stats.automation = {
+        passives: [{ type: 'spell_breaker', alwaysPreparedSpells: ['Shield'] }],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).toContain('Shield');
+    });
+
+    // ── Automation: cantrip_spellcasting_ability ──
+
+    it('adds cantrip_spellcasting_ability cantrip even when not in spell list', () => {
+      const stats = makePlayerStats();
+      stats.spells = ['Fire Bolt'];
+      stats.automation = {
+        actions: [{ type: 'cantrip_spellcasting_ability', cantripName: 'Light', spellcastingAbility: 'Charisma' }],
+      };
+
+      const result = getSpellAbilities([], stats);
+
+      const light = result.spells.find(s => s.name === 'Light');
+      expect(light).toEqual({ name: 'Light', prepared: 'Always', spellCastingAbility: 'Charisma' });
+    });
+
+    // ── Mixed automation ──
+
+    it('handles mixed automation features across all three arrays', () => {
+      const allSpells = [
+        makeSpell('Shield', 1),
+        makeSpell('Minor Illusion', 1),
+        makeSpell('Light', 0),
+      ];
+      const stats = makePlayerStats();
+      stats.class.major = {
+        name: 'Order',
+        features: [
+          { name: 'Minor Illusion Feature' },
+          { name: 'Light Feature' },
+        ],
+      };
+      stats.automation = {
+        actions: [{ type: 'free_spell', spell: 'Shield' }],
+        bonusActions: [{ type: 'passive_rule', effect: 'always_prepared_spells', name: 'Minor Illusion Feature', spells: ['Minor Illusion'] }],
+        passives: [
+          { type: 'passive_rule', effect: 'always_prepared_spells', name: 'Light Feature', spells: ['Light'] },
+          { type: 'other_feature_type' },
+        ],
+      };
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result).not.toBeNull();
+      expect(result.spells.map(s => s.name)).toEqual(['Light', 'Minor Illusion', 'Shield']);
+    });
+
+    // ── Automation: psionic_spells_list ──
+
+    it('adds psionic_spells_list when feature name matches a major feature', () => {
+      const allSpells = [
+        makeSpell('Mind Sliver', 0),
+        makeSpell('Detect Thoughts', 1),
+      ];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Sorcerer',
+          class_levels: [{ level: 3, spellcasting: { cantrips_known: 4, spell_slots: { '1': 4, '2': 3 } } }],
+          spell_casting_ability: 'Charisma',
+          major: {
+            name: 'Aberrant Sorcery',
+            features: [
+              { name: 'Psionic Spells' },
+              { name: 'Telepathic Speech' },
+            ],
+          },
+        },
+        abilities: [{ name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+        automation: {
+          passives: [
+            { type: 'psionic_spells_list', name: 'Psionic Spells', psionicSpells: ['Mind Sliver', 'Detect Thoughts'] },
+          ],
+        },
+      });
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      const names = result.spells.map(s => s.name);
+      expect(names).toContain('Mind Sliver');
+      expect(names).toContain('Detect Thoughts');
+    });
+
+    it('skips psionic_spells_list when feature name does not match major features', () => {
+      const allSpells = [
+        makeSpell('Mind Sliver', 0),
+        makeSpell('Detect Thoughts', 1),
+      ];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Sorcerer',
+          class_levels: [{ level: 3, spellcasting: { cantrips_known: 4, spell_slots: { '1': 4, '2': 3 } } }],
+          spell_casting_ability: 'Charisma',
+          major: {
+            name: 'Draconic Sorcery',
+            features: [
+              { name: 'Draconic Resilience' },
+              { name: 'Draconic Spells' },
+            ],
+          },
+        },
+        abilities: [{ name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+        automation: {
+          passives: [
+            { type: 'psionic_spells_list', name: 'Psionic Spells', psionicSpells: ['Mind Sliver', 'Detect Thoughts'] },
+          ],
+        },
+      });
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      const names = result.spells.map(s => s.name);
+      expect(names).not.toContain('Mind Sliver');
+      expect(names).not.toContain('Detect Thoughts');
+    });
+
+    it('skips psionic_spells_list when major has no features array', () => {
+      const allSpells = [makeSpell('Mind Sliver', 0)];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Sorcerer',
+          class_levels: [{ level: 3, spellcasting: { cantrips_known: 4, spell_slots: { '1': 4, '2': 3 } } }],
+          spell_casting_ability: 'Charisma',
+          major: {
+            name: 'Draconic Sorcery',
+          },
+        },
+        abilities: [{ name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 }],
+        automation: {
+          passives: [
+            { type: 'psionic_spells_list', name: 'Psionic Spells', psionicSpells: ['Mind Sliver'] },
+          ],
+        },
+      });
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      expect(result.spells.map(s => s.name)).not.toContain('Mind Sliver');
+    });
+  });
+});

@@ -96,18 +96,12 @@ vi.mock('../../rules/spells/metamagicRules.js', () => ({
     getChaModifier: vi.fn(),
 }));
 
-import { rollExpression } from '../../../services/dice/diceRoller.js';
 import { getRuntimeValue, setRuntimeValue } from '../../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../../services/encounters/combatData.js';
-import { hasIgnoreResistance, hasGreatWeaponFighting, applyGreatWeaponFightingToDamage } from '../../../services/combat/automation/automationService.js';
-import { endInvisibilityOnHostileAction } from '../../../services/rules/features/invisibilityService.js';
-import { applyMinDamageAdjustment } from '../loggedDiceRollUtils.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
-import { addEntry } from '../../../services/ui/logService.js';
-import { sendSavePrompt } from '../../../services/combat/conditions/savePromptService.js';
 import { createLogDamageAndShow } from '../useLoggedDiceRollDamage.js';
 
-describe('Plain damage additional coverage', () => {
+describe('Plain damage ram attack / prone', () => {
     const deps = {
         characterName: 'TestFighter',
         campaignName: 'test-campaign',
@@ -127,17 +121,9 @@ describe('Plain damage additional coverage', () => {
     };
 
     beforeEach(() => {
-        rollExpression.mockClear().mockReturnValue({ total: 8, rolls: [5, 3], modifier: 0 });
         getRuntimeValue.mockReset().mockReturnValue(null);
         setRuntimeValue.mockClear();
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        hasIgnoreResistance.mockReturnValue(false);
-        hasGreatWeaponFighting.mockReturnValue(false);
-        applyGreatWeaponFightingToDamage.mockReturnValue([1, 2, 3]);
-        endInvisibilityOnHostileAction.mockClear();
         applyDamageToTarget.mockReset().mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-        addEntry.mockClear();
-        sendSavePrompt.mockClear();
         loadCombatSummary.mockResolvedValue({
             creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
         });
@@ -149,216 +135,169 @@ describe('Plain damage additional coverage', () => {
         return createLogDamageAndShow(deps);
     }
 
-    describe('resistance effect', () => {
-        it('applies resistance damage reduction when effect is active and damage type matches', async () => {
+    describe('ram attack / prone condition', () => {
+        it('applies prone condition when ramActive and isMelee', async () => {
             getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [
-                    {
-                        effect: 'resistance_damage_reduction',
-                        target: 'Goblin',
-                        chosenType: 'fire',
-                    },
-                ];
-                if (key === 'Goblin' && prop === 'resistanceUsedThisTurn') {
-                    return null;
-                }
-                return null;
-            });
-            rollExpression.mockReturnValueOnce({ total: 2, rolls: [2], modifier: 0 });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 7, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Fire Bolt', '1d10', 8, [8], 0, {
-                targetName: 'Goblin',
-                damageType: 'fire',
-                attackerName: 'TestFighter',
-            });
-
-            expect(rollExpression).toHaveBeenCalledWith('1d4');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Goblin',
-                'resistanceUsedThisTurn',
-                true,
-                'test-campaign'
-            );
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                resistanceReduction: 2,
-                resistanceRoll: 2,
-            }));
-        });
-
-        it('does not apply resistance when damage type does not match', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [
-                    {
-                        effect: 'resistance_damage_reduction',
-                        target: 'Goblin',
-                        chosenType: 'cold',
-                    },
-                ];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 8, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Fire Bolt', '1d10', 8, [8], 0, {
-                targetName: 'Goblin',
-                damageType: 'fire',
-                attackerName: 'TestFighter',
-            });
-
-            expect(rollExpression).not.toHaveBeenCalledWith('1d8');
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                resistanceReduction: 0,
-            }));
-        });
-
-        it('does not apply resistance when already used this turn', async () => {
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign') return [
-                    {
-                        effect: 'resistance_damage_reduction',
-                        target: 'Goblin',
-                        chosenType: 'fire',
-                    },
-                ];
-                if (key === 'Goblin' && prop === 'resistanceUsedThisTurn') {
-                    return true;
-                }
+                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
                 return null;
             });
             applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Fire Bolt', '1d10', 8, [8], 0, {
-                targetName: 'Goblin',
-                damageType: 'fire',
-                attackerName: 'TestFighter',
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Medium' }],
             });
 
-            expect(rollExpression).not.toHaveBeenCalledWith('1d4');
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                ramActive: true,
+                isMelee: true,
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                ['Prone'],
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone if target is already prone', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return ['Prone'];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Medium' }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                ramActive: true,
+                isMelee: true,
+            });
+
             expect(setRuntimeValue).not.toHaveBeenCalledWith(
                 'Goblin',
-                'resistanceUsedThisTurn',
-                true,
+                'activeConditions',
+                expect.arrayContaining(['Prone']),
                 'test-campaign'
             );
         });
     });
 
-    describe('no secondary formula path', () => {
-        it('calls applyDamageToTarget once when no secondary formula', async () => {
-            getRuntimeValue.mockImplementation((key) => {
+    describe('player target with size check for ram', () => {
+        it('applies prone to player target when ram active and size is Small', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
                 if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReset().mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-            });
-
-            expect(applyDamageToTarget.mock.calls.length).toBe(1);
-        });
-    });
-
-    describe('intercepted damage', () => {
-        it('handles intercepted damage correctly', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({
-                finalDamage: 5,
-                newHp: 8,
-                damageReduced: false,
-                intercepted: true,
-                interceptedFeature: 'Shield Boy',
-                damageDealt: 3,
-                oldHp: 11,
-            });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-            });
-
-            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-                interceptedFeature: 'Shield Boy',
-            }));
-        });
-    });
-
-    describe('crit formatting', () => {
-        it('formats formula as doubled when isCrit is true', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
                 return null;
             });
             applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'player', ac: 12, currentHp: 13, maxHp: 13, size: 'Small' }],
+            });
 
             const fn = createFn();
             await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
                 targetName: 'Goblin',
                 damageType: 'slashing',
-                isAutoCrit: true,
-            });
-
-            expect(deps.logEntry).toHaveBeenCalled();
-            const logCall = deps.logEntry.mock.calls[0][0];
-            expect(logCall.isCrit).toBe(true);
-            expect(logCall.formula).toContain('*2');
-        });
-    });
-
-    describe('endInvisibilityOnHostileAction calls', () => {
-        it('calls endInvisibilityOnHostileAction when appliedDamage > 0', async () => {
-            getRuntimeValue.mockImplementation((key) => {
-                if (key === 'campaign') return [];
-                return null;
-            });
-            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-            });
-
-            expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestFighter', 'test-campaign');
-        });
-    });
-
-    describe('lastAttack with existing data merge', () => {
-        it('merges new lastAttack data with existing', async () => {
-            getRuntimeValue.mockReset().mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') return [];
-                if (key === 'campaign' && prop === 'lastAttack') return {
-                    hit: true,
-                    attackerName: 'PreviousAttacker',
-                };
-                return null;
-            });
-            applyDamageToTarget.mockReset().mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
-
-            const fn = createFn();
-            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
-                targetName: 'Goblin',
-                damageType: 'slashing',
-                attackerName: 'TestFighter',
-                attackName: 'Longsword',
+                ramActive: true,
+                isMelee: true,
             });
 
             expect(setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'lastAttack',
-                expect.objectContaining({
-                    attackerName: 'TestFighter',
-                    targetName: 'Goblin',
-                }),
+                'Goblin',
+                'activeConditions',
+                ['Prone'],
+                'test-campaign'
+            );
+        });
+
+        it('does not apply prone when target is Huge or larger', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13, size: 'Huge' }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                ramActive: true,
+                isMelee: true,
+            });
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                expect.anything(),
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('player target size for ram', () => {
+        it('applies prone to player target when ram active and size is Tiny', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'player', ac: 12, currentHp: 13, maxHp: 13, size: 'Tiny' }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                ramActive: true,
+                isMelee: true,
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                ['Prone'],
+                'test-campaign'
+            );
+        });
+
+        it('applies prone when target has no size property', async () => {
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign') return [];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                return null;
+            });
+            applyDamageToTarget.mockReturnValue({ finalDamage: 8, newHp: 5, damageReduced: false });
+            loadCombatSummary.mockResolvedValue({
+                creatures: [{ name: 'Goblin', type: 'npc', ac: 12, currentHp: 13, maxHp: 13 }],
+            });
+
+            const fn = createFn();
+            await fn('Longsword', '1d8+3', 8, [5, 3], 3, {
+                targetName: 'Goblin',
+                damageType: 'slashing',
+                ramActive: true,
+                isMelee: true,
+            });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                ['Prone'],
                 'test-campaign'
             );
         });
