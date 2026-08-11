@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /* ------------------------------------------------------------------ */
-/*  Mocks — all dependencies of savePath.js                            */
+/*  SUT — imported after mocks in main file                            */
 /* ------------------------------------------------------------------ */
+
+// Re-export the helpers from the main test file via a shared module
+// Each file has its own mocks to be independently runnable
 
 vi.mock('../../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
@@ -38,14 +41,8 @@ vi.mock('../../../features/viciousMockeryService.js', () => ({
   triggerViciousMockeryForGeneric: vi.fn(() => Promise.resolve()),
 }));
 
-/* ------------------------------------------------------------------ */
-/*  SUT import after mocks                                             */
-/* ------------------------------------------------------------------ */
-
 const { handleSavePath } = await import('./savePath.js');
 const { rollExpression, rollExpressionMaximized } = await import('../../../../dice/diceRoller.js');
-const { triggerViciousMockeryForGeneric } = await import('../../../features/viciousMockeryService.js');
-const { triggerSoulstitchSpells } = await import('../../postCastRiderService.js');
 const { getCombatContext } = await import('../../../combat/damageUtils.js');
 
 /* ------------------------------------------------------------------ */
@@ -102,10 +99,6 @@ function makeMetaCtx(overrides = {}) {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helper — build handleSavePath args                                 */
-/* ------------------------------------------------------------------ */
-
 function makeSavePathArgs(overrides = {}) {
   return {
     spell: makeSpell(),
@@ -135,256 +128,20 @@ function makeSavePathArgs(overrides = {}) {
 /*  beforeEach — reset all mocks                                       */
 /* ------------------------------------------------------------------ */
 
-describe('savePath.js — handleSavePath', () => {
+describe('savePath.js — handleAoE', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     rollExpression.mockReturnValue({ total: 5, rolls: [5] });
     rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8] });
-    triggerSoulstitchSpells.mockResolvedValue(undefined);
     getCombatContext.mockReturnValue(null);
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  handleSavePath — routing to AoE vs single-target                 */
-  /* ---------------------------------------------------------------- */
-
-  describe('AoE routing', () => {
-    const baseArgs = () => makeSavePathArgs();
-
-    it('routes to handleAoE when area_of_effect shape is cone', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.modalName).toBe('saveAttackAoe');
-      expect(result.automationPopup.payload.shape).toBe('cone');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is line', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'line', size: 120 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('line');
-    });
-
-    it('routes to handleAoE when area_of_effect type is sphere', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { type: 'sphere', radius: 20 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('sphere');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is cube', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'cube', size: 20 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('cube');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is cylinder', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'cylinder', radius: 10, height: 40 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('cylinder');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is emanation', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'emanation', size: 30 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('emanation');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is square', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'square', size: 20 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('square');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is circle', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'circle', size: 20 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('circle');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is wall', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'wall', length: 30 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('wall');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is cage', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'cage', radius: 15 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('cage');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is floor', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'floor', size: 60 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('floor');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is area (lowercase)', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'area', size: 30 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('area');
-    });
-
-    it('routes to handleAoE when area_of_effect shape is AREA (uppercase)', async () => {
-      const args = baseArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { shape: 'AREA', size: 30 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result.automationPopup.payload.shape).toBe('AREA');
-    });
-  });
-
-  describe('single-target routing', () => {
-    it('routes to handleSingleTargetSave when no area_of_effect', async () => {
-      const args = makeSavePathArgs();
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result).toBeUndefined();
-    });
-
-    it('routes to handleSingleTargetSave when area_of_effect type is undefined', async () => {
-      const args = makeSavePathArgs();
-      args.fullSpell = makeFullSpell({ area_of_effect: { type: undefined, size: 60 } });
-      const result = await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(result).toBeUndefined();
-    });
   });
 
   /* ---------------------------------------------------------------- */
   /*  handleAoE — overlay targeting                                    */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — overlay targeting', () => {
+  describe('overlay targeting', () => {
     it('fetches overlay when targetName starts with overlay-', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
@@ -511,7 +268,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — damage expression resolution                         */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — damage expression resolution', () => {
+  describe('damage expression resolution', () => {
     it('uses damage_at_slot_level at slot level', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({
@@ -642,7 +399,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — condition-only AoE (grease)                          */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — condition-only AoE', () => {
+  describe('condition-only AoE', () => {
     it('returns aoeCondition modal for grease with fail effects', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = {
@@ -790,7 +547,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — innate sorcery DC bonus                              */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — innate sorcery DC bonus', () => {
+  describe('innate sorcery DC bonus', () => {
     it('adds +1 to saveDc when innateSorceryActive is true for condition-only AoE', async () => {
       const args = makeSavePathArgs({ innateSorceryActive: true });
       args.fullSpell = {
@@ -839,7 +596,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — dc_success resolution                                */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — dc_success resolution', () => {
+  describe('dc_success resolution', () => {
     it('maps dc_success 0 to "none"', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({
@@ -922,7 +679,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — metamagicHeighten with hasInvisible                  */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — metamagicHeighten', () => {
+  describe('metamagicHeighten', () => {
     it('sets metamagicHeighten to true when hasInvisible is true', async () => {
       const args = makeSavePathArgs({ hasInvisible: true });
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
@@ -961,7 +718,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — rangeToFeet integration                              */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — rangeToFeet integration', () => {
+  describe('rangeToFeet integration', () => {
     it('passes range through rangeToFeet', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 }, range: '200 feet' });
@@ -1000,7 +757,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — getCombatContext with overlay targeted creature      */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — getCombatContext with overlay targeted creature', () => {
+  describe('getCombatContext with overlay targeted creature', () => {
     it('finds targetName from combat context when overlay targeted', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
@@ -1056,7 +813,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — automationEffects fail conditions                    */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — automationEffects fail conditions', () => {
+  describe('automationEffects fail conditions', () => {
     it('extracts condition names from fail effects', async () => {
       const args = makeSavePathArgs({ effectiveDamageType: '' });
       args.fullSpell = {
@@ -1121,7 +878,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — hasDamage detection                                  */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — hasDamage detection', () => {
+  describe('hasDamage detection', () => {
     it('treats damageExpression "0" as no damage', async () => {
       const args = makeSavePathArgs({ effectiveDamageType: '' });
       args.fullSpell = {
@@ -1201,7 +958,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — saveAttackAoe payload structure                      */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — saveAttackAoe payload structure', () => {
+  describe('saveAttackAoe payload structure', () => {
     it('includes full action object with name and automation', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
@@ -1275,7 +1032,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — damage type and dc_type fallbacks                    */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — damage type and dc_type fallbacks', () => {
+  describe('damage type and dc_type fallbacks', () => {
     it('uses effectiveDamageType directly', async () => {
       const args = makeSavePathArgs({ effectiveDamageType: 'Lightning' });
       args.fullSpell = makeFullSpell({ area_of_effect: { type: 'cone', size: 60 } });
@@ -1373,7 +1130,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — condition-only with no fail effects                  */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — condition-only with no fail effects', () => {
+  describe('condition-only with no fail effects', () => {
     it('goes to saveAttackAoe when automationEffects.fail is empty', async () => {
       const args = makeSavePathArgs({ effectiveDamageType: '' });
       args.fullSpell = {
@@ -1403,7 +1160,7 @@ describe('savePath.js — handleSavePath', () => {
   /*  handleAoE — no automation at all                                 */
   /* ---------------------------------------------------------------- */
 
-  describe('handleAoE — no automation at all', () => {
+  describe('no automation at all', () => {
     it('goes to saveAttackAoe when automation is missing', async () => {
       const args = makeSavePathArgs();
       args.fullSpell = {
@@ -1423,35 +1180,6 @@ describe('savePath.js — handleSavePath', () => {
       );
 
       expect(result.automationPopup.modalName).toBe('saveAttackAoe');
-    });
-  });
-
-  /* ---------------------------------------------------------------- */
-  /*  handleSavePath — soulstitch error handling                       */
-  /* ---------------------------------------------------------------- */
-
-  describe('handleSavePath — soulstitch error handling', () => {
-    it('logs error when triggerSoulstitchSpells throws', async () => {
-      const args = makeSavePathArgs();
-      triggerSoulstitchSpells.mockRejectedValue(new Error('Soulstitch failed'));
-
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await handleSavePath(
-        args.spell, args.fullSpell, args.metaCtx, args.playerStats,
-        args.campaignName, args.mapName, args.characters, args.getTargetInfo,
-        args.getRuntimeValue, args.innateSorceryActive, args.effectiveDamageType,
-        args.spellSaveDc, args.overchannelFormula, args.overchannelActive,
-        args.overchannelUseCount, args.rollAttack, args.rollDamage,
-        args.formula, args.hasInvisible,
-      );
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[spellCast] Soulstitch Spells trigger failed:',
-        expect.any(Error),
-      );
-
-      consoleSpy.mockRestore();
     });
   });
 });
