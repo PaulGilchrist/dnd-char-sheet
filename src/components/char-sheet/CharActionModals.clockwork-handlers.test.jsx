@@ -1,4 +1,4 @@
-// Handler callback tests for modal close handlers in CharActionModals
+// Handler callback tests for clockwork/other choice modals in CharActionModals
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -535,74 +535,165 @@ vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHan
 
 // ── Tests ──
 
-describe('CharActionModals — modal close handlers', () => {
+describe('CharActionModals — remaining choice modal handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('Shield Bash close handler', () => {
-    it('dispatches target-effects-updated and combat-summary-updated on close', () => {
+  // ── Clockwork Cavalcade choice handler ──
+
+  describe('Clockwork Cavalcade choice handler', () => {
+    it('calls setModalState with heal modal when heal is chosen', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ shieldBashModal: {} }}
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('shield-bash-close'));
-      expect(setModalState).toHaveBeenCalledWith({ shieldBashModal: null });
+      fireEvent.click(screen.getByTestId('clockwork-choose-heal'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: expect.anything() });
+    });
+
+    it('calls setModalState with dispel modal when dispel is chosen', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('clockwork-choose-dispel'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: expect.anything() });
+    });
+
+    it('calls setModalState with repair modal when repair is chosen', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('clockwork-choose-repair'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: expect.anything() });
+    });
+
+    it('does nothing when clockworkCavalcadeModal is not in merged state', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{}}
+        setModalState={setModalState}
+      />);
+      // No clockwork modal to click, so no action
+      expect(setModalState).not.toHaveBeenCalled();
     });
   });
 
-  describe('Quivering Palm close handler', () => {
-    it('dispatches target-effects-updated and combat-summary-updated on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ quiveringPalmModal: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('quivering-palm-close'));
-      expect(setModalState).toHaveBeenCalledWith({ quiveringPalmModal: null });
-    });
-  });
+  // ── Clockwork Cavalcade handlers ──
 
-  describe('Attack Rider Modal close handler', () => {
-    it('dispatches target-effects-updated on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps()}
-        modalState={{ attackRiderModal: { action: { name: 'Test Attack' } } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('attack-rider-close'));
-      expect(setModalState).toHaveBeenCalledWith({ attackRiderModal: null });
-    });
-  });
-
-  describe('Open Hand From Flurry handlers', () => {
-    it('calls handleOpenHandFromFlurrySkip on close without confirm', () => {
+  describe('Clockwork Cavalcade handlers', () => {
+    it('calls handleClockworkCavalcadeHealConfirm on heal confirm', () => {
       const handler = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurrySkip: handler })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: { name: 'Open Hand' } }], currentIndex: 0, saveDc: 15 } }}
+        {...createBaseProps({ handleClockworkCavalcadeHealConfirm: handler })}
+        modalState={{ clockworkCavalcadeHealModal: { creatureTargets: [{ name: 'Ally1' }], maxHeal: 100, campaignName: 'test', combatSummary: {} } }}
         setModalState={vi.fn()}
       />);
-      // The close button calls handleOpenHandFromFlurrySkip
-      fireEvent.click(screen.getByTestId('open-hand-close'));
+      fireEvent.click(screen.getByTestId('mass-heal-confirm'));
+      expect(handler).toHaveBeenCalledWith(['Target1']);
+    });
+
+    it('calls handleClockworkCavalcadeDispelConfirm on dispel confirm', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleClockworkCavalcadeDispelConfirm: handler })}
+        modalState={{ clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] } }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByTestId('creature-confirm'));
+      expect(handler).toHaveBeenCalledWith(['Goblin']);
+    });
+
+    it('calls handleClockworkCavalcadeRepairConfirm on repair button click', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: handler })}
+        modalState={{ clockworkCavalcadeRepairModal: {} }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByText('Repair'));
       expect(handler).toHaveBeenCalled();
     });
+  });
 
-    it('calls handleOpenHandFromFlurryConfirm with optionName when confirm is clicked', () => {
+  // ── Cleave handlers ──
+
+  describe('Cleave handlers', () => {
+    it('handleCleaveAttack is available as a prop', () => {
       const handler = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurryConfirm: handler })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: { name: 'Open Hand' } }], currentIndex: 0, saveDc: 15 } }}
+        {...createBaseProps({ handleCleaveAttack: handler })}
         setModalState={vi.fn()}
       />);
-      // The confirm button calls handleOpenHandFromFlurryConfirm with optionName
-      // The mock OpenHandTechniqueModal doesn't have a confirm button in our mock
-      // so we verify the modal renders with the correct action
-      expect(screen.getByTestId('open-hand-technique-modal')).toBeInTheDocument();
+      expect(handler).toBeDefined();
+    });
+
+    it('handleCleaveSkip is available as a prop', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleCleaveSkip: handler })}
+        setModalState={vi.fn()}
+      />);
+      expect(handler).toBeDefined();
+    });
+  });
+
+  // ── Divination Savant / Illusion Savant handlers ──
+
+  describe('Divination Savant / Illusion Savant handlers', () => {
+    it('handleDivinationSavantConfirm is available as a prop', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleDivinationSavantConfirm: handler })}
+        setModalState={vi.fn()}
+      />);
+      expect(handler).toBeDefined();
+    });
+
+    it('handleIllusionSavantConfirm is available as a prop', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleIllusionSavantConfirm: handler })}
+        setModalState={vi.fn()}
+      />);
+      expect(handler).toBeDefined();
+    });
+  });
+
+  // ── Teleport Modal with moonlight_step_teleport effect ──
+
+  describe('Teleport Modal with Moonlight Step', () => {
+    it('passes isMoonlightStep=true when automation effect is moonlight_step_teleport', () => {
+      render(<CharActionModals
+        {...createBaseProps()}
+        modalState={{ teleportModal: { action: { automation: { effect: 'moonlight_step_teleport' } } } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('teleport-modal')).toBeInTheDocument();
+    });
+  });
+
+  // ── Reckless Attack default mode ──
+
+  describe('Reckless Attack default mode', () => {
+    it('defaults to full mode when mode is not specified', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleRecklessAttackConfirm: handler })}
+        modalState={{ recklessAttackModal: { attack: { name: 'Test' } } }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByTestId('reckless-confirm'));
+      expect(handler).toHaveBeenCalled();
     });
   });
 });

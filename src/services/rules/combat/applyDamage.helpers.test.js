@@ -1,112 +1,195 @@
-// @cleaned-by-ai
 // @improved-by-ai
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Mocks BEFORE imports (hoisted by vitest) ───────────────────
+
+vi.mock('../../dice/diceRoller.js', () => ({
+  rollD20: vi.fn(),
+  rollExpression: vi.fn(),
+}));
+
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
+  getStore: vi.fn(() => ({ keys: () => [] })),
+}));
+
+vi.mock('../../ui/storage.js', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
+
+vi.mock('../../combat/conditions/savePromptService.js', () => ({
+  sendDeathSavePrompt: vi.fn(),
+  sendConcentrationPrompt: vi.fn(),
+}));
+
+vi.mock('../../combat/concentration/concentrationRules.js', () => ({
+  rollConcentrationSave: vi.fn(),
+}));
+
+vi.mock('../../ui/utils.js', () => ({ default: { guid: vi.fn(() => 'test-guid-001') } }));
+
+vi.mock('../../automation/handlers/spells/tashasLaughterHandler.js', () => ({
+  processTashasLaughterRepeatSave: vi.fn(),
+  handle: vi.fn(),
+}));
+
+vi.mock('./rangeValidation.js', () => ({
+  getDistanceFeet: vi.fn(() => 30),
+}));
+
+// ── Imports ─────────────────────────────────────────────────────
 
 import {
-  computeDamageAfterResistancesWithDetails,
-  clearReTriggeredSequence,
+  computeDamageAfterResistances,
+  computeDamageAfterSave,
+  hasEvasionForSave,
+  computeDamageAfterEvasion,
+  rollSaveForCreature,
 } from './applyDamage.js';
 
-// ── Globals ─────────────────────────────────────────────────────
-
-global.fetch = vi.fn(() => new Promise(() => {}));
+import { rollD20 } from '../../dice/diceRoller.js';
 
 // ── Tests ───────────────────────────────────────────────────────
 
-describe('computeDamageAfterResistancesWithDetails', () => {
-  it('throws when damageTypes is null, undefined, or empty', () => {
-    expect(() => computeDamageAfterResistancesWithDetails(10, null)).toThrow();
-    expect(() => computeDamageAfterResistancesWithDetails(10, undefined)).toThrow();
-    expect(() => computeDamageAfterResistancesWithDetails(10, [])).toThrow();
+describe('computeDamageAfterResistances', () => {
+  it('throws when damageTypes is null, undefined, empty, or contains null/empty entries', async () => {
+    expect(() => computeDamageAfterResistances(10, null)).toThrow();
+    expect(() => computeDamageAfterResistances(10, undefined)).toThrow();
+    expect(() => computeDamageAfterResistances(10, [])).toThrow();
+    expect(() => computeDamageAfterResistances(10, [null])).toThrow();
+    expect(() => computeDamageAfterResistances(10, [''])).toThrow();
   });
 
-  it('skips null/empty damage type entries without throwing', () => {
-    let result = computeDamageAfterResistancesWithDetails(10, [null, 'Fire'], [], []);
-    expect(result.finalDamage).toBe(10);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['', 'Fire'], [], []);
-    expect(result.finalDamage).toBe(10);
+  it('returns raw damage when no resistances or immunities match', async () => {
+    expect(computeDamageAfterResistances(10, ['Fire'], [], [])).toBe(10);
+    expect(computeDamageAfterResistances(15, ['Fire', 'Cold'], ['poison'], [])).toBe(15);
   });
 
-  it('returns raw damage with empty typeDetails when no resistances/immunities', () => {
-    const result = computeDamageAfterResistancesWithDetails(10, ['Fire'], [], []);
-    expect(result.finalDamage).toBe(10);
-    expect(result.typeDetails).toEqual([]);
+  it('applies immunity — returns 0', async () => {
+    expect(computeDamageAfterResistances(10, ['Fire'], [], ['fire'])).toBe(0);
+    expect(computeDamageAfterResistances(10, ['FIRE'], [], ['Fire'])).toBe(0);
   });
 
-  it('returns 0 damage with immune status when immunity matches, halved with resistant status', () => {
-    let result = computeDamageAfterResistancesWithDetails(10, ['Fire'], [], ['fire']);
-    expect(result.finalDamage).toBe(0);
-    expect(result.typeDetails).toEqual([{ damageType: 'Fire', status: 'immune' }]);
-
-    result = computeDamageAfterResistancesWithDetails(9, ['Fire'], ['fire'], []);
-    expect(result.finalDamage).toBe(4);
-    expect(result.typeDetails).toEqual([{ damageType: 'Fire', status: 'resistant' }]);
+  it('applies resistance — halves damage with Math.floor', async () => {
+    expect(computeDamageAfterResistances(9, ['Fire'], ['fire'], [])).toBe(4);
+    expect(computeDamageAfterResistances(10, ['fire'], ['Fire'], [])).toBe(5);
   });
 
-  it('immunity takes priority over resistance, checks all damage types, stops at first immunity', () => {
-    let result = computeDamageAfterResistancesWithDetails(10, ['Fire'], ['fire'], ['fire']);
-    expect(result.finalDamage).toBe(0);
-    expect(result.typeDetails).toEqual([{ damageType: 'Fire', status: 'immune' }]);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['Fire', 'Cold'], ['cold'], []);
-    expect(result.finalDamage).toBe(5);
-    expect(result.typeDetails).toEqual([{ damageType: 'Cold', status: 'resistant' }]);
-
-    result = computeDamageAfterResistancesWithDetails(20, ['Fire', 'Cold'], [], ['cold']);
-    expect(result.finalDamage).toBe(0);
-    expect(result.typeDetails).toEqual([{ damageType: 'Cold', status: 'immune' }]);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['Fire', 'Cold', 'Acid'], ['cold'], ['fire']);
-    expect(result.finalDamage).toBe(0);
-    expect(result.typeDetails).toHaveLength(1);
-    expect(result.typeDetails[0].damageType).toBe('Fire');
+  it('immunity takes priority over resistance for the same type', async () => {
+    expect(computeDamageAfterResistances(10, ['Fire'], ['fire'], ['fire'])).toBe(0);
   });
 
-  it('returns raw damage when no damage types match, handles multiple resistance matches', () => {
-    let result = computeDamageAfterResistancesWithDetails(15, ['Fire', 'Cold'], ['poison'], []);
-    expect(result.finalDamage).toBe(15);
-    expect(result.typeDetails).toEqual([]);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['Fire', 'Cold', 'Acid'], ['fire', 'cold'], []);
-    expect(result.finalDamage).toBe(5);
-    expect(result.typeDetails).toHaveLength(2);
-    expect(result.typeDetails[0].status).toBe('resistant');
-    expect(result.typeDetails[1].status).toBe('resistant');
-  });
-
-  it('ignores resistance when ignoreResistance is true, still reports immunity', () => {
-    let result = computeDamageAfterResistancesWithDetails(10, ['Fire'], ['fire'], [], true);
-    expect(result.finalDamage).toBe(10);
-    expect(result.typeDetails).toEqual([]);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['Fire'], ['fire'], ['fire'], true);
-    expect(result.finalDamage).toBe(0);
-    expect(result.typeDetails).toEqual([{ damageType: 'Fire', status: 'immune' }]);
-  });
-
-  it('preserves casing, handles case-insensitive matching, and undefined resistances/immunities', () => {
-    let result = computeDamageAfterResistancesWithDetails(10, ['FIRE'], ['fire'], []);
-    expect(result.typeDetails[0].damageType).toBe('FIRE');
-
-    result = computeDamageAfterResistancesWithDetails(10, ['fire'], ['FIRE'], []);
-    expect(result.finalDamage).toBe(5);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['fire'], [], ['FIRE']);
-    expect(result.finalDamage).toBe(0);
-
-    result = computeDamageAfterResistancesWithDetails(10, ['Fire'], undefined, undefined);
-    expect(result.finalDamage).toBe(10);
-    expect(result.typeDetails).toEqual([]);
+  it('checks all damage types in array — halved on first resistance match, zero on immunity', async () => {
+    expect(computeDamageAfterResistances(10, ['Fire', 'Cold'], ['cold'], [])).toBe(5);
+    expect(computeDamageAfterResistances(20, ['Fire', 'Cold'], [], ['cold'])).toBe(0);
   });
 });
 
-describe('clearReTriggeredSequence', () => {
-  it('removes a sequence ID from the internal set without throwing', () => {
-    clearReTriggeredSequence('test-seq-1');
-    clearReTriggeredSequence('test-seq-2');
-    clearReTriggeredSequence('');
-    clearReTriggeredSequence(null);
-    clearReTriggeredSequence(undefined);
+describe('computeDamageAfterSave', () => {
+  it('returns raw damage when save fails regardless of dcSuccess', async () => {
+    expect(computeDamageAfterSave(10, false, 'half')).toBe(10);
+  });
+
+  it('returns half damage on success with dcSuccess "half"', async () => {
+    expect(computeDamageAfterSave(9, true, 'half')).toBe(4);
+    expect(computeDamageAfterSave(10, true, 'half')).toBe(5);
+  });
+
+  it('returns 0 on success with any dcSuccess other than "half"', async () => {
+    expect(computeDamageAfterSave(10, true, 'none')).toBe(0);
+  });
+
+  it('returns 0 damage when raw damage is 0', async () => {
+    expect(computeDamageAfterSave(0, true, 'half')).toBe(0);
+    expect(computeDamageAfterSave(0, false, 'half')).toBe(0);
+  });
+});
+
+describe('rollSaveForCreature', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns correct shape with single roll', async () => {
+    rollD20.mockReturnValueOnce(15);
+    const creature = { saveBonuses: { dex: 3 } };
+    const result = rollSaveForCreature(creature, 'dex', 18);
+    expect(result).toEqual({
+      roll: 15,
+      total: 18,
+      bonus: 3,
+      success: true,
+      rawRolls: [15, 15],
+    });
+  });
+
+  it('takes minimum of two rolls on disadvantage', async () => {
+    rollD20.mockReturnValueOnce(17).mockReturnValueOnce(5);
+    const creature = { saveBonuses: { con: 2 } };
+    const result = rollSaveForCreature(creature, 'con', 18, true);
+    expect(result.roll).toBe(5);
+    expect(result.total).toBe(7);
+    expect(result.success).toBe(false);
+    expect(result.rawRolls).toEqual([17, 5]);
+  });
+
+  it('takes maximum of two rolls on advantage', async () => {
+    rollD20.mockReturnValueOnce(5).mockReturnValueOnce(17);
+    const creature = { saveBonuses: { con: 2 } };
+    const result = rollSaveForCreature(creature, 'con', 18, false, true);
+    expect(result.roll).toBe(17);
+    expect(result.total).toBe(19);
+    expect(result.success).toBe(true);
+    expect(result.rawRolls).toEqual([5, 17]);
+  });
+
+  it('handles null creature, negative bonus, and ties as success', async () => {
+    rollD20.mockReturnValueOnce(8);
+    expect(rollSaveForCreature(null, 'wis', 15).success).toBe(false);
+
+    rollD20.mockReturnValueOnce(15);
+    const negResult = rollSaveForCreature({ saveBonuses: { dex: -3 } }, 'dex', 18);
+    expect(negResult.total).toBe(12);
+    expect(negResult.success).toBe(false);
+
+    rollD20.mockReturnValueOnce(10);
+    const tieResult = rollSaveForCreature({ saveBonuses: { con: 5 } }, 'con', 15);
+    expect(tieResult.success).toBe(true);
+  });
+});
+
+describe('hasEvasionForSave', () => {
+  it('returns false when evasionEffects is null, undefined, or empty', async () => {
+    expect(hasEvasionForSave(null, 'dex')).toBe(false);
+    expect(hasEvasionForSave(undefined, 'dex')).toBe(false);
+    expect(hasEvasionForSave([], 'dex')).toBe(false);
+  });
+
+  it('matches saveType case-insensitively, returns false on no match, handles null saveType', async () => {
+    const effects = [{ saveType: 'DEX' }, { saveType: 'CON' }];
+    expect(hasEvasionForSave(effects, 'dex')).toBe(true);
+    expect(hasEvasionForSave(effects, 'Dex')).toBe(true);
+    expect(hasEvasionForSave(effects, 'wis')).toBe(false);
+
+    const effects2 = [{ saveType: '' }];
+    expect(hasEvasionForSave(effects2, null)).toBe(true);
+  });
+});
+
+describe('computeDamageAfterEvasion', () => {
+  it('falls through to computeDamageAfterSave when evasion is not active', async () => {
+    expect(computeDamageAfterEvasion(10, true, 'half', false)).toBe(5);
+  });
+
+  it('returns 0 on save success with evasion active and dcSuccess half, half on fail', async () => {
+    expect(computeDamageAfterEvasion(10, true, 'half', true)).toBe(0);
+    expect(computeDamageAfterEvasion(10, false, 'half', true)).toBe(5);
+    expect(computeDamageAfterEvasion(9, false, 'half', true)).toBe(4);
+    expect(computeDamageAfterEvasion(7, false, 'half', true)).toBe(3);
+    expect(computeDamageAfterEvasion(1, false, 'half', true)).toBe(0);
+  });
+
+  it('falls through for any dcSuccess other than half when evasion is active', async () => {
+    expect(computeDamageAfterEvasion(10, true, 'none', true)).toBe(0);
+    expect(computeDamageAfterEvasion(10, false, 'none', true)).toBe(10);
+    expect(computeDamageAfterEvasion(20, true, 'all', true)).toBe(0);
+    expect(computeDamageAfterEvasion(20, false, 'all', true)).toBe(20);
   });
 });

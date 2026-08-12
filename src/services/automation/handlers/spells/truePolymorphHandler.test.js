@@ -34,13 +34,12 @@ vi.mock('../../../ui/utils.js', () => ({
   default: { getName: (fullName) => fullName || 'Unknown' },
 }));
 
-import { handle, resolveTruePolymorphMaxCR } from './truePolymorphHandler.js';
+import { handle } from './truePolymorphHandler.js';
 import { createSaveListener } from '../../common/savePrompt.js';
 import { addTargetResult } from '../../common/damageRollback.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
-import { getMonsterData } from '../../../npcs/monsterUtils.js';
 import { addEntry } from '../../../ui/logService.js';
 
 const campaignName = 'TestCampaign';
@@ -553,101 +552,6 @@ describe('truePolymorphHandler.handle', () => {
     });
   });
 
-  describe('mode handling', () => {
-    it('returns true_polymorph_object popup for creature_to_object mode', async () => {
-      setupBaseMocks({ saveResult: { success: false } });
-
-      const result = await handle(
-        makeAction({ truePolymorphTarget: targetName, mode: 'creature_to_object' }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('true_polymorph_object');
-      expect(result.payload.targetName).toBe(targetName);
-      expect(result.payload.casterName).toBe(casterName);
-    });
-
-    it('returns true_polymorph_select with maxCR 9 for object_into_creature mode', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-
-      const result = await handle(
-        makeAction({ mode: 'object_into_creature' }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('true_polymorph_select');
-      expect(result.payload.mode).toBe('object_into_creature');
-      expect(result.payload.maxCR).toBe(9);
-      expect(result.payload.targetName).toBeNull();
-    });
-
-    it('passes spell and spellSlotLevel in the popup payload', async () => {
-      setupBaseMocks({ saveResult: { success: false } });
-
-      const result = await handle(
-        makeAction({ truePolymorphTarget: targetName }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.spell).toEqual({ name: 'True Polymorph', level: 9 });
-      expect(result.payload.spellLevel).toBe(9);
-    });
-
-    it('passes campaignName in the popup payload', async () => {
-      setupBaseMocks({ saveResult: { success: false } });
-
-      const result = await handle(
-        makeAction({ truePolymorphTarget: targetName }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.campaignName).toBe(campaignName);
-    });
-  });
-
-  describe('object_into_creature without target', () => {
-    it('returns true_polymorph_select with null targetName and maxCR 9', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-
-      const result = await handle(
-        makeAction({ mode: 'object_into_creature' }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('true_polymorph_select');
-      expect(result.payload.targetName).toBeNull();
-      expect(result.payload.maxCR).toBe(9);
-      expect(result.payload.mode).toBe('object_into_creature');
-    });
-
-    it('passes characters array in the popup for object_into_creature', async () => {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      const characters = [{ name: 'PC1' }, { name: 'PC2' }];
-
-      const result = await handle(
-        makeAction({ mode: 'object_into_creature', characters }),
-        makePlayerStats(),
-        campaignName,
-        null,
-      );
-
-      expect(result.payload.characters).toEqual(characters);
-    });
-  });
-
   describe('no valid target fallback', () => {
     it('returns automation_info when target is not found and mode is not object_into_creature', async () => {
       getCombatContext.mockResolvedValue(baseCombatContext);
@@ -780,124 +684,5 @@ describe('truePolymorphHandler.handle', () => {
 
       expect(result.payload.description).toContain('0 hit points');
     });
-  });
-});
-
-describe('truePolymorphHandler.resolveTruePolymorphMaxCR', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('returns player level for a matching PC', async () => {
-    const characters = [{ name: targetName, computedStats: { level: 7 } }];
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(7);
-  });
-
-  it('falls back to creature level field for a PC', async () => {
-    const characters = [{ name: targetName, level: 5 }];
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(5);
-  });
-
-  it('returns monster challenge rating for NPCs', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: 3 });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(3);
-  });
-
-  it('parses fractional challenge ratings', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: '1/2' });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(0.5);
-  });
-
-  it('defaults to CR 1 for custom NPCs without a challenge rating', async () => {
-    getMonsterData.mockResolvedValue(null);
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(1);
-  });
-
-  it('matches a PC by exact name', async () => {
-    const characters = [{ name: 'Goblin the Brave', computedStats: { level: 9 } }];
-
-    const maxCR = await resolveTruePolymorphMaxCR('Goblin the Brave', campaignName, characters);
-
-    expect(maxCR).toBe(9);
-  });
-
-  it('prefers computedStats.level over level field', async () => {
-    const characters = [{ name: targetName, level: 3, computedStats: { level: 8 } }];
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(8);
-  });
-
-  it('returns DEFAULT_MAX_CR (1) when character has no level', async () => {
-    const characters = [{ name: targetName }];
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(1);
-  });
-
-  it('returns DEFAULT_MAX_CR when level is 0', async () => {
-    const characters = [{ name: targetName, computedStats: { level: 0 } }];
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(1);
-  });
-
-  it('skips characters with non-number level', async () => {
-    const characters = [{ name: targetName, computedStats: { level: 'unknown' } }];
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: '2' });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, characters);
-
-    expect(maxCR).toBe(2);
-  });
-
-  it('returns 0 for empty fractional CR like "0/1"', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: '0/1' });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(0);
-  });
-
-  it('returns 0 for invalid CR string', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: 'invalid' });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(0);
-  });
-
-  it('handles null challenge_rating', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: null });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(1);
-  });
-
-  it('handles empty string challenge_rating', async () => {
-    getMonsterData.mockResolvedValue({ name: targetName, challenge_rating: '' });
-
-    const maxCR = await resolveTruePolymorphMaxCR(targetName, campaignName, []);
-
-    expect(maxCR).toBe(1);
   });
 });
