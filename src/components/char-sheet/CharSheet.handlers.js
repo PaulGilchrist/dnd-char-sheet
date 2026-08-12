@@ -1,5 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js'
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js'
 import { executeEmpoweredReroll } from '../../services/rules/spells/empoweredSpellService.js'
 import { getManeuversForRules, getSuperiorityDice } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js'
 import { loadCombatSummary } from '../../services/encounters/combatData.js'
@@ -127,11 +128,10 @@ export async function handlePuncture(playerStats, campaignName, characters, popu
     const used = getRuntimeValue(playerName, usedKey, campaignName);
     if (used) return null;
     
-    const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
-    
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary || !targetName) return null;
+    
+    const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
     
     const damageDifference = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0) - rawDamage;
     
@@ -188,7 +188,6 @@ export async function handleSavageAttacker(playerStats, campaignName, characters
     
     const { rawDamage, targetName, damageTypes, originalRolls, newRolls } = savageData;
     
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary || !targetName) return null;
     

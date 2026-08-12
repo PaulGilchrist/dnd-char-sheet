@@ -2,6 +2,7 @@ import React from 'react'
 import { cloneDeep } from 'lodash';
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import rulesFactory from '../../services/rules/rulesFactory.js'
+import { applyShieldOfFaith } from '../../services/automation/handlers/shieldOfFaithHandler.js'
 import useSharedPopup from '../../hooks/combat/useSharedPopup.js'
 
 import CharAbilities from './CharAbilities.jsx'
@@ -380,7 +381,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
             spell: { duration: popupHtml.duration, range: popupHtml.range },
             automation: { type: 'shield_of_faith' },
         };
-        const { applyShieldOfFaith } = await import('../../services/automation/handlers/shieldOfFaithHandler.js');
         const result = await applyShieldOfFaith(action, playerStats, campaignName, null, [targetName]);
         if (result) {
             setPopupHtml(result.payload);
