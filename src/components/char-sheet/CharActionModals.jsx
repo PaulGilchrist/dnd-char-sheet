@@ -1,4 +1,3 @@
-import { confirmTeleport } from '../../services/automation/handlers/class-warlock/tempTeleportHandler.js';
 import React, { useEffect } from 'react';
 import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
 import { setSkipFlag } from '../../services/automation/common/oncePerTurn.js';
@@ -71,13 +70,8 @@ import CelestialResilienceModal from './modals/CelestialResilienceModal.jsx'
 import VitalityOfTheTreeModal from './modals/VitalityOfTheTreeModal.jsx'
 import InspiringSmiteModal from './modals/InspiringSmiteModal.jsx'
 import RecklessAttackModal from './modals/shared/RecklessAttackModal.jsx'
-import MassHealModal from './modals/MassHealModal.jsx'
 import ClockworkCavalcadeModal from './modals/divine/ClockworkCavalcadeModal.jsx'
 import SilenceModal from './modals/SilenceModal.jsx'
-import MassCureWoundsModal from './modals/MassCureWoundsModal.jsx'
-import PrayerOfHealingModal from './modals/PrayerOfHealingModal.jsx'
-import PowerWordFortifyModal from './modals/PowerWordFortifyModal.jsx'
-import MassHealingWordModal from './modals/MassHealingWordModal.jsx'
 import TashasLaughterModal from './modals/shared/TashasLaughterModal.jsx'
 import FlurryOfBlowsTargetPopup from './popups/FlurryOfBlowsTargetPopup.jsx'
 import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx'
@@ -95,88 +89,13 @@ import { applyStarryChaliceHeal } from '../../services/rules/spells/postCastHeal
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { sanitizeHtml } from '../../services/ui/sanitize.js'
-
-
 import { logHealingToSSE } from '../../services/automation/common/healingRoll.js'
 import { addEntry } from '../../services/ui/logService.js'
+import InlineChoiceModals from './modals/InlineChoiceModals.jsx'
+import SecondaryTargetModals from './modals/SecondaryTargetModals.jsx'
+import HealingModals from './modals/HealingModals.jsx'
 
-function buildHealingIllusionTargets(playerStats, characters, combatSummary) {
-    const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
-    const names = new Set(allCreatures.map(c => c.name));
-    const result = Array.from(names)
-        .map(name => {
-            const creature = allCreatures.find(c => c.name === name);
-            return { name: creature.name, type: creature.type, size: creature.size, currentHp: creature.currentHp, maxHp: creature.maxHp };
-        });
-    return result;
-}
-
-async function handleHealingIllusionConfirm(targetName, payload, characters, campaignName, combatSummary, onClose) {
-    const { action, playerStats } = payload;
-    const casterName = playerStats.name;
-    const stored = getRuntimeValue(casterName, 'activeBuffs', campaignName);
-    const activeBuffs = Array.isArray(stored) ? stored : [];
-    const newBuffs = activeBuffs.filter(b => b.name !== action.name);
-    setRuntimeValue(casterName, 'activeBuffs', newBuffs, campaignName);
-    const healAmount = playerStats.level || 1;
-    const maxHp = targetName === playerStats.name
-        ? playerStats.hitPoints
-        : (Number(getRuntimeValue(targetName, 'hitPoints', campaignName)) || findCreatureMaxHp(targetName, combatSummary, characters) || 0);
-    const currentHp = Number(getRuntimeValue(targetName, 'currentHitPoints', campaignName)) || findCreatureCurrentHp(targetName, combatSummary) || 0;
-    const newHp = Math.min(maxHp, currentHp + healAmount);
-    await setRuntimeValue(targetName, 'currentHitPoints', newHp, campaignName);
-    logHealingToSSE(campaignName, {
-        targetName,
-        sourceName: action.name,
-        actualHeal: newHp - currentHp,
-        newHp,
-        maxHp,
-        healingName: 'Healing Illusion',
-    });
-    onClose();
-}
-
-function findCreatureMaxHp(targetName, combatSummary, characters) {
-    const creature = combatSummary?.creatures?.find(c => c.name === targetName);
-    if (creature?.maxHp) return creature.maxHp;
-    const char = characters?.find(c => c.name === targetName);
-    return char?.maxHp;
-}
-
-function findCreatureCurrentHp(targetName, combatSummary) {
-    const creature = combatSummary?.creatures?.find(c => c.name === targetName);
-    return creature?.currentHp;
-}
-
-function buildInvokeDuplicityTargets(playerStats, characters, combatSummary) {
-    const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
-    const names = new Set(allCreatures.map(c => c.name));
-    const result = Array.from(names)
-        .map(name => {
-            const creature = allCreatures.find(c => c.name === name);
-            return { name: creature.name, type: creature.type, currentHp: creature.currentHp, maxHp: creature.maxHp };
-        });
-    return result;
-}
-
-async function handleInvokeDuplicityConfirm(selectedAllyNames, payload, campaignName, onClose) {
-    const { playerStats } = payload;
-    if (selectedAllyNames.length === 0) {
-        onClose();
-        return;
-    }
-    await setRuntimeValue(playerStats.name, 'invokeDuplicityAdvantageTargets', selectedAllyNames, campaignName);
-    await addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: playerStats.name,
-        abilityName: 'Improved Duplicity',
-        description: `${playerStats.name} used Improved Duplicity, granting Advantage to ${selectedAllyNames.join(', ')}.`,
-    }).catch(() => {});
-    window.dispatchEvent(new CustomEvent('buffs-updated'));
-    onClose();
-}
-
-export default function CharActionModals({
+function CharActionModals({
     playerStats,
     campaignName,
     characters,
@@ -272,6 +191,223 @@ export default function CharActionModals({
         }
     }, [mergedModalState.clockworkCavalcadeModal, setModalState]);
 
+    const handleStarryChaliceConfirm = async (targetName) => {
+        setModalState({ starryChaliceHealModal: null });
+        const result = await applyStarryChaliceHeal(targetName, campaignName);
+        if (result) {
+            setPopupHtml({
+                type: 'heal',
+                name: 'Starry Form: Chalice',
+                formula: `${mergedModalState.starryChaliceHealModal.amount} HP`,
+                rolls: [],
+                total: mergedModalState.starryChaliceHealModal.amount,
+                targetName: result.targetName,
+                finalHeal: result.actualHeal,
+            });
+        }
+    };
+
+    const handleEpitomeConfirm = async (chosenType) => {
+        setModalState({ epitomeModal: null });
+        const result = await applyResistanceChoice(mergedModalState.epitomeModal?.action, playerStats, campaignName, chosenType);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+    };
+
+    const handleDestructiveStrideConfirm = async (chosenType) => {
+        setModalState({ destructiveStrideModal: null });
+        const result = await applyDamageTypeChoice(mergedModalState.destructiveStrideModal?.action, playerStats, campaignName, chosenType);
+        if (result?.type === 'modal') {
+            setModalState({ destructiveStrideTargetModal: result.payload });
+        } else if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+    };
+
+    const handleDestructiveStrideTargetConfirm = async (targetName) => {
+        const payload = mergedModalState.destructiveStrideTargetModal;
+        setModalState({ destructiveStrideTargetModal: null });
+        const result = await applyTargetChoice(payload?.action, playerStats, campaignName, targetName, payload?.chosenType, payload?.martialArtsDie);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+    };
+
+    const handleDestructiveStrideTargetSkip = async () => {
+        const payload = mergedModalState.destructiveStrideTargetModal;
+        setModalState({ destructiveStrideTargetModal: null });
+        const result = await skipTargetChoice(payload?.action, playerStats, campaignName);
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+    };
+
+    const handleHealingIllusionConfirm = async (targetName, payload, characters, campaignName, combatSummary, onClose) => {
+        const { action, playerStats } = payload;
+        const casterName = playerStats.name;
+        const stored = getRuntimeValue(casterName, 'activeBuffs', campaignName);
+        const activeBuffs = Array.isArray(stored) ? stored : [];
+        const newBuffs = activeBuffs.filter(b => b.name !== action.name);
+        setRuntimeValue(casterName, 'activeBuffs', newBuffs, campaignName);
+        const healAmount = playerStats.level || 1;
+        const maxHp = targetName === playerStats.name
+            ? playerStats.hitPoints
+            : (Number(getRuntimeValue(targetName, 'hitPoints', campaignName)) || findCreatureMaxHp(targetName, combatSummary, characters) || 0);
+        const currentHp = Number(getRuntimeValue(targetName, 'currentHitPoints', campaignName)) || findCreatureCurrentHp(targetName, combatSummary) || 0;
+        const newHp = Math.min(maxHp, currentHp + healAmount);
+        await setRuntimeValue(targetName, 'currentHitPoints', newHp, campaignName);
+        logHealingToSSE(campaignName, {
+            targetName,
+            sourceName: action.name,
+            actualHeal: newHp - currentHp,
+            newHp,
+            maxHp,
+            healingName: 'Healing Illusion',
+        });
+        onClose();
+    };
+
+    const findCreatureMaxHp = (targetName, combatSummary, characters) => {
+        const creature = combatSummary?.creatures?.find(c => c.name === targetName);
+        if (creature?.maxHp) return creature.maxHp;
+        const char = characters?.find(c => c.name === targetName);
+        return char?.maxHp;
+    };
+
+    const findCreatureCurrentHp = (targetName, combatSummary) => {
+        const creature = combatSummary?.creatures?.find(c => c.name === targetName);
+        return creature?.currentHp;
+    };
+
+    const buildHealingIllusionTargets = () => {
+        const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
+        const names = new Set(allCreatures.map(c => c.name));
+        const result = Array.from(names)
+            .map(name => {
+                const creature = allCreatures.find(c => c.name === name);
+                return { name: creature.name, type: creature.type, size: creature.size, currentHp: creature.currentHp, maxHp: creature.maxHp };
+            });
+        return result;
+    };
+
+    const buildInvokeDuplicityTargets = () => {
+        const allCreatures = [...(characters || []), ...(combatSummary?.creatures || [])];
+        const names = new Set(allCreatures.map(c => c.name));
+        const result = Array.from(names)
+            .map(name => {
+                const creature = allCreatures.find(c => c.name === name);
+                return { name: creature.name, type: creature.type, currentHp: creature.currentHp, maxHp: creature.maxHp };
+            });
+        return result;
+    };
+
+    const handleInvokeDuplicityConfirm = async (selectedAllyNames, payload, campaignName, onClose) => {
+        const { playerStats } = payload;
+        if (selectedAllyNames.length === 0) {
+            onClose();
+            return;
+        }
+        await setRuntimeValue(playerStats.name, 'invokeDuplicityAdvantageTargets', selectedAllyNames, campaignName);
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Improved Duplicity',
+            description: `${playerStats.name} used Improved Duplicity, granting Advantage to ${selectedAllyNames.join(', ')}.`,
+        }).catch(() => {});
+        window.dispatchEvent(new CustomEvent('buffs-updated'));
+        onClose();
+    };
+
+    const handleAttackRiderClose = async () => {
+        const modalAction = mergedModalState.attackRiderModal?.action;
+        const modalPlayerStats = mergedModalState.attackRiderModal?.playerStats;
+        const modalCampaignName = mergedModalState.attackRiderModal?.campaignName;
+        setModalState({ attackRiderModal: null });
+        window.dispatchEvent(new CustomEvent('target-effects-updated'));
+        if (modalAction?.name === "Stalker's Flurry") {
+            const optKey = `_${modalAction.name.replace(/\s+/g, '_')}_option`;
+            const chosen = getRuntimeValue(modalPlayerStats.name, optKey, modalCampaignName);
+            if (!chosen) {
+                const skipKey = `_${modalAction.name.replace(/\s+/g, '_')}_skippedRound`;
+                await setSkipFlag(skipKey, modalPlayerStats, modalCampaignName);
+            }
+        }
+        const isCunningStrikeVariant = ['Cunning Strike', 'Improved Cunning Strike', 'Devious Strikes'].includes(modalAction?.name);
+        if (isCunningStrikeVariant) {
+            const costUsed = getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName);
+            if (!costUsed || costUsed === 0) {
+                if (autoDamageContext?.current) {
+                    const ctx = autoDamageContext.current;
+                    const sneakAttackDice = ctx.sneakAttackDice || 0;
+                    let formula = ctx.formula;
+                    let total = ctx.total;
+                    let rolls = ctx.rolls;
+                    if (sneakAttackDice > 0) {
+                        const sneakFormula = `${sneakAttackDice}d6`;
+                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
+                        if (sneakResult) {
+                            formula += ` + ${sneakFormula} [Sneak Attack]`;
+                            total += sneakResult.total;
+                            rolls = [...rolls, ...sneakResult.rolls];
+                        }
+                    }
+                    setPopupHtml(null);
+                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
+                    autoDamageContext.current = null;
+                }
+            } else if (autoDamageContext) {
+                const ctx = autoDamageContext.current;
+                if (ctx) {
+                    const cunningStrikeCost = Number(getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName) ?? 0);
+                    const effectiveSneakDice = Math.max(0, ctx.sneakAttackDice - cunningStrikeCost);
+                    let formula = ctx.formula;
+                    let total = ctx.total;
+                    let rolls = ctx.rolls;
+                    if (effectiveSneakDice > 0) {
+                        const sneakFormula = `${effectiveSneakDice}d6`;
+                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
+                        if (sneakResult) {
+                            formula += ` + ${sneakFormula} [Sneak Attack]`;
+                            total += sneakResult.total;
+                            rolls = [...rolls, ...sneakResult.rolls];
+                        }
+                    }
+                    setPopupHtml(null);
+                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
+                    autoDamageContext.current = null;
+                }
+            } else if (pendingDamage?._cunningStrike) {
+                const pending = pendingDamage;
+                const { attack } = pending;
+                pendingDamage = null;
+                (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
+                    const sneakAttackDice = ctx?.sneakAttackDice || 0;
+                    const cunningStrikeCost = Number(getRuntimeValue(playerStats.name, '_cunningStrikeCostUsed', campaignName) ?? 0);
+                    const effectiveSneakDice = Math.max(0, sneakAttackDice - cunningStrikeCost);
+                    const wasCrit = pending.popupHtml?.isCrit;
+                    const baseResult = rollExpression(attack.damage);
+                    if (!baseResult) return;
+                    let formula = attack.damage;
+                    let total = baseResult.total;
+                    let rolls = baseResult.rolls;
+                    const modifier = baseResult.modifier;
+                    if (effectiveSneakDice > 0) {
+                        const sneakFormula = `${effectiveSneakDice}d6`;
+                        const sneakResult = wasCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
+                        if (sneakResult) {
+                            formula += ` + ${sneakFormula} [Sneak Attack]`;
+                            total += sneakResult.total;
+                            rolls = [...rolls, ...sneakResult.rolls];
+                        }
+                    }
+                    setPopupHtml(null);
+                    rollDamage(attack.name, formula, total, rolls, modifier, ctx);
+                }).catch((e) => { console.error("[CharActionModals] Error:", e); });
+            }
+        }
+    };
+
     return (
         <>
             {mergedModalState.healingPoolModal && (
@@ -354,94 +490,7 @@ export default function CharActionModals({
             {mergedModalState.attackRiderModal && (
                 <AttackRiderModal
                     {...mergedModalState.attackRiderModal}
-                    onClose={async () => {
-                        const modalAction = mergedModalState.attackRiderModal?.action;
-                        const modalPlayerStats = mergedModalState.attackRiderModal?.playerStats;
-                        const modalCampaignName = mergedModalState.attackRiderModal?.campaignName;
-                        setModalState({ attackRiderModal: null });
-                        window.dispatchEvent(new CustomEvent('target-effects-updated'));
-                        if (modalAction?.name === "Stalker's Flurry") {
-                            const optKey = `_${modalAction.name.replace(/\s+/g, '_')}_option`;
-                            const chosen = getRuntimeValue(modalPlayerStats.name, optKey, modalCampaignName);
-                            if (!chosen) {
-                                const skipKey = `_${modalAction.name.replace(/\s+/g, '_')}_skippedRound`;
-                                await setSkipFlag(skipKey, modalPlayerStats, modalCampaignName);
-                            }
-                        }
-                        const isCunningStrikeVariant = ['Cunning Strike', 'Improved Cunning Strike', 'Devious Strikes'].includes(modalAction?.name);
-                        if (isCunningStrikeVariant) {
-                            const costUsed = getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName);
-                            if (!costUsed || costUsed === 0) {
-                                if (autoDamageContext?.current) {
-                                    const ctx = autoDamageContext.current;
-                                    const sneakAttackDice = ctx.sneakAttackDice || 0;
-                                    let formula = ctx.formula;
-                                    let total = ctx.total;
-                                    let rolls = ctx.rolls;
-                                    if (sneakAttackDice > 0) {
-                                        const sneakFormula = `${sneakAttackDice}d6`;
-                                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                                        if (sneakResult) {
-                                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                                            total += sneakResult.total;
-                                            rolls = [...rolls, ...sneakResult.rolls];
-                                        }
-                                    }
-                                    setPopupHtml(null);
-                                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
-                                    autoDamageContext.current = null;
-                                }
-                            } else if (autoDamageContext) {
-                                const ctx = autoDamageContext.current;
-                                if (ctx) {
-                                    const cunningStrikeCost = Number(getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName) ?? 0);
-                                    const effectiveSneakDice = Math.max(0, ctx.sneakAttackDice - cunningStrikeCost);
-                                    let formula = ctx.formula;
-                                    let total = ctx.total;
-                                    let rolls = ctx.rolls;
-                                    if (effectiveSneakDice > 0) {
-                                        const sneakFormula = `${effectiveSneakDice}d6`;
-                                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                                        if (sneakResult) {
-                                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                                            total += sneakResult.total;
-                                            rolls = [...rolls, ...sneakResult.rolls];
-                                        }
-                                    }
-                                    setPopupHtml(null);
-                                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
-                                    autoDamageContext.current = null;
-                                }
-                            } else if (pendingDamage?._cunningStrike) {
-                                const pending = pendingDamage;
-                                const { attack } = pending;
-                                pendingDamage = null;
-                                (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
-                                    const sneakAttackDice = ctx?.sneakAttackDice || 0;
-                                    const cunningStrikeCost = Number(getRuntimeValue(playerStats.name, '_cunningStrikeCostUsed', campaignName) ?? 0);
-                                    const effectiveSneakDice = Math.max(0, sneakAttackDice - cunningStrikeCost);
-                                    const wasCrit = pending.popupHtml?.isCrit;
-                                    const baseResult = rollExpression(attack.damage);
-                                    if (!baseResult) return;
-                                    let formula = attack.damage;
-                                    let total = baseResult.total;
-                                    let rolls = baseResult.rolls;
-                                    const modifier = baseResult.modifier;
-                                    if (effectiveSneakDice > 0) {
-                                        const sneakFormula = `${effectiveSneakDice}d6`;
-                                        const sneakResult = wasCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                                        if (sneakResult) {
-                                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                                            total += sneakResult.total;
-                                            rolls = [...rolls, ...sneakResult.rolls];
-                                        }
-                                    }
-                                    setPopupHtml(null);
-                                    rollDamage(attack.name, formula, total, rolls, modifier, ctx);
-                                }).catch((e) => { console.error("[CharActionModals] Error:", e); });
-                            }
-                        }
-                    }}
+                    onClose={handleAttackRiderClose}
                 />
             )}
             {mergedModalState.openHandTechniqueModal && (
@@ -533,39 +582,10 @@ export default function CharActionModals({
                     isMoonlightStep={mergedModalState.teleportModal.action?.automation?.effect === 'moonlight_step_teleport'}
                 />
             )}
-            {mergedModalState.moonlightStepFallbackModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ moonlightStepFallbackModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-moon"></i> {mergedModalState.moonlightStepFallbackModal.action.name}
-                        </div>
-                        <div className="sp-body">
-                            <p>No Moonlight Step uses remaining. Consume a level {mergedModalState.moonlightStepFallbackModal.slotLevel} spell slot to use Moonlight Step?</p>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-roll-btn" onClick={async () => {
-                                const { action, playerStats: fallbackStats, campaignName: fallbackCampaign, slotLevel } = mergedModalState.moonlightStepFallbackModal;
-                                setModalState({ moonlightStepFallbackModal: null });
-                                const res = await confirmTeleport(action, fallbackStats, fallbackCampaign, false, slotLevel);
-                                if (res?.type === 'popup') {
-                                    const payload = res.payload;
-                                    const html = `<b>${payload.name || action.name}</b><br/>${payload.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
-                                    setPopupHtml(html);
-                                }
-                            }}>
-                                <i className="fa-solid fa-check"></i> Yes, Consume Slot
-                            </button>
-                            <button className="sp-dismiss-btn" onClick={() => setModalState({ moonlightStepFallbackModal: null })}>
-                                <i className="fa-solid fa-times"></i> No
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
             {mergedModalState.healingIllusionModal && (
                 <SecondaryTargetModal
                     title="Healing Illusion"
-                    targets={buildHealingIllusionTargets(playerStats, characters, combatSummary)}
+                    targets={buildHealingIllusionTargets()}
                     description={`The illusion has ended. Choose a creature within 5 feet to regain ${playerStats.level || 1} HP:`}
                     onTargetSelected={(targetName) => handleHealingIllusionConfirm(targetName, mergedModalState.healingIllusionModal, characters, campaignName, combatSummary, () => { setModalState({ healingIllusionModal: null }); window.dispatchEvent(new CustomEvent('buffs-updated')); })}
                     onSkip={() => { setModalState({ healingIllusionModal: null }); window.dispatchEvent(new CustomEvent('buffs-updated')); }}
@@ -579,7 +599,7 @@ export default function CharActionModals({
                 <CreatureSelectionModal
                     title="Improved Duplicity — Choose Allies"
                     icon="fa-people-arrows"
-                    targets={buildInvokeDuplicityTargets(playerStats, characters, combatSummary)}
+                    targets={buildInvokeDuplicityTargets()}
                     description="When you and your illusion are within 5 feet of a creature, your allies have Advantage on attack rolls against that creature."
                     note="Select all allies who should gain Advantage from the Improved Duplicity."
                     confirmLabel="Grant Advantage"
@@ -849,188 +869,6 @@ export default function CharActionModals({
                     onSkip={handleAttackRiderManeuverSkip}
                 />
             )}
-            {mergedModalState.attackRiderOptionsModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ attackRiderOptionsModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-bolt"></i> {mergedModalState.attackRiderOptionsModal.maneuver.name} — Choose Effect
-                        </div>
-                        <div className="sp-body">
-                            <p>Select the effect to apply:</p>
-                            <div style={{ textAlign: 'left', marginTop: '12px' }}>
-                                {mergedModalState.attackRiderOptionsModal.riderOptions.map((opt, i) => (
-                                    <label
-                                        key={i}
-                                        style={{
-                                            display: 'block', padding: '8px 12px', margin: '4px 0',
-                                            borderRadius: '6px', cursor: 'pointer',
-                                            background: 'transparent',
-                                            border: '1px solid var(--color-link)',
-                                        }}
-                                        onClick={() => handleAttackRiderOptionSelect(opt.name, mergedModalState.attackRiderOptionsModal)}
-                                    >
-                                        <strong>{opt.name}</strong>
-                                        {opt.effect === 'disadvantage_on_next_save' && <span style={{ opacity: 0.7, marginLeft: '6px', fontSize: '0.85em' }}>— Target has Disadvantage on next saving throw</span>}
-                                        {opt.effect === 'next_attack_bonus' && <span style={{ opacity: 0.7, marginLeft: '6px', fontSize: '0.85em' }}>— Next attack against target gains +5 bonus</span>}
-                                        {opt.effect === 'push_15ft' && <span style={{ opacity: 0.7, marginLeft: '6px', fontSize: '0.85em' }}>— Push target 15 feet</span>}
-                                        {opt.effect === 'speed_reduction' && <span style={{ opacity: 0.7, marginLeft: '6px', fontSize: '0.85em' }}>— Reduce target's speed by 15 feet</span>}
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={() => setModalState({ attackRiderOptionsModal: null })}>Skip</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {mergedModalState.sweepingAttackTargetModal && (
-                <SecondaryTargetModal
-                    title="Sweeping Attack"
-                    targets={mergedModalState.sweepingAttackTargetModal.secondaryTargets}
-                    description={`Choose a creature within 5 feet of ${mergedModalState.sweepingAttackTargetModal.primaryTarget} to take ${mergedModalState.sweepingAttackTargetModal.dieValue} damage:`}
-                    onTargetSelected={(targetName) => handleSweepingAttackConfirm(targetName, mergedModalState.sweepingAttackTargetModal)}
-                    onSkip={() => setModalState({ sweepingAttackTargetModal: null })}
-                    confirmLabel="Apply Sweeping Attack"
-                    confirmIcon="fa-bolt"
-                    showSize={true}
-                />
-            )}
-            {mergedModalState.baitAndSwitchChoiceModal && (
-                <SecondaryTargetModal
-                    title="Bait and Switch — AC Bonus"
-                    targets={mergedModalState.baitAndSwitchChoiceModal.options}
-                    description={mergedModalState.baitAndSwitchChoiceModal.description}
-                    onTargetSelected={(targetName) => handleBaitAndSwitchChoiceConfirm(targetName, mergedModalState.baitAndSwitchChoiceModal)}
-                    onSkip={() => setModalState({ baitAndSwitchChoiceModal: null })}
-                    confirmLabel="Apply AC Bonus"
-                    confirmIcon="fa-check"
-                />
-            )}
-            {mergedModalState.commanderStrikeChoiceModal && (
-                <SecondaryTargetModal
-                    title="Commander's Strike — Ally Attack"
-                    targets={mergedModalState.commanderStrikeChoiceModal.options}
-                    description={mergedModalState.commanderStrikeChoiceModal.description}
-                    onTargetSelected={(targetName) => handleCommanderStrikeChoiceConfirm(targetName, mergedModalState.commanderStrikeChoiceModal)}
-                    onSkip={() => setModalState({ commanderStrikeChoiceModal: null })}
-                    confirmLabel="Grant Attack"
-                    confirmIcon="fa-check"
-                />
-            )}
-            {mergedModalState.rallyChoiceModal && (
-                <SecondaryTargetModal
-                    title="Rally"
-                    targets={mergedModalState.rallyChoiceModal.allyOptions}
-                    description={mergedModalState.rallyChoiceModal.description}
-                    onTargetSelected={(targetName) => handleRallyChoiceConfirm(targetName, mergedModalState.rallyChoiceModal)}
-                    onSkip={() => setModalState({ rallyChoiceModal: null })}
-                    confirmLabel="Grant Temp HP"
-                    confirmIcon="fa-heart"
-                />
-            )}
-            {mergedModalState.divineFuryChoice && (
-                <div className="sp-overlay" onClick={() => handleDivineFurySkip()}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-bolt"></i> Divine Fury — Damage Type
-                        </div>
-                        <div className="sp-body">
-                            <p>Choose the damage type for this hit:</p>
-                            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                                <button className="sp-roll-btn" style={{ marginRight: '12px' }} onClick={() => handleDivineFuryDamageType('Necrotic')}>
-                                    <i className="fa-solid fa-skull"></i> Necrotic
-                                </button>
-                                <button className="sp-roll-btn" onClick={() => handleDivineFuryDamageType('Radiant')}>
-                                    <i className="fa-solid fa-sun"></i> Radiant
-                                </button>
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={handleDivineFurySkip}>Skip</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {mergedModalState.damageTypeChoice && (
-                <div className="sp-overlay" onClick={() => {
-                    if (pendingDamage?._attackRider) handleEnhancedUnarmedSkip();
-                    else if (pendingDamage?._damageTypeModifier) handleDamageTypeModifierSkip();
-                    else handleGenericDamageTypeSkip();
-                }}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-bolt"></i> {mergedModalState.damageTypeChoice.title}
-                        </div>
-                        <div className="sp-body">
-                            <p>Choose the damage type for this hit:</p>
-                            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                                {mergedModalState.damageTypeChoice.types.map((type) => (
-                                    <button
-                                        key={type}
-                                        className="sp-roll-btn"
-                                        style={{ margin: '0 6px 8px 6px' }}
-                                        onClick={() => {
-                                            if (pendingDamage?._attackRider) handleEnhancedUnarmedChoice(type);
-                                            else if (pendingDamage?._damageTypeModifier) handleDamageTypeModifierChoice(type);
-                                            else handleGenericDamageTypeChoice(type);
-                                        }}
-                                    >
-                                        {type}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={() => {
-                                if (pendingDamage?._attackRider) handleEnhancedUnarmedSkip();
-                                else if (pendingDamage?._damageTypeModifier) handleDamageTypeModifierSkip();
-                                else handleGenericDamageTypeSkip();
-                            }}>Skip</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {mergedModalState.featureChoice && (
-                <div className="sp-overlay" onClick={handleFeatureChoiceSkip}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-bolt"></i> {mergedModalState.featureChoice.action.name}
-                        </div>
-                        <div className="sp-body">
-                            <p><b>Choose your option:</b></p>
-                            <p style={{ opacity: 0.8, fontSize: '0.9em' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(mergedModalState.featureChoice.action.description) }}></p>
-                            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                                {mergedModalState.featureChoice.options.map((opt, i) => {
-                                    const optName = typeof opt === 'string' ? opt : opt.name;
-                                    return (
-                                        <button
-                                            key={optName || i}
-                                            className="sp-roll-btn"
-                                            style={{ margin: '0 6px 8px 6px' }}
-                                            onClick={() => handleFeatureChoiceConfirm(optName)}
-                                        >
-                                            {optName}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={handleFeatureChoiceSkip}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {mergedModalState.flurryOfBlowsModal && (
-                <FlurryOfBlowsTargetPopup
-                    totalAttacks={mergedModalState.flurryOfBlowsModal.numAttacks || 3}
-                    creatureTargets={mergedModalState.flurryOfBlowsModal.creatureTargets}
-                    currentTargetName={mergedModalState.flurryOfBlowsModal.currentTargetName}
-                    onConfirm={handleFlurryOfBlowsConfirm}
-                    onSkip={() => setModalState({ flurryOfBlowsModal: null })}
-                />
-            )}
             {mergedModalState.starryFormConstellationModal && (
                 <ConstellationSelectionModal
                     action={mergedModalState.starryFormConstellationModal.action}
@@ -1065,20 +903,6 @@ export default function CharActionModals({
                     maxTargets={mergedModalState.zealousPresenceModal.maxTargets}
                     onConfirm={handleZealousPresenceConfirm}
                     onSkip={() => setModalState({ zealousPresenceModal: null })}
-                />
-            )}
-            {mergedModalState.naturesSanctuaryCreaturesModal && (
-                <CreatureSelectionModal
-                    title={mergedModalState.naturesSanctuaryCreaturesModal.isMove ? "Nature's Sanctuary (Move) — Choose Creatures" : "Nature's Sanctuary — Choose Creatures"}
-                    icon="fa-tree"
-                    targets={mergedModalState.naturesSanctuaryCreaturesModal.creatureTargets}
-                    description="Select creatures to include in the sanctuary. Creatures in the sanctuary gain Half Cover and resistance to your Nature's Ward damage type."
-                    note={mergedModalState.naturesSanctuaryCreaturesModal.isMove ? "Existing creatures are pre-selected. Toggle to add or remove creatures." : "Expend 1 Wild Shape use to create the sanctuary."}
-                    confirmLabel={mergedModalState.naturesSanctuaryCreaturesModal.isMove ? "Move Sanctuary" : "Create Sanctuary"}
-                    confirmIcon="fa-tree"
-                    defaultSelected={mergedModalState.naturesSanctuaryCreaturesModal.defaultSelected}
-                    onConfirm={handleNaturesSanctuaryConfirm}
-                    onSkip={() => setModalState({ naturesSanctuaryCreaturesModal: null })}
                 />
             )}
             {mergedModalState.coronaEnemySelectionModal && (
@@ -1139,54 +963,6 @@ export default function CharActionModals({
                     onSkip={() => setModalState({ inspiringSmiteModal: null })}
                 />
             )}
-            {mergedModalState.tricksterBlessingModal && (
-                <SecondaryTargetModal
-                    title="Blessing of the Trickster — Choose Target"
-                    targets={mergedModalState.tricksterBlessingModal.creatureTargets}
-                    confirmLabel="Grant Blessing"
-                    confirmIcon="fa-hands"
-                    showHp={false}
-                    onTargetSelected={handleTricksterBlessingConfirm}
-                    onSkip={() => handleTricksterBlessingConfirm(null)}
-                />
-            )}
-            {mergedModalState.bardicInspirationTargetModal && (
-                <SecondaryTargetModal
-                    title="Bardic Inspiration — Choose Target"
-                    targets={mergedModalState.bardicInspirationTargetModal.creatureTargets}
-                    confirmLabel="Grant Inspiration"
-                    confirmIcon="fa-music"
-                    description={`Grant a Bardic Inspiration die (d${mergedModalState.bardicInspirationTargetModal.dieSize}) to the target. The creature can roll it on one ability check.`}
-                    showHp={false}
-                    onTargetSelected={handleBardicInspirationConfirm}
-                    onSkip={() => handleBardicInspirationConfirm(null)}
-                />
-            )}
-            {mergedModalState.inspiringMovementAllyModal && (
-                <SecondaryTargetModal
-                    title="Inspiring Movement — Choose Ally"
-                    targets={mergedModalState.inspiringMovementAllyModal.creatureTargets}
-                    confirmLabel="Move"
-                    confirmIcon="fa-person-walking"
-                    featureDescription="Both you and the chosen ally move up to half your Speeds without provoking Opportunity Attacks."
-                    onTargetSelected={handleInspiringMovementConfirm}
-                    onSkip={() => handleInspiringMovementConfirm(null)}
-                />
-            )}
-            {mergedModalState.oceanicGiftTargetModal && (
-                <SecondaryTargetModal
-                    title={mergedModalState.oceanicGiftTargetModal.doubleEmanation ? "Oceanic Gift — Choose Ally (Self + Ally, 2 Wild Shape)" : "Oceanic Gift — Choose Ally"}
-                    targets={mergedModalState.oceanicGiftTargetModal.creatureTargets}
-                    confirmLabel="Grant Wrath of the Sea"
-                    confirmIcon="fa-water"
-                    featureDescription={mergedModalState.oceanicGiftTargetModal.doubleEmanation
-                        ? "Manifest the Emanation around both yourself and the chosen ally. Costs 2 Wild Shape uses."
-                        : "Manifest the Emanation around one willing creature within 60 feet. Costs 1 Wild Shape."
-                    }
-                    onTargetSelected={(targetName) => handleOceanicGiftConfirm(targetName)}
-                    onSkip={() => handleOceanicGiftConfirm(null)}
-                />
-            )}
             {mergedModalState.epitomeModal && (
                 <ElementalEpitomeModal
                     action={mergedModalState.epitomeModal.action}
@@ -1206,18 +982,6 @@ export default function CharActionModals({
                     onClose={() => setModalState({ destructiveStrideModal: null })}
                 />
             )}
-            {mergedModalState.destructiveStrideTargetModal && (
-                <SecondaryTargetModal
-                    title="Destructive Stride — Choose Target"
-                    targets={mergedModalState.destructiveStrideTargetModal.targets || []}
-                    confirmLabel="Deal Damage"
-                    confirmIcon="fa-person-running"
-                    description="Choose a creature only if the monk comes within 5 ft. of them while striding."
-                    showHp={true}
-                    onTargetSelected={handleDestructiveStrideTargetConfirm}
-                    onSkip={handleDestructiveStrideTargetSkip}
-                />
-            )}
             {mergedModalState.recklessAttackModal && (
                 <RecklessAttackModal
                     playerStats={playerStats}
@@ -1235,101 +999,10 @@ export default function CharActionModals({
                         : () => handleRecklessAttackCancel(mergedModalState.recklessAttackModal.attack)}
                 />
             )}
-            {mergedModalState.massHealModal && (
-                <MassHealModal
-                    creatureTargets={mergedModalState.massHealModal.creatureTargets}
-                    maxTargets={mergedModalState.massHealModal.maxTargets}
-                    pool={mergedModalState.massHealModal.totalPool}
-                    onConfirm={handleMassHealConfirm}
-                    onSkip={() => setModalState({ massHealModal: null })}
-                    campaignName={mergedModalState.massHealModal.campaignName}
-                    combatSummary={mergedModalState.massHealModal.combatSummary}
-                />
-            )}
             {mergedModalState.clockworkCavalcadeModal && (
                 <ClockworkCavalcadeModal
                     onChoose={handleClockworkCavalcadeChoice}
                     onClose={() => setModalState({ clockworkCavalcadeModal: null })}
-                />
-            )}
-            {mergedModalState.clockworkCavalcadeHealModal && (
-                <MassHealModal
-                    creatureTargets={mergedModalState.clockworkCavalcadeHealModal.creatureTargets}
-                    maxTargets={mergedModalState.clockworkCavalcadeHealModal.creatureTargets.length}
-                    pool={mergedModalState.clockworkCavalcadeHealModal.maxHeal}
-                    onConfirm={handleClockworkCavalcadeHealConfirm}
-                    onSkip={() => setModalState({ clockworkCavalcadeHealModal: null })}
-                    campaignName={mergedModalState.clockworkCavalcadeHealModal.campaignName}
-                    combatSummary={mergedModalState.clockworkCavalcadeHealModal.combatSummary}
-                    title="Clockwork Cavalcade: Heal"
-                    description="Choose any number of creatures in the Cube. Divide <b>100 HP</b> among them however you like."
-                    icon="fa-heart"
-                    confirmLabel="Heal"
-                    confirmIcon="fa-heart"
-                />
-            )}
-            {mergedModalState.clockworkCavalcadeDispelModal && (
-                <CreatureSelectionModal
-                    title="Clockwork Cavalcade: Dispel"
-                    description="Every spell of level 6 and lower ends on creatures and objects of your choice in the Cube."
-                    targets={mergedModalState.clockworkCavalcadeDispelModal.creatureTargets}
-                    confirmLabel="Dispel"
-                    confirmIcon="fa-wand-magic-sparkles"
-                    icon="fa-wand-magic-sparkles"
-                    onConfirm={handleClockworkCavalcadeDispelConfirm}
-                    onSkip={() => setModalState({ clockworkCavalcadeDispelModal: null })}
-                />
-            )}
-            {mergedModalState.clockworkCavalcadeRepairModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ clockworkCavalcadeRepairModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-hammer"></i> Clockwork Cavalcade: Repair
-                        </div>
-                        <div className="sp-body">
-                            <p>Damaged objects within the Cube are repaired instantly. This effect does not restore Hit Points to creatures.</p>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-confirm-btn" onClick={handleClockworkCavalcadeRepairConfirm} type="button">
-                                <i className="fa-solid fa-hammer"></i> Repair
-                            </button>
-                            <button className="sp-dismiss-btn" onClick={() => setModalState({ clockworkCavalcadeRepairModal: null })} type="button">
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {mergedModalState.massCureWoundsModal && (
-                <MassCureWoundsModal
-                    creatureTargets={mergedModalState.massCureWoundsModal.creatureTargets}
-                    maxTargets={mergedModalState.massCureWoundsModal.maxTargets}
-                    onConfirm={handleMassCureWoundsConfirm}
-                    onSkip={() => setModalState({ massCureWoundsModal: null })}
-                />
-            )}
-            {mergedModalState.prayerOfHealingModal && (
-                <PrayerOfHealingModal
-                    creatureTargets={mergedModalState.prayerOfHealingModal.creatureTargets}
-                    maxTargets={mergedModalState.prayerOfHealingModal.maxTargets}
-                    onConfirm={handlePrayerOfHealingConfirm}
-                    onSkip={() => setModalState({ prayerOfHealingModal: null })}
-                />
-            )}
-            {mergedModalState.powerWordFortifyModal && (
-                <PowerWordFortifyModal
-                    creatureTargets={mergedModalState.powerWordFortifyModal.creatureTargets}
-                    totalTempHp={mergedModalState.powerWordFortifyModal.totalTempHp}
-                    onConfirm={handlePowerWordFortifyConfirm}
-                    onSkip={() => setModalState({ powerWordFortifyModal: null })}
-                />
-            )}
-            {mergedModalState.massHealingWordModal && (
-                <MassHealingWordModal
-                    creatureTargets={mergedModalState.massHealingWordModal.creatureTargets}
-                    maxTargets={mergedModalState.massHealingWordModal.maxTargets}
-                    onConfirm={handleMassHealingWordConfirm}
-                    onSkip={() => setModalState({ massHealingWordModal: null })}
                 />
             )}
             {mergedModalState.animateDeadModal && (
@@ -1386,70 +1059,73 @@ export default function CharActionModals({
                     onClose={() => setModalState({ summonSpiritModal: null })}
                 />
             )}
-            {mergedModalState.starryChaliceHealModal && (
-                <SecondaryTargetModal
-                    title="Starry Form: Chalice"
-                    targets={mergedModalState.starryChaliceHealModal.targetNames.map(name => ({ name, type: 'creature' }))}
-                    onTargetSelected={(targetName) => handleStarryChaliceConfirm(targetName)}
-                    onSkip={() => setModalState({ starryChaliceHealModal: null })}
-                    description="Choose a creature within 30 feet to regain hit points from the Chalice constellation."
-                    confirmLabel="Heal"
-                    confirmIcon="fa-heart"
-                    showHp={true}
+            {mergedModalState.flurryOfBlowsModal && (
+                <FlurryOfBlowsTargetPopup
+                    totalAttacks={mergedModalState.flurryOfBlowsModal.numAttacks || 3}
+                    creatureTargets={mergedModalState.flurryOfBlowsModal.creatureTargets}
+                    currentTargetName={mergedModalState.flurryOfBlowsModal.currentTargetName}
+                    onConfirm={handleFlurryOfBlowsConfirm}
+                    onSkip={() => setModalState({ flurryOfBlowsModal: null })}
                 />
             )}
+
+            <InlineChoiceModals
+                mergedModalState={mergedModalState}
+                setModalState={setModalState}
+                setPopupHtml={setPopupHtml}
+                _autoDamageContext={autoDamageContext}
+                pendingDamage={pendingDamage}
+                _mapName={mapName}
+                _buildCtx={buildCtx}
+                _buildCtxSync={buildCtxSync}
+                _rollDamage={rollDamage}
+                _playerStats={playerStats}
+                _campaignName={campaignName}
+                handleDivineFuryDamageType={handleDivineFuryDamageType}
+                handleDivineFurySkip={handleDivineFurySkip}
+                handleEnhancedUnarmedChoice={handleEnhancedUnarmedChoice}
+                handleEnhancedUnarmedSkip={handleEnhancedUnarmedSkip}
+                handleGenericDamageTypeChoice={handleGenericDamageTypeChoice}
+                handleGenericDamageTypeSkip={handleGenericDamageTypeSkip}
+                handleDamageTypeModifierChoice={handleDamageTypeModifierChoice}
+                handleDamageTypeModifierSkip={handleDamageTypeModifierSkip}
+                handleFeatureChoiceConfirm={handleFeatureChoiceConfirm}
+                handleFeatureChoiceSkip={handleFeatureChoiceSkip}
+                handleAttackRiderOptionSelect={handleAttackRiderOptionSelect}
+                handleClockworkCavalcadeRepairConfirm={handleClockworkCavalcadeRepairConfirm}
+                sanitizeHtml={sanitizeHtml}
+            />
+
+            <SecondaryTargetModals
+                mergedModalState={mergedModalState}
+                setModalState={setModalState}
+                handleSweepingAttackConfirm={handleSweepingAttackConfirm}
+                handleBaitAndSwitchChoiceConfirm={handleBaitAndSwitchChoiceConfirm}
+                handleCommanderStrikeChoiceConfirm={handleCommanderStrikeChoiceConfirm}
+                handleRallyChoiceConfirm={handleRallyChoiceConfirm}
+                handleTricksterBlessingConfirm={handleTricksterBlessingConfirm}
+                handleBardicInspirationConfirm={handleBardicInspirationConfirm}
+                handleInspiringMovementConfirm={handleInspiringMovementConfirm}
+                handleOceanicGiftConfirm={handleOceanicGiftConfirm}
+                handleDestructiveStrideTargetConfirm={handleDestructiveStrideTargetConfirm}
+                handleDestructiveStrideTargetSkip={handleDestructiveStrideTargetSkip}
+                handleStarryChaliceConfirm={handleStarryChaliceConfirm}
+            />
+
+            <HealingModals
+                mergedModalState={mergedModalState}
+                setModalState={setModalState}
+                handleMassHealConfirm={handleMassHealConfirm}
+                handleClockworkCavalcadeHealConfirm={handleClockworkCavalcadeHealConfirm}
+                handleClockworkCavalcadeDispelConfirm={handleClockworkCavalcadeDispelConfirm}
+                handleMassCureWoundsConfirm={handleMassCureWoundsConfirm}
+                handlePrayerOfHealingConfirm={handlePrayerOfHealingConfirm}
+                handlePowerWordFortifyConfirm={handlePowerWordFortifyConfirm}
+                handleMassHealingWordConfirm={handleMassHealingWordConfirm}
+                handleNaturesSanctuaryConfirm={handleNaturesSanctuaryConfirm}
+            />
         </>
     );
-
-    async function handleStarryChaliceConfirm(targetName) {
-        setModalState({ starryChaliceHealModal: null });
-        const result = await applyStarryChaliceHeal(targetName, campaignName);
-        if (result) {
-            setPopupHtml({
-                type: 'heal',
-                name: 'Starry Form: Chalice',
-                formula: `${mergedModalState.starryChaliceHealModal.amount} HP`,
-                rolls: [],
-                total: mergedModalState.starryChaliceHealModal.amount,
-                targetName: result.targetName,
-                finalHeal: result.actualHeal,
-            });
-        }
-    }
-
-    async function handleEpitomeConfirm(chosenType) {
-        setModalState({ epitomeModal: null });
-        const result = await applyResistanceChoice(mergedModalState.epitomeModal?.action, playerStats, campaignName, chosenType);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-    }
-
-    async function handleDestructiveStrideConfirm(chosenType) {
-        setModalState({ destructiveStrideModal: null });
-        const result = await applyDamageTypeChoice(mergedModalState.destructiveStrideModal?.action, playerStats, campaignName, chosenType);
-        if (result?.type === 'modal') {
-            setModalState({ destructiveStrideTargetModal: result.payload });
-        } else if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-    }
-
-    async function handleDestructiveStrideTargetConfirm(targetName) {
-        const payload = mergedModalState.destructiveStrideTargetModal;
-        setModalState({ destructiveStrideTargetModal: null });
-        const result = await applyTargetChoice(payload?.action, playerStats, campaignName, targetName, payload?.chosenType, payload?.martialArtsDie);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-    }
-
-    async function handleDestructiveStrideTargetSkip() {
-        const payload = mergedModalState.destructiveStrideTargetModal;
-        setModalState({ destructiveStrideTargetModal: null });
-        const result = await skipTargetChoice(payload?.action, playerStats, campaignName);
-        if (result?.payload) {
-            setPopupHtml(result.payload);
-        }
-    }
 }
+
+export default CharActionModals;
