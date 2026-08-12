@@ -28,6 +28,11 @@ vi.mock('./modals/shared/SetConditionModal.jsx', () => ({
 vi.mock('./modals/EyebiteEffectModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="eyebite-effect-modal">EyebiteEffectModal</div>; },
 }));
+vi.mock('./modals/BlindnessDeafnessModal.jsx', () => ({
+  default: function TestModal({ onClose }) {
+    return <div data-testid="blindness-deafness-modal"><button data-testid="blindness-deafness-close" onClick={onClose}>Close</button></div>;
+  },
+}));
 vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({
   default: function TestModal({ onClose }) {
     return <div data-testid="attack-rider-modal"><button data-testid="attack-rider-close" onClick={onClose}>Close</button></div>;
@@ -96,7 +101,9 @@ vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('./modals/shared/SaveAttackHealModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
+  default: function TestModal({ onClose }) {
+    return <div data-testid="save-attack-heal-modal"><button data-testid="save-attack-heal-modal-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/divine/DivineSparkModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="divine-spark-modal">DivineSparkModal</div>; },
@@ -128,7 +135,9 @@ vi.mock('./modals/shared/BonusActionChoiceModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="bonus-action-choice-modal">BonusActionChoiceModal</div>; },
 }));
 vi.mock('./modals/CelestialRevelationModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="celestial-revelation-modal">CelestialRevelationModal</div>; },
+  default: function TestModal({ onClose }) {
+    return <div data-testid="celestial-revelation-modal"><button data-testid="celestial-revelation-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/RevelationInFleshModal.jsx', () => ({
   default: function TestModal({ onClose }) {
@@ -136,22 +145,33 @@ vi.mock('./modals/RevelationInFleshModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/ElementalAffinityModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="elemental-affinity-modal">ElementalAffinityModal</div>; },
+  default: function TestModal({ onClose }) {
+    return <div data-testid="elemental-affinity-modal"><button data-testid="elemental-affinity-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/SingleResistanceSelectionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="single-resistance-selection-modal">SingleResistanceSelectionModal</div>; },
+  default: function TestModal({ onClose }) {
+    return <div data-testid="single-resistance-selection-modal"><button data-testid="single-resistance-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/shared/ChoiceListModal.jsx', () => ({
   ChoiceListModal: function TestModal() { return <div data-testid="choice-list-modal">ChoiceListModal</div>; },
 }));
 vi.mock('./modals/DragonCompanionModal.jsx', () => ({
-  default: function TestModal() { return <div data-testid="dragon-companion-modal">DragonCompanionModal</div>; },
+  default: function TestModal({ onClose }) {
+    return <div data-testid="dragon-companion-modal"><button data-testid="dragon-companion-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/WildMagicDoubleRollModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="wild-magic-double-roll-modal">WildMagicDoubleRollModal</div>; },
 }));
 vi.mock('./modals/WildMagicTamedModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="wild-magic-tamed-modal">WildMagicTamedModal</div>; },
+}));
+vi.mock('./modals/WildMagicSurgeModal.jsx', () => ({
+  default: function TestModal({ onClose }) {
+    return <div data-testid="wild-magic-surge-modal"><button data-testid="wild-magic-close" onClick={onClose}>Close</button></div>;
+  },
 }));
 vi.mock('./modals/arcane/ThirdEyeModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="third-eye-modal">ThirdEyeModal</div>; },
@@ -236,6 +256,11 @@ vi.mock('./modals/RadianceOfDawnModal.jsx', () => ({
 vi.mock('./modals/MantleOfInspirationModal.jsx', () => ({
   default: function TestModal({ onSkip }) {
     return <div data-testid="mantle-of-inspiration-modal"><button data-testid="mantle-skip" onClick={onSkip}>Skip</button></div>;
+  },
+}));
+vi.mock('./modals/VitalityOfTheTreeModal.jsx', () => ({
+  default: function TestModal({ onSkip }) {
+    return <div data-testid="vitality-of-the-tree-modal"><button data-testid="vitality-skip" onClick={onSkip}>Skip</button></div>;
   },
 }));
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
@@ -664,6 +689,170 @@ describe('CharActionModals — Helper functions and modals', () => {
         setModalState={vi.fn()}
       />);
       expect(screen.getByTestId('reckless-mode').textContent).toBe('brutalOnly');
+    });
+  });
+
+  describe('Modal close handlers for uncovered modals', () => {
+    it('closes healingPoolModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ healingPoolModal: { name: 'Test Pool', pool: 10 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('healing-close'));
+      expect(setModalState).toHaveBeenCalledWith({ healingPoolModal: null });
+    });
+
+    it('closes saveAttackHealModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ saveAttackHealModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('save-attack-heal-modal-close'));
+      expect(setModalState).toHaveBeenCalledWith({ saveAttackHealModal: null });
+    });
+
+    it('closes openHandTechniqueModal and dispatches events', async () => {
+      const setModalState = vi.fn();
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ openHandTechniqueModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('open-hand-close'));
+      expect(setModalState).toHaveBeenCalledWith({ openHandTechniqueModal: null });
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'target-effects-updated' }));
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'combat-summary-updated' }));
+      dispatchSpy.mockRestore();
+    });
+
+    it('closes blindnessDeafnessModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ blindnessDeafnessModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('blindness-deafness-close'));
+      expect(setModalState).toHaveBeenCalledWith({ blindnessDeafnessModal: null });
+    });
+
+    it('closes elementalAffinityModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ elementalAffinityModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('elemental-affinity-close'));
+      expect(setModalState).toHaveBeenCalledWith({ elementalAffinityModal: null });
+    });
+
+    it('closes fiendishResilienceModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ fiendishResilienceModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('single-resistance-close'));
+      expect(setModalState).toHaveBeenCalledWith({ fiendishResilienceModal: null });
+    });
+
+    it('closes dragonCompanionModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ dragonCompanionModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('dragon-companion-close'));
+      expect(setModalState).toHaveBeenCalledWith({ dragonCompanionModal: null });
+    });
+
+    it('closes wildMagicSurgeModal and clears spellModalState', () => {
+      const setModalState = vi.fn();
+      const setSpellModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ wildMagicSurgeModal: { surgeTable: [], mode: 'roll' } }}
+        setModalState={setModalState}
+        setSpellModalState={setSpellModalState}
+      />);
+      fireEvent.click(screen.getByTestId('wild-magic-close'));
+      expect(setModalState).toHaveBeenCalledWith({ wildMagicSurgeModal: null });
+      expect(setSpellModalState).toHaveBeenCalledWith({ wildMagicSurgeModal: null });
+    });
+
+    it('closes celestialRevelationModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ celestialRevelationModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('celestial-revelation-close'));
+      expect(setModalState).toHaveBeenCalledWith({ celestialRevelationModal: null });
+    });
+
+    it('closes fiendishLegacyModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ fiendishLegacyModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('fiendish-close'));
+      expect(setModalState).toHaveBeenCalledWith({ fiendishLegacyModal: null });
+    });
+
+    it('closes breathWeaponShapeModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ breathWeaponShapeModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('breath-close'));
+      expect(setModalState).toHaveBeenCalledWith({ breathWeaponShapeModal: null });
+    });
+
+    it('closes hypnoticPatternShakeModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ hypnoticPatternShakeModal: { action: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('hypnotic-close'));
+      expect(setModalState).toHaveBeenCalledWith({ hypnoticPatternShakeModal: null });
+    });
+
+    it('closes clockworkCavalcadeModal via close button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('cc-close'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
+    });
+
+    it('handles vitalityOfTheTreeTarget onSkip', () => {
+      const setModalState = vi.fn();
+      const handleConfirm = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleVitalityOfTheTreeConfirm: handleConfirm })}
+        modalState={{ vitalityOfTheTreeTarget: { creatureTargets: [{ name: 'Ally1' }], tempHp: 5, maxTargets: 3 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('vitality-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ vitalityOfTheTreeTarget: null });
     });
   });
 });

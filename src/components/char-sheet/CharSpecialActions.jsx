@@ -5,7 +5,7 @@ import { useCombatSuperiorityModal } from '../../hooks/combat/useCombatSuperiori
 import { normalizeAutoDamage, resolveAttackDamageStandalone } from './useAttackDamageResolution.js';
 import { applyTargetChoice as applyDestructiveStrideTargetChoice } from '../../services/automation/handlers/combat/destructiveStrideHandler.js';
 import { getCategories } from '../../services/character/featureCategories.js';
-import { renderMarkdownInline, sanitizeHtml } from '../../services/ui/sanitize.js';
+import { renderMarkdownInline } from '../../services/ui/sanitize.js';
 import { loadFightingStyles } from '../../services/ui/dataLoader.js';
 import { executeHandler } from '../../services/automation/index.js';
 import { isInteractiveAutomation } from '../../services/combat/automation/automationService.js';
@@ -13,42 +13,17 @@ import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/r
 import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js';
 import { applyChoice } from '../../services/automation/handlers/class-ranger/defensiveTacticsHandler.js';
 import { applyChoice as applyHunterPreyChoice } from '../../services/automation/handlers/class-ranger/hunterPreyHandler.js';
-import TeleportModal from './modals/TeleportModal.jsx';
 import { confirmTeleport } from '../../services/automation/handlers/class-warlock/tempTeleportHandler.js';
-import SignatureSpellsModal from './modals/arcane/SignatureSpellsModal.jsx';
-import SpellMasteryModal from './modals/arcane/SpellMasteryModal.jsx';
-import SavantModal from './modals/arcane/SavantModal.jsx';
-import CombatSuperiorityModal from './modals/CombatSuperiorityModal.jsx';
-import WeaponKindMasteryModal from './modals/WeaponKindMasteryModal.jsx';
-import WeaponMasteryChoiceModal from './modals/WeaponMasteryChoiceModal.jsx';
-import ResourcePoolModal from './modals/ResourcePoolModal.jsx';
-import NaturalRecoveryModal from './modals/NaturalRecoveryModal.jsx';
-import CircleOfTheLandSpellsModal from './modals/CircleOfTheLandSpellsModal.jsx';
-import ElementalAffinityModal from './modals/ElementalAffinityModal.jsx';
-import SingleResistanceSelectionModal from './modals/SingleResistanceSelectionModal.jsx';
-import MultiResistanceSelectionModal from './modals/MultiResistanceSelectionModal.jsx';
-import { applyTypeChoice as applyBoonOfEnergyResistance } from '../../services/automation/handlers/reactions/boonOfEnergyResistanceHandler.js';
-import WildMagicSurgeModal from './modals/WildMagicSurgeModal.jsx';
-import StrideOfTheElementsModal from './modals/StrideOfTheElementsModal.jsx';
-import ElementalEpitomeModal from './modals/ElementalEpitomeModal.jsx';
-import DestructiveStrideModal from './modals/DestructiveStrideModal.jsx';
-import QuiveringPalmModal from './modals/QuiveringPalmModal.jsx';
-import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx';
-import StepsOfTheFeyTauntModal from './modals/StepsOfTheFeyTauntModal.jsx';
-import HurlThroughHellModal from './modals/HurlThroughHellModal.jsx';
-import ClairvoyantCombatantModal from './modals/ClairvoyantCombatantModal.jsx';
 import { onSignatureSpellsSelected } from '../../services/automation/handlers/class-wizard/signatureSpellsHandler.js';
 import { onSpellMasterySelected } from '../../services/automation/handlers/class-wizard/spellMasteryHandler.js';
 import { onSavantSelected } from '../../services/automation/handlers/class-wizard/SavantHandler.js';
 import { applyPortentChoice } from '../../services/automation/handlers/class-wizard/portentHandler.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
-import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
 import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
 import { confirmEncouragingSong, skipEncouragingSong } from '../../services/automation/handlers/buffs/encouragingSongHandler.js';
+import CharSpecialActionsModals from './CharSpecialActionsModals.jsx';
 import './CharSpecialActions.css';
-
-
 function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, mapName }) {
     const [teleportModal, setTeleportModal] = useState(null);
     const [moonlightStepFallback, setMoonlightStepFallback] = useState(null);
@@ -91,26 +66,23 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             if (autoDamage.ripostePopup) {
                 const payload = autoDamage.ripostePopup;
                 const html = typeof payload === 'string'
-                    ? payload
-                    : `<b><i class="fa-solid fa-bolt"></i> ${payload.name || 'Combat Superiority'}</b><br/>${payload.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+                ? payload
+                : `<b><i class="fa-solid fa-bolt"></i> ${payload.name || 'Combat Superiority'}</b><br/>${payload.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
                 setPopupHtml(html);
             }
         },
     });
-
     const {
         combatSuperiorityModal,
         setCombatSuperiorityModal,
         handleCombatSuperiorityConfirm,
         handleCombatSuperiorityReopenSelection,
     } = useCombatSuperiorityModal(playerStats, campaignName, rollAttack, rollDamage, setPopupHtml);
-
     const hasReplenishingMeal = (playerStats.automation?.passives ?? []).some(
         p => p.type === 'passive_rule' && p.effect === 'bonus_healing' && p.name === 'Replenishing Meal'
     );
     const replenishingMeals = useRuntimeValue(playerStats.name, 'replenishingMeals', campaignName);
     const replenishingMealMax = hasReplenishingMeal ? 4 + (playerStats.proficiency || 0) : 0;
-
     const handleReplenishingMealClick = useCallback(async () => {
         if (cannotAct) return;
         if (!hasReplenishingMeal) return;
@@ -128,7 +100,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const targets = allCreatures.filter(c => { if (seen.has(c.name)) return false; seen.add(c.name); return true; });
         setReplenishingMealModal({ targets, maxTargets: current });
     }, [cannotAct, hasReplenishingMeal, replenishingMeals, replenishingMealMax, campaignName, characters, setPopupHtml]);
-
     const handleReplenishingMealConfirm = useCallback(async (selectedNames) => {
         if (!replenishingMealModal) return;
         const { maxTargets } = replenishingMealModal;
@@ -149,13 +120,11 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         setPopupHtml(html);
         setReplenishingMealModal(null);
     }, [replenishingMealModal, replenishingMeals, replenishingMealMax, campaignName, setPopupHtml, playerStats.name]);
-
     const hasBolsteringTreats = (playerStats.automation?.specialActions ?? []).some(
         p => p.type === 'temp_hp_buff' && p.name === 'Bolstering Treats'
     );
     const chefBolsteringTreats = useRuntimeValue(playerStats.name, 'chefBolsteringTreats', campaignName);
     const bolsteringTreatsMax = hasBolsteringTreats ? (playerStats.proficiency || 0) : 0;
-
     const handleBolsteringTreatsClick = useCallback(async () => {
         if (cannotAct) return;
         if (!hasBolsteringTreats) return;
@@ -173,7 +142,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const targets = allCreatures.filter(c => { if (seen.has(c.name)) return false; seen.add(c.name); return true; });
         setBolsteringTreatsModal({ targets, maxTargets: current });
     }, [cannotAct, hasBolsteringTreats, chefBolsteringTreats, bolsteringTreatsMax, campaignName, characters, setPopupHtml]);
-
     const handleBolsteringTreatsConfirm = useCallback(async (selectedNames) => {
         if (!bolsteringTreatsModal) return;
         const { maxTargets } = bolsteringTreatsModal;
@@ -194,13 +162,11 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         setPopupHtml(html);
         setBolsteringTreatsModal(null);
     }, [bolsteringTreatsModal, chefBolsteringTreats, bolsteringTreatsMax, campaignName, setPopupHtml, playerStats.name]);
-
     const hasPoisonerFeat = (playerStats.automation?.specialActions ?? []).some(
         p => p.type === 'brew_poison' && p.name === 'Brew Poison'
     );
     const poisonDoses = useRuntimeValue(playerStats.name, 'poisonDoses', campaignName);
     const poisonDosesMax = hasPoisonerFeat ? (playerStats.proficiency || 0) : 0;
-
     const handleBrewPoisonClick = useCallback(async () => {
         if (cannotAct) return;
         if (!hasPoisonerFeat) return;
@@ -242,7 +208,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const html = `<b>Brew Poison</b><br/>Brewed ${max - current} poison dose${max - current !== 1 ? 's' : ''} using a Poisoner's Kit (50 GP, 1 hour). Poison Doses: ${max}/${max}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [cannotAct, hasPoisonerFeat, poisonDoses, poisonDosesMax, campaignName, setPopupHtml, playerStats.inventory, playerStats.name]);
-
     const handleBolsteringPerformanceConfirm = useCallback(async (selectedTargets) => {
         if (!bolsteringPerformanceModal) return;
         const result = await confirmBolsteringPerformance(
@@ -258,7 +223,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setBolsteringPerformanceModal(null);
     }, [bolsteringPerformanceModal, setPopupHtml]);
-
     const handleEncouragingSongConfirm = useCallback(async (selectedTargets) => {
         if (!encouragingSongModal) return;
         const result = await confirmEncouragingSong(
@@ -273,7 +237,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setEncouragingSongModal(null);
     }, [encouragingSongModal, setPopupHtml]);
-
     const handleEncouragingSongSkip = useCallback(async () => {
         if (!encouragingSongModal) return;
         const result = await skipEncouragingSong(
@@ -287,7 +250,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setEncouragingSongModal(null);
     }, [encouragingSongModal, setPopupHtml]);
-
     useEffect(() => {
         let cancelled = false;
         loadFightingStyles().then(styles => {
@@ -298,7 +260,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         });
         return () => { cancelled = true; };
     }, []);
-
     const handleFeatureChoiceConfirm = useCallback(async (choice) => {
         if (!featureChoiceModal) return;
         const { action, optionKey } = featureChoiceModal;
@@ -332,11 +293,9 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const html = `<b>${action.name}</b><br/>Option chosen: <b>${choice}</b>. ${restMessage}`;
         setPopupHtml(html);
     }, [featureChoiceModal, playerStats, campaignName, setPopupHtml]);
-
     const handleFeatureChoiceSkip = useCallback(() => {
         setFeatureChoiceModal(null);
     }, []);
-
     const handleAspectOfTheWildsConfirm = useCallback(async (choice) => {
         const existingBuffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
         const currentBuffs = Array.isArray(existingBuffs) ? [...existingBuffs] : [];
@@ -374,17 +333,9 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const html = `<b>Aspect of the Wilds</b><br/>Chose <b>${choice}</b>: ${effects[choice]}<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [playerStats, campaignName, setPopupHtml]);
-
     const handleAspectOfTheWildsSkip = useCallback(() => {
         setAspectOfTheWildsModal(null);
     }, []);
-
-    const aspectOptions = [
-        { name: 'Owl', description: 'You have Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet.', icon: 'eye' },
-        { name: 'Panther', description: 'You have a Climb Speed equal to your Speed.', icon: 'paw' },
-        { name: 'Salmon', description: 'You have a Swim Speed equal to your Speed.', icon: 'fish' },
-    ];
-
     const handleAutomationClick = useCallback(async (action) => {
         if (cannotAct) return;
         const auto = action.automation;
@@ -501,7 +452,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         if (!strideModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign } = strideModal;
         setStrideModal(null);
-
         const stored = getRuntimeValue(modalPlayerStats.name, 'activeBuffs', modalCampaign);
         const activeBuffs = Array.isArray(stored) ? stored : [];
         const existingStride = activeBuffs.find(b => b.name === 'Stride of the Elements');
@@ -509,7 +459,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             ? activeBuffs.map(b => b.name === 'Stride of the Elements' ? { ...b, ...buffEntry } : b)
             : [...activeBuffs, { name: 'Stride of the Elements', ...buffEntry }];
         await setRuntimeValue(modalPlayerStats.name, 'activeBuffs', newBuffs, modalCampaign);
-
         const descriptions = {
             'Ice Walk': 'You can walk across and climb icy or wet surfaces without needing to make an Ability Check. You ignore difficult terrain that is composed of ice or snow.',
             '+10 Speed': 'Your Speed increases by 10 feet.',
@@ -524,25 +473,20 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             description,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[StrideOfTheElements] Error logging:', e); });
-
         const html = `<b>${action.name}</b><br/>Chose <strong>${optionName}</strong>. ${descriptions[optionName] || optionName}<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [strideModal, setPopupHtml]);
-
     const handleCelestialResilienceConfirm = useCallback(async (selectedTargets) => {
         if (!celestialResilienceModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign, allyTempHp } = celestialResilienceModal;
-
         if (!selectedTargets || selectedTargets.length === 0) {
             setPopupHtml(`<b>${action.name}</b><br/>No allies selected.<br/><span class="dice-roll-hint">click to dismiss</span>`);
             setCelestialResilienceModal(null);
             return;
         }
-
         for (const targetName of selectedTargets) {
             await setTempHp(targetName, allyTempHp, modalCampaign);
         }
-
         await addEntry(modalCampaign, {
             type: 'ability_use',
             characterName: modalPlayerStats.name,
@@ -550,19 +494,16 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             description: `${modalPlayerStats.name} grants ${allyTempHp} temporary hit points to ${selectedTargets.join(', ')}.`,
             timestamp: Date.now(),
         }).catch((e) => { console.error('[celestialResilience] Error logging:', e); });
-
         const html = `<b>${action.name}</b><br/>Granted ${allyTempHp} temporary hit points to ${selectedTargets.join(', ')}.<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
         setCelestialResilienceModal(null);
     }, [celestialResilienceModal, setPopupHtml]);
-
     const handleCelestialResilienceSkip = useCallback(() => {
         if (!celestialResilienceModal) return;
         const { action } = celestialResilienceModal;
         setPopupHtml(`<b>${action.name}</b><br/>No allies selected.<br/><span class="dice-roll-hint">click to dismiss</span>`);
         setCelestialResilienceModal(null);
     }, [celestialResilienceModal, setPopupHtml]);
-
     const handleEpitomeConfirm = useCallback(async (payload) => {
         if (!epitomeModal) return;
         const { action } = epitomeModal;
@@ -570,11 +511,9 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         const html = `<b>${action.name}</b><br/>${payload?.description || 'Elemental Epitome activated.'}<br/><span class="dice-roll-hint">click to dismiss</span>`;
         setPopupHtml(html);
     }, [epitomeModal, setPopupHtml]);
-
     const handleEpitomeClose = useCallback(() => {
         setEpitomeModal(null);
     }, []);
-
     const handleDestructiveStrideConfirm = useCallback(async (result) => {
         if (!destructiveStrideModal) return;
         setDestructiveStrideModal(null);
@@ -585,24 +524,19 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPopupHtml(html);
         }
     }, [destructiveStrideModal, setPopupHtml]);
-
     const handleDestructiveStrideTargetConfirm = useCallback(async (targetName) => {
         if (!destructiveStrideTargetModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign, chosenType, martialArtsDie } = destructiveStrideTargetModal;
         setDestructiveStrideTargetModal(null);
-
         const result = await applyDestructiveStrideTargetChoice(action, modalPlayerStats, modalCampaign, targetName, chosenType, martialArtsDie);
-
         if (result?.type === 'popup') {
             const html = `<b>${result.payload?.name || 'Destructive Stride'}</b><br/>${result.payload?.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
     }, [destructiveStrideTargetModal, setPopupHtml]);
-
     const handleDestructiveStrideTargetSkip = useCallback(() => {
         setDestructiveStrideTargetModal(null);
     }, []);
-
     const handleMoonlightStepFallbackConfirm = useCallback(async () => {
         if (!moonlightStepFallback) return;
         const { action, playerStats: fallbackStats, campaignName: fallbackCampaign, slotLevel } = moonlightStepFallback;
@@ -614,7 +548,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPopupHtml(html);
         }
     }, [moonlightStepFallback, setPopupHtml]);
-
     const handleSignatureSpellsConfirm = useCallback(async (spell1, spell2) => {
         if (!signatureSpellsModal) return;
         const result = await onSignatureSpellsSelected(signatureSpellsModal.action, playerStats, campaignName, spell1, spell2);
@@ -627,7 +560,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPopupHtml(html);
         }
     }, [signatureSpellsModal, playerStats, campaignName, setPopupHtml]);
-
     const handleSpellMasteryConfirm = useCallback(async (spell1, spell2) => {
         if (!spellMasteryModal) return;
         const result = await onSpellMasterySelected(spellMasteryModal.action, playerStats, campaignName, spell1, spell2);
@@ -640,7 +572,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPopupHtml(html);
         }
     }, [spellMasteryModal, playerStats, campaignName, setPopupHtml]);
-
     const handleSavantConfirm = useCallback(async (spell1, spell2) => {
         if (!savantModal) return;
         const result = await onSavantSelected(savantModal.action, playerStats, campaignName, spell1, spell2, savantModal.school);
@@ -653,17 +584,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPopupHtml(html);
         }
     }, [savantModal, playerStats, campaignName, setPopupHtml]);
-
-    function getEventDisplayLabel(eventType, eventData) {
-        if (eventType === 'attack') {
-            return `Attack vs AC ${eventData.targetName || 'unknown'}`;
-        }
-        if (eventType === 'ability') {
-            return eventData.checkName || 'Ability check';
-        }
-        return eventData.saveType ? eventData.saveType.toUpperCase() : 'Save';
-    }
-
     const handlePortentDieChoice = useCallback(async (chosenDie) => {
         if (!portentModal) return;
         const { action, playerStats: ps, campaignName: cn, targetName, eventType, eventData, context } = portentModal;
@@ -680,16 +600,11 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             setPortentModal(null);
         }
     }, [portentModal, setPopupHtml]);
-
     const handlePortentModalClose = useCallback(() => {
         setPortentModal(null);
     }, []);
-
-
-
     // Build specialActions list immutably
     let specialActions = [...(playerStats.specialActions || [])];
-
     // Add fighting style special actions
     if (fightingStylesMap && playerStats.class.fightingStyles) {
         if (playerStats.class.fightingStyles.includes('Great Weapon Fighting') && !specialActions.find((specialAction) => specialAction.name === 'Great Weapon Fighting')) {
@@ -706,391 +621,86 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             if (style) specialActions.push(style);
             }
     }
-
-
     // Get names of features that should not be shown in Special Actions
     const actionNames = new Set(playerStats.actions?.map(action => action.name) || []);
     const bonusActionNames = new Set(playerStats.bonusActions?.map(action => action.name) || []);
     const reactionNames = new Set(playerStats.reactions?.map(action => action.name) || []);
     const characterAdvancementNames = new Set(playerStats.characterAdvancement?.map(feature => feature.name) || []);
-    
       const categories = getCategories(playerStats.rules || '5e');
-    
     // Filter out features that are in actions, bonusActions, reactions, or characterAdvancement, or featuresToIgnore
-    const filteredActions = specialActions.filter(action => 
-          !actionNames.has(action.name) && 
-          !bonusActionNames.has(action.name) && 
+    const filteredActions = specialActions.filter(action =>
+          !actionNames.has(action.name) &&
+          !bonusActionNames.has(action.name) &&
           !reactionNames.has(action.name) &&
           !characterAdvancementNames.has(action.name) &&
           !categories.featuresToIgnore.includes(action.name) &&
           !(action.name && action.name.startsWith('Level 1 Spell [Instance'))
       );
-    
     const uniqueActions = Array.from(new Map(filteredActions.map(action => [action.name, action])).values());
     return (
             <div className='char-special-actions'>
                 <div className='sectionHeader'>Special Actions</div>
-              {teleportModal && (
-                <TeleportModal
-                    action={teleportModal.action}
-                    playerStats={teleportModal.playerStats}
-                    campaignName={teleportModal.campaignName}
-                    onClose={() => setTeleportModal(null)}
-                    isMoonlightStep={teleportModal.action?.automation?.effect === 'moonlight_step_teleport'}
+                <CharSpecialActionsModals
+                teleportModal={teleportModal} setTeleportModal={setTeleportModal}
+                moonlightStepFallback={moonlightStepFallback} setMoonlightStepFallback={setMoonlightStepFallback}
+                signatureSpellsModal={signatureSpellsModal} setSignatureSpellsModal={setSignatureSpellsModal}
+                spellMasteryModal={spellMasteryModal} setSpellMasteryModal={setSpellMasteryModal}
+                savantModal={savantModal} setSavantModal={setSavantModal}
+                combatSuperiorityModal={combatSuperiorityModal} setCombatSuperiorityModal={setCombatSuperiorityModal}
+                weaponKindMasteryModal={weaponKindMasteryModal} setWeaponKindMasteryModal={setWeaponKindMasteryModal}
+                weaponMasteryChoiceModal={weaponMasteryChoiceModal} setWeaponMasteryChoiceModal={setWeaponMasteryChoiceModal}
+                resourcePoolModal={resourcePoolModal} setResourcePoolModal={setResourcePoolModal}
+                naturalRecoveryModal={naturalRecoveryModal} setNaturalRecoveryModal={setNaturalRecoveryModal}
+                circleOfTheLandSpellsModal={circleOfTheLandSpellsModal} setCircleOfTheLandSpellsModal={setCircleOfTheLandSpellsModal}
+                elementalAffinityModal={elementalAffinityModal} setElementalAffinityModal={setElementalAffinityModal}
+                wildMagicSurgeModal={wildMagicSurgeModal} setWildMagicSurgeModal={setWildMagicSurgeModal}
+                strideModal={strideModal} setStrideModal={setStrideModal}
+                epitomeModal={epitomeModal} setEpitomeModal={setEpitomeModal}
+                destructiveStrideModal={destructiveStrideModal} setDestructiveStrideModal={setDestructiveStrideModal}
+                destructiveStrideTargetModal={destructiveStrideTargetModal} setDestructiveStrideTargetModal={setDestructiveStrideTargetModal}
+                quiveringPalmModal={quiveringPalmModal} setQuiveringPalmModal={setQuiveringPalmModal}
+                celestialResilienceModal={celestialResilienceModal} setCelestialResilienceModal={setCelestialResilienceModal}
+                fiendishResilienceModal={fiendishResilienceModal} setFiendishResilienceModal={setFiendishResilienceModal}
+                multiResistanceModal={multiResistanceModal} setMultiResistanceModal={setMultiResistanceModal}
+                stepsOfTheFeyTauntModal={stepsOfTheFeyTauntModal} setStepsOfTheFeyTauntModal={setStepsOfTheFeyTauntModal}
+                hurlThroughHellModal={hurlThroughHellModal} setHurlThroughHellModal={setHurlThroughHellModal}
+                clairvoyantCombatantModal={clairvoyantCombatantModal} setClairvoyantCombatantModal={setClairvoyantCombatantModal}
+                portentModal={portentModal} setPortentModal={setPortentModal}
+                replenishingMealModal={replenishingMealModal} setReplenishingMealModal={setReplenishingMealModal}
+                bolsteringTreatsModal={bolsteringTreatsModal} setBolsteringTreatsModal={setBolsteringTreatsModal}
+                bolsteringPerformanceModal={bolsteringPerformanceModal} setBolsteringPerformanceModal={setBolsteringPerformanceModal}
+                encouragingSongModal={encouragingSongModal} setEncouragingSongModal={setEncouragingSongModal}
+                featureChoiceModal={featureChoiceModal} setFeatureChoiceModal={setFeatureChoiceModal}
+                aspectOfTheWildsModal={aspectOfTheWildsModal} setAspectOfTheWildsModal={setAspectOfTheWildsModal}
+                playerStats={playerStats} campaignName={campaignName}
+                handleMoonlightStepFallbackConfirm={handleMoonlightStepFallbackConfirm}
+                handleSignatureSpellsConfirm={handleSignatureSpellsConfirm}
+                handleSpellMasteryConfirm={handleSpellMasteryConfirm}
+                handleSavantConfirm={handleSavantConfirm}
+                handleCombatSuperiorityConfirm={handleCombatSuperiorityConfirm}
+                handleCombatSuperiorityReopenSelection={handleCombatSuperiorityReopenSelection}
+                handleStrideConfirm={handleStrideConfirm}
+                handleEpitomeConfirm={handleEpitomeConfirm}
+                handleEpitomeClose={handleEpitomeClose}
+                handleDestructiveStrideConfirm={handleDestructiveStrideConfirm}
+                handleDestructiveStrideTargetConfirm={handleDestructiveStrideTargetConfirm}
+                handleDestructiveStrideTargetSkip={handleDestructiveStrideTargetSkip}
+                handleCelestialResilienceConfirm={handleCelestialResilienceConfirm}
+                handleCelestialResilienceSkip={handleCelestialResilienceSkip}
+                handlePortentModalClose={handlePortentModalClose}
+                handlePortentDieChoice={handlePortentDieChoice}
+                handleFeatureChoiceConfirm={handleFeatureChoiceConfirm}
+                handleFeatureChoiceSkip={handleFeatureChoiceSkip}
+                handleAspectOfTheWildsConfirm={handleAspectOfTheWildsConfirm}
+                handleAspectOfTheWildsSkip={handleAspectOfTheWildsSkip}
+                handleReplenishingMealConfirm={handleReplenishingMealConfirm}
+                handleBolsteringTreatsConfirm={handleBolsteringTreatsConfirm}
+                handleBolsteringPerformanceConfirm={handleBolsteringPerformanceConfirm}
+                handleEncouragingSongConfirm={handleEncouragingSongConfirm}
+                handleEncouragingSongSkip={handleEncouragingSongSkip}
+                setPopupHtml={setPopupHtml}
                 />
-            )}
-            {moonlightStepFallback && (
-                <div className="sp-overlay" onClick={() => setMoonlightStepFallback(null)}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-moon"></i> {moonlightStepFallback.action.name}
-                        </div>
-                        <div className="sp-body">
-                            <p>No Moonlight Step uses remaining. Consume a level {moonlightStepFallback.slotLevel} spell slot to use Moonlight Step?</p>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-roll-btn" onClick={handleMoonlightStepFallbackConfirm}>
-                                <i className="fa-solid fa-check"></i> Yes, Consume Slot
-                            </button>
-                            <button className="sp-dismiss-btn" onClick={() => setMoonlightStepFallback(null)}>
-                                <i className="fa-solid fa-times"></i> No
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {signatureSpellsModal && (
-                <SignatureSpellsModal
-                    payload={signatureSpellsModal}
-                    onConfirm={handleSignatureSpellsConfirm}
-                    onClose={() => setSignatureSpellsModal(null)}
-                />
-            )}
-            {spellMasteryModal && (
-                <SpellMasteryModal
-                    payload={spellMasteryModal}
-                    onConfirm={handleSpellMasteryConfirm}
-                    onClose={() => setSpellMasteryModal(null)}
-                />
-            )}
-            {savantModal && (
-                <SavantModal
-                    payload={savantModal}
-                    onConfirm={handleSavantConfirm}
-                    onClose={() => setSavantModal(null)}
-                />
-            )}
-            {combatSuperiorityModal && (
-                <CombatSuperiorityModal
-                    payload={combatSuperiorityModal}
-                    onConfirm={handleCombatSuperiorityConfirm}
-                    onReopenSelection={handleCombatSuperiorityReopenSelection}
-                    onClose={() => setCombatSuperiorityModal(null)}
-                />
-            )}
-            {weaponKindMasteryModal && (
-                <WeaponKindMasteryModal
-                    {...weaponKindMasteryModal}
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    onClose={() => setWeaponKindMasteryModal(null)}
-                />
-            )}
-            {weaponMasteryChoiceModal && (
-                <WeaponMasteryChoiceModal
-                    {...weaponMasteryChoiceModal}
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    onClose={() => setWeaponMasteryChoiceModal(null)}
-                    onConfirm={() => setWeaponMasteryChoiceModal(null)}
-                />
-            )}
-            {resourcePoolModal && (
-                <ResourcePoolModal
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    automation={resourcePoolModal.automation}
-                    onClose={() => setResourcePoolModal(null)}
-                />
-            )}
-            {naturalRecoveryModal && (
-                <NaturalRecoveryModal
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    onClose={() => setNaturalRecoveryModal(null)}
-                />
-            )}
-            {circleOfTheLandSpellsModal && (
-                <CircleOfTheLandSpellsModal
-                    playerStats={playerStats}
-                    campaignName={campaignName}
-                    onClose={() => setCircleOfTheLandSpellsModal(null)}
-                />
-            )}
-            {elementalAffinityModal && (
-                <ElementalAffinityModal
-                    action={elementalAffinityModal.action}
-                    playerStats={elementalAffinityModal.playerStats}
-                    campaignName={elementalAffinityModal.campaignName}
-                    onClose={() => setElementalAffinityModal(null)}
-                />
-            )}
-            {wildMagicSurgeModal && (
-                <WildMagicSurgeModal
-                    {...wildMagicSurgeModal}
-                    onClose={() => setWildMagicSurgeModal(null)}
-                />
-            )}
-            {strideModal && (
-                <StrideOfTheElementsModal
-                    action={strideModal.action}
-                    playerStats={strideModal.playerStats}
-                    campaignName={strideModal.campaignName}
-                    onConfirm={handleStrideConfirm}
-                    onClose={() => setStrideModal(null)}
-                />
-            )}
-            {epitomeModal && (
-                <ElementalEpitomeModal
-                    action={epitomeModal.action}
-                    playerStats={epitomeModal.playerStats}
-                    campaignName={epitomeModal.campaignName}
-                    currentResistance={epitomeModal.currentResistance}
-                    onConfirm={handleEpitomeConfirm}
-                    onClose={handleEpitomeClose}
-                />
-            )}
-            {destructiveStrideModal && (
-                <DestructiveStrideModal
-                    action={destructiveStrideModal.action}
-                    playerStats={destructiveStrideModal.playerStats}
-                    campaignName={destructiveStrideModal.campaignName}
-                    onConfirm={handleDestructiveStrideConfirm}
-                    onClose={() => setDestructiveStrideModal(null)}
-                />
-            )}
-            {destructiveStrideTargetModal && (
-                <SecondaryTargetModal
-                    title="Destructive Stride"
-                    icon="fa-person-running"
-                    targets={destructiveStrideTargetModal.targets || []}
-                    description="Choose a creature within 5 ft. that you entered a space near while striding. A creature can take this damage only once per turn."
-                    confirmLabel="Strike"
-                    confirmIcon="fa-person-running"
-                    onTargetSelected={handleDestructiveStrideTargetConfirm}
-                    onSkip={handleDestructiveStrideTargetSkip}
-                />
-            )}
-            {quiveringPalmModal && (
-                <QuiveringPalmModal
-                    {...quiveringPalmModal}
-                    onClose={() => setQuiveringPalmModal(null)}
-                />
-            )}
-            {stepsOfTheFeyTauntModal && (
-                <StepsOfTheFeyTauntModal
-                    {...stepsOfTheFeyTauntModal}
-                    onClose={() => setStepsOfTheFeyTauntModal(null)}
-                />
-            )}
-            {hurlThroughHellModal && (
-                <HurlThroughHellModal
-                    {...hurlThroughHellModal}
-                    onClose={() => setHurlThroughHellModal(null)}
-                />
-            )}
-            {clairvoyantCombatantModal && (
-                <ClairvoyantCombatantModal
-                    {...clairvoyantCombatantModal}
-                    onClose={() => setClairvoyantCombatantModal(null)}
-                />
-            )}
-            {portentModal && (
-                <div className="portent-modal-overlay" onClick={handlePortentModalClose}>
-                    <div className="portent-modal" onClick={e => e.stopPropagation()}>
-                        <h3>Portent</h3>
-                        <div className="portent-modal-section">
-                            <div className="portent-modal-label">Creature: <span className="portent-modal-target">{portentModal.targetName}</span></div>
-                            <div className="portent-modal-label">{getEventDisplayLabel(portentModal.eventType, portentModal.eventData)}</div>
-                            <div className="portent-modal-original">
-                                d20({portentModal.eventData.d20}) + {portentModal.eventData.bonus} = {portentModal.eventData.d20 + portentModal.eventData.bonus}
-                                {portentModal.eventType === 'attack' && ` (${portentModal.eventData.hit ? 'Hit' : 'Miss'})`}
-                            </div>
-                        </div>
-                        <div className="portent-modal-section">
-                            <div className="portent-modal-label">Choose a foretelling roll:</div>
-                            <div className="portent-dice-options">
-                                {portentModal.diceOptions.map(die => (
-                                    <button key={die} className="portent-die-btn" onClick={() => handlePortentDieChoice(die)}>
-                                        {die}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="portent-modal-actions">
-                            <button className="portent-cancel-btn" onClick={handlePortentModalClose}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {celestialResilienceModal && (
-                <CreatureSelectionModal
-                    title="Celestial Resilience"
-                    icon="fa-shield-hart"
-                    targets={celestialResilienceModal.creatureTargets}
-                    maxTargets={celestialResilienceModal.maxTargets}
-                    description="Choose up to 5 allies to gain temporary hit points from your Celestial Resilience."
-                    note={`You gain ${celestialResilienceModal.selfTempHp} temporary hit points. Each selected ally gains ${celestialResilienceModal.allyTempHp} temporary hit points.`}
-                    confirmLabel="Grant Resilience"
-                    confirmIcon="fa-shield-hart"
-                    onConfirm={handleCelestialResilienceConfirm}
-                    onSkip={handleCelestialResilienceSkip}
-                />
-            )}
-            {fiendishResilienceModal && (
-                <SingleResistanceSelectionModal
-                    {...fiendishResilienceModal}
-                    onClose={() => setFiendishResilienceModal(null)}
-                />
-            )}
-            {multiResistanceModal && (
-                <MultiResistanceSelectionModal
-                    title={multiResistanceModal.action?.name || 'Energy Resistances'}
-                    icon="fa-shield-halved"
-                    damageTypes={multiResistanceModal.damageTypes}
-                    existingTypes={multiResistanceModal.existingTypes}
-                    maxSelections={multiResistanceModal.maxSelections || 2}
-                    action={multiResistanceModal.action}
-                    playerStats={multiResistanceModal.playerStats}
-                    campaignName={multiResistanceModal.campaignName}
-                    onConfirm={async (selected) => {
-                        const payload = multiResistanceModal;
-                        setMultiResistanceModal(null);
-                        const res = await applyBoonOfEnergyResistance(payload.action, payload.playerStats, payload.campaignName, selected);
-                        if (res?.type === 'popup') {
-                            const html = `<b>${res.payload?.name || payload.action?.name}</b><br/>${res.payload?.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
-                            setPopupHtml(html);
-                        }
-                        return res;
-                    }}
-                    onClose={() => setMultiResistanceModal(null)}
-                />
-            )}
-            {featureChoiceModal && (
-                <div className="sp-overlay" onClick={handleFeatureChoiceSkip}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-bolt"></i> {featureChoiceModal.action.name}
-                        </div>
-                        <div className="sp-body">
-                            <p><b>Choose your option:</b></p>
-                            <p style={{ opacity: 0.8, fontSize: '0.9em' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(featureChoiceModal.action.description) }}></p>
-                            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                                {featureChoiceModal.options.map((opt, i) => {
-                                    const optName = typeof opt === 'string' ? opt : opt.name;
-                                    return (
-                                        <button
-                                            key={optName || i}
-                                            className="sp-roll-btn"
-                                            style={{ margin: '0 6px 8px 6px' }}
-                                            onClick={() => handleFeatureChoiceConfirm(optName)}
-                                        >
-                                            {optName}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={handleFeatureChoiceSkip}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {aspectOfTheWildsModal && (
-                <div className="sp-overlay" onClick={handleAspectOfTheWildsSkip}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                        <div className="sp-header">
-                            <i className="fa-solid fa-paw"></i> Aspect of the Wilds
-                        </div>
-                        <div className="sp-body">
-                            <p>Choose an animal aspect:</p>
-                            <div style={{ textAlign: 'left', marginTop: '12px' }}>
-                                {aspectOptions.map((opt, i) => (
-                                    <label key={i} style={{ display: 'block', padding: '8px 12px', margin: '4px 0', borderRadius: '6px', cursor: 'pointer', background: 'transparent', border: '1px solid transparent' }}>
-                                        <input
-                                            type="radio"
-                                            name="aspectOption"
-                                            onChange={() => handleAspectOfTheWildsConfirm(opt.name)}
-                                            style={{ marginRight: '8px' }}
-                                        />
-                                        <i className={`fas fa-${opt.icon}`}></i> <strong>{opt.name}</strong> — {opt.description}
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="sp-actions">
-                            <button className="sp-dismiss-btn" onClick={handleAspectOfTheWildsSkip}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {replenishingMealModal && (
-                <CreatureSelectionModal
-                    title="Replenishing Meal"
-                    icon="fa-utensils"
-                    targets={replenishingMealModal.targets}
-                    maxTargets={replenishingMealModal.maxTargets}
-                    description="Choose creatures to receive a replenishing meal."
-                    note="Each creature can hold at most 1 meal. During a Short Rest, a creature that eats the meal and rolls a Hit Die gains extra 1d8 HP."
-                    confirmLabel="Distribute Meals"
-                    confirmIcon="fa-utensils"
-                    onConfirm={handleReplenishingMealConfirm}
-                    onSkip={() => setReplenishingMealModal(null)}
-                />
-            )}
-            {bolsteringTreatsModal && (
-                <CreatureSelectionModal
-                    title="Bolstering Treats"
-                    icon="fa-cookie-bite"
-                    targets={bolsteringTreatsModal.targets}
-                    maxTargets={bolsteringTreatsModal.maxTargets}
-                    description="Choose creatures to receive a bolstering treat."
-                    note="Each creature can hold at most 1 treat. A creature with a treat can use a Bonus Action to gain Temporary Hit Points equal to your Proficiency Bonus."
-                    confirmLabel="Distribute Treats"
-                    confirmIcon="fa-cookie-bite"
-                    onConfirm={handleBolsteringTreatsConfirm}
-                    onSkip={() => setBolsteringTreatsModal(null)}
-                />
-            )}
-            {bolsteringPerformanceModal && (
-                <CreatureSelectionModal
-                    title="Bolstering Performance"
-                    icon="fa-bullhorn"
-                    targets={bolsteringPerformanceModal.creatureTargets}
-                    maxTargets={bolsteringPerformanceModal.maxTargets}
-                    description="Choose up to 6 allies to gain temporary hit points."
-                    note={`Each target gains ${bolsteringPerformanceModal.tempHp} temporary hit points.`}
-                    confirmLabel="Inspire"
-                    confirmIcon="fa-bullhorn"
-                    onConfirm={handleBolsteringPerformanceConfirm}
-                    onSkip={() => setBolsteringPerformanceModal(null)}
-                />
-            )}
-            {encouragingSongModal && (
-                <CreatureSelectionModal
-                    title="Encouraging Song"
-                    icon="fa-music"
-                    targets={encouragingSongModal.creatureTargets}
-                    maxTargets={encouragingSongModal.maxTargets}
-                    description="Choose up to your Proficiency Bonus allies to hear your song and gain Heroic Inspiration."
-                    confirmLabel="Inspire"
-                    confirmIcon="fa-music"
-                    onConfirm={handleEncouragingSongConfirm}
-                    onSkip={handleEncouragingSongSkip}
-                />
-            )}
-            {uniqueActions.map((specialAction, index) => {
+                {uniqueActions.map((specialAction, index) => {
                 const isInteractive = isInteractiveAutomation(specialAction);
                 const auto = specialAction.automation;
                 const hasStringOptions = auto?.type === 'damage_bonus' && auto.options?.length > 0 && auto.options.every(o => typeof o === 'string');
@@ -1099,8 +709,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                         <b className={isClickable ? "clickable" : ""} onClick={isClickable ? () => handleAutomationClick(specialAction) : undefined}>{specialAction.name}:</b> <span dangerouslySetInnerHTML={{ __html: renderMarkdownInline(specialAction.description) }}></span>
                     </div>
                 })}
-           </div>
-        )
+               </div>
+           )
 }
-
-export default CharSpecialActions
+export default CharSpecialActions;

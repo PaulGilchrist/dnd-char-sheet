@@ -1,6 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js'
 import * as storageService from '../../../services/ui/storage.js'
-import { getCombatSummary, setCombatSummaryCache } from '../../../services/encounters/combatData.js'
+import { getCombatSummary } from '../../../services/encounters/combatData.js'
 
 export function clearHuntersMarkConcentration(name, campaignName) {
   const cs = getCombatSummary(campaignName)
