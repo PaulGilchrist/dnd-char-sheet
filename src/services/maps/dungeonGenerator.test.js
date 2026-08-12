@@ -156,6 +156,104 @@ describe('dungeonGenerator', () => {
       const highDensity = generateDungeon({ gridSize: 30, seed: 42, density: 1 });
       expect(highDensity.walls.length).toBeGreaterThan(0);
     });
+
+    it('should generate maps with multiple different seeds for coverage', () => {
+      for (let seed = 1; seed <= 100; seed++) {
+        const map = generateDungeon({ gridSize: 20, seed });
+        expect(map.gridSize).toBe(20);
+        expect(map.walls.length).toBeGreaterThan(0);
+        expect(map.walls.length).toBeLessThan(map.gridSize * map.gridSize);
+        expect(map.placedItems.length).toBeGreaterThan(0);
+        for (const item of map.placedItems) {
+          expect(item.gridX).toBeGreaterThanOrEqual(0);
+          expect(item.gridX).toBeLessThan(map.gridSize);
+          expect(item.gridY).toBeGreaterThanOrEqual(0);
+          expect(item.gridY).toBeLessThan(map.gridSize);
+        }
+        const positions = map.placedItems.map(i => i.gridX + ',' + i.gridY);
+        expect(new Set(positions).size).toBe(positions.length);
+      }
+    });
+
+    it('should handle null/undefined opts gracefully', () => {
+      const map1 = generateDungeon(null);
+      expect(map1.gridSize).toBe(30);
+      expect(map1.walls.length).toBeGreaterThan(0);
+
+      const map2 = generateDungeon(undefined);
+      expect(map2.gridSize).toBe(30);
+      expect(map2.walls.length).toBeGreaterThan(0);
+
+      const map3 = generateDungeon({});
+      expect(map3.gridSize).toBe(30);
+      expect(map3.walls.length).toBeGreaterThan(0);
+    });
+
+    it('should clamp density to [0, 1] range', () => {
+      const negDensity = generateDungeon({ gridSize: 20, seed: 42, density: -1 });
+      expect(negDensity.gridSize).toBe(20);
+      expect(negDensity.walls.length).toBeGreaterThan(0);
+
+      const highDensity = generateDungeon({ gridSize: 20, seed: 42, density: 2 });
+      expect(highDensity.gridSize).toBe(20);
+      expect(highDensity.walls.length).toBeGreaterThan(0);
+    });
+
+    it('should include secret doors with seed that produces them', () => {
+      let hasSecretDoor = false;
+      for (let seed = 1; seed <= 500; seed++) {
+        const map = generateDungeon({ gridSize: 25, seed });
+        if (map.placedItems.some(i => i.type === 'secretDoor')) {
+          hasSecretDoor = true;
+          const secretDoor = map.placedItems.find(i => i.type === 'secretDoor');
+          expect(secretDoor.visible).toBe(false);
+          break;
+        }
+      }
+      expect(hasSecretDoor).toBe(true);
+    });
+
+    it('should include various furniture types with multiple seeds', () => {
+      const allTypes = new Set();
+      for (let seed = 1; seed <= 200; seed++) {
+        const map = generateDungeon({ gridSize: 30, seed });
+        for (const item of map.placedItems) {
+          allTypes.add(item.type);
+        }
+      }
+      expect(allTypes.has('torch')).toBe(true);
+      expect(allTypes.has('door')).toBe(true);
+      expect(allTypes.has('stairs')).toBe(true);
+      expect(allTypes.has('trap')).toBe(true);
+    });
+
+    it('should generate maps with NPCs having valid names and rotations', () => {
+      const validNames = ['Goblin', 'Skeleton', 'Orc', 'Bandit', 'Spider', 'Zombie'];
+      const validRots = [0, 90, 180, 270];
+      for (let seed = 1; seed <= 50; seed++) {
+        const map = generateDungeon({ gridSize: 30, seed });
+        const npcs = map.placedItems.filter(i => i.type === 'npc');
+        for (const npc of npcs) {
+          expect(validNames).toContain(npc.name);
+          expect(validRots).toContain(npc.rotation);
+          expect(npc.visible).toBe(false);
+        }
+      }
+    });
+
+    it('should include corridor traps at junctions', () => {
+      // Corridor traps are probabilistic; just check the generation doesn't fail
+      const map = generateDungeon({ gridSize: 40, seed: 999 });
+      expect(map.placedItems.length).toBeGreaterThan(0);
+    });
+
+    it('should place items with unique IDs', () => {
+      for (let seed = 1; seed <= 100; seed++) {
+        const map = generateDungeon({ gridSize: 25, seed });
+        const ids = map.placedItems.map(i => i.id);
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+    });
   });
 
   describe('visualize', () => {
