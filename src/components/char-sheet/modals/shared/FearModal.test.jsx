@@ -13,7 +13,7 @@ vi.mock('../../../../services/combat/conditions/savePromptService.js', () => ({
 }));
 
 vi.mock('../../../../services/ui/logService.js', () => ({
-    addEntry: vi.fn().mockResolvedValue({ id: 'log-1' }),
+    addEntry: vi.fn(() => Promise.resolve({ id: 'log-1' })),
 }));
 
 vi.mock('../../../../services/encounters/combatData.js', () => ({
