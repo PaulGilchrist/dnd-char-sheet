@@ -248,6 +248,25 @@ describe('MonsterCardModal - getSaveModifierForSaveType', () => {
       fireEvent.click(clickableSaveLinks[0]);
       expect(rollSavingThrow).toHaveBeenCalledWith('CON', 3, expect.objectContaining({ saveDc: 13, saveType: 'Constitution' }));
     });
+
+    it('returns 0 when non-player target has no save data in target or creatures', () => {
+      damageUtils.__setFindCreatureReturn({
+        name: 'Goblin',
+        conditions: [],
+        targetName: 'Ogre',
+      });
+
+      const m = makeMonster({
+        actions: [{ name: 'Web', description: 'Constitution Saving Throw: DC 13', save_dc: 13, save_type: 'Constitution' }],
+      });
+
+      render(<MonsterCardModal {...makeProps(m, { creatures: [{ name: 'Goblin', targetName: 'Ogre' }, { name: 'Ogre' }] })} />);
+
+      const clickableSaveLinks = document.querySelectorAll('.mc-dice-link-save-clickable');
+      expect(clickableSaveLinks.length).toBeGreaterThan(0);
+      fireEvent.click(clickableSaveLinks[0]);
+      expect(rollSavingThrow).toHaveBeenCalledWith('CON', 0, expect.objectContaining({ saveDc: 13, saveType: 'Constitution' }));
+    });
   });
 
   describe('no target', () => {
