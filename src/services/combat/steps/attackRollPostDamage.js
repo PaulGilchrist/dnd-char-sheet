@@ -1,0 +1,569 @@
+import { rollExpression } from '../../dice/diceRoller.js';
+import { getCombatContext, getTargetFromAttacker } from '../../rules/combat/damageUtils.js';
+import { getCurrentCombatRound, loadCombatSummary } from '../../../encounters/combatData.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { applyDamageToTarget } from '../../rules/combat/applyDamage.js';
+import { addEntry } from '../../ui/logService.js';
+import { collectWeaponMastery } from '../../combat/automation/automationService.js';
+import { featureModules } from './features/index.js';
+import { applyMasteryEffect } from '../../automation/handlers/combat/weaponMasteryHandler.js';
+import { isWithinRange } from '../../rules/combat/rangeCheck.js';
+import { createSaveListener } from '../../automation/common/savePrompt.js';
+import { addCondition } from '../../combat/conditions/conditionSaveService.js';
+
+export function buildFeatureRidersStep() {
+  return {
+    name: 'featureRiders',
+    subscribe: 'celestial:applied',
+    emit: 'riders:applied',
+    condition: () => true,
+    handler: async (ctx) => {
+      let data = { formula: ctx.formula, total: ctx.total, rolls: [...(ctx.rolls || [])] };
+      for (const feat of featureModules) {
+        if (feat.condition(ctx)) {
+          const result = await feat.handler(ctx, data);
+          if (!result) continue;
+          if (result.modal) return result;
+          if (result.popup) return result;
+          if (result.data) data = result.data;
+          if (result.sideEffects) await result.sideEffects();
+        }
+      }
+      return { data };
+    },
+  };
+}
+
+export function buildDamageTypeModifiersStep() {
+  return {
+    name: 'damageTypeModifiers',
+    subscribe: 'riders:applied',
+    emit: 'dmg_type:modified',
+    condition: (ctx) => ctx.attack?.weaponType === 'unarmed' && !!ctx.playerStats.automation?.passives,
+    handler: async (ctx) => {
+      let formula = ctx.formula;
+      let total = ctx.total;
+      let rolls = [...(ctx.rolls || [])];
+      const ps = ctx.playerStats;
+
+      const dmgMods = ps.automation.passives.filter(a => a.type === 'damage_type_modifier' && a.trigger === 'unarmed_strike_hit');
+      for (const mod of dmgMods) {
+        const key = `_${mod.name.replace(/\s+/g, '_')}_usedRound`;
+        const round = getCurrentCombatRound();
+        if (mod.oncePerTurn && getRuntimeValue(ps.name, key, ctx.campaignName) === round) continue;
+        const stored = getRuntimeValue(ps.name, 'empoweredStrikesDamageType', ctx.campaignName);
+        if (stored) { ctx.attack.damageType = stored; setRuntimeValue(ps.name, 'empoweredStrikesDamageType', null, ctx.campaignName); break; }
+        if (mod.options?.length > 0) {
+          const normalOption = mod.options.find(o => o.name !== 'Force');
+          const forceOption = mod.options.find(o => o.name === 'Force');
+          let chosenType = normalOption?.damageType || ctx.attack.damageType;
+
+          const cs = await getCombatContext(ctx.campaignName);
+          const target = cs ? getTargetFromAttacker(cs, ps.name) : null;
+
+          if (target && normalOption && forceOption) {
+            const lower = normalOption.damageType.toLowerCase();
+            const isImmune = target.immunities?.some(i => i.toLowerCase() === lower);
+            const isResisted = target.resistances?.some(r => r.toLowerCase() === lower);
+
+            if (isImmune || isResisted) {
+              chosenType = forceOption.damageType;
+              ctx.attack.damageType = chosenType;
+              const reason = isImmune ? 'immune to' : 'resists';
+              addEntry(ctx.campaignName, {
+                type: 'ability_use',
+                characterName: ps.name,
+                abilityName: mod.name,
+                description: `${mod.name} — auto-selected ${chosenType} damage (${target.name} ${reason} ${normalOption.damageType})`,
+                targetName: target.name,
+              }).catch(() => {});
+
+              ctx.attack.damageType = chosenType;
+              return {
+                data: { formula, total, rolls },
+                popup: `<b>${mod.name}</b><br/>${target.name} ${reason} ${normalOption.damageType} — using <b>${chosenType}</b>`,
+              };
+            }
+          }
+
+          ctx.attack.damageType = chosenType;
+          break;
+        }
+      }
+
+      const riders = ps.automation.passives.filter(a => a.type === 'attack_rider' && a.trigger === 'unarmed_strike_hit' && a.chooseOne && a.options?.length > 0);
+      for (const rider of riders) {
+        const key = `_${rider.name.replace(/\s+/g, '_')}_usedRound`;
+        const round = getCurrentCombatRound();
+        if (rider.oncePerTurn && getRuntimeValue(ps.name, key, ctx.campaignName) === round) continue;
+        const stored = getRuntimeValue(ps.name, `_${rider.name.replace(/\s+/g, '_')}_selectedOption`, ctx.campaignName);
+        if (stored) {
+          const opt = rider.options.find(o => o.name === stored);
+          if (opt?.effect === 'damage_bonus') {
+            const rr = rollExpression(opt.damageExpression);
+            if (rr) {
+              formula += ` + ${opt.damageExpression} [${opt.damageType || 'same_as_weapon'}]`;
+              total += rr.total;
+              rolls = [...rolls, ...rr.rolls];
+            }
+            setRuntimeValue(ps.name, `_${rider.name.replace(/\s+/g, '_')}_selectedOption`, null, ctx.campaignName);
+          }
+          continue;
+        }
+        if (rider.options?.length > 0) {
+          return {
+            modal: { type: 'damageTypeChoice', props: { title: `${rider.name} — Enhanced Unarmed Strike`, types: rider.options.map(o => o.name) } },
+          };
+        }
+      }
+
+      return { data: { formula, total, rolls } };
+    },
+  };
+}
+
+export function buildOverchannelStep() {
+  return {
+    name: 'overchannel',
+    subscribe: 'dmg_type:modified',
+    emit: 'damage:ready',
+    condition: (ctx) => ctx.overchannelActive && ctx.overchannelUseCount > 1,
+    handler: async (ctx) => {
+      const dicePerLevel = 2 + (ctx.overchannelUseCount - 1);
+      const totalDice = dicePerLevel * ctx.overchannelSpellLevel;
+      const r = rollExpression(`${totalDice}d12`);
+      if (r) {
+        const cs = await loadCombatSummary(ctx.campaignName);
+        const app = applyDamageToTarget(cs, ctx.playerStats.name, r.total, ['Necrotic'], ctx.campaignName, null, true, ctx.playerStats.name);
+        addEntry(ctx.campaignName, { type: 'roll', characterName: ctx.playerStats.name, rollType: 'overchannel-damage', name: 'Overchannel', formula: `${totalDice}d12`, rolls: r.rolls, total: r.total, modifier: r.modifier, damageType: 'Necrotic', targetName: ctx.playerStats.name, finalDamage: app?.finalDamage, note: 'Overchannel self-damage (ignores resistance/immunity)' }).catch((e) => { console.error("[damagePipeline] Error:", e); });
+      }
+      return { data: {} };
+    },
+  };
+}
+
+export function buildProceedToDamageStep() {
+  return {
+    name: 'proceedToDamage',
+    subscribe: 'damage:ready',
+    emit: 'damage:applied',
+    condition: (ctx) => ctx.formula != null,
+    handler: async (ctx) => {
+      let saveResult = null;
+      let saveDc = 0;
+      const poisonedActive = getRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', ctx.campaignName);
+      if (poisonedActive) {
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+        if (lastAttack?.hit) {
+          const targetName = lastAttack.targetName;
+          const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
+          const intMod = ctx.playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0;
+          const poisonerAbilityModifier = Math.max(dexMod, intMod);
+          const proficiencyBonus = ctx.playerStats.proficiency || 0;
+          saveDc = 8 + poisonerAbilityModifier + proficiencyBonus;
+
+          const { promise } = createSaveListener(ctx.campaignName, {
+            targetName: targetName,
+            saveType: 'CON',
+            saveDc: saveDc,
+            attackerName: ctx.playerStats.name,
+            damageFormula: `${lastAttack.damageFormula || '1d8'}+${lastAttack.modifier || 0}`,
+            damageType: lastAttack.damageType || lastAttack.primaryDamageType || 'slashing',
+            rawDamage: lastAttack.primaryDamage || 0,
+            sourceName: lastAttack.attackName || 'Weapon',
+          });
+
+          addEntry(ctx.campaignName, {
+            type: 'save_result',
+            characterName: ctx.playerStats.name,
+            targetName: targetName,
+            saveType: 'CON',
+            saveDc: saveDc,
+            description: `Poisoned weapon: ${targetName} must make a DC ${saveDc} CON save or take ${lastAttack.damageType || 'weapon'} damage plus 2d8 Poison damage and gain the Poisoned condition until the end of your next turn.`,
+            success: null,
+          }).catch(() => {});
+
+          saveResult = await promise;
+
+          setRuntimeValue(ctx.playerStats.name, 'poisonedWeaponsActive', null, ctx.campaignName);
+
+          if (saveResult && !saveResult.success) {
+            ctx.autoDamageSecondaryFormula = '2d8';
+            ctx.autoDamageSecondaryName = 'Poison';
+            ctx.autoDamageSecondaryDamageType = 'Poison';
+          }
+        }
+      }
+
+      ctx.proceedWithDamage(ctx.attack, ctx.formula, ctx.total, ctx.rolls, ctx.modifier, ctx.critLabels, ctx);
+
+      if (saveResult && !saveResult.success) {
+        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+        const targetName = lastAttack?.targetName;
+        if (targetName) {
+          const cs = await loadCombatSummary(ctx.campaignName);
+          const rollResult = rollExpression('2d8');
+          const poisonDamage = rollResult?.total || 7;
+          const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
+          const creature = cs?.creatures?.find(c => c.name === targetName);
+          const isPlayer = creature?.type === 'player';
+          const playerComputed = isPlayer ? (characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)?.computedStats || characters.find(c => (typeof c === 'string' ? c : c.name) === targetName)) : null;
+          let resistances = isPlayer ? (playerComputed?.resistances || []) : (creature?.resistances || []);
+          const immunities = isPlayer ? (playerComputed?.immunities || []) : (creature?.immunities || []);
+          const actualPoisonDamage = Math.max(0, immunities.includes('Poison') ? 0 : (resistances.includes('Poison') ? Math.ceil(poisonDamage / 2) : poisonDamage));
+
+          if (actualPoisonDamage > 0) {
+            if (isPlayer) {
+              const storedCurrentHp = getRuntimeValue(targetName, 'currentHitPoints');
+              const currentTempHp = Number(getRuntimeValue(targetName, 'tempHp', ctx.campaignName) || 0);
+              let damageAfterTempHp = actualPoisonDamage;
+              if (currentTempHp > 0) {
+                const absorbed = Math.min(damageAfterTempHp, currentTempHp);
+                damageAfterTempHp -= absorbed;
+                setRuntimeValue(targetName, 'tempHp', currentTempHp - absorbed, ctx.campaignName);
+              }
+              const oldHp = storedCurrentHp;
+              const newHp = Math.max(0, oldHp - damageAfterTempHp);
+              setRuntimeValue(targetName, 'currentHitPoints', newHp, ctx.campaignName);
+            } else {
+              const oldHp = creature.currentHp;
+              creature.currentHp = Math.max(0, oldHp - actualPoisonDamage);
+            }
+
+            const existing = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+            if (existing) {
+              existing.secondaryDamage = actualPoisonDamage;
+              existing.secondaryDamageType = 'Poison';
+              existing.actualDamage = (existing.actualDamage || 0) + actualPoisonDamage;
+              await setRuntimeValue('campaign', 'lastAttack', existing, ctx.campaignName);
+            }
+          }
+
+          const conditionDef = { key: 'poisoned', label: 'Poisoned' };
+          addCondition(cs, targetName, conditionDef, saveDc, 'CON', getRuntimeValue, setRuntimeValue, ctx.campaignName, ctx.playerStats);
+
+          const primaryDmg = lastAttack?.primaryDamage || 0;
+          const primaryType = lastAttack?.primaryDamageType || 'weapon';
+          const totalDmg = primaryDmg + actualPoisonDamage;
+          let desc = `<strong>${targetName}</strong> failed the CON save (DC ${saveDc}).`;
+          if (primaryDmg > 0) {
+            desc += `<br/>Took <strong>${primaryDmg} ${primaryType}</strong> + <strong>${actualPoisonDamage} Poison</strong> = <strong>${totalDmg} total damage</strong>.`;
+          } else {
+            desc += `<br/>Took <strong>${actualPoisonDamage} Poison damage</strong>.`;
+          }
+          desc += `<br/><br/><em>Condition lasts until the end of your next turn.</em>`;
+          ctx.setPopupHtml?.({
+            type: 'automation_info',
+            name: 'Poisoned Weapons',
+            description: desc,
+          });
+
+          addEntry(ctx.campaignName, {
+            type: 'ability_use',
+            characterName: ctx.playerStats.name,
+            abilityName: 'Poisoned Weapons',
+            description: `Poison dose triggered on ${targetName} — target failed CON save (DC ${saveDc}), took ${actualPoisonDamage || poisonDamage} Poison damage (plus ${primaryDmg} ${primaryType} damage) and gained Poisoned condition.`,
+            targetName: targetName,
+          }).catch(() => {});
+        }
+      }
+
+      return { data: { _done: true } };
+    },
+  };
+}
+
+export function buildStalkersFlurryPostDamageStep() {
+  return {
+    name: 'stalkersFlurryPostDamage',
+    subscribe: 'damage:applied',
+    emit: 'cleave:check',
+    condition: (ctx) => !!ctx.playerStats.automation?.passives,
+    handler: async (ctx) => {
+      const secondaryTarget = getRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrikeTarget', ctx.campaignName);
+      const pending = getRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrike', ctx.campaignName);
+      if (pending && secondaryTarget && ctx.total > 0) {
+        ctx.setPopupHtml?.(null);
+        ctx.setAttackRiderModal?.(null);
+        const cs = await getCombatContext(ctx.campaignName);
+        const characters = getRuntimeValue('characters', 'characters', ctx.campaignName) || [];
+        applyDamageToTarget(cs, secondaryTarget, ctx.total, [ctx.attack.damageType], ctx.campaignName, characters, false, ctx.playerStats.name, false, { isAutoCrit: ctx.isCrit });
+        await addEntry(ctx.campaignName, {
+          type: 'ability_use',
+          characterName: ctx.playerStats.name,
+          abilityName: "Stalker's Flurry - Sudden Strike",
+          description: `Sudden Strike: ${ctx.total} damage to ${secondaryTarget} (same as primary attack).`,
+        }).catch(() => {});
+        setRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrike', null, ctx.campaignName);
+        setRuntimeValue(ctx.playerStats.name, 'pendingSuddenStrikeTarget', null, ctx.campaignName);
+      }
+      return { data: {} };
+    },
+  };
+}
+
+export function buildCleaveMasteryStep() {
+  return {
+    name: 'cleaveMastery',
+    subscribe: 'cleave:check',
+    emit: 'cleave:done',
+    condition: (ctx) => !!ctx.setSecondaryTargetModal && ctx.attack?.name && ctx.playerStats?.automation,
+    handler: async (ctx) => {
+      const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+      if (!lastAttack?.hit) return { data: {} };
+
+      const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);
+      if (!available) return { data: {} };
+      const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
+      if (!allMasteries.includes('Cleave')) return { data: {} };
+
+      const cs = await loadCombatSummary(ctx.campaignName);
+      const firstTarget = cs?.creatures?.find(c => c.name === lastAttack.targetName);
+      const mapName = ctx.playerStats?.mapName;
+      const hasMapPositions = mapName && firstTarget?.position;
+
+      const resolveHp = (creature, ps) => {
+        if (!creature) return { currentHp: 0, maxHp: 0 };
+        if (creature.type === 'player') {
+          const currentHp = getRuntimeValue(creature.name, 'currentHitPoints') ?? getRuntimeValue(creature.name, 'hitPoints') ?? 0;
+          const maxHp = getRuntimeValue(creature.name, 'hitPoints') ?? ps?.hitPoints ?? 0;
+          return { currentHp, maxHp };
+        }
+        return { currentHp: creature.currentHp ?? creature.maxHp, maxHp: creature.maxHp };
+      };
+
+      let secondTargets;
+      if (hasMapPositions) {
+        const attackerName = ctx.playerStats.name;
+        const reach = 8;
+        secondTargets = [];
+        for (const c of cs.creatures) {
+          if (c.name === lastAttack.targetName) continue;
+          const nearFirst = await isWithinRange(firstTarget.name, c.name, 5);
+          const nearAttacker = await isWithinRange(attackerName, c.name, reach);
+          if (nearFirst && nearAttacker) {
+            secondTargets.push({ ...c, ...resolveHp(c, ctx.playerStats) });
+          }
+        }
+      }
+
+      if (!hasMapPositions || !secondTargets) {
+        secondTargets = cs.creatures
+          .filter(c => c.name !== lastAttack.targetName)
+          .map(c => ({ ...c, ...resolveHp(c, ctx.playerStats) }));
+      }
+
+      if (secondTargets.length === 0) return { data: {} };
+
+      const cleaveDamageFormula = lastAttack.damageFormula
+        ? lastAttack.damageFormula.replace(/\+\s*\d+/g, '').trim()
+        : lastAttack.damageFormula;
+
+      ctx._cleaveAttackInfo = {
+        attackName: lastAttack.attackName,
+        damageFormula: cleaveDamageFormula || lastAttack.damageFormula,
+        damageType: lastAttack.damageType || 'same_as_weapon',
+      };
+
+      ctx.setSecondaryTargetModal?.({
+        title: 'Cleave — Choose Second Target',
+        targets: secondTargets,
+        onTargetSelected: async (cleaveTargetName) => {
+          if (!cleaveTargetName || !ctx.rollDamage) return;
+
+          const combatSummary = await getCombatContext(ctx.campaignName);
+          const target = combatSummary?.creatures?.find(c => c.name === cleaveTargetName);
+          const targetAc = target?.ac || 0;
+          const abilityName = ctx.playerStats?.abilities?.[0]?.name || 'STR';
+          const ability = ctx.playerStats?.abilities?.find(a => a.name === abilityName);
+          const abilityMod = ability?.bonus || 0;
+          const attackBonus = abilityMod + (ctx.playerStats.proficiency || 0);
+          const d20Roll = Math.floor(Math.random() * 20) + 1;
+          const totalRoll = d20Roll + attackBonus;
+          const hit = totalRoll >= targetAc;
+
+          const cleaveFormula = ctx._cleaveAttackInfo?.damageFormula || '0';
+          let damageResult = null;
+          if (hit) {
+            damageResult = rollExpression(cleaveFormula);
+          }
+
+          if (hit && damageResult) {
+            const context = {
+              targetName: cleaveTargetName,
+              damageType: ctx._cleaveAttackInfo.damageType,
+              attackerName: ctx.playerStats.name,
+            };
+            ctx.rollDamage(`${ctx._cleaveAttackInfo.attackName} (Cleave)`, cleaveFormula, damageResult.total, damageResult.rolls, 0, context);
+            addEntry(ctx.campaignName, {
+              type: 'ability_use',
+              characterName: ctx.playerStats.name,
+              abilityName: 'Cleave',
+              description: `${ctx.playerStats.name} used Cleave on ${ctx._cleaveAttackInfo.attackName} against ${cleaveTargetName}`,
+              targetName: cleaveTargetName,
+            }).catch(() => {});
+          } else {
+            const context = {
+              targetName: cleaveTargetName,
+              damageType: ctx._cleaveAttackInfo.damageType,
+              attackerName: ctx.playerStats.name,
+              isAutoMiss: true,
+            };
+            ctx.rollDamage(`${ctx._cleaveAttackInfo.attackName} (Cleave)`, cleaveFormula, 0, [], 0, context);
+            addEntry(ctx.campaignName, {
+              type: 'ability_use',
+              characterName: ctx.playerStats.name,
+              abilityName: 'Cleave',
+              description: `${ctx.playerStats.name} used Cleave on ${ctx._cleaveAttackInfo.attackName} against ${cleaveTargetName} — Miss`,
+              targetName: cleaveTargetName,
+            }).catch(() => {});
+          }
+        },
+        onSkip: () => {},
+        featureDescription: 'On a hit, the second creature takes weapon damage (no ability modifier to damage unless negative). Once per turn.',
+      });
+
+      return {
+        data: { _cleavePending: true },
+        modal: { type: 'cleaveTargetSelection', props: { title: 'Cleave — Choose Second Target', targets: secondTargets } },
+      };
+    },
+  };
+}
+
+export function buildTacticalMasterStep() {
+  return {
+    name: 'tacticalMaster',
+    subscribe: 'cleave:done',
+    emit: 'tactical:done',
+    condition: (ctx) => ctx.attack?.name && ctx.playerStats?.automation,
+    handler: async (ctx) => {
+      const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+      if (!lastAttack?.hit) return { data: {} };
+
+      const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);
+      if (!available) return { data: {} };
+
+      const choiceMasteries = available.choiceMasteries || [];
+      const replaceOptions = available.replaceMasteryOptions || [];
+      const modalOptions = replaceOptions.length > 0 ? replaceOptions : choiceMasteries;
+      const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
+      const autoApplyMasteries = allMasteries.filter(m => !['Graze', 'Topple', 'Nick', ...choiceMasteries, ...replaceOptions].includes(m));
+
+      const targetName = lastAttack.targetName;
+
+      for (const masteryName of autoApplyMasteries) {
+        const alreadyApplied = getRuntimeValue(ctx.campaignName, `_${masteryName}_appliedTarget`, ctx.campaignName);
+        if (alreadyApplied === targetName) continue;
+        if (masteryName !== 'Slow') {
+          setRuntimeValue(ctx.campaignName, `_${masteryName}_appliedTarget`, targetName, ctx.campaignName);
+        }
+        await applyMasteryEffect(masteryName, ctx.playerStats, ctx.campaignName, targetName).catch((e) => { console.error('[Mastery] Error:', e); });
+      }
+
+      if (modalOptions.length > 0) {
+        const isChoiceMode = !!available.choiceMasteries && available.choiceMasteries.length > 0;
+        ctx.setModalState?.({
+          tacticalMasterPending: {
+            attackName: lastAttack.attackName,
+            baseMastery: available.baseMastery,
+            replaceOptions: modalOptions,
+            targetName,
+            isChoiceMode,
+          },
+        });
+        return {
+          data: { _tacticalMasterPending: true },
+          modal: { type: 'tacticalMaster', props: { attackName: lastAttack.attackName, baseMastery: available.baseMastery, replaceOptions: modalOptions, targetName, isChoiceMode } },
+        };
+      }
+      return { data: {} };
+    },
+  };
+}
+
+export function buildToppleMasteryStep() {
+  return {
+    name: 'toppleMastery',
+    subscribe: 'tactical:done',
+    emit: 'mastery:done',
+    condition: (ctx) => ctx.attack?.name && ctx.playerStats,
+    handler: async (ctx) => {
+      const lastAttack = await getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+      if (!lastAttack?.hit) return { data: {} };
+
+      const available = collectWeaponMastery(lastAttack.attackName, ctx.playerStats);
+      if (!available) return { data: {} };
+      const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
+      const choiceMast = available.choiceMasteries || [];
+      const hasTopple = allMasteries.includes('Topple') || choiceMast.includes('Topple');
+      if (!hasTopple) return { data: {} };
+      if (available.baseMastery !== 'Topple') return { data: {} };
+
+      const toppleTargetName = lastAttack.targetName;
+      const weaponAttack = ctx.playerStats.attacks?.find(a => a.name === lastAttack.attackName);
+      const abilityName = weaponAttack?.abilityName || 'Strength';
+      const ability = ctx.playerStats.abilities?.find(a => a.name === abilityName);
+      const abilityMod = ability?.bonus || 0;
+      const prof = ctx.playerStats.proficiency || 0;
+      const saveDc = 8 + abilityMod + prof;
+
+      const { promise } = createSaveListener(ctx.campaignName, {
+        targetName: toppleTargetName,
+        saveType: 'CON',
+        saveDc,
+      });
+
+      addEntry(ctx.campaignName, {
+        type: 'save_result',
+        characterName: ctx.playerStats.name,
+        targetName: toppleTargetName,
+        saveType: 'CON',
+        saveDc,
+        description: `Topple: ${toppleTargetName} must make a DC ${saveDc} CON save (weapon ${abilityName}) or fall Prone.`,
+        success: null,
+      }).catch(() => {});
+
+      const result = await promise;
+
+      if (result && !result.success) {
+        const cs = await loadCombatSummary(ctx.campaignName);
+        const conditionDef = { key: 'prone', label: 'Prone' };
+        addCondition(cs, toppleTargetName, conditionDef, saveDc, 'CON', getRuntimeValue, setRuntimeValue, ctx.campaignName, ctx.playerStats);
+
+        addEntry(ctx.campaignName, {
+          type: 'save_result',
+          characterName: ctx.playerStats.name,
+          rollType: 'save-topple',
+          targetName: toppleTargetName,
+          saveDc,
+          saveType: 'CON',
+          success: false,
+          description: `${toppleTargetName} failed CON save vs Topple. Gains Prone condition.`,
+        }).catch(() => {});
+
+        addEntry(ctx.campaignName, {
+          type: 'ability_use',
+          characterName: ctx.playerStats.name,
+          abilityName: 'Topple',
+          description: `${ctx.playerStats.name} used Topple on ${toppleTargetName} — target failed CON save (DC ${saveDc}, weapon ${abilityName}), fell Prone.`,
+          targetName: toppleTargetName,
+        }).catch(() => {});
+      }
+
+      return { data: {} };
+    },
+  };
+}
+
+export function buildMasteryDoneStep() {
+  return {
+    name: 'masteryDone',
+    subscribe: 'cleave:check',
+    emit: 'pipeline:complete',
+    condition: () => true,
+    handler: async () => {
+      return { data: { _pipelineComplete: true } };
+    },
+  };
+}

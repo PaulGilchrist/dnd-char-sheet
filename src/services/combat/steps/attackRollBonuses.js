@@ -1,0 +1,319 @@
+import { rollExpression } from '../../dice/diceRoller.js';
+import { getCurrentCombatRound } from '../../../encounters/combatData.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { evaluateAutoExpression } from '../../combat/automation/automationService.js';
+import { getActiveBuffs } from '../../automation/common/buffToggle.js';
+import { resolveDiceExpression } from '../automation/automationExpressions.js';
+import { addEntry } from '../../ui/logService.js';
+
+export function buildAutomationBonusesStep() {
+  return {
+    name: 'automationBonuses',
+    subscribe: 'superiority:applied',
+    emit: 'automation:applied',
+    condition: (ctx) => (!!ctx.playerStats.automation?.actions || !!ctx.playerStats.automation?.passives),
+    handler: async (ctx) => {
+      let formula = ctx.formula;
+      let total = ctx.total;
+      let rolls = [...(ctx.rolls || [])];
+      const actions = ctx.playerStats.automation.actions || [];
+
+      for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'melee_weapon_hit')) {
+        const r = rollExpression(a.damageExpression);
+        if (r) { formula += ` + ${a.damageExpression} [${a.damageType}]`; total += r.total; rolls = [...rolls, ...r.rolls]; }
+      }
+
+      for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'monk_weapon_or_unarmed_hit')) {
+        const r = rollExpression(a.damageExpression);
+        if (r) {
+          const dt = (getRuntimeValue(ctx.playerStats.name, '_Elemental_Attunement_option', ctx.campaignName) || 'fire').toLowerCase();
+          formula += ` + ${a.damageExpression} [${dt}]`; total += r.total; rolls = [...rolls, ...r.rolls];
+        }
+      }
+
+      const heavy = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'melee_heavy_weapon_hit');
+      if (heavy.length > 0 && (ctx.attack?.properties || []).includes('Heavy')) {
+        for (const a of heavy) {
+          const r = rollExpression(a.damageExpression);
+          const evalResult = evaluateAutoExpression(a.damageExpression, ctx.playerStats);
+          const bonusValue = r ? r.total : evalResult;
+          if (bonusValue) {
+            const dt = a.damageType || ctx.attack?.damageType || 'Slashing';
+            const label = dt === 'same_as_weapon' ? (a.name || 'Slashing') : dt;
+            const displayExpr = r ? a.damageExpression : String(bonusValue);
+            formula += ` + ${displayExpr} [${label}]`;
+            total += bonusValue;
+            if (r) rolls = [...rolls, ...r.rolls];
+          }
+        }
+      }
+
+      const frenzy = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'reckless_attack_hit_while_raging');
+      if (frenzy.length > 0) {
+        const used = getRuntimeValue(ctx.playerStats.name, '_frenzyUsedRound', ctx.campaignName);
+        const round = getCurrentCombatRound();
+        if (used !== round) {
+          const buffs = getRuntimeValue(ctx.playerStats.name, 'activeBuffs', ctx.campaignName) || [];
+          const isReckless = buffs.some(b => b.effect === 'advantage_attacks_advantage_against');
+          const isRaging = buffs.some(b => b.damageBonusExpression);
+          const attackAbilityName = ctx.attack?.abilityName;
+          const isStr = attackAbilityName ? attackAbilityName.toLowerCase() === 'strength' : null;
+          const strMod = ctx.playerStats.abilities?.find(a => a.name === 'Strength')?.bonus ?? 0;
+          const dexMod = ctx.playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0;
+          const inferredIsStr = strMod >= dexMod;
+          const isStrFinal = isStr !== null ? isStr : inferredIsStr;
+          if (isReckless && isRaging && isStrFinal) {
+            for (const a of frenzy) {
+              const resolvedExpr = resolveDiceExpression(a.damageExpression, ctx.playerStats);
+              const r = rollExpression(resolvedExpr);
+              if (r) {
+                const dt = a.damageType === 'same_as_weapon' ? (ctx.attack?.damageType || 'Slashing') : a.damageType;
+                formula += ` + ${resolvedExpr} [${dt}]`;
+                total += r.total;
+                rolls = [...rolls, ...r.rolls];
+              }
+            }
+            setRuntimeValue(ctx.playerStats.name, '_frenzyUsedRound', round, ctx.campaignName);
+          }
+        }
+      }
+
+      const df = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'first_hit_while_raging');
+      if (df.length > 0) {
+        const used = getRuntimeValue(ctx.playerStats.name, '_divineFuryUsedRound', ctx.campaignName);
+        const round = getCurrentCombatRound();
+        if (used !== round) {
+          const buffs = getRuntimeValue(ctx.playerStats.name, 'activeBuffs', ctx.campaignName) || [];
+          const isRaging = buffs.some(b => b.damageBonusExpression);
+          if (isRaging) {
+            const a = df[0];
+            let expr = a.damageExpression || '';
+            expr = expr.replace(/barbarian_level\s*\/\s*2/gi, String(Math.floor(ctx.playerStats.level / 2)))
+              .replace(/barbarian_level/gi, String(ctx.playerStats.level));
+            const r = rollExpression(expr);
+            if (r) {
+              const dt = a.damageType || '';
+              if (dt.includes(' or ')) {
+                ctx.setDivineFuryChoice?.(dt);
+                return {
+                  data: { _divineFuryPending: true, bonusExpr: expr, bonusTotal: r.total, bonusRolls: r.rolls },
+                  modal: { type: 'divineFury', props: { damageType: dt } },
+                };
+              }
+              formula += ` + ${expr} [${dt}]`; total += r.total; rolls = [...rolls, ...r.rolls];
+            }
+            setRuntimeValue(ctx.playerStats.name, '_divineFuryUsedRound', round, ctx.campaignName);
+          }
+        }
+      }
+
+      const brutalStrikeActive = getRuntimeValue(ctx.playerStats.name, '_brutalStrikeActive', ctx.campaignName);
+      if (brutalStrikeActive) {
+          const allAutomation = [...(ctx.playerStats.automation.actions || []), ...(ctx.playerStats.automation.passives || [])];
+          const matchingRiders = allAutomation.filter(
+              x => x.type === 'attack_rider' && x.damageExpression && x.trigger === 'strength_attack_hit_after_reckless'
+          ).sort((a, b) => {
+              const exprA = a.damageExpression || '';
+              const exprB = b.damageExpression || '';
+              const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
+              const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
+              return countB - countA;
+          });
+          const rider = matchingRiders[0];
+        if (rider) {
+          const r = rollExpression(rider.damageExpression);
+          if (r) {
+            formula += ` + ${rider.damageExpression} [${rider.damageType || 'same_as_weapon'}]`;
+            total += r.total;
+            rolls = [...rolls, ...r.rolls];
+          }
+
+          const effectChoices = getRuntimeValue(ctx.playerStats.name, '_brutalStrikeEffects', ctx.campaignName) || [];
+          const targetName = ctx.targetName;
+          if (effectChoices.length > 0 && targetName) {
+            let storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const riderOptions = rider.options || [];
+
+            for (const choiceName of effectChoices) {
+              const option = riderOptions.find(o => o.name === choiceName);
+              if (!option) continue;
+
+              if (option.effect === 'disadvantage_on_next_save' || option.effect === 'next_attack_bonus') {
+                const newEffect = {
+                  target: targetName,
+                  source: ctx.playerStats.name,
+                  option: option.name,
+                  effect: option.effect,
+                  value: option.effect === 'next_attack_bonus' ? (option.value || 5) : (option.value || null),
+                  noOpportunityAttacks: option.noOpportunityAttacks || false,
+                  duration: 'until_start_of_next_turn',
+                };
+                storedEffects = [...storedEffects, newEffect];
+              }
+            }
+            setRuntimeValue('campaign', 'targetEffects', storedEffects, ctx.campaignName);
+          }
+
+          addEntry(ctx.campaignName, { type: 'ability_use', characterName: ctx.playerStats.name, abilityName: rider.name, description: `${ctx.playerStats.name} used ${rider.name} on ${targetName}`, targetName }).catch(() => {});
+
+          setRuntimeValue(ctx.playerStats.name, '_brutalStrikeActive', null, ctx.campaignName);
+          setRuntimeValue(ctx.playerStats.name, '_brutalStrikeEffects', null, ctx.campaignName);
+        }
+      }
+
+      return { data: { formula, total, rolls } };
+    },
+  };
+}
+
+export function buildWeaponHitBonusesStep() {
+  return {
+    name: 'weaponHitBonuses',
+    subscribe: 'automation:applied',
+    emit: 'weapon_hit:applied',
+    condition: (ctx) => !!ctx.playerStats.automation?.actions,
+    handler: async (ctx) => {
+      let formula = ctx.formula;
+      let total = ctx.total;
+      let rolls = [...(ctx.rolls || [])];
+
+      const all = [...(ctx.playerStats.automation.actions || []), ...(ctx.playerStats.automation.passives || [])];
+      const upgraded = new Set(all.filter(b => b.upgrades).map(b => b.upgrades));
+
+      const bonuses = ctx.playerStats.automation.actions.filter(
+        a => a.type === 'damage_bonus' && (a.trigger === 'weapon_attack_hit' || a.trigger === 'weapon_or_beast_form_attack_hit')
+      ).filter(b => !upgraded.has(b.name));
+
+      for (const bonus of bonuses) {
+        const optKey = `_${(bonus.upgrades || bonus.name).replace(/\s+/g, '_')}_option`;
+        const chosen = getRuntimeValue(ctx.playerStats.name, optKey, ctx.campaignName);
+        if (bonus.options?.length > 0) {
+          if (!chosen) continue;
+          if (!chosen.toLowerCase().includes('strike')) continue;
+        }
+
+        const usedKey = `_${bonus.name.replace(/\s+/g, '_')}_usedRound`;
+        const round = getCurrentCombatRound();
+        if (bonus.oncePerTurn && getRuntimeValue(ctx.playerStats.name, usedKey, ctx.campaignName) === round) continue;
+
+        if (bonus.uses_expression && bonus.recharge) {
+          const usesKey = `_${bonus.name.replace(/\s+/g, '_')}_uses`;
+          const cur = Number(getRuntimeValue(ctx.playerStats.name, usesKey, ctx.campaignName) ?? bonus.usesMax);
+          if (cur <= 0) continue;
+        }
+
+        const r = rollExpression(bonus.damageExpression);
+        if (!r) continue;
+
+        const dt = bonus.damageType || '';
+        if (dt.includes(' or ')) {
+          return {
+            data: { _weaponHitPending: true, bonusExpr: bonus.damageExpression, bonusTotal: r.total, bonusRolls: r.rolls, _weaponHitOnceKey: usedKey },
+            modal: { type: 'damageTypeChoice', props: { title: `${bonus.name} — Damage Type`, types: dt.split(/\s+or\s+/).flatMap(t => t.split(/\s+/)).filter(Boolean) } },
+          };
+        }
+        formula += ` + ${bonus.damageExpression} [${dt}]`;
+        total += r.total;
+        rolls = [...rolls, ...r.rolls];
+
+        if (bonus.oncePerTurn) setRuntimeValue(ctx.playerStats.name, usedKey, round, ctx.campaignName);
+        if (bonus.uses_expression && bonus.recharge) {
+          const usesKey = `_${bonus.name.replace(/\s+/g, '_')}_uses`;
+          const cur = Number(getRuntimeValue(ctx.playerStats.name, usesKey, ctx.campaignName) ?? bonus.usesMax);
+          if (cur > 0) setRuntimeValue(ctx.playerStats.name, usesKey, cur - 1, ctx.campaignName);
+        }
+      }
+
+      return { data: { formula, total, rolls } };
+    },
+  };
+}
+
+export function buildNatural20BonusesStep() {
+  const OVERWHELMING_STRIKE_TEST_ROLL = 20;
+
+  return {
+    name: 'natural20Bonuses',
+    subscribe: 'weapon_hit:applied',
+    emit: 'n20:applied',
+    condition: (ctx) => {
+      const d20Val = ctx.d20Roll;
+      const matches = ctx.isNatural20 || (d20Val >= OVERWHELMING_STRIKE_TEST_ROLL);
+      const hasActions = !!ctx.playerStats.automation?.actions;
+      return matches && hasActions;
+    },
+    handler: async (ctx) => {
+      let formula = ctx.formula;
+      let total = ctx.total;
+      let rolls = [...(ctx.rolls || [])];
+
+      const matchingActions = ctx.playerStats.automation.actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'natural_20_attack_roll');
+      for (const a of matchingActions) {
+        let expr = a.extraDamageExpression || '';
+        if (expr === 'increased_ability_score') {
+          const abilityName = a.abilityIncreased || null;
+          if (abilityName) {
+            const abil = ctx.playerStats.abilities?.find(x => x.name === abilityName);
+            expr = abil?.bonus || 0;
+          } else {
+            const strAbil = ctx.playerStats.abilities?.find(x => x.name === 'Strength');
+            const dexAbil = ctx.playerStats.abilities?.find(x => x.name === 'Dexterity');
+            const strBonus = strAbil?.bonus || 0;
+            const dexBonus = dexAbil?.bonus || 0;
+            expr = Math.max(strBonus, dexBonus);
+          }
+        }
+        if (expr || expr === 0) {
+          const r = rollExpression(String(expr));
+          if (r) {
+            formula += ` + ${expr} [${a.name}]`;
+            total += r.total;
+            rolls = [...rolls, ...r.rolls];
+          } else if (typeof expr === 'number') {
+            formula += ` + ${expr} [${a.name}]`;
+            total += expr;
+          }
+        }
+      }
+
+      return { data: { formula, total, rolls } };
+    },
+  };
+}
+
+export function buildCelestialRevelationStep() {
+  return {
+    name: 'celestialRevelation',
+    subscribe: 'n20:applied',
+    emit: 'celestial:applied',
+    condition: (ctx) => !!ctx.playerStats.automation?.passives,
+    handler: async (ctx) => {
+      const riders = ctx.playerStats.automation.passives.filter(
+        a => a.type === 'attack_rider' && a.damageExpression && a.trigger === 'hit'
+      );
+      if (riders.length === 0) return { data: {} };
+
+      const activeBuffs = getActiveBuffs(ctx.playerStats.name, ctx.campaignName);
+      const names = ['Heavenly Wings', 'Inner Radiance', 'Necrotic Shroud'];
+      const active = activeBuffs.find(b => names.includes(b.name));
+      if (!active) return { data: {} };
+
+      const rider = riders.find(r => r.name === active.name);
+      if (!rider) return { data: {} };
+
+      const usedKey = `_${rider.name.replace(/\s+/g, '_')}_usedRound`;
+      const round = getCurrentCombatRound();
+      if (rider.oncePerTurn && getRuntimeValue(ctx.playerStats.name, usedKey, ctx.campaignName) === round) return { data: {} };
+
+      const r = rollExpression(rider.damageExpression);
+      if (r) {
+        const formula = `${ctx.formula} + ${rider.damageExpression} [${rider.damageType || ''}]`;
+        const total = ctx.total + r.total;
+        const rolls = [...(ctx.rolls || []), ...r.rolls];
+        if (rider.oncePerTurn) setRuntimeValue(ctx.playerStats.name, usedKey, round, ctx.campaignName);
+        return { data: { formula, total, rolls } };
+      }
+      return { data: {} };
+    },
+  };
+}
