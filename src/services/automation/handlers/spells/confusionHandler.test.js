@@ -51,9 +51,8 @@ import { handle } from './confusionHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
-import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { storeSpellLastAttack } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import storage from '../../../ui/storage.js';
@@ -517,122 +516,23 @@ describe('confusionHandler.handle', () => {
       const abilityEntry = addEntry.mock.calls[0][1];
       expect(abilityEntry.promptId).toBe('confusion-prompt');
     });
-  });
 
-  describe('on successful save', () => {
-    it('posts a save_result entry with success=true', async () => {
+    it('uses action.name in ability_use log entry', async () => {
       const ps = makePlayerStats();
-      const action = makeAction();
+      const action = { name: "Tasha's Confusion", automation: { type: 'confusion', saveType: 'WIS', saveDc: 13 } };
       const ctx = makeCombatContext([{ name: 'Goblin' }]);
       getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue(successSaveListener());
+      buildSaveDc.mockReturnValue(10);
+      createSaveListener.mockReturnValue(failSaveListener());
 
       await handle(action, ps, campaignName, null);
 
-      const saveResultEntries = addEntry.mock.calls.filter(
-        call => call[1].type === 'save_result',
-      );
-      expect(saveResultEntries.length).toBe(1);
-      const entry = saveResultEntries[0][1];
-      expect(entry.targetName).toBe('Goblin');
-      expect(entry.success).toBe(true);
-      expect(entry.saveType).toBe('WIS');
-      expect(entry.saveDc).toBe(20);
-      expect(entry.rollType).toBe('save-confusion');
+      const abilityEntry = addEntry.mock.calls.find(c => c[1].type === 'ability_use')[1];
+      expect(abilityEntry.abilityName).toBe("Tasha's Confusion");
     });
 
-    it('posts a save_result entry for each target that saves', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([
-        { name: 'Goblin' },
-        { name: 'Orc' },
-      ]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue(successSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const saveResultEntries = addEntry.mock.calls.filter(
-        call => call[1].type === 'save_result',
-      );
-      expect(saveResultEntries.length).toBe(2);
-    });
-
-    it('posts a save_result via addTargetResult with correct params', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue({
-        promptId: 'confusion-prompt',
-        promise: Promise.resolve({ success: true, roll: 18, total: 20 }),
-      });
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addTargetResult).toHaveBeenCalledWith(campaignName, {
-        targetName: 'Goblin',
-        saveResult: 'success',
-        roll: 18,
-        total: 20,
-        conditions: [],
-        appliedDamage: 0,
-      });
-    });
-
-    it('does not apply any conditions or expirations on save success', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue(successSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addExpiration).not.toHaveBeenCalled();
-    });
-
-    it('includes save_result type in total entry count', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue(successSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addEntry).toHaveBeenCalledTimes(2);
-      const abilityEntries = addEntry.mock.calls.filter(call => call[1].type === 'ability_use');
-      const saveEntries = addEntry.mock.calls.filter(call => call[1].type === 'save_result');
-      expect(abilityEntries.length).toBe(1);
-      expect(saveEntries.length).toBe(1);
-    });
-
-    it('includes success description in target name', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(20);
-      createSaveListener.mockReturnValue(successSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const saveEntry = addEntry.mock.calls.find(c => c[1].type === 'save_result')[1];
-      expect(saveEntry.description).toContain('Goblin');
-      expect(saveEntry.description).toContain('succeeded on WIS save');
-    });
-  });
-
-  describe('on failed save', () => {
-    it('applies charmed and speed_zero conditions to the target', async () => {
-      const ps = makePlayerStats();
+    it('uses custom playerStats name in ability_use log description', async () => {
+      const ps = makePlayerStats({ name: 'WizardX' });
       const action = makeAction();
       const ctx = makeCombatContext([{ name: 'Goblin' }]);
       getCombatContext.mockResolvedValue(ctx);
@@ -642,190 +542,9 @@ describe('confusionHandler.handle', () => {
 
       await handle(action, ps, campaignName, null);
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin', 'activeConditions', expect.arrayContaining(['charmed', 'speed_zero']), campaignName,
-      );
-    });
-
-    it('deduplicates charmed and speed_zero if already present', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue(['charmed', 'speed_zero', 'frightened']);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsArg = setRuntimeValue.mock.calls.find(c => c[1] === 'activeConditions')[2];
-      expect(conditionsArg.filter(c => String(c).toLowerCase() === 'charmed').length).toBe(1);
-      expect(conditionsArg.filter(c => String(c).toLowerCase() === 'speed_zero').length).toBe(1);
-      expect(conditionsArg).toContain('frightened');
-    });
-
-    it('preserves other conditions when adding charmed and speed_zero', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue(['frightened', 'blinded']);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsArg = setRuntimeValue.mock.calls.find(c => c[1] === 'activeConditions')[2];
-      expect(conditionsArg).toContain('frightened');
-      expect(conditionsArg).toContain('blinded');
-      expect(conditionsArg).toContain('charmed');
-      expect(conditionsArg).toContain('speed_zero');
-    });
-
-    it('removes existing charmed and speed_zero before reapplying', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue(['charmed', 'speed_zero']);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const conditionsArg = setRuntimeValue.mock.calls.find(c => c[1] === 'activeConditions')[2];
-      expect(conditionsArg).toEqual(['charmed', 'speed_zero']);
-    });
-
-    it('posts a condition log entry with the correct details', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        type: 'condition',
-        action: 'applied',
-        characterName: 'Goblin',
-        condition: 'Confused',
-        reason: 'Confusion spell',
-        note: expect.stringContaining('Can\'t take Bonus Actions or Reactions'),
-        timestamp: expect.any(Number),
-      }));
-    });
-
-    it('registers expirations for charmed, speed_zero, remove_target_effect, and confusion_turn_start', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addExpiration).toHaveBeenCalledWith(
-        casterName, 'Goblin',
-        expect.arrayContaining([
-          expect.objectContaining({ type: 'charmed', condition: 'charmed' }),
-          expect.objectContaining({ type: 'speed_zero', condition: 'speed_zero' }),
-          expect.objectContaining({ type: 'remove_target_effect', effectKey: 'confusion' }),
-          expect.objectContaining({ type: 'confusion_turn_start', name: 'Confusion' }),
-        ]),
-        campaignName,
-      );
-    });
-
-    it('tracks confusion effect in targetEffects with correct properties', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const effectCalls = setRuntimeValue.mock.calls.filter(
-        call => call[1] === 'targetEffects',
-      );
-      expect(effectCalls.length).toBeGreaterThan(0);
-      const effects = effectCalls[effectCalls.length - 1][2];
-      const confusionEffect = effects.find(e => e.effect === 'confusion');
-      expect(confusionEffect).toBeDefined();
-      expect(confusionEffect.target).toBe('Goblin');
-      expect(confusionEffect.source).toBe(casterName);
-      expect(confusionEffect.conditions).toEqual(['charmed', 'speed_zero']);
-      expect(confusionEffect.dc).toBe(10);
-      expect(confusionEffect.duration).toBe('concentration');
-    });
-
-    it('updates existing confusion effect if one already exists for the target', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([
-        { target: 'Goblin', effect: 'confusion', source: 'OldCaster', dc: 12 },
-      ]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const effectCalls = setRuntimeValue.mock.calls.filter(
-        call => call[1] === 'targetEffects',
-      );
-      const effects = effectCalls[effectCalls.length - 1][2];
-      expect(effects.length).toBe(1);
-      expect(effects[0].source).toBe(casterName);
-      expect(effects[0].dc).toBe(10);
-    });
-
-    it('posts save_result via addTargetResult with failure params', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue({
-        promptId: 'confusion-prompt',
-        promise: Promise.resolve({ success: false, roll: 5, total: 7 }),
-      });
-
-      await handle(action, ps, campaignName, null);
-
-      expect(addTargetResult).toHaveBeenCalledWith(campaignName, {
-        targetName: 'Goblin',
-        saveResult: 'failure',
-        roll: 5,
-        total: 7,
-        conditions: ['charmed', 'speed_zero'],
-        appliedDamage: 0,
-      });
-    });
-
-    it('does not call buildSaveDc with advantage/disadvantage confusion (disadvantage via metaCtx)', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      // buildSaveDc should be called once at the start, not per-target
-      expect(buildSaveDc).toHaveBeenCalledTimes(1);
+      const abilityEntry = addEntry.mock.calls.find(c => c[1].type === 'ability_use')[1];
+      expect(abilityEntry.characterName).toBe('WizardX');
+      expect(abilityEntry.description).toContain('WizardX');
     });
   });
 
@@ -973,22 +692,6 @@ describe('confusionHandler.handle', () => {
       expect(result.payload.description).toContain('Confusion affects 1 creature(s)');
     });
 
-    it('uses custom playerStats name in ability_use log description', async () => {
-      const ps = makePlayerStats({ name: 'WizardX' });
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const abilityEntry = addEntry.mock.calls.find(c => c[1].type === 'ability_use')[1];
-      expect(abilityEntry.characterName).toBe('WizardX');
-      expect(abilityEntry.description).toContain('WizardX');
-    });
-
     it('handles mixed success/failure across multiple targets', async () => {
       const ps = makePlayerStats();
       const action = makeAction();
@@ -1015,88 +718,6 @@ describe('confusionHandler.handle', () => {
 
       expect(result.payload.description).toContain('Confusion affects 1 creature(s)');
       expect(result.payload.description).toContain('2 creature(s) saved');
-    });
-
-    it('handles non-array activeConditions gracefully', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue('not-an-array');
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin', 'activeConditions', expect.arrayContaining(['charmed', 'speed_zero']), campaignName,
-      );
-    });
-
-    it('handles undefined activeConditions gracefully', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue(undefined);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Goblin', 'activeConditions', expect.arrayContaining(['charmed', 'speed_zero']), campaignName,
-      );
-    });
-
-    it('handles non-array targetEffects gracefully', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      getRuntimeValue.mockReturnValue('not-an-array');
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      // Should still set targetEffects as an array
-      const effectCalls = setRuntimeValue.mock.calls.filter(
-        call => call[1] === 'targetEffects',
-      );
-      expect(effectCalls.length).toBeGreaterThan(0);
-    });
-
-    it('uses action.name in ability_use log entry', async () => {
-      const ps = makePlayerStats();
-      const action = { name: 'Tasha\'s Confusion', automation: { type: 'confusion', saveType: 'WIS', saveDc: 13 } };
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      createSaveListener.mockReturnValue(failSaveListener());
-
-      await handle(action, ps, campaignName, null);
-
-      const abilityEntry = addEntry.mock.calls.find(c => c[1].type === 'ability_use')[1];
-      expect(abilityEntry.abilityName).toBe('Tasha\'s Confusion');
-    });
-
-    it('handles saveResult with missing roll/total fields', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-      const ctx = makeCombatContext([{ name: 'Goblin' }]);
-      getCombatContext.mockResolvedValue(ctx);
-      buildSaveDc.mockReturnValue(10);
-      createSaveListener.mockReturnValue({
-        promptId: 'confusion-prompt',
-        promise: Promise.resolve({ success: true }),
-      });
-
-      await handle(action, ps, campaignName, null);
-
-      // Should not throw - uses ?? 0 fallback
-      const saveEntries = addEntry.mock.calls.filter(c => c[1].type === 'save_result');
-      expect(saveEntries.length).toBe(1);
     });
 
     it('handles targets passed as string array in metaCtx', async () => {

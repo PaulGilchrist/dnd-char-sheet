@@ -44,12 +44,10 @@ vi.mock('../../../rules/effects/restRules.js', () => ({
 
 import { handle } from './healingHandler.js';
 import * as diceRoller from '../../../dice/diceRoller.js';
-import * as classFeatures from '../../../character/classFeatures.js';
-import * as targetResolver from '../../common/targetResolver.js';
-import * as healingRoll from '../../common/healingRoll.js';
-import * as automationService from '../../../combat/automation/automationService.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as restRules from '../../../rules/effects/restRules.js';
+import * as healingRoll from '../../common/healingRoll.js';
+import * as automationService from '../../../combat/automation/automationService.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -77,28 +75,26 @@ function makeAction(automation = {}) {
   };
 }
 
+function mockDefaultBehavior() {
+  diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+  diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
+  automationService.resolveHealingBonuses.mockReturnValue(0);
+  automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 0, details: [] });
+  healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 15, maxHp: 20, actualHeal: 5 });
+}
+
 // ── Tests ──────────────────────────────────────────────────────
 
-describe('healingHandler', () => {
+describe('healingHandler self_healing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-    diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
-    automationService.resolveHealingBonuses.mockReturnValue(0);
-    automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 0, details: [] });
-    automationService.hasHealingMaximization.mockReturnValue(false);
-    automationService.hasHealingMaximizationForTarget.mockReturnValue(false);
-    automationService.hasRerollHealingOnes.mockReturnValue(false);
-    healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 15, maxHp: 20, actualHeal: 5 });
-    classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 6 });
-    targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'TestHealer' } });
+    mockDefaultBehavior();
     runtimeState.getRuntimeValue.mockReturnValue(undefined);
-    restRules.getHitDieSize.mockReturnValue(8);
   });
 
   // ── Self healing with expression ─────────────────────────────
 
-  describe('self_healing with healExpression', () => {
+  describe('healExpression', () => {
     it('should return automation_info popup with healing result', async () => {
       const ps = makePlayerStats();
       const action = makeAction({
@@ -218,7 +214,7 @@ describe('healingHandler', () => {
 
   // ── Hit die roll ─────────────────────────────────────────────
 
-  describe('self_healing with hit_die_roll', () => {
+  describe('hit_die_roll', () => {
     it('should block when insufficient hit dice', async () => {
       runtimeState.getRuntimeValue.mockReturnValue(1);
       restRules.getHitDieSize.mockReturnValue(8);
@@ -348,12 +344,11 @@ describe('healingHandler', () => {
       expect(result2.type).toBe('popup');
       expect(result2.payload.description).toContain('0 hit dice');
     });
-
   });
 
   // ── Bloodied only ────────────────────────────────────────────
 
-  describe('self_healing with bloodiedOnly', () => {
+  describe('bloodiedOnly', () => {
     it('should block when above half HP', async () => {
       const ps = makePlayerStats({ currentHitPoints: 15, maxHitPoints: 20 });
       const action = makeAction({
@@ -396,10 +391,16 @@ describe('healingHandler', () => {
 
   // ── Maximization and reroll ──────────────────────────────────
 
-  describe('maximization and reroll behavior', () => {
+  describe('maximization and reroll', () => {
+    beforeEach(() => {
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+      diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
+      automationService.hasHealingMaximizationForTarget.mockReturnValue(false);
+      automationService.hasRerollHealingOnes.mockReturnValue(false);
+    });
+
     it('should use rollExpressionMaximized when hasHealingMaximization', async () => {
       automationService.hasHealingMaximizationForTarget.mockReturnValue(true);
-      diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
 
       const ps = makePlayerStats();
       const action = makeAction({ healExpression: '1d6' });
@@ -433,351 +434,6 @@ describe('healingHandler', () => {
     });
   });
 
-  // ── Uses-based non-self healing ──────────────────────────────
-
-  describe('uses-based non-self healing', () => {
-    it('should resolve target and return automation_info when uses available', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const ps = makePlayerStats();
-      const action = makeAction({
-        uses: 1,
-        healExpression: '2d4',
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('should return healing popup when no uses field and no healExpression for self_healing', async () => {
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'TestHealer' } });
-
-      const ps = makePlayerStats();
-      const action = makeAction({
-        uses: 1,
-      });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('should resolve target when uses available for non-self type', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Cure Wounds',
-        automation: {
-          type: 'reaction',
-          uses: 1,
-          healExpression: '1d8',
-        },
-      };
-
-      await handle(action, ps, campaignName, null);
-
-      expect(targetResolver.resolveTarget).toHaveBeenCalledWith(campaignName, 'TestHealer');
-    });
-
-    it('should apply healing and log when target resolves to ally', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 15, maxHp: 20, actualHeal: 5 });
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Cure Wounds',
-        automation: {
-          type: 'reaction',
-          uses: 1,
-          healExpression: '1d8',
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.description).toContain('Ally');
-      expect(result.payload.description).toContain('Regained 5 HP');
-      expect(healingRoll.logHealingToSSE).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        targetName: 'Ally',
-        sourceName: 'Cure Wounds',
-      }));
-    });
-
-    it('should return automation_info with Long Rest message when uses depleted for non-self', async () => {
-      runtimeState.getRuntimeValue.mockReturnValue(0);
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Cure Wounds',
-        automation: {
-          type: 'reaction',
-          uses: 1,
-          healExpression: '1d8',
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.description).toContain('Long Rest');
-    });
-  });
-
-  // ── Non-self healing without uses field ──────────────────────
-
-  describe('non-self healing without uses field', () => {
-    it('should return healing popup with expression when no uses', async () => {
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Cure Wounds',
-        automation: {
-          type: 'reaction',
-          healExpression: '1d8',
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('should return healing popup when no uses and no healExpression', async () => {
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Stabilize',
-        automation: {
-          type: 'reaction',
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('should include bonus HP in description when resolveHealingBonuses > 0', async () => {
-      automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 2, details: [{ name: 'Disciple of Life', amount: 2 }] });
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Cure Wounds',
-        automation: {
-          type: 'reaction',
-          healExpression: '1d8',
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.type).toBe('automation_info');
-    });
-  });
-
-  // ── healAmount number path (no uses field) ───────────────────
-
-  describe('healAmount number (no uses)', () => {
-    it('should return healing popup with healAmount number', async () => {
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Stabilize',
-        automation: {
-          type: 'reaction',
-          healAmount: 1,
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-
-    it('should add bonus to number healAmount and include in description', async () => {
-      automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 3, details: [{ name: 'Disciple of Life', amount: 3 }] });
-      const ps = makePlayerStats();
-      const action = {
-        name: 'Lay on Hands',
-        automation: {
-          type: 'reaction',
-          healAmount: 5,
-        },
-      };
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-    });
-  });
-
-  // ── Monk healing ─────────────────────────────────────────────
-
-  describe('monk healing (martial_arts_die + WIS)', () => {
-    it('should return handOfHealing modal when expression includes martial_arts_die and WIS', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 3 }],
-      });
-      const action = makeAction({
-        healExpression: 'martial_arts_die + WIS',
-      });
-
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.modalName).toBe('handOfHealing');
-      expect(result.payload.monkName).toBe('TestHealer');
-      expect(result.payload.bonus).toBe(3);
-    });
-
-    it('should use martialArtsDie from class features or default to 4', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 2 }],
-      });
-      const action = makeAction({
-        healExpression: 'martial_arts_die + WIS',
-      });
-
-      classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 8 });
-      diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.formula).toContain('1d8');
-    });
-
-    it('should default martialArtsDie to 4 when class features returns null', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 2 }],
-      });
-      const action = {
-        name: 'Hand of Healing',
-        automation: {
-          type: 'self_healing',
-          healExpression: 'martial_arts_die + WIS',
-        },
-      };
-
-      classFeatures.getClassFeatures.mockReturnValue(null);
-      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.formula).toContain('1d4');
-    });
-
-    it('should include bonus in formula when resolveHealingBonuses > 0', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 3 }],
-      });
-      const action = makeAction({
-        healExpression: 'martial_arts_die + WIS',
-      });
-
-      classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 6 });
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-      automationService.resolveHealingBonusesWithDetails.mockReturnValue({ totalBonus: 2, details: [{ name: 'Disciple of Life', amount: 2 }] });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.formula).toContain('+ 2');
-      expect(result.payload.bonus).toBe(5);
-    });
-
-    it('should include targetName and HP info in modal payload', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 2 }],
-      });
-      const action = makeAction({
-        healExpression: 'martial_arts_die + WIS',
-      });
-
-      classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 6 });
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 18, maxHp: 20, actualHeal: 8 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.targetName).toBe('TestHealer');
-      expect(result.payload.targetCurrentHp).toBe(18);
-      expect(result.payload.targetMaxHp).toBe(20);
-    });
-
-    it('should use targetName from resolveTarget when isSelf is false', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 3 }],
-      });
-      const action = {
-        name: 'Hand of Healing',
-        automation: {
-          type: 'other_healing',
-          healExpression: 'martial_arts_die + WIS',
-        },
-      };
-
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('modal');
-      expect(result.payload.targetName).toBe('Ally');
-    });
-
-    it('should fallback to player name when resolveTarget returns null for monk healing', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 3 }],
-      });
-      const action = {
-        name: 'Hand of Healing',
-        automation: {
-          type: 'other_healing',
-          healExpression: 'martial_arts_die + WIS',
-        },
-      };
-
-      targetResolver.resolveTarget.mockResolvedValue(null);
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.targetName).toBe('TestHealer');
-    });
-  });
-
-  // ── Physician's Touch ────────────────────────────────────────
-
-  describe("Physician's Touch feature", () => {
-    it('should include hasPhysiciansTouch in modal payload when feature exists', async () => {
-      const ps = makePlayerStats({
-        abilities: [{ name: 'Wisdom', bonus: 2 }],
-        specialActions: [{ name: "Physician's Touch" }],
-      });
-      const action = makeAction({ healExpression: 'martial_arts_die + WIS' });
-
-      classFeatures.getClassFeatures.mockReturnValue({ martialArtsDie: 6 });
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.payload.hasPhysiciansTouch).toBe(true);
-    });
-  });
-
   // ── Uses tracking edge cases ─────────────────────────────────
 
   describe('uses tracking edge cases', () => {
@@ -798,262 +454,4 @@ describe('healingHandler', () => {
       );
     });
   });
-
-  // ── Battle Medic (requiresHealersKit) ──────────────────────────
-
-  describe('Battle Medic (requiresHealersKit)', () => {
-    function makeBattleMedicAction(overrides = {}) {
-      return {
-        name: 'Battle Medic',
-        automation: {
-          type: 'healing',
-          healExpression: 'ally_hit_die + proficiency_bonus',
-          action: 'action',
-          range: '5 ft',
-          requiresHealersKit: true,
-          ...overrides,
-        },
-      };
-    }
-
-    function makeCharacters(targetName, hitDieSize) {
-      return [
-        {
-          name: targetName,
-          computedStats: {
-            class: { hit_point_die: `d${hitDieSize}` },
-            level: 5,
-          },
-        },
-      ];
-    }
-
-    it('should return popup error when no Healer\'s Kit in inventory', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ['Longsword'], backpack: ['Scrolls'] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-
-      const result = await handle(action, ps, campaignName, null, []);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain("Healer's Kit");
-    });
-
-    it('should succeed when Healer\'s Kit is in equipped', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(2);
-      restRules.getHitDieSize.mockReturnValue(8);
-      diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 18, maxHp: 20, actualHeal: 11 });
-
-      const result = await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.description).toContain('1d8');
-      expect(result.payload.description).toContain('= 11');
-    });
-
-    it('should succeed when Healer\'s Kit is in backpack', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: [], backpack: ["Healer's Kit"] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 12, maxHp: 20, actualHeal: 9 });
-
-      await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd6' } } },
-      ]);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Ally',
-        'shortRestHitDice',
-        0,
-        campaignName,
-        true,
-      );
-    });
-
-    it('should return popup error when target has no hit dice remaining', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(0);
-
-      const result = await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('no hit dice remaining');
-    });
-
-    it('should use target\'s hit die size from characters array', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(3);
-      restRules.getHitDieSize.mockReturnValue(10);
-      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 20, maxHp: 20, actualHeal: 10 });
-
-      const characters = makeCharacters('Ally', 10);
-      await handle(action, ps, campaignName, null, characters);
-
-      expect(restRules.getHitDieSize).toHaveBeenCalledWith(characters[0].computedStats);
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d10');
-    });
-
-    it('should apply roll + proficiency_bonus without extra healing bonuses', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-        proficiency: 4,
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(2);
-      diceRoller.rollExpression.mockReturnValue({ total: 6, rolls: [6], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 16, maxHp: 20, actualHeal: 10 });
-
-      const result = await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(result.payload.description).toContain('= 10');
-      expect(result.payload.description).toContain('1d8 + 4');
-    });
-
-    it('should consume target\'s hit die and report remaining', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-        proficiency: 3,
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(2);
-      restRules.getHitDieSize.mockReturnValue(8);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 13, maxHp: 20, actualHeal: 8 });
-
-      const result = await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Ally',
-        'shortRestHitDice',
-        1,
-        campaignName,
-        true,
-      );
-      expect(result.payload.description).toContain('1 hit dice remaining');
-    });
-
-    it('should use rerollOnes when hasRerollHealingOnes is true', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      restRules.getHitDieSize.mockReturnValue(8);
-      automationService.hasRerollHealingOnes.mockReturnValue(true);
-      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [7], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 10, maxHp: 20, actualHeal: 10 });
-
-      await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(diceRoller.rollExpression).toHaveBeenCalledWith('1d8', { rerollOnes: true });
-      expect(diceRoller.rollExpressionMaximized).not.toHaveBeenCalled();
-    });
-
-    it('should use rollExpressionMaximized when hasHealingMaximization is true', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      automationService.hasHealingMaximizationForTarget.mockReturnValue(true);
-      diceRoller.rollExpressionMaximized.mockReturnValue({ total: 8, rolls: [8], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 11, maxHp: 20, actualHeal: 11 });
-
-      await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(diceRoller.rollExpressionMaximized).toHaveBeenCalledWith('1d8');
-      expect(diceRoller.rollExpression).not.toHaveBeenCalled();
-    });
-
-    it('should handle already at full HP', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-        proficiency: 3,
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(1);
-      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 20, maxHp: 20, actualHeal: 0 });
-
-      const result = await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(result.payload.description).toContain('Already at full HP');
-      expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'Ally',
-        'shortRestHitDice',
-        0,
-        campaignName,
-        true,
-      );
-    });
-
-    it('should log to SSE with correct details', async () => {
-      const ps = makePlayerStats({
-        inventory: { equipped: ["Healer's Kit"], backpack: [] },
-        proficiency: 3,
-      });
-      const action = makeBattleMedicAction();
-      targetResolver.resolveTarget.mockResolvedValue({ target: { name: 'Ally' } });
-      runtimeState.getRuntimeValue.mockReturnValue(2);
-      restRules.getHitDieSize.mockReturnValue(8);
-      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-      healingRoll.applyHealingDirectly.mockReturnValue({ newHp: 13, maxHp: 20, actualHeal: 8 });
-
-      await handle(action, ps, campaignName, null, [
-        { name: 'Ally', computedStats: { class: { hit_point_die: 'd8' } } },
-      ]);
-
-      expect(healingRoll.logHealingToSSE).toHaveBeenCalledWith(campaignName, expect.objectContaining({
-        targetName: 'Ally',
-        sourceName: 'Battle Medic',
-        actualHeal: 8,
-        newHp: 13,
-        maxHp: 20,
-        rollInfo: '1d8=5 (5)',
-        bonusDetails: [],
-      }));
-    });
-  });
-
 });

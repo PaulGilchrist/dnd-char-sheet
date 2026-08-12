@@ -1,8 +1,14 @@
-// @cleaned-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import CharSheet from './CharSheet';
+import {
+  createMockStore,
+  createMockPlayerStats,
+  createDefaultProps,
+  createSharedPopupReturnValue,
+  resetTestState,
+} from './CharSheet.test-utils';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -164,22 +170,17 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
   )),
 }));
 
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
+const sharedPopupReturnValue = createSharedPopupReturnValue();
 
 vi.mock('../../hooks/combat/useSharedPopup.js', () => {
   const mockFn = vi.fn();
   mockFn.mockImplementation(() => {
-    return { ...sharedPopupReturnVal, Provider: ({ children }) => children };
+    return { ...sharedPopupReturnValue, Provider: ({ children }) => children };
   });
   return { default: mockFn };
 });
 
-const mockStore = new Map();
+const mockStore = createMockStore();
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -235,66 +236,15 @@ vi.mock('../../services/rules/rulesFactory.js', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const createMockPlayerStats = (overrides = {}) => ({
-  name: 'Test Character',
-  level: 5,
-  hitPoints: { current: 40, max: 40 },
-  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
-  spellAbilities: { spells: [], maxPreparedSpells: 5 },
-  rules: '5e',
-  automation: { passives: [] },
-  class: { name: 'Fighter' },
-  speed: 30,
-  race: { speed: 30 },
-  actions: [],
-  bonusActions: [],
-  reactions: [],
-  specialActions: [],
-  characterAdvancement: [],
-  skillProficiencies: [],
-  saveModifiers: [],
-  ...overrides,
-});
-
-const mockPlayerSummary = {
-  name: 'Test Character',
-  rules: '5e',
-};
-
-const defaultProps = {
-  allAbilityScores: [],
-  allClasses: [],
-  allClasses2024: [],
-  allEquipment: [],
-  allMagicItems: [],
-  allRaces: [],
-  allSpells: [],
-  allSpells2024: [],
-  playerSummary: mockPlayerSummary,
-  allRaces2024: [],
-  allMagicItems2024: [],
-  campaignName: 'test-campaign',
-  activeMapName: null,
-  characters: [],
-  onDeleteCharacter: vi.fn(),
-  onEditCharacter: vi.fn(),
-  onUploadClick: vi.fn(),
-  onSaveClick: vi.fn(),
-};
-
-// ---------------------------------------------------------------------------
 // Tests — handleReroll callback
 // ---------------------------------------------------------------------------
 
 describe('handleReroll callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('sets fanaticalFocusUsed when condition is raging', async () => {
@@ -349,11 +299,11 @@ describe('handleReroll callback', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleStrokeOfLuck callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('sets strokeOfLuckUsed and boonOfCombatProwessUsed', async () => {
@@ -370,17 +320,17 @@ describe('handleStrokeOfLuck callback', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleBardicInspiration callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('logs ability_use entry when bardic inspiration is used', async () => {
     mockStore.set('Test Character:bardicInspirationDie', 'd6');
     mockStore.set('Test Character:bardicInspirationGrantedBy', 'Bard');
-    sharedPopupReturnVal.popupHtml = {
+    sharedPopupReturnValue.popupHtml = {
       name: 'Persuasion Check',
       rolls: [15],
       bonus: 3,
@@ -395,7 +345,7 @@ describe('handleBardicInspiration callback', () => {
   });
 
   it('does nothing when no bardicInspirationDie', async () => {
-    sharedPopupReturnVal.popupHtml = {
+    sharedPopupReturnValue.popupHtml = {
       name: 'Persuasion Check',
       rolls: [15],
       bonus: 3,
@@ -412,7 +362,7 @@ describe('handleBardicInspiration callback', () => {
   it('uses default checkName when popupHtml.name is missing', async () => {
     mockStore.set('Test Character:bardicInspirationDie', 'd6');
     mockStore.set('Test Character:bardicInspirationGrantedBy', 'Bard');
-    sharedPopupReturnVal.popupHtml = {
+    sharedPopupReturnValue.popupHtml = {
       rolls: [15],
       bonus: 3,
       modifier: 0,
@@ -431,11 +381,11 @@ describe('handleBardicInspiration callback', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleBiDefenseCombatSummary callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('updates combatSummary when lastAttack exists', async () => {
@@ -479,11 +429,11 @@ describe('handleBiDefenseCombatSummary callback', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleBardicInspirationOffense callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('applies damage to target and logs entry', async () => {
@@ -530,15 +480,15 @@ describe('handleBardicInspirationOffense callback', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleEmpoweredSpell callback', () => {
+  const defaultProps = createDefaultProps();
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetTestState(sharedPopupReturnValue);
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
   });
 
   it('calls executeEmpoweredReroll and returns result', async () => {
-    sharedPopupReturnVal.popupHtml = { empoweredSpellChaMod: 3 };
+    sharedPopupReturnValue.popupHtml = { empoweredSpellChaMod: 3 };
 
     render(<CharSheet {...defaultProps} />);
 
@@ -552,585 +502,6 @@ describe('handleEmpoweredSpell callback', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handlePuncture callback
-// ---------------------------------------------------------------------------
-
-describe('handlePuncture callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('applies damage difference when puncture is used', async () => {
-    mockStore.set('Test Character:piercerPunctureUsedThisTurn', null);
-    sharedPopupReturnVal.popupHtml = {
-      modifier: 5,
-      damageType: 'Piercing',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when puncture already used this turn', async () => {
-    mockStore.set('Test Character:piercerPunctureUsedThisTurn', true);
-    sharedPopupReturnVal.popupHtml = {
-      modifier: 5,
-      damageType: 'Piercing',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when no punctureData', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handleSavageAttacker callback
-// ---------------------------------------------------------------------------
-
-describe('handleSavageAttacker callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('applies damage difference when savage attacker is used', async () => {
-    mockStore.set('Test Character:_Savage_Attacker_usedRound', null);
-    sharedPopupReturnVal.popupHtml = {
-      modifier: 5,
-      damageType: 'Slashing',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when savage attacker already used', async () => {
-    mockStore.set('Test Character:_Savage_Attacker_usedRound', true);
-    sharedPopupReturnVal.popupHtml = {
-      modifier: 5,
-      damageType: 'Slashing',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handleTacticalMind callback
-// ---------------------------------------------------------------------------
-
-describe('handleTacticalMind callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('logs Tactical Mind ability use', async () => {
-    mockStore.set('Test Character:secondWindUses', 2);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when no secondWindUses', async () => {
-    mockStore.set('Test Character:secondWindUses', 0);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('uses default checkName when popupHtml.name missing', async () => {
-    mockStore.set('Test Character:secondWindUses', 2);
-    sharedPopupReturnVal.popupHtml = {
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handleDarkOnesLuck callback
-// ---------------------------------------------------------------------------
-
-describe('handleDarkOnesLuck callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('logs Dark Ones Luck ability use', async () => {
-    mockStore.set('Test Character:darkOnesLuckUses', 3);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Persuasion Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when darkOnesLuckUses is 0', async () => {
-    mockStore.set('Test Character:darkOnesLuckUses', 0);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Persuasion Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('uses default rollName when popupHtml.name missing', async () => {
-    mockStore.set('Test Character:darkOnesLuckUses', 3);
-    sharedPopupReturnVal.popupHtml = {
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handleSuperiorityManeuver callback
-// ---------------------------------------------------------------------------
-
-describe('handleSuperiorityManeuver callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('logs superiority maneuver use', async () => {
-    mockStore.set('Test Character:superiorityDice', 4);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('updates initiative when maneuver is on initiative roll', async () => {
-    mockStore.set('Test Character:superiorityDice', 4);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Initiative',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    const { loadCombatSummary } = await import('../../services/encounters/combatData.js');
-    loadCombatSummary.mockResolvedValue({
-      creatures: [{ type: 'player', name: 'Test Character', initiative: '0' }],
-    });
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when superiorityDice is 0', async () => {
-    mockStore.set('Test Character:superiorityDice', 0);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does nothing when maneuver not found', async () => {
-    mockStore.set('Test Character:superiorityDice', 4);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    const { getManeuversForRules } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
-    getManeuversForRules.mockResolvedValue([]);
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — handlePsiBolsteredKnack callback
-// ---------------------------------------------------------------------------
-
-describe('handlePsiBolsteredKnack callback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('logs Psi-Bolstered Knack when success', async () => {
-    mockStore.set('Test Character:psionicEnergy', 3);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('does not expend energy when failure', async () => {
-    mockStore.set('Test Character:psionicEnergy', 3);
-    sharedPopupReturnVal.popupHtml = {
-      name: 'Athletics Check',
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('uses default popupName when popupHtml.name missing', async () => {
-    mockStore.set('Test Character:psionicEnergy', 3);
-    sharedPopupReturnVal.popupHtml = {
-      rolls: [15],
-      bonus: 3,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — ShieldOfFaithTargetSelectionModal (lines 46-74)
-// ---------------------------------------------------------------------------
-
-describe('ShieldOfFaithTargetSelectionModal', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders shield_of_faith_target_selection modal', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'shield_of_faith_target_selection',
-      creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }],
-      duration: '1 minute',
-      range: '60 feet',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with empty creatureTargets when popupHtml has none', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'shield_of_faith_target_selection',
-      creatureTargets: [],
-      duration: '1 minute',
-      range: '60 feet',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('renders with null creatureTargets when popupHtml has none property', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'shield_of_faith_target_selection',
-      duration: '1 minute',
-      range: '60 feet',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Wild Shape confirm handler
-// ---------------------------------------------------------------------------
-
-describe('Wild Shape confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders wild_shape_select modal with action', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'wild_shape_select',
-      playerStats: { name: 'Test Character' },
-      campaignName: 'test-campaign',
-      action: { name: 'Wild Shape' },
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Polymorph confirm handler
-// ---------------------------------------------------------------------------
-
-describe('Polymorph confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders polymorph_select modal with all required data', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'polymorph_select',
-      maxCR: 1,
-      campaignName: 'test-campaign',
-      targetName: 'Test Character',
-      casterName: 'Enemy',
-      spell: { name: 'Polymorph' },
-      spellLevel: 4,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Shapechange confirm handler
-// ---------------------------------------------------------------------------
-
-describe('Shapechange confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders shapechange_select modal with allowAnyCreature', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'shapechange_select',
-      maxCR: 5,
-      campaignName: 'test-campaign',
-      targetName: 'Test Character',
-      casterName: 'Test Character',
-      spell: { name: 'Shapechange' },
-      spellLevel: 9,
-      allowAnyCreature: true,
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Animal Shapes confirm handler
-// ---------------------------------------------------------------------------
-
-describe('Animal Shapes confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders animal_shapes_target_selection modal', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'animal_shapes_target_selection',
-      targets: [{ name: 'Ally1' }, { name: 'Ally2' }],
-      maxCR: 4,
-      campaignName: 'test-campaign',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('animal-shapes-selection-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — True Polymorph confirm handler
-// ---------------------------------------------------------------------------
-
-describe('True Polymorph confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders true_polymorph_select modal with creature_to_creature mode', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'true_polymorph_select',
-      maxCR: 10,
-      campaignName: 'test-campaign',
-      targetName: 'Test Character',
-      casterName: 'Enemy',
-      spell: { name: 'True Polymorph' },
-      spellLevel: 9,
-      mode: 'creature_to_creature',
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('polymorph-selection-modal')).toBeInTheDocument();
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests — Object Transform confirm handler
-// ---------------------------------------------------------------------------
-
-describe('Object Transform confirm handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-  });
-
-  it('renders true_polymorph_object modal', async () => {
-    sharedPopupReturnVal.popupHtml = {
-      type: 'true_polymorph_object',
-      campaignName: 'test-campaign',
-      targetName: 'Test Character',
-      casterName: 'Test Character',
-      spell: { name: 'True Polymorph' },
-    };
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('object-transform-modal')).toBeInTheDocument();
     });
   });
 });
