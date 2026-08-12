@@ -1,0 +1,311 @@
+// SavePromptModal — Special Handlers (Bane on attacker, HP restoration, CombatSummary, Storage)
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import SavePromptModal from './SavePromptModal.jsx';
+import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
+import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
+import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getCombatSummary } from '../../services/encounters/combatData.js';
+import storage from '../../services/ui/storage.js';
+import * as savePromptService from '../../services/combat/conditions/savePromptService.js';
+import { setupDefaults, cleanupDefaults } from './SavePromptModal.test-utils.jsx';
+
+// ── Mocks ──
+
+vi.mock('../../services/ui/utils.js', () => ({
+  default: {
+    getName: (name) => name || 'Unknown',
+  },
+}));
+
+vi.mock('../../services/dice/diceRoller.js', () => ({
+  rollD20: vi.fn(),
+  rollExpression: vi.fn(),
+}));
+
+vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
+  sendSaveResult: vi.fn(),
+  clearSavePrompt: vi.fn(),
+}));
+
+vi.mock('../../services/combat/auras/auraOfProtection.js', () => ({
+  computeAuraBonus: vi.fn(async () => ({ bonus: 0, sourceName: null })),
+}));
+
+vi.mock('../../services/combat/conditions/conditionUtils.js', () => ({
+  getAbilitySaveBonus: vi.fn(() => 3),
+}));
+
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+  getStore: vi.fn(() => new Map()),
+  useSyncedState: vi.fn(() => [null, vi.fn()]),
+  listeners: new Map(),
+  getRuntimeValue: vi.fn(() => null),
+  setRuntimeValue: vi.fn(),
+}));
+
+vi.mock('../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../services/ui/storage.js', () => ({
+  default: {
+    set: vi.fn(() => Promise.resolve()),
+    get: vi.fn(() => Promise.resolve(null)),
+  },
+}));
+
+vi.mock('../../hooks/useAllySelection.js', () => ({
+  getAllyList: vi.fn(() => []),
+}));
+
+vi.mock('../../services/automation/handlers/buffs/circleOfPowerHandler.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    isCircleOfPowerActive: vi.fn(() => false),
+  };
+});
+
+vi.mock('./Subscriber.jsx', () => {
+  function MockSubscriber({ handleEvent, campaignName }) {
+    return React.createElement(
+      'div',
+      { 'data-testid': 'subscriber', 'data-campaign': campaignName },
+      React.createElement('button', { 'data-testid': 'subscriber-trigger', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-1', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-second', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget2`, data: { promptId: 'test-prompt-2', targetName: 'testTarget2', saveType: 'dex', saveDc: 15, disadvantage: true, dcSuccess: 'half' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-cleared', onClick: () => handleEvent({ key: `change-${campaignName}-savePromptCleared-testTarget`, data: { promptId: 'test-prompt-1' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-disadvantage', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget3`, data: { promptId: 'test-prompt-disadv', targetName: 'testTarget3', saveType: 'str', saveDc: 14, disadvantage: true, dcSuccess: 'half', sourceName: 'Fireball' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-dex', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-dex', targetName: 'testTarget', saveType: 'dex', saveDc: 17, disadvantage: false, dcSuccess: 'half', sourceName: 'Sacred Flame' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-none-dc', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget4`, data: { promptId: 'test-prompt-none', targetName: 'testTarget4', saveType: 'wis', saveDc: 16, disadvantage: false, dcSuccess: 'none' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-wis', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-wis', targetName: 'testTarget', saveType: 'WIS', saveDc: 13, disadvantage: false, dcSuccess: 'half' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-attacker', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-attacker', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false, attackerName: 'testAttacker' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-rawdamage', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-rd', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false, rawDamage: 10, dcSuccess: 'half' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-rawdamage-none', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-rd-none', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false, rawDamage: 10, dcSuccess: 'none' } }) }),
+      React.createElement('button', { 'data-testid': 'subscriber-trigger-rawdamage-reroll', onClick: () => handleEvent({ key: `change-${campaignName}-savePrompt-testTarget`, data: { promptId: 'test-prompt-rd-reroll', targetName: 'testTarget', saveType: 'con', saveDc: 12, disadvantage: false, rawDamage: 10, dcSuccess: 'half' } }) }),
+    );
+  }
+  return { default: MockSubscriber };
+});
+
+describe('SavePromptModal — Special Handlers', () => {
+  beforeEach(() => setupDefaults(rollD20, computeAuraBonus, getRuntimeValue));
+  afterEach(cleanupDefaults);
+
+  // ── Bane on attacker ──
+
+  it('applies bane attacker bonus when attacker has bane_penalty', async () => {
+    rollD20.mockReturnValue(15);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (name === 'campaign' && key === 'targetEffects') return [
+        { target: 'testTarget', effect: 'bane_penalty' },
+        { target: 'testTarget', effect: 'bless_bonus' },
+        { target: 'testTarget', effect: 'warding_bond', saveBonus: 1 },
+        { target: 'testAttacker', effect: 'bane_penalty' },
+      ];
+      return null;
+    });
+    vi.mocked(rollExpression).mockReturnValue({ total: 3 });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger-attacker');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Bane/i)).toBeInTheDocument();
+  });
+
+  // ── submitSaveResult with success + damage restoration ──
+
+  it('restores HP on successful save reroll when rawDamage > 0', async () => {
+    rollD20.mockReturnValue(20);
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
+      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
+      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
+      return null;
+    });
+    vi.mocked(getCombatSummary).mockReturnValue({
+      lastAttack: { finalDamage: 10 },
+      creatures: [],
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    });
+
+    // After rolling and seeing success, clicking Done should call sendSaveResult
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
+    expect(savePromptService.clearSavePrompt).toHaveBeenCalled();
+  });
+
+  // ── submitSaveResult: updates combatSummary lastAttack ──
+
+  it('updates combatSummary lastAttack when submitSaveResult is called with combatSummary', async () => {
+    rollD20.mockReturnValue(20);
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
+      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
+      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
+      return null;
+    });
+    vi.mocked(getCombatSummary).mockReturnValue({
+      lastAttack: { d20: 10, total: 15 },
+      creatures: [],
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    });
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
+      saveType: 'con',
+      saveDc: 12,
+    }), 'test-campaign');
+  });
+
+  // ── submitSaveResult: HP restoration path ──
+
+  it('restores HP via submitSaveResult when success and rawDamage > 0', async () => {
+    rollD20.mockReturnValue(20);
+    getRuntimeValue.mockImplementation((name, key, campaign) => {
+      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
+      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
+      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
+      return null;
+    });
+    vi.mocked(getCombatSummary).mockReturnValue({
+      lastAttack: { finalDamage: 10 },
+      creatures: [],
+    });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger-rawdamage');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
+    });
+
+    const doneBtn = screen.getByRole('button', { name: 'Done' });
+    fireEvent.click(doneBtn);
+
+    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
+  });
+
+  // ── Storage: lastAttack with secondary formula ──
+
+  it('stores lastAttack with secondary formula data', async () => {
+    rollD20.mockReturnValue(15);
+    vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
+
+    render(
+      <SavePromptModal
+        campaignName="test-campaign"
+        characters={[]}
+        activeMapName={null}
+      />
+    );
+
+    const trigger = screen.getByTestId('subscriber-trigger');
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const trigger2 = screen.getByTestId('subscriber-trigger-second');
+    fireEvent.click(trigger2);
+
+    await waitFor(() => {
+      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
+    });
+
+    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
+    fireEvent.click(rollBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Total:/i)).toBeInTheDocument();
+    });
+
+    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.any(Object), 'test-campaign');
+  });
+});

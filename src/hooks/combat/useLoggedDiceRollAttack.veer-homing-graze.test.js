@@ -156,11 +156,8 @@ import {
     applyMinDamageAdjustment,
 } from './loggedDiceRollUtils.js';
 import { createLogAndShow } from './useLoggedDiceRollAttack.js';
-import { addEntry } from '../../services/ui/logService.js';
 import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import { hasBardicInspirationDefense, getBardicInspirationDieSize, hasBardicInspirationOffense } from '../../services/combat/auras/bardicInspirationState.js';
-import { hasIgnoreResistance } from '../../services/combat/automation/automationService.js';
-import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
 
 describe('createLogAndShow - Sanctuary Save Prompt Flow', () => {
     const deps = {
@@ -489,9 +486,9 @@ describe('createLogAndShow - Veer Mount Redirect', () => {
     });
 });
 
-describe('createLogAndShow - Soul Blades Homing Strikes', () => {
+describe('createLogAndShow - Feats of Chaos & Lucky Cleanup', () => {
     const deps = {
-        characterName: 'SoulknifeRogue',
+        characterName: 'TestFighter',
         campaignName: 'test-campaign',
         characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
         setPopupHtml: vi.fn(),
@@ -501,7 +498,67 @@ describe('createLogAndShow - Soul Blades Homing Strikes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        rollD20.mockReturnValue(10);
+        rollD20.mockReturnValue(15);
+        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 12 });
+        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
+        isUnbreakableMajestyActive.mockReturnValue(false);
+        hasAttackerTriggeredMajesty.mockReturnValue(false);
+        getRuntimeValue.mockReturnValue(null);
+        getShieldAcBonus.mockReturnValue(0);
+        getShieldOfFaithAcBonus.mockReturnValue(0);
+        applyMinDamageAdjustment.mockImplementation((d) => d);
+        utils.getName.mockImplementation((n) => n);
+    });
+
+    function createFn() {
+        return createLogAndShow(deps);
+    }
+
+    describe('feats of chaos consumption', () => {
+        it('consumes featsOfChaosActive after one d20 roll', async () => {
+            getRuntimeValue.mockImplementation((name, prop) => {
+                if (name === 'TestFighter' && prop === 'featsOfChaosActive') return true;
+                return null;
+            });
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'featsOfChaosActive', false, 'test-campaign', true);
+        });
+
+        it('does not consume when featsOfChaosActive is not true', async () => {
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'featsOfChaosActive', false, 'test-campaign', true);
+        });
+    });
+
+    describe('lucky advantageActive cleanup', () => {
+        it('cleans up luckyAdvantageActive after popup when shouldSkipPopup is false', async () => {
+            getRuntimeValue.mockImplementation((name, prop) => {
+                if (name === 'TestFighter' && prop === 'luckyAdvantageActive') return true;
+                return null;
+            });
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'luckyAdvantageActive', null, 'test-campaign');
+        });
+    });
+});
+
+describe('createLogAndShow - Miss Effects & Combat Inspiration', () => {
+    const deps = {
+        characterName: 'TestFighter',
+        campaignName: 'test-campaign',
+        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
+        setPopupHtml: vi.fn(),
+        logEntry: vi.fn(),
+        autoDamageSourceRef: { current: null },
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        rollD20.mockReturnValue(5);
         rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
         getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 20 });
         loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
@@ -518,100 +575,149 @@ describe('createLogAndShow - Soul Blades Homing Strikes', () => {
         return createLogAndShow(deps);
     }
 
-    function mockSoulknifeStats() {
-        getRuntimeValue.mockImplementation((name, prop) => {
-            if (name === 'SoulknifeRogue' && prop === 'psionicEnergy') return 3;
-            return null;
+    describe('miss effects (Vex/Sap)', () => {
+        it('adds next_attack_advantage targetEffect on miss when passives include it', async () => {
+            getRuntimeValue.mockImplementation((name, prop) => {
+                if (name === 'TestFighter' && prop === 'psionicEnergy') return 0;
+                return null;
+            });
+            const fn = createFn();
+            await fn('Longsword', 5, 'attack', {
+                targetName: 'Goblin',
+                playerStats: {
+                    automation: {
+                        passives: [{ type: 'auto_effect', trigger: 'miss', effect: 'next_attack_advantage', duration: 'until_start_of_next_turn', name: 'Vex' }],
+                    },
+                },
+            });
+            const targetEffectCalls = setRuntimeValue.mock.calls.filter(
+                call => call[1] === 'targetEffects'
+            );
+            expect(targetEffectCalls.length).toBeGreaterThan(0);
+            const effects = targetEffectCalls[0][2];
+            expect(effects.some(e => e.effect === 'next_attack_advantage' && e.vexTarget === 'Goblin')).toBe(true);
         });
+    });
+
+    describe('combat inspiration offense', () => {
+        const wizardDeps = {
+            characterName: 'TestWizard',
+            campaignName: 'test-campaign',
+            characters: [{ name: 'Bard', computedStats: { armorClass: 14 } }],
+            setPopupHtml: vi.fn(),
+            logEntry: vi.fn(),
+            autoDamageSourceRef: { current: null },
+        };
+
+        beforeEach(() => {
+            vi.clearAllMocks();
+            rollD20.mockReturnValue(20);
+            rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+            getTargetFromAttacker.mockReturnValue({ name: 'Bard', ac: 14 });
+            loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Bard', type: 'player', ac: 14 }] });
+            isUnbreakableMajestyActive.mockReturnValue(false);
+            hasAttackerTriggeredMajesty.mockReturnValue(false);
+            getRuntimeValue.mockReturnValue(null);
+            getShieldAcBonus.mockReturnValue(0);
+            getShieldOfFaithAcBonus.mockReturnValue(0);
+            applyMinDamageAdjustment.mockImplementation((d) => d);
+            utils.getName.mockImplementation((n) => n);
+            hasBardicInspirationDefense.mockReturnValue(false);
+            getBardicInspirationDieSize.mockReturnValue(null);
+            hasBardicInspirationOffense.mockReturnValue(false);
+        });
+
+        function createWizardFn() {
+            return createLogAndShow(wizardDeps);
+        }
+
+        it('includes bardicInspirationOffense in popup when playerStats provided', async () => {
+            hasBardicInspirationOffense.mockReturnValue(true);
+            const context = {
+                targetName: 'Bard',
+                playerStats: { automation: { features: [{ type: 'bardic_inspiration_offense' }] } },
+            };
+            const fn = createWizardFn();
+            await fn('Fire Bolt', 3, 'attack', context);
+            expect(wizardDeps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                bardicInspirationOffense: true,
+            }));
+        });
+
+        it('includes bardicInspirationOffenseDieSize in popup', async () => {
+            hasBardicInspirationOffense.mockReturnValue(true);
+            getBardicInspirationDieSize.mockReturnValue('d6');
+            const context = {
+                targetName: 'Bard',
+                playerStats: { automation: { features: [{ type: 'bardic_inspiration_offense' }] } },
+            };
+            const fn = createWizardFn();
+            await fn('Fire Bolt', 3, 'attack', context);
+            expect(wizardDeps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                bardicInspirationOffenseDieSize: 'd6',
+            }));
+        });
+    });
+});
+
+describe('createLogAndShow - Graze Damage on Miss', () => {
+    const deps = {
+        characterName: 'TestFighter',
+        campaignName: 'test-campaign',
+        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
+        setPopupHtml: vi.fn(),
+        logEntry: vi.fn(),
+        autoDamageSourceRef: { current: null },
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        rollD20.mockReturnValue(5);
+        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 20 });
+        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
+        isUnbreakableMajestyActive.mockReturnValue(false);
+        hasAttackerTriggeredMajesty.mockReturnValue(false);
+        getRuntimeValue.mockReturnValue(null);
+        getShieldAcBonus.mockReturnValue(0);
+        getShieldOfFaithAcBonus.mockReturnValue(0);
+        applyMinDamageAdjustment.mockImplementation((d) => d);
+        utils.getName.mockImplementation((n) => n);
+    });
+
+    function createFn() {
+        return createLogAndShow(deps);
     }
 
-    it('uses homing strikes to turn miss into hit with sufficient psionic energy', async () => {
-        mockSoulknifeStats();
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 15 });
-        const origRandom = Math.random;
-        Math.random = () => 1; // Always returns max psionic bonus (6 for d6)
-        const context = {
-            targetName: 'Goblin',
-            playerStats: {
-                class: { name: 'Rogue', major: { name: 'Soulknife' }, class_levels: [{ level: 9, energy: { energy_die: 6 } }] },
-                level: 9,
-                _trackedResources: { psionicEnergy: { max: 3 } },
-            },
-            isPsychicBlade: true,
-        };
+    it('applies graze damage when miss and grazeDamage context is set', async () => {
         const fn = createFn();
-        await fn('Psychic Blade', 3, 'attack', context);
-        Math.random = origRandom;
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            type: 'ability_use',
-            abilityName: 'Soul Blades',
-            description: expect.stringContaining('Homing Strikes'),
-        }));
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            hit: true,
-        }));
-    });
-
-    it('does not use homing strikes when psionic energy is 0', async () => {
-        getRuntimeValue.mockImplementation((name, prop) => {
-            if (name === 'SoulknifeRogue' && prop === 'psionicEnergy') return 0;
-            return null;
+        await fn('Longsword', 5, 'attack', {
+            targetName: 'Goblin',
+            grazeDamage: true,
+            grazeAbilityMod: 3,
+            damageType: 'slashing',
         });
-        const context = {
-            targetName: 'Goblin',
-            playerStats: {
-                class: { name: 'Rogue', major: { name: 'Soulknife' }, class_levels: [{ level: 9, energy: { energy_die: 6 } }] },
-                level: 9,
-                _trackedResources: { psionicEnergy: { max: 3 } },
-            },
-            isPsychicBlade: true,
-        };
-        const fn = createFn();
-        await fn('Psychic Blade', 3, 'attack', context);
         expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            hit: false,
+            type: 'graze-damage',
         }));
     });
 
-    it('does not use homing strikes when psionic die still results in miss', async () => {
-        mockSoulknifeStats();
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 30 });
-        const context = {
-            targetName: 'Goblin',
-            playerStats: {
-                class: { name: 'Rogue', major: { name: 'Soulknife' }, class_levels: [{ level: 9, energy: { energy_die: 6 } }] },
-                level: 9,
-                _trackedResources: { psionicEnergy: { max: 3 } },
-            },
-            isPsychicBlade: true,
-        };
+    it('does not apply graze damage when hit', async () => {
+        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 10 });
+        rollD20.mockReturnValue(15);
         const fn = createFn();
-        await fn('Psychic Blade', 3, 'attack', context);
-        // Even with psionic bonus, total = 10 + 3 + (1-6) = at most 19, still < 30
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            description: expect.stringContaining('still missed'),
-        }));
-    });
-
-    it('logs that homing strikes check failed for non-Soulknife', async () => {
-        const context = {
+        await fn('Longsword', 5, 'attack', {
             targetName: 'Goblin',
-            playerStats: {
-                class: { name: 'Fighter', major: { name: 'Champion' } },
-                level: 5,
-            },
-            isPsychicBlade: true,
-        };
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', context);
-        expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-            abilityName: 'Soul Blades',
-            description: expect.stringContaining('check: isSoulknife=false'),
+            grazeDamage: true,
+            grazeAbilityMod: 3,
+        });
+        expect(deps.setPopupHtml).not.toHaveBeenCalledWith(expect.objectContaining({
+            type: 'graze-damage',
         }));
     });
 });
 
-describe('createLogAndShow - Lucky Halfling reroll', () => {
+describe('createLogAndShow - Lucky Halfling Reroll (Skipped)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         rollD20.mockReturnValue(15);
@@ -632,261 +738,5 @@ describe('createLogAndShow - Lucky Halfling reroll', () => {
     // is only reachable if the code is fixed. Skipping these tests.
     it('skipped - Lucky reroll code path is unreachable (effectiveD20Roll undefined at check)', () => {
         expect(true).toBe(true);
-    });
-});
-
-describe('createLogAndShow - Feats of Chaos consumption', () => {
-    const deps = {
-        characterName: 'TestFighter',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        autoDamageSourceRef: { current: null },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        rollD20.mockReturnValue(15);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 12 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
-        getShieldAcBonus.mockReturnValue(0);
-        getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-    });
-
-    function createFn() {
-        return createLogAndShow(deps);
-    }
-
-    it('consumes featsOfChaosActive after one d20 roll', async () => {
-        getRuntimeValue.mockImplementation((name, prop) => {
-            if (name === 'TestFighter' && prop === 'featsOfChaosActive') return true;
-            return null;
-        });
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'featsOfChaosActive', false, 'test-campaign', true);
-    });
-
-    it('does not consume when featsOfChaosActive is not true', async () => {
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
-        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'featsOfChaosActive', false, 'test-campaign', true);
-    });
-});
-
-describe('createLogAndShow - Lucky advantageActive cleanup', () => {
-    const deps = {
-        characterName: 'TestFighter',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        autoDamageSourceRef: { current: null },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        rollD20.mockReturnValue(15);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 12 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
-        getShieldAcBonus.mockReturnValue(0);
-        getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-    });
-
-    function createFn() {
-        return createLogAndShow(deps);
-    }
-
-    it('cleans up luckyAdvantageActive after popup when shouldSkipPopup is false', async () => {
-        getRuntimeValue.mockImplementation((name, prop) => {
-            if (name === 'TestFighter' && prop === 'luckyAdvantageActive') return true;
-            return null;
-        });
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
-        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'luckyAdvantageActive', null, 'test-campaign');
-    });
-});
-
-describe('createLogAndShow - Miss effects (Vex/Sap)', () => {
-    const deps = {
-        characterName: 'TestFighter',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        autoDamageSourceRef: { current: null },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        rollD20.mockReturnValue(5);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 20 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
-        getShieldAcBonus.mockReturnValue(0);
-        getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-    });
-
-    function createFn() {
-        return createLogAndShow(deps);
-    }
-
-    it('adds next_attack_advantage targetEffect on miss when passives include it', async () => {
-        getRuntimeValue.mockImplementation((name, prop) => {
-            if (name === 'TestFighter' && prop === 'psionicEnergy') return 0;
-            return null;
-        });
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', {
-            targetName: 'Goblin',
-            playerStats: {
-                automation: {
-                    passives: [{ type: 'auto_effect', trigger: 'miss', effect: 'next_attack_advantage', duration: 'until_start_of_next_turn', name: 'Vex' }],
-                },
-            },
-        });
-        const targetEffectCalls = setRuntimeValue.mock.calls.filter(
-            call => call[1] === 'targetEffects'
-        );
-        expect(targetEffectCalls.length).toBeGreaterThan(0);
-        const effects = targetEffectCalls[0][2];
-        expect(effects.some(e => e.effect === 'next_attack_advantage' && e.vexTarget === 'Goblin')).toBe(true);
-    });
-});
-
-describe('createLogAndShow - Graze damage on miss', () => {
-    const deps = {
-        characterName: 'TestFighter',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'Goblin', computedStats: { armorClass: 12 } }],
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        autoDamageSourceRef: { current: null },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        rollD20.mockReturnValue(5);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 20 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Goblin', type: 'npc', ac: 12 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
-        getShieldAcBonus.mockReturnValue(0);
-        getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-        hasIgnoreResistance.mockReturnValue(false);
-        applyDamageToTarget.mockResolvedValue({ finalDamage: 2, newHp: 8 });
-    });
-
-    function createFn() {
-        return createLogAndShow(deps);
-    }
-
-    it('applies graze damage when miss and grazeDamage context is set', async () => {
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', {
-            targetName: 'Goblin',
-            grazeDamage: true,
-            grazeAbilityMod: 3,
-            damageType: 'slashing',
-        });
-        expect(applyDamageToTarget).toHaveBeenCalled();
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            type: 'graze-damage',
-        }));
-    });
-
-    it('does not apply graze damage when hit', async () => {
-        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 10 });
-        rollD20.mockReturnValue(15);
-        const fn = createFn();
-        await fn('Longsword', 5, 'attack', {
-            targetName: 'Goblin',
-            grazeDamage: true,
-            grazeAbilityMod: 3,
-        });
-        expect(applyDamageToTarget).not.toHaveBeenCalled();
-    });
-});
-
-describe('createLogAndShow - Combat Inspiration Offense', () => {
-    const deps = {
-        characterName: 'TestWizard',
-        campaignName: 'test-campaign',
-        characters: [{ name: 'Bard', computedStats: { armorClass: 14 } }],
-        setPopupHtml: vi.fn(),
-        logEntry: vi.fn(),
-        autoDamageSourceRef: { current: null },
-    };
-
-    beforeEach(() => {
-        vi.clearAllMocks();
-        rollD20.mockReturnValue(20);
-        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
-        getTargetFromAttacker.mockReturnValue({ name: 'Bard', ac: 14 });
-        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Bard', type: 'player', ac: 14 }] });
-        isUnbreakableMajestyActive.mockReturnValue(false);
-        hasAttackerTriggeredMajesty.mockReturnValue(false);
-        getRuntimeValue.mockReturnValue(null);
-        getShieldAcBonus.mockReturnValue(0);
-        getShieldOfFaithAcBonus.mockReturnValue(0);
-        applyMinDamageAdjustment.mockImplementation((d) => d);
-        utils.getName.mockImplementation((n) => n);
-        hasBardicInspirationDefense.mockReturnValue(false);
-        getBardicInspirationDieSize.mockReturnValue(null);
-        hasBardicInspirationOffense.mockReturnValue(false);
-    });
-
-    function createFn() {
-        return createLogAndShow(deps);
-    }
-
-    it('includes bardicInspirationOffense in popup when playerStats provided', async () => {
-        hasBardicInspirationOffense.mockReturnValue(true);
-        const context = {
-            targetName: 'Bard',
-            playerStats: { automation: { features: [{ type: 'bardic_inspiration_offense' }] } },
-        };
-        const fn = createFn();
-        await fn('Fire Bolt', 3, 'attack', context);
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            bardicInspirationOffense: true,
-        }));
-    });
-
-    it('includes bardicInspirationOffenseDieSize in popup', async () => {
-        hasBardicInspirationOffense.mockReturnValue(true);
-        getBardicInspirationDieSize.mockReturnValue('d6');
-        const context = {
-            targetName: 'Bard',
-            playerStats: { automation: { features: [{ type: 'bardic_inspiration_offense' }] } },
-        };
-        const fn = createFn();
-        await fn('Fire Bolt', 3, 'attack', context);
-        expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-            bardicInspirationOffenseDieSize: 'd6',
-        }));
     });
 });

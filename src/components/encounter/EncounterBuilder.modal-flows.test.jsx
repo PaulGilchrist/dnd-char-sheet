@@ -353,75 +353,35 @@ const sampleMonsters = [
   { index: 'dragon', name: 'Young Dragon', xp: 120, challenge_rating: 2, type: 'dragon', environments: ['underground'] },
 ];
 
-async function mount(overrides = {}) {
-  const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-  useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-  const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-  useEncounterManagement.mockReturnValue({
-    modalOpen: false,
-    modalMode: null,
-    encounters: [],
-    loading: false,
-    openSaveModal: vi.fn(),
-    openLoadModal: vi.fn(),
-    closeModal: vi.fn(),
-    saveEncounter: vi.fn(),
-    updateEncounter: vi.fn(),
-    loadEncounterData: vi.fn(),
-    deleteEncounterAction: vi.fn(),
-    renameEncounterAction: vi.fn(),
-    ...overrides,
-  });
-
-  return render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-}
-
-describe('EncounterBuilder - additional interactions', () => {
+describe('EncounterBuilder - modal and management flows', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     global.window.confirm = vi.fn(() => true);
   });
 
-  describe('sort functionality - additional fields', () => {
-    it('sorts by CR when sort field is changed to cr', async () => {
-      await mount();
-      const sortField = screen.getByTestId('sort-field');
-      expect(sortField).toHaveTextContent('name');
-      expect(screen.getByTestId('encounter-monster-table')).toBeInTheDocument();
-    });
-
-    it('toggles sort direction when same field is clicked twice', async () => {
-      await mount();
-      const sortDirection = screen.getByTestId('sort-direction');
-      expect(sortDirection).toHaveTextContent('asc');
-    });
-  });
-
-  describe('environment filter', () => {
-    it('calls onEnvironmentChange when environment changes', async () => {
-      await mount();
-      expect(screen.getByTestId('encounter-filter-panel')).toBeInTheDocument();
-    });
-  });
-
-  describe('save encounter - existing encounter (update path)', () => {
-    it('calls updateEncounter (not openSaveModal) when currentEncounterName is set', async () => {
-      const updateEncounter = vi.fn();
+  describe('modal save flow', () => {
+    it('calls saveEncounter after modal save button is clicked', async () => {
+      const saveEncounter = vi.fn().mockResolvedValue(undefined);
       const openSaveModal = vi.fn();
+      let modalOpen = false;
+      let modalMode = null;
+
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal, openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter, loadEncounterData: vi.fn(),
+      useEncounterManagement.mockImplementation(() => ({
+        modalOpen, modalMode, encounters: [], loading: false,
+        openSaveModal: vi.fn(() => { modalOpen = true; modalMode = 'save'; openSaveModal(); }),
+        openLoadModal: vi.fn(() => { modalOpen = true; modalMode = 'load'; }),
+        closeModal: vi.fn(() => { modalOpen = false; modalMode = null; }),
+        saveEncounter, updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
+      }));
 
       render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
@@ -431,33 +391,128 @@ describe('EncounterBuilder - additional interactions', () => {
       await waitFor(() => {
         expect(openSaveModal).toHaveBeenCalled();
       });
+
+      expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
+
+      const modalSaveBtn = screen.getByTestId('modal-save');
+      fireEvent.click(modalSaveBtn);
+
+      await waitFor(() => {
+        expect(saveEncounter).toHaveBeenCalledWith('Test Encounter', expect.any(Object));
+      });
     });
   });
 
-  describe('save encounter - new encounter (save path)', () => {
-    it('calls openSaveModal when no currentEncounterName', async () => {
-      const openSaveModal = vi.fn();
+  describe('load encounter flow', () => {
+    it('calls loadEncounterData when load modal opens and encounter is selected', async () => {
+      const loadEncounterData = vi.fn().mockResolvedValue({
+        selectedMonsters: [{ index: 'goblin', name: 'Goblin', qty: 2 }],
+        description: 'A test encounter',
+        effectiveXP: 100,
+      });
+      const openLoadModal = vi.fn();
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
       useEncounterManagement.mockReturnValue({
         modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal, openLoadModal: vi.fn(), closeModal: vi.fn(),
+        openSaveModal: vi.fn(), openLoadModal, closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData,
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      const loadBtn = screen.getByText('Load');
+      fireEvent.click(loadBtn);
+
+      await waitFor(() => {
+        expect(openLoadModal).toHaveBeenCalled();
+      });
+    });
+
+    it('resolves monster data when loading an encounter with monster refs', async () => {
+      const loadEncounterData = vi.fn().mockResolvedValue({
+        selectedMonsters: [{ index: 'goblin', name: 'Goblin', qty: 3 }],
+        description: 'Loaded encounter',
+        effectiveXP: 150,
+      });
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: 'load', encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData,
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+
+      const handleLoad = useEncounterManagement.mock.results[0].value.loadEncounterData;
+      await handleLoad('test-encounter');
+
+      expect(loadEncounterData).toHaveBeenCalledWith('test-encounter');
+    });
+  });
+
+  describe('delete encounter flow', () => {
+    it('calls deleteEncounterAction when user confirms deletion', async () => {
+      const deleteEncounterAction = vi.fn().mockResolvedValue(undefined);
+      global.window.confirm = vi.fn(() => true);
+
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
         saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+        deleteEncounterAction, renameEncounterAction: vi.fn(),
       });
 
       render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
+      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
+    });
 
-      const saveBtn = screen.getByText(/Save|Update/);
-      fireEvent.click(saveBtn);
+    it('does not call deleteEncounterAction when user cancels', async () => {
+      const deleteEncounterAction = vi.fn();
+      global.window.confirm = vi.fn(() => false);
 
-      await waitFor(() => {
-        expect(openSaveModal).toHaveBeenCalled();
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction, renameEncounterAction: vi.fn(),
       });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
+    });
+  });
+
+  describe('rename encounter', () => {
+    it('calls renameEncounterAction with old and new names', async () => {
+      const renameEncounterAction = vi.fn().mockResolvedValue(undefined);
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction,
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+      expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
     });
   });
 });

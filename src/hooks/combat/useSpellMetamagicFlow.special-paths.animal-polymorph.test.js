@@ -209,192 +209,167 @@ function renderHookWithSpell(hookSetup, spellName, spellOverrides = {}) {
   return { result, onExecute, spell };
 }
 
-describe('useSpellMetamagicFlow — getCreatureTargets', () => {
-  it('returns creature names from combat summary', () => {
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
-    );
-
-    expect(result.current.pendingMetamagic).toBeNull();
-  });
-});
-
-describe('useSpellMetamagicFlow — handleGreaterRestorationNoEffects', () => {
+describe('useSpellMetamagicFlow — handleAnimalShapesBeastConfirm success', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
   });
 
-  it('refunds spell slot and logs entry when no effects to remove', async () => {
-    const { setRuntimeValue } = await import('../runtime/useRuntimeState.js');
+  it('sets animalShapes concentration state when result.ok is true', async () => {
+    const animalShapesModule = await import('../../services/automation/handlers/spells/animalShapesService.js');
+    animalShapesModule.applyAnimalShapes.mockResolvedValue({ ok: true });
+
+    const setPopupHtml = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn(), null, [], setPopupHtml)
+    );
+
+    const allySel = await import('../../hooks/useAllySelection.js');
+    allySel.getAllyList.mockReturnValueOnce(['goblin a']);
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Animal Shapes', level: 8 }));
+    });
+
+    expect(result.current.pendingAnimalShapes).not.toBeNull();
+
+    await act(async () => {
+      await result.current.handleAnimalShapesTargetConfirm(['Goblin A']);
+    });
+
+    expect(setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'animal_shapes_target_selection',
+    }));
+  });
+});
+
+describe('useSpellMetamagicFlow — handleTruePolymorphSkip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+  });
+
+  it('clears pending truePolymorph without calling onExecute', () => {
     const { result } = renderHookWithSpell(
       (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Greater Restoration',
-      { level: 5 },
+      'True Polymorph',
+      { level: 9 },
     );
 
     act(() => {
-      result.current.handleGreaterRestorationNoEffects();
+      result.current.handleTruePolymorphPathSelect('creature_to_creature');
     });
 
-    expect(setRuntimeValue).toHaveBeenCalledWith(
-      'TestSorcerer',
-      'spell_slots_level_5',
-      4,
-      'TestCampaign'
+    act(() => {
+      result.current.handleTruePolymorphSkip();
+    });
+
+    expect(result.current.pendingTruePolymorph).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — handleForesightSkip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+  });
+
+  it('clears pending foresight and logs entry on skip', () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Foresight',
+      { level: 9 },
     );
+
+    act(() => {
+      result.current.handleForesightSkip();
+    });
+
+    expect(result.current.pendingForesight).toBeNull();
     expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
       type: 'spell',
       characterName: 'TestSorcerer',
-      targetName: null,
-      targets: [],
-      spellName: 'Greater Restoration',
-      spellLevel: 5,
+      targetName: 'TestSorcerer',
+      targets: ['TestSorcerer', 'Goblin A', 'Goblin B', 'Goblin C'],
+      spellName: 'Foresight',
+      spellLevel: 9,
       castingTime: '1 Action',
       timestamp: expect.any(Number),
     });
-    expect(result.current.pendingGreaterRestoration).toBeNull();
   });
 });
 
-describe('useSpellMetamagicFlow — non-Sorcerer cantrip with material', () => {
+describe('useSpellMetamagicFlow — handleProtectionFromEvilAndGoodSkip', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
   });
 
-  it('consumes material and calls onExecute for non-Sorcerer cantrip with damage and material', async () => {
-    const materialModule = await import('../../services/rules/spells/materialComponents.js');
-    materialModule.getConsumedMaterial.mockImplementation((spell) => {
-      if ((spell.name || '').toLowerCase() === 'firebolt') {
-        return { itemName: 'Some Material' };
-      }
-      return null;
-    });
-
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(
-        { name: 'TestWizard', class: { name: 'Wizard' }, level: 5 },
-        'TestCampaign',
-        onExecute
-      )
+  it('clears pending and logs entry on skip', () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Protection from Evil and Good',
+      { level: 1 },
     );
 
-    await act(async () => {
-      result.current.gateMetamagic(makeSpell({ name: 'Firebolt', level: 0, damage: { damage_at_character_level: { 5: '1d10' } } }));
+    act(() => {
+      result.current.handleProtectionFromEvilAndGoodSkip();
     });
 
-    expect(onExecute).toHaveBeenCalled();
-    expect(materialModule.consumeMaterial).toHaveBeenCalledWith(
-      expect.any(Object),
-      'Some Material',
-      'TestCampaign'
-    );
+    expect(result.current.pendingProtectionFromEvilAndGood).toBeNull();
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      targetName: 'TestSorcerer',
+      targets: ['TestSorcerer'],
+      spellName: 'Protection from Evil and Good',
+      spellLevel: 1,
+      castingTime: '1 Action',
+      timestamp: expect.any(Number),
+    });
   });
 });
 
-describe('useSpellMetamagicFlow — multi-target spread with secondary modal', () => {
+describe('useSpellMetamagicFlow — Shield of Faith Sorcerer flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
   });
 
-  it('shows secondary target modal for Power Word Heal when setSecondaryTargetModal is provided', () => {
-    const setSecondaryTargetModal = vi.fn();
-    const setPopupHtml = vi.fn();
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(
-        makePlayerStats(),
-        'TestCampaign',
-        onExecute,
-        setSecondaryTargetModal,
-        [],
-        setPopupHtml
-      )
+  it('sets pendingMetamagic for Shield of Faith (no gate)', () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Shield of Faith',
+      { level: 1 },
     );
 
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Power Word Heal', level: 9 }));
-    });
-
-    expect(setSecondaryTargetModal).toHaveBeenCalled();
-    const modal = setSecondaryTargetModal.mock.calls[0][0];
-    expect(modal.secondaryTargetModal.title).toBe('Words of Creation — Choose Second Target');
-    expect(modal.secondaryTargetModal.targets).toHaveLength(3);
+    expect(result.current.pendingMetamagic).not.toBeNull();
+    expect(result.current.pendingShieldOfFaith).toBeNull();
   });
 
-  it('calls onExecute with multiTarget when second target selected from modal', async () => {
-    const setSecondaryTargetModal = vi.fn();
-    const setPopupHtml = vi.fn();
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(
-        makePlayerStats(),
-        'TestCampaign',
-        onExecute,
-        setSecondaryTargetModal,
-        [],
-        setPopupHtml
-      )
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Power Word Kill', level: 8 }));
-    });
-
-    expect(setSecondaryTargetModal).toHaveBeenCalled();
-    const modal = setSecondaryTargetModal.mock.calls[0][0].secondaryTargetModal;
-
-    await act(async () => {
-      await modal.onTargetSelected('Goblin A');
-    });
-
-    expect(onExecute).toHaveBeenCalled();
-    expect(onExecute.mock.calls[0][1].multiTarget).toBe('Goblin A');
-  });
-
-  it('calls onExecute with empty metaCtx when skipping secondary target', async () => {
-    const setSecondaryTargetModal = vi.fn();
-    const setPopupHtml = vi.fn();
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(
-        makePlayerStats(),
-        'TestCampaign',
-        onExecute,
-        setSecondaryTargetModal,
-        [],
-        setPopupHtml
-      )
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Power Word Heal', level: 9 }));
-    });
-
-    expect(setSecondaryTargetModal).toHaveBeenCalled();
-    const modal = setSecondaryTargetModal.mock.calls[0][0].secondaryTargetModal;
-
-    await act(async () => {
-      modal.onSkip();
-    });
-
-    expect(onExecute).toHaveBeenCalled();
-    expect(onExecute.mock.calls[0][1]).toEqual({});
-  });
-
-  it('does not show secondary modal when setSecondaryTargetModal is null', () => {
+  it('handleShieldOfFaithConfirm does nothing without pendingShieldOfFaith', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
     );
 
     act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Power Word Heal', level: 9 }));
+      result.current.handleShieldOfFaithConfirm(['Goblin A']);
     });
 
-    expect(result.current.pendingMultiTarget).not.toBeNull();
+    expect(onExecute).not.toHaveBeenCalled();
+  });
+
+  it('handleShieldOfFaithSkip does nothing without pendingShieldOfFaith', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleShieldOfFaithSkip();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
   });
 });
