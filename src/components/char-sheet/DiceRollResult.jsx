@@ -1,20 +1,14 @@
-import { useState } from 'react';
 import './diceRollResult.css';
+import { useDiceRollState } from './DiceRollResult.computed.js';
+import { createDiceRollHandlers } from './DiceRollResult.handlers.js';
 
 function DiceRollResult(props) {
     const {
-        // Roll data
-        name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0, total = 0, critLabels,
-
-        // Combat/target data
+        name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0,
         targetName, targetAc, hit, isAutoMiss, rangeReason, coverReason, coverLevel, coverAcBonus,
         defensiveDuelistBonus, baitAndSwitchBonus, unerringStrikeApplied, interceptedFeature,
-        isCrit, isAutoCrit, isNatural1,
-
-        // Save data
+        isCrit, isAutoCrit,
         dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, holyAuraSaveResult,
-
-        // Damage/heal data
         finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, autoDamage,
         secondaryFormula, secondaryRolls, secondaryTotal, secondaryModifier, secondaryDamageType,
         secondaryFinalDamage, secondarySaveResult,
@@ -22,12 +16,9 @@ function DiceRollResult(props) {
         baseFormula, baseTotal, baseRolls, bonusFormula, bonusTotal, bonusRolls,
         rayOfEnfeebleReduction, rayOfEnfeebleRoll, resistanceReduction, resistanceRoll,
         elementalAdeptBonus, isPotentCantrip,
-
-        // Feature flags
-        strSaveReplace, strCheckReplace, strScore, wisCheckReplace, wisCheckMinBonus,
         reliableTalent, tacticalMind, tacticalMindBonus, darkOnesLuck, strokeOfLuck,
         luckyAdvantage, luckyDisadvantage,
-        bardicInspiration, bardicInspirationDie,         bardicInspirationDefense, bardicInspirationDefenseDieSize,
+        bardicInspiration, bardicInspirationDie, bardicInspirationDefense, bardicInspirationDefenseDieSize,
         bardicInspirationOffense, bardicInspirationOffenseDieSize,
         availableSuperiorityManeuvers, psiBolsteredKnack, psiBolsteredKnackDieSize,
         empoweredSpell, savageAttacker, piercerPuncture,
@@ -36,255 +27,87 @@ function DiceRollResult(props) {
         luckyRerolled, luckyRerollValue,
         healingRerollOriginalRolls, healingRerollDisplayRolls,
         gwfApplied, gwfOriginalRolls, gwfDisplayRolls,
-        spellName,
-
-        // Callbacks
-        onQuickRoll, onReroll, onDarkOnesLuck, onStrokeOfLuck, onLuckyAdvantage, onLuckyDisadvantage,
-        onSuperiorityManeuver, onTacticalMind, onPsiBolsteredKnack, onBardicInspiration,
-        onBardicInspirationDefense, onBardicInspirationOffense, onEmpoweredSpell, onPuncture,
-        onSavageAttacker, onDone,
-
-        // Notices
+        critLabels,
+        onQuickRoll, onStrokeOfLuck, onLuckyAdvantage, onLuckyDisadvantage,
+        onPsiBolsteredKnack,
+        onDone,
         resistanceNotice, hunterLoreNotice, advantageReason, forcedMode,
     } = props;
-    const isD20 = type === 'd20';
-    const [mode, setMode] = useState(forcedMode || 'normal');
-    const [rerollUsed, setRerollUsed] = useState(false);
-    const [rerollResult, setRerollResult] = useState(null);
-    const [tacticalUsed, setTacticalUsed] = useState(false);
-    const [tacticalResult, setTacticalResult] = useState(null);
-    const [strokeUsed, setStrokeUsed] = useState(false);
-    const [strokeResult, setStrokeResult] = useState(null);
-    const [bardicInspirationUsed, setBardicInspirationUsed] = useState(false);
-    const [bardicInspirationResult, setBardicInspirationResult] = useState(null);
-    const [bardicInspirationDefenseUsed, setBardicInspirationDefenseUsed] = useState(false);
-    const [bardicInspirationDefenseResult, setBardicInspirationDefenseResult] = useState(null);
-    const [bardicInspirationOffenseUsed, setBardicInspirationOffenseUsed] = useState(false);
-    const [bardicInspirationOffenseResult, setBardicInspirationOffenseResult] = useState(null);
-    const [superiorityUsed, setSuperiorityUsed] = useState(false);
-    const [superiorityResult, setSuperiorityResult] = useState(null);
-    const [psiKnackClicked, setPsiKnackClicked] = useState(false);
-    const [psiKnackResult, setPsiKnackResult] = useState(null);
-    const [psiKnackConsumed, setPsiKnackConsumed] = useState(false);
-    const [empoweredSpellUsed, setEmpoweredSpellUsed] = useState(false);
-    const [empoweredSpellResult, setEmpoweredSpellResult] = useState(null);
-    const [darkOnesLuckUsed, setDarkOnesLuckUsed] = useState(false);
-    const [darkOnesLuckResult, setDarkOnesLuckResult] = useState(null);
-    const [boonUsed, setBoonUsed] = useState(false);
-    const [punctureUsed, setPunctureUsed] = useState(false);
-    const [punctureResult, setPunctureResult] = useState(null);
-    const [savageAttackerUsed, setSavageAttackerUsed] = useState(false);
-    const [savageAttackerResult, setSavageAttackerResult] = useState(null);
 
-    let finalRoll = 0;
-    const safeRolls = Array.isArray(rolls) ? rolls : [];
+    const state = useDiceRollState(props);
+    const handlers = createDiceRollHandlers(props, state);
+    const {
+        mode, setMode,
+        rerollUsed, rerollResult,
+        tacticalUsed, tacticalResult,
+        strokeUsed, strokeResult, setStrokeResult, setStrokeUsed,
+        bardicInspirationUsed, bardicInspirationResult,
+        bardicInspirationDefenseUsed, bardicInspirationDefenseResult,
+        bardicInspirationOffenseUsed, bardicInspirationOffenseResult,
+        superiorityUsed, superiorityResult,
+        psiKnackClicked, psiKnackResult, psiKnackConsumed, setPsiKnackResult, setPsiKnackClicked, setPsiKnackConsumed,
+        empoweredSpellUsed, empoweredSpellResult,
+        darkOnesLuckUsed, darkOnesLuckResult,
+        boonUsed, setBoonUsed,
+        punctureUsed, punctureResult,
+        savageAttackerUsed, savageAttackerResult,
+        isD20, isDamageType, isHealType, isCritDamage, isSaveDamageType,
+        safeRolls, finalRoll, originalTotal, displayRoll, displayTotal,
+        strReplaceApplied, finalDisplayTotal,
+        finalTotal, showFumble,
+        computedHit,
+    } = state;
 
-    if (isD20) {
-        const r1 = safeRolls[0] || 0;
-        const r2 = safeRolls[1] || 0;
-
-        if (mode === 'advantage') {
-            finalRoll = Math.max(r1, r2);
-        } else if (mode === 'disadvantage') {
-            finalRoll = Math.min(r1, r2);
-        } else {
-            finalRoll = r1;
-        }
-    } else {
-         finalRoll = safeRolls.reduce((sum, r) => sum + r, 0);
-      }
-
-    const isDamageType = type === 'damage' || rollType === 'damage' || type === 'save-damage' || rollType === 'save-damage' || type === 'aoe-damage' || rollType === 'aoe-damage' || type === 'overchannel-damage' || rollType === 'overchannel-damage' || type === 'graze-damage' || rollType === 'graze-damage';
-
-    const isHealType = type === 'heal';
-
-    const isCritDamage = isDamageType && (isCrit || isAutoCrit);
-
-    const originalTotal = (isDamageType || isHealType) ? total : (finalRoll + bonus + modifier);
-    const displayRoll = luckyRerolled ? luckyRerollValue : (strokeResult !== null ? 20 : (rerollResult !== null ? rerollResult.roll : (bardicInspirationResult !== null ? bardicInspirationResult.d20Roll : finalRoll)));
-    const displayTotal = luckyRerolled ? (luckyRerollValue + bonus + modifier) : (strokeResult !== null ? 20 + bonus + modifier : (rerollResult !== null ? rerollResult.total : (bardicInspirationResult !== null ? bardicInspirationResult.total : originalTotal)));
-    const appliesReplace = (strSaveReplace && rollType === 'save') || (strCheckReplace && (rollType === 'check' || rollType === 'skill'));
-    const strReplaceApplied = appliesReplace && displayTotal < (strScore || 10);
-    const finalDisplayTotal = strReplaceApplied ? strScore : displayTotal;
-    const wisBonus = wisCheckReplace ? (wisCheckMinBonus || 1) : bonus;
-    const wisDisplayTotal = wisCheckReplace && (rollType === 'check' || rollType === 'skill') ? finalRoll + wisBonus + modifier : displayTotal;
-    const reliableTalentTotal = reliableTalent && (rollType === 'check' || rollType === 'skill') && displayRoll <= 9 ? 10 + bonus + modifier : null;
-    const d20Floor10Total = d20Floor10 && displayRoll <= 9 ? 10 + bonus + modifier : null;
-    const starryDragonFloorTotal = starryDragonFloor && displayRoll <= 9 ? 10 + bonus + modifier : null;
-    const finalTotal = (starryDragonFloorTotal !== null ? starryDragonFloorTotal : d20Floor10Total !== null ? d20Floor10Total : reliableTalentTotal !== null ? reliableTalentTotal : (wisCheckReplace && (rollType === 'check' || rollType === 'skill') ? wisDisplayTotal : finalDisplayTotal));
-    const showFumble = isNatural1 && rollType === 'attack';
-
-    const effectiveAc = targetAc + (coverAcBonus || 0) + (defensiveDuelistBonus || 0) + (baitAndSwitchBonus || 0);
-    const computedHit = isAutoMiss ? false : (targetName && hit !== undefined && targetAc !== undefined ? finalTotal >= effectiveAc : hit);
+    const {
+        handleReroll, handleTacticalMind, handleDarkOnesLuck,
+        handleBardicInspiration, handleBardicInspirationDefense, handleBardicInspirationOffense,
+        handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleSuperiorityManeuver,
+    } = handlers;
 
     const critDiceRolls = isCritDamage && rolls ? rolls.map((r, i) => {
         const label = critLabels?.[i] || null;
         return label ? `${r}*2 [${label}]` : `${r}*2`;
     }) : null;
     const displayFormula = formula;
-
-    const handleTacticalMind = async () => {
-        const dieResult = Math.floor(Math.random() * 10) + 1;
-        const newTotal = finalRoll + bonus + modifier + dieResult;
-        setTacticalResult({ bonus: dieResult, total: newTotal });
-        setTacticalUsed(true);
-        if (onTacticalMind) await onTacticalMind(dieResult);
-    };
-
-    const handleDarkOnesLuck = async () => {
-        const dieValue = Math.floor(Math.random() * 10) + 1;
-        const currentTotal = finalRoll + bonus + modifier;
-        setDarkOnesLuckResult({ dieValue, total: currentTotal + dieValue });
-        setDarkOnesLuckUsed(true);
-        if (onDarkOnesLuck) await onDarkOnesLuck(dieValue);
-    };
-
-    const handleBardicInspiration = async () => {
-        const dieSize = parseInt(bardicInspirationDie, 10) || 6;
-        const dieValue = Math.floor(Math.random() * dieSize) + 1;
-        const newTotal = finalRoll + bonus + modifier + dieValue;
-        setBardicInspirationResult({ d20Roll: finalRoll, dieValue, dieSize, total: newTotal });
-        setBardicInspirationUsed(true);
-        if (onBardicInspiration) await onBardicInspiration(dieValue, dieSize);
-    };
-
-    const handleBardicInspirationDefense = async () => {
-        const dieSize = bardicInspirationDefenseDieSize || 6;
-        const dieValue = Math.floor(Math.random() * dieSize) + 1;
-        const newAc = (targetAc || 0) + dieValue;
-        const attackTotal = finalTotal;
-        const willMiss = attackTotal < newAc;
-        setBardicInspirationDefenseResult({ dieValue, dieSize, newAc, willMiss, attackTotal });
-        setBardicInspirationDefenseUsed(true);
-        if (onBardicInspirationDefense) {
-            await onBardicInspirationDefense(dieValue, dieSize, newAc, willMiss);
-        } else {
-            console.error('[BI Defense] onBardicInspirationDefense is falsy!');
-        }
-    };
-
-    const handleBardicInspirationOffense = async () => {
-        const dieSize = bardicInspirationOffenseDieSize || autoDamage?.bardicInspirationOffenseDieSize || 6;
-        const dieValue = Math.floor(Math.random() * dieSize) + 1;
-        const newTotal = total + dieValue;
-        setBardicInspirationOffenseResult({ dieValue, dieSize, bonusTotal: newTotal });
-        setBardicInspirationOffenseUsed(true);
-        if (onBardicInspirationOffense) await onBardicInspirationOffense(dieValue, dieSize);
-    };
-
-    const handleEmpoweredSpell = async () => {
-        if (onEmpoweredSpell) {
-            const lastEvent = {
-                damageFormula: formula,
-                rolls: rolls,
-                rawDamage: total,
-                targetName: targetName,
-                spellName: spellName || '',
-                damageTypes: damageType ? [damageType] : [],
-            };
-            const result = await onEmpoweredSpell(lastEvent);
-            setEmpoweredSpellResult(result);
-            setEmpoweredSpellUsed(true);
-        }
-    };
-
-    const handlePuncture = async () => {
-        if (!rolls || rolls.length === 0 || !onPuncture) return;
-        
-        const sortedWithIndex = rolls
-            .map((r, i) => ({ value: r, index: i }))
-            .sort((a, b) => a.value - b.value);
-        const lowestIndex = sortedWithIndex[0].index;
-        const originalRolls = [...rolls];
-        const newRoll = Math.floor(Math.random() * (rolls[0] > 0 ? rolls[0] : 6)) + 1;
-        const newRolls = [...rolls];
-        newRolls[lowestIndex] = newRoll;
-        
-        setPunctureResult({
-            originalDice: originalRolls,
-            newDice: newRolls,
-            rerolledIndex: lowestIndex,
-            originalValue: originalRolls[lowestIndex],
-            newValue: newRoll,
-        });
-        setPunctureUsed(true);
-        
-        await onPuncture({
-            damageFormula: formula,
-            rolls: newRolls,
-            rawDamage: total,
-            targetName: targetName,
-            damageTypes: damageType ? [damageType] : [],
-            originalRolls,
-            newRolls,
-            rerolledIndex: lowestIndex,
-            originalValue: originalRolls[lowestIndex],
-            newValue: newRoll,
-        });
-    };
-
-    const handleSavageAttacker = () => {
-        if (!rolls || rolls.length === 0 || !formula || !onSavageAttacker) return;
-        
-        const diceMatch = formula.match(/(\d+)d(\d+)/);
-        if (!diceMatch) return;
-        
-        const numDice = parseInt(diceMatch[1], 10);
-        const dieSize = parseInt(diceMatch[2], 10);
-        if (numDice !== rolls.length || dieSize <= 0) return;
-        
-        const originalRolls = [...rolls];
-        const originalTotal = originalRolls.reduce((sum, r) => sum + r, 0);
-        
-        const newRolls = [];
-        for (let i = 0; i < numDice; i++) {
-            newRolls.push(Math.floor(Math.random() * dieSize) + 1);
-        }
-        const newTotal = newRolls.reduce((sum, r) => sum + r, 0);
-        
-        setSavageAttackerResult({
-            original: originalRolls.join(', '),
-            rerolled: newRolls.join(', '),
-            originalTotal,
-            newTotal,
-            better: newTotal > originalTotal,
-        });
-        setSavageAttackerUsed(true);
-        
-        onSavageAttacker({
-            damageFormula: formula,
-            rolls: newTotal > originalTotal ? newRolls : originalRolls,
-            rawDamage: total,
-            targetName: targetName,
-            damageTypes: damageType ? [damageType] : [],
-            originalRolls,
-            newRolls,
-        });
-    };
-
-    const handleSuperiorityManeuver = async (maneuver) => {
-        if (!onSuperiorityManeuver) return;
-        try {
-            const dieResult = Math.floor(Math.random() * 12) + 1;
-            const newTotal = finalRoll + bonus + modifier + dieResult;
-            setSuperiorityResult({ dieValue: dieResult, maneuverName: maneuver.name, total: newTotal });
-            setSuperiorityUsed(true);
-            await onSuperiorityManeuver(maneuver.name, dieResult);
-        } catch (e) {
-            console.error('[DiceRollResult] Superiority maneuver failed:', e);
-        }
-    };
-
     const saveAbilityLabel = saveType ? saveType.toUpperCase() : '';
 
-    const isSaveDamageType = type === 'save-damage';
+    const handlePsiKnackClick = () => {
+        const dieSize = psiBolsteredKnackDieSize || 6;
+        const dieValue = Math.floor(Math.random() * dieSize) + 1;
+        const currentTotal = strokeResult !== null ? 20 + bonus + modifier : (rerollResult !== null ? rerollResult.total : (finalRoll + bonus + modifier));
+        setPsiKnackResult({ dieValue, dieSize, newTotal: currentTotal + dieValue });
+        setPsiKnackClicked(true);
+    };
 
-    const handleReroll = () => {
-        const newRoll = Math.floor(Math.random() * 20) + 1;
-        const rerollBonus = autoRerollBonus || 0;
-        setRerollResult({ roll: newRoll, total: newRoll + bonus + rerollBonus });
-        setRerollUsed(true);
-        if (onReroll) onReroll();
+    const handlePsiKnackSucceeded = () => {
+        setPsiKnackConsumed(true);
+        if (onPsiBolsteredKnack) onPsiBolsteredKnack({ dieValue: psiKnackResult.dieValue, dieSize: psiKnackResult.dieSize, success: true });
+    };
+
+    const handlePsiKnackFailed = () => {
+        setPsiKnackConsumed(true);
+        if (onPsiBolsteredKnack) onPsiBolsteredKnack({ dieValue: psiKnackResult.dieValue, dieSize: psiKnackResult.dieSize, success: false });
+    };
+
+    const handleStrokeOfLuck = () => {
+        setStrokeResult({ roll: 20, total: 20 + bonus + modifier });
+        setStrokeUsed(true);
+        if (onStrokeOfLuck) onStrokeOfLuck();
+    };
+
+    const handleBoonOfCombatProwess = () => {
+        setBoonUsed(true);
+        if (onStrokeOfLuck) onStrokeOfLuck();
+    };
+
+    const handleLuckyAdvantage = () => {
+        setMode('advantage');
+        if (onLuckyAdvantage) onLuckyAdvantage();
+    };
+
+    const handleLuckyDisadvantage = () => {
+        setMode('disadvantage');
+        if (onLuckyDisadvantage) onLuckyDisadvantage();
     };
 
     return (
@@ -340,7 +163,7 @@ function DiceRollResult(props) {
                     ) : bardicInspirationResult !== null ? (
                        ` +${bardicInspirationResult.total - bardicInspirationResult.d20Roll}`
                     ) : strReplaceApplied ? (
-                       ` → ${strScore} (Indomitable Might)`
+                       ` → ${finalDisplayTotal} (Indomitable Might)`
                     ) : isCritDamage ? ` +${modifier}${bonusDetail && bonus > 0 ? ' ' + bonusDetail : ''}` : (bonus + modifier) >= 0 && (bonus + modifier) !== 0 ? ` +${(bonus + modifier)}${bonusDetail ? ' ' + bonusDetail : ''}` :
                       (bonus + modifier) < 0 ? ` ${(bonus + modifier)}${bonusDetail ? ' ' + bonusDetail : ''}` : ''}
                 </div>
@@ -560,7 +383,7 @@ function DiceRollResult(props) {
 
             {strokeOfLuck && !strokeUsed && isD20 && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => { setStrokeResult({ roll: 20, total: 20 + bonus + modifier }); setStrokeUsed(true); if (onStrokeOfLuck) onStrokeOfLuck(); }} type="button">
+                <button className="dice-roll-reroll-btn" onClick={handleStrokeOfLuck} type="button">
                   <i className="fa-solid fa-star"></i> Stroke of Luck
                 </button>
               </div>
@@ -568,7 +391,7 @@ function DiceRollResult(props) {
 
             {autoRerollForAttack && !boonUsed && isD20 && !hit && !isAutoMiss && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => { setBoonUsed(true); if (onStrokeOfLuck) onStrokeOfLuck(); }} type="button">
+                <button className="dice-roll-reroll-btn" onClick={handleBoonOfCombatProwess} type="button">
                   <i className="fa-solid fa-shield-halved"></i> Boon of Combat Prowess
                 </button>
               </div>
@@ -584,7 +407,7 @@ function DiceRollResult(props) {
 
             {luckyAdvantage && isD20 && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => { setMode('advantage'); if (onLuckyAdvantage) onLuckyAdvantage(); }} type="button">
+                <button className="dice-roll-reroll-btn" onClick={handleLuckyAdvantage} type="button">
                   <i className="fa-solid fa-eye"></i> Lucky: Advantage (1 LP)
                 </button>
               </div>
@@ -592,7 +415,7 @@ function DiceRollResult(props) {
 
             {luckyDisadvantage && isD20 && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => { setMode('disadvantage'); if (onLuckyDisadvantage) onLuckyDisadvantage(); }} type="button">
+                <button className="dice-roll-reroll-btn" onClick={handleLuckyDisadvantage} type="button">
                   <i className="fa-solid fa-eye-slash"></i> Lucky: Disadvantage (1 LP)
                 </button>
               </div>
@@ -626,13 +449,7 @@ function DiceRollResult(props) {
 
             {psiBolsteredKnack && !psiKnackClicked && (rollType === 'check' || rollType === 'skill') && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => {
-                  const dieSize = psiBolsteredKnackDieSize || 6;
-                  const dieValue = Math.floor(Math.random() * dieSize) + 1;
-                  const currentTotal = strokeResult !== null ? 20 + bonus + modifier : (rerollResult !== null ? rerollResult.total : (finalRoll + bonus + modifier));
-                  setPsiKnackResult({ dieValue, dieSize, newTotal: currentTotal + dieValue });
-                  setPsiKnackClicked(true);
-                }} type="button">
+                <button className="dice-roll-reroll-btn" onClick={handlePsiKnackClick} type="button">
                   <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack (d{psiBolsteredKnackDieSize || 6})
                 </button>
               </div>
@@ -682,16 +499,10 @@ function DiceRollResult(props) {
               <div className="dice-roll-reroll-result">
                 <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack: +{psiKnackResult.dieValue} (d{psiKnackResult.dieSize}) → <strong>{psiKnackResult.newTotal}</strong>
                 <div className="dice-roll-reroll" style={{ marginTop: '8px' }}>
-                  <button className="dice-roll-reroll-btn" onClick={() => {
-                    setPsiKnackConsumed(true);
-                    if (onPsiBolsteredKnack) onPsiBolsteredKnack({ dieValue: psiKnackResult.dieValue, dieSize: psiKnackResult.dieSize, success: true });
-                  }} type="button">
+                  <button className="dice-roll-reroll-btn" onClick={handlePsiKnackSucceeded} type="button">
                     <i className="fa-solid fa-check"></i> Succeeded
                   </button>
-                  <button className="dice-roll-reroll-btn" onClick={() => {
-                    setPsiKnackConsumed(true);
-                    if (onPsiBolsteredKnack) onPsiBolsteredKnack({ dieValue: psiKnackResult.dieValue, dieSize: psiKnackResult.dieSize, success: false });
-                  }} type="button">
+                  <button className="dice-roll-reroll-btn" onClick={handlePsiKnackFailed} type="button">
                     <i className="fa-solid fa-xmark"></i> Still Failed
                   </button>
                 </div>

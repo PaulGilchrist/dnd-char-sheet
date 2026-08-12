@@ -171,4 +171,45 @@ describe('DiceRollResult', () => {
             expect(container.querySelector('.dice-roll-reroll-result')).toBeInTheDocument();
         });
     });
+
+    describe('error paths', () => {
+        it('logs console.error when onBardicInspirationDefense is falsy', () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+            render(
+                <DiceRollResult
+                    name="Longsword"
+                    type="attack"
+                    rolls={[18]}
+                    bonus={5}
+                    targetName="Goblin"
+                    targetAc={14}
+                    hit={true}
+                    bardicInspirationDefense={true}
+                    bardicInspirationDefenseDieSize={6}
+                />
+            );
+            fireEvent.click(screen.getByText(/Bardic Inspiration - Defense/));
+            expect(consoleSpy).toHaveBeenCalledWith('[BI Defense] onBardicInspirationDefense is falsy!');
+            consoleSpy.mockRestore();
+        });
+
+        it('logs console.error when superiority maneuver throws', async () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();
+            const onSuperiorityManeuver = vi.fn().mockRejectedValue(new Error('test error'));
+            render(
+                <DiceRollResult
+                    name="Sword"
+                    type="attack"
+                    rolls={[15]}
+                    bonus={3}
+                    availableSuperiorityManeuvers={[{ name: 'Pushing Attack' }]}
+                    onSuperiorityManeuver={onSuperiorityManeuver}
+                />
+            );
+            fireEvent.click(screen.getByText(/Pushing Attack/));
+            await new Promise(r => setTimeout(r, 0));
+            expect(consoleSpy).toHaveBeenCalledWith('[DiceRollResult] Superiority maneuver failed:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+    });
 });
