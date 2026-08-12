@@ -3,6 +3,7 @@ import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import utils from '../../ui/utils.js';
 import { getCurrentCombatRound, getActiveCreatureName, getCombatSummary } from '../../encounters/combatData.js';
 import { expireForCreature, expireForTarget } from './expirationQueue.js';
+import { processSleetStormAreaSave } from '../../automation/handlers/spells/sleetStormHandler.js';
 
 /**
  * Expire stale pendingExpirations at the start of each creature's turn.
@@ -65,7 +66,6 @@ export async function expireStaleEffects(campaignName, overrideActiveName) {
                     if (isAlreadyProne) continue;
                     // Trigger recurring save
                     try {
-                        const { processSleetStormAreaSave } = await import('../../automation/handlers/spells/sleetStormHandler.js');
                         await processSleetStormAreaSave(activeName, teTargetName, campaignName, sleetStormTracking.mapName);
                     } catch (_e) { /* ignore per-creature errors */ }
                 }

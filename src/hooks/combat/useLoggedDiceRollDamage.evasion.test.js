@@ -137,24 +137,16 @@ vi.mock('../../hooks/useAllySelection.js', () => ({
     getAllyList: vi.fn(),
 }));
 
-import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../runtime/useRuntimeState.js';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { hasIgnoreResistance, playerIsImmuneToCondition } from '../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
-import { addEntry } from '../../services/ui/logService.js';
-import { hasPotentCantrip, isMagicMissileImmune, hasSoulstitchProtection, applyMinDamageAdjustment, readAoeContext } from './loggedDiceRollUtils.js';
+import { hasSoulstitchProtection, applyMinDamageAdjustment } from './loggedDiceRollUtils.js';
 import { computeDamageAfterSave, rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from '../../services/rules/combat/applyDamage.js';
 import { createLogDamageAndShow } from './useLoggedDiceRollDamage.js';
 import { getCoronaSaveDisadvantage } from '../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../services/combat/auras/elderChampionAuraUtils.js';
-import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
-import { hasBardicInspirationOffense, getBardicInspirationDieSize, getBardicInspirationDieSizeFromClass } from '../../services/combat/auras/bardicInspirationState.js';
-import { hasEmpoweredSpell } from '../../services/rules/spells/empoweredSpellService.js';
-import { getChaModifier } from '../../services/rules/spells/metamagicRules.js';
-import { getAllyList } from '../../hooks/useAllySelection.js';
-import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
-import { getAffectedCreatures, processAoeNpcs, sendAoePlayerSaves } from '../../services/rules/combat/aoeService.js';
 describe('Evasion logging', () => {
     const deps = {
         characterName: 'TestWizard',

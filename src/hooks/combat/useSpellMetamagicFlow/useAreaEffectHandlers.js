@@ -111,7 +111,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       metaCtx: { targets: result },
     }
     await executeHandler(action, playerStats, campaignName, null)
-  }, [playerStats])
+  }, [playerStats, campaignName])
 
   const handleConfusionConfirm = React.useCallback(async (pending, result) => {
     const targetNames = Array.isArray(result) ? result : [result]
@@ -135,7 +135,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       metaCtx: { targets: result },
     }
     await executeHandler(action, playerStats, campaignName, null)
-  }, [playerStats])
+  }, [playerStats, campaignName])
 
   const handleSleetStormConfirm = React.useCallback(async (pending, result) => {
     const action = {
@@ -145,7 +145,7 @@ export function useAreaEffectHandlers(createSkipHandler, playerStats, campaignNa
       metaCtx: { targets: result },
     }
     await executeHandler(action, playerStats, campaignName, null)
-  }, [playerStats])
+  }, [playerStats, campaignName])
 
   const handleGlobeSkip = createSkipHandler('globe', (pending) => pending.creatureTargets)
   const handleForcecageSkip = createSkipHandler('forcecage', (pending) => pending.creatureTargets)

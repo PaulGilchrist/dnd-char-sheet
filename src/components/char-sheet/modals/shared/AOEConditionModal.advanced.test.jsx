@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AOEConditionModal from './AOEConditionModal.jsx';
+import { addEntry } from '../../../../services/ui/logService.js';
 
 // ── Mocked modules ──
 
@@ -39,9 +40,6 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
-import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
-import { addEntry } from '../../../../services/ui/logService.js';
-import * as damageRollback from '../../../../services/automation/common/damageRollback.js';
 
 // ── Test fixtures ──
 
@@ -80,19 +78,6 @@ function makeProps(overrides = {}) {
         onClose: vi.fn(),
         ...overrides,
     };
-}
-
-// ── Helper to select a target row ──
-
-function selectTargetRow(index) {
-    const labels = document.querySelectorAll('.secondary-target-row');
-    fireEvent.click(labels[index]);
-}
-
-// ── Helpers ──
-
-function getApplyButton() {
-    return screen.getByRole('button', { name: /Blinding Darkness/ });
 }
 
 // ── Tests ──
