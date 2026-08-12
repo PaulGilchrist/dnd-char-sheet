@@ -36,6 +36,10 @@ vi.mock('./rangeValidation.js', () => ({
   getDistanceFeet: vi.fn(() => 30),
 }));
 
+vi.mock('../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 // ── Imports ─────────────────────────────────────────────────────
 
 import {

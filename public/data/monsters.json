@@ -4764,7 +4764,7 @@
     ]
   },
   {
-    "index": "animate-objects-huge",
+    "index": "animated-object-huge",
     "name": "Animated Object (Huge)",
     "size": "Huge",
     "type": "construct",
@@ -4874,7 +4874,7 @@
     "description": "An object animated by the Animate Objects spell. Huge size."
   },
   {
-    "index": "animate-objects-large",
+    "index": "animated-object-large",
     "name": "Animated Object (Large)",
     "size": "Large",
     "type": "construct",
@@ -4984,7 +4984,7 @@
     "description": "An object animated by the Animate Objects spell. Large size."
   },
   {
-    "index": "animate-objects-medium",
+    "index": "animated-object-medium",
     "name": "Animated Object (Medium)",
     "size": "Medium",
     "type": "construct",

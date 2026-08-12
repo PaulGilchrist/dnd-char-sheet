@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
+import { addEntry } from '../../services/ui/logService.js';
+import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
@@ -205,99 +207,222 @@ function renderHookWithSpell(hookSetup, spellName, spellOverrides = {}) {
   return { result, onExecute, spell };
 }
 
-describe('useSpellMetamagicFlow — Enhance Ability confirm/skip', () => {
+describe('useSpellMetamagicFlow — Charm Person confirm/skip', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('applies enhance ability effect and logs entry on confirm', async () => {
+  it('triggers charm person and logs entry on confirm', async () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    const monsterUtils = await import('../../services/npcs/monsterUtils.js');
+    monsterUtils.getMonsterData.mockResolvedValue({ type: 'humanoid' });
+
+    await act(async () => {
+      await result.current.gateMetamagic(makeSpell({ name: 'Charm Person', level: 1 }));
+    });
+
+    expect(result.current.pendingCharmPerson).not.toBeNull();
+
+    await act(async () => {
+      await result.current.handleCharmPersonConfirm(['Goblin A']);
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      targetName: 'Goblin A',
+      targets: ['Goblin A', 'Goblin B', 'Goblin C'],
+      spellName: 'Charm Person',
+      spellLevel: 1,
+      castingTime: '1 Action',
+      timestamp: expect.any(Number),
+    });
+    expect(result.current.pendingCharmPerson).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Charm Monster confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('triggers charm monster and logs entry on confirm', async () => {
     const { result } = renderHookWithSpell(
       (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Enhance Ability',
-      { level: 2 },
+      'Charm Monster',
+      { level: 4 },
+    );
+
+    const { triggerCharmMonster } = await import('../../services/rules/features/charmMonsterService.js');
+
+    await act(async () => {
+      await result.current.handleCharmMonsterConfirm(['Goblin A']);
+    });
+
+    expect(triggerCharmMonster).toHaveBeenCalled();
+    expect(result.current.pendingCharmMonster).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Banishment confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('triggers banishment and logs entry on confirm', async () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Banishment',
+      { level: 4 },
+    );
+
+    await act(async () => {
+      await result.current.handleBanishmentConfirm(['Goblin A']);
+    });
+
+    expect(result.current.pendingBanishment).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Prismatic Spray confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls onExecute with selectedTargets on confirm', async () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+    const spell = makeSpell({ name: 'Prismatic Spray', level: 7 });
+    act(() => {
+      result.current.gateMetamagic(spell);
+    });
+
+    await act(async () => {
+      await result.current.handlePrismaticSprayConfirm(['Goblin A']);
+    });
+
+    expect(onExecute).toHaveBeenCalledWith(spell, { selectedTargets: ['Goblin A'] });
+    expect(result.current.pendingPrismaticSpray).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Healing Word confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('triggers healing word and logs entry on confirm', async () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Healing Word',
+      { level: 1 },
+    );
+
+    const { triggerHealingWord } = await import('../../services/rules/features/healingWordService.js');
+
+    await act(async () => {
+      await result.current.handleHealingWordConfirm({ targetName: 'Goblin A' });
+    });
+
+    expect(triggerHealingWord).toHaveBeenCalled();
+    expect(result.current.pendingHealingWord).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Regenerate confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('executes regenerate and logs entry on confirm', async () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Regenerate',
+      { level: 7 },
+    );
+
+    await act(async () => {
+      await result.current.handleRegenerateConfirm({ targetName: 'Goblin A' });
+    });
+
+    expect(result.current.pendingRegenerate).toBeNull();
+  });
+});
+
+describe('useSpellMetamagicFlow — Protection from Evil and Good confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('consumes material and applies effect on confirm', async () => {
+    const { result } = renderHookWithSpell(
+      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
+      'Protection from Evil and Good',
+      { level: 1 },
     );
 
     const automation = await import('../../services/automation/index.js');
 
-    act(() => {
-      result.current.handleEnhanceAbilityAbilitySelect('Bear Might');
-    });
-
     await act(async () => {
-      await result.current.handleEnhanceAbilityConfirm({ targetName: 'Goblin A' });
+      await result.current.handleProtectionFromEvilAndGoodConfirm(['Goblin A']);
     });
 
-    expect(automation.applyEnhanceAbilityEffect).toHaveBeenCalled();
-    expect(result.current.enhanceAbilityStage).toBeNull();
-    expect(result.current.pendingEnhanceAbility).toBeNull();
-  });
-
-  it('clears state and rolls back slot on skip', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Enhance Ability',
-      { level: 2 },
-    );
-
-    act(() => {
-      result.current.handleEnhanceAbilityAbilitySelect('Bear Might');
-    });
-
-    act(() => {
-      result.current.handleEnhanceAbilitySkip();
-    });
-
-    expect(result.current.enhanceAbilityStage).toBeNull();
-    expect(result.current.pendingEnhanceAbility).toBeNull();
+    expect(automation.applyProtectionFromEvilAndGood).toHaveBeenCalled();
+    expect(result.current.pendingProtectionFromEvilAndGood).toBeNull();
   });
 });
 
-describe('useSpellMetamagicFlow — Protection from Poison confirm/skip', () => {
+describe('useSpellMetamagicFlow — Shield of Faith confirm/skip', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('applies protection from poison and logs entry on confirm', async () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Protection from Poison',
-      { level: 2 },
+  it('applies shield of faith and logs entry on confirm', async () => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
     );
 
-    const automation = await import('../../services/automation/index.js');
-
-    await act(async () => {
-      await result.current.handleProtectionFromPoisonConfirm(['Goblin A']);
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Shield of Faith', level: 1 }));
     });
 
-    expect(automation.applyProtectionFromPoisonHandler).toHaveBeenCalled();
-    expect(result.current.pendingProtectionFromPoison).toBeNull();
+    act(() => {
+      result.current.handleShieldOfFaithConfirm(['Goblin A']);
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
   });
 });
 
-describe('useSpellMetamagicFlow — Stone Skin confirm/skip', () => {
+describe('useSpellMetamagicFlow — Heal confirm/skip', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('applies stone skin and logs entry on confirm', async () => {
+  it('triggers heal and logs entry on confirm', async () => {
     const { result } = renderHookWithSpell(
       (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Stone Skin',
-      { level: 3 },
+      'Heal',
+      { level: 6 },
     );
 
-    const { consumeMaterial } = await import('../../services/rules/spells/materialComponents.js');
+    const { triggerHeal } = await import('../../services/rules/features/healService.js');
 
     await act(async () => {
-      await result.current.handleStoneSkinConfirm('Goblin A');
+      await result.current.handleHealConfirm({ targetName: 'Goblin A' });
     });
 
-    expect(consumeMaterial).toHaveBeenCalledWith(
-      expect.any(Object),
-      'Diamond Dust (100 gp)',
-      'TestCampaign'
-    );
-    expect(result.current.pendingStoneSkin).toBeNull();
+    expect(triggerHeal).toHaveBeenCalled();
+    expect(result.current.pendingHeal).toBeNull();
   });
 });
