@@ -33,7 +33,7 @@ vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('../../../automation/index.js', () => ({
+vi.mock('../../../../automation/index.js', () => ({
   executeHandler: vi.fn(),
 }))
 
@@ -68,7 +68,7 @@ vi.mock('../../../features/friendsService.js', () => ({
   triggerFriends: vi.fn(),
 }))
 
-vi.mock('../postCastRiderService.js', () => ({
+vi.mock('../../postCastRiderService.js', () => ({
   triggerPostCastRiderSaves: vi.fn(async () => null),
   triggerSpellThief: vi.fn(async () => null),
   triggerBewitchingMagic: vi.fn(async () => null),
@@ -77,7 +77,7 @@ vi.mock('../postCastRiderService.js', () => ({
   getEmpoweredEvocationIntModifier: vi.fn(() => 0),
 }))
 
-vi.mock('../postCastHealService.js', () => ({
+vi.mock('../../postCastHealService.js', () => ({
   triggerPostCastSelfHeals: vi.fn(async () => {}),
   triggerPostCastAllyHeals: vi.fn(async () => {}),
 }))
@@ -129,7 +129,7 @@ vi.mock('../../../features/mazeService.js', () => ({ triggerMaze: vi.fn(async ()
 vi.mock('../../../features/falseLifeService.js', () => ({ triggerFalseLife: vi.fn(async () => {}) }))
 vi.mock('../../../features/heroismService.js', () => ({ handle: vi.fn(), applyHeroism: vi.fn(), isHeroismActive: vi.fn() }))
 
-vi.mock('../../../automation/handlers/spells/sanctuaryHandler.js', () => ({
+vi.mock('../../../../automation/handlers/spells/sanctuaryHandler.js', () => ({
   endSanctuary: vi.fn(async () => {}),
 }))
 
@@ -141,7 +141,7 @@ vi.mock('../../../combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
 }))
 
-vi.mock('../../../automation/handlers/class-wizard/arcaneWardHandler.js', () => ({
+vi.mock('../../../../automation/handlers/class-wizard/arcaneWardHandler.js', () => ({
   onAbjurationSpellCast: vi.fn(),
 }))
 
