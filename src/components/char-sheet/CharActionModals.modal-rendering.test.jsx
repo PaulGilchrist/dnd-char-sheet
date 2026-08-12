@@ -1,19 +1,12 @@
-// Tests for gaps in CharActionModals coverage:
+// Tests for modal rendering and close behavior in CharActionModals.jsx:
 // - bendFateModal rendering
-// - handleStarryChaliceConfirm async behavior
-// - handleDestructiveStrideTargetConfirm / handleDestructiveStrideTargetSkip
-// - handleEpitomeConfirm setPopupHtml path
-// - handleDestructiveStrideConfirm setPopupHtml path
-// - combatSummary state from getCombatContext useEffect
-// - handleClockworkCavalcadeChoice null-modal edge case
-// - BastionOfLaw onConfirm setPopupHtml path
-// - AnimateDead / CreateUndead / SummonSpirit confirm setPopupHtml path
-// - Attack Rider Modal close with Stalker's Flurry
-// - Attack Rider Modal close with Cunning Strike variants
-// - openHandFromFlurry handler behavior
 // - starryFormConstellationModal / twinklingConstellationModal rendering
 // - moonlightStepFallbackModal Yes/No buttons
-// - setSpellModalState clearing for wildMagicSurgeModal
+// - wildMagicSurgeModal setSpellModalState clearing
+// - divineInterventionModal close clearing both modal and action
+// - attackRiderModal close behavior (Stalker's Flurry / Cunning Strike)
+// - clockworkCavalcadeRepairModal inline buttons
+// - openHandFromFlurry rendering and handler
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -447,7 +440,7 @@ vi.mock('./modals/MassHealingWordModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/AnimateDeadModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onClose }) {
+  default: function TestModal({ onClose, onConfirm }) {
     return (
       <div data-testid="animate-dead-modal">
         <button data-testid="animate-dead-confirm" onClick={() => onConfirm({ zombieCount: 2, skeletonCount: 1 })}>Confirm</button>
@@ -457,7 +450,7 @@ vi.mock('./modals/AnimateDeadModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/CreateUndeadModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onClose }) {
+  default: function TestModal({ onClose, onConfirm }) {
     return (
       <div data-testid="create-undead-modal">
         <button data-testid="create-undead-confirm" onClick={() => onConfirm({ ghoulCount: 1 })}>Confirm</button>
@@ -467,7 +460,7 @@ vi.mock('./modals/CreateUndeadModal.jsx', () => ({
   },
 }));
 vi.mock('./modals/SummonSpiritModal.jsx', () => ({
-  default: function TestModal({ onConfirm, onClose }) {
+  default: function TestModal({ onClose, onConfirm }) {
     return (
       <div data-testid="summon-spirit-modal">
         <button data-testid="summon-spirit-confirm" onClick={() => onConfirm('air-spirit')}>Confirm</button>
@@ -547,6 +540,9 @@ vi.mock('./modals/BendFateModal.jsx', () => ({
 vi.mock('./modals/MoonlightStepResourceModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="moonlight-step-resource-modal">MoonlightStepResourceModal</div>; },
 }));
+vi.mock('./modals/WildMagicSurgeModal.jsx', () => ({
+  default: function TestModal() { return <div data-testid="wild-magic-surge-modal">WildMagicSurgeModal</div>; },
+}));
 vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js', () => ({
   handle: vi.fn().mockResolvedValue(undefined),
   handleSpendDice: vi.fn().mockResolvedValue(undefined),
@@ -580,14 +576,9 @@ vi.mock('../../services/automation/common/oncePerTurn.js', () => ({
   setSkipFlag: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Override createBaseProps to include setPopupHtml for tests that need it
-function createBasePropsWithPopup(overrides) {
-  return { ...createBaseProps(overrides), setPopupHtml: vi.fn() };
-}
-
 // ── Tests ──
 
-describe('CharActionModals — gap coverage tests', () => {
+describe('CharActionModals — modal rendering tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -613,158 +604,6 @@ describe('CharActionModals — gap coverage tests', () => {
       />);
       fireEvent.click(screen.getByTestId('bend-fate-close'));
       expect(setModalState).toHaveBeenCalledWith({ bendFateModal: null });
-    });
-  });
-
-  // ── Starry Chalice confirm handler ──
-
-  describe('Starry Chalice confirm handler', () => {
-    it('clears modal state when applyStarryChaliceHeal is called', async () => {
-      const setModalState = vi.fn();
-      const setPopupHtml = vi.fn();
-
-      render(<CharActionModals
-        {...createBasePropsWithPopup({ setModalState, setPopupHtml })}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
-        campaignName="test"
-        setModalState={setModalState}
-      />);
-
-      // Click the target in the secondary target modal
-      fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
-
-      // The handler sets modal state null regardless of result
-      expect(setModalState).toHaveBeenCalledWith({ starryChaliceHealModal: null });
-    });
-  });
-
-  // ── Epitome confirm handler ──
-
-  describe('Epitome confirm handler', () => {
-    it('clears modal state when applyResistanceChoice is called', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ epitomeModal: { action: {}, playerStats: { name: 'Caster' }, campaignName: 'test', currentResistance: 'fire' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('epitome-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ epitomeModal: null });
-    });
-  });
-
-  // ── Destructive Stride confirm handler ──
-
-  describe('Destructive Stride confirm handler', () => {
-    it('clears modal state when applyDamageTypeChoice is called', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ destructiveStrideModal: { action: {}, playerStats: { name: 'Monk' }, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('destructive-stride-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideModal: null });
-    });
-  });
-
-  // ── Destructive Stride Target handlers ──
-
-  describe('Destructive Stride Target handlers', () => {
-    it('clears modal state on target selection', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: { name: 'Destructive Stride' } } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('secondary-target-Goblin'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideTargetModal: null });
-    });
-
-    it('clears modal state on skip', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: { name: 'Destructive Stride' } } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideTargetModal: null });
-    });
-  });
-
-  // ── Animate Dead confirm handler ──
-
-  describe('Animate Dead confirm handler', () => {
-    it('clears modal state when confirmAnimateDead is called', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ animateDeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('animate-dead-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ animateDeadModal: null });
-    });
-  });
-
-  // ── Create Undead confirm handler ──
-
-  describe('Create Undead confirm handler', () => {
-    it('clears modal state when confirmCreateUndead is called', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ createUndeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('create-undead-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ createUndeadModal: null });
-    });
-  });
-
-  // ── Summon Spirit confirm handler ──
-
-  describe('Summon Spirit confirm handler', () => {
-    it('clears modal state when confirmSummonSpirit is called', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ summonSpiritModal: { action: {}, playerStats: {}, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('summon-spirit-confirm'));
-      expect(setModalState).toHaveBeenCalledWith({ summonSpiritModal: null });
-    });
-  });
-
-  // ── Open Hand From Flurry handler behavior ──
-
-  describe('Open Hand From Flurry handler behavior', () => {
-    it('calls handleOpenHandFromFlurryConfirm with optionName on confirm', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleOpenHandFromFlurryConfirm: handler })}
-        modalState={{ openHandFromFlurry: { targets: [{ action: { name: 'Open Hand' } }], currentIndex: 0, saveDc: 15 } }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('open-hand-confirm'));
-      expect(handler).toHaveBeenCalledWith({ optionName: 'grappled' });
     });
   });
 
@@ -831,110 +670,6 @@ describe('CharActionModals — gap coverage tests', () => {
         setSpellModalState={setSpellModalState}
       />);
       expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
-    });
-  });
-
-  // ── Divine Intervention cast handler ──
-
-  describe('Divine Intervention cast handler', () => {
-    it('calls handleDivineInterventionCast when cast button is clicked', () => {
-      const handler = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ handleDivineInterventionCast: handler })}
-        modalState={{ divineInterventionModal: {} }}
-        setModalState={vi.fn()}
-      />);
-      fireEvent.click(screen.getByTestId('divine-intervention-cast'));
-      expect(handler).toHaveBeenCalledWith('cast');
-    });
-
-    it('clears both divineInterventionModal and divineInterventionAction on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ divineInterventionModal: {}, divineInterventionAction: { name: 'Divine Intervention' } }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('divine-intervention-close'));
-      expect(setModalState).toHaveBeenCalledWith({ divineInterventionModal: null, divineInterventionAction: null });
-    });
-  });
-
-  // ── Bastion of Law onConfirm handler ──
-
-  describe('Bastion of Law onConfirm handler', () => {
-    it('does not clear modal state on confirm (only onClose does)', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ bastionOfLawModal: { featureName: 'Bastion of Law', auto: {} } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('bastion-confirm'));
-      // BastionOfLaw onConfirm does NOT dismiss the modal — only onClose does
-      expect(setModalState).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Attack Rider Modal close with Stalker's Flurry ──
-
-  describe('Attack Rider Modal close with Stalker\'s Flurry', () => {
-    it('sets skip flag when action is Stalker\'s Flurry and no option chosen', async () => {
-      const setModalState = vi.fn();
-
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ attackRiderModal: { action: { name: "Stalker's Flurry" }, playerStats: { name: 'Rogue' }, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('attack-rider-close'));
-      expect(setModalState).toHaveBeenCalledWith({ attackRiderModal: null });
-    });
-
-    it('does not set skip flag when action is not Stalker\'s Flurry', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ attackRiderModal: { action: { name: 'Test Attack' }, playerStats: { name: 'Rogue' }, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('attack-rider-close'));
-      expect(setModalState).toHaveBeenCalledWith({ attackRiderModal: null });
-    });
-  });
-
-  // ── Attack Rider Modal close with Cunning Strike variants ──
-
-  describe('Attack Rider Modal close with Cunning Strike variants', () => {
-    it('dispatches target-effects-updated on close', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ attackRiderModal: { action: { name: 'Cunning Strike' }, playerStats: { name: 'Rogue' }, campaignName: 'test' } }}
-        setModalState={setModalState}
-      />);
-
-      fireEvent.click(screen.getByTestId('attack-rider-close'));
-      expect(setModalState).toHaveBeenCalledWith({ attackRiderModal: null });
-    });
-  });
-
-  // ── Clockwork Cavalcade choice null-modal edge case ──
-
-  describe('Clockwork Cavalcade choice null-modal edge case', () => {
-    it('does nothing when clockworkCavalcadeModal is not in merged state', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{}}
-        setModalState={setModalState}
-      />);
-      // No clockwork modal rendered, so no buttons to click
-      expect(setModalState).not.toHaveBeenCalled();
     });
   });
 

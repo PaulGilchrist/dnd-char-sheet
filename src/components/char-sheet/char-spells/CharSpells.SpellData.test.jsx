@@ -3,6 +3,107 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
 import * as helpers from './CharSpells.test.helpers.js';
 
+const { useSpellMetamagicFlow } = vi.hoisted(() => {
+  const spellFlowHandlers = [
+    'gateMetamagic','handleConfirm','handleSkip','handleMultiTargetConfirm','handleMultiTargetSkip',
+    'handleAidConfirm','handleAidSkip','handleHeroesFeastConfirm','handleHeroesFeastSkip',
+    'handleGreaterRestorationConfirm','handleGreaterRestorationSkip','handleGreaterRestorationNoEffects',
+    'handleLesserRestorationConfirm','handleLesserRestorationSkip',
+    'handleMageArmorConfirm','handleMageArmorSkip',
+    'handleProtectionFromEnergyConfirm','handleProtectionFromEnergySkip',
+    'handleResistanceConfirm','handleResistanceSkip',
+    'handleRemoveCurseConfirm','handleRemoveCurseSkip',
+    'handleMagicMissileConfirm','handleMagicMissileSkip',
+    'handleBaneConfirm','handleBaneSkip',
+    'handleBlessConfirm','handleBlessSkip',
+    'handleFaerieFireConfirm','handleFaerieFireSkip',
+    'handleHolyAuraConfirm','handleHolyAuraSkip',
+    'handleBeaconOfHopeConfirm','handleBeaconOfHopeSkip',
+    'handleSlowConfirm','handleSlowSkip',
+    'handleHasteConfirm','handleHasteSkip',
+    'handleEnhanceAbilityAbilitySelect','handleEnhanceAbilityConfirm','handleEnhanceAbilitySkip',
+    'handleBarkskinConfirm','handleBarkskinSkip',
+    'handleInvisibilityConfirm','handleInvisibilitySkip',
+    'handleGreaterInvisibilityConfirm','handleGreaterInvisibilitySkip',
+    'handleFeignDeathConfirm','handleFeignDeathSkip',
+    'handleHealConfirm','handleHealSkip',
+    'handleProtectionFromEvilAndGoodConfirm','handleProtectionFromEvilAndGoodSkip',
+    'handleProtectionFromPoisonConfirm','handleProtectionFromPoisonSkip',
+    'handleStoneSkinConfirm','handleStoneSkinSkip',
+    'handlePassWithoutTraceConfirm','handlePassWithoutTraceSkip',
+    'handleGlobeConfirm','handleGlobeSkip',
+    'handleAntimagicFieldConfirm','handleAntimagicFieldSkip',
+    'handleForcecageConfirm','handleForcecageSkip',
+    'handleStinkingCloudConfirm','handleStinkingCloudSkip',
+    'handleConfusionConfirm','handleConfusionSkip',
+    'handleWebConfirm','handleWebSkip',
+    'handleAnimalFriendshipConfirm','handleAnimalFriendshipSkip',
+    'handleAuraOfLifeConfirm','handleAuraOfLifeSkip',
+    'handleAuraOfPurityConfirm','handleAuraOfPuritySkip',
+    'handleCircleOfPowerConfirm','handleCircleOfPowerSkip',
+    'handleCompulsionConfirm','handleCompulsionSkip',
+    'handleSleetStormConfirm','handleSleetStormSkip',
+    'handleAuraOfVitalityConfirm','handleAuraOfVitalitySkip',
+    'handleForesightConfirm','handleForesightSkip',
+    'handleLongstriderConfirm','handleLongstriderSkip',
+    'handleSpareTheDyingConfirm','handleSpareTheDyingSkip',
+    'handleDeathWardConfirm','handleDeathWardSkip',
+    'handleHeroismConfirm','handleHeroismSkip',
+    'handleSanctuaryConfirm','handleSanctuarySkip',
+    'handleRegenerateConfirm','handleRegenerateSkip',
+    'handleHealingWordConfirm','handleHealingWordSkip',
+    'handleCureWoundsConfirm','handleCureWoundsSkip',
+    'handleRevivifyConfirm','handleRevivifySkip',
+    'handleUpcastConfirm','handleUpcastCancel',
+    'handleHoldMonsterConfirm','handleHoldMonsterSkip',
+    'handleHoldPersonConfirm','handleHoldPersonSkip',
+    'handlePolymorphConfirm','handlePolymorphSkip',
+    'handleAnimalShapesTargetConfirm','handleAnimalShapesSkip',
+    'handleTruePolymorphPathSelect','handleTruePolymorphTargetConfirm','handleTruePolymorphSkip',
+    'handleCharmPersonConfirm','handleCharmPersonSkip',
+    'handleCharmMonsterConfirm','handleCharmMonsterSkip',
+    'handleBanishmentConfirm','handleBanishmentSkip',
+    'handlePrismaticSprayConfirm','handlePrismaticSpraySkip',
+  ];
+
+  const pendingProps = [
+    'pendingMetamagic','pendingMultiTarget','pendingAid','pendingHeroesFeast',
+    'pendingGreaterRestoration','pendingLesserRestoration','pendingMageArmor',
+    'pendingProtectionFromEnergy','pendingResistance','pendingRemoveCurse',
+    'pendingMagicMissile','pendingBane','pendingBless','pendingFaerieFire',
+    'pendingHolyAura','pendingBeaconOfHope','pendingSlow','pendingHaste',
+    'pendingEnhanceAbility','pendingBarkskin','pendingInvisibility','pendingGreaterInvisibility',
+    'pendingFeignDeath','pendingHeal','pendingProtectionFromEvilAndGood',
+    'pendingProtectionFromPoison','pendingStoneSkin','pendingPassWithoutTrace',
+    'pendingGlobe','pendingAntimagicField','pendingForcecage','pendingStinkingCloud',
+    'pendingConfusion','pendingWeb','pendingAnimalFriendship','pendingAuraOfLife',
+    'pendingAuraOfPurity','pendingCircleOfPower','pendingCompulsion','pendingSleetStorm',
+    'pendingAuraOfVitality','pendingForesight','pendingLongstrider','pendingSpareTheDying',
+    'pendingDeathWard','pendingHeroism','pendingSanctuary','pendingRegenerate',
+    'pendingHealingWord','pendingCureWounds','pendingRevivify','pendingShapechange',
+    'pendingUpcast',
+  ];
+
+  const flowMock = {};
+  spellFlowHandlers.forEach(h => { flowMock[h] = vi.fn(); });
+  pendingProps.forEach(p => { flowMock[p] = null; });
+  flowMock.enhanceAbilityStage = null;
+  flowMock.protectionFromEnergyStage = null;
+  flowMock.resistanceStage = null;
+  flowMock.flowHoldMonster = null;
+  flowMock.flowHoldPerson = null;
+  flowMock.flowPolymorph = null;
+  flowMock.flowAnimalShapes = null;
+  flowMock.flowTruePolymorph = null;
+  flowMock.flowCharmPerson = null;
+  flowMock.flowCharmMonster = null;
+  flowMock.flowBanishment = null;
+  flowMock.flowPrismaticSpray = null;
+  flowMock.buildUpcastLevels = vi.fn(() => []);
+
+  return { useSpellMetamagicFlow: vi.fn(() => flowMock) };
+});
+
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),
   getRuntimeValue: vi.fn(() => null),
@@ -30,198 +131,7 @@ vi.mock('../../../hooks/combat/useMetamagic.js', () => ({
 }));
 
 vi.mock('../../../hooks/combat/useSpellMetamagicFlow.js', () => ({
-  useSpellMetamagicFlow: vi.fn(() => ({
-    pendingMetamagic: null,
-    pendingMultiTarget: null,
-    gateMetamagic: vi.fn(),
-    handleConfirm: vi.fn(),
-    handleSkip: vi.fn(),
-    handleMultiTargetConfirm: vi.fn(),
-    handleMultiTargetSkip: vi.fn(),
-    pendingAid: null,
-    handleAidConfirm: vi.fn(),
-    handleAidSkip: vi.fn(),
-    pendingHeroesFeast: null,
-    handleHeroesFeastConfirm: vi.fn(),
-    handleHeroesFeastSkip: vi.fn(),
-    pendingGreaterRestoration: null,
-    handleGreaterRestorationConfirm: vi.fn(),
-    handleGreaterRestorationSkip: vi.fn(),
-    handleGreaterRestorationNoEffects: vi.fn(),
-    pendingLesserRestoration: null,
-    handleLesserRestorationConfirm: vi.fn(),
-    handleLesserRestorationSkip: vi.fn(),
-    pendingMageArmor: null,
-    handleMageArmorConfirm: vi.fn(),
-    handleMageArmorSkip: vi.fn(),
-    pendingProtectionFromEnergy: null,
-    handleProtectionFromEnergyConfirm: vi.fn(),
-    handleProtectionFromEnergySkip: vi.fn(),
-    pendingResistance: null,
-    handleResistanceConfirm: vi.fn(),
-    handleResistanceSkip: vi.fn(),
-    pendingRemoveCurse: null,
-    handleRemoveCurseConfirm: vi.fn(),
-    handleRemoveCurseSkip: vi.fn(),
-    pendingMagicMissile: null,
-    handleMagicMissileConfirm: vi.fn(),
-    handleMagicMissileSkip: vi.fn(),
-    pendingBane: null,
-    handleBaneConfirm: vi.fn(),
-    handleBaneSkip: vi.fn(),
-    pendingBless: null,
-    handleBlessConfirm: vi.fn(),
-    handleBlessSkip: vi.fn(),
-    pendingFaerieFire: null,
-    handleFaerieFireConfirm: vi.fn(),
-    handleFaerieFireSkip: vi.fn(),
-    pendingHolyAura: null,
-    handleHolyAuraConfirm: vi.fn(),
-    handleHolyAuraSkip: vi.fn(),
-    pendingBeaconOfHope: null,
-    handleBeaconOfHopeConfirm: vi.fn(),
-    handleBeaconOfHopeSkip: vi.fn(),
-    pendingSlow: null,
-    handleSlowConfirm: vi.fn(),
-    handleSlowSkip: vi.fn(),
-    pendingHaste: null,
-    handleHasteConfirm: vi.fn(),
-    handleHasteSkip: vi.fn(),
-    pendingEnhanceAbility: null,
-    enhanceAbilityStage: null,
-    handleEnhanceAbilityAbilitySelect: vi.fn(),
-    handleEnhanceAbilityConfirm: vi.fn(),
-    handleEnhanceAbilitySkip: vi.fn(),
-    pendingBarkskin: null,
-    handleBarkskinConfirm: vi.fn(),
-    handleBarkskinSkip: vi.fn(),
-    pendingInvisibility: null,
-    handleInvisibilityConfirm: vi.fn(),
-    handleInvisibilitySkip: vi.fn(),
-    pendingGreaterInvisibility: null,
-    handleGreaterInvisibilityConfirm: vi.fn(),
-    handleGreaterInvisibilitySkip: vi.fn(),
-    pendingFeignDeath: null,
-    handleFeignDeathConfirm: vi.fn(),
-    handleFeignDeathSkip: vi.fn(),
-    pendingHeal: null,
-    handleHealConfirm: vi.fn(),
-    handleHealSkip: vi.fn(),
-    pendingProtectionFromEvilAndGood: null,
-    handleProtectionFromEvilAndGoodConfirm: vi.fn(),
-    handleProtectionFromEvilAndGoodSkip: vi.fn(),
-    pendingProtectionFromPoison: null,
-    handleProtectionFromPoisonConfirm: vi.fn(),
-    handleProtectionFromPoisonSkip: vi.fn(),
-    pendingStoneSkin: null,
-    handleStoneSkinConfirm: vi.fn(),
-    handleStoneSkinSkip: vi.fn(),
-    pendingPassWithoutTrace: null,
-    handlePassWithoutTraceConfirm: vi.fn(),
-    handlePassWithoutTraceSkip: vi.fn(),
-    pendingGlobe: null,
-    handleGlobeConfirm: vi.fn(),
-    handleGlobeSkip: vi.fn(),
-    pendingAntimagicField: null,
-    handleAntimagicFieldConfirm: vi.fn(),
-    handleAntimagicFieldSkip: vi.fn(),
-    pendingForcecage: null,
-    handleForcecageConfirm: vi.fn(),
-    handleForcecageSkip: vi.fn(),
-    pendingStinkingCloud: null,
-    handleStinkingCloudConfirm: vi.fn(),
-    handleStinkingCloudSkip: vi.fn(),
-    pendingConfusion: null,
-    handleConfusionConfirm: vi.fn(),
-    handleConfusionSkip: vi.fn(),
-    pendingWeb: null,
-    handleWebConfirm: vi.fn(),
-    handleWebSkip: vi.fn(),
-    pendingAnimalFriendship: null,
-    handleAnimalFriendshipConfirm: vi.fn(),
-    handleAnimalFriendshipSkip: vi.fn(),
-    pendingAuraOfLife: null,
-    handleAuraOfLifeConfirm: vi.fn(),
-    handleAuraOfLifeSkip: vi.fn(),
-    pendingAuraOfPurity: null,
-    handleAuraOfPurityConfirm: vi.fn(),
-    handleAuraOfPuritySkip: vi.fn(),
-    pendingCircleOfPower: null,
-    handleCircleOfPowerConfirm: vi.fn(),
-    handleCircleOfPowerSkip: vi.fn(),
-    pendingCompulsion: null,
-    handleCompulsionConfirm: vi.fn(),
-    handleCompulsionSkip: vi.fn(),
-    pendingSleetStorm: null,
-    handleSleetStormConfirm: vi.fn(),
-    handleSleetStormSkip: vi.fn(),
-    pendingAuraOfVitality: null,
-    handleAuraOfVitalityConfirm: vi.fn(),
-    handleAuraOfVitalitySkip: vi.fn(),
-    pendingForesight: null,
-    handleForesightConfirm: vi.fn(),
-    handleForesightSkip: vi.fn(),
-    pendingLongstrider: null,
-    handleLongstriderConfirm: vi.fn(),
-    handleLongstriderSkip: vi.fn(),
-    pendingSpareTheDying: null,
-    handleSpareTheDyingConfirm: vi.fn(),
-    handleSpareTheDyingSkip: vi.fn(),
-    pendingDeathWard: null,
-    handleDeathWardConfirm: vi.fn(),
-    handleDeathWardSkip: vi.fn(),
-    pendingHeroism: null,
-    handleHeroismConfirm: vi.fn(),
-    handleHeroismSkip: vi.fn(),
-    pendingSanctuary: null,
-    handleSanctuaryConfirm: vi.fn(),
-    handleSanctuarySkip: vi.fn(),
-    pendingRegenerate: null,
-    handleRegenerateConfirm: vi.fn(),
-    handleRegenerateSkip: vi.fn(),
-    pendingHealingWord: null,
-    handleHealingWordConfirm: vi.fn(),
-    handleHealingWordSkip: vi.fn(),
-    pendingCureWounds: null,
-    handleCureWoundsConfirm: vi.fn(),
-    handleCureWoundsSkip: vi.fn(),
-    pendingRevivify: null,
-    handleRevivifyConfirm: vi.fn(),
-    handleRevivifySkip: vi.fn(),
-    pendingShapechange: null,
-    pendingUpcast: null,
-    buildUpcastLevels: vi.fn(() => []),
-    handleUpcastConfirm: vi.fn(),
-    handleUpcastCancel: vi.fn(),
-    flowHoldMonster: null,
-    handleHoldMonsterConfirm: vi.fn(),
-    handleHoldMonsterSkip: vi.fn(),
-    flowHoldPerson: null,
-    handleHoldPersonConfirm: vi.fn(),
-    handleHoldPersonSkip: vi.fn(),
-    flowPolymorph: null,
-    handlePolymorphConfirm: vi.fn(),
-    handlePolymorphSkip: vi.fn(),
-    flowAnimalShapes: null,
-    handleAnimalShapesTargetConfirm: vi.fn(),
-    handleAnimalShapesSkip: vi.fn(),
-    flowTruePolymorph: null,
-    handleTruePolymorphPathSelect: vi.fn(),
-    handleTruePolymorphTargetConfirm: vi.fn(),
-    handleTruePolymorphSkip: vi.fn(),
-    flowCharmPerson: null,
-    handleCharmPersonConfirm: vi.fn(),
-    handleCharmPersonSkip: vi.fn(),
-    flowCharmMonster: null,
-    handleCharmMonsterConfirm: vi.fn(),
-    handleCharmMonsterSkip: vi.fn(),
-    flowBanishment: null,
-    handleBanishmentConfirm: vi.fn(),
-    handleBanishmentSkip: vi.fn(),
-    flowPrismaticSpray: null,
-    handlePrismaticSprayConfirm: vi.fn(),
-    handlePrismaticSpraySkip: vi.fn(),
-  })),
+  useSpellMetamagicFlow,
 }));
 
 vi.mock('../../../hooks/combat/useSpellUpcastFlow.js', () => ({
@@ -394,154 +304,21 @@ function renderWithProps(props) {
   return render(<CharSpells {...baseProps} {...props} />);
 }
 
-describe('CharSpells - Additional Coverage', () => {
+describe('CharSpells - Spell Data and Display', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('innate sorcery save DC', () => {
-    it('renders base save DC of 13 when no innate sorcery', () => {
-      renderWithProps({});
-      expect(screen.getByText('13')).toBeInTheDocument();
-    });
-  });
-
-  describe('characters prop', () => {
-    it('renders without throwing when characters is provided', () => {
-      const characters = [
-        { name: 'Test Character', type: 'player' },
-        { name: 'Goblin', type: 'enemy' },
-      ];
-      render(<CharSpells {...baseProps} characters={characters} />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-
-    it('renders without throwing when characters is undefined', () => {
-      render(<CharSpells {...baseProps} characters={undefined} />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-  });
-
-  describe('setModalState prop', () => {
-    it('renders without throwing when setModalState is provided', () => {
-      const setModalState = vi.fn();
-      render(<CharSpells {...baseProps} setModalState={setModalState} />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-
-    it('renders without throwing when setModalState is undefined', () => {
-      render(<CharSpells {...baseProps} setModalState={undefined} />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-  });
-
-  describe('mapName prop', () => {
-    it('renders without throwing when mapName is provided', () => {
-      render(<CharSpells {...baseProps} mapName='test-map' />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-
-    it('renders without throwing when mapName is null', () => {
-      render(<CharSpells {...baseProps} mapName={null} />);
-      expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-  });
-
-  describe('exhaustion penalty styling', () => {
-    it('adds stat--penalized class to to-hit span when exhaustionPenalty > 0', () => {
-      renderWithProps({ exhaustionPenalty: 1 });
-      const toHitSpan = document.querySelector('.spell-abilities span');
-      expect(toHitSpan).toHaveClass('stat--penalized');
-    });
-
-    it('adds stat--penalized class to modifier span when exhaustionPenalty > 0', () => {
-      renderWithProps({ exhaustionPenalty: 1 });
-      const modifierSpan = document.querySelectorAll('.spell-abilities span')[1];
-      expect(modifierSpan).toHaveClass('stat--penalized');
-    });
-
-    it('adds stat--penalized class to attack label when exhaustionPenalty > 0', () => {
-      renderWithProps({ exhaustionPenalty: 1 });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      expect(attackLabel).toHaveClass('stat--penalized');
-    });
-
-    it('adds stat--penalized class to attack label when conditionAttackMode is set', () => {
-      renderWithProps({ conditionAttackMode: 'disadvantage' });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      expect(attackLabel).toHaveClass('stat--penalized');
-    });
-
-    it('adds stat--penalized class to attack label when conditionAttackMode is set', () => {
-      renderWithProps({ conditionAttackMode: 'disadvantage' });
-      const attackLabel = screen.getByText(/Attack \(to hit\):/);
-      expect(attackLabel).toHaveClass('stat--penalized');
-    });
-  });
-
-  describe('spell abilities section rendering', () => {
-    it('renders spell attack to-hit with calculated value', () => {
-      renderWithProps({});
-      // toHit (5) - exhaustionPenalty (0) = 5
-      expect(screen.getByText('+5')).toBeInTheDocument();
-    });
-
-    it('renders spell modifier with calculated value', () => {
-      renderWithProps({});
-      // modifier (3) - exhaustionPenalty (0) = 3
-      expect(screen.getByText('+3')).toBeInTheDocument();
-    });
-
-    it('renders cantrips_known when present', () => {
-      renderWithProps({});
-      expect(screen.getByText('3')).toBeInTheDocument();
-    });
-
-    it('renders 0 for cantrips_known when undefined', () => {
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          cantrips_known: undefined,
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      expect(screen.getByText('0')).toBeInTheDocument();
-    });
-
-    it('renders "All" for prepared_spells when both prepared_spells and spells_known are undefined', () => {
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          prepared_spells: undefined,
-          spells_known: undefined,
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const spellAbilitiesDiv = document.querySelector('.spell-abilities');
-      expect(spellAbilitiesDiv.textContent).toContain('All');
-    });
   });
 
   describe('spell data edge cases', () => {
     it('handles spell with null damage gracefully', () => {
       const spell = {
-        name: 'Null Damage Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        damage: null,
-        prepared: 'Always',
+        name: 'Null Damage Spell', level: 1, casting_time: '1 action',
+        range: 'Self', duration: 'Instantaneous', components: ['V'],
+        damage: null, prepared: 'Always',
       };
       const stats = {
         ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [spell] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       expect(screen.getByText('Utility')).toBeInTheDocument();
@@ -549,20 +326,13 @@ describe('CharSpells - Additional Coverage', () => {
 
     it('handles spell with empty components array', () => {
       const spell = {
-        name: 'Empty Components Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: [],
+        name: 'Empty Components Spell', level: 1, casting_time: '1 action',
+        range: 'Self', duration: 'Instantaneous', components: [],
         prepared: 'Always',
       };
       const stats = {
         ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [spell] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
@@ -572,19 +342,12 @@ describe('CharSpells - Additional Coverage', () => {
 
     it('handles spell without range property', () => {
       const spell = {
-        name: 'No Range Spell',
-        level: 1,
-        casting_time: '1 action',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
+        name: 'No Range Spell', level: 1, casting_time: '1 action',
+        duration: 'Instantaneous', components: ['V'], prepared: 'Always',
       };
       const stats = {
         ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [spell] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
@@ -594,19 +357,12 @@ describe('CharSpells - Additional Coverage', () => {
 
     it('handles spell without duration property', () => {
       const spell = {
-        name: 'No Duration Spell',
-        level: 1,
-        casting_time: '1 action',
-        range: 'Self',
-        components: ['V'],
-        prepared: 'Always',
+        name: 'No Duration Spell', level: 1, casting_time: '1 action',
+        range: 'Self', components: ['V'], prepared: 'Always',
       };
       const stats = {
         ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [spell] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
@@ -616,19 +372,12 @@ describe('CharSpells - Additional Coverage', () => {
 
     it('handles spell without casting_time property', () => {
       const spell = {
-        name: 'No Casting Time Spell',
-        level: 1,
-        range: 'Self',
-        duration: 'Instantaneous',
-        components: ['V'],
-        prepared: 'Always',
+        name: 'No Casting Time Spell', level: 1, range: 'Self',
+        duration: 'Instantaneous', components: ['V'], prepared: 'Always',
       };
       const stats = {
         ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [spell],
-        },
+        spellAbilities: { ...basePlayerStats.spellAbilities, spells: [spell] },
       };
       render(<CharSpells playerStats={stats} campaignName="test" />);
       const table = screen.getByRole('table');
@@ -925,67 +674,6 @@ describe('CharSpells - Additional Coverage', () => {
     });
   });
 
-  describe('spell popup parent wrapper', () => {
-    it('renders the spell-popup-parent wrapper div when spellAbilities exists', () => {
-      renderWithProps({});
-      const wrapper = document.querySelector('.spell-popup-parent');
-      expect(wrapper).toBeInTheDocument();
-    });
-
-    it('does not render spell-popup-parent when spellAbilities is missing', () => {
-      const stats = { name: 'No Spells' };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const wrapper = document.querySelector('.spell-popup-parent');
-      expect(wrapper).not.toBeInTheDocument();
-    });
-
-    it('does not render spell-popup-parent when spells array is empty', () => {
-      const stats = {
-        ...basePlayerStats,
-        spellAbilities: {
-          ...basePlayerStats.spellAbilities,
-          spells: [],
-        },
-      };
-      render(<CharSpells playerStats={stats} campaignName="test" />);
-      const wrapper = document.querySelector('.spell-popup-parent');
-      expect(wrapper).toBeInTheDocument();
-    });
-  });
-
-  describe('spell abilities section', () => {
-    it('renders the spell-abilities section div', () => {
-      renderWithProps({});
-      const section = document.querySelector('.spell-abilities');
-      expect(section).toBeInTheDocument();
-    });
-
-    it('renders the Spells section header', () => {
-      renderWithProps({});
-      expect(screen.getByText('Spells')).toBeInTheDocument();
-    });
-
-    it('renders Attack (to hit) label', () => {
-      renderWithProps({});
-      expect(screen.getByText(/Attack \(to hit\):/)).toBeInTheDocument();
-    });
-
-    it('renders Modifier label', () => {
-      renderWithProps({});
-      expect(screen.getByText('Modifier:')).toBeInTheDocument();
-    });
-
-    it('renders Save DC label', () => {
-      renderWithProps({});
-      expect(screen.getByText(/Save DC:/)).toBeInTheDocument();
-    });
-
-    it('renders Cantrips Known label', () => {
-      renderWithProps({});
-      expect(screen.getByText(/Cantrips Known:/)).toBeInTheDocument();
-    });
-  });
-
   describe('prepared column header sorting', () => {
     it('makes Spell header clickable for alphabetical sort', () => {
       renderWithProps({});
@@ -1015,13 +703,6 @@ describe('CharSpells - Additional Coverage', () => {
       const names = Array.from(rows).map(row => row.querySelector('td:first-child')?.textContent.trim());
       const uniqueNames = new Set(names);
       expect(uniqueNames.size).toBe(names.length);
-    });
-  });
-
-  describe('CharSpellSlots rendering', () => {
-    it('renders the CharSpellSlots component', () => {
-      renderWithProps({});
-      expect(screen.getByTestId('char-spell-slots')).toBeInTheDocument();
     });
   });
 

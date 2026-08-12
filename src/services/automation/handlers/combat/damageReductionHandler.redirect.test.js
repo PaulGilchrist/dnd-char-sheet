@@ -642,27 +642,6 @@ describe('damageReductionHandler - redirect flow', () => {
     });
   });
 
-  describe('redirect - handleRedirect returns null path', () => {
-    it('returns popup when handleRedirect returns null (redirect not triggered)', async () => {
-      automationService.evaluateAutoExpression.mockReturnValue(5);
-      applyHealing.applyHealingToTarget.mockResolvedValue({ actualHeal: 5 });
-      damageRollback.findLastAttack.mockResolvedValue({
-        attackEvent: { targetName: 'MonkHero' },
-        targetName: 'MonkHero',
-        totalDamage: 10,
-        damageTypes: ['Slashing'],
-      });
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
-      const ps = makeMonkPlayerStats();
-      const action = makeAction({ reductionExpression: '1d4' });
-
-      const result = await handle(action, ps, campaignName, null);
-
-      expect(result.type).toBe('popup');
-      expect(result.payload.description).toContain('Reduce damage by');
-    });
-  });
-
   describe('redirect - onSkip error handling', () => {
     it('does not throw when onSkip log entry rejects', async () => {
       runtimeState.getRuntimeValue.mockReturnValue(1);

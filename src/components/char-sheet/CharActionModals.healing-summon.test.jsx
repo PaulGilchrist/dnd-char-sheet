@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
@@ -448,222 +448,302 @@ vi.mock('../../services/automation/handlers/spells/summonSpiritHandler.js', () =
 
 // ── Tests ──
 
-describe('CharActionModals — Helper functions and modals', () => {
+describe('CharActionModals — Healing & Summoning modals', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('Healing Illusion modal', () => {
-    it('renders SecondaryTargetModal with correct title and description', () => {
-      const playerStats = { name: 'Test Character', level: 5 };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
-      const combatSummary = { creatures: [{ name: 'Goblin', type: 'humanoid', currentHp: 10, maxHp: 30 }] };
+  describe('Mass Heal modal', () => {
+    it('renders MassHealModal with correct props', () => {
       render(<CharActionModals
-        {...createBaseProps({})}
-        playerStats={playerStats}
-        characters={characters}
-        modalState={{ healingIllusionModal: { action: {}, playerStats } }}
-        setModalState={vi.fn()}
-        combatSummary={combatSummary}
-      />);
-      expect(screen.getByTestId('secondary-title').textContent).toBe('Healing Illusion');
-      expect(screen.getByTestId('secondary-show-hp')).toBeTruthy();
-    });
-
-    it('builds target list from characters and internal combatSummary', async () => {
-      const playerStats = { name: 'Caster', level: 3 };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
-      render(<CharActionModals
-        {...createBaseProps({})}
-        playerStats={playerStats}
-        characters={characters}
-        modalState={{ healingIllusionModal: { action: {}, playerStats } }}
+        {...createBaseProps({ handleMassHealConfirm: vi.fn() })}
+        modalState={{ massHealModal: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} } }}
         setModalState={vi.fn()}
       />);
-      await waitFor(() => {
-        // Both characters and creatures from getCombatContext appear as targets
-        expect(screen.getByTestId('secondary-target-Ally1')).toBeTruthy();
-        expect(screen.getByTestId('secondary-target-Goblin')).toBeTruthy();
-      });
+      expect(screen.getByTestId('mass-heal-modal')).toBeTruthy();
     });
 
-    it('dismisses modal on skip', async () => {
+    it('dismisses modal on skip', () => {
       const setModalState = vi.fn();
-      const playerStats = { name: 'Caster', level: 3 };
       render(<CharActionModals
-        {...createBaseProps({})}
-        playerStats={playerStats}
-        modalState={{ healingIllusionModal: { action: {}, playerStats } }}
+        {...createBaseProps({ handleMassHealConfirm: vi.fn() })}
+        modalState={{ massHealModal: { creatureTargets: ['Goblin'], totalPool: 50, campaignName: 'test-campaign', combatSummary: {} } }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      await waitFor(() => {
-        expect(setModalState).toHaveBeenCalledWith({ healingIllusionModal: null });
-      });
+      fireEvent.click(screen.getByTestId('mass-heal-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ massHealModal: null });
     });
   });
+  describe('Clockwork Cavalcade modal', () => {
+    it('renders ClockworkCavalcadeModal with onChoose and onClose', () => {
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('clockwork-cavalcade-modal')).toBeTruthy();
+    });
 
-  describe('Invoke Duplicity modal', () => {
+    it('calls handleClockworkCavalcadeChoice with "heal" on heal button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('cc-heal'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: {} });
+    });
+
+    it('calls handleClockworkCavalcadeChoice with "dispel" on dispel button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('cc-dispel'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: {} });
+    });
+
+    it('calls handleClockworkCavalcadeChoice with "repair" on repair button', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setModalState })}
+        modalState={{ clockworkCavalcadeModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('cc-repair'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeModal: null });
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: {} });
+    });
+  });
+  describe('Clockwork Cavalcade Heal modal', () => {
+    it('renders MassHealModal with custom title and description', () => {
+      render(<CharActionModals
+        {...createBaseProps({ handleClockworkCavalcadeHealConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeHealModal: { creatureTargets: ['Goblin'], maxHeal: 100, campaignName: 'test-campaign', combatSummary: {} } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('mass-heal-modal')).toBeTruthy();
+    });
+
+    it('dismisses modal on skip', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleClockworkCavalcadeHealConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeHealModal: { creatureTargets: ['Goblin'], maxHeal: 100, campaignName: 'test-campaign', combatSummary: {} } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('mass-heal-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: null });
+    });
+  });
+  describe('Clockwork Cavalcade Dispel modal', () => {
     it('renders CreatureSelectionModal with correct title', () => {
-      const playerStats = { name: 'Test Character' };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
-      const combatSummary = { creatures: [{ name: 'Goblin', type: 'humanoid', currentHp: 10, maxHp: 30 }] };
       render(<CharActionModals
-        {...createBaseProps({})}
-        playerStats={playerStats}
-        characters={characters}
-        modalState={{ invokeDuplicityModal: { action: {}, playerStats } }}
+        {...createBaseProps({ handleClockworkCavalcadeDispelConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] } }}
         setModalState={vi.fn()}
-        combatSummary={combatSummary}
       />);
-      expect(screen.getByTestId('creature-title').textContent).toBe('Improved Duplicity — Choose Allies');
+      expect(screen.getByTestId('creature-title').textContent).toBe('Clockwork Cavalcade: Dispel');
     });
 
-    it('builds target list with deduplication by name', async () => {
-      const playerStats = { name: 'Caster' };
-      const characters = [{ name: 'Ally1', type: 'humanoid', size: 'M', currentHp: 30, maxHp: 50 }];
+    it('dismisses modal on skip', () => {
+      const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({})}
-        playerStats={playerStats}
-        characters={characters}
-        modalState={{ invokeDuplicityModal: { action: {}, playerStats } }}
-        setModalState={vi.fn()}
+        {...createBaseProps({ handleClockworkCavalcadeDispelConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeDispelModal: { creatureTargets: [{ name: 'Goblin' }] } }}
+        setModalState={setModalState}
       />);
-      await waitFor(() => {
-        expect(screen.getByTestId('creature-target-Ally1')).toBeTruthy();
-        expect(screen.getByTestId('creature-target-Goblin')).toBeTruthy();
-      });
+      fireEvent.click(screen.getByTestId('creature-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: null });
     });
   });
-
-  describe('Flurry of Blows modal', () => {
-    it('renders FlurryOfBlowsTargetPopup with correct props', () => {
+  describe('Clockwork Cavalcade Repair modal', () => {
+    it('renders inline modal with repair and cancel buttons', () => {
       render(<CharActionModals
-        {...createBaseProps({ handleFlurryOfBlowsConfirm: vi.fn() })}
-        modalState={{ flurryOfBlowsModal: { numAttacks: 3, creatureTargets: ['Goblin'], currentTargetName: 'Goblin' } }}
+        {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeRepairModal: {} }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('flurry-of-blows-popup')).toBeTruthy();
+      expect(screen.getByText('Repair')).toBeTruthy();
+      expect(screen.getByText('Cancel')).toBeTruthy();
     });
 
-    it('calls handleFlurryOfBlowsConfirm on confirm', () => {
+    it('dismisses modal on cancel', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: vi.fn() })}
+        modalState={{ clockworkCavalcadeRepairModal: {} }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByText('Cancel'));
+      expect(setModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: null });
+    });
+
+    it('calls handleClockworkCavalcadeRepairConfirm on repair button', () => {
       const handler = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleFlurryOfBlowsConfirm: handler })}
-        modalState={{ flurryOfBlowsModal: { numAttacks: 3, creatureTargets: ['Goblin'], currentTargetName: 'Goblin' } }}
+        {...createBaseProps({ handleClockworkCavalcadeRepairConfirm: handler })}
+        modalState={{ clockworkCavalcadeRepairModal: {} }}
         setModalState={vi.fn()}
       />);
-      fireEvent.click(screen.getByTestId('flurry-confirm'));
-      expect(handler).toHaveBeenCalledWith('target');
+      fireEvent.click(screen.getByText('Repair'));
+      expect(handler).toHaveBeenCalled();
+    });
+  });
+  describe('Mass Cure Wounds modal', () => {
+    it('renders MassCureWoundsModal with correct props', () => {
+      render(<CharActionModals
+        {...createBaseProps({ handleMassCureWoundsConfirm: vi.fn() })}
+        modalState={{ massCureWoundsModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('mass-cure-wounds-modal')).toBeTruthy();
     });
 
     it('dismisses modal on skip', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleFlurryOfBlowsConfirm: vi.fn() })}
-        modalState={{ flurryOfBlowsModal: { numAttacks: 3, creatureTargets: ['Goblin'], currentTargetName: 'Goblin' } }}
+        {...createBaseProps({ handleMassCureWoundsConfirm: vi.fn() })}
+        modalState={{ massCureWoundsModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('flurry-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ flurryOfBlowsModal: null });
+      fireEvent.click(screen.getByTestId('mass-cure-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ massCureWoundsModal: null });
     });
   });
-
-  describe('Starry Chalice Heal modal', () => {
-    it('renders SecondaryTargetModal with Chalice title', () => {
+  describe('Prayer of Healing modal', () => {
+    it('renders PrayerOfHealingModal with correct props', () => {
       render(<CharActionModals
-        {...createBaseProps({ handleStarryChaliceConfirm: vi.fn() })}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
+        {...createBaseProps({ handlePrayerOfHealingConfirm: vi.fn() })}
+        modalState={{ prayerOfHealingModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('secondary-title').textContent).toBe('Starry Form: Chalice');
+      expect(screen.getByTestId('prayer-of-healing-modal')).toBeTruthy();
     });
 
     it('dismisses modal on skip', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleStarryChaliceConfirm: vi.fn() })}
-        modalState={{ starryChaliceHealModal: { targetNames: ['Ally1'], amount: 10 } }}
+        {...createBaseProps({ handlePrayerOfHealingConfirm: vi.fn() })}
+        modalState={{ prayerOfHealingModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('secondary-skip'));
-      expect(setModalState).toHaveBeenCalledWith({ starryChaliceHealModal: null });
+      fireEvent.click(screen.getByTestId('prayer-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ prayerOfHealingModal: null });
+    });
+  });
+  describe('Power Word Fortify modal', () => {
+    it('renders PowerWordFortifyModal with correct props', () => {
+      render(<CharActionModals
+        {...createBaseProps({ handlePowerWordFortifyConfirm: vi.fn() })}
+        modalState={{ powerWordFortifyModal: { creatureTargets: ['Goblin'], totalTempHp: 10 } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('power-word-fortify-modal')).toBeTruthy();
+    });
+
+    it('dismisses modal on skip', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handlePowerWordFortifyConfirm: vi.fn() })}
+        modalState={{ powerWordFortifyModal: { creatureTargets: ['Goblin'], totalTempHp: 10 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('fortify-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
     });
   });
 
-  describe('Elemental Epitome modal', () => {
-    it('renders ElementalEpitomeModal with correct props', () => {
+  describe('Mass Healing Word modal', () => {
+    it('renders MassHealingWordModal with correct props', () => {
       render(<CharActionModals
-        {...createBaseProps({ handleEpitomeConfirm: vi.fn() })}
-        modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
+        {...createBaseProps({ handleMassHealingWordConfirm: vi.fn() })}
+        modalState={{ massHealingWordModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('elemental-epitome-modal')).toBeTruthy();
+      expect(screen.getByTestId('mass-healing-word-modal')).toBeTruthy();
+    });
+
+    it('dismisses modal on skip', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleMassHealingWordConfirm: vi.fn() })}
+        modalState={{ massHealingWordModal: { creatureTargets: ['Goblin'], maxTargets: 5 } }}
+        setModalState={setModalState}
+      />);
+      fireEvent.click(screen.getByTestId('healing-word-skip'));
+      expect(setModalState).toHaveBeenCalledWith({ massHealingWordModal: null });
+    });
+  });
+
+  describe('Animate Dead modal', () => {
+    it('renders AnimateDeadModal with correct props', () => {
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ animateDeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('animate-dead-modal')).toBeTruthy();
     });
 
     it('dismisses modal on close', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleEpitomeConfirm: vi.fn() })}
-        modalState={{ epitomeModal: { action: {}, playerStats: {}, campaignName: 'test-campaign', currentResistance: 'cold' } }}
+        {...createBaseProps({})}
+        modalState={{ animateDeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('epitome-close'));
-      expect(setModalState).toHaveBeenCalledWith({ epitomeModal: null });
+      fireEvent.click(screen.getByTestId('animate-dead-close'));
+      expect(setModalState).toHaveBeenCalledWith({ animateDeadModal: null });
     });
   });
 
-  describe('Destructive Stride modal', () => {
-    it('renders DestructiveStrideModal with correct props', () => {
+  describe('Create Undead modal', () => {
+    it('renders CreateUndeadModal with correct props', () => {
       render(<CharActionModals
-        {...createBaseProps({ handleDestructiveStrideConfirm: vi.fn() })}
-        modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        {...createBaseProps({})}
+        modalState={{ createUndeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('destructive-stride-modal')).toBeTruthy();
+      expect(screen.getByTestId('create-undead-modal')).toBeTruthy();
     });
 
     it('dismisses modal on close', () => {
       const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleDestructiveStrideConfirm: vi.fn() })}
-        modalState={{ destructiveStrideModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        {...createBaseProps({})}
+        modalState={{ createUndeadModal: { maxTargets: 3, action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={setModalState}
       />);
-      fireEvent.click(screen.getByTestId('stride-close'));
-      expect(setModalState).toHaveBeenCalledWith({ destructiveStrideModal: null });
+      fireEvent.click(screen.getByTestId('create-undead-close'));
+      expect(setModalState).toHaveBeenCalledWith({ createUndeadModal: null });
     });
   });
 
-  describe('Destructive Stride Target modal', () => {
-    it('renders SecondaryTargetModal with correct description', () => {
+  describe('Summon Spirit modal', () => {
+    it('renders SummonSpiritModal with correct props', () => {
       render(<CharActionModals
-        {...createBaseProps({ handleDestructiveStrideTargetConfirm: vi.fn(), handleDestructiveStrideTargetSkip: vi.fn() })}
-        modalState={{ destructiveStrideTargetModal: { targets: [{ name: 'Goblin' }], action: {}, chosenType: 'fire', martialArtsDie: 4 } }}
+        {...createBaseProps({})}
+        modalState={{ summonSpiritModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByTestId('secondary-title').textContent).toBe('Destructive Stride — Choose Target');
-      expect(screen.getByTestId('secondary-desc').textContent).toBe('Choose a creature only if the monk comes within 5 ft. of them while striding.');
-    });
-  });
-
-  describe('Reckless Attack modal', () => {
-    it('renders with mode=full by default', () => {
-      render(<CharActionModals
-        {...createBaseProps({ handleRecklessAttackConfirm: vi.fn(), handleRecklessAttackCancel: vi.fn(), handleBrutalStrikeConfirm: vi.fn(), handleBrutalStrikeCancel: vi.fn() })}
-        modalState={{ recklessAttackModal: { attack: { name: 'Longsword' } } }}
-        setModalState={vi.fn()}
-      />);
-      expect(screen.getByTestId('reckless-mode').textContent).toBe('full');
+      expect(screen.getByTestId('summon-spirit-modal')).toBeTruthy();
     });
 
-    it('renders with explicit mode', () => {
+    it('dismisses modal on close', () => {
+      const setModalState = vi.fn();
       render(<CharActionModals
-        {...createBaseProps({ handleRecklessAttackConfirm: vi.fn(), handleRecklessAttackCancel: vi.fn(), handleBrutalStrikeConfirm: vi.fn(), handleBrutalStrikeCancel: vi.fn() })}
-        modalState={{ recklessAttackModal: { attack: { name: 'Longsword' }, mode: 'brutalOnly' } }}
-        setModalState={vi.fn()}
+        {...createBaseProps({})}
+        modalState={{ summonSpiritModal: { action: {}, playerStats: {}, campaignName: 'test-campaign' } }}
+        setModalState={setModalState}
       />);
-      expect(screen.getByTestId('reckless-mode').textContent).toBe('brutalOnly');
+      fireEvent.click(screen.getByTestId('summon-spirit-close'));
+      expect(setModalState).toHaveBeenCalledWith({ summonSpiritModal: null });
     });
   });
 });
