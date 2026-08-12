@@ -3,6 +3,7 @@ import utils from '../../services/ui/utils.js';
 import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
 import { sendSaveResult, clearSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import Subscriber from './Subscriber.jsx';
+import { getSaveDisadvantage } from './savePromptUtils.js';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -15,20 +16,7 @@ import storage from '../../services/ui/storage.js';
 import './savePromptModal.css';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
-
-// Disadvantage from the save prompt itself (e.g. Heightened metamagic) or from
-// the target's Charmed condition / Otto's Irresistible Dance on DEX saves.
-// Mirrors the DEX save disadvantage granted by 'charmed' in conditionEffects.js.
-function getSaveDisadvantage(current, campaignName) {
-  if (!current) return false;
-  if (current.disadvantage) return true;
-  const saveType = (current.saveType || '').toLowerCase();
-  if (saveType !== 'dex') return false;
-  const targetConditions = getRuntimeValue(current.targetName, 'activeConditions', campaignName) || [];
-  if (targetConditions.some(c => String(c).toLowerCase() === 'charmed')) return true;
-  const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-  return targetEffects.some(te => te.target === current.targetName && te.effect === 'ottos_irresistible_dance');
-}
+import { createFanaticalFocusHandler, createDisciplinedSurvivorHandler, createGuardedMindHandler, createLivingLegendHandler } from './savePromptHandlers.js';
 
 function SavePromptModal({ campaignName, characters, activeMapName }) {
   const [prompts, setPrompts] = useState([]);
@@ -497,6 +485,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       promptId, targetName, success, roll, total, saveBonus, rawRolls, mode, bonusDetail,
       saveType, saveDc, condition, sourceName, damageFormula, damageType, rawDamage, dcSuccess,
       secondaryFormula, secondaryDamageType, secondaryRawDamage,
+      note, healingName, healingNote,
     } = saveData;
 
     sendSaveResult(campaignName, targetName, {
@@ -509,44 +498,23 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     ));
 
     addEntry(campaignName, {
-      type: 'roll',
-      rollType: 'save-damage',
-      name: sourceName || 'Unknown',
-      formula: damageFormula || '',
-      rolls: [roll],
-      total,
-      modifier: saveBonus,
-      damageType: damageType || null,
-      targetName,
-      saveType: saveType || null,
-      saveDc: saveDc,
-      saveResult: success ? 'success' : 'failure',
-      saveRoll: roll,
-      saveBonus,
-      saveRawRolls: rawRolls,
-      finalDamage: null,
-      note: saveData.note || 'save_reroll',
-      timestamp: Date.now(),
+      type: 'roll', rollType: 'save-damage', name: sourceName || 'Unknown',
+      formula: damageFormula || '', rolls: [roll], total,
+      modifier: saveBonus, damageType: damageType || null, targetName,
+      saveType: saveType || null, saveDc, saveResult: success ? 'success' : 'failure',
+      saveRoll: roll, saveBonus, saveRawRolls: rawRolls, finalDamage: null,
+      note: note || 'save_reroll', timestamp: Date.now(),
     }).catch((e) => { console.error('[SavePromptModal] Error logging reroll:', e); });
 
     const cs = getCombatSummary(campaignName);
     if (cs) {
       cs.lastAttack = {
-        ...cs.lastAttack,
-        d20: roll,
-        d20Rolls: rawRolls,
-        bonus: saveBonus,
-        total,
-        saveType: saveType || null,
-        saveDc: saveDc,
-        saveResult: success ? 'success' : 'failure',
-        saveConditions: condition ? [condition] : [],
-        timestamp: Date.now(),
+        ...cs.lastAttack, d20: roll, d20Rolls: rawRolls, bonus: saveBonus, total,
+        saveType: saveType || null, saveDc, saveResult: success ? 'success' : 'failure',
+        saveConditions: condition ? [condition] : [], timestamp: Date.now(),
         ...(secondaryFormula ? {
-          secondaryFormula,
-          secondaryDamageType: secondaryDamageType || null,
-          secondaryRawDamage: secondaryRawDamage || 0,
-          secondaryTotal: secondaryRawDamage || 0,
+          secondaryFormula, secondaryDamageType: secondaryDamageType || null,
+          secondaryRawDamage: secondaryRawDamage || 0, secondaryTotal: secondaryRawDamage || 0,
         } : {}),
       };
       storage.set('combatSummary', cs, campaignName);
@@ -555,30 +523,17 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     if (success && rawDamage > 0) {
       const lastAttack = getRuntimeValue('campaign', 'lastAttack', campaignName);
       const actualDamageApplied = lastAttack?.finalDamage ?? lastAttack?.primaryDamage ?? rawDamage;
-      let damageToRestore;
-      if (dcSuccess === 'half') {
-        damageToRestore = Math.ceil(actualDamageApplied / 2);
-      } else {
-        damageToRestore = actualDamageApplied;
-      }
+      const damageToRestore = dcSuccess === 'half' ? Math.ceil(actualDamageApplied / 2) : actualDamageApplied;
       const currentHp = getRuntimeValue(targetName, 'hitPoints', campaignName);
       const maxHp = getRuntimeValue(targetName, 'maxHitPoints', campaignName) ?? (currentHp + actualDamageApplied);
       const restoredHp = Math.min(maxHp, (currentHp ?? 0) + damageToRestore);
       setRuntimeValue(targetName, 'hitPoints', restoredHp, campaignName);
 
       addEntry(campaignName, {
-        type: 'roll',
-        characterName: targetName,
-        rollType: 'healing',
-        name: saveData.healingName || 'Save Reroll',
-        rolls: [],
-        total: damageToRestore,
-        modifier: 0,
-        damageType: null,
-        targetName,
-        finalDamage: null,
-        note: saveData.healingNote || 'save_reroll_hp_restore',
-        timestamp: Date.now(),
+        type: 'roll', characterName: targetName, rollType: 'healing',
+        name: healingName || 'Save Reroll', rolls: [], total: damageToRestore,
+        modifier: 0, damageType: null, targetName, finalDamage: null,
+        note: healingNote || 'save_reroll_hp_restore', timestamp: Date.now(),
       }).catch((e) => { console.error('[SavePromptModal] Error logging HP restore:', e); });
     }
 
@@ -589,140 +544,24 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     if (!fanaticalFocusAvailable || !current) return;
     setRerollUsedForSave(true);
     setRuntimeValue(current.targetName, 'fanaticalFocusUsed', true, campaignName);
-    const rerollBonus = rageDamageBonus;
-    let saveBonus = 0;
-    let character = null;
-    try {
-      character = (characters || []).find(c => {
-        const name = typeof c === 'string' ? c : c.name;
-        return name && utils.getName(name) === utils.getName(current.targetName);
-      });
-      if (character && typeof character !== 'string') {
-        saveBonus = getAbilitySaveBonus(character.computedStats || character, current.saveType);
-      }
-    } catch { /* ignore */ }
-    const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
-    const roll1 = rollD20();
-    const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
-    const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
-    const total = finalRoll + saveBonus + aura.bonus + rerollBonus;
-    const success = total >= current.saveDc;
-    submitSaveResult({
-      promptId: current.promptId,
-      targetName: current.targetName,
-      success,
-      roll: finalRoll,
-      total,
-      saveBonus: saveBonus + aura.bonus + rerollBonus,
-      rawRolls: [roll1, roll2],
-      mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
-      bonusDetail: `(+${rerollBonus} Fanatical Focus)`,
-      saveType: current.saveType,
-      saveDc: current.saveDc,
-      condition: current.condition,
-      sourceName: current.sourceName,
-      damageFormula: current.damageFormula,
-      damageType: current.damageType,
-      rawDamage: current.rawDamage,
-      dcSuccess: current.dcSuccess,
-      secondaryFormula: current.secondaryFormula,
-      secondaryDamageType: current.secondaryDamageType,
-      secondaryRawDamage: current.secondaryRawDamage,
-      note: 'fanatical_focus_reroll',
-      healingName: 'Fanatical Focus',
-      healingNote: 'fanatical_focus_hp_restore',
-    });
+    const handler = createFanaticalFocusHandler({ campaignName, characters, activeMapName, current, rageDamageBonus, fanaticalFocusAvailable, setRerollUsedForSave, submitSaveResult });
+    await handler();
   }, [fanaticalFocusAvailable, rageDamageBonus, current, campaignName, characters, activeMapName, submitSaveResult]);
 
   const handleDisciplinedSurvivor = useCallback(async () => {
     if (!disciplinedSurvivorAvailable || !current) return;
     setRerollUsedForSave(true);
-    const newFocus = currentFocusPoints - 1;
-    setRuntimeValue(current.targetName, 'focusPoints', newFocus, campaignName);
-    let saveBonus = 0;
-    let character = null;
-    try {
-      character = (characters || []).find(c => {
-        const name = typeof c === 'string' ? c : c.name;
-        return name && utils.getName(name) === utils.getName(current.targetName);
-      });
-      if (character && typeof character !== 'string') {
-        saveBonus = getAbilitySaveBonus(character.computedStats || character, current.saveType);
-      }
-    } catch { /* ignore */ }
-    const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
-    const roll1 = rollD20();
-    const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
-    const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
-    const total = finalRoll + saveBonus + aura.bonus;
-    const success = total >= current.saveDc;
-    submitSaveResult({
-      promptId: current.promptId,
-      targetName: current.targetName,
-      success,
-      roll: finalRoll,
-      total,
-      saveBonus: saveBonus + aura.bonus,
-      rawRolls: [roll1, roll2],
-      mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
-      bonusDetail: '(-1 Focus Point)',
-      saveType: current.saveType,
-      saveDc: current.saveDc,
-      condition: current.condition,
-      sourceName: current.sourceName,
-      damageFormula: current.damageFormula,
-      damageType: current.damageType,
-      rawDamage: current.rawDamage,
-      dcSuccess: current.dcSuccess,
-      secondaryFormula: current.secondaryFormula,
-      secondaryDamageType: current.secondaryDamageType,
-      secondaryRawDamage: current.secondaryRawDamage,
-      note: 'disciplined_survivor_reroll',
-      healingName: 'Disciplined Survivor',
-      healingNote: 'disciplined_survivor_hp_restore',
-    });
-  }, [disciplinedSurvivorAvailable, currentFocusPoints, current, campaignName, characters, activeMapName, submitSaveResult]);
+    setRuntimeValue(current.targetName, 'focusPoints', currentFocusPoints - 1, campaignName);
+    const handler = createDisciplinedSurvivorHandler({ campaignName, current, currentFocusPoints, disciplinedSurvivorAvailable, setRerollUsedForSave, submitSaveResult });
+    await handler();
+  }, [disciplinedSurvivorAvailable, currentFocusPoints, current, campaignName, submitSaveResult]);
 
   const handleGuardedMind = useCallback(async () => {
     if (!guardedMindAvailable || !current) return;
     setRerollUsedForSave(true);
     setRuntimeValue(current.targetName, '_guardedMind_usedRest', 'rest', campaignName);
-
-    const saveLabel = (current.saveType || 'Save').toUpperCase();
-    const success = true;
-    submitSaveResult({
-      promptId: current.promptId,
-      targetName: current.targetName,
-      success,
-      roll: 20,
-      total: current.saveDc,
-      saveBonus: 0,
-      rawRolls: [20],
-      mode: 'normal',
-      bonusDetail: '(Guarded Mind)',
-      saveType: current.saveType,
-      saveDc: current.saveDc,
-      condition: current.condition,
-      sourceName: current.sourceName,
-      damageFormula: current.damageFormula,
-      damageType: current.damageType,
-      rawDamage: current.rawDamage,
-      dcSuccess: current.dcSuccess,
-      secondaryFormula: current.secondaryFormula,
-      secondaryDamageType: current.secondaryDamageType,
-      secondaryRawDamage: current.secondaryRawDamage,
-      note: 'guarded_mind_reroll',
-      healingName: 'Guarded Mind',
-      healingNote: 'guarded_mind_hp_restore',
-    });
-
-    addEntry(campaignName, {
-      type: 'ability_use',
-      characterName: current.targetName,
-      abilityName: 'Guarded Mind',
-      description: `${current.targetName} used Guarded Mind to override a failed ${saveLabel} save.`,
-      timestamp: Date.now(),
-    }).catch((e) => { console.error('[SavePromptModal] Error:', e); });
+    const handler = createGuardedMindHandler({ campaignName, current, guardedMindAvailable, setRerollUsedForSave, submitSaveResult });
+    await handler();
   }, [guardedMindAvailable, current, campaignName, submitSaveResult]);
 
   return (
@@ -785,46 +624,8 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                   )}
                   {!current.result.success && !rerollUsedForSave && livingLegendAvailable && (
                     <button className="sp-stroke-btn" onClick={async () => {
-                      if (!current) return;
-                      setRerollUsedForSave(true);
-                      let localSaveBonus = 0;
-                      const localChar = (characters || []).find(c => {
-                        const name = typeof c === 'string' ? c : c.name;
-                        return name && utils.getName(name) === utils.getName(current.targetName);
-                      });
-                      if (localChar && typeof localChar !== 'string') {
-                        localSaveBonus = getAbilitySaveBonus(localChar.computedStats || localChar, current.saveType);
-                      }
-                      const aura = await computeAuraBonus({ targetName: current.targetName, characters, campaignName, activeMapName, allCreatures: getCombatSummary(campaignName)?.creatures });
-                      const roll1 = rollD20();
-                      const roll2 = getSaveDisadvantage(current, campaignName) ? rollD20() : roll1;
-                      const finalRoll = getSaveDisadvantage(current, campaignName) ? Math.min(roll1, roll2) : roll1;
-                      const total = finalRoll + localSaveBonus + aura.bonus;
-                      const success = total >= current.saveDc;
-                      submitSaveResult({
-                        promptId: current.promptId,
-                        targetName: current.targetName,
-                        success,
-                        roll: finalRoll,
-                        total,
-                        saveBonus: localSaveBonus + aura.bonus,
-                        rawRolls: [roll1, roll2],
-                        mode: getSaveDisadvantage(current, campaignName) ? 'disadvantage' : 'normal',
-                        saveType: current.saveType,
-                        saveDc: current.saveDc,
-                        condition: current.condition,
-                        sourceName: current.sourceName,
-                        damageFormula: current.damageFormula,
-                        damageType: current.damageType,
-                        rawDamage: current.rawDamage,
-                        dcSuccess: current.dcSuccess,
-                        secondaryFormula: current.secondaryFormula,
-                        secondaryDamageType: current.secondaryDamageType,
-                        secondaryRawDamage: current.secondaryRawDamage,
-                        note: 'living_legend_reroll',
-                        healingName: 'Living Legend',
-                        healingNote: 'living_legend_hp_restore',
-                      });
+                      const handler = createLivingLegendHandler({ campaignName, characters, activeMapName, current, livingLegendAvailable, setRerollUsedForSave, submitSaveResult });
+                      await handler();
                     }} type="button">
                       <i className="fa-solid fa-rotate"></i> Reroll Save
                     </button>
