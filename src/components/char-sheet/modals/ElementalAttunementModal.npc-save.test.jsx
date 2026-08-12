@@ -111,8 +111,9 @@ function renderModal(props = {}) {
 
 describe('ElementalAttunementModal NPC save resolution', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.restoreAllMocks();
         diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+        vi.spyOn(global.Math, 'random').mockReturnValue(0.1);
     });
 
     function setupNPC(name = 'Goblin1', saveBonuses = { dex: 2 }) {
