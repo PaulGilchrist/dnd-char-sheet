@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -117,6 +117,12 @@ describe('CharSummary - Bait and Switch AC Bonus', () => {
         [5, 'Trickster', /\+5 from Trickster/],
     ])('shows bait and switch AC bonus with value %i from %s', (bonus, source, expectedText) => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'baitAndSwitchActive') return true;
+            if (key === 'baitAndSwitchBonus') return bonus;
+            if (key === 'baitAndSwitchSource') return source;
+            return null;
+        });
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'baitAndSwitchActive') return true;
             if (key === 'baitAndSwitchBonus') return bonus;
             if (key === 'baitAndSwitchSource') return source;

@@ -169,6 +169,10 @@ describe('CharSummary - Senses Proficiencies Languages', () => {
 
     it('renders senses with see_invisibility buff', () => {
         getActiveBuffs.mockReturnValue([{ effect: 'see_invisibility' }]);
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'activeBuffs') return [{ effect: 'see_invisibility' }];
+            return null;
+        });
         const stats = {
             ...mockPlayerStats,
             senses: [{ name: 'Blindsight', value: '60 ft' }],

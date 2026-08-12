@@ -251,6 +251,10 @@ describe('CharSummary - Stormborn Resistances', () => {
             if (key === 'wrathOfTheSeaActive') return true;
             return null;
         });
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive') return true;
+            return null;
+        });
         const stats = {
             ...mockPlayerStats,
             automation: {

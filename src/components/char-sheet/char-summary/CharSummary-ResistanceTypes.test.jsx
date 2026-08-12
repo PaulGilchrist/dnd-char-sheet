@@ -140,6 +140,10 @@ describe('CharSummary - Boon of Energy Resistance', () => {
             if (key === '_Energy_Resistances_chosenTypes') return ['fire', 'cold'];
             return null;
         });
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === '_Energy_Resistances_chosenTypes') return ['fire', 'cold'];
+            return null;
+        });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText(/Fire/)).toBeInTheDocument();
         expect(screen.getByText(/Cold/)).toBeInTheDocument();

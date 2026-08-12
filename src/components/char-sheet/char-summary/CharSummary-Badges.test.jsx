@@ -200,12 +200,20 @@ describe('CharSummary - Badge Rendering', () => {
             if (key === 'wrathOfTheSeaActive') return true;
             return null;
         });
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive') return true;
+            return null;
+        });
         render(<CharSummary playerStats={mockPlayerStats} campaignName={mockCampaignName} exhaustionLevel={0} />);
         expect(screen.getByText('Wrath of the Sea')).toBeInTheDocument();
     });
 
     it('does not render Wrath of the Sea badge when inactive', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive') return false;
+            return null;
+        });
+        vi.mocked(getRuntimeValue).mockImplementation((_name, key, _campaign) => {
             if (key === 'wrathOfTheSeaActive') return false;
             return null;
         });

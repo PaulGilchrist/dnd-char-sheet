@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
 import { getActiveBuffs } from '../../../services/combat/buffs/buffService.js';
-import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { useRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { mockPlayerStats, mockCampaignName } from './CharSummary.test-mocks.test.jsx';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
@@ -186,6 +186,10 @@ describe('CharSummary - Passive Buff Effects', () => {
 
     it('sets fly speed when stormborn passive is present and no fly speed exists', () => {
         useRuntimeValue.mockImplementation((name, key, _campaign) => {
+            if (key === 'wrathOfTheSeaActive') return true;
+            return null;
+        });
+        getRuntimeValue.mockImplementation((name, key, _campaign) => {
             if (key === 'wrathOfTheSeaActive') return true;
             return null;
         });
