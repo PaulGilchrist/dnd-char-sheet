@@ -931,3 +931,426 @@ describe('miscHandlers – telekinetic_shove', () => {
         expect(result.action).toBe('action')
     })
 })
+
+// ── arcane_ward ──────────────────────────────────────────────────────
+
+describe('miscHandlers – arcane_ward', () => {
+    it('computes maxHp from wizard level and INT modifier', () => {
+        const feature = makeFeature({ type: 'arcane_ward' })
+        const result = miscHandlers.arcane_ward(feature, BASE_STATS)
+        expect(result.type).toBe('arcane_ward')
+        // level(5) * 2 + intMod(1) = 11
+        expect(result.maxHp).toBe(11)
+        expect(result.wardHpExpression).toBe('(2 * 5) + 1')
+        expect(result.wardRestoreExpression).toBe('2 * spell_slot_level')
+        expect(result.wardTrigger).toBe('abjuration_spell_cast')
+        expect(result.wardDuration).toBe('long_rest')
+        expect(result.bonusActionRestore).toBe(false)
+        expect(result.hasAutomation).toBe(true)
+    })
+
+    it('respects custom wardHpExpression and wardRestoreExpression', () => {
+        const feature = makeFeature({
+            type: 'arcane_ward',
+            wardHpExpression: 'custom_expression',
+            wardRestoreExpression: 'custom_restore'
+        })
+        const result = miscHandlers.arcane_ward(feature, BASE_STATS)
+        expect(result.wardHpExpression).toBe('custom_expression')
+        expect(result.wardRestoreExpression).toBe('custom_restore')
+    })
+
+    it('respects bonusActionRestore flag', () => {
+        const feature = makeFeature({
+            type: 'arcane_ward',
+            bonusActionRestore: true
+        })
+        const result = miscHandlers.arcane_ward(feature, BASE_STATS)
+        expect(result.bonusActionRestore).toBe(true)
+    })
+})
+
+// ── arcane_ward_bonus_action ─────────────────────────────────────────
+
+describe('miscHandlers – arcane_ward_bonus_action', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'arcane_ward_bonus_action' })
+        const result = miscHandlers.arcane_ward_bonus_action(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'arcane_ward_bonus_action',
+            action: 'bonus_action',
+            casting_time: '1 bonus action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── projected_ward ───────────────────────────────────────────────────
+
+describe('miscHandlers – projected_ward', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'projected_ward' })
+        const result = miscHandlers.projected_ward(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'projected_ward',
+            range: 30,
+            reaction: true,
+            wardTrigger: 'ally_damage_taken',
+            casting_time: '1 reaction',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── animal_aspect ────────────────────────────────────────────────────
+
+describe('miscHandlers – animal_aspect', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'animal_aspect' })
+        const result = miscHandlers.animal_aspect(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'animal_aspect',
+            options: [],
+            casting_time: '',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── clouds_jaunt ─────────────────────────────────────────────────────
+
+describe('miscHandlers – clouds_jaunt', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'clouds_jaunt' })
+        const result = miscHandlers.clouds_jaunt(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'clouds_jaunt',
+            distance: '30 ft',
+            range: '30_ft',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 bonus action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+
+    it('includes automation object', () => {
+        const feature = makeFeature({ type: 'clouds_jaunt', distance: '60 ft' })
+        const result = miscHandlers.clouds_jaunt(feature, BASE_STATS)
+        expect(result.automation).toBeDefined()
+        expect(result.distance).toBe('60 ft')
+    })
+})
+
+// ── bewitching_magic ─────────────────────────────────────────────────
+
+describe('miscHandlers – bewitching_magic', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'bewitching_magic' })
+        const result = miscHandlers.bewitching_magic(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'bewitching_magic',
+            casting_time: 'passive',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── fire_burn ────────────────────────────────────────────────────────
+
+describe('miscHandlers – fire_burn', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'fire_burn' })
+        const result = miscHandlers.fire_burn(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'fire_burn',
+            damage: '1d10',
+            damageType: 'Fire',
+            trigger: 'hit',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── frosts_chill ─────────────────────────────────────────────────────
+
+describe('miscHandlers – frosts_chill', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'frosts_chill' })
+        const result = miscHandlers.frosts_chill(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'frosts_chill',
+            damage: '1d6',
+            damageType: 'Cold',
+            condition: 'speed_reduction',
+            value: '10_ft',
+            trigger: 'hit',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── hills_tumble ─────────────────────────────────────────────────────
+
+describe('miscHandlers – hills_tumble', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'hills_tumble' })
+        const result = miscHandlers.hills_tumble(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'hills_tumble',
+            trigger: 'melee_hit',
+            effect: 'prone',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── stones_endurance ─────────────────────────────────────────────────
+
+describe('miscHandlers – stones_endurance', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'stones_endurance' })
+        const result = miscHandlers.stones_endurance(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'stones_endurance',
+            reductionExpression: '1d12 + CON modifier',
+            trigger: 'damage_received',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 reaction',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── storms_thunder ───────────────────────────────────────────────────
+
+describe('miscHandlers – storms_thunder', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'storms_thunder' })
+        const result = miscHandlers.storms_thunder(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'storms_thunder',
+            damage: '1d8',
+            damageType: 'Thunder',
+            range: '60_ft',
+            trigger: 'damage_received_within_range',
+            uses: null,
+            recharge: 'long_rest',
+            casting_time: '1 reaction',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── brew_poison ──────────────────────────────────────────────────────
+
+describe('miscHandlers – brew_poison', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'brew_poison' })
+        const result = miscHandlers.brew_poison(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'brew_poison',
+            description: '',
+            casting_time: 'passive',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── apply_poison ─────────────────────────────────────────────────────
+
+describe('miscHandlers – apply_poison', () => {
+    it('computes saveDc from max(DEX, INT) modifiers + proficiency', () => {
+        const feature = makeFeature({ type: 'apply_poison' })
+        const result = miscHandlers.apply_poison(feature, BASE_STATS)
+        expect(result.type).toBe('apply_poison')
+        // dexMod=2, intMod=1, max=2, prof=3, saveDc=8+2+3=13
+        expect(result.saveDc).toBe(13)
+        expect(result.poisonerAbilityModifier).toBe(2)
+        expect(result.damageExpression).toBe('2d8')
+        expect(result.damageType).toBe('Poison')
+        expect(result.condition).toBe('poisoned')
+        expect(result.saveType).toBe('CON')
+        expect(result.casting_time).toBe('bonus_action')
+        expect(result.hasAutomation).toBe(true)
+    })
+
+    it('uses INT modifier when higher than DEX', () => {
+        const stats = {
+            ...BASE_STATS,
+            abilities: [
+                { name: 'Strength', bonus: 1 },
+                { name: 'Dexterity', bonus: 0 },
+                { name: 'Constitution', bonus: 1 },
+                { name: 'Intelligence', bonus: 4 },
+                { name: 'Wisdom', bonus: 1 },
+                { name: 'Charisma', bonus: 1 },
+            ]
+        }
+        const feature = makeFeature({ type: 'apply_poison' })
+        const result = miscHandlers.apply_poison(feature, stats)
+        // dexMod=0, intMod=4, max=4, prof=3, saveDc=8+4+3=15
+        expect(result.saveDc).toBe(15)
+        expect(result.poisonerAbilityModifier).toBe(4)
+    })
+})
+
+// ── defensive_tactics ────────────────────────────────────────────────
+
+describe('miscHandlers – defensive_tactics', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'defensive_tactics' })
+        const result = miscHandlers.defensive_tactics(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'defensive_tactics',
+            casting_time: 'passive',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── superior_hunter_prey ─────────────────────────────────────────────
+
+describe('miscHandlers – superior_hunter_prey', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'superior_hunter_prey' })
+        const result = miscHandlers.superior_hunter_prey(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'superior_hunter_prey',
+            casting_time: 'passive',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── shadow_step_rider ────────────────────────────────────────────────
+
+describe('miscHandlers – shadow_step_rider', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'shadow_step_rider' })
+        const result = miscHandlers.shadow_step_rider(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'shadow_step_rider',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── moonlight_step_rider ─────────────────────────────────────────────
+
+describe('miscHandlers – moonlight_step_rider', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'moonlight_step_rider' })
+        const result = miscHandlers.moonlight_step_rider(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'moonlight_step_rider',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── illusory_reality ─────────────────────────────────────────────────
+
+describe('miscHandlers – illusory_reality', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'illusory_reality' })
+        const result = miscHandlers.illusory_reality(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'illusory_reality',
+            effect: 'illusory_reality',
+            casting_time: '1 bonus_action',
+            objectDuration: '1 minute',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── memorize_spell ───────────────────────────────────────────────────
+
+describe('miscHandlers – memorize_spell', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'memorize_spell' })
+        const result = miscHandlers.memorize_spell(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'memorize_spell',
+            casting_time: 'passive',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── protection_from_poison ───────────────────────────────────────────
+
+describe('miscHandlers – protection_from_poison', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'protection_from_poison' })
+        const result = miscHandlers.protection_from_poison(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'protection_from_poison',
+            range: 'Touch',
+            duration: '1 hour',
+            casting_time: '1 action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── remove_curse ─────────────────────────────────────────────────────
+
+describe('miscHandlers – remove_curse', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'remove_curse' })
+        const result = miscHandlers.remove_curse(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'remove_curse',
+            range: 'Touch',
+            casting_time: '1 action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})
+
+// ── spare_the_dying ──────────────────────────────────────────────────
+
+describe('miscHandlers – spare_the_dying', () => {
+    it('returns defaults', () => {
+        const feature = makeFeature({ type: 'spare_the_dying' })
+        const result = miscHandlers.spare_the_dying(feature, BASE_STATS)
+        expect(result).toMatchObject({
+            type: 'spare_the_dying',
+            range: '15 feet',
+            casting_time: 'action',
+            hasAutomation: true,
+            name: 'Test Feature'
+        })
+    })
+})

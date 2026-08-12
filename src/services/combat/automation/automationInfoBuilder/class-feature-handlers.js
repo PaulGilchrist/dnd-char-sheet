@@ -1,0 +1,101 @@
+import { getAbilityModifier } from '../../../shared/abilityLookup.js'
+
+// ── Class Feature Handlers ───────────────────────────────────────────
+
+export const classFeatureHandlers = {
+    'telekinetic_shove': (feature, playerStats) => {
+        const auto = feature.automation
+        const prof = playerStats.proficiency || 0
+        const saveDc = auto.saveDc === 'ability'
+            ? 8 + getAbilityModifier(playerStats.abilities, auto.saveAbility || 'INT') + prof
+            : auto.saveDc || 10
+        let action = auto.action
+        if (!action && auto.casting_time) {
+            if (auto.casting_time === '1 bonus action' || auto.casting_time === 'bonus_action') {
+                action = 'bonus_action'
+            } else if (auto.casting_time === '1 action' || auto.casting_time === 'action') {
+                action = 'action'
+            }
+        }
+        return {
+            type: 'telekinetic_shove',
+            name: feature.name,
+            saveType: auto.saveType || 'STR',
+            saveDc,
+            saveAbility: auto.saveAbility || 'INT',
+            range: auto.range || '30',
+            pushDistance: auto.pushDistance || 5,
+            action: action || 'bonus_action',
+            casting_time: auto.casting_time || '1 bonus action',
+            hasAutomation: true
+        }
+    },
+
+    'arcane_ward': (feature, playerStats) => {
+        const auto = feature.automation
+        const intMod = getAbilityModifier(playerStats.abilities, 'Intelligence')
+        const wizardLevel = playerStats.level
+        const maxHp = wizardLevel * 2 + intMod
+        return {
+            type: 'arcane_ward',
+            name: feature.name,
+            wardHpExpression: auto.wardHpExpression || `(2 * ${wizardLevel}) + ${intMod}`,
+            wardRestoreExpression: auto.wardRestoreExpression || '2 * spell_slot_level',
+            wardTrigger: auto.wardTrigger || 'abjuration_spell_cast',
+            wardDuration: auto.wardDuration || 'long_rest',
+            bonusActionRestore: !!auto.bonusActionRestore,
+            maxHp,
+            hasAutomation: true
+        }
+    },
+
+    'arcane_ward_bonus_action': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'arcane_ward_bonus_action',
+            name: feature.name,
+            action: 'bonus_action',
+            casting_time: auto.casting_time || '1 bonus action',
+            hasAutomation: true
+        }
+    },
+
+    'projected_ward': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'projected_ward',
+            name: feature.name,
+            range: auto.range || 30,
+            reaction: true,
+            wardTrigger: auto.wardTrigger || 'ally_damage_taken',
+            casting_time: auto.casting_time || '1 reaction',
+            hasAutomation: true
+        }
+    },
+
+    'animal_aspect': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'animal_aspect',
+            name: feature.name,
+            options: auto.options || [],
+            casting_time: auto.casting_time || '',
+            hasAutomation: true
+        }
+    },
+
+    'clouds_jaunt': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'clouds_jaunt',
+            name: feature.name,
+            distance: auto.distance || '30 ft',
+            range: auto.range || '30_ft',
+            uses: auto.uses || null,
+            recharge: auto.recharge || 'long_rest',
+            casting_time: auto.casting_time || '1 bonus action',
+            automation: auto,
+            hasAutomation: true
+        }
+    },
+}
