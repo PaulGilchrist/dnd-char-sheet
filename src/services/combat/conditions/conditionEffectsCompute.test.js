@@ -304,6 +304,123 @@ describe('computeConditionEffects — targetEffects', () => {
     const result = computeConditionEffects([], [], [{ effect: 'crusher_enhanced_critical' }]);
     expect(result.targetAdvantageCount).toBe(1);
   });
+
+  it('handles banishment effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'banishment' }]);
+    expect(result.saveType).toBeNull();
+    expect(result.conditionToApply).toBeNull();
+  });
+
+  it('handles forcecage effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'forcecage', dc: 15 }]);
+    expect(result.saveType).toBeNull();
+    expect(result.conditionToApply).toBeNull();
+  });
+
+  it('handles prismatic_spray_indigo effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'prismatic_spray_indigo' }]);
+    expect(result.saveType).toBeNull();
+  });
+
+  it('handles prismatic_spray_violet effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'prismatic_spray_violet' }]);
+    expect(result.saveType).toBeNull();
+  });
+
+  it('handles pass_without_trace_bonus target effect', () => {
+    expect(computeConditionEffects([], [], [{ effect: 'pass_without_trace_bonus', bonusExpression: '10' }]).passWithoutTraceBonus).toBe('10');
+  });
+
+  it('handles holy_aura target effect with source tracking', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'holy_aura', source: 'Paladin' }]);
+    expect(result.targetDisadvantageCount).toBe(1);
+    expect(result.saveAdvantageCount).toBe(1);
+    expect(result.saveAdvantageReasons).toContain('Holy Aura');
+    expect(result.saveAdvantageReasons).toContain('Paladin');
+  });
+
+  it('handles circle_of_power target effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'circle_of_power' }]);
+    expect(result.saveAdvantage).toContain('against_spell');
+    expect(result.saveAdvantageReasons).toContain('Circle of Power');
+  });
+
+  it('handles foresight without blindsight/truesight (targetDisadvantageCount)', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'foresight' }]);
+    expect(result.targetDisadvantageCount).toBe(1);
+  });
+
+  it('handles foresight with blindsight (no targetDisadvantageCount)', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'foresight' }], false, false, false, false, null, false, null, false, false, false, [], false, false, false, [{ name: 'Blindsight' }]);
+    expect(result.targetDisadvantageCount).toBe(0);
+  });
+
+  it('handles blur with blindsight (no targetDisadvantageCount)', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'blur' }], false, false, false, false, null, false, null, false, false, false, [], false, false, false, [{ name: 'Truesight' }]);
+    expect(result.targetDisadvantageCount).toBe(0);
+  });
+
+  it('handles blur without blindsight (targetDisadvantageCount)', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'blur' }]);
+    expect(result.targetDisadvantageCount).toBe(1);
+  });
+
+  it('handles faerie_fire effect with source tracking', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'faerie_fire', source: 'Cleric' }]);
+    expect(result.targetAdvantageCount).toBe(1);
+    expect(result.targetAdvantageReasons).toContain('Cleric');
+    expect(result.noAdvantageAgainstInvisible).toBe(true);
+  });
+
+  it('handles hex_ability_check_disadvantage effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'hex_ability_check_disadvantage', ability: 'CON' }]);
+    expect(result.abilityCheckDisadvantageAbilities).toContain('CON');
+  });
+
+  it('handles enhance_ability effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'enhance_ability', ability: 'stealth' }]);
+    expect(result.abilityCheckAdvantageAbilities).toContain('STEALTH');
+  });
+
+  it('handles advantage_abilities effect with source', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'advantage_abilities', source: 'Bard' }]);
+    expect(result.abilityCheckAdvantage).toBe(true);
+    expect(result.abilityCheckAdvantageReasons).toContain('Bard');
+  });
+
+  it('handles advantage_attacks effect with source', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'advantage_attacks', source: 'Bard' }]);
+    expect(result.attackAdvantageCount).toBe(1);
+    expect(result.attackAdvantageReasons).toContain('Bard');
+  });
+
+  it('handles advantage_saves effect with source', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'advantage_saves', source: 'Paladin' }]);
+    expect(result.saveAdvantageCount).toBe(1);
+    expect(result.saveAdvantageReasons).toContain('Paladin');
+  });
+
+  it('handles resistance_damage_reduction effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'resistance_damage_reduction' }]);
+    expect(result.resistanceDamageReduction).toBe(true);
+  });
+
+  it('handles bane_penalty effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'bane_penalty' }]);
+    expect(result.banePenalty).toBe(true);
+  });
+
+  it('handles bless_bonus effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'bless_bonus' }]);
+    expect(result.blessBonus).toBe(true);
+  });
+
+  it('handles beacon_of_hope target effect', () => {
+    const result = computeConditionEffects([], [], [{ effect: 'beacon_of_hope' }]);
+    expect(result.beaconOfHope).toBe(true);
+    expect(result.saveAdvantageAbilities).toContain('WIS');
+    expect(result.saveAdvantageReasons).toContain('Beacon of Hope');
+  });
 });
 
 // ---------------------------------------------------------------------------

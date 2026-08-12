@@ -1,6 +1,6 @@
 // @cleaned-by-ai
 // @improved-by-ai
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   computeConditionEffects,
   getNetAttackMode,
@@ -9,7 +9,15 @@ import {
   CONDITIONS_THAT_SPEED_ZERO,
   hasSaveModifier,
   hasSaveAdvantage,
+  hasBeaconOfHope,
 } from './conditionEffects.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
+  setRuntimeBatch: vi.fn(),
+}));
 
 describe('conditionEffects', () => {
   describe('CONDITIONS_THAT_CANNOT_ACT', () => {
@@ -544,6 +552,41 @@ describe('conditionEffects', () => {
       const effects = computeConditionEffects([], [{ target: 'saving_throw', condition: 'against_spell', effect: 'advantage' }]);
       expect(hasSaveAdvantage(effects, 'con', false)).toBe(true);
       expect(hasSaveAdvantage(effects, 'dex', false)).toBe(true);
+    });
+  });
+
+  describe('hasBeaconOfHope', () => {
+    it('returns false when targetName is null', () => {
+      expect(hasBeaconOfHope(null, 'test-campaign')).toBe(false);
+    });
+
+    it('returns false when targetName is undefined', () => {
+      expect(hasBeaconOfHope(undefined, 'test-campaign')).toBe(false);
+    });
+
+    it('returns false when no targetEffects contain beacon_of_hope', () => {
+      vi.mocked(getRuntimeValue).mockReturnValue([]);
+      expect(hasBeaconOfHope('Player', 'test-campaign')).toBe(false);
+    });
+
+    it('returns true when targetEffects contains beacon_of_hope for target', () => {
+      vi.mocked(getRuntimeValue).mockReturnValue([
+        { effect: 'beacon_of_hope', target: 'Player' },
+        { effect: 'advantage_attacks', target: 'Enemy' },
+      ]);
+      expect(hasBeaconOfHope('Player', 'test-campaign')).toBe(true);
+    });
+
+    it('returns false when beacon_of_hope exists but target does not match', () => {
+      vi.mocked(getRuntimeValue).mockReturnValue([
+        { effect: 'beacon_of_hope', target: 'OtherPlayer' },
+      ]);
+      expect(hasBeaconOfHope('Player', 'test-campaign')).toBe(false);
+    });
+
+    it('returns false when getRuntimeValue returns null', () => {
+      vi.mocked(getRuntimeValue).mockReturnValue(null);
+      expect(hasBeaconOfHope('Player', 'test-campaign')).toBe(false);
     });
   });
 });

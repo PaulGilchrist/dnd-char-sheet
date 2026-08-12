@@ -1,7 +1,7 @@
 // @cleaned-by-ai
 // @improved-by-ai
 import { describe, it, expect } from 'vitest';
-import { saveModifierApplies } from './conditionEffects.js';
+import { saveModifierApplies } from './conditionEffectsInternal.js';
 
 // ---------------------------------------------------------------------------
 // saveModifierApplies — target validation
