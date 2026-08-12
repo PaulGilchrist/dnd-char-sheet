@@ -391,3 +391,42 @@ describe('processFeatureAutomation – wrapper injection and edge cases', () => 
         expect(result.actions).toEqual([])
     })
 })
+
+// ── Range bonus cantrip coverage ──
+
+describe('collectAutomationFromFeatures – rangeBonusCantrip', () => {
+    it('creates cantrip_range_bonus passive when damage_bonus has rangeBonusCantrip with numeric value', () => {
+        const result = collectAutomationFromFeatures([
+            { name: 'Fire Bolt', automation: { type: 'damage_bonus', rangeBonusCantrip: '+10ft' } },
+        ], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].type).toBe('cantrip_range_bonus')
+        expect(result.passives[0].bonusExpression).toBe('10')
+    })
+
+    it('does not create cantrip_range_bonus when rangeBonusCantrip has no numeric value', () => {
+        const result = collectAutomationFromFeatures([
+            { name: 'Magic', automation: { type: 'damage_bonus', rangeBonusCantrip: '+abc' } },
+        ], ps)
+        expect(result.passives.filter(p => p.type === 'cantrip_range_bonus')).toHaveLength(0)
+    })
+
+    it('does not create cantrip_range_bonus when rangeBonusCantrip is empty', () => {
+        const result = collectAutomationFromFeatures([
+            { name: 'No Bonus', automation: { type: 'damage_bonus', rangeBonusCantrip: '' } },
+        ], ps)
+        expect(result.passives.filter(p => p.type === 'cantrip_range_bonus')).toHaveLength(0)
+    })
+})
+
+// ── minor_telekinesis_spell coverage ──
+
+describe('collectAutomationFromFeatures – minor_telekinesis_spell', () => {
+    it('categorizes minor_telekinesis_spell as a special action', () => {
+        const result = collectAutomationFromFeatures([
+            makeFeature({ type: 'minor_telekinesis_spell' }),
+        ], ps)
+        expect(result.specialActions).toHaveLength(1)
+        expect(result.specialActions[0].type).toBe('minor_telekinesis_spell')
+    })
+})
