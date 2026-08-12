@@ -1,13 +1,9 @@
 import React from 'react'
 import { cloneDeep } from 'lodash';
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
-import { applyShieldOfFaith } from '../../services/automation/handlers/shieldOfFaithHandler.js'
 import rulesFactory from '../../services/rules/rulesFactory.js'
 import useSharedPopup from '../../hooks/combat/useSharedPopup.js'
-import Popup from '../common/popup.jsx'
-import AttackResultPopup from '../common/AttackResultPopup.jsx'
-import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
-import { sanitizeHtml } from '../../services/ui/sanitize.js'
+
 import CharAbilities from './CharAbilities.jsx'
 import CharActions from './CharActions.jsx'
 import CharInventory from './CharInventory.jsx'
@@ -17,21 +13,10 @@ import CharCharacterAdvancement from './CharCharacterAdvancement.jsx'
 import CharSpells from './char-spells/CharSpells.jsx'
 import CharSummary from './char-summary/CharSummary.jsx'
 import { computeAuraComboEffects } from '../../services/combat/auras/auraComboEffects.js';
-import { computeConditionEffects, getNetAttackMode, CONDITIONS_THAT_CANNOT_ACT } from '../../services/combat/conditions/conditionEffects.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
-import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
-import { getDistanceFeet } from '../../services/rules/combat/rangeValidation.js';
-import { isDistanceInRange } from '../../services/rules/combat/rangeCheck.js';
-import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
-import { EXHAUSTION_LEVELS } from '../../services/combat/conditions/exhaustionRules.js';
-import { isCreatureWarded } from '../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
-import { getHolyAuraTargets } from '../../services/automation/handlers/buffs/holyAuraHandler.js';
-import { addEntry } from '../../services/ui/logService.js';
-import { applyDamageToTarget } from '../../services/rules/combat/applyDamage.js';
-import { executeEmpoweredReroll } from '../../services/rules/spells/empoweredSpellService.js';
-import { getManeuversForRules, getSuperiorityDice } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
-import { loadCombatSummary } from '../../services/encounters/combatData.js';
-import * as storageService from '../../services/ui/storage.js';
+import { computeCharConditionEffects } from './CharSheet.conditionEffects';
+import { handleReroll, handleStrokeOfLuck, handleBardicInspiration, handleBiDefenseCombatSummary, handleBardicInspirationOffense, handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleTacticalMind, handleDarkOnesLuck, handleSuperiorityManeuver, handlePsiBolsteredKnack } from './CharSheet.handlers';
+import { ShieldOfFaithTargetSelectionModal, renderPopup } from './CharSheet.modals.jsx';
 import { activateWildShape } from '../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js'
 import { confirmPolymorphTransform } from '../../services/automation/handlers/spells/polymorphService.js'
 import { confirmShapechangeTransform } from '../../services/automation/handlers/spells/shapechangeService.js'
@@ -39,39 +24,6 @@ import { applyAnimalShapes } from '../../services/automation/handlers/spells/ani
 import { confirmTruePolymorphTransform, applyObjectTransform } from '../../services/automation/handlers/spells/truePolymorphService.js'
 import './CharSheet.css'
 import './CharSheet.shieldOfFaith.css'
-import PolymorphSelectionModal from './modals/PolymorphSelectionModal.jsx'
-import AnimalShapesSelectionModal from './modals/AnimalShapesSelectionModal.jsx'
-import ObjectTransformModal from './modals/ObjectTransformModal.jsx'
-
-function ShieldOfFaithTargetSelectionModal({ popupHtml, setPopupHtml, playerStats, campaignName }) {
-    const targets = popupHtml?.creatureTargets?.map(name => ({ name, type: 'creature' })) || [];
-
-    const handleTargetSelected = async (targetName) => {
-        const action = {
-            name: 'Shield of Faith',
-            spell: { duration: popupHtml.duration, range: popupHtml.range },
-            automation: { type: 'shield_of_faith' },
-        };
-        const result = await applyShieldOfFaith(action, playerStats, campaignName, null, [targetName]);
-        if (result) {
-            setPopupHtml(result.payload);
-        } else {
-            setPopupHtml(null);
-        }
-    };
-
-    return (
-        <SecondaryTargetModal
-            title="Shield of Faith"
-            targets={targets}
-            onTargetSelected={handleTargetSelected}
-            onSkip={() => setPopupHtml(null)}
-            description="Choose a creature within 60 feet to gain a +2 bonus to AC."
-            confirmLabel="Cast"
-            confirmIcon="fa-shield-halved"
-        />
-    );
-}
 
 function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment, allMagicItems, allRaces, allSpells, allSpells2024, playerSummary, allRaces2024, allMagicItems2024, onDeleteCharacter, onEditCharacter, onUploadClick, onSaveClick, campaignName, activeMapName, characters }) {
     const [playerStats, setPlayerStats] = React.useState(null);
@@ -140,9 +92,6 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         const targetName = popupData.targetName || popupData.casterName;
         await applyObjectTransform(targetName, objectType, popupData.casterName, popupData.spell, popupData.campaignName, playerStats);
     }, [playerStats]);
-
-    const storedExhaustion = useRuntimeValue(playerSummary?.name, 'exhaustionLevel', campaignName);
-    const exhaustionLevel = typeof storedExhaustion === 'number' ? Math.min(EXHAUSTION_LEVELS, Math.max(0, storedExhaustion)) : 0;
 
     const biDieRuntime = useRuntimeValue(playerSummary?.name, 'bardicInspirationDie', campaignName);
     const biCombatOptRuntime = useRuntimeValue(playerSummary?.name, 'bardicInspirationCombatOptions', campaignName);
@@ -362,375 +311,83 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
     const handleConditionsChange = () => { }
     const handleBuffsChange = () => { }
 
-    const exhaustionPenalty = 2 * exhaustionLevel;
-
-    const storedConditions = useRuntimeValue(playerSummary?.name, 'activeConditions', campaignName);
-    const activeConditions = Array.isArray(storedConditions) ? storedConditions : [];
-    // Merge save modifiers from active combat stances (e.g. Rage STR save advantage)
     const activeBuffs = useRuntimeValue(playerSummary?.name, 'activeBuffs', campaignName) ?? [];
-    const stanceSaveModifiers = Array.isArray(activeBuffs)
-        ? activeBuffs.filter(b => b.advantages?.length).flatMap(b =>
-            b.advantages
-                .filter(a => a.toLowerCase().includes('saves'))
-                .map(a => {
-                    const abilityMatch = a.match(/^(\w{3})\s+saves/);
-                    return abilityMatch
-                        ? { source: b.name, target: 'saving_throw', condition: 'stance_active', effect: 'advantage', abilities: [abilityMatch[1].toUpperCase()] }
-                        : null;
-                })
-                .filter(Boolean)
-        )
-        : [];
+    const { conditionEffects, cannotAct, conditionAttackMode, isRaging, exhaustionPenalty } = computeCharConditionEffects(playerSummary, playerStats, campaignName, activeBuffs);
 
-    // Protection from Evil and Good: check if spell is active
-    const pfeagActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'protection_from_evil_and_good');
+    const luckyAdvantageActive = useRuntimeValue(playerStats?.name, 'luckyAdvantageActive', campaignName);
+    const luckyDisadvantageActive = useRuntimeValue(playerStats?.name, 'luckyDisadvantageActive', campaignName);
+    const effectiveAttackMode = luckyAdvantageActive ? 'advantage' : conditionAttackMode;
 
-    // Protection from Evil and Good: if already charmed/frightened by a warded creature,
-    // the target has Advantage on any new saving throw against the relevant effect
-    const pfeagSaveAdvantage = [];
-    if (pfeagActive && playerStats) {
-        const hasCharmed = activeConditions.includes('charmed');
-        const hasFrightened = activeConditions.includes('frightened');
-        if (hasCharmed || hasFrightened) {
-            pfeagSaveAdvantage.push({
-                source: 'Protection from Evil and Good',
-                target: 'saving_throw',
-                condition: 'pfeag_save_advantage',
-                effect: 'advantage',
-            });
-        }
-    }
-    const allSaveModifiers = [...(playerStats?.saveModifiers || []), ...stanceSaveModifiers, ...pfeagSaveAdvantage];
-    const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
-    const myTargetEffects = allTargetEffects.filter(te => te.target === (playerSummary?.name));
-    const isRaging = Array.isArray(activeBuffs) && activeBuffs.some(b => b.damageBonusExpression);
-    const shapeShiftActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shape_shift');
-    const isPeerlessAthlete = getRuntimeValue(playerStats?.name, 'peerlessAthleteActive', campaignName);
-    const isLargeFormActive = getRuntimeValue(playerStats?.name, 'largeFormActive', campaignName);
-    const seeInvisibilityActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'see_invisibility');
-    const isLivingLegendActive = getRuntimeValue(playerStats?.name, 'livingLegendActive', campaignName) === true;
-    const isElderChampionActive = getRuntimeValue(playerStats?.name, 'elderChampionActive', campaignName) === true;
-    const isHolyAuraActive = getHolyAuraTargets(playerStats?.name, campaignName);
-    const isProtectionFromPoisonActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.name === 'Protection from Poison' && b.effect === 'protection_from_poison');
-    const isTranceOfOrderActive = getRuntimeValue(playerStats?.name, 'tranceOfOrderActive', campaignName) === true;
-    const combatContext = getCombatSummary(campaignName);
-     const conditionEffects = computeConditionEffects(activeConditions, allSaveModifiers, myTargetEffects, isRaging, shapeShiftActive, isPeerlessAthlete, isLargeFormActive, combatContext, seeInvisibilityActive, playerStats?.name, isLivingLegendActive, isElderChampionActive, false, isHolyAuraActive, isProtectionFromPoisonActive, isTranceOfOrderActive);
-    if (playerStats) {
-        const speedHalvedTime = getRuntimeValue(playerStats.name, 'stunned_speedHalved', campaignName);
-        if (speedHalvedTime) conditionEffects.speedHalved = true;
-    }
-    if (conditionEffects.autoRerollBonus && playerStats) {
-        conditionEffects.autoRerollBonus = evaluateAutoExpression(conditionEffects.autoRerollBonus, playerStats);
-    }
-    if (playerStats) {
-        const fanaticalFocusUsed = getRuntimeValue(playerStats.name, 'fanaticalFocusUsed', campaignName);
-        if (fanaticalFocusUsed && conditionEffects.autoRerollForSaves) {
-            conditionEffects.autoRerollForSaves = false;
-            conditionEffects.autoRerollBonus = null;
-        }
-        const indomitableUses = Number(getRuntimeValue(playerStats.name, 'indomitableUses', campaignName) ?? 0);
-        const indomitableMax = playerStats.level >= 17 ? 3 : playerStats.level >= 13 ? 2 : 1;
-        if (indomitableUses >= indomitableMax && conditionEffects.autoRerollForSaves) {
-            conditionEffects.autoRerollForSaves = false;
-            conditionEffects.autoRerollBonus = null;
-        }
-        const strokeOfLuckUsed = getRuntimeValue(playerStats.name, 'strokeOfLuckUsed', campaignName);
-        if (strokeOfLuckUsed && conditionEffects.strokeOfLuck) {
-            conditionEffects.strokeOfLuck = false;
-        }
-    }
-    // Reckless Attack: enemies have Advantage on attack rolls against you
-    if (Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'advantage_attacks_advantage_against')) {
-        conditionEffects.targetAdvantageCount = (conditionEffects.targetAdvantageCount || 0) + 1;
-    }
-
-    // Blessing of the Trickster: Advantage on Dexterity (Stealth) checks
-    const hasTricksterBlessing = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'advantage_on_stealth');
-    if (hasTricksterBlessing) {
-        conditionEffects.abilityCheckAdvantage = true;
-        conditionEffects.abilityCheckAdvantageSkill = 'Stealth';
-    }
-
-    // Buff-ally effects (e.g., Zealous Presence): Advantage on attack rolls and saving throws
-    const buffAllyActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'advantage_attacks_and_saves');
-    if (buffAllyActive) {
-        conditionEffects.attackAdvantageCount = (conditionEffects.attackAdvantageCount || 0) + 1;
+    if (luckyAdvantageActive && conditionEffects) {
         conditionEffects.saveAdvantageCount = (conditionEffects.saveAdvantageCount || 0) + 1;
     }
 
-    // Cloak of Shadows: Invisibility grants attack advantage and target disadvantage
-    const cloakOfShadowsActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'cloak_of_shadows');
-    if (cloakOfShadowsActive) {
-        conditionEffects.attackAdvantageCount = (conditionEffects.attackAdvantageCount || 0) + 1;
-        conditionEffects.targetDisadvantageCount = (conditionEffects.targetDisadvantageCount || 0) + 1;
-    }
-
-
-
-    // Shield: +5 AC until start of next turn, immune to Magic Missile
-    const shieldActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield');
-    if (shieldActive) {
-        conditionEffects.shieldAcBonus = 5;
-        conditionEffects.magicMissileImmune = true;
-    }
-
-    // Warding Bond: +1 AC and +1 to all saving throws (only if within 60 feet)
-    let wardingBondAcBonus = 0;
-    let wardingBondSaveBonus = 0;
-    for (const buff of activeBuffs) {
-        if (buff.effect === 'warding_bond' && buff.sourceCharacter) {
-            const casterName = buff.sourceCharacter;
-            if (casterName === playerSummary?.name) continue;
-            const casterCreature = combatContext?.creatures?.find(c => c.name === casterName);
-            const targetCreature = combatContext?.creatures?.find(c => c.name === playerSummary?.name);
-            const distance = casterCreature && targetCreature ? getDistanceFeet(casterCreature.position, targetCreature.position) : null;
-            if (distance === null || isDistanceInRange(distance, 60)) {
-                if (buff.acBonus) {
-                    wardingBondAcBonus += buff.acBonus;
-                }
-                if (buff.saveBonus) {
-                    wardingBondSaveBonus += buff.saveBonus;
-                }
-            }
-        }
-    }
-    if (wardingBondAcBonus > 0) {
-        conditionEffects.wardingBondAcBonus = wardingBondAcBonus;
-    }
-    if (wardingBondSaveBonus > 0) {
-        conditionEffects.saveBonusExpression = (conditionEffects.saveBonusExpression || '0') + ' + ' + wardingBondSaveBonus;
-    }
-
-    // Shield of Faith: +2 AC for duration (Concentration, up to 10 minutes)
-    const shieldOfFaithActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield_of_faith');
-    if (shieldOfFaithActive) {
-        conditionEffects.shieldOfFaithAcBonus = 2;
-    }
-
-    // Alert: Other creatures don't gain advantage on attack rolls against you from being unseen
-    if (playerStats?.unseenAttackerAdvantageNegate) {
-        conditionEffects.noAdvantageAgainst = true;
-    }
-
-    // Protection from Evil and Good: warded creature types have Disadvantage on attack rolls,
-    // target can't be charmed/frightened/possessed by them, advantage on new saves against existing effects
-    if (pfeagActive && playerStats && combatContext) {
-        const attackerName = combatContext.attackerName;
-        if (attackerName) {
-            const attackerCreature = combatContext.creatures?.find(c => c.name === attackerName);
-            if (attackerCreature && isCreatureWarded(attackerCreature.type, playerStats.name, campaignName)) {
-                conditionEffects.targetDisadvantageCount = (conditionEffects.targetDisadvantageCount || 0) + 1;
-            }
-        }
-    }
-
-    // Haste: Advantage on Dexterity saving throws
-    const hasteActive = Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'haste');
-    if (hasteActive) {
-        conditionEffects.saveAdvantageAbilities = [...(conditionEffects.saveAdvantageAbilities || []), 'DEX'];
-    }
-
-    // Holy Nimbus: Holy Ward grants advantage on saving throws against Fiends/Undead for allies
-    // (handled in SavePromptModal.jsx where attacker type and ally list are known)
-
-    // Elusive: No attack roll can have Advantage against you unless you have the Incapacitated condition
-    if (playerStats) {
-        const hasElusive = [
-            ...(playerStats.actions || []),
-            ...(playerStats.bonusActions || []),
-            ...(playerStats.reactions || []),
-            ...(playerStats.specialActions || [])
-        ].some(a => a.name === 'Elusive');
-        const isIncapacitated = activeConditions.some(c => CONDITIONS_THAT_CANNOT_ACT.has(c));
-        if (hasElusive && !isIncapacitated) {
-            conditionEffects.noAdvantageAgainst = true;
-        }
-    }
-
-    const cannotAct = activeConditions.some(c => CONDITIONS_THAT_CANNOT_ACT.has(c))
-    const conditionAttackMode = getNetAttackMode(conditionEffects.attackAdvantageCount, conditionEffects.attackDisadvantageCount, conditionEffects.restoreBalance)
-    const luckyAdvantageActive = useRuntimeValue(playerStats?.name, 'luckyAdvantageActive', campaignName)
-    const luckyDisadvantageActive = useRuntimeValue(playerStats?.name, 'luckyDisadvantageActive', campaignName)
-    const effectiveAttackMode = luckyAdvantageActive ? 'advantage' : conditionAttackMode
-
-    if (luckyAdvantageActive && conditionEffects) {
-        conditionEffects.saveAdvantageCount = (conditionEffects.saveAdvantageCount || 0) + 1
-    }
-
     if (luckyDisadvantageActive && conditionEffects) {
-        conditionEffects.luckyDisadvantage = true
+        conditionEffects.luckyDisadvantage = true;
     }
 
-    const handleReroll = React.useCallback(() => {
-        if (playerStats) {
-            if (conditionEffects.autoRerollCondition === 'raging') {
-                setRuntimeValue(playerStats.name, 'fanaticalFocusUsed', true, campaignName);
-            } else if (conditionEffects.autoRerollCondition === 'disciplined_survivor') {
-                const currentFocus = Number(getRuntimeValue(playerStats.name, 'focusPoints', campaignName) ?? playerStats.focusPoints);
-                if (currentFocus <= 0) {
-                    return;
-                }
-                setRuntimeValue(playerStats.name, 'focusPoints', currentFocus - 1, campaignName);
-            } else {
-                const current = Number(getRuntimeValue(playerStats.name, 'indomitableUses', campaignName) ?? 0);
-                setRuntimeValue(playerStats.name, 'indomitableUses', current + 1, campaignName);
-            }
-        }
-    }, [playerStats, campaignName, conditionEffects.autoRerollCondition]);
+    const handleRerollWrapped = React.useCallback(() => {
+        handleReroll(playerStats, campaignName, conditionEffects);
+    }, [playerStats, campaignName, conditionEffects]);
 
-    const handleStrokeOfLuck = React.useCallback(() => {
-        if (playerStats) {
-            setRuntimeValue(playerStats.name, 'strokeOfLuckUsed', true, campaignName);
-            setRuntimeValue(playerStats.name, 'boonOfCombatProwessUsed', Date.now(), campaignName);
-        }
+    const handleStrokeOfLuckWrapped = React.useCallback(() => {
+        handleStrokeOfLuck(playerStats, campaignName);
     }, [playerStats, campaignName]);
 
-    const handleBardicInspiration = React.useCallback(async (dieValue, dieSize) => {
-        if (!playerStats) return;
-        const playerName = playerStats.name;
-        const biDie = getRuntimeValue(playerName, 'bardicInspirationDie', campaignName);
-        if (!biDie) return;
-        const grantedBy = getRuntimeValue(playerName, 'bardicInspirationGrantedBy', campaignName) || 'unknown';
-        const checkName = popupHtml?.name || 'Ability Check';
-        const d20 = popupHtml?.rolls?.[0] || 0;
-        const bonus = popupHtml?.bonus || 0;
-        const modifier = popupHtml?.modifier || 0;
-        const originalTotal = d20 + bonus + modifier;
-        const modifiedTotal = originalTotal + dieValue;
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: 'Bardic Inspiration',
-            description: `${playerName} used Bardic Inspiration (1d${dieSize}): +${dieValue} to ${checkName} (d20 ${d20} + ${bonus + modifier} = ${originalTotal} → ${modifiedTotal}). Inspiration granted by ${grantedBy}.`,
-            dieValue,
-            dieSize,
-            timestamp: Date.now(),
-        });
-        setRuntimeValue(playerName, 'bardicInspirationDie', null, campaignName);
-        setRuntimeValue(playerName, 'bardicInspirationGrantedBy', null, campaignName);
+    const handleBardicInspirationWrapped = React.useCallback(async (_dieValue, _dieSize) => {
+        await handleBardicInspiration(playerStats, campaignName, popupHtml);
     }, [playerStats, campaignName, popupHtml]);
 
-    const handleBiDefenseCombatSummary = React.useCallback(async ({ dieValue, newAc, willMiss }) => {
-        if (!playerStats) return;
-        const cs = await loadCombatSummary(campaignName);
-        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-        const la = lastAttack;
-        if (la) {
-            la.effectiveAc = newAc;
-            la.bardicInspirationDefense = { used: true, biRoll: dieValue, newEffectiveAc: newAc };
-            if (willMiss) {
-                la.hit = false;
-                la.isAutoMiss = true;
-            }
-            storageService.default.set('combatSummary', cs, campaignName);
-        }
+    const handleBiDefenseCombatSummaryWrapped = React.useCallback(async ({ dieValue: _dieValue, newAc: _newAc, willMiss: _willMiss }) => {
+        await handleBiDefenseCombatSummary(playerStats, campaignName, { dieValue: _dieValue, newAc: _newAc, willMiss: _willMiss });
     }, [playerStats, campaignName]);
 
-    const handleBardicInspirationOffense = React.useCallback(async (dieValue, dieSize) => {
-        if (!playerStats) return;
-        const playerName = playerStats.name;
-        const biUsesRaw = getRuntimeValue(playerName, 'bardicInspirationUses', campaignName);
-        const biUsesNum = (typeof biUsesRaw === 'object' && biUsesRaw !== null) ? biUsesRaw.current : (biUsesRaw != null ? Number(biUsesRaw) : (playerStats?._trackedResources?.bardicInspirationUses?.current ?? 0));
-        if (biUsesNum > 0) {
-            await setRuntimeValue(playerName, 'bardicInspirationUses', biUsesNum - 1, campaignName);
-        }
-        const cs = await loadCombatSummary(campaignName);
-        const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
-        const la = lastAttack;
-        const targetName = la?.targetName;
-        const damageType = la?.damageType || 'Bludgeoning';
-        const damageTypes = Array.isArray(damageType) ? damageType : [damageType];
-        if (targetName) {
-            const applyResult = applyDamageToTarget(cs, targetName, dieValue, damageTypes, campaignName, characters, false, playerName);
-            if (applyResult) {
-                storageService.default.set('combatSummary', cs, campaignName);
-            }
-        }
-        setRuntimeValue(playerName, 'bardicInspirationDie', null, campaignName);
-        setRuntimeValue(playerName, 'bardicInspirationCombatOptions', null, campaignName);
-        setRuntimeValue(playerName, 'bardicInspirationGrantedBy', null, campaignName);
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: 'Combat Inspiration - Offense',
-            description: `${playerName} used Combat Inspiration - Offense, rolling ${dieValue} (d${dieSize}) bonus damage${targetName ? ` on ${targetName}` : ''}.`,
-            biDieRoll: dieValue,
-            timestamp: Date.now(),
-        });
+    const handleBardicInspirationOffenseWrapped = React.useCallback(async (dieValue, dieSize) => {
+        await handleBardicInspirationOffense(playerStats, campaignName, characters, dieValue, dieSize);
     }, [playerStats, campaignName, characters]);
 
-    const handleEmpoweredSpell = React.useCallback(async (lastEventData) => {
-        if (!playerStats || !campaignName) return null;
-        const result = await executeEmpoweredReroll({
-            campaignName,
-            playerStats,
-            lastEvent: lastEventData,
-            chaMod: popupHtml?.empoweredSpellChaMod || 0,
-            characters,
-        });
-        if (result?.popupState?.result) {
-            return result.popupState.result;
-        }
-        return null;
+    const handleEmpoweredSpellWrapped = React.useCallback(async (lastEventData) => {
+        return await handleEmpoweredSpell(playerStats, campaignName, characters, popupHtml, lastEventData);
     }, [playerStats, campaignName, characters, popupHtml]);
 
-    const handlePuncture = React.useCallback(async (punctureData) => {
-        if (!playerStats || !campaignName || !punctureData) return null;
-        
-        const playerName = playerStats.name;
-        const usedKey = 'piercerPunctureUsedThisTurn';
-        const used = getRuntimeValue(playerName, usedKey, campaignName);
-        if (used) return null;
-        
-        const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
-        
-        const combatSummary = await getCombatContext(campaignName);
-        if (!combatSummary || !targetName) return null;
-        
-        const damageDifference = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0) - rawDamage;
-        
-        if (damageDifference !== 0) {
-            applyDamageToTarget(
-                combatSummary,
-                targetName,
-                damageDifference,
-                damageTypes || [popupHtml?.damageType || 'Piercing'],
-                campaignName,
-                characters,
-                false,
-                playerName
-            );
-        }
-        
-        await setRuntimeValue(playerName, usedKey, true, campaignName);
-        
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: 'Piercer - Puncture',
-            description: `${playerName} used Piercer - Puncture: rerolled die ${rerolledIndex + 1} from ${originalValue} → ${newValue} (${originalRolls.join(', ')} → ${newRolls.join(', ')}).`,
-            timestamp: Date.now(),
-        });
-        
-        const newTotal = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0);
-        const newFinalDamage = Math.max(0, newTotal);
-        
-        setPopupHtml({
-            ...popupHtml,
-            total: newTotal,
-            adjustedTotal: newTotal,
-            rolls: newRolls,
-            finalDamage: newFinalDamage,
-        });
-        
-        return {
-            originalDice: originalRolls,
-            newDice: newRolls,
-            rerolledIndex,
-            originalValue,
-            newValue,
-        };
+    const handlePunctureWrapped = React.useCallback(async (punctureData) => {
+        return await handlePuncture(playerStats, campaignName, characters, popupHtml, setPopupHtml, punctureData);
     }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
+
+    const handleSavageAttackerWrapped = React.useCallback(async (savageData) => {
+        return await handleSavageAttacker(playerStats, campaignName, characters, popupHtml, setPopupHtml, savageData);
+    }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
+
+    const handleTacticalMindWrapped = React.useCallback(async (dieResult) => {
+        await handleTacticalMind(playerStats, campaignName, { ...popupHtml, tacticalMindDie: dieResult });
+    }, [playerStats, campaignName, popupHtml]);
+
+    const handleDarkOnesLuckWrapped = React.useCallback(async (dieValue) => {
+        await handleDarkOnesLuck(playerStats, campaignName, { ...popupHtml, darkOnesLuckValue: dieValue });
+    }, [playerStats, campaignName, popupHtml]);
+
+    const handleSuperiorityManeuverWrapped = React.useCallback(async (maneuverName, dieValue) => {
+        await handleSuperiorityManeuver(playerStats, campaignName, setPopupHtml, popupHtml, maneuverName, dieValue);
+    }, [playerStats, campaignName, setPopupHtml, popupHtml]);
+
+    const handlePsiBolsteredKnackWrapped = React.useCallback(async ({ dieValue, dieSize, success }) => {
+        await handlePsiBolsteredKnack(playerStats, campaignName, popupHtml, dieValue, dieSize, success);
+    }, [playerStats, campaignName, popupHtml]);
+
+    const handleShieldOfFaithTargetSelected = React.useCallback(async (targetName) => {
+        const action = {
+            name: 'Shield of Faith',
+            spell: { duration: popupHtml.duration, range: popupHtml.range },
+            automation: { type: 'shield_of_faith' },
+        };
+        const { applyShieldOfFaith } = await import('../../services/automation/handlers/shieldOfFaithHandler.js');
+        const result = await applyShieldOfFaith(action, playerStats, campaignName, null, [targetName]);
+        if (result) {
+            setPopupHtml(result.payload);
+        } else {
+            setPopupHtml(null);
+        }
+    }, [playerStats, campaignName, popupHtml, setPopupHtml]);
 
     // Update Counterspell popup when save result is received
     React.useEffect(() => {
@@ -747,205 +404,12 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         return () => window.removeEventListener('counterspell-save-result', handler);
     }, [setPopupHtml]);
 
-    const handleSavageAttacker = React.useCallback(async (savageData) => {
-        if (!playerStats || !campaignName || !savageData) return null;
-        
-        const playerName = playerStats.name;
-        const usedKey = '_Savage_Attacker_usedRound';
-        const stored = getRuntimeValue(playerName, usedKey, campaignName);
-        if (stored) return null;
-        
-        const { rawDamage, targetName, damageTypes, originalRolls, newRolls } = savageData;
-        
-        const combatSummary = await getCombatContext(campaignName);
-        if (!combatSummary || !targetName) return null;
-        
-        const newTotal = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0);
-        const damageDifference = newTotal - rawDamage;
-        
-        if (damageDifference !== 0) {
-            applyDamageToTarget(
-                combatSummary,
-                targetName,
-                damageDifference,
-                damageTypes || [popupHtml?.damageType || 'Slashing'],
-                campaignName,
-                characters,
-                false,
-                playerName
-            );
-        }
-        
-        await setRuntimeValue(playerName, usedKey, true, campaignName);
-        
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: 'Savage Attacker',
-            description: `${playerName} used Savage Attacker: rerolled damage dice ${originalRolls.join(', ')} → ${newRolls.join(', ')} (${newRolls.reduce((s, r) => s + r, 0)} vs ${originalRolls.reduce((s, r) => s + r, 0)}).`,
-            timestamp: Date.now(),
-        });
-        
-        setPopupHtml({
-            ...popupHtml,
-            total: newTotal,
-            adjustedTotal: newTotal,
-            rolls: newRolls,
-        });
-        
-        return {
-            original: originalRolls.join(', '),
-            rerolled: newRolls.join(', '),
-            originalTotal: originalRolls.reduce((s, r) => s + r, 0),
-            newTotal: newRolls.reduce((s, r) => s + r, 0),
-            better: newRolls.reduce((s, r) => s + r, 0) > originalRolls.reduce((s, r) => s + r, 0),
-        };
-    }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
-
-    const handleTacticalMind = React.useCallback(async (dieResult) => {
-        if (!playerStats) return;
-        const playerName = playerStats.name;
-        let currentUses = Number(getRuntimeValue(playerName, 'secondWindUses', campaignName) ?? 0);
-        const maxUses = playerStats.class?.class_levels?.[(playerStats.level || 1) - 1]?.second_wind || 0;
-        if (currentUses <= 0) {
-            currentUses = maxUses;
-            await setRuntimeValue(playerName, 'secondWindUses', currentUses, campaignName);
-        }
-        if (currentUses <= 0) return;
-        await setRuntimeValue(playerName, 'secondWindUses', currentUses - 1, campaignName);
-        const checkName = popupHtml?.name || 'Ability Check';
-        const d20 = popupHtml?.rolls?.[0] || 0;
-        const bonus = popupHtml?.bonus || 0;
-        const originalTotal = d20 + bonus;
-        const modifiedTotal = originalTotal + dieResult;
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: 'Tactical Mind',
-            description: `${playerName} used Tactical Mind: +${dieResult} to ${checkName} (d20 ${d20} + ${bonus} = ${originalTotal} → ${modifiedTotal}).`,
-            d10Roll: dieResult,
-            timestamp: Date.now(),
-        });
-    }, [playerStats, campaignName, popupHtml]);
-
-    const handleDarkOnesLuck = React.useCallback(async (dieValue) => {
-        if (!playerStats) return;
-        const playerName = playerStats.name;
-        const usesKey = 'darkOnesLuckUses';
-        const chaMod = playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0;
-        const maxUses = Math.max(1, chaMod);
-        const currentUses = Number(getRuntimeValue(playerName, usesKey, campaignName) ?? maxUses);
-        if (currentUses <= 0) return;
-        await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
-        const rollName = popupHtml?.name || 'Ability Check';
-        const d20 = popupHtml?.rolls?.[0] || 0;
-        const bonus = popupHtml?.bonus || 0;
-        const originalTotal = d20 + bonus;
-        const modifiedTotal = originalTotal + dieValue;
-        await addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: playerName,
-            abilityName: "Dark One's Own Luck",
-            description: `${playerName} used Dark One's Own Luck: +1d10(${dieValue}) to ${rollName} (d20 ${d20} + ${bonus} = ${originalTotal} → ${modifiedTotal}). Uses remaining: ${currentUses - 1}/${maxUses}.`,
-            timestamp: Date.now(),
-        });
-    }, [playerStats, campaignName, popupHtml]);
-
-    const handleSuperiorityManeuver = React.useCallback(async (maneuverName, dieValue) => {
-        if (!playerStats) return;
-        try {
-            await getManeuversForRules(playerStats.rules || '2024');
-            const allManeuvers = await getManeuversForRules(playerStats.rules || '2024');
-            const maneuver = allManeuvers.find(m => m.name === maneuverName);
-            if (!maneuver) return;
-
-            const superiorityDice = getSuperiorityDice(playerStats, campaignName);
-            if (superiorityDice <= 0) return;
-
-            await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice - 1, campaignName);
-
-            const skillName = popupHtml?.name || 'Ability Check';
-            const oldTotal = popupHtml?.rolls?.[0] + (popupHtml?.bonus || 0);
-            const newTotal = oldTotal + dieValue;
-
-            // Update initiative tracker if this was an initiative roll
-            if (skillName === 'Initiative' || popupHtml?.rollType === 'initiative') {
-                const cs = await loadCombatSummary(campaignName);
-                if (cs) {
-                    const creature = cs.creatures.find(
-                        c => c.type === 'player' && c.name === playerStats.name
-                    );
-                    if (creature) {
-                        creature.initiative = String(newTotal);
-                        cs.creatures.sort((a, b) => b.initiative - a.initiative);
-                        console.error('[CharSheet initiative adjust] set activeCreatureName:', cs.creatures[0]?.name);
-                        storageService.default.set('combatSummary', cs, campaignName);
-                    }
-                }
-                window.dispatchEvent(new CustomEvent('initiative-rolled', {
-                    detail: { characterName: playerStats.name, roll: newTotal },
-                }));
-            }
-
-            const logEntry = {
-                type: 'ability_use',
-                characterName: playerStats.name,
-                abilityName: maneuverName,
-                description: `Used ${maneuverName} on ${skillName} check. Superiority die rolled ${dieValue}. Adjusted total: ${oldTotal} → ${newTotal}.`,
-            };
-
-            // Show result popup
-            const desc = `<b>${maneuverName}</b><br/>Rolled d12 for ${dieValue}.<br/>${skillName}: ${oldTotal} → <b>${newTotal}</b> (+${dieValue})`;
-            setPopupHtml({
-                type: 'automation_info',
-                name: maneuverName,
-                description: desc,
-            });
-
-            try {
-                await addEntry(campaignName, logEntry);
-            } catch (e) {
-                console.error('[CharSheet] Error logging superiority maneuver:', e);
-            }
-        } catch (e) {
-            console.error('[CharSheet] Superiority maneuver execution failed:', e);
-        }
-    }, [playerStats, campaignName, setPopupHtml, popupHtml]);
-
-    const handlePsiBolsteredKnack = React.useCallback(async ({ dieValue, dieSize, success }) => {
-        if (!playerStats) return;
-        const name = playerStats.name;
-        const popupName = popupHtml?.name || 'Ability Check';
-        const oldRoll = popupHtml?.rolls?.[0] || 0;
-        const bonus = popupHtml?.bonus || 0;
-        const oldTotal = oldRoll + bonus;
-        const newTotal = oldTotal + dieValue;
-
-        if (success) {
-            const currentEnergy = Number(getRuntimeValue(name, 'psionicEnergy', campaignName) ?? 0);
-            if (currentEnergy > 0) {
-                await setRuntimeValue(name, 'psionicEnergy', currentEnergy - 1, campaignName);
-            }
-        }
-
-        const desc = `<b>Psi-Bolstered Knack</b><br/>Rolled d${dieSize} for ${dieValue}.<br/>${popupName}: ${oldTotal} → <b>${newTotal}</b> (+${dieValue})${success ? ' — Succeeded, energy expended' : ' — Still failed, energy not expended'}`;
-        addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: name,
-            abilityName: 'Psi-Bolstered Knack',
-            description: desc,
-            timestamp: Date.now(),
-        }).catch((e) => { console.error('[CharSheet] Error logging Psi-Bolstered Knack:', e); });
-    }, [playerStats, campaignName, popupHtml]);
-
     React.useEffect(() => {
         if (!playerStats) return;
         if (!isRaging) {
             setRuntimeValue(playerStats.name, 'fanaticalFocusUsed', false, campaignName);
         }
     }, [isRaging, playerStats, campaignName]);
-
-
 
     const [auraComboEffects, setAuraComboEffects] = React.useState(null);
     React.useEffect(() => {
@@ -960,6 +424,26 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         }).then(setAuraComboEffects);
     }, [playerStats, characters, campaignName, activeMapName]);
 
+    const popupHandlers = {
+        onWildShapeConfirm: handleWildShapeConfirm,
+        onPolymorphConfirm: handlePolymorphConfirm,
+        onShapechangeConfirm: handleShapechangeConfirm,
+        onAnimalShapesBeastConfirm: handleAnimalShapesBeastConfirm,
+        onTruePolymorphConfirm: handleTruePolymorphConfirm,
+        onObjectTransformConfirm: handleObjectTransformConfirm,
+        onSuperiorityManeuver: handleSuperiorityManeuverWrapped,
+        onTacticalMind: handleTacticalMindWrapped,
+        onDarkOnesLuck: handleDarkOnesLuckWrapped,
+        onPsiBolsteredKnack: handlePsiBolsteredKnackWrapped,
+        onBardicInspiration: handleBardicInspirationWrapped,
+        onBardicInspirationOffense: handleBardicInspirationOffenseWrapped,
+        onEmpoweredSpell: handleEmpoweredSpellWrapped,
+        onPuncture: handlePunctureWrapped,
+        onSavageAttacker: handleSavageAttackerWrapped,
+        onBiDefenseCombatSummary: handleBiDefenseCombatSummaryWrapped,
+        onStrokeOfLuck: handleStrokeOfLuckWrapped,
+    };
+
     return (<Provider value={value}>
         <React.Fragment>
             {playerStats && <div className='char-sheet' data-testid='char-sheet'>
@@ -973,7 +457,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                     activeMapName={activeMapName}
                     characters={characters}
                     onLongRest={() => { }}
-                    exhaustionLevel={exhaustionLevel}
+                    exhaustionLevel={exhaustionPenalty / 2}
                     conditionEffects={conditionEffects}
                     onConditionsChange={handleConditionsChange}
                     auraComboEffects={auraComboEffects}
@@ -985,8 +469,8 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                       exhaustionPenalty={exhaustionPenalty}
                       conditionEffects={conditionEffects}
                       isRaging={isRaging}
-                      onReroll={handleReroll}
-                      onStrokeOfLuck={handleStrokeOfLuck}
+                      onReroll={handleRerollWrapped}
+                      onStrokeOfLuck={handleStrokeOfLuckWrapped}
                       characters={characters}
                       luckyDisadvantageActive={luckyDisadvantageActive}
                   ></CharAbilities>
@@ -1017,167 +501,9 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                 <div className='no-print'><CharCharacterAdvancement playerStats={playerStats} campaignName={campaignName}></CharCharacterAdvancement></div>
             </div>}
         </React.Fragment>
-                {popupHtml && (() => {
-                    if (typeof popupHtml === 'string') {
-                        return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml) }}></div></Popup>;
-                    }
-                    if (popupHtml.type === 'shield_of_faith_target_selection') return null;
-                    if (popupHtml.type === 'barkskin_target_selection') return null;
-                    if (popupHtml.html) {
-                        return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.html) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
-                    }
-                    if (popupHtml.type === 'automation_info') {
-                        return <Popup onClickOrKeyDown={() => setPopupHtml(null)}><div className="dice-roll-result"><div className="dice-roll-header"><i className="fa-solid fa-info-circle"></i>{popupHtml.name}</div><div dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupHtml.description) }}></div><div className="dice-roll-hint">click to dismiss</div></div></Popup>;
-                    }
-                    if (popupHtml.type === 'wild_shape_select') {
-                        return (
-                            <PolymorphSelectionModal
-                                playerStats={popupHtml.playerStats}
-                                campaignName={popupHtml.campaignName}
-                                title="Wild Shape"
-                                icon="fa-paw"
-                                actionLabel="Wild Shape"
-                                onConfirm={(beast) => {
-                                    setPopupHtml(null);
-                                    handleWildShapeConfirm(popupHtml.action, beast, popupHtml.playerStats, popupHtml.campaignName);
-                                }}
-                                onCancel={() => setPopupHtml(null)}
-                                isLocalhost={isLocalhost}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'polymorph_select') {
-                        return (
-                            <PolymorphSelectionModal
-                                maxCR={popupHtml.maxCR}
-                                campaignName={popupHtml.campaignName}
-                                title="Polymorph"
-                                icon="fa-paw"
-                                actionLabel="Transform"
-                                onConfirm={(beast) => {
-                                    setPopupHtml(null);
-                                    handlePolymorphConfirm(beast, popupHtml);
-                                }}
-                                onCancel={() => setPopupHtml(null)}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'shapechange_select') {
-                        return (
-                            <PolymorphSelectionModal
-                                maxCR={popupHtml.maxCR}
-                                campaignName={popupHtml.campaignName}
-                                title="Shapechange"
-                                icon="fa-paw"
-                                actionLabel="Shapechange"
-                                allowAnyCreature={true}
-                                excludeTypes={['construct', 'undead']}
-                                onConfirm={(form) => {
-                                    setPopupHtml(null);
-                                    handleShapechangeConfirm(form, popupHtml);
-                                }}
-                                onCancel={() => setPopupHtml(null)}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'animal_shapes_target_selection') {
-                        return (
-                            <AnimalShapesSelectionModal
-                                targets={popupHtml.targets}
-                                maxCR={popupHtml.maxCR}
-                                campaignName={popupHtml.campaignName}
-                                title="Animal Shapes"
-                                icon="fa-paw"
-                                onConfirm={handleAnimalShapesBeastConfirm}
-                                onCancel={() => setPopupHtml(null)}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'true_polymorph_select') {
-                        return (
-                            <PolymorphSelectionModal
-                                maxCR={popupHtml.maxCR}
-                                campaignName={popupHtml.campaignName}
-                                title="True Polymorph"
-                                icon="fa-paw"
-                                actionLabel="Transform"
-                                allowAnyCreature={true}
-                                mode={popupHtml.mode}
-                                onConfirm={(creature) => {
-                                    setPopupHtml(null);
-                                    handleTruePolymorphConfirm(creature, popupHtml);
-                                }}
-                                onCancel={() => setPopupHtml(null)}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'true_polymorph_object') {
-                        return (
-                            <ObjectTransformModal
-                                onConfirm={(objectType) => {
-                                    setPopupHtml(null);
-                                    handleObjectTransformConfirm(objectType, popupHtml);
-                                }}
-                                onCancel={() => setPopupHtml(null)}
-                            />
-                        );
-                    }
-                    if (popupHtml.type === 'heal_multi') {
-                        const healResults = popupHtml.results || [];
-                        const totalHealed = healResults.reduce((sum, r) => sum + r.healAmount, 0);
-                        return (
-                            <Popup onClickOrKeyDown={() => setPopupHtml(null)}>
-                                <div className="dice-roll-result">
-                                    <div className="dice-roll-header">
-                                        <i className="fa-solid fa-heart"></i> {popupHtml.name}
-                                    </div>
-                                    <div className="dice-roll-total">{totalHealed}</div>
-                                    <div className="dice-roll-breakdown">
-                                        {popupHtml.formula}: <span className="dice-rolled">{popupHtml.rolls.join(', ')}</span>
-                                    </div>
-                                    {popupHtml.bonusHeal > 0 && (
-                                        <div className="dice-roll-heal-bonus">
-                                            <i className="fa-solid fa-sparkles"></i> Bonus: +{popupHtml.bonusHeal} ({popupHtml.bonusHealDetail})
-                                        </div>
-                                    )}
-                                    {healResults.length > 0 && (
-                                        <div className="dice-roll-heal-multi">
-                                            {healResults.map((r, i) => (
-                                                <div key={i} className="dice-roll-heal-multi-target">
-                                                    <strong>{r.targetName}</strong>: +{r.healAmount} HP ({r.rolls.join(', ')})
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <div className="dice-roll-hint">click to dismiss</div>
-                                </div>
-                            </Popup>
-                        );
-                    }
-                    return <AttackResultPopup
-                        popupHtml={popupHtml}
-                        onClose={() => {
-                            if (popupHtml?.type === 'automation_info') return;
-                            setPopupHtml(null);
-                        }}
-                        campaignName={campaignName}
-                        attackerName={playerStats?.name}
-                        setPopupHtml={setPopupHtml}
-                        onSuperiorityManeuver={popupHtml?.availableSuperiorityManeuvers ? handleSuperiorityManeuver : undefined}
-                        onTacticalMind={popupHtml?.tacticalMind ? handleTacticalMind : undefined}
-                        onDarkOnesLuck={popupHtml?.darkOnesLuck ? handleDarkOnesLuck : undefined}
-                        onPsiBolsteredKnack={popupHtml?.psiBolsteredKnack ? handlePsiBolsteredKnack : undefined}
-                        onBardicInspiration={popupHtml?.bardicInspiration ? handleBardicInspiration : undefined}
-                        onBardicInspirationOffense={popupHtml?.bardicInspirationOffense ? handleBardicInspirationOffense : undefined}
-                        onEmpoweredSpell={popupHtml?.empoweredSpell ? handleEmpoweredSpell : undefined}
-                        onPuncture={popupHtml?.piercerPuncture ? handlePuncture : undefined}
-                        onSavageAttacker={popupHtml?.savageAttacker ? handleSavageAttacker : undefined}
-                        onAfterBiDefense={handleBiDefenseCombatSummary}
-                        onStrokeOfLuck={handleStrokeOfLuck}
-                    />;
-                })()}
+                {renderPopup(popupHtml, setPopupHtml, isLocalhost, playerStats, campaignName, characters, popupHandlers)}
                 {popupHtml?.type === 'shield_of_faith_target_selection' && (
-                    <ShieldOfFaithTargetSelectionModal popupHtml={popupHtml} setPopupHtml={setPopupHtml} playerStats={playerStats} campaignName={campaignName} />
+                    <ShieldOfFaithTargetSelectionModal popupHtml={popupHtml} setPopupHtml={setPopupHtml} playerStats={playerStats} campaignName={campaignName} handleShieldOfFaithTargetSelected={handleShieldOfFaithTargetSelected} />
                 )}
     </Provider>)
 }
