@@ -82,15 +82,19 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
         };
     }
 
+    function defaultCombatSummary() {
+        return {
+            creatures: [
+                { name: 'TestCaster', initiative: '15', initiativeBonus: 3 },
+            ],
+        };
+    }
+
     // ── confirmCreateUndead: basic flow ────────────────────────
 
-    describe('confirmCreateUndead - basic flow', () => {
+    describe('basic flow', () => {
         beforeEach(() => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'TestCaster', initiative: '15', initiativeBonus: 3 },
-                ],
-            });
+            getCombatSummary.mockReturnValue(defaultCombatSummary());
             loadMonsters.mockResolvedValue([mockGhoul]);
         });
 
@@ -142,7 +146,7 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             expect(combatSummary.creatures.filter(c => c.monsterIndex === 'ghoul')).toHaveLength(1);
         });
 
-        it('creates 1 ghoul when ghoulCount is 0 (falsy default)', async () => {
+        it('creates 1 ghoul when ghoulCount is 0 or null (falsy default)', async () => {
             const combatSummary = getCombatSummary(mockCampaignName);
 
             const result = await confirmCreateUndead(
@@ -152,7 +156,6 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
                 { ghoulCount: 0 },
             );
 
-            // ghoulCount=0 is falsy, so count = 0 || 1 = 1
             expect(result.type).toBe('popup');
             expect(combatSummary.creatures.filter(c => c.monsterIndex === 'ghoul')).toHaveLength(1);
         });
@@ -160,15 +163,13 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
         it('creates 1 ghoul when ghoulCount is null (falsy default)', async () => {
             const combatSummary = getCombatSummary(mockCampaignName);
 
-            const result = await confirmCreateUndead(
+            await confirmCreateUndead(
                 makeAction(),
                 mockPlayerStats,
                 mockCampaignName,
                 { ghoulCount: null },
             );
 
-            // ghoulCount=null is falsy, so count = null || 1 = 1
-            expect(result.type).toBe('popup');
             expect(combatSummary.creatures.filter(c => c.monsterIndex === 'ghoul')).toHaveLength(1);
         });
 
@@ -183,101 +184,68 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toBe('No undead created.');
         });
-
-        it('returns early when ghoulCount is undefined and no other counts', async () => {
-            const result = await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                {},
-            );
-
-            // ghoulCount defaults to 1 via `count = ghoulCount || 1`, so this creates 1 ghoul
-            expect(result.type).toBe('popup');
-        });
     });
 
     // ── confirmCreateUndead: combat summary failures ───────────
 
-    describe('confirmCreateUndead - combat summary failures', () => {
-        it('returns error popup when combat summary is null', async () => {
-            getCombatSummary.mockReturnValue(null);
+    describe('combat summary failures', () => {
+        beforeEach(() => {
             loadMonsters.mockResolvedValue([mockGhoul]);
-
-            const result = await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).toBe('Failed to load combat summary.');
         });
 
-        it('returns error popup when combat summary is undefined', async () => {
-            getCombatSummary.mockReturnValue(undefined);
-            loadMonsters.mockResolvedValue([mockGhoul]);
+        it('returns error popup when combat summary is null or undefined', async () => {
+            const results = [];
+            for (const val of [null, undefined]) {
+                getCombatSummary.mockReturnValue(val);
+                const result = await confirmCreateUndead(
+                    makeAction(),
+                    mockPlayerStats,
+                    mockCampaignName,
+                    { ghoulCount: 1 },
+                );
+                results.push(result);
+            }
 
-            const result = await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            expect(result.payload.description).toBe('Failed to load combat summary.');
+            for (const result of results) {
+                expect(result.type).toBe('popup');
+                expect(result.payload.type).toBe('automation_info');
+                expect(result.payload.description).toBe('Failed to load combat summary.');
+            }
         });
     });
 
     // ── confirmCreateUndead: monster loading failures ──────────
 
-    describe('confirmCreateUndead - monster loading failures', () => {
+    describe('monster loading failures', () => {
         beforeEach(() => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster', initiative: '15', initiativeBonus: 3 }],
-            });
+            getCombatSummary.mockReturnValue(defaultCombatSummary());
         });
 
-        it('returns error popup when ghoul monster is not found', async () => {
-            loadMonsters.mockResolvedValue([]);
+        it('returns error popup when ghoul monster is not found or has wrong index', async () => {
+            const results = [];
+            for (const monsters of [[], [{ index: 'zombie' }]]) {
+                loadMonsters.mockResolvedValue(monsters);
+                const result = await confirmCreateUndead(
+                    makeAction(),
+                    mockPlayerStats,
+                    mockCampaignName,
+                    { ghoulCount: 1 },
+                );
+                results.push(result);
+            }
 
-            const result = await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('Failed to load ghoul monster data.');
-        });
-
-        it('returns error popup when ghoul has wrong index', async () => {
-            loadMonsters.mockResolvedValue([{ index: 'zombie' }]);
-
-            const result = await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toBe('Failed to load ghoul monster data.');
+            for (const result of results) {
+                expect(result.type).toBe('popup');
+                expect(result.payload.description).toBe('Failed to load ghoul monster data.');
+            }
         });
     });
 
     // ── confirmCreateUndead: ghoul creature creation ───────────
 
-    describe('confirmCreateUndead - ghoul creature creation', () => {
+    describe('ghoul creature creation', () => {
         beforeEach(() => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'TestCaster', initiative: '15', initiativeBonus: 3 },
-                ],
-            });
+            getCombatSummary.mockReturnValue(defaultCombatSummary());
             loadMonsters.mockResolvedValue([mockGhoul]);
         });
 
@@ -426,11 +394,9 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
 
     // ── confirmCreateUndead: summoned target effects ────────────
 
-    describe('confirmCreateUndead - summoned target effects', () => {
+    describe('summoned target effects', () => {
         beforeEach(() => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster', initiative: '15', initiativeBonus: 3 }],
-            });
+            getCombatSummary.mockReturnValue(defaultCombatSummary());
             loadMonsters.mockResolvedValue([mockGhoul]);
         });
 
@@ -506,7 +472,7 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
 
     // ── confirmCreateUndead: initiative handling ────────────────
 
-    describe('confirmCreateUndead - initiative', () => {
+    describe('initiative handling', () => {
         beforeEach(() => {
             loadMonsters.mockResolvedValue([mockGhoul]);
         });
@@ -530,43 +496,36 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             expect(ghoul.initiative).toBe('11.9');
         });
 
-        it('falls back to random roll when caster has no initiative (empty string)', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster', initiative: '', initiativeBonus: 3 }],
-            });
+        it('falls back to random roll when caster has no initiative (empty string or undefined)', async () => {
+            let randomSaved = Math.random;
+            Math.random = () => 0.5;
 
-            const combatSummary = getCombatSummary(mockCampaignName);
+            try {
+                const scenarios = [
+                    { initiative: '', initiativeBonus: 3 },
+                    { initiative: undefined, initiativeBonus: 3 },
+                ];
 
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
+                for (const scenario of scenarios) {
+                    getCombatSummary.mockReturnValue({
+                        creatures: [{ name: 'TestCaster', ...scenario }],
+                    });
 
-            const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
-            // Random roll: Math.floor(Math.random() * 20) + 1 + 3 = 4..24, minus 0.1
-            // Initiative is a string like "X.9" where X is 3..23
-            expect(ghoul.initiative).toMatch(/^\d+\.9$/);
-        });
+                    const combatSummary = getCombatSummary(mockCampaignName);
 
-        it('falls back to random roll when caster initiative is undefined', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster' }],
-            });
+                    await confirmCreateUndead(
+                        makeAction(),
+                        mockPlayerStats,
+                        mockCampaignName,
+                        { ghoulCount: 1 },
+                    );
 
-            const combatSummary = getCombatSummary(mockCampaignName);
-
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
-            // Random roll gives a string like "X.9"
-            expect(ghoul.initiative).toMatch(/^\d+\.9$/);
+                    const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
+                    expect(ghoul.initiative).toMatch(/^\d+\.9$/);
+                }
+            } finally {
+                Math.random = randomSaved;
+            }
         });
 
         it('uses initiativeBonus in random roll when no initiative set', async () => {
@@ -574,7 +533,6 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
                 creatures: [{ name: 'TestCaster', initiativeBonus: 5 }],
             });
 
-            // Intercept Math.random to return a predictable value (0.5)
             const originalRandom = Math.random;
             Math.random = () => 0.5;
 
@@ -615,7 +573,7 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
 
     // ── confirmCreateUndead: initiative sorting ────────────────
 
-    describe('confirmCreateUndead - initiative sorting', () => {
+    describe('initiative sorting', () => {
         beforeEach(() => {
             getCombatSummary.mockReturnValue({
                 creatures: [
@@ -642,56 +600,40 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             expect(ghoulIdx).toBeLessThan(goblinIdx);
         });
 
-        it('handles creatures with empty initiative string in sort', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'TestCaster', initiative: '15', initiativeBonus: 0 },
-                    { name: 'Goblin', initiative: '', initiativeBonus: 0 },
-                ],
-            });
+        it('handles creatures with empty/undefined initiative string in sort', async () => {
+            const scenarios = [
+                { name: 'Goblin', initiative: '' },
+                { name: 'Goblin' },
+            ];
 
-            const combatSummary = getCombatSummary(mockCampaignName);
+            for (const goblin of scenarios) {
+                getCombatSummary.mockReturnValue({
+                    creatures: [
+                        { name: 'TestCaster', initiative: '15', initiativeBonus: 0 },
+                        goblin,
+                    ],
+                });
 
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
+                const combatSummary = getCombatSummary(mockCampaignName);
 
-            const indices = combatSummary.creatures.map(c => c.name);
-            const ghoulIdx = indices.indexOf('Ghoul');
-            const goblinIdx = indices.indexOf('Goblin');
-            expect(ghoulIdx).toBeLessThan(goblinIdx);
-        });
+                await confirmCreateUndead(
+                    makeAction(),
+                    mockPlayerStats,
+                    mockCampaignName,
+                    { ghoulCount: 1 },
+                );
 
-        it('handles creatures with undefined initiative in sort', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [
-                    { name: 'TestCaster', initiative: '15', initiativeBonus: 0 },
-                    { name: 'Goblin' },
-                ],
-            });
-
-            const combatSummary = getCombatSummary(mockCampaignName);
-
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            const indices = combatSummary.creatures.map(c => c.name);
-            const ghoulIdx = indices.indexOf('Ghoul');
-            const goblinIdx = indices.indexOf('Goblin');
-            expect(ghoulIdx).toBeLessThan(goblinIdx);
+                const indices = combatSummary.creatures.map(c => c.name);
+                const ghoulIdx = indices.indexOf('Ghoul');
+                const goblinIdx = indices.indexOf('Goblin');
+                expect(ghoulIdx).toBeLessThan(goblinIdx);
+            }
         });
     });
 
     // ── confirmCreateUndead: ghoul initiative offset ───────────
 
-    describe('confirmCreateUndead - ghoul initiative offset', () => {
+    describe('ghoul initiative offset', () => {
         beforeEach(() => {
             getCombatSummary.mockReturnValue({
                 creatures: [{ name: 'TestCaster', initiative: '15', initiativeBonus: 3 }],
@@ -700,10 +642,6 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
         });
 
         it('gives ghouls initiative 0.1 less than caster', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster', initiative: '15', initiativeBonus: 3 }],
-            });
-
             const combatSummary = getCombatSummary(mockCampaignName);
 
             await confirmCreateUndead(
@@ -738,7 +676,7 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
 
     // ── confirmCreateUndead: initiative string format ──────────
 
-    describe('confirmCreateUndead - initiative string format', () => {
+    describe('initiative string format', () => {
         beforeEach(() => {
             getCombatSummary.mockReturnValue({
                 creatures: [{ name: 'TestCaster', initiative: '15', initiativeBonus: 3 }],
@@ -746,36 +684,35 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             loadMonsters.mockResolvedValue([mockGhoul]);
         });
 
-        it('stores ghoul initiative as string', async () => {
-            const combatSummary = getCombatSummary(mockCampaignName);
+        it('stores ghoul initiative as string (with caster initiative and random fallback)', async () => {
+            let randomSaved = Math.random;
+            Math.random = () => 0.5;
+            try {
+                const scenarios = [
+                    { initiative: '15', initiativeBonus: 3 },
+                    { initiative: undefined, initiativeBonus: 3 },
+                ];
 
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
+                for (const scenario of scenarios) {
+                    getCombatSummary.mockReturnValue({
+                        creatures: [{ name: 'TestCaster', ...scenario }],
+                    });
 
-            const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
-            expect(typeof ghoul.initiative).toBe('string');
-        });
+                    const combatSummary = getCombatSummary(mockCampaignName);
 
-        it('stores initiative as string even with random fallback', async () => {
-            getCombatSummary.mockReturnValue({
-                creatures: [{ name: 'TestCaster' }],
-            });
+                    await confirmCreateUndead(
+                        makeAction(),
+                        mockPlayerStats,
+                        mockCampaignName,
+                        { ghoulCount: 1 },
+                    );
 
-            const combatSummary = getCombatSummary(mockCampaignName);
-
-            await confirmCreateUndead(
-                makeAction(),
-                mockPlayerStats,
-                mockCampaignName,
-                { ghoulCount: 1 },
-            );
-
-            const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
-            expect(typeof ghoul.initiative).toBe('string');
+                    const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
+                    expect(typeof ghoul.initiative).toBe('string');
+                }
+            } finally {
+                Math.random = randomSaved;
+            }
         });
     });
 });
