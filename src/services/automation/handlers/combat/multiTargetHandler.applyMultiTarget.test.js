@@ -1,8 +1,6 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mocks ──────────────────────────────────────────────────────
-
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
@@ -45,8 +43,6 @@ vi.mock('../../../rules/features/invisibilityService.js', () => ({
   endInvisibilityOnHostileAction: vi.fn(),
 }));
 
-// ── Imports ────────────────────────────────────────────────────
-
 import { applyMultiTarget } from './multiTargetHandler.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -59,44 +55,7 @@ import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibilityService.js';
 
-// ── Helpers ────────────────────────────────────────────────────
-
-const campaignName = 'TestCampaign';
-const mapName = 'tavern-map';
-
-function makePlayerStats(overrides = {}) {
-  return {
-    name: 'TestHero',
-    level: 5,
-    proficiencyBonus: 3,
-    hitPoints: 30,
-    ...overrides,
-  };
-}
-
-function makeAction(automation = {}) {
-  return {
-    name: 'Word of Creation',
-    automation: {
-      range: '30 ft',
-      ...automation,
-    },
-  };
-}
-
-function makeCombatSummary(creatures = [], players = []) {
-  return { creatures, players, placedItems: [] };
-}
-
-function makeDamageSpell(spellName, damageType) {
-  return { name: spellName, damage: { damage_type: damageType } };
-}
-
-function makeHealSpell(overrides = {}) {
-  return { name: 'Power Word Heal', ...overrides };
-}
-
-// ── Tests ──────────────────────────────────────────────────────
+import { campaignName, mapName, makePlayerStats, makeAction, makeCombatSummary, makeDamageSpell, makeHealSpell } from './multiTargetHandler.test-utils.js';
 
 describe('multiTargetHandler.applyMultiTarget', () => {
   beforeEach(() => {
@@ -110,65 +69,45 @@ describe('multiTargetHandler.applyMultiTarget', () => {
 
   describe('early returns', () => {
     it('should return null when secondTargetName is empty string', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', '', null, null
       );
-
       expect(result).toBeNull();
     });
 
     it('should return null when secondTargetName is null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
-
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', null, null, null
       );
-
       expect(result).toBeNull();
     });
 
     it('should return null when no combat context exists', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(null);
-
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
-
       expect(result).toBeNull();
     });
 
     it('should return null when first target not found in combat summary', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Orc' }]));
-
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
-
       expect(result).toBeNull();
     });
 
     it('should return null when second target not found in combat summary', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeCombatSummary([{ name: 'Goblin' }]));
-
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
-
       expect(result).toBeNull();
     });
   });
@@ -185,8 +124,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     }
 
     it('should return out-of-range popup when first target is out of range', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeBaseCombatSummary());
       rangeToFeet.mockReturnValue(30);
       resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 1, gridY: 1 } });
@@ -194,7 +131,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       isWithinRange.mockResolvedValue(false);
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
 
@@ -204,8 +141,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should return out-of-range popup when second target is out of range', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeBaseCombatSummary());
       rangeToFeet.mockReturnValue(30);
       resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 1, gridY: 1 } });
@@ -213,7 +148,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       isWithinRange.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
 
@@ -222,14 +157,12 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should skip range check when mapName is null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeBaseCombatSummary());
       rangeToFeet.mockReturnValue(30);
       resolveMapPositions.mockResolvedValue(null);
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, null,
+        makeAction(), makePlayerStats(), campaignName, null,
         'Goblin', 'Orc', null, null
       );
 
@@ -238,14 +171,12 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should skip range check when attackerPos is null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeBaseCombatSummary());
       rangeToFeet.mockReturnValue(30);
       resolveMapPositions.mockResolvedValue({ attackerPos: null });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
 
@@ -254,14 +185,12 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should not check range when rangeFt is null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       getCombatContext.mockResolvedValue(makeBaseCombatSummary());
       rangeToFeet.mockReturnValue(null);
       resolveMapPositions.mockResolvedValue({ attackerPos: { gridX: 1, gridY: 1 } });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', null, null
       );
 
@@ -272,8 +201,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
 
   describe('damage application', () => {
     it('should apply damage to second target when spell has damage and rawDamage > 0', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Cone of Cold', 'cold');
       const metaCtx = { totalDamage: 20 };
       const cs = makeCombatSummary(
@@ -284,14 +211,14 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 10 });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
       expect(applyDamageToTarget).toHaveBeenCalledWith(
-        cs, 'Orc', 20, ['cold'], campaignName, null, false, ps.name
+        cs, 'Orc', 20, ['cold'], campaignName, null, false, 'TestHero'
       );
-      expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith(ps.name, campaignName);
+      expect(endInvisibilityOnHostileAction).toHaveBeenCalledWith('TestHero', campaignName);
       expect(addEntry).toHaveBeenCalledWith(campaignName, {
         type: 'hp_change',
         targetName: 'Orc',
@@ -299,15 +226,13 @@ describe('multiTargetHandler.applyMultiTarget', () => {
         currentHp: 5,
         maxHp: 22,
         isHealing: false,
-        sourceName: ps.name,
+        sourceName: 'TestHero',
         note: 'Cone of Cold (multi-target spread)',
       });
       expect(result.payload.description).toContain('Orc');
     });
 
     it('should skip damage application when rawDamage is 0', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Cone of Cold', 'cold');
       const metaCtx = { totalDamage: 0 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -315,7 +240,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       ));
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -324,8 +249,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should skip damage application when spell has no damage property', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = { name: 'Some Spell' };
       const metaCtx = { totalDamage: 20 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -333,7 +256,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       ));
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -341,7 +264,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should use action.payload.spellName when spell.name is missing', async () => {
-      const ps = makePlayerStats();
       const action = {
         name: 'Word of Creation',
         automation: { range: '30 ft' },
@@ -355,7 +277,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 10 });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        action, makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -363,8 +285,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should use rawDamage from metaCtx when totalDamage is missing', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Fireball', 'fire');
       const metaCtx = { rawDamage: 15 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -373,18 +293,16 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 10 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
       expect(applyDamageToTarget).toHaveBeenCalledWith(
-        expect.any(Object), 'Orc', 15, ['fire'], campaignName, null, false, ps.name
+        expect.any(Object), 'Orc', 15, ['fire'], campaignName, null, false, 'TestHero'
       );
     });
 
     it('should not apply damage when applyDamageToTarget returns null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Fireball', 'fire');
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -393,7 +311,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue(null);
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -407,8 +325,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should not call endInvisibility when finalDamage is 0', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Fireball', 'fire');
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -417,7 +333,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 15, finalDamage: 0 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -425,8 +341,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should use empty string for damageType when spell.damage exists but damage_type is missing', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = { damage: {} };
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -435,20 +349,18 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 15, finalDamage: 5 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
       expect(applyDamageToTarget).toHaveBeenCalledWith(
-        expect.any(Object), 'Orc', 10, [''], campaignName, null, false, ps.name
+        expect.any(Object), 'Orc', 10, [''], campaignName, null, false, 'TestHero'
       );
     });
   });
 
   describe('power word heal application', () => {
     it('should apply healing when spellName is "power word heal"', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell({ maxHp: 30 });
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -459,7 +371,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyHealingToTarget.mockReturnValue({ newHp: 22, actualHeal: 7 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -471,14 +383,12 @@ describe('multiTargetHandler.applyMultiTarget', () => {
         currentHp: 22,
         maxHp: 22,
         isHealing: true,
-        sourceName: ps.name,
+        sourceName: 'TestHero',
         note: 'Power Word Heal (multi-target spread)',
       });
     });
 
     it('should use getRuntimeValue for current HP when target.currentHp is missing', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell();
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -490,7 +400,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyHealingToTarget.mockReturnValue({ newHp: 18, actualHeal: 8 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -498,8 +408,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should use maxHp from playerStats when target has no maxHp and runtimeValue is null', async () => {
-      const ps = makePlayerStats({ hitPoints: 25 });
-      const action = makeAction();
       const spell = makeHealSpell();
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -511,7 +419,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyHealingToTarget.mockReturnValue({ newHp: 25, actualHeal: 15 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats({ hitPoints: 25 }), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -519,8 +427,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should skip healing when healAmount is 0 (target already full HP)', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell();
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -532,7 +438,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyHealingToTarget.mockReturnValue({ newHp: 22, actualHeal: 0 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -540,8 +446,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should skip healing when applyHealingToTarget returns null', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell();
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -553,7 +457,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyHealingToTarget.mockReturnValue(null);
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -567,8 +471,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should remove conditions when spell has status_effects', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell({ status_effects: ['poisoned', 'blinded'] });
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -583,7 +485,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -593,8 +495,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should log condition removals', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell({ status_effects: ['poisoned'] });
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -609,7 +509,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -624,8 +524,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should not set powerWordHealStandPermission when target has no prone condition', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell({ status_effects: ['poisoned'] });
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -640,7 +538,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -651,8 +549,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should handle status_effects with case-insensitive condition matching', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeHealSpell({ status_effects: ['Poisoned'] });
       const metaCtx = {};
       const cs = makeCombatSummary(
@@ -667,7 +563,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -679,8 +575,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
 
   describe('ability log entry', () => {
     it('should call addEntry with correct ability_use log', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Cone of Cold', 'cold');
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -689,14 +583,14 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 10 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
       expect(addEntry).toHaveBeenCalledWith(campaignName, {
         type: 'ability_use',
-        characterName: ps.name,
-        abilityName: action.name,
+        characterName: 'TestHero',
+        abilityName: 'Word of Creation',
         description: expect.stringContaining('Cone of Cold'),
         targetName: 'Orc',
         timestamp: expect.any(Number),
@@ -704,7 +598,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should include spell name from payload when spell.name is missing', async () => {
-      const ps = makePlayerStats();
       const action = {
         name: 'Word of Creation',
         automation: { range: '30 ft' },
@@ -718,7 +611,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 15, finalDamage: 5 });
 
       await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        action, makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -730,8 +623,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
 
   describe('success popup', () => {
     it('should return automation_info popup on successful application', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Cone of Cold', 'cold');
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -740,20 +631,18 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 5 });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
       expect(result.type).toBe('popup');
       expect(result.payload.type).toBe('automation_info');
-      expect(result.payload.name).toBe(action.name);
+      expect(result.payload.name).toBe('Word of Creation');
       expect(result.payload.description).toContain('Cone of Cold');
       expect(result.payload.description).toContain('Orc');
     });
 
     it('should include range in success description', async () => {
-      const ps = makePlayerStats();
-      const action = makeAction();
       const spell = makeDamageSpell('Cone of Cold', 'cold');
       const metaCtx = { totalDamage: 10 };
       getCombatContext.mockResolvedValue(makeCombatSummary(
@@ -762,7 +651,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 5 });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        makeAction(), makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
@@ -770,7 +659,6 @@ describe('multiTargetHandler.applyMultiTarget', () => {
     });
 
     it('should use default range in description when automation.range is missing', async () => {
-      const ps = makePlayerStats();
       const action = {
         name: 'Word of Creation',
         automation: {},
@@ -784,7 +672,7 @@ describe('multiTargetHandler.applyMultiTarget', () => {
       applyDamageToTarget.mockReturnValue({ newHp: 5, finalDamage: 5 });
 
       const result = await applyMultiTarget(
-        action, ps, campaignName, mapName,
+        action, makePlayerStats(), campaignName, mapName,
         'Goblin', 'Orc', spell, metaCtx
       );
 
