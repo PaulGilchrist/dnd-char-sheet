@@ -197,574 +197,261 @@ function makeSpell(overrides = {}) {
   };
 }
 
-// ── handleBanishmentConfirm with popup payload ──────────────────────────────
+// ── Popup payload tests (consolidated) ────────────────────────────────────────
+// Each entry tests that a confirm handler calls setPopupHtml with the expected
+// payload. Handlers fall into three categories:
+//   1. Array targets (standard confirm) — handler receives ['Target Name']
+//   2. Object targets — handler receives { targetName: 'Target Name' }
+//   3. String targets — handler receives 'Target Name'
 
-describe('useSpellMetamagicFlow — handleBanishmentConfirm popup', () => {
+describe('useSpellMetamagicFlow — confirm handlers set popup html', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('calls setPopupHtml with banishment popup payload', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
+  const popupPayloadTests = [
+    {
+      name: 'Banishment',
+      spellName: 'Banishment',
+      spellLevel: 4,
+      handler: 'handleBanishmentConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'banishment-popup',
+    },
+    {
+      name: 'Revivify',
+      spellName: 'Revivify',
+      spellLevel: 5,
+      handler: 'handleRevivifyConfirm',
+      handlerArg: [{ targetName: 'Goblin A' }],
+      expectedPayload: 'revivify-popup',
+    },
+    {
+      name: 'Sanctuary',
+      spellName: 'Sanctuary',
+      spellLevel: 1,
+      handler: 'handleSanctuaryConfirm',
+      handlerArg: ['Goblin A'],
+      expectedPayload: 'sanctuary-popup',
+    },
+    {
+      name: 'Polymorph',
+      spellName: 'Polymorph',
+      spellLevel: 4,
+      handler: 'handlePolymorphConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'polymorph-popup',
+      overridePolymorph: true,
+      overrideValue: { payload: 'polymorph-popup' },
+    },
+    {
+      name: 'True Polymorph (object_into_creature)',
+      spellName: 'True Polymorph',
+      spellLevel: 9,
+      preHandler: 'handleTruePolymorphPathSelect',
+      preHandlerArg: ['object_into_creature'],
+      handler: 'handleTruePolymorphTargetConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'true-polymorph-popup',
+    },
+    {
+      name: 'True Polymorph (creature_to_creature)',
+      spellName: 'True Polymorph',
+      spellLevel: 9,
+      preHandler: 'handleTruePolymorphPathSelect',
+      preHandlerArg: ['creature_to_creature'],
+      handler: 'handleTruePolymorphTargetConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'true-polymorph-popup',
+    },
+    {
+      name: 'Healing Word (with heal result)',
+      spellName: 'Healing Word',
+      spellLevel: 1,
+      handler: 'handleHealingWordConfirm',
+      handlerArg: [{ targetName: 'Goblin A' }],
+      expectedPayload: 'heal',
+      isPartialMatch: true,
+      overrideFeature: true,
+      overrideValue: {
+        formula: '1d4+2',
+        rolls: [3],
+        rawTotal: 5,
+        healAmount: 5,
+        targetName: 'Goblin A',
+        bonusHeal: 2,
+        bonusDetails: [{ amount: 2, name: 'Tavern Heal' }],
+      },
+    },
+    {
+      name: 'Regenerate',
+      spellName: 'Regenerate',
+      spellLevel: 7,
+      handler: 'handleRegenerateConfirm',
+      handlerArg: [{ targetName: 'Goblin A' }],
+      expectedPayload: 'regenerate-popup',
+    },
+    {
+      name: 'Confusion',
+      spellName: 'Confusion',
+      spellLevel: 4,
+      handler: 'handleConfusionConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'confusion-popup',
+      overrideAutomation: true,
+      overrideValue: { payload: 'confusion-popup' },
+    },
+    {
+      name: 'Globe of Invulnerability',
+      spellName: 'Globe of Invulnerability',
+      spellLevel: 4,
+      handler: 'handleGlobeConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'globe-popup',
+      overrideAutomation: true,
+      overrideValue: { payload: 'globe-popup' },
+    },
+    {
+      name: 'Forcecage',
+      spellName: 'Forcecage',
+      spellLevel: 7,
+      handler: 'handleForcecageConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'forcecage-popup',
+      overrideAutomation: true,
+      overrideValue: { payload: 'forcecage-popup' },
+    },
+    {
+      name: 'Antimagic Field',
+      spellName: 'Antimagic Field',
+      spellLevel: 4,
+      handler: 'handleAntimagicFieldConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'antimagic-popup',
+      overrideAutomation: true,
+      overrideValue: { payload: 'antimagic-popup' },
+    },
+    {
+      name: 'Protection from Poison',
+      spellName: 'Protection from Poison',
+      spellLevel: 2,
+      handler: 'handleProtectionFromPoisonConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'protectionFromPoison-popup',
+    },
+    {
+      name: 'Stone Skin',
+      spellName: 'Stone Skin',
+      spellLevel: 3,
+      handler: 'handleStoneSkinConfirm',
+      handlerArg: ['Goblin A'],
+      expectedPayload: 'stoneSkin-popup',
+    },
+    {
+      name: 'Remove Curse',
+      spellName: 'Remove Curse',
+      spellLevel: 3,
+      handler: 'handleRemoveCurseConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'removeCurse-popup',
+    },
+    {
+      name: 'Foresight',
+      spellName: 'Foresight',
+      spellLevel: 9,
+      handler: 'handleForesightConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'foresight-popup',
+    },
+    {
+      name: 'Death Ward',
+      spellName: 'Death Ward',
+      spellLevel: 4,
+      handler: 'handleDeathWardConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'deathWard-popup',
+    },
+    {
+      name: 'Heroism',
+      spellName: 'Heroism',
+      spellLevel: 2,
+      handler: 'handleHeroismConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'heroism-popup',
+    },
+    {
+      name: 'Barkskin',
+      spellName: 'Barkskin',
+      spellLevel: 2,
+      handler: 'handleBarkskinConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'barkskin-popup',
+    },
+    {
+      name: 'Aura of Vitality',
+      spellName: 'Aura of Vitality',
+      spellLevel: 3,
+      handler: 'handleAuraOfVitalityConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'auraOfVitality-popup',
+    },
+    {
+      name: 'Circle of Power',
+      spellName: 'Circle of Power',
+      spellLevel: 7,
+      handler: 'handleCircleOfPowerConfirm',
+      handlerArg: [['Goblin A']],
+      expectedPayload: 'circleOfPower-popup',
+    },
+  ];
 
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Banishment', level: 4 }));
+  for (const test of popupPayloadTests) {
+    it(`calls setPopupHtml with ${test.expectedPayload} for ${test.name}`, async () => {
+      const setPopupHtml = vi.fn();
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
+      );
+
+      act(() => {
+        result.current.gateMetamagic(makeSpell({ name: test.spellName, level: test.spellLevel }));
+      });
+
+      // Apply overrides before calling handlers
+      if (test.overrideAutomation) {
+        const automation = await import('../../services/automation/index.js');
+        automation.executeHandler.mockReturnValue(Promise.resolve(test.overrideValue));
+      }
+      if (test.overridePolymorph) {
+        const polymorphService = await import('../../services/automation/handlers/spells/polymorphService.js');
+        polymorphService.applyPolymorph.mockReturnValue(Promise.resolve(test.overrideValue));
+      }
+      if (test.overrideFeature) {
+        const rulesFeatures = await import('../../services/rules/features/healingWordService.js');
+        rulesFeatures.triggerHealingWord.mockReturnValue(Promise.resolve(test.overrideValue));
+      }
+
+      // Run pre-handler if needed (for multi-stage spells)
+      if (test.preHandler) {
+        act(() => {
+          result.current[test.preHandler](...test.preHandlerArg);
+        });
+      }
+
+      // Run the confirm handler
+      await act(async () => {
+        await result.current[test.handler](...test.handlerArg);
+      });
+
+      await flushMicrotasks();
+
+      if (test.isPartialMatch) {
+        expect(setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+          type: test.expectedPayload,
+        }));
+      } else {
+        expect(setPopupHtml).toHaveBeenCalledWith(test.expectedPayload);
+      }
     });
-
-    await act(async () => {
-      await result.current.handleBanishmentConfirm(['Goblin A']);
-    });
-
-    await flushMicrotasks();
-
-    expect(setPopupHtml).toHaveBeenCalledWith('banishment-popup');
-  });
-});
-
-// ── handleRevivifyConfirm with popup payload ────────────────────────────────
-
-describe('useSpellMetamagicFlow — handleRevivifyConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with revivify popup payload', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Revivify', level: 5 }));
-    });
-
-    await act(async () => {
-      await result.current.handleRevivifyConfirm({ targetName: 'Goblin A' });
-    });
-
-    await flushMicrotasks();
-
-    expect(setPopupHtml).toHaveBeenCalledWith('revivify-popup');
-  });
-});
-
-// ── handleSanctuaryConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handleSanctuaryConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with sanctuary popup payload', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Sanctuary', level: 1 }));
-    });
-
-    await act(async () => {
-      await result.current.handleSanctuaryConfirm('Goblin A');
-    });
-
-    await flushMicrotasks();
-
-    expect(setPopupHtml).toHaveBeenCalledWith('sanctuary-popup');
-  });
-});
-
-// ── handlePolymorphConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handlePolymorphConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with polymorph popup payload on confirm', async () => {
-    const automation = await import('../../services/automation/handlers/spells/polymorphService.js');
-    automation.applyPolymorph.mockResolvedValueOnce({ payload: 'polymorph-popup' });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Polymorph', level: 4 }));
-    });
-
-    await act(async () => {
-      await result.current.handlePolymorphConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('polymorph-popup');
-  });
-});
-
-// ── handleTruePolymorphPathSelect with popup payload ────────────────────────
-
-describe('useSpellMetamagicFlow — handleTruePolymorphPathSelect popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with true polymorph popup payload when object_into_creature', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'True Polymorph', level: 9 }));
-    });
-
-    await act(async () => {
-      await result.current.handleTruePolymorphPathSelect('object_into_creature');
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('true-polymorph-popup');
-  });
-});
-
-// ── handleTruePolymorphTargetConfirm with popup payload ─────────────────────
-
-describe('useSpellMetamagicFlow — handleTruePolymorphTargetConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with true polymorph popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'True Polymorph', level: 9 }));
-    });
-
-    act(() => {
-      result.current.handleTruePolymorphPathSelect('creature_to_creature');
-    });
-
-    await act(async () => {
-      await result.current.handleTruePolymorphTargetConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('true-polymorph-popup');
-  });
-});
-
-// ── handleHealingWordConfirm with popup payload ─────────────────────────────
-
-describe('useSpellMetamagicFlow — handleHealingWordConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with heal popup when triggerHealingWord returns result', async () => {
-    const rulesFeatures = await import('../../services/rules/features/healingWordService.js');
-    rulesFeatures.triggerHealingWord.mockResolvedValueOnce({
-      formula: '1d4+2',
-      rolls: [3],
-      rawTotal: 5,
-      healAmount: 5,
-      targetName: 'Goblin A',
-      bonusHeal: 2,
-      bonusDetails: [{ amount: 2, name: 'Tavern Heal' }],
-    });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Healing Word', level: 1 }));
-    });
-
-    await act(async () => {
-      await result.current.handleHealingWordConfirm({ targetName: 'Goblin A' });
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heal',
-      name: 'Healing Word',
-      formula: '1d4+2',
-      total: 5,
-      targetName: 'Goblin A',
-      bonusHeal: 2,
-      bonusHealDetail: '2 Tavern Heal',
-    }));
-  });
-});
-
-// ── handleRegenerateConfirm with popup payload ──────────────────────────────
-
-describe('useSpellMetamagicFlow — handleRegenerateConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with regenerate popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Regenerate', level: 7 }));
-    });
-
-    await act(async () => {
-      await result.current.handleRegenerateConfirm({ targetName: 'Goblin A' });
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('regenerate-popup');
-  });
-});
-
-// ── handleConfusionConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handleConfusionConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with confusion popup payload on confirm', async () => {
-    const automation = await import('../../services/automation/index.js');
-    automation.executeHandler.mockResolvedValueOnce({ payload: 'confusion-popup' });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Confusion', level: 4 }));
-    });
-
-    await act(async () => {
-      await result.current.handleConfusionConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('confusion-popup');
-  });
-});
-
-// ── handleAnimalFriendshipConfirm with popup payload ────────────────────────
-
-describe('useSpellMetamagicFlow — handleAnimalFriendshipConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with globe popup payload on confirm', async () => {
-    const automation = await import('../../services/automation/index.js');
-    automation.executeHandler.mockResolvedValueOnce({ payload: 'globe-popup' });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Globe of Invulnerability', level: 4 }));
-    });
-
-    await act(async () => {
-      await result.current.handleGlobeConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('globe-popup');
-  });
-
-  it('calls setPopupHtml with forcecage popup payload on confirm', async () => {
-    const automation = await import('../../services/automation/index.js');
-    automation.executeHandler.mockResolvedValueOnce({ payload: 'forcecage-popup' });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Forcecage', level: 7 }));
-    });
-
-    await act(async () => {
-      await result.current.handleForcecageConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('forcecage-popup');
-  });
-
-  it('calls setPopupHtml with antimagicField popup payload on confirm', async () => {
-    const automation = await import('../../services/automation/index.js');
-    automation.executeHandler.mockResolvedValueOnce({ payload: 'antimagic-popup' });
-
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Antimagic Field', level: 4 }));
-    });
-
-    await act(async () => {
-      await result.current.handleAntimagicFieldConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('antimagic-popup');
-  });
-});
-
-// ── handleProtectionFromPoisonConfirm with popup payload ────────────────────
-
-describe('useSpellMetamagicFlow — handleProtectionFromPoisonConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with protectionFromPoison popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Protection from Poison', level: 2 }));
-    });
-
-    await act(async () => {
-      await result.current.handleProtectionFromPoisonConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('protectionFromPoison-popup');
-  });
-});
-
-// ── handleStoneSkinConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handleStoneSkinConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with stoneSkin popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Stone Skin', level: 3 }));
-    });
-
-    await act(async () => {
-      await result.current.handleStoneSkinConfirm('Goblin A');
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('stoneSkin-popup');
-  });
-});
-
-// ── handleRemoveCurseConfirm with popup payload ─────────────────────────────
-
-describe('useSpellMetamagicFlow — handleRemoveCurseConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with removeCurse popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Remove Curse', level: 3 }));
-    });
-
-    await act(async () => {
-      await result.current.handleRemoveCurseConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('removeCurse-popup');
-  });
-});
-
-// ── handleForesightConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handleForesightConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with foresight popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Foresight', level: 9 }));
-    });
-
-    await act(async () => {
-      await result.current.handleForesightConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('foresight-popup');
-  });
-});
-
-// ── handleDeathWardConfirm with popup payload ───────────────────────────────
-
-describe('useSpellMetamagicFlow — handleDeathWardConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with deathWard popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Death Ward', level: 4 }));
-    });
-
-    await act(async () => {
-      await result.current.handleDeathWardConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('deathWard-popup');
-  });
-});
-
-// ── handleHeroismConfirm with popup payload ─────────────────────────────────
-
-describe('useSpellMetamagicFlow — handleHeroismConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with heroism popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Heroism', level: 2 }));
-    });
-
-    await act(async () => {
-      await result.current.handleHeroismConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('heroism-popup');
-  });
-});
-
-// ── handleBarkskinConfirm with popup payload ────────────────────────────────
-
-describe('useSpellMetamagicFlow — handleBarkskinConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with barkskin popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Barkskin', level: 2 }));
-    });
-
-    await act(async () => {
-      await result.current.handleBarkskinConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('barkskin-popup');
-  });
-});
-
-// ── handleAuraOfVitalityConfirm with popup payload ──────────────────────────
-
-describe('useSpellMetamagicFlow — handleAuraOfVitalityConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with auraOfVitality popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Aura of Vitality', level: 3 }));
-    });
-
-    await act(async () => {
-      await result.current.handleAuraOfVitalityConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('auraOfVitality-popup');
-  });
-});
-
-// ── handleCircleOfPowerConfirm with popup payload ───────────────────────────
-
-describe('useSpellMetamagicFlow — handleCircleOfPowerConfirm popup', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('calls setPopupHtml with circleOfPower popup payload on confirm', async () => {
-    const setPopupHtml = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'test-campaign', vi.fn(), null, [], setPopupHtml)
-    );
-
-    await act(async () => {
-      await result.current.gateMetamagic(makeSpell({ name: 'Circle of Power', level: 7 }));
-    });
-
-    await act(async () => {
-      await result.current.handleCircleOfPowerConfirm(['Goblin A']);
-    });
-
-    expect(setPopupHtml).toHaveBeenCalledWith('circleOfPower-popup');
-  });
+  }
 });
