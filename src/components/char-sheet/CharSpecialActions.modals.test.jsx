@@ -394,375 +394,177 @@ function createPlayerStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
+function createSpecialAction(name, automation) {
+  return { name, description: `${name} description.`, automation };
+}
+
+const modalTests = [
+  {
+    name: 'TeleportModal',
+    modalName: 'teleport',
+    actionName: 'Blink Steps',
+    automation: { type: 'teleport' },
+    payload: { action: { name: 'Blink Steps' }, playerStats: basePlayerStats, campaignName: 'test' },
+    testId: 'teleport-modal',
+  },
+  {
+    name: 'SignatureSpellsModal',
+    modalName: 'signatureSpells',
+    actionName: 'Signature Spells',
+    automation: { type: 'signature_spells' },
+    payload: { action: { name: 'Signature Spells' }, playerStats: basePlayerStats, campaignName: 'test', level3Options: ['Fireball', 'Haste'] },
+    testId: 'signature-spells-modal',
+  },
+  {
+    name: 'SpellMasteryModal',
+    modalName: 'spellMastery',
+    actionName: 'Spell Mastery',
+    automation: { type: 'spell_mastery' },
+    payload: { action: { name: 'Spell Mastery' }, playerStats: basePlayerStats, campaignName: 'test', levelOptions: ['Mage Armor', 'Shield'] },
+    testId: 'spell-mastery-modal',
+  },
+  {
+    name: 'SavantModal',
+    modalName: 'EvocationSavant',
+    actionName: 'Evocation Savant',
+    automation: { type: 'passive_rule', effect: 'evocation_savant' },
+    payload: { action: { name: 'Evocation Savant' }, playerStats: basePlayerStats, campaignName: 'test', school: 'Evocation', spellOptions: ['Shocking Burst', 'Flaming Burst'] },
+    testId: 'evocation-savant-modal',
+  },
+  {
+    name: 'WeaponKindMasteryModal',
+    modalName: 'weaponKindMastery',
+    actionName: 'Weapon Kind Mastery',
+    automation: { type: 'weapon_kind_mastery' },
+    payload: { action: { name: 'Weapon Kind Mastery' } },
+    testId: 'weapon-kind-mastery-modal',
+  },
+  {
+    name: 'WeaponMasteryChoiceModal',
+    modalName: 'weaponMasteryChoice',
+    actionName: 'Weapon Mastery',
+    automation: { type: 'weapon_mastery_choice' },
+    payload: { action: { name: 'Weapon Mastery' } },
+    testId: 'weapon-mastery-choice-modal',
+  },
+  {
+    name: 'ResourcePoolModal',
+    modalName: 'resourcePool',
+    actionName: 'Resource Pool',
+    automation: { type: 'resource_pool' },
+    payload: { automation: { type: 'resource_pool' } },
+    testId: 'resource-pool-modal',
+  },
+  {
+    name: 'NaturalRecoveryModal',
+    modalName: 'naturalRecovery',
+    actionName: 'Natural Recovery',
+    automation: { type: 'natural_recovery' },
+    payload: {},
+    testId: 'natural-recovery-modal',
+  },
+  {
+    name: 'CircleOfTheLandSpellsModal',
+    modalName: 'circleOfTheLandSpells',
+    actionName: 'Circle of the Land',
+    automation: { type: 'circle_of_the_land' },
+    payload: {},
+    testId: 'circle-of-the-land-modal',
+  },
+  {
+    name: 'ElementalAffinityModal',
+    modalName: 'elementalAffinity',
+    actionName: 'Elemental Affinity',
+    automation: { type: 'elemental_affinity' },
+    payload: { action: { name: 'Elemental Affinity' } },
+    testId: 'elemental-affinity-modal',
+  },
+  {
+    name: 'WildMagicSurgeModal',
+    modalName: 'wildMagicSurge',
+    actionName: 'Wild Magic Surge',
+    automation: { type: 'wild_magic_surge' },
+    payload: {},
+    testId: 'wild-magic-surge-modal',
+  },
+  {
+    name: 'StrideOfTheElementsModal',
+    modalName: 'strideOfTheElements',
+    actionName: 'Stride of the Elements',
+    automation: { type: 'stride_of_elements' },
+    payload: { action: { name: 'Stride of the Elements' } },
+    testId: 'stride-of-elements-modal',
+  },
+  {
+    name: 'ElementalEpitomeModal',
+    modalName: 'elementalEpitome',
+    actionName: 'Elemental Epitome',
+    automation: { type: 'elemental_epitome' },
+    payload: { action: { name: 'Elemental Epitome' } },
+    testId: 'elemental-epitome-modal',
+  },
+  {
+    name: 'QuiveringPalmModal',
+    modalName: 'quiveringPalm',
+    actionName: 'Quivering Palm',
+    automation: { type: 'quivering_palm' },
+    payload: {},
+    testId: 'quivering-palm-modal',
+  },
+  {
+    name: 'StepsOfTheFeyTauntModal',
+    modalName: 'stepsOfTheFeyTaunt',
+    actionName: 'Steps of the Fey Taunt',
+    automation: { type: 'steps_of_the_fey_taunt' },
+    payload: {},
+    testId: 'steps-of-fey-taunt-modal',
+  },
+  {
+    name: 'HurlThroughHellModal',
+    modalName: 'hurlThroughHell',
+    actionName: 'Hurl Through Hell',
+    automation: { type: 'hurl_through_hell' },
+    payload: {},
+    testId: 'hurl-through-hell-modal',
+  },
+  {
+    name: 'ClairvoyantCombatantModal',
+    modalName: 'clairvoyantCombatant',
+    actionName: 'Clairvoyant Combatant',
+    automation: { type: 'clairvoyant_combatant' },
+    payload: {},
+    testId: 'clairvoyant-combatant-modal',
+  },
+];
+
 describe('CharSpecialActions - Modal Rendering via executeHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  function createSpecialAction(name, automation) {
-    return { name, description: `${name} description.`, automation };
-  }
-
   describe('modal rendering from executeHandler results', () => {
-    it('renders TeleportModal when executeHandler returns teleport modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'teleport',
-        payload: { action: { name: 'Blink Steps' }, playerStats: basePlayerStats, campaignName: 'test' },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Blink Steps', { type: 'teleport' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Blink Steps/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('teleport-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders SignatureSpellsModal when executeHandler returns signatureSpells modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'signatureSpells',
-        payload: { action: { name: 'Signature Spells' }, playerStats: basePlayerStats, campaignName: 'test', level3Options: ['Fireball', 'Haste'] },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Signature Spells', { type: 'signature_spells' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Signature Spells/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('signature-spells-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders SpellMasteryModal when executeHandler returns spellMastery modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'spellMastery',
-        payload: { action: { name: 'Spell Mastery' }, playerStats: basePlayerStats, campaignName: 'test', levelOptions: ['Mage Armor', 'Shield'] },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Spell Mastery', { type: 'spell_mastery' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Spell Mastery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('spell-mastery-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders SavantModal when executeHandler returns Savant modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'EvocationSavant',
-        payload: { action: { name: 'Evocation Savant' }, playerStats: basePlayerStats, campaignName: 'test', school: 'Evocation', spellOptions: ['Shocking Burst', 'Flaming Burst'] },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Evocation Savant', { type: 'passive_rule', effect: 'evocation_savant' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Evocation Savant/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('evocation-savant-modal')).toBeInTheDocument();
-      });
-    });
-
-    // CombatSuperiorityModal state is managed by useCombatSuperiorityModal hook, tested elsewhere
-
-    it('renders WeaponKindMasteryModal when executeHandler returns weaponKindMastery modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'weaponKindMastery',
-        payload: { action: { name: 'Weapon Kind Mastery' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Weapon Kind Mastery', { type: 'weapon_kind_mastery' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Weapon Kind Mastery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('weapon-kind-mastery-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders WeaponMasteryChoiceModal when executeHandler returns weaponMasteryChoice modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'weaponMasteryChoice',
-        payload: { action: { name: 'Weapon Mastery' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Weapon Mastery', { type: 'weapon_mastery_choice' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Weapon Mastery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('weapon-mastery-choice-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders ResourcePoolModal when executeHandler returns resourcePool modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'resourcePool',
-        payload: { automation: { type: 'resource_pool' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Resource Pool', { type: 'resource_pool' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Resource Pool/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('resource-pool-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders NaturalRecoveryModal when executeHandler returns naturalRecovery modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'naturalRecovery',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Natural Recovery', { type: 'natural_recovery' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Natural Recovery/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('natural-recovery-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders CircleOfTheLandSpellsModal when executeHandler returns circleOfTheLandSpells modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'circleOfTheLandSpells',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Circle of the Land', { type: 'circle_of_the_land' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Circle of the Land/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('circle-of-the-land-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders ElementalAffinityModal when executeHandler returns elementalAffinity modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'elementalAffinity',
-        payload: { action: { name: 'Elemental Affinity' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Elemental Affinity', { type: 'elemental_affinity' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Elemental Affinity/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('elemental-affinity-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders WildMagicSurgeModal when executeHandler returns wildMagicSurge modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'wildMagicSurge',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Wild Magic Surge', { type: 'wild_magic_surge' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Wild Magic Surge/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders StrideOfTheElementsModal when executeHandler returns strideOfTheElements modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'strideOfTheElements',
-        payload: { action: { name: 'Stride of the Elements' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Stride of the Elements', { type: 'stride_of_elements' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Stride of the Elements/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('stride-of-elements-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders ElementalEpitomeModal when executeHandler returns elementalEpitome modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'elementalEpitome',
-        payload: { action: { name: 'Elemental Epitome' } },
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Elemental Epitome', { type: 'elemental_epitome' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Elemental Epitome/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('elemental-epitome-modal')).toBeInTheDocument();
-      });
-    });
-
-    // DestructiveStride modal chain tested in automationClickHandlers test
-
-    it('renders QuiveringPalmModal when executeHandler returns quiveringPalm modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'quiveringPalm',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Quivering Palm', { type: 'quivering_palm' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Quivering Palm/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('quivering-palm-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders StepsOfTheFeyTauntModal when executeHandler returns stepsOfTheFeyTaunt modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'stepsOfTheFeyTaunt',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Steps of the Fey Taunt', { type: 'steps_of_the_fey_taunt' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Steps of the Fey Taunt/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('steps-of-fey-taunt-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders HurlThroughHellModal when executeHandler returns hurlThroughHell modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'hurlThroughHell',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Hurl Through Hell', { type: 'hurl_through_hell' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Hurl Through Hell/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('hurl-through-hell-modal')).toBeInTheDocument();
-      });
-    });
-
-    it('renders ClairvoyantCombatantModal when executeHandler returns clairvoyantCombatant modal', async () => {
-      executeHandler.mockResolvedValue({
-        type: 'modal',
-        modalName: 'clairvoyantCombatant',
-        payload: {},
-      });
-
-      const playerStats = createPlayerStats({
-        specialActions: [
-          createSpecialAction('Clairvoyant Combatant', { type: 'clairvoyant_combatant' }),
-        ],
-      });
-      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-      fireEvent.click(screen.getAllByText(/Clairvoyant Combatant/)[0]);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('clairvoyant-combatant-modal')).toBeInTheDocument();
-      });
-    });
+    it.each(modalTests)(
+      'renders $name when executeHandler returns $modalName modal',
+      async ({ modalName, actionName, automation, payload, testId }) => {
+        executeHandler.mockResolvedValue({
+          type: 'modal',
+          modalName,
+          payload,
+        });
+
+        const playerStats = createPlayerStats({
+          specialActions: [
+            createSpecialAction(actionName, automation),
+          ],
+        });
+        render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+        fireEvent.click(screen.getAllByText(new RegExp(actionName))[0]);
+
+        await waitFor(() => {
+          expect(screen.getByTestId(testId)).toBeInTheDocument();
+        });
+      },
+    );
   });
 });
