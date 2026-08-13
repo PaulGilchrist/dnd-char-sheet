@@ -1,14 +1,26 @@
-// @cleaned-by-ai
 // @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getRuntimeValue, clearRuntimeState, getAllStoreKeys, seedTrackedResources, addStorageChangeListener, setRuntimeValue } from './useRuntimeState.js';
+import {
+  getRuntimeValue,
+  clearRuntimeState,
+  getAllStoreKeys,
+  seedTrackedResources,
+  addStorageChangeListener,
+  setRuntimeValue,
+  hasRuntimeValue,
+  getStore,
+  setRuntimeObject,
+  setRuntimeBatch,
+  notify,
+  listeners,
+} from './useRuntimeState.js';
 
-// Clear all stores and listeners between tests since clearRuntimeState only clears stores
 function clearAll() {
   const keys = getAllStoreKeys();
   for (const key of keys) {
     clearRuntimeState(key);
   }
+  listeners.clear();
 }
 
 describe('useRuntimeState — getRuntimeValue', () => {
@@ -48,6 +60,216 @@ describe('useRuntimeState — getRuntimeValue', () => {
     expect(getRuntimeValue('test-char', 'spells')).toEqual([1, 2, 3]);
     expect(getRuntimeValue('test-char', 'stats')).toEqual({ str: 18, dex: 14 });
   });
+
+  it('logs error to console when reading campaign-level key with wrong characterKey', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
+    getRuntimeValue('test-char', 'targetEffects');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[getRuntimeValue] Campaign-level key read with wrong characterKey'),
+      expect.objectContaining({ characterKey: 'test-char', propertyName: 'targetEffects' })
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('returns null for a key that was cleared', () => {
+    seedTrackedResources('test-char', { hp: 10 });
+    expect(getRuntimeValue('test-char', 'hp')).toBe(10);
+    clearRuntimeState('test-char');
+    expect(getRuntimeValue('test-char', 'hp')).toBeNull();
+  });
+});
+
+describe('useRuntimeState — setRuntimeValue', () => {
+  beforeEach(() => {
+    clearAll();
+    vi.spyOn(global, 'fetch').mockResolvedValue(undefined);
+    global.fetch.mockClear();
+  });
+
+  it('sets a value in the store and sends a POST request', () => {
+    setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+    expect(getRuntimeValue('test-char', 'hp')).toBe(15);
+    const callArgs = global.fetch.mock.calls[0];
+    expect(callArgs[0]).toBe('/api/campaigns/test-campaign/test-char');
+    expect(callArgs[1].method).toBe('POST');
+    const body = JSON.parse(callArgs[1].body);
+    expect(body.value).toHaveProperty('hp', 15);
+  });
+
+  it('handles campaign-level characterKey with single property POST format', () => {
+    setRuntimeValue('campaign', 'gameMode', 'dm', 'test-campaign');
+    const callArgs = global.fetch.mock.calls[0];
+    expect(callArgs[0]).toBe('/api/campaigns/test-campaign/gameMode');
+    const body = JSON.parse(callArgs[1].body);
+    expect(body).toEqual({ value: 'dm' });
+  });
+
+  it('encodes special characters in campaign name and character key', () => {
+    setRuntimeValue('my char', 'hp', 15, 'my campaign');
+    const callArgs = global.fetch.mock.calls[0];
+    expect(callArgs[0]).toBe('/api/campaigns/my%20campaign/my%20char');
+  });
+
+  it('does not POST or notify when value is unchanged', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls.length).toBe(1);
+
+    setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls.length).toBe(1);
+  });
+
+  it('does not POST when number-string equality matches', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+    setRuntimeValue('test-char', 'hp', '15', 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(global.fetch.mock.calls.length).toBe(1);
+  });
+
+  it('logs error when campaignName is undefined', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
+    setRuntimeValue('test-char', 'hp', 15, undefined);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'setRuntimeValue called with undefined campaignName',
+      expect.objectContaining({ characterKey: 'test-char' })
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('logs error when setting campaign-level key with wrong characterKey', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
+    setRuntimeValue('test-char', 'targetEffects', [], 'test-campaign');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[setRuntimeValue] Campaign-level key written with wrong characterKey'),
+      expect.objectContaining({ characterKey: 'test-char', propertyName: 'targetEffects' })
+    );
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('useRuntimeState — setRuntimeObject', () => {
+  beforeEach(() => {
+    clearAll();
+    vi.spyOn(global, 'fetch').mockResolvedValue(undefined);
+    global.fetch.mockClear();
+  });
+
+  it('sets multiple properties at once', () => {
+    setRuntimeObject('test-char', { hp: 15, sp: 10, maxHp: 20, maxSp: 15 }, 'test-campaign');
+    expect(getRuntimeValue('test-char', 'hp')).toBe(15);
+    expect(getRuntimeValue('test-char', 'sp')).toBe(10);
+    expect(getRuntimeValue('test-char', 'maxHp')).toBe(20);
+    expect(getRuntimeValue('test-char', 'maxSp')).toBe(15);
+  });
+
+  it('does not POST when skipSync is true', () => {
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign', true);
+    expect(global.fetch.mock.calls.length).toBe(0);
+    expect(getRuntimeValue('test-char', 'hp')).toBe(15);
+  });
+
+  it('does not POST when no values changed', () => {
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign');
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign');
+    expect(global.fetch.mock.calls.length).toBe(1);
+  });
+
+  it('does not trigger listeners when no values changed', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign');
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers listeners only once even when multiple properties change', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeObject('test-char', { hp: 15, sp: 10 }, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not seed when passed null, undefined, or non-object', () => {
+    setRuntimeObject('test-char', null, 'test-campaign');
+    setRuntimeObject('test-char', undefined, 'test-campaign');
+    setRuntimeObject('test-char', 'string', 'test-campaign');
+    expect(getRuntimeValue('test-char', 'hp')).toBeNull();
+  });
+
+  it('handles empty object (no changes)', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeObject('test-char', {}, 'test-campaign');
+    setRuntimeObject('test-char', {}, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(0);
+    expect(global.fetch.mock.calls.length).toBe(0);
+  });
+
+  it('does not POST when number-string equality matches', () => {
+    setRuntimeObject('test-char', { hp: 15 }, 'test-campaign');
+    setRuntimeObject('test-char', { hp: '15' }, 'test-campaign');
+    expect(global.fetch.mock.calls.length).toBe(1);
+  });
+});
+
+describe('useRuntimeState — setRuntimeBatch', () => {
+  beforeEach(() => {
+    clearAll();
+    vi.spyOn(global, 'fetch').mockResolvedValue(undefined);
+    global.fetch.mockClear();
+  });
+
+  it('updates multiple properties and POSTs once', () => {
+    setRuntimeBatch('test-char', { hp: 15, sp: 10, maxHp: 20 }, 'test-campaign');
+    expect(getRuntimeValue('test-char', 'hp')).toBe(15);
+    expect(getRuntimeValue('test-char', 'sp')).toBe(10);
+    expect(getRuntimeValue('test-char', 'maxHp')).toBe(20);
+    const callArgs = global.fetch.mock.calls[0];
+    expect(callArgs[0]).toBe('/api/campaigns/test-campaign/test-char');
+    const body = JSON.parse(callArgs[1].body);
+    expect(body.value).toHaveProperty('hp', 15);
+    expect(body.value).toHaveProperty('sp', 10);
+    expect(body.value).toHaveProperty('maxHp', 20);
+  });
+
+  it('does not POST when no values changed', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    setRuntimeBatch('test-char', { hp: 15 }, 'test-campaign');
+    expect(listener).toHaveBeenCalledTimes(1);
+    const firstCallCount = global.fetch.mock.calls.length;
+    setRuntimeBatch('test-char', { hp: 15 }, 'test-campaign');
+    expect(global.fetch.mock.calls.length).toBe(firstCallCount);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not POST when number-string equality matches', () => {
+    setRuntimeBatch('test-char', { hp: 15 }, 'test-campaign');
+    setRuntimeBatch('test-char', { hp: '15' }, 'test-campaign');
+    expect(global.fetch.mock.calls.length).toBe(1);
+  });
+
+  it('does not seed when passed null, undefined, or non-object', () => {
+    setRuntimeBatch('test-char', null, 'test-campaign');
+    setRuntimeBatch('test-char', undefined, 'test-campaign');
+    setRuntimeBatch('test-char', 'string', 'test-campaign');
+    expect(getRuntimeValue('test-char', 'hp')).toBeNull();
+  });
+
+  it('logs error when campaignName is undefined', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error');
+    setRuntimeBatch('test-char', { hp: 15 }, undefined);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'setRuntimeBatch called with undefined campaignName',
+      expect.objectContaining({ characterKey: 'test-char' })
+    );
+    consoleErrorSpy.mockRestore();
+  });
 });
 
 describe('useRuntimeState — clearRuntimeState', () => {
@@ -74,6 +296,13 @@ describe('useRuntimeState — clearRuntimeState', () => {
     expect(getRuntimeValue('char-a', 'hp')).toBeNull();
     expect(getRuntimeValue('char-b', 'hp')).toBe(20);
   });
+
+  it('removes the character key from getAllStoreKeys', () => {
+    seedTrackedResources('test-char', { hp: 10 });
+    expect(getAllStoreKeys()).toContain('test-char');
+    clearRuntimeState('test-char');
+    expect(getAllStoreKeys()).not.toContain('test-char');
+  });
 });
 
 describe('useRuntimeState — getAllStoreKeys', () => {
@@ -98,6 +327,13 @@ describe('useRuntimeState — getAllStoreKeys', () => {
     expect(getAllStoreKeys()).toContain('char-a');
     clearRuntimeState('char-a');
     expect(getAllStoreKeys()).not.toContain('char-a');
+  });
+
+  it('includes pendingExpirations key created by seedTrackedResources', () => {
+    seedTrackedResources('test-char', { hp: 10 });
+    expect(getAllStoreKeys()).toContain('test-char');
+    const store = getStore('test-char');
+    expect(store.has('pendingExpirations')).toBe(true);
   });
 });
 
@@ -150,6 +386,18 @@ describe('useRuntimeState — seedTrackedResources', () => {
     seedTrackedResources('test-char', { hp: 10 });
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it('creates pendingExpirations array on first seed', () => {
+    seedTrackedResources('test-char', { hp: 10 });
+    const store = getStore('test-char');
+    expect(store.get('pendingExpirations')).toEqual([]);
+  });
+
+  it('does not create pendingExpirations when seeding invalid input', () => {
+    seedTrackedResources('test-char', null);
+    const store = getStore('test-char');
+    expect(store.has('pendingExpirations')).toBe(false);
+  });
 });
 
 describe('useRuntimeState — addStorageChangeListener', () => {
@@ -192,5 +440,103 @@ describe('useRuntimeState — addStorageChangeListener', () => {
     setRuntimeValue('char-a', 'hp', 10, 'test-campaign');
     expect(charA).toHaveBeenCalledTimes(1);
     expect(charB).toHaveBeenCalledTimes(0);
+  });
+
+  it('can remove one listener without affecting others', () => {
+    const listener1 = vi.fn();
+    const listener2 = vi.fn();
+    const cleanup1 = addStorageChangeListener('test-char', listener1);
+    addStorageChangeListener('test-char', listener2);
+
+    vi.spyOn(global, 'fetch').mockResolvedValue(undefined);
+    setRuntimeValue('test-char', 'hp', 10, 'test-campaign');
+    expect(listener1).toHaveBeenCalledTimes(1);
+    expect(listener2).toHaveBeenCalledTimes(1);
+
+    cleanup1();
+    setRuntimeValue('test-char', 'sp', 5, 'test-campaign');
+    expect(listener1).toHaveBeenCalledTimes(1);
+    expect(listener2).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifies listeners via direct notify() call', () => {
+    const listener = vi.fn();
+    addStorageChangeListener('test-char', listener);
+    notify('test-char');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles notify for character with no listeners', () => {
+    expect(() => notify('no-listeners')).not.toThrow();
+  });
+});
+
+describe('useRuntimeState — hasRuntimeValue', () => {
+  beforeEach(() => {
+    clearAll();
+  });
+
+  it('returns true when a property exists with a value', () => {
+    seedTrackedResources('test-char', { hp: 15 });
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(true);
+  });
+
+  it('returns true when a property exists with null value', () => {
+    seedTrackedResources('test-char', { hp: null });
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(true);
+  });
+
+  it('returns true when a property exists with falsy values', () => {
+    seedTrackedResources('test-char', { hp: 0, active: false, name: '' });
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(true);
+    expect(hasRuntimeValue('test-char', 'active')).toBe(true);
+    expect(hasRuntimeValue('test-char', 'name')).toBe(true);
+  });
+
+  it('returns false when a property has never been set', () => {
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(false);
+  });
+
+  it('returns false after clearRuntimeState', () => {
+    seedTrackedResources('test-char', { hp: 10 });
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(true);
+    clearRuntimeState('test-char');
+    expect(hasRuntimeValue('test-char', 'hp')).toBe(false);
+  });
+
+  it('distinguishes between null value and unset key', () => {
+    // nullVal is explicitly set to null
+    seedTrackedResources('test-char', { nullVal: null });
+
+    expect(hasRuntimeValue('test-char', 'nullVal')).toBe(true);
+    expect(getRuntimeValue('test-char', 'nullVal')).toBeNull();
+    expect(hasRuntimeValue('test-char', 'unsetVal')).toBe(false);
+    expect(getRuntimeValue('test-char', 'unsetVal')).toBeNull();
+  });
+});
+
+describe('useRuntimeState — getStore', () => {
+  beforeEach(() => {
+    clearAll();
+  });
+
+  it('creates a new store for a character key that does not exist', () => {
+    const store = getStore('new-char');
+    expect(store).toBeInstanceOf(Map);
+    expect(getAllStoreKeys()).toContain('new-char');
+  });
+
+  it('returns the same store instance for the same character key', () => {
+    const store1 = getStore('test-char');
+    const store2 = getStore('test-char');
+    expect(store1).toBe(store2);
+  });
+
+  it('returns independent stores for different character keys', () => {
+    const storeA = getStore('char-a');
+    const storeB = getStore('char-b');
+    expect(storeA).not.toBe(storeB);
+    storeA.set('hp', 10);
+    expect(storeB.get('hp')).toBeUndefined();
   });
 });

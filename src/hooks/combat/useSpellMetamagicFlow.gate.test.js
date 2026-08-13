@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
@@ -40,102 +41,6 @@ vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
   hasPsionicSorcery: vi.fn(() => false),
 }));
 
-vi.mock('../../services/automation/index.js', () => ({
-  applyAidEffect: vi.fn(),
-  applyHeroesFeastEffect: vi.fn(),
-  applyLesserRestorationEffect: vi.fn(),
-  applyMageArmorEffect: vi.fn(),
-  applyShieldOfFaithEffect: vi.fn(),
-  applyProtectionFromEnergyHandler: vi.fn(),
-  applyProtectionFromPoisonHandler: vi.fn(),
-  applyResistanceEffect: vi.fn(),
-  executeHandler: vi.fn(),
-  confirmGreaterRestoration: vi.fn(),
-  applyHolyAuraEffect: vi.fn(),
-  applyBaneEffect: vi.fn(),
-  applyBlessEffect: vi.fn(),
-  applyFaerieFire: vi.fn(() => Promise.resolve(null)),
-  applyHaste: vi.fn(),
-  applyEnhanceAbilityEffect: vi.fn(() => Promise.resolve(null)),
-  applyBarkskinEffect: vi.fn(() => Promise.resolve(null)),
-  applyInvisibility: vi.fn(),
-  applyGreaterInvisibility: vi.fn(),
-  applyFeignDeath: vi.fn(() => Promise.resolve(null)),
-  applyLongstriderEffect: vi.fn(() => Promise.resolve(null)),
-  applySpareTheDyingEffect: vi.fn(() => Promise.resolve(null)),
-  applyPassWithoutTraceEffect: vi.fn(() => Promise.resolve(null)),
-  applyBeaconOfHopeEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfLifeEffect: vi.fn(),
-  applyAuraOfPurityEffect: vi.fn(),
-  applyCircleOfPowerEffect: vi.fn(() => Promise.resolve(null)),
-  applyCompulsionEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfVitalityEffect: vi.fn(() => Promise.resolve(null)),
-  applyDeathWardEffect: vi.fn(() => Promise.resolve(null)),
-  applyHeroism: vi.fn(() => Promise.resolve(null)),
-  applyProtectionFromEvilAndGood: vi.fn(),
-  applyStoneSkinHandler: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/greaterRestorationService.js', () => ({
-  confirmGreaterRestoration: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/removeCurseService.js', () => ({
-  confirmRemoveCurse: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/regenerateService.js', () => ({
-  confirmRegenerate: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/foresightService.js', () => ({
-  triggerForesight: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/holdMonsterService.js', () => ({
-  triggerHoldMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmPersonService.js', () => ({
-  triggerCharmPerson: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmMonsterService.js', () => ({
-  triggerCharmMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/banishmentService.js', () => ({
-  triggerBanishment: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/faerieFireService.js', () => ({
-  triggerFaerieFire: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/healService.js', () => ({
-  triggerHeal: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/healingWordService.js', () => ({
-  triggerHealingWord: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/revivifyService.js', () => ({
-  triggerRevivify: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/polymorphService.js', () => ({
-  applyPolymorph: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/animalShapesService.js', () => ({
-  applyAnimalShapes: vi.fn(() => Promise.resolve({ ok: false })),
-}));
-
-vi.mock('../../services/automation/handlers/spells/truePolymorphService.js', () => ({
-  applyTruePolymorph: vi.fn(() => Promise.resolve(null)),
-}));
-
 vi.mock('../../services/rules/spells/materialComponents.js', () => ({
   getConsumedMaterial: vi.fn(() => null),
   hasMaterial: vi.fn(() => true),
@@ -155,28 +60,8 @@ vi.mock('../runtime/useRuntimeState.js', () => ({
 }));
 
 vi.mock('../useAllySelection.js', () => ({
-  getAllyList: vi.fn((casterName) => [casterName.toLowerCase()]),
+  getAllyList: vi.fn(() => []),
 }));
-
-global.fetch = vi.fn((url) => {
-  if (url && url.includes('combat-summary')) {
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ creatures: [] }),
-    });
-  }
-  return Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  });
-});
-
-Object.defineProperty(window, 'dispatchEvent', {
-  value: vi.fn(),
-  writable: true,
-});
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -215,8 +100,6 @@ function renderHookWithSpell(hookSetup, spellName, spellOverrides = {}) {
 // Additional behavior (confirm/skip handlers, two-stage flows, Sorcerer-specific
 // logic) is covered by dedicated test files.
 
-// Only spells that had creatureTargets checks in the original tests are listed here.
-// Other spells just verify the pending key is set (no creatureTargets assertion).
 const gatedSpellsWithCreatureChecks = [
   { name: 'Foresight', level: 9, pendingKey: 'pendingForesight', casterIncluded: true },
   { name: 'Sanctuary', level: 1, pendingKey: 'pendingSanctuary', casterIncluded: true },
@@ -281,29 +164,35 @@ describe('useSpellMetamagicFlow — simple spell gates', () => {
         getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
       });
 
-      it(`sets ${spell.pendingKey}`, () => {
+      it(`sets ${spell.pendingKey} with expected structure`, () => {
         const { result } = renderHookWithSpell(
           (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
           spell.name,
           { level: spell.level },
         );
 
-        expect(result.current[spell.pendingKey]).not.toBeNull();
+        const pending = result.current[spell.pendingKey];
+        expect(pending).not.toBeNull();
+
+        if (spell.name !== 'Magic Missile') {
+          expect(pending.spellName).toBe(spell.name);
+          expect(pending.spellLevel).toBe(spell.level);
+        }
 
         if (spell.maxTargets !== undefined) {
-          expect(result.current[spell.pendingKey].maxTargets).toBe(spell.maxTargets);
+          expect(pending.maxTargets).toBe(spell.maxTargets);
         }
 
         if (spell.spellLevel !== undefined) {
-          expect(result.current[spell.pendingKey].spellLevel).toBe(spell.spellLevel);
+          expect(pending.spellLevel).toBe(spell.spellLevel);
         }
 
         if (spell.totalMissiles !== undefined) {
-          expect(result.current[spell.pendingKey].totalMissiles).toBe(spell.totalMissiles);
+          expect(pending.totalMissiles).toBe(spell.totalMissiles);
         }
 
         if (spell.damageTypesLength !== undefined) {
-          expect(result.current[spell.pendingKey].damageTypes.length).toBe(spell.damageTypesLength);
+          expect(pending.damageTypes.length).toBe(spell.damageTypesLength);
         }
       });
     });
@@ -325,15 +214,18 @@ describe('useSpellMetamagicFlow — gated spells with creatureTargets checks', (
           { level: spell.level },
         );
 
-        expect(result.current[spell.pendingKey]).not.toBeNull();
+        const pending = result.current[spell.pendingKey];
+        expect(pending).not.toBeNull();
+        expect(Array.isArray(pending.creatureTargets)).toBe(true);
+        expect(pending.creatureTargets.length).toBeGreaterThan(0);
 
         if (spell.casterIncluded) {
-          expect(result.current[spell.pendingKey].creatureTargets).toContain('TestSorcerer');
+          expect(pending.creatureTargets).toContain('TestSorcerer');
         }
 
         if (spell.casterExcluded) {
-          expect(result.current[spell.pendingKey].creatureTargets).not.toContain('TestSorcerer');
-          expect(result.current[spell.pendingKey].creatureTargets).toContain('Goblin A');
+          expect(pending.creatureTargets).not.toContain('TestSorcerer');
+          expect(pending.creatureTargets).toContain('Goblin A');
         }
       });
     });
@@ -362,10 +254,11 @@ describe('useSpellMetamagicFlow — monster-data-gated spells', () => {
       }));
     });
 
-    expect(result.current.pendingHoldMonster).not.toBeNull();
-    expect(result.current.pendingHoldMonster.creatureTargets).not.toContain('TestSorcerer');
-    expect(result.current.pendingHoldMonster.creatureTargets).toContain('Goblin A');
-    expect(result.current.pendingHoldMonster.maxTargets).toBe(2);
+    const pending = result.current.pendingHoldMonster;
+    expect(pending).not.toBeNull();
+    expect(pending.creatureTargets).not.toContain('TestSorcerer');
+    expect(pending.creatureTargets).toContain('Goblin A');
+    expect(pending.maxTargets).toBe(2);
   });
 
   it('sets pending holdPerson for humanoid monsters', async () => {
@@ -469,12 +362,14 @@ describe('useSpellMetamagicFlow — Animal Shapes gate', () => {
       { level: 8 },
     );
 
-    expect(result.current.pendingAnimalShapes).not.toBeNull();
-    expect(result.current.pendingAnimalShapes.maxCR).toBe(4);
+    const pending = result.current.pendingAnimalShapes;
+    expect(pending).not.toBeNull();
+    expect(pending.maxCR).toBe(4);
+    expect(pending.creatureTargets).toContain('Goblin A');
   });
 });
 
-// ── Protection from Energy gate (additional) ──────────────────────────────────
+// ── Protection from Energy gate ───────────────────────────────────────────────
 
 describe('useSpellMetamagicFlow — Protection from Energy gate', () => {
   beforeEach(() => {
@@ -489,7 +384,10 @@ describe('useSpellMetamagicFlow — Protection from Energy gate', () => {
       { level: 3 },
     );
 
-    expect(result.current.pendingProtectionFromEnergy).not.toBeNull();
+    const pending = result.current.pendingProtectionFromEnergy;
+    expect(pending).not.toBeNull();
+    expect(Array.isArray(pending.damageTypes)).toBe(true);
+    expect(pending.damageTypes.length).toBeGreaterThan(0);
   });
 
   it('uses default damageTypes when spell has no automation', () => {
@@ -501,7 +399,9 @@ describe('useSpellMetamagicFlow — Protection from Energy gate', () => {
       result.current.gateMetamagic(makeSpell({ name: 'Protection from Energy', level: 3, automation: null }));
     });
 
-    expect(result.current.pendingProtectionFromEnergy).not.toBeNull();
+    const pending = result.current.pendingProtectionFromEnergy;
+    expect(pending).not.toBeNull();
+    expect(pending.damageTypes).toEqual(['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder']);
   });
 });
 
@@ -543,8 +443,102 @@ describe('useSpellMetamagicFlow — Shield of Faith gate', () => {
       { level: 1 },
     );
 
-    // Shield of Faith is not in the gateMetamagic switch - it falls through to the Sorcerer metamagic flow
     expect(result.current.pendingShieldOfFaith).toBeNull();
-    expect(result.current.pendingMetamagic).not.toBeNull();
+    const metamagic = result.current.pendingMetamagic;
+    expect(metamagic).not.toBeNull();
+    expect(metamagic.spellName).toBe('Shield of Faith');
+  });
+});
+
+// ── Caster-included spells always include the caster ──────────────────────────
+
+describe('useSpellMetamagicFlow — caster-included spells always include the caster', () => {
+  const casterIncludedSpells = [
+    { name: 'Foresight', level: 9, pendingKey: 'pendingForesight' },
+    { name: 'Sanctuary', level: 1, pendingKey: 'pendingSanctuary' },
+    { name: 'Protection from Evil and Good', level: 1, pendingKey: 'pendingProtectionFromEvilAndGood' },
+    { name: 'Enhance Ability', level: 2, pendingKey: 'pendingEnhanceAbility' },
+  ];
+
+  for (const spell of casterIncludedSpells) {
+    describe(spell.name, () => {
+      beforeEach(() => {
+        vi.clearAllMocks();
+        getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+      });
+
+      it('includes the caster even when combat has no creatures', () => {
+        getCombatSummary.mockReturnValueOnce({ creatures: [] });
+        const { result } = renderHook(() =>
+          useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+        );
+
+        act(() => {
+          result.current.gateMetamagic(makeSpell({ name: spell.name, level: spell.level }));
+        });
+
+        const pending = result.current[spell.pendingKey];
+        expect(pending).not.toBeNull();
+        expect(pending.creatureTargets).toContain('TestSorcerer');
+      });
+    });
+  }
+});
+
+// ── Magic Missile missile count ───────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — Magic Missile missile count', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+  });
+
+  it('calculates totalMissiles based on spell level (3 + level - 1)', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Magic Missile', level: 1 }));
+    });
+
+    expect(result.current.pendingMagicMissile.totalMissiles).toBe(3);
+  });
+
+  it('calculates totalMissiles for upcast (level 3 = 5 missiles)', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Magic Missile', level: 3 }));
+    });
+
+    expect(result.current.pendingMagicMissile.totalMissiles).toBe(5);
+  });
+});
+
+// ── Resistance damage types ──────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — Resistance damage types', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+  });
+
+  it('includes all 11 standard damage types', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Resistance', level: 0 }));
+    });
+
+    const pending = result.current.pendingResistance;
+    expect(pending.damageTypes).toEqual([
+      'Acid', 'Bludgeoning', 'Cold', 'Fire', 'Lightning',
+      'Necrotic', 'Piercing', 'Poison', 'Radiant', 'Slashing', 'Thunder',
+    ]);
   });
 });

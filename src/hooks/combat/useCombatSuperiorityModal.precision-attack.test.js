@@ -8,20 +8,12 @@ vi.mock('../../services/automation/index.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
   setRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-  loadCombatSummary: vi.fn(),
-  setCombatSummaryCache: vi.fn(),
 }));
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -33,10 +25,10 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
   onCombatSuperioritySelected: vi.fn(),
 }));
 
-import { executeManeuver } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { setRuntimeValue, getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
+import { executeManeuver } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 
 const mockPlayerStats = { name: 'Thorin', level: 5 };
 const mockCampaignName = 'test-campaign';
@@ -432,12 +424,10 @@ describe('useCombatSuperiorityModal - Precision Attack', () => {
 
       await confirm(result);
 
-      expect(setRuntimeValue).not.toHaveBeenCalledWith(
-        'Thorin',
-        'lastAttackRoll',
-        expect.any(Object),
-        mockCampaignName
+      const lastAttackRollCalls = setRuntimeValue.mock.calls.filter(
+        call => call[0] === 'Thorin' && call[1] === 'lastAttackRoll'
       );
+      expect(lastAttackRollCalls).toHaveLength(0);
     });
 
     it('should skip precision attack logic when lastAttackRoll.targetAc is null', async () => {
@@ -513,11 +503,12 @@ describe('useCombatSuperiorityModal - Precision Attack', () => {
     it('should include characterName from playerStats in log entry', async () => {
       const lastAttackRoll = createLastAttackRoll({ d20: 15, bonus: 5, targetAc: 16 });
       const lastAttack = createLastAttack();
+      const dieValue = 4;
 
       getRuntimeValue.mockImplementation((ns, key) =>
         ns === 'campaign' && key === 'lastAttack' ? lastAttack : lastAttackRoll
       );
-      executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue: 4 });
+      executeManeuver.mockResolvedValue({ effect: 'attack_roll_bonus', dieValue });
 
       const playerStats = { name: 'Grimjaw', level: 7 };
       const campaignName = 'mythic-raids';

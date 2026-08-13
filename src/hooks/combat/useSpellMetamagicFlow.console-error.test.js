@@ -1,6 +1,8 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
+import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
 
 vi.mock('./useMetamagic.js', () => ({
@@ -16,6 +18,10 @@ vi.mock('../../services/ui/logService.js', () => ({
 
 vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
   getMultiTargetSpreadForSpell: vi.fn(() => null),
+}));
+
+vi.mock('../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
 }));
 
 vi.mock('../../services/npcs/monsterUtils.js', () => ({
@@ -146,12 +152,6 @@ vi.mock('../useAllySelection.js', () => ({
   getAllyList: vi.fn((casterName) => [casterName.toLowerCase()]),
 }));
 
-vi.mock('../../services/encounters/combatData.js', () => ({
-  getCombatSummary: vi.fn(() => ({
-    creatures: null,
-  })),
-}));
-
 global.fetch = vi.fn((url) => {
   if (url && url.includes('combat-summary')) {
     return Promise.resolve({
@@ -191,79 +191,118 @@ function makeSpell(overrides = {}) {
   };
 }
 
-// ── console.error paths when creatures is null ────────────────────────────────
+// ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('useSpellMetamagicFlow — console.error on null creatures', () => {
+describe('useSpellMetamagicFlow — null creatures behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  const consoleErrorSpells = [
-    { name: 'Foresight', level: 9 },
-    { name: 'Sanctuary', level: 1 },
-    { name: 'Protection from Evil and Good', level: 1 },
-    { name: 'Protection from Poison', level: 2 },
-    { name: 'Stone Skin', level: 3 },
-    { name: 'Lesser Restoration', level: 2 },
-    { name: 'Greater Restoration', level: 5 },
-    { name: 'Remove Curse', level: 3 },
-    { name: 'Aid', level: 1 },
-    { name: 'Bane', level: 0 },
-    { name: 'Bless', level: 1 },
-    { name: 'Holy Aura', level: 8 },
-    { name: 'Slow', level: 3 },
-    { name: 'Haste', level: 3 },
-    { name: 'Enhance Ability', level: 2 },
-    { name: 'Barkskin', level: 2 },
-    { name: 'Invisibility', level: 2 },
-    { name: 'Greater Invisibility', level: 4 },
-    { name: 'Feign Death', level: 3 },
-    { name: 'Heal', level: 6 },
-    { name: 'Longstrider', level: 0 },
-    { name: 'Spare The Dying', level: 0 },
-    { name: 'Pass Without Trace', level: 2 },
-    { name: 'Beacon of Hope', level: 3 },
-    { name: "Heroes' Feast", level: 7 },
-    { name: 'Mage Armor', level: 1 },
-    { name: 'Protection from Energy', level: 3 },
-    { name: 'Resistance', level: 0 },
-    { name: 'Magic Missile', level: 1 },
-    { name: 'Globe of Invulnerability', level: 4 },
-    { name: 'Antimagic Field', level: 4 },
-    { name: 'Forcecage', level: 7 },
-    { name: 'Stinking Cloud', level: 1 },
-    { name: 'Confusion', level: 4 },
-    { name: 'Web', level: 1 },
-    { name: 'Sleet Storm', level: 3 },
-    { name: 'Regenerate', level: 7 },
-    { name: 'Healing Word', level: 1 },
-    { name: 'Cure Wounds', level: 1 },
-    { name: 'Revivify', level: 5 },
-    { name: 'Aura of Life', level: 4 },
-    { name: 'Aura of Purity', level: 4 },
-    { name: 'Circle of Power', level: 9 },
-    { name: 'Compulsion', level: 4 },
-    { name: 'Aura of Vitality', level: 3 },
-    { name: 'Death Ward', level: 4 },
-    { name: 'Heroism', level: 1 },
+  // When getCombatSummary returns creatures: null, gate handlers that call
+  // getCsAndTargets log a console.error and return early without setting any
+  // pending state. This is the same behavior verified for individual spells in
+  // useSpellMetamagicFlow.gate.test.js; this file tests the behavior with a
+  // representative subset of gate handler categories.
+
+  const gateSpellNames = [
+    'Foresight',
+    'Sanctuary',
+    'Stone Skin',
+    'Greater Restoration',
+    'Aid',
+    'Slow',
+    'Haste',
+    'Invisibility',
+    'Heal',
+    'Mage Armor',
+    'Magic Missile',
+    'Globe of Invulnerability',
+    'Regenerate',
+    'Cure Wounds',
+    'Revivify',
   ];
 
-  for (const spell of consoleErrorSpells) {
-    it(`logs console.error for ${spell.name} when creatures is null`, () => {
+  for (const spellName of gateSpellNames) {
+    it(`logs console.error for ${spellName} gate when creatures is null`, () => {
       const spy = vi.spyOn(console, 'error');
+      getCombatSummary.mockReturnValueOnce({ creatures: null });
+
       const { result } = renderHook(() =>
         useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
       );
 
       act(() => {
-        result.current.gateMetamagic(makeSpell(spell));
+        result.current.gateMetamagic(makeSpell({ name: spellName }));
       });
 
       expect(spy).toHaveBeenCalledWith(
-        expect.stringMatching(/(Creature targets empty for|Combat summary missing)/)
+        'Creature targets empty for unknown: cs=exists, characters.length=undefined'
       );
+      // Gate handler returns false (no creatureTargets), so flow falls through
+      // to Sorcerer metamagic path which sets pendingMetamagic
+      expect(result.current.pendingMetamagic).not.toBeNull();
+      expect(result.current.pendingMetamagic.spellName).toBe(spellName);
+
       spy.mockRestore();
     });
   }
+
+  // ── Non-gated spells fall through to Sorcerer metamagic flow ──────────────
+
+  it('falls through to metamagic pending when a non-gated spell is used with null creatures', () => {
+    getCombatSummary.mockReturnValueOnce({ creatures: null });
+
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Shield of Faith', level: 1 }));
+    });
+
+    expect(result.current.pendingMetamagic).not.toBeNull();
+    expect(result.current.pendingMetamagic.spellName).toBe('Shield of Faith');
+  });
+
+  // ── Non-Sorcerer flow with null creatures ────────────────────────────────
+
+  it('non-Sorcerer falls through prepareSpellCast even when creatures is null', async () => {
+    getCombatSummary.mockReturnValueOnce({ creatures: null });
+    const onExecute = vi.fn();
+
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(
+        { name: 'TestWizard', class: { name: 'Wizard' }, level: 5 },
+        'TestCampaign',
+        onExecute
+      )
+    );
+
+    await act(async () => {
+      await result.current.gateMetamagic(makeSpell({ name: 'Fireball', level: 3 }));
+    });
+
+    expect(onExecute).toHaveBeenCalled();
+  });
+
+  // ── getMultiTargetSpreadForSpell returns truthy with null creatures ──────
+
+  it('sets multiTarget pending when getMultiTargetSpreadForSpell returns a spread with null creatures', () => {
+    getMultiTargetSpreadForSpell.mockReturnValue({ range: '30 feet' });
+    getCombatSummary.mockReturnValueOnce({ creatures: null });
+
+    const characters = [{ name: 'Ally One' }];
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn(), null, characters)
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Fireball', level: 3 }));
+    });
+
+    expect(result.current.pendingMultiTarget).not.toBeNull();
+    expect(result.current.pendingMultiTarget.spellName).toBe('Fireball');
+    expect(result.current.pendingMultiTarget.range).toBe('30 feet');
+  });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../services/rules/spells/spellCastService.js', () => ({
@@ -31,672 +32,296 @@ function makeProps(overrides = {}) {
   };
 }
 
+/**
+ * Modal routing mappings from handleModalResult switch cases.
+ * Each entry: [modalName from executeSpellCast, expected setModalState key]
+ */
+const MODAL_ROUTE_MAP = [
+  ['massHealTarget', 'massHealModal'],
+  ['massCureWoundsTarget', 'massCureWoundsModal'],
+  ['prayerOfHealingTarget', 'prayerOfHealingModal'],
+  ['powerWordFortifyTarget', 'powerWordFortifyModal'],
+  ['massHealingWordTarget', 'massHealingWordModal'],
+  ['saveAttackAoe', 'saveAttackAoeModal'],
+  ['aoeCondition', 'aoeConditionModal'],
+  ['fear', 'fearModal'],
+  ['hypnoticPattern', 'hypnoticPatternModal'],
+  ['calmEmotions', 'calmEmotionsModal'],
+  ['massSuggestion', 'massSuggestionModal'],
+  ['ArcaneVigor', 'arcaneVigorModal'],
+  ['blindnessDeafness', 'blindnessDeafnessModal'],
+  ['silenceTargetSelection', 'silenceModal'],
+  ['eyebiteEffect', 'eyebiteEffectModal'],
+  ['wildMagicSurge', 'wildMagicSurgeModal'],
+  ['feignDeathTargetSelection', 'feignDeathModal'],
+  ['tashasLaughter', 'tashasLaughterModal'],
+  ['animateDead', 'animateDeadModal'],
+  ['createUndead', 'createUndeadModal'],
+  ['summonSpirit', 'summonSpiritModal'],
+  ['starryChaliceHeal', 'starryChaliceHealModal'],
+];
+
 describe('useSpellCastExecutor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('handleModalResult — modalName routing', () => {
-    const baseProps = makeProps();
+    it.each(MODAL_ROUTE_MAP)(
+      'maps modalName "%s" to setModalState key "%s" with correct payload',
+      async (modalName, expectedKey) => {
+        const props = makeProps();
+        const setModalState = vi.fn();
+        const payload = { data: 'payloadData' };
 
-    it('maps massHealTarget to massHealModal', async () => {
+        executeSpellCast.mockResolvedValue({ modalName, payload });
+
+        const { result } = renderHook(() =>
+          useSpellCastExecutor(
+            props.rollAttack,
+            props.rollDamage,
+            props.playerStats,
+            props.getTargetInfo,
+            props.campaignName,
+            props.mapName,
+            props.characters,
+            props.setPopupHtml,
+            props.extraMeta,
+            undefined,
+            setModalState,
+          ),
+        );
+
+        await act(async () => {
+          await result.current.castAction(makeSpell(), {});
+        });
+
+        expect(setModalState).toHaveBeenCalledWith({ [expectedKey]: payload });
+        expect(props.setPopupHtml).not.toHaveBeenCalled();
+      },
+    );
+
+    it('passes the payload through unchanged without transformation', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
+      const complexPayload = {
+        targets: ['A', 'B', 'C'],
+        spellLevel: 3,
+        customFlag: true,
+        nested: { key: 'value' },
+      };
+
       executeSpellCast.mockResolvedValue({
         modalName: 'massHealTarget',
-        payload: { data: 'massHeal' },
+        payload: complexPayload,
       });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
           undefined,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ massHealModal: { data: 'massHeal' } });
+      expect(setModalState).toHaveBeenCalledWith({ massHealModal: complexPayload });
     });
 
-    it('maps massCureWoundsTarget to massCureWoundsModal', async () => {
+    it('passes undefined payload when result has modalName but no payload field', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'massCureWoundsTarget',
-        payload: { data: 'massCure' },
-      });
+
+      executeSpellCast.mockResolvedValue({ modalName: 'fear' });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
           undefined,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ massCureWoundsModal: { data: 'massCure' } });
+      expect(setModalState).toHaveBeenCalledWith({ fearModal: undefined });
     });
 
-    it('maps prayerOfHealingTarget to prayerOfHealingModal', async () => {
+    it('passes empty object payload when result has modalName with empty payload', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'prayerOfHealingTarget',
-        payload: { data: 'prayer' },
-      });
+
+      executeSpellCast.mockResolvedValue({ modalName: 'calmEmotions', payload: {} });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
           undefined,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ prayerOfHealingModal: { data: 'prayer' } });
+      expect(setModalState).toHaveBeenCalledWith({ calmEmotionsModal: {} });
     });
 
-    it('maps powerWordFortifyTarget to powerWordFortifyModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'powerWordFortifyTarget',
-        payload: { data: 'fortify' },
-      });
+    it('falls back to setPopupHtml when modalName result is received but setModalState is undefined', async () => {
+      const props = makeProps();
 
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ powerWordFortifyModal: { data: 'fortify' } });
-    });
-
-    it('maps massHealingWordTarget to massHealingWordModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'massHealingWordTarget',
-        payload: { data: 'massHealingWord' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ massHealingWordModal: { data: 'massHealingWord' } });
-    });
-
-    it('maps saveAttackAoe to saveAttackAoeModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'saveAttackAoe',
-        payload: { data: 'saveAoe' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ saveAttackAoeModal: { data: 'saveAoe' } });
-    });
-
-    it('maps aoeCondition to aoeConditionModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'aoeCondition',
-        payload: { data: 'aoeCond' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ aoeConditionModal: { data: 'aoeCond' } });
-    });
-
-    it('maps fear to fearModal', async () => {
-      const setModalState = vi.fn();
       executeSpellCast.mockResolvedValue({
         modalName: 'fear',
-        payload: { data: 'fearData' },
+        payload: { action: { name: 'Fear' } },
       });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ fearModal: { data: 'fearData' } });
+      expect(props.setPopupHtml).toHaveBeenCalledWith({ action: { name: 'Fear' } });
     });
 
-    it('maps hypnoticPattern to hypnoticPatternModal', async () => {
+    it('automationPopup takes priority over modalName in result', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
+
       executeSpellCast.mockResolvedValue({
-        modalName: 'hypnoticPattern',
-        payload: { data: 'hypno' },
+        automationPopup: { type: 'popup', payload: '<div>Automation!</div>' },
+        modalName: 'massHealTarget',
+        payload: { action: { name: 'Mass Heal' } },
       });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
           undefined,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ hypnoticPatternModal: { data: 'hypno' } });
+      expect(props.setPopupHtml).toHaveBeenCalledWith('<div>Automation!</div>');
+      expect(setModalState).not.toHaveBeenCalled();
     });
 
-    it('maps calmEmotions to calmEmotionsModal', async () => {
+    it('uses different spell names without affecting modal routing', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
+
       executeSpellCast.mockResolvedValue({
-        modalName: 'calmEmotions',
-        payload: { data: 'calm' },
+        modalName: 'massHealTarget',
+        payload: { spell: 'DifferentSpell' },
       });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
           undefined,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
-        await result.current.castAction(makeSpell(), {});
+        await result.current.castAction(makeSpell({ name: 'Prayer of Healing' }), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ calmEmotionsModal: { data: 'calm' } });
+      expect(setModalState).toHaveBeenCalledWith({ massHealModal: { spell: 'DifferentSpell' } });
     });
 
-    it('maps massSuggestion to massSuggestionModal', async () => {
+    it('clears ref.current after modal routing completes', async () => {
+      const props = makeProps();
       const setModalState = vi.fn();
+      const ref = { current: { attackerPos: { x: 1 } } };
+
       executeSpellCast.mockResolvedValue({
-        modalName: 'massSuggestion',
-        payload: { data: 'massSugg' },
+        modalName: 'massHealTarget',
+        payload: { data: 'test' },
       });
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          ref,
           setModalState,
-        )
+        ),
       );
 
       await act(async () => {
         await result.current.castAction(makeSpell(), {});
       });
 
-      expect(setModalState).toHaveBeenCalledWith({ massSuggestionModal: { data: 'massSugg' } });
-    });
-
-    it('maps ArcaneVigor to arcaneVigorModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'ArcaneVigor',
-        payload: { data: 'arcane' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ arcaneVigorModal: { data: 'arcane' } });
-    });
-
-    it('maps blindnessDeafness to blindnessDeafnessModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'blindnessDeafness',
-        payload: { data: 'blind' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ blindnessDeafnessModal: { data: 'blind' } });
-    });
-
-    it('maps silenceTargetSelection to silenceModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'silenceTargetSelection',
-        payload: { data: 'silence' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ silenceModal: { data: 'silence' } });
-    });
-
-    it('maps eyebiteEffect to eyebiteEffectModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'eyebiteEffect',
-        payload: { data: 'eyebite' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ eyebiteEffectModal: { data: 'eyebite' } });
-    });
-
-    it('maps wildMagicSurge to wildMagicSurgeModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'wildMagicSurge',
-        payload: { data: 'wild' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ wildMagicSurgeModal: { data: 'wild' } });
-    });
-
-    it('maps feignDeathTargetSelection to feignDeathModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'feignDeathTargetSelection',
-        payload: { data: 'feign' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ feignDeathModal: { data: 'feign' } });
-    });
-
-    it('maps tashasLaughter to tashasLaughterModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'tashasLaughter',
-        payload: { data: 'laughter' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ tashasLaughterModal: { data: 'laughter' } });
-    });
-
-    it('maps animateDead to animateDeadModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'animateDead',
-        payload: { data: 'animate' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ animateDeadModal: { data: 'animate' } });
-    });
-
-    it('maps createUndead to createUndeadModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'createUndead',
-        payload: { data: 'createUndead' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ createUndeadModal: { data: 'createUndead' } });
-    });
-
-    it('maps summonSpirit to summonSpiritModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'summonSpirit',
-        payload: { data: 'summon' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ summonSpiritModal: { data: 'summon' } });
-    });
-
-    it('maps starryChaliceHeal to starryChaliceHealModal', async () => {
-      const setModalState = vi.fn();
-      executeSpellCast.mockResolvedValue({
-        modalName: 'starryChaliceHeal',
-        payload: { data: 'starry' },
-      });
-
-      const { result } = renderHook(() =>
-        useSpellCastExecutor(
-          baseProps.rollAttack,
-          baseProps.rollDamage,
-          baseProps.playerStats,
-          baseProps.getTargetInfo,
-          baseProps.campaignName,
-          baseProps.mapName,
-          baseProps.characters,
-          baseProps.setPopupHtml,
-          {},
-          undefined,
-          setModalState,
-        )
-      );
-
-      await act(async () => {
-        await result.current.castAction(makeSpell(), {});
-      });
-
-      expect(setModalState).toHaveBeenCalledWith({ starryChaliceHealModal: { data: 'starry' } });
+      expect(ref.current).toBeNull();
     });
   });
 });

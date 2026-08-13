@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../services/rules/spells/spellCastService.js', () => ({
@@ -36,10 +37,41 @@ describe('useSpellCastExecutor', () => {
     vi.clearAllMocks();
   });
 
-  describe('error handling', () => {
-    it('does not set popupHtml when executeSpellCast throws', async () => {
+  describe('error handling — behavior not covered elsewhere', () => {
+    it('does not call setModalState when executeSpellCast throws', async () => {
       const props = makeProps();
+      const setModalState = vi.fn();
       executeSpellCast.mockRejectedValue(new Error('Cast failed'));
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          undefined,
+          setModalState,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(setModalState).not.toHaveBeenCalled();
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
+    });
+
+    it('hook remains usable after a cast error', async () => {
+      const props = makeProps();
+      executeSpellCast
+        .mockRejectedValueOnce(new Error('First cast failed'))
+        .mockResolvedValueOnce(null);
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
@@ -59,12 +91,18 @@ describe('useSpellCastExecutor', () => {
       });
 
       expect(props.setPopupHtml).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
     });
 
-    it('logs error to console when executeSpellCast throws', async () => {
+    it('handles non-Error rejection values (string)', async () => {
       const props = makeProps();
       const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
-      executeSpellCast.mockRejectedValue(new Error('Cast failed'));
+      executeSpellCast.mockRejectedValue('string error');
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
@@ -85,18 +123,18 @@ describe('useSpellCastExecutor', () => {
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '[useSpellCastExecutor] executeSpellCast error for Fireball:',
-        expect.any(Error)
+        'string error',
       );
+
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
     });
 
-    it('logs error with correct spell name when executeSpellCast throws', async () => {
+    it('handles undefined rejection value', async () => {
       const props = makeProps();
       const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
-      executeSpellCast.mockRejectedValue(new Error('Cast failed'));
-
-      const spell = makeSpell({ name: 'Burning Hands' });
+      executeSpellCast.mockRejectedValue(undefined);
 
       const { result } = renderHook(() =>
         useSpellCastExecutor(
@@ -112,13 +150,47 @@ describe('useSpellCastExecutor', () => {
       );
 
       await act(async () => {
-        await result.current.castAction(spell, {});
+        await result.current.castAction(makeSpell(), {});
       });
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[useSpellCastExecutor] executeSpellCast error for Burning Hands:',
-        expect.any(Error)
+        '[useSpellCastExecutor] executeSpellCast error for Fireball:',
+        undefined,
       );
+
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles null rejection value', async () => {
+      const props = makeProps();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
+      executeSpellCast.mockRejectedValue(null);
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[useSpellCastExecutor] executeSpellCast error for Fireball:',
+        null,
+      );
+
+      expect(props.setPopupHtml).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
     });

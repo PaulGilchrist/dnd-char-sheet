@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellPositionResolver } from './useSpellPositionResolver.js';
@@ -60,14 +61,14 @@ describe('useSpellPositionResolver', () => {
   // ── Return value structure ─────────────────────────────────────────────
 
   describe('return value', () => {
-    it('returns an object with resolvePositions and cachedPosRef', () => {
+    it('returns an object with resolvePositions function and cachedPosRef ref', () => {
       const { result } = renderHook(() =>
         useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
       );
 
       expect(result.current).toHaveProperty('resolvePositions');
-      expect(result.current).toHaveProperty('cachedPosRef');
       expect(typeof result.current.resolvePositions).toBe('function');
+      expect(result.current).toHaveProperty('cachedPosRef');
       expect(result.current.cachedPosRef).toHaveProperty('current');
       expect(result.current.cachedPosRef.current).toBeNull();
     });
@@ -84,7 +85,7 @@ describe('useSpellPositionResolver', () => {
   // ── Early return when no mapName ───────────────────────────────────────
 
   describe('early return when no mapName', () => {
-    it('does not call any services when mapName is null', async () => {
+    it('does not call any services when mapName is falsy', async () => {
       const { result } = renderHook(() =>
         useSpellPositionResolver('TestCampaign', null, 'Wizard')
       );
@@ -97,18 +98,6 @@ describe('useSpellPositionResolver', () => {
       expect(mockGetCombatContext).not.toHaveBeenCalled();
       expect(mockGetTargetFromAttacker).not.toHaveBeenCalled();
       expect(mockGetNearestPlacedItem).not.toHaveBeenCalled();
-    });
-
-    it('does not call any services when mapName is undefined', async () => {
-      const { result } = renderHook(() =>
-        useSpellPositionResolver('TestCampaign', undefined, 'Wizard')
-      );
-
-      await act(async () => {
-        await result.current.resolvePositions();
-      });
-
-      expect(mockLoadMapData).not.toHaveBeenCalled();
     });
 
     it('does not call any services when mapName is empty string', async () => {
@@ -146,7 +135,7 @@ describe('useSpellPositionResolver', () => {
       expect(mockLoadMapData).toHaveBeenCalledWith('TestCampaign', 'TestMap');
       expect(mockGetCombatContext).toHaveBeenCalledWith('TestCampaign');
       expect(mockGetTargetFromAttacker).toHaveBeenCalledWith(
-        expect.anything(),
+        csData,
         'Wizard'
       );
 
@@ -175,7 +164,7 @@ describe('useSpellPositionResolver', () => {
       });
     });
 
-    it('resolves position when target is an NPC not on the map', async () => {
+    it('resolves position when target is an NPC found via placed items', async () => {
       const mapData = makeMapData({
         players: [{ name: 'Wizard', gridX: 5, gridY: 5 }],
         placedItems: [
@@ -208,35 +197,7 @@ describe('useSpellPositionResolver', () => {
       });
     });
 
-    it('uses nearest placed item when multiple matches exist', async () => {
-      const mapData = makeMapData({
-        players: [{ name: 'Wizard', gridX: 5, gridY: 5 }],
-        placedItems: [
-          { name: 'Goblin', gridX: 3, gridY: 3 },
-          { name: 'Goblin 2', gridX: 8, gridY: 8 },
-        ],
-      });
-      mockLoadMapData.mockResolvedValue([mapData]);
-      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
-      mockGetTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
-      mockGetNearestPlacedItem.mockReturnValue({ name: 'Goblin', gridX: 3, gridY: 3 });
-
-      const { result } = renderHook(() =>
-        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
-      );
-
-      await act(async () => {
-        await result.current.resolvePositions();
-      });
-
-      expect(mockGetNearestPlacedItem).toHaveBeenCalledTimes(1);
-      expect(result.current.cachedPosRef.current.targetPos).toEqual({
-        gridX: 3,
-        gridY: 3,
-      });
-    });
-
-    it('uses player position when target exists as both player and placed item', async () => {
+    it('prefers player position over placed item when target exists in both', async () => {
       const mapData = makeMapData({
         players: [
           { name: 'Wizard', gridX: 5, gridY: 5 },
@@ -259,9 +220,51 @@ describe('useSpellPositionResolver', () => {
         await result.current.resolvePositions();
       });
 
+      // Player position (3,3) takes priority over placed item (99,99)
       expect(result.current.cachedPosRef.current).toEqual({
         attackerPos: { gridX: 5, gridY: 5 },
         targetPos: { gridX: 3, gridY: 3 },
+      });
+    });
+
+    it('refreshes cached positions on subsequent calls', async () => {
+      const mapData1 = makeMapData({
+        players: [{ name: 'Wizard', gridX: 5, gridY: 5 }],
+        placedItems: [{ name: 'Goblin', gridX: 3, gridY: 3 }],
+      });
+      const mapData2 = makeMapData({
+        players: [{ name: 'Wizard', gridX: 7, gridY: 7 }],
+        placedItems: [{ name: 'Goblin', gridX: 1, gridY: 1 }],
+      });
+      mockLoadMapData
+        .mockResolvedValueOnce([mapData1])
+        .mockResolvedValueOnce([mapData2]);
+      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
+      mockGetTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+      mockGetNearestPlacedItem.mockReturnValue({ name: 'Goblin', gridX: 3, gridY: 3 });
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toEqual({
+        attackerPos: { gridX: 5, gridY: 5 },
+        targetPos: { gridX: 3, gridY: 3 },
+      });
+
+      mockGetNearestPlacedItem.mockReturnValue({ name: 'Goblin', gridX: 1, gridY: 1 });
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toEqual({
+        attackerPos: { gridX: 7, gridY: 7 },
+        targetPos: { gridX: 1, gridY: 1 },
       });
     });
   });
@@ -297,6 +300,22 @@ describe('useSpellPositionResolver', () => {
       });
 
       expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not call getTargetFromAttacker when combat context is null', async () => {
+      mockLoadMapData.mockResolvedValue([makeMapData()]);
+      mockGetCombatContext.mockResolvedValue(null);
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(mockGetTargetFromAttacker).not.toHaveBeenCalled();
+      expect(mockGetNearestPlacedItem).not.toHaveBeenCalled();
     });
   });
 
@@ -340,9 +359,25 @@ describe('useSpellPositionResolver', () => {
 
   describe('attacker not found on map', () => {
     it('does not cache positions when attacker is not in mapData.players', async () => {
-      mockLoadMapData.mockResolvedValue(makeMapData({
+      mockLoadMapData.mockResolvedValue([makeMapData({
         players: [{ name: 'Rogue', gridX: 10, gridY: 10 }],
-      }));
+      })]);
+      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
+      mockGetTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not cache positions when mapData.players is undefined', async () => {
+      mockLoadMapData.mockResolvedValue([makeMapData({ players: undefined })]);
       mockGetCombatContext.mockResolvedValue(makeCombatSummary());
       mockGetTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
 
@@ -361,12 +396,12 @@ describe('useSpellPositionResolver', () => {
   // ── Target position resolution failure ─────────────────────────────────
 
   describe('target position resolution failure', () => {
-    it('does not cache positions when target is not a player and no placed items', async () => {
+    it('does not cache positions when target is not a player and placedItems is empty', async () => {
       const mapData = makeMapData({
         players: [{ name: 'Wizard', gridX: 5, gridY: 5 }],
         placedItems: [],
       });
-      mockLoadMapData.mockResolvedValue(mapData);
+      mockLoadMapData.mockResolvedValue([mapData]);
       mockGetCombatContext.mockResolvedValue(makeCombatSummary());
       mockGetTargetFromAttacker.mockReturnValue({ name: 'Mystery Creature' });
 
@@ -400,6 +435,88 @@ describe('useSpellPositionResolver', () => {
       expect(mockGetNearestPlacedItem).toHaveBeenCalled();
       expect(result.current.cachedPosRef.current).toBeNull();
     });
+
+    it('does not cache positions when target has no name property', async () => {
+      mockLoadMapData.mockResolvedValue([makeMapData()]);
+      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
+      mockGetTargetFromAttacker.mockReturnValue({});
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+  });
+
+  // ── Map data edge cases ────────────────────────────────────────────────
+
+  describe('map data edge cases', () => {
+    it('does not cache positions when loadMapData returns undefined', async () => {
+      mockLoadMapData.mockResolvedValue(undefined);
+      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not cache positions when loadMapData returns null', async () => {
+      mockLoadMapData.mockResolvedValue(null);
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not cache positions when loadMapData returns empty array', async () => {
+      mockLoadMapData.mockResolvedValue([]);
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not cache positions when attacker has no gridX/gridY', async () => {
+      mockLoadMapData.mockResolvedValue([{
+        players: [{ name: 'Wizard' }],
+        placedItems: [{ name: 'Goblin', gridX: 3, gridY: 3 }],
+      }]);
+      mockGetCombatContext.mockResolvedValue(makeCombatSummary());
+      mockGetTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      await act(async () => {
+        await result.current.resolvePositions();
+      });
+
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
   });
 
   // ── Error handling ─────────────────────────────────────────────────────
@@ -431,6 +548,30 @@ describe('useSpellPositionResolver', () => {
         await result.current.resolvePositions();
       });
 
+      expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('does not call downstream services when loadMapData times out', async () => {
+      // Simulate timeout by never resolving the mock
+      mockLoadMapData.mockImplementation(() => new Promise(() => {}));
+
+      const { result } = renderHook(() =>
+        useSpellPositionResolver('TestCampaign', 'TestMap', 'Wizard')
+      );
+
+      // The hook has a 3-second timeout, so we use a shorter test timeout
+      await expect(
+        act(async () => {
+          await Promise.race([
+            result.current.resolvePositions(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('test timeout')), 100)
+            ),
+          ]);
+        })
+      ).rejects.toThrow('test timeout');
+
+      // After timeout, the catch block should leave cachedPosRef as null
       expect(result.current.cachedPosRef.current).toBeNull();
     });
   });

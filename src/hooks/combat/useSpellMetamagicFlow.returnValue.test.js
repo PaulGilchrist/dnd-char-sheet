@@ -1,6 +1,12 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
+import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
+import { addEntry } from '../../services/ui/logService.js';
+import { setRuntimeValue } from '../runtime/useRuntimeState.js';
+
+// ── Shared minimal mocks ──────────────────────────────────────────────────────
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
@@ -18,7 +24,7 @@ vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
 }));
 
 vi.mock('../../services/npcs/monsterUtils.js', () => ({
-  getMonsterData: vi.fn(),
+  getMonsterData: vi.fn(() => Promise.resolve({ type: 'humanoid' })),
 }));
 
 vi.mock('../../services/encounters/combatData.js', () => ({
@@ -41,13 +47,13 @@ vi.mock('../../services/automation/index.js', () => ({
   applyHeroesFeastEffect: vi.fn(),
   applyLesserRestorationEffect: vi.fn(),
   applyMageArmorEffect: vi.fn(),
-  applyShieldOfFaithEffect: vi.fn(),
   applyProtectionFromEnergyHandler: vi.fn(),
-  applyProtectionFromPoisonHandler: vi.fn(),
+  applyProtectionFromEvilAndGood: vi.fn(),
+  applyProtectionFromPoisonHandler: vi.fn(() => Promise.resolve(null)),
   applyResistanceEffect: vi.fn(),
-  executeHandler: vi.fn(),
+  executeHandler: vi.fn(() => Promise.resolve(null)),
   confirmGreaterRestoration: vi.fn(),
-  applyHolyAuraEffect: vi.fn(),
+  applyHolyAuraEffect: vi.fn(() => Promise.resolve(null)),
   applyBaneEffect: vi.fn(),
   applyBlessEffect: vi.fn(),
   applyFaerieFire: vi.fn(() => Promise.resolve(null)),
@@ -68,8 +74,8 @@ vi.mock('../../services/automation/index.js', () => ({
   applyAuraOfVitalityEffect: vi.fn(() => Promise.resolve(null)),
   applyDeathWardEffect: vi.fn(() => Promise.resolve(null)),
   applyHeroism: vi.fn(() => Promise.resolve(null)),
-  applyProtectionFromEvilAndGood: vi.fn(),
   applyStoneSkinHandler: vi.fn(() => Promise.resolve(null)),
+  handleSanctuary: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('../../services/rules/features/greaterRestorationService.js', () => ({
@@ -174,6 +180,8 @@ Object.defineProperty(window, 'dispatchEvent', {
   writable: true,
 });
 
+// ── Factories ──────────────────────────────────────────────────────────────────
+
 function makePlayerStats(overrides = {}) {
   return {
     name: 'TestSorcerer',
@@ -183,12 +191,25 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-describe('useSpellMetamagicFlow — return value', () => {
+function makeSpell(overrides = {}) {
+  return {
+    name: 'Fireball',
+    level: 3,
+    casting_time: '1 Action',
+    range: '150 ft.',
+    ...overrides,
+  };
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — return value shape', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('returns all pending state keys and handler functions', () => {
+  it('returns gateMetamagic, handleConfirm, handleSkip, and handler functions', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -196,241 +217,485 @@ describe('useSpellMetamagicFlow — return value', () => {
 
     const ret = result.current;
 
-    // All pending state keys
-    expect(ret).toHaveProperty('pendingMetamagic');
-    expect(ret).toHaveProperty('pendingMultiTarget');
-    expect(ret).toHaveProperty('pendingAid');
-    expect(ret).toHaveProperty('pendingBane');
-    expect(ret).toHaveProperty('pendingBless');
-    expect(ret).toHaveProperty('pendingFaerieFire');
-    expect(ret).toHaveProperty('pendingHolyAura');
-    expect(ret).toHaveProperty('pendingBeaconOfHope');
-    expect(ret).toHaveProperty('pendingSlow');
-    expect(ret).toHaveProperty('pendingHaste');
-    expect(ret).toHaveProperty('pendingEnhanceAbility');
-    expect(ret).toHaveProperty('pendingBarkskin');
-    expect(ret).toHaveProperty('pendingInvisibility');
-    expect(ret).toHaveProperty('pendingGreaterInvisibility');
-    expect(ret).toHaveProperty('pendingFeignDeath');
-    expect(ret).toHaveProperty('pendingHeal');
-    expect(ret).toHaveProperty('pendingHeroesFeast');
-    expect(ret).toHaveProperty('pendingGreaterRestoration');
-    expect(ret).toHaveProperty('pendingLesserRestoration');
-    expect(ret).toHaveProperty('pendingMageArmor');
-    expect(ret).toHaveProperty('pendingShieldOfFaith');
-    expect(ret).toHaveProperty('pendingProtectionFromEvilAndGood');
-    expect(ret).toHaveProperty('pendingProtectionFromPoison');
-    expect(ret).toHaveProperty('pendingStoneSkin');
-    expect(ret).toHaveProperty('pendingProtectionFromEnergy');
-    expect(ret).toHaveProperty('pendingResistance');
-    expect(ret).toHaveProperty('pendingRemoveCurse');
-    expect(ret).toHaveProperty('pendingMagicMissile');
-    expect(ret).toHaveProperty('pendingPassWithoutTrace');
-    expect(ret).toHaveProperty('pendingGlobe');
-    expect(ret).toHaveProperty('pendingForcecage');
-    expect(ret).toHaveProperty('pendingAntimagicField');
-    expect(ret).toHaveProperty('pendingRegenerate');
-    expect(ret).toHaveProperty('pendingHealingWord');
-    expect(ret).toHaveProperty('pendingCureWounds');
-    expect(ret).toHaveProperty('pendingStinkingCloud');
-    expect(ret).toHaveProperty('pendingWeb');
-    expect(ret).toHaveProperty('pendingAnimalFriendship');
-    expect(ret).toHaveProperty('pendingAuraOfLife');
-    expect(ret).toHaveProperty('pendingAuraOfPurity');
-    expect(ret).toHaveProperty('pendingCircleOfPower');
-    expect(ret).toHaveProperty('pendingCompulsion');
-    expect(ret).toHaveProperty('pendingAuraOfVitality');
-    expect(ret).toHaveProperty('pendingForesight');
-    expect(ret).toHaveProperty('pendingLongstrider');
-    expect(ret).toHaveProperty('pendingSpareTheDying');
-    expect(ret).toHaveProperty('pendingPrismaticSpray');
-    expect(ret).toHaveProperty('pendingRevivify');
-    expect(ret).toHaveProperty('pendingSanctuary');
-    expect(ret).toHaveProperty('pendingSleetStorm');
-    expect(ret).toHaveProperty('pendingHoldMonster');
-    expect(ret).toHaveProperty('pendingHoldPerson');
-    expect(ret).toHaveProperty('pendingPolymorph');
-    expect(ret).toHaveProperty('pendingShapechange');
-    expect(ret).toHaveProperty('pendingAnimalShapes');
-    expect(ret).toHaveProperty('pendingTruePolymorph');
-    expect(ret).toHaveProperty('pendingCharmPerson');
-    expect(ret).toHaveProperty('pendingCharmMonster');
-    expect(ret).toHaveProperty('pendingBanishment');
-    expect(ret).toHaveProperty('pendingDeathWard');
-    expect(ret).toHaveProperty('pendingHeroism');
-
-    // Key handler functions
+    // Core entry points
     expect(ret).toHaveProperty('gateMetamagic');
+    expect(typeof ret.gateMetamagic).toBe('function');
     expect(ret).toHaveProperty('handleConfirm');
+    expect(typeof ret.handleConfirm).toBe('function');
     expect(ret).toHaveProperty('handleSkip');
+    expect(typeof ret.handleSkip).toBe('function');
     expect(ret).toHaveProperty('handleMultiTargetConfirm');
+    expect(typeof ret.handleMultiTargetConfirm).toBe('function');
     expect(ret).toHaveProperty('handleMultiTargetSkip');
-    expect(ret).toHaveProperty('handleAidConfirm');
-    expect(ret).toHaveProperty('handleAidSkip');
-    expect(ret).toHaveProperty('handleBaneConfirm');
-    expect(ret).toHaveProperty('handleBaneSkip');
-    expect(ret).toHaveProperty('handleBlessConfirm');
-    expect(ret).toHaveProperty('handleBlessSkip');
-    expect(ret).toHaveProperty('handleHolyAuraConfirm');
-    expect(ret).toHaveProperty('handleHolyAuraSkip');
-    expect(ret).toHaveProperty('handleSlowConfirm');
-    expect(ret).toHaveProperty('handleSlowSkip');
-    expect(ret).toHaveProperty('handleHasteConfirm');
-    expect(ret).toHaveProperty('handleHasteSkip');
-    expect(ret).toHaveProperty('handleEnhanceAbilityAbilitySelect');
-    expect(ret).toHaveProperty('handleEnhanceAbilityConfirm');
-    expect(ret).toHaveProperty('handleEnhanceAbilitySkip');
-    expect(ret).toHaveProperty('handleBarkskinConfirm');
-    expect(ret).toHaveProperty('handleBarkskinSkip');
-    expect(ret).toHaveProperty('handleInvisibilityConfirm');
-    expect(ret).toHaveProperty('handleInvisibilitySkip');
-    expect(ret).toHaveProperty('handleGreaterInvisibilityConfirm');
-    expect(ret).toHaveProperty('handleGreaterInvisibilitySkip');
-    expect(ret).toHaveProperty('handleFeignDeathConfirm');
-    expect(ret).toHaveProperty('handleFeignDeathSkip');
-    expect(ret).toHaveProperty('handleHealConfirm');
-    expect(ret).toHaveProperty('handleHealSkip');
-    expect(ret).toHaveProperty('handleHeroesFeastConfirm');
-    expect(ret).toHaveProperty('handleHeroesFeastSkip');
-    expect(ret).toHaveProperty('handleAuraOfLifeConfirm');
-    expect(ret).toHaveProperty('handleAuraOfLifeSkip');
-    expect(ret).toHaveProperty('handleAuraOfPurityConfirm');
-    expect(ret).toHaveProperty('handleAuraOfPuritySkip');
-    expect(ret).toHaveProperty('handleCircleOfPowerConfirm');
-    expect(ret).toHaveProperty('handleCircleOfPowerSkip');
-    expect(ret).toHaveProperty('handleCompulsionConfirm');
-    expect(ret).toHaveProperty('handleCompulsionSkip');
-    expect(ret).toHaveProperty('handleAuraOfVitalityConfirm');
-    expect(ret).toHaveProperty('handleAuraOfVitalitySkip');
-    expect(ret).toHaveProperty('handleDeathWardConfirm');
-    expect(ret).toHaveProperty('handleDeathWardSkip');
-    expect(ret).toHaveProperty('handleHeroismConfirm');
-    expect(ret).toHaveProperty('handleHeroismSkip');
-    expect(ret).toHaveProperty('handleResistanceTargetSelect');
-    expect(ret).toHaveProperty('handleResistanceTypeSelect');
-    expect(ret).toHaveProperty('handleResistanceSkip');
-    expect(ret).toHaveProperty('handleProtectionFromEnergyTargetSelect');
-    expect(ret).toHaveProperty('handleProtectionFromEnergyTypeSelect');
-    expect(ret).toHaveProperty('handleProtectionFromEnergySkip');
-    expect(ret).toHaveProperty('handleProtectionFromPoisonConfirm');
-    expect(ret).toHaveProperty('handleProtectionFromPoisonSkip');
-    expect(ret).toHaveProperty('handleStoneSkinConfirm');
-    expect(ret).toHaveProperty('handleStoneSkinSkip');
-    expect(ret).toHaveProperty('handleGlobeConfirm');
-    expect(ret).toHaveProperty('handleGlobeSkip');
-    expect(ret).toHaveProperty('handleForcecageConfirm');
-    expect(ret).toHaveProperty('handleForcecageSkip');
-    expect(ret).toHaveProperty('handleAntimagicFieldConfirm');
-    expect(ret).toHaveProperty('handleAntimagicFieldSkip');
-    expect(ret).toHaveProperty('handleStinkingCloudConfirm');
-    expect(ret).toHaveProperty('handleStinkingCloudSkip');
-    expect(ret).toHaveProperty('handleConfusionConfirm');
-    expect(ret).toHaveProperty('handleConfusionSkip');
-    expect(ret).toHaveProperty('handleWebConfirm');
-    expect(ret).toHaveProperty('handleWebSkip');
-    expect(ret).toHaveProperty('handleAnimalFriendshipConfirm');
-    expect(ret).toHaveProperty('handleAnimalFriendshipSkip');
-    expect(ret).toHaveProperty('handleRegenerateConfirm');
-    expect(ret).toHaveProperty('handleRegenerateSkip');
-    expect(ret).toHaveProperty('handleHealingWordConfirm');
-    expect(ret).toHaveProperty('handleHealingWordSkip');
-    expect(ret).toHaveProperty('handleCureWoundsConfirm');
-    expect(ret).toHaveProperty('handleCureWoundsSkip');
-    expect(ret).toHaveProperty('handleHoldMonsterConfirm');
-    expect(ret).toHaveProperty('handleHoldMonsterSkip');
-    expect(ret).toHaveProperty('handleHoldPersonConfirm');
-    expect(ret).toHaveProperty('handleHoldPersonSkip');
-    expect(ret).toHaveProperty('handlePolymorphConfirm');
-    expect(ret).toHaveProperty('handlePolymorphSkip');
-    expect(ret).toHaveProperty('handleAnimalShapesTargetConfirm');
-    expect(ret).toHaveProperty('handleAnimalShapesSkip');
-    expect(ret).toHaveProperty('handleAnimalShapesBeastConfirm');
-    expect(ret).toHaveProperty('handleTruePolymorphPathSelect');
-    expect(ret).toHaveProperty('handleTruePolymorphTargetConfirm');
-    expect(ret).toHaveProperty('handleTruePolymorphSkip');
-    expect(ret).toHaveProperty('handleCharmPersonConfirm');
-    expect(ret).toHaveProperty('handleCharmPersonSkip');
-    expect(ret).toHaveProperty('handleCharmMonsterConfirm');
-    expect(ret).toHaveProperty('handleCharmMonsterSkip');
-    expect(ret).toHaveProperty('handleBanishmentConfirm');
-    expect(ret).toHaveProperty('handleBanishmentSkip');
-    expect(ret).toHaveProperty('handlePrismaticSprayConfirm');
-    expect(ret).toHaveProperty('handlePrismaticSpraySkip');
-    expect(ret).toHaveProperty('handleRevivifyConfirm');
-    expect(ret).toHaveProperty('handleRevivifySkip');
-    expect(ret).toHaveProperty('handleSanctuaryConfirm');
-    expect(ret).toHaveProperty('handleSanctuarySkip');
-    expect(ret).toHaveProperty('handleSleetStormConfirm');
-    expect(ret).toHaveProperty('handleSleetStormSkip');
-    expect(ret).toHaveProperty('handleMagicMissileConfirm');
-    expect(ret).toHaveProperty('handleMagicMissileSkip');
-    expect(ret).toHaveProperty('handleForesightConfirm');
-    expect(ret).toHaveProperty('handleForesightSkip');
-    expect(ret).toHaveProperty('handleProtectionFromEvilAndGoodConfirm');
-    expect(ret).toHaveProperty('handleProtectionFromEvilAndGoodSkip');
-    expect(ret).toHaveProperty('handleShieldOfFaithConfirm');
-    expect(ret).toHaveProperty('handleShieldOfFaithSkip');
-    expect(ret).toHaveProperty('handleEnhanceAbilityConfirm');
-    expect(ret).toHaveProperty('handleEnhanceAbilitySkip');
-    expect(ret).toHaveProperty('handleBarkskinConfirm');
-    expect(ret).toHaveProperty('handleBarkskinSkip');
-    expect(ret).toHaveProperty('handleInvisibilityConfirm');
-    expect(ret).toHaveProperty('handleInvisibilitySkip');
-    expect(ret).toHaveProperty('handleGreaterInvisibilityConfirm');
-    expect(ret).toHaveProperty('handleGreaterInvisibilitySkip');
-    expect(ret).toHaveProperty('handleFaerieFireConfirm');
-    expect(ret).toHaveProperty('handleFaerieFireSkip');
-    expect(ret).toHaveProperty('handleBeaconOfHopeConfirm');
-    expect(ret).toHaveProperty('handleBeaconOfHopeSkip');
-    expect(ret).toHaveProperty('handleLongstriderConfirm');
-    expect(ret).toHaveProperty('handleLongstriderSkip');
-    expect(ret).toHaveProperty('handleSpareTheDyingConfirm');
-    expect(ret).toHaveProperty('handleSpareTheDyingSkip');
-    expect(ret).toHaveProperty('handlePassWithoutTraceConfirm');
-    expect(ret).toHaveProperty('handlePassWithoutTraceSkip');
-    expect(ret).toHaveProperty('handleLesserRestorationConfirm');
-    expect(ret).toHaveProperty('handleLesserRestorationSkip');
-    expect(ret).toHaveProperty('handleRemoveCurseConfirm');
-    expect(ret).toHaveProperty('handleRemoveCurseSkip');
-    expect(ret).toHaveProperty('handleMageArmorConfirm');
-    expect(ret).toHaveProperty('handleMageArmorSkip');
-    expect(ret).toHaveProperty('handleProtectionFromEnergyTypeSelect');
-    expect(ret).toHaveProperty('handleProtectionFromEnergySkip');
-    expect(ret).toHaveProperty('handleProtectionFromPoisonConfirm');
-    expect(ret).toHaveProperty('handleProtectionFromPoisonSkip');
-    expect(ret).toHaveProperty('handleStoneSkinConfirm');
-    expect(ret).toHaveProperty('handleStoneSkinSkip');
-    expect(ret).toHaveProperty('handleGreaterRestorationConfirm');
-    expect(ret).toHaveProperty('handleGreaterRestorationSkip');
-    expect(ret).toHaveProperty('handleTruePolymorphTargetConfirm');
-    expect(ret).toHaveProperty('handleTruePolymorphSkip');
-    expect(ret).toHaveProperty('handleCharmPersonConfirm');
-    expect(ret).toHaveProperty('handleCharmPersonSkip');
-    expect(ret).toHaveProperty('handleCharmMonsterConfirm');
-    expect(ret).toHaveProperty('handleCharmMonsterSkip');
-    expect(ret).toHaveProperty('handleBanishmentConfirm');
-    expect(ret).toHaveProperty('handleBanishmentSkip');
-    expect(ret).toHaveProperty('handleAnimalShapesTargetConfirm');
-    expect(ret).toHaveProperty('handleAnimalShapesSkip');
-    expect(ret).toHaveProperty('handleAnimalShapesBeastConfirm');
-    expect(ret).toHaveProperty('handleRevivifyConfirm');
-    expect(ret).toHaveProperty('handleRevivifySkip');
-    expect(ret).toHaveProperty('handleSanctuaryConfirm');
-    expect(ret).toHaveProperty('handleSanctuarySkip');
-    expect(ret).toHaveProperty('handleSleetStormConfirm');
-    expect(ret).toHaveProperty('handleSleetStormSkip');
-    expect(ret).toHaveProperty('handleMagicMissileConfirm');
-    expect(ret).toHaveProperty('handleMagicMissileSkip');
-    expect(ret).toHaveProperty('handleForesightConfirm');
-    expect(ret).toHaveProperty('handleForesightSkip');
-    expect(ret).toHaveProperty('handleProtectionFromEvilAndGoodConfirm');
-    expect(ret).toHaveProperty('handleProtectionFromEvilAndGoodSkip');
-    expect(ret).toHaveProperty('handleShieldOfFaithConfirm');
-    expect(ret).toHaveProperty('handleShieldOfFaithSkip');
+    expect(typeof ret.handleMultiTargetSkip).toBe('function');
+    expect(ret).toHaveProperty('cfClearPending');
+    expect(typeof ret.cfClearPending).toBe('function');
+  });
 
-    // Stage state
-    expect(ret).toHaveProperty('resistanceStage');
-    expect(ret).toHaveProperty('enhanceAbilityStage');
-    expect(ret).toHaveProperty('protectionFromEnergyStage');
+  it('returns pending state getters for all supported spells', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    const pendingKeys = [
+      'pendingMetamagic', 'pendingMultiTarget', 'pendingAid', 'pendingBane',
+      'pendingBless', 'pendingFaerieFire', 'pendingHolyAura', 'pendingBeaconOfHope',
+      'pendingSlow', 'pendingHaste', 'pendingEnhanceAbility', 'pendingBarkskin',
+      'pendingInvisibility', 'pendingGreaterInvisibility', 'pendingFeignDeath',
+      'pendingHeal', 'pendingHeroesFeast', 'pendingGreaterRestoration',
+      'pendingLesserRestoration', 'pendingMageArmor', 'pendingShieldOfFaith',
+      'pendingProtectionFromEvilAndGood', 'pendingProtectionFromPoison',
+      'pendingStoneSkin', 'pendingProtectionFromEnergy', 'pendingResistance',
+      'pendingRemoveCurse', 'pendingMagicMissile', 'pendingPassWithoutTrace',
+      'pendingGlobe', 'pendingForcecage', 'pendingAntimagicField',
+      'pendingRegenerate', 'pendingHealingWord', 'pendingCureWounds',
+      'pendingStinkingCloud', 'pendingWeb', 'pendingAnimalFriendship',
+      'pendingAuraOfLife', 'pendingAuraOfPurity', 'pendingCircleOfPower',
+      'pendingCompulsion', 'pendingAuraOfVitality', 'pendingForesight',
+      'pendingLongstrider', 'pendingSpareTheDying', 'pendingPrismaticSpray',
+      'pendingConfusion', 'pendingRevivify', 'pendingSanctuary',
+      'pendingSleetStorm', 'pendingHoldMonster', 'pendingHoldPerson',
+      'pendingPolymorph', 'pendingShapechange', 'pendingAnimalShapes',
+      'pendingTruePolymorph', 'pendingCharmPerson', 'pendingCharmMonster',
+      'pendingBanishment', 'pendingDeathWard', 'pendingHeroism',
+    ];
+
+    for (const key of pendingKeys) {
+      expect(result.current).toHaveProperty(key);
+    }
+  });
+
+  it('returns stage state for two-stage handlers', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    expect(result.current).toHaveProperty('resistanceStage');
+    expect(result.current).toHaveProperty('enhanceAbilityStage');
+    expect(result.current).toHaveProperty('protectionFromEnergyStage');
+    expect(result.current.resistanceStage).toBeNull();
+    expect(result.current.enhanceAbilityStage).toBeNull();
+    expect(result.current.protectionFromEnergyStage).toBeNull();
+  });
+
+  it('returns all handler functions for simple spells', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    const handlers = [
+      'handleAidConfirm', 'handleAidSkip',
+      'handleBaneConfirm', 'handleBaneSkip',
+      'handleBlessConfirm', 'handleBlessSkip',
+      'handleFaerieFireConfirm', 'handleFaerieFireSkip',
+      'handleHolyAuraConfirm', 'handleHolyAuraSkip',
+      'handleBeaconOfHopeConfirm', 'handleBeaconOfHopeSkip',
+      'handleSlowConfirm', 'handleSlowSkip',
+      'handleHasteConfirm', 'handleHasteSkip',
+      'handleInvisibilityConfirm', 'handleInvisibilitySkip',
+      'handleGreaterInvisibilityConfirm', 'handleGreaterInvisibilitySkip',
+      'handleFeignDeathConfirm', 'handleFeignDeathSkip',
+      'handleHealConfirm', 'handleHealSkip',
+      'handleHeroesFeastConfirm', 'handleHeroesFeastSkip',
+      'handleLongstriderConfirm', 'handleLongstriderSkip',
+      'handleSpareTheDyingConfirm', 'handleSpareTheDyingSkip',
+      'handleAuraOfLifeConfirm', 'handleAuraOfLifeSkip',
+      'handleAuraOfPurityConfirm', 'handleAuraOfPuritySkip',
+      'handleCircleOfPowerConfirm', 'handleCircleOfPowerSkip',
+      'handleCompulsionConfirm', 'handleCompulsionSkip',
+      'handleAuraOfVitalityConfirm', 'handleAuraOfVitalitySkip',
+      'handleDeathWardConfirm', 'handleDeathWardSkip',
+      'handleHeroismConfirm', 'handleHeroismSkip',
+      'handleGreaterRestorationConfirm', 'handleGreaterRestorationSkip',
+      'handleGreaterRestorationNoEffects',
+      'handleLesserRestorationConfirm', 'handleLesserRestorationSkip',
+      'handleCureWoundsConfirm', 'handleCureWoundsSkip',
+      'handleStinkingCloudConfirm', 'handleStinkingCloudSkip',
+      'handleWebConfirm', 'handleWebSkip',
+      'handleConfusionConfirm', 'handleConfusionSkip',
+      'handleAnimalFriendshipConfirm', 'handleAnimalFriendshipSkip',
+      'handleRegenerateConfirm', 'handleRegenerateSkip',
+      'handleHealingWordConfirm', 'handleHealingWordSkip',
+      'handleHoldMonsterConfirm', 'handleHoldMonsterSkip',
+      'handleHoldPersonConfirm', 'handleHoldPersonSkip',
+      'handlePolymorphConfirm', 'handlePolymorphSkip',
+      'handleCharmPersonConfirm', 'handleCharmPersonSkip',
+      'handleCharmMonsterConfirm', 'handleCharmMonsterSkip',
+      'handleBanishmentConfirm', 'handleBanishmentSkip',
+      'handlePrismaticSprayConfirm', 'handlePrismaticSpraySkip',
+      'handleRevivifyConfirm', 'handleRevivifySkip',
+      'handleSanctuaryConfirm', 'handleSanctuarySkip',
+      'handleSleetStormConfirm', 'handleSleetStormSkip',
+      'handleMagicMissileConfirm', 'handleMagicMissileSkip',
+      'handleForesightConfirm', 'handleForesightSkip',
+      'handleProtectionFromEvilAndGoodConfirm', 'handleProtectionFromEvilAndGoodSkip',
+      'handleShieldOfFaithConfirm', 'handleShieldOfFaithSkip',
+      'handleBarkskinConfirm', 'handleBarkskinSkip',
+      'handlePassWithoutTraceConfirm', 'handlePassWithoutTraceSkip',
+      'handleProtectionFromPoisonConfirm', 'handleProtectionFromPoisonSkip',
+      'handleStoneSkinConfirm', 'handleStoneSkinSkip',
+      'handleMageArmorConfirm', 'handleMageArmorSkip',
+      'handleGlobeConfirm', 'handleGlobeSkip',
+      'handleForcecageConfirm', 'handleForcecageSkip',
+      'handleAntimagicFieldConfirm', 'handleAntimagicFieldSkip',
+    ];
+
+    for (const handler of handlers) {
+      expect(result.current).toHaveProperty(handler);
+      expect(typeof result.current[handler]).toBe('function');
+    }
+  });
+
+  it('returns two-stage and complex handler functions', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    const handlers = [
+      'handleResistanceTargetSelect', 'handleResistanceTypeSelect', 'handleResistanceSkip',
+      'handleProtectionFromEnergyTargetSelect', 'handleProtectionFromEnergyTypeSelect', 'handleProtectionFromEnergySkip',
+      'handleEnhanceAbilityAbilitySelect', 'handleEnhanceAbilityConfirm', 'handleEnhanceAbilitySkip',
+      'handleTruePolymorphPathSelect', 'handleTruePolymorphTargetConfirm', 'handleTruePolymorphSkip',
+      'handleAnimalShapesTargetConfirm', 'handleAnimalShapesBeastConfirm', 'handleAnimalShapesSkip',
+    ];
+
+    for (const handler of handlers) {
+      expect(result.current).toHaveProperty(handler);
+      expect(typeof result.current[handler]).toBe('function');
+    }
+  });
+});
+
+// ── gateMetamagic behavior ────────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — gateMetamagic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+  });
+
+  it('sets pending state for metamagic-enabled spells', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    expect(result.current.pendingBane).not.toBeNull();
+    expect(result.current.pendingBane.spellName).toBe('Bane');
+  });
+
+  it('sets pendingMetamagic for any spell passed through gateMetamagic', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Fireball', level: 3 }));
+    });
+
+    // gateMetamagic always sets pendingMetamagic regardless of spell type
+    expect(result.current.pendingMetamagic).not.toBeNull();
+    expect(result.current.pendingMetamagic.spellName).toBe('Fireball');
+  });
+
+  it('clears pending after confirm handler runs', async () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    expect(result.current.pendingBane).not.toBeNull();
+
+    await act(async () => {
+      await result.current.handleBaneConfirm(['Goblin A']);
+    });
+
+    expect(result.current.pendingBane).toBeNull();
+  });
+
+  it('clears pending after skip handler runs', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    expect(result.current.pendingBane).not.toBeNull();
+
+    act(() => {
+      result.current.handleBaneSkip();
+    });
+
+    expect(result.current.pendingBane).toBeNull();
+  });
+});
+
+// ── Handler guards — no-op when no pending ────────────────────────────────────
+
+describe('useSpellMetamagicFlow — handler guards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+  });
+
+  it('handleBaneConfirm does nothing when no pending bane', async () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    await act(async () => {
+      await result.current.handleBaneConfirm(['Goblin A']);
+    });
+
+    expect(addEntry).not.toHaveBeenCalled();
+  });
+
+  it('handleBaneSkip does nothing when no pending bane', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.handleBaneSkip();
+    });
+
+    expect(addEntry).not.toHaveBeenCalled();
+  });
+
+  it('handleMagicMissileConfirm does nothing when no pending magicMissile', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleMagicMissileConfirm({ distribution: { 'Goblin A': 1 } });
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+  });
+
+  it('handleResistanceTypeSelect does nothing when no pending resistance', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.handleResistanceTypeSelect('fire');
+    });
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('handleProtectionFromEnergyTypeSelect does nothing when no pending protectionFromEnergy', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.handleProtectionFromEnergyTypeSelect('fire');
+    });
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('handleGreaterRestorationNoEffects does nothing when no pending greaterRestoration', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.handleGreaterRestorationNoEffects();
+    });
+
+    expect(addEntry).not.toHaveBeenCalled();
+  });
+
+  it('handleTruePolymorphPathSelect does nothing when no pending truePolymorph', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.handleTruePolymorphPathSelect('object_into_creature');
+    });
+
+    expect(addEntry).not.toHaveBeenCalled();
+  });
+
+  it('handleAnimalShapesBeastConfirm calls setPopupHtml(null) even when no pending animalShapes', async () => {
+    const setPopupHtml = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn(), null, [], setPopupHtml)
+    );
+
+    await act(async () => {
+      await result.current.handleAnimalShapesBeastConfirm({});
+    });
+
+    expect(setPopupHtml).toHaveBeenCalledWith(null);
+  });
+});
+
+// ── cfClearPending ────────────────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — cfClearPending', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+  });
+
+  it('clears pending state for a given type', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    expect(result.current.pendingBane).not.toBeNull();
+
+    act(() => {
+      result.current.cfClearPending('bane');
+    });
+
+    expect(result.current.pendingBane).toBeNull();
+  });
+
+  it('is a no-op when type has no pending state', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    // Should not throw
+    act(() => {
+      result.current.cfClearPending('nonexistent');
+    });
+
+    expect(result.current.pendingBane).toBeNull();
+  });
+});
+
+// ── Two-stage handler state transitions ───────────────────────────────────────
+
+describe('useSpellMetamagicFlow — two-stage handler state transitions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+  });
+
+  it('resistance: target select transitions stage to "type"', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Resistance', level: 0 }));
+    });
+
+    // useEffect in useTwoStageHandlers auto-sets stage to 'target' when pending exists
+    expect(result.current.resistanceStage).toBe('target');
+
+    act(() => {
+      result.current.handleResistanceTargetSelect('Goblin A');
+    });
+
+    expect(result.current.resistanceStage).toBe('type');
+  });
+
+  it('enhanceAbility: ability select transitions stage to "target"', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Enhance Ability', level: 2 }));
+    });
+
+    // useEffect in useTwoStageHandlers auto-sets stage to 'ability' when pending exists
+    expect(result.current.enhanceAbilityStage).toBe('ability');
+
+    act(() => {
+      result.current.handleEnhanceAbilityAbilitySelect('Strength');
+    });
+
+    expect(result.current.enhanceAbilityStage).toBe('target');
+  });
+
+  it('protectionFromEnergy: target select transitions stage to "type"', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Protection from Energy', level: 3 }));
+    });
+
+    // useEffect in useTwoStageHandlers auto-sets stage to 'target' when pending exists
+    expect(result.current.protectionFromEnergyStage).toBe('target');
+
+    act(() => {
+      result.current.handleProtectionFromEnergyTargetSelect('Goblin A');
+    });
+
+    expect(result.current.protectionFromEnergyStage).toBe('type');
+  });
+});
+
+// ── Logging on confirm/skip ──────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — logging on confirm/skip', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+  });
+
+  it('logs a spell entry on confirm handler execution', async () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    await act(async () => {
+      await result.current.handleBaneConfirm(['Goblin A']);
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      spellName: 'Bane',
+    }));
+  });
+
+  it('logs a spell entry on skip handler execution', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Bane', level: 0 }));
+    });
+
+    act(() => {
+      result.current.handleBaneSkip();
+    });
+
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      spellName: 'Bane',
+    }));
   });
 });

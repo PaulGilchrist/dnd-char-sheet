@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../services/rules/spells/spellCastService.js', () => ({
@@ -36,15 +37,14 @@ describe('useSpellCastExecutor', () => {
     vi.clearAllMocks();
   });
 
-  describe('castAction — modalName result handling', () => {
-    it('calls handleModalResult when result has modalName and setModalState is provided', async () => {
+  describe('castAction — bare modalName (non-automationPopup) handling', () => {
+    it('calls setModalState with correct mapping when result has modalName and setModalState is provided', async () => {
       const props = makeProps();
       const setModalState = vi.fn();
 
       executeSpellCast.mockResolvedValue({
         modalName: 'massHealTarget',
         payload: { action: { name: 'Mass Heal' } },
-        healAmount: 20,
       });
 
       const { result } = renderHook(() =>
@@ -71,7 +71,7 @@ describe('useSpellCastExecutor', () => {
       expect(props.setPopupHtml).not.toHaveBeenCalled();
     });
 
-    it('falls back to setPopupHtml when result has modalName but no setModalState', async () => {
+    it('falls back to setPopupHtml when result has modalName but setModalState is not provided', async () => {
       const props = makeProps();
 
       executeSpellCast.mockResolvedValue({
@@ -97,9 +97,10 @@ describe('useSpellCastExecutor', () => {
       });
 
       expect(props.setPopupHtml).toHaveBeenCalledWith({ action: { name: 'Fear' } });
+      expect(props.setPopupHtml).toHaveBeenCalledTimes(1);
     });
 
-    it('handles unknown modalName with console.error when setModalState is provided', async () => {
+    it('logs console.error for unknown modalName when setModalState is provided', async () => {
       const props = makeProps();
       const setModalState = vi.fn();
       const consoleErrorSpy = vi.spyOn(console, 'error').mockReturnValue();
@@ -136,6 +137,167 @@ describe('useSpellCastExecutor', () => {
       expect(props.setPopupHtml).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it('unknown modalName without setModalState falls back to setPopupHtml (no error logged)', async () => {
+      const props = makeProps();
+
+      executeSpellCast.mockResolvedValue({
+        modalName: 'totallyUnknown',
+        payload: { data: 'unknown payload' },
+      });
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      // Without setModalState, the code path goes directly to setPopupHtml(result.payload)
+      // without calling handleModalResult, so unknown modalNames are silently passed through
+      expect(props.setPopupHtml).toHaveBeenCalledWith({ data: 'unknown payload' });
+    });
+
+    it('automationPopup takes priority over bare modalName in result', async () => {
+      const props = makeProps();
+      const setModalState = vi.fn();
+
+      executeSpellCast.mockResolvedValue({
+        automationPopup: { type: 'popup', payload: '<div>Automation popup</div>' },
+        modalName: 'massHealTarget',
+        payload: { action: { name: 'Mass Heal' } },
+      });
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          undefined,
+          setModalState,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      // automationPopup path fires first, so setPopupHtml is called with the automation payload
+      expect(props.setPopupHtml).toHaveBeenCalledWith('<div>Automation popup</div>');
+      expect(setModalState).not.toHaveBeenCalled();
+    });
+
+    it('bare modalName payload is preserved through to setModalState without transformation', async () => {
+      const props = makeProps();
+      const setModalState = vi.fn();
+      const complexPayload = { targets: ['A', 'B', 'C'], spellLevel: 3, customFlag: true };
+
+      executeSpellCast.mockResolvedValue({
+        modalName: 'massCureWoundsTarget',
+        payload: complexPayload,
+      });
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          undefined,
+          setModalState,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(setModalState).toHaveBeenCalledWith({ massCureWoundsModal: complexPayload });
+    });
+
+    it('bare modalName with empty payload object routes correctly', async () => {
+      const props = makeProps();
+      const setModalState = vi.fn();
+
+      executeSpellCast.mockResolvedValue({
+        modalName: 'calmEmotions',
+        payload: {},
+      });
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          undefined,
+          setModalState,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(setModalState).toHaveBeenCalledWith({ calmEmotionsModal: {} });
+    });
+
+    it('bare modalName without payload field routes correctly with undefined', async () => {
+      const props = makeProps();
+      const setModalState = vi.fn();
+
+      executeSpellCast.mockResolvedValue({
+        modalName: 'hypnoticPattern',
+      });
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          undefined,
+          setModalState,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(setModalState).toHaveBeenCalledWith({ hypnoticPatternModal: undefined });
     });
   });
 });

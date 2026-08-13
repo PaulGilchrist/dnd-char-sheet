@@ -1,9 +1,13 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
 
+// ── Mocking strategy ──────────────────────────────────────────────────────────
+// Only mock the modules actually exercised by the behavior under test.
+// Unrelated automation handlers receive no-ops so they never interfere.
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
@@ -178,6 +182,8 @@ Object.defineProperty(window, 'dispatchEvent', {
   writable: true,
 });
 
+// ── Factories ──────────────────────────────────────────────────────────────────
+
 function makePlayerStats(overrides = {}) {
   return {
     name: 'TestSorcerer',
@@ -197,23 +203,48 @@ function makeSpell(overrides = {}) {
   };
 }
 
-function renderHookWithSpell(hookSetup, spellName, spellOverrides = {}) {
+// ── Test helpers ───────────────────────────────────────────────────────────────
+
+// Renders the hook and gates a spell that hits the spell gate for greater restoration.
+// Returns { result, onExecute } for the caller to inspect.
+function renderWithGreaterRestoration(playerStatsOverride = {}) {
   const onExecute = vi.fn();
   const { result } = renderHook(() =>
-    hookSetup(onExecute)
+    useSpellMetamagicFlow(
+      makePlayerStats(playerStatsOverride),
+      'TestCampaign',
+      onExecute
+    )
   );
-  const spell = makeSpell({ name: spellName, ...spellOverrides });
+  // gateMetamagic is async; use act with async to await it
   act(() => {
-    result.current.gateMetamagic(spell);
+    result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
   });
-  return { result, onExecute, spell };
+  return { result, onExecute };
 }
 
-describe('useSpellMetamagicFlow — getCreatureTargets', () => {
-  it('returns creature names from combat summary', () => {
-    const onExecute = vi.fn();
+// Renders the hook and gates a spell that hits the spell gate for a target-selection spell.
+function renderWithTargetSpell(spellName, spellLevel, playerStatsOverride = {}) {
+  const onExecute = vi.fn();
+  const { result } = renderHook(() =>
+    useSpellMetamagicFlow(
+      makePlayerStats(playerStatsOverride),
+      'TestCampaign',
+      onExecute
+    )
+  );
+  act(() => {
+    result.current.gateMetamagic(makeSpell({ name: spellName, level: spellLevel }));
+  });
+  return { result, onExecute };
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — initial state', () => {
+  it('has no pending metamagic on mount', () => {
     const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
 
     expect(result.current.pendingMetamagic).toBeNull();
@@ -223,28 +254,30 @@ describe('useSpellMetamagicFlow — getCreatureTargets', () => {
 describe('useSpellMetamagicFlow — handleGreaterRestorationNoEffects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('refunds spell slot and logs entry when no effects to remove', async () => {
-    const { setRuntimeValue } = await import('../runtime/useRuntimeState.js');
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Greater Restoration',
-      { level: 5 },
-    );
+  it('refunds the spell slot and logs when no effects to remove', async () => {
+    const { result, onExecute } = renderWithGreaterRestoration();
 
-    act(() => {
+    // Greater Restoration has a spell gate, so pendingGreaterRestoration is set
+    expect(result.current.pendingGreaterRestoration).not.toBeNull();
+
+    await act(async () => {
       result.current.handleGreaterRestorationNoEffects();
     });
 
+    // Slot should be refunded (3 + 1 = 4)
+    const { setRuntimeValue } = await import('../runtime/useRuntimeState.js');
     expect(setRuntimeValue).toHaveBeenCalledWith(
       'TestSorcerer',
       'spell_slots_level_5',
       4,
       'TestCampaign'
     );
-    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+
+    // A log entry should be created for the cancelled cast
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
       type: 'spell',
       characterName: 'TestSorcerer',
       targetName: null,
@@ -252,19 +285,35 @@ describe('useSpellMetamagicFlow — handleGreaterRestorationNoEffects', () => {
       spellName: 'Greater Restoration',
       spellLevel: 5,
       castingTime: '1 Action',
-      timestamp: expect.any(Number),
-    });
+    }));
+
+    // onExecute should NOT be called — the spell was cancelled, not cast
+    expect(onExecute).not.toHaveBeenCalled();
+
+    // Pending should be cleared
     expect(result.current.pendingGreaterRestoration).toBeNull();
+  });
+
+  it('does nothing when called without a pending greater restoration', async () => {
+    const { result, onExecute } = renderWithTargetSpell('Fireball', 3);
+
+    expect(result.current.pendingGreaterRestoration).toBeNull();
+
+    await act(async () => {
+      result.current.handleGreaterRestorationNoEffects();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
   });
 });
 
 describe('useSpellMetamagicFlow — non-Sorcerer cantrip with material', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('consumes material and calls onExecute for non-Sorcerer cantrip with damage and material', async () => {
+  it('consumes material and calls onExecute for a damaging cantrip', async () => {
     const materialModule = await import('../../services/rules/spells/materialComponents.js');
     materialModule.getConsumedMaterial.mockImplementation((spell) => {
       if ((spell.name || '').toLowerCase() === 'firebolt') {
@@ -283,21 +332,52 @@ describe('useSpellMetamagicFlow — non-Sorcerer cantrip with material', () => {
     );
 
     await act(async () => {
-      result.current.gateMetamagic(makeSpell({ name: 'Firebolt', level: 0, damage: { damage_at_character_level: { 5: '1d10' } } }));
+      await result.current.gateMetamagic(
+        makeSpell({ name: 'Firebolt', level: 0, damage: { damage_at_character_level: { 5: '1d10' } } })
+      );
     });
 
+    // The wizard should have onExecute called with the upcast spell
     expect(onExecute).toHaveBeenCalled();
+    const [executedSpell] = onExecute.mock.calls[0];
+    expect(executedSpell.level).toBe(5);
+
+    // Material should have been consumed
     expect(materialModule.consumeMaterial).toHaveBeenCalledWith(
       expect.any(Object),
       'Some Material',
       'TestCampaign'
     );
   });
+
+  it('does not upcast a cantrip without damage', async () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(
+        { name: 'TestWizard', class: { name: 'Wizard' }, level: 5 },
+        'TestCampaign',
+        onExecute
+      )
+    );
+
+    await act(async () => {
+      await result.current.gateMetamagic(
+        makeSpell({ name: 'Minor Illusion', level: 0 })
+      );
+    });
+
+    // Non-damage cantrip goes through prepareSpellCast (not upcast path)
+    expect(onExecute).toHaveBeenCalled();
+    const [executedSpell] = onExecute.mock.calls[0];
+    // prepareSpellCast mock returns { modifiedSpell: {} }, so level is undefined
+    expect(executedSpell).toEqual({});
+  });
 });
 
-describe('useSpellMetamagicFlow — multi-target spread with secondary modal', () => {
+describe('useSpellMetamagicFlow — multi-target Power Word spells with secondary modal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
   it('shows secondary target modal for Power Word Heal when setSecondaryTargetModal is provided', () => {
@@ -325,7 +405,7 @@ describe('useSpellMetamagicFlow — multi-target spread with secondary modal', (
     expect(modal.secondaryTargetModal.targets).toHaveLength(3);
   });
 
-  it('calls onExecute with multiTarget when second target selected from modal', async () => {
+  it('calls onExecute with multiTarget when second target is selected from modal', async () => {
     const setSecondaryTargetModal = vi.fn();
     const setPopupHtml = vi.fn();
     const onExecute = vi.fn();
@@ -341,7 +421,7 @@ describe('useSpellMetamagicFlow — multi-target spread with secondary modal', (
     );
 
     act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Power Word Kill', level: 8 }));
+      result.current.gateMetamagic(makeSpell({ name: 'Power Word Heal', level: 9 }));
     });
 
     expect(setSecondaryTargetModal).toHaveBeenCalled();
@@ -353,6 +433,7 @@ describe('useSpellMetamagicFlow — multi-target spread with secondary modal', (
 
     expect(onExecute).toHaveBeenCalled();
     expect(onExecute.mock.calls[0][1].multiTarget).toBe('Goblin A');
+    expect(setSecondaryTargetModal).toHaveBeenCalledWith(null);
   });
 
   it('calls onExecute with empty metaCtx when skipping secondary target', async () => {
@@ -383,9 +464,10 @@ describe('useSpellMetamagicFlow — multi-target spread with secondary modal', (
 
     expect(onExecute).toHaveBeenCalled();
     expect(onExecute.mock.calls[0][1]).toEqual({});
+    expect(setSecondaryTargetModal).toHaveBeenCalledWith(null);
   });
 
-  it('does not show secondary modal when setSecondaryTargetModal is null', () => {
+  it('falls back to pendingMultiTarget when setSecondaryTargetModal is not provided', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -396,5 +478,6 @@ describe('useSpellMetamagicFlow — multi-target spread with secondary modal', (
     });
 
     expect(result.current.pendingMultiTarget).not.toBeNull();
+    expect(result.current.pendingMultiTarget.spellName).toBe('Power Word Heal');
   });
 });

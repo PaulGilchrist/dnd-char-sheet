@@ -1,7 +1,13 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
+
+// ── Minimal mocks for material component blocking path ──────────────────────────
+// The gateMetamagic flow checks consumed materials BEFORE any spell-specific
+// handlers or automation. We only need to mock the modules that gateMetamagic
+// reads during the material check phase.
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
@@ -10,134 +16,11 @@ vi.mock('./useMetamagic.js', () => ({
   logMetamagicUse: vi.fn(),
 }));
 
-vi.mock('../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
-  getMultiTargetSpreadForSpell: vi.fn(() => null),
-}));
-
-vi.mock('../../services/npcs/monsterUtils.js', () => ({
-  getMonsterData: vi.fn(),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-  getCombatSummary: vi.fn(() => ({
-    creatures: [
-      { name: 'Goblin A' },
-      { name: 'Goblin B' },
-      { name: 'Goblin C' },
-    ],
-  })),
-}));
-
-vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
-  isPsionicSpell: vi.fn(() => false),
-  hasPsionicSorcery: vi.fn(() => false),
-}));
-
-vi.mock('../../services/automation/index.js', () => ({
-  applyAidEffect: vi.fn(),
-  applyHeroesFeastEffect: vi.fn(),
-  applyLesserRestorationEffect: vi.fn(),
-  applyMageArmorEffect: vi.fn(),
-  applyShieldOfFaithEffect: vi.fn(),
-  applyProtectionFromEnergyHandler: vi.fn(),
-  applyProtectionFromPoisonHandler: vi.fn(),
-  applyResistanceEffect: vi.fn(),
-  executeHandler: vi.fn(),
-  confirmGreaterRestoration: vi.fn(),
-  applyHolyAuraEffect: vi.fn(),
-  applyBaneEffect: vi.fn(),
-  applyBlessEffect: vi.fn(),
-  applyFaerieFire: vi.fn(() => Promise.resolve(null)),
-  applyHaste: vi.fn(),
-  applyEnhanceAbilityEffect: vi.fn(() => Promise.resolve(null)),
-  applyBarkskinEffect: vi.fn(() => Promise.resolve(null)),
-  applyInvisibility: vi.fn(),
-  applyGreaterInvisibility: vi.fn(),
-  applyFeignDeath: vi.fn(() => Promise.resolve(null)),
-  applyLongstriderEffect: vi.fn(() => Promise.resolve(null)),
-  applySpareTheDyingEffect: vi.fn(() => Promise.resolve(null)),
-  applyPassWithoutTraceEffect: vi.fn(() => Promise.resolve(null)),
-  applyBeaconOfHopeEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfLifeEffect: vi.fn(),
-  applyAuraOfPurityEffect: vi.fn(),
-  applyCircleOfPowerEffect: vi.fn(() => Promise.resolve(null)),
-  applyCompulsionEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfVitalityEffect: vi.fn(() => Promise.resolve(null)),
-  applyDeathWardEffect: vi.fn(() => Promise.resolve(null)),
-  applyHeroism: vi.fn(() => Promise.resolve(null)),
-  applyProtectionFromEvilAndGood: vi.fn(),
-  applyStoneSkinHandler: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/greaterRestorationService.js', () => ({
-  confirmGreaterRestoration: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/removeCurseService.js', () => ({
-  confirmRemoveCurse: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/regenerateService.js', () => ({
-  confirmRegenerate: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/foresightService.js', () => ({
-  triggerForesight: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/holdMonsterService.js', () => ({
-  triggerHoldMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmPersonService.js', () => ({
-  triggerCharmPerson: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmMonsterService.js', () => ({
-  triggerCharmMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/banishmentService.js', () => ({
-  triggerBanishment: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/faerieFireService.js', () => ({
-  triggerFaerieFire: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/healService.js', () => ({
-  triggerHeal: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/healingWordService.js', () => ({
-  triggerHealingWord: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/revivifyService.js', () => ({
-  triggerRevivify: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/polymorphService.js', () => ({
-  applyPolymorph: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/animalShapesService.js', () => ({
-  applyAnimalShapes: vi.fn(() => Promise.resolve({ ok: false })),
-}));
-
-vi.mock('../../services/automation/handlers/spells/truePolymorphService.js', () => ({
-  applyTruePolymorph: vi.fn(() => Promise.resolve(null)),
-}));
-
 vi.mock('../../services/rules/spells/materialComponents.js', () => ({
-  getConsumedMaterial: vi.fn(() => null),
-  hasMaterial: vi.fn(() => true),
-  consumeMaterial: vi.fn(() => Promise.resolve(true)),
-  getMaterialRequirementMessage: vi.fn(() => null),
+  getConsumedMaterial: vi.fn(),
+  hasMaterial: vi.fn(),
+  consumeMaterial: vi.fn(),
+  getMaterialRequirementMessage: vi.fn(),
 }));
 
 vi.mock('../../services/rules/spells/spellPreparationService.js', () => ({
@@ -146,34 +29,33 @@ vi.mock('../../services/rules/spells/spellPreparationService.js', () => ({
   incrementFreeCastResource: vi.fn(),
 }));
 
+vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
+  isPsionicSpell: vi.fn(() => false),
+  hasPsionicSorcery: vi.fn(() => false),
+}));
+
+vi.mock('../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => ({ creatures: [] })),
+}));
+
+vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
+  getMultiTargetSpreadForSpell: vi.fn(() => null),
+}));
+
+vi.mock('../../services/ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('../runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(() => 3),
   setRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../useAllySelection.js', () => ({
-  getAllyList: vi.fn((casterName) => [casterName.toLowerCase()]),
+  getAllyList: vi.fn(() => []),
 }));
 
-global.fetch = vi.fn((url) => {
-  if (url && url.includes('combat-summary')) {
-    return Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ creatures: [] }),
-    });
-  }
-  return Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-  });
-});
-
-Object.defineProperty(window, 'dispatchEvent', {
-  value: vi.fn(),
-  writable: true,
-});
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makePlayerStats(overrides = {}) {
   return {
@@ -194,42 +76,163 @@ function makeSpell(overrides = {}) {
   };
 }
 
-// ── Material component blocking ──────────────────────────────────────────────
+// ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('useSpellMetamagicFlow — material component blocking', () => {
-  beforeEach(() => {
+describe('useSpellMetamagicFlow — material component gating', () => {
+  let materialModule;
+
+  beforeEach(async () => {
+    materialModule = await import('../../services/rules/spells/materialComponents.js');
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
+    // Default: spell has no material requirement
+    materialModule.getConsumedMaterial.mockReturnValue(null);
   });
 
-  it('shows popup and returns early when material is consumed but not possessed', async () => {
-    const materialModule = await import('../../services/rules/spells/materialComponents.js');
-    materialModule.getConsumedMaterial.mockImplementation((spell) => {
-      if ((spell.name || '').toLowerCase() === 'greater restoration') {
-        return { itemName: 'Diamond Dust (100 gp)' };
-      }
-      return null;
-    });
-    materialModule.hasMaterial.mockReturnValueOnce(false);
-    materialModule.getMaterialRequirementMessage.mockReturnValueOnce('Need Diamond Dust');
+  describe('when spell has no material requirement', () => {
+    it('proceeds without showing a material popup for Sorcerer (sets metamagic pending)', async () => {
+      const setPopupHtml = vi.fn();
+      const onExecute = vi.fn();
 
-    const setPopupHtml = vi.fn();
-    const onExecute = vi.fn();
-    const { result } = renderHook(() =>
-      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
-    );
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
+      );
 
-    act(() => {
-      result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Fireball' }));
+      });
+
+      expect(setPopupHtml).not.toHaveBeenCalled();
+      // Sorcerer path: sets metamagic pending, does not call onExecute yet
+      expect(result.current.pendingMetamagic).not.toBeNull();
+      expect(result.current.pendingMetamagic.spellName).toBe('Fireball');
+      expect(onExecute).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when spell requires a consumed material', () => {
+    beforeEach(async () => {
+      const { getConsumedMaterial, getMaterialRequirementMessage } = await import('../../services/rules/spells/materialComponents.js');
+      materialModule = await import('../../services/rules/spells/materialComponents.js');
+      getConsumedMaterial.mockImplementation((spell) => {
+        if (spell.name === 'Greater Restoration') {
+          return { itemName: 'Diamond Dust (100 gp)' };
+        }
+        return null;
+      });
+      getMaterialRequirementMessage.mockImplementation((spell) => {
+        if (spell.name === 'Greater Restoration') {
+          return 'Greater Restoration requires diamond dust worth 100+ GP, which the spell consumes.';
+        }
+        return null;
+      });
     });
 
-    expect(setPopupHtml).toHaveBeenCalledWith({
-      type: 'automation_info',
-      name: 'Greater Restoration',
-      automationType: 'material_required',
-      description: expect.anything(),
+    it('shows a popup and prevents execution when caster lacks the material', async () => {
+      materialModule.hasMaterial.mockReturnValue(false);
+      const setPopupHtml = vi.fn();
+      const onExecute = vi.fn();
+
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
+      );
+
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
+      });
+
+      expect(setPopupHtml).toHaveBeenCalledWith({
+        type: 'automation_info',
+        name: 'Greater Restoration',
+        automationType: 'material_required',
+        description: 'Greater Restoration requires diamond dust worth 100+ GP, which the spell consumes.',
+      });
+      expect(onExecute).not.toHaveBeenCalled();
     });
-    expect(onExecute).not.toHaveBeenCalled();
-    expect(result.current.pendingGreaterRestoration).toBeNull();
+
+    it('proceeds past material check when caster possesses the material (sets metamagic pending)', async () => {
+      materialModule.hasMaterial.mockReturnValue(true);
+      const setPopupHtml = vi.fn();
+      const onExecute = vi.fn();
+
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
+      );
+
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
+      });
+
+      expect(setPopupHtml).not.toHaveBeenCalled();
+      // Sorcerer path: sets metamagic pending for metamagic application
+      expect(result.current.pendingMetamagic).not.toBeNull();
+      expect(result.current.pendingMetamagic.spellName).toBe('Greater Restoration');
+      expect(onExecute).not.toHaveBeenCalled();
+    });
+
+    it('does not execute when setPopupHtml is null but material is missing', async () => {
+      materialModule.hasMaterial.mockReturnValue(false);
+      const onExecute = vi.fn();
+
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], undefined)
+      );
+
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
+      });
+
+      expect(onExecute).not.toHaveBeenCalled();
+    });
+
+    it('blocks execution for any spell with a missing consumed material', async () => {
+      materialModule.hasMaterial.mockReturnValue(false);
+      materialModule.getConsumedMaterial.mockReturnValue({ itemName: 'Ruby Dust (1,500 gp)' });
+      materialModule.getMaterialRequirementMessage.mockReturnValue('Forcecage requires ruby dust worth 1,500+ GP, which the spell consumes.');
+
+      const setPopupHtml = vi.fn();
+      const onExecute = vi.fn();
+
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
+      );
+
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Forcecage', level: 7 }));
+      });
+
+      expect(setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'automation_info',
+        automationType: 'material_required',
+      }));
+      expect(onExecute).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('gate ordering', () => {
+    it('checks materials before any other gating logic', async () => {
+      // Even if other gates would apply (multi-target, sorcerer metamagic, etc.),
+      // the material check runs first and blocks execution.
+      materialModule.getConsumedMaterial.mockReturnValue({ itemName: 'Diamond Dust (100 gp)' });
+      materialModule.hasMaterial.mockReturnValue(false);
+      materialModule.getMaterialRequirementMessage.mockReturnValue('Need material.');
+
+      const setPopupHtml = vi.fn();
+      const onExecute = vi.fn();
+
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute, null, [], setPopupHtml)
+      );
+
+      await act(async () => {
+        result.current.gateMetamagic(makeSpell({ name: 'Greater Restoration', level: 5 }));
+      });
+
+      // Material popup shown, execution blocked
+      expect(setPopupHtml).toHaveBeenCalled();
+      expect(onExecute).not.toHaveBeenCalled();
+      // No pending state should be set because we returned early
+      expect(result.current.pendingGreaterRestoration).toBeNull();
+    });
   });
 });

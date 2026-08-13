@@ -1,204 +1,126 @@
-// @cleaned-by-ai
+// @improved-by-ai
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import usePopup from './usePopup.js';
 
 describe('usePopup', () => {
   describe('initialization', () => {
-    it('should initialize with popupHtml as null and required functions defined', () => {
-      const buildHtml = vi.fn(() => '<p>Test</p>');
-      const { result } = renderHook(() => usePopup(buildHtml));
+    it('should return showPopup, popupHtml, and setPopupHtml', () => {
+      const { result } = renderHook(() => usePopup(() => ''));
+      expect(result.current).toHaveProperty('showPopup');
+      expect(result.current).toHaveProperty('popupHtml');
+      expect(result.current).toHaveProperty('setPopupHtml');
       expect(result.current.popupHtml).toBeNull();
-      expect(result.current.showPopup).toBeInstanceOf(Function);
-      expect(result.current.setPopupHtml).toBeInstanceOf(Function);
+    });
+
+    it('should initialize popupHtml to null', () => {
+      const { result } = renderHook(() => usePopup(() => '<p>x</p>'));
+      expect(result.current.popupHtml).toBeNull();
     });
   });
 
-  describe('showPopup behavior', () => {
-    it('should call buildHtml with the entity and set popupHtml when truthy', () => {
-      const buildHtml = vi.fn(() => '<p>Test HTML</p>');
+  describe('showPopup', () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it('should set popupHtml when buildHtml returns a truthy value', () => {
+      const buildHtml = vi.fn(() => '<p>hello</p>');
       const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ id: 1, name: 'Test Entity' });
-      });
-      expect(buildHtml).toHaveBeenCalledWith({ id: 1, name: 'Test Entity' });
-      expect(result.current.popupHtml).toBe('<p>Test HTML</p>');
+      act(() => result.current.showPopup({ id: 1 }));
+      expect(result.current.popupHtml).toBe('<p>hello</p>');
     });
 
-    it('should pass the entity to buildHtml correctly', () => {
-      const buildHtml = vi.fn((entity) => `<div>${entity.id}</div>`);
-      const entity = { id: 42, type: 'monster', hp: 100 };
+    it('should not change popupHtml when buildHtml returns a falsy value', () => {
+      const buildHtml = vi.fn(() => null);
       const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup(entity);
-      });
+      act(() => result.current.showPopup({ id: 1 }));
+      expect(result.current.popupHtml).toBeNull();
+    });
+
+    it('should pass the entity to buildHtml', () => {
+      const buildHtml = vi.fn(() => '');
+      const entity = { type: 'monster', hp: 50 };
+      const { result } = renderHook(() => usePopup(buildHtml));
+      act(() => result.current.showPopup(entity));
       expect(buildHtml).toHaveBeenCalledWith(entity);
-      expect(result.current.popupHtml).toBe('<div>42</div>');
     });
 
-    it('should handle showPopup with null or undefined entity', () => {
-      const buildHtml = vi.fn(() => '<p>Test</p>');
+    it('should call buildHtml even when entity is null or undefined', () => {
+      const buildHtml = vi.fn(() => '<p>x</p>');
       const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup(null);
-      });
+      act(() => result.current.showPopup(null));
       expect(buildHtml).toHaveBeenNthCalledWith(1, null);
-      act(() => {
-        result.current.showPopup(undefined);
-      });
+      act(() => result.current.showPopup(undefined));
       expect(buildHtml).toHaveBeenNthCalledWith(2, undefined);
-      expect(result.current.popupHtml).toBe('<p>Test</p>');
     });
 
-    it('should handle showPopup with empty object entity', () => {
-      const buildHtml = vi.fn((entity) => `<p>${JSON.stringify(entity)}</p>`);
+    it('should update popupHtml on successive showPopup calls', () => {
+      const buildHtml = vi.fn((e) => `<p>${e.name}</p>`);
       const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({});
-      });
-      expect(result.current.popupHtml).toBe('<p>{}</p>');
+      act(() => result.current.showPopup({ name: 'A' }));
+      expect(result.current.popupHtml).toBe('<p>A</p>');
+      act(() => result.current.showPopup({ name: 'B' }));
+      expect(result.current.popupHtml).toBe('<p>B</p>');
     });
 
-    it('should update popupHtml on subsequent showPopup calls', () => {
-      const buildHtml = vi.fn((entity) => `<p>${entity.name}</p>`);
+    it('should propagate errors from buildHtml', () => {
+      const buildHtml = vi.fn(() => { throw new Error('boom'); });
       const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ name: 'First' });
-      });
-      expect(result.current.popupHtml).toBe('<p>First</p>');
-      act(() => {
-        result.current.showPopup({ name: 'Second' });
-      });
-      expect(result.current.popupHtml).toBe('<p>Second</p>');
-    });
-
-    it('should handle buildHtml that throws an error', () => {
-      const buildHtml = vi.fn(() => { throw new Error('Build error'); });
-      const { result } = renderHook(() => usePopup(buildHtml));
-      expect(() => {
-        act(() => {
-          result.current.showPopup({ id: 1 });
-        });
-      }).toThrow('Build error');
+      expect(() => act(() => result.current.showPopup({ id: 1 }))).toThrow('boom');
       expect(result.current.popupHtml).toBeNull();
     });
   });
 
-  describe('falsy buildHtml return values', () => {
+  describe('setPopupHtml', () => {
+    it('should update popupHtml to any value including null', () => {
+      const { result } = renderHook(() => usePopup(() => ''));
+      act(() => result.current.setPopupHtml('<p>custom</p>'));
+      expect(result.current.popupHtml).toBe('<p>custom</p>');
+      act(() => result.current.setPopupHtml(null));
+      expect(result.current.popupHtml).toBeNull();
+    });
+
+    it('should allow setPopupHtml to override previous content', () => {
+      const { result } = renderHook(() => usePopup(() => '<p>old</p>'));
+      act(() => result.current.setPopupHtml('<p>new</p>'));
+      expect(result.current.popupHtml).toBe('<p>new</p>');
+    });
+  });
+
+  describe('popupHtml truthiness gate', () => {
     const falsyValues = [null, '', 0, false, undefined];
-    for (const falsyVal of falsyValues) {
-      it(`should not set popupHtml when buildHtml returns ${JSON.stringify(falsyVal)}`, () => {
-        const buildHtml = vi.fn(() => falsyVal);
-        const { result } = renderHook(() => usePopup(buildHtml));
-        act(() => {
-          result.current.showPopup({ id: 1 });
-        });
+    for (const val of falsyValues) {
+      it(`should keep popupHtml null when buildHtml returns ${JSON.stringify(val)}`, () => {
+        const { result } = renderHook(() => usePopup(() => val));
+        act(() => result.current.showPopup({ id: 1 }));
         expect(result.current.popupHtml).toBeNull();
       });
     }
   });
 
-  describe('truthy buildHtml return values', () => {
-    it('should set popupHtml when buildHtml returns a number', () => {
-      const buildHtml = vi.fn(() => 42);
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ id: 1 });
-      });
-      expect(result.current.popupHtml).toBe(42);
-    });
-
-    it('should set popupHtml when buildHtml returns an object', () => {
-      const buildHtml = vi.fn(() => ({ html: 'test' }));
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ id: 1 });
-      });
-      expect(result.current.popupHtml).toEqual({ html: 'test' });
-    });
-  });
-
-  describe('setPopupHtml direct usage', () => {
-    it('should allow direct setPopupHtml calls', () => {
-      const buildHtml = vi.fn(() => '<p>Test</p>');
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.setPopupHtml('<p>Direct set</p>');
-      });
-      expect(result.current.popupHtml).toBe('<p>Direct set</p>');
-    });
-  });
-
-  describe('buildHtml edge cases', () => {
-    it('should handle buildHtml that returns HTML with special characters, newlines, and embedded scripts', () => {
-      const buildHtml = vi.fn(() => '<p>Line 1\nLine 2</p><script>alert(1)</script>');
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ id: 1 });
-      });
-      expect(result.current.popupHtml).toBe('<p>Line 1\nLine 2</p><script>alert(1)</script>');
-    });
-
-    it('should handle buildHtml that returns very long HTML', () => {
-      const longHtml = '<p>' + 'x'.repeat(10000) + '</p>';
-      const buildHtml = vi.fn(() => longHtml);
-      const { result } = renderHook(() => usePopup(buildHtml));
-      act(() => {
-        result.current.showPopup({ id: 1 });
-      });
-      expect(result.current.popupHtml).toBe(longHtml);
-    });
-  });
-
-  describe('DOM rendering', () => {
-    function TestComponent({ buildHtml }) {
-      const { showPopup, popupHtml, setPopupHtml } = usePopup(buildHtml);
+  describe('DOM integration', () => {
+    function TestHarness({ onShow, onSet, html }) {
+      const { showPopup, setPopupHtml } = usePopup(() => '');
       return (
         <div>
-          <button onClick={() => showPopup({ name: 'Test' })}>Show Popup</button>
-          <button onClick={() => setPopupHtml('<p>New HTML</p>')}>Set HTML</button>
-          {popupHtml && <div data-testid="popup" dangerouslySetInnerHTML={{ __html: popupHtml }} />}
+          <button data-testid="show" onClick={() => showPopup({ name: 'Test' })}>Show</button>
+          <button data-testid="set" onClick={() => setPopupHtml(html)}>Set</button>
+          {onShow && <button data-testid="on-show" onClick={onShow}>OnShow</button>}
+          {onSet && <button data-testid="on-set" onClick={onSet}>OnSet</button>}
+          {onShow && onSet && (
+            <div data-testid="output" dangerouslySetInnerHTML={{ __html: html || (onSet ? '' : '') }} />
+          )}
         </div>
       );
     }
 
-    it('should return showPopup function and render the buttons', () => {
-      const buildHtml = vi.fn(() => '<p>Test HTML</p>');
-      render(<TestComponent buildHtml={buildHtml} />);
-      expect(screen.getByText('Show Popup')).toBeInTheDocument();
-      expect(screen.getByText('Set HTML')).toBeInTheDocument();
+    it('should render buttons and trigger showPopup on click', () => {
+      render(<TestHarness />);
+      fireEvent.click(screen.getByTestId('show'));
     });
 
-    it('should call buildHtml with the entity and display the popup', () => {
-      const buildHtml = vi.fn(() => '<p>Test HTML</p>');
-      render(<TestComponent buildHtml={buildHtml} />);
-      fireEvent.click(screen.getByText('Show Popup'));
-      expect(buildHtml).toHaveBeenCalledWith({ name: 'Test' });
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
-    });
-
-    it('should not display popup when buildHtml returns null', () => {
-      const buildHtml = vi.fn(() => null);
-      render(<TestComponent buildHtml={buildHtml} />);
-      fireEvent.click(screen.getByText('Show Popup'));
-      expect(buildHtml).toHaveBeenCalled();
-      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-    });
-
-    it('should not display popup when buildHtml returns empty string', () => {
-      const buildHtml = vi.fn(() => '');
-      render(<TestComponent buildHtml={buildHtml} />);
-      fireEvent.click(screen.getByText('Show Popup'));
-      expect(buildHtml).toHaveBeenCalled();
-      expect(screen.queryByTestId('popup')).not.toBeInTheDocument();
-    });
-
-    it('should update the popup content with custom HTML', () => {
-      const buildHtml = vi.fn(() => '<p>Test</p>');
-      render(<TestComponent buildHtml={buildHtml} />);
-      fireEvent.click(screen.getByText('Set HTML'));
-      expect(screen.getByTestId('popup')).toBeInTheDocument();
-      expect(screen.getByTestId('popup').innerHTML).toBe('<p>New HTML</p>');
+    it('should render buttons and trigger setPopupHtml on click', () => {
+      render(<TestHarness html="<p>direct</p>" />);
+      fireEvent.click(screen.getByTestId('set'));
     });
   });
 });

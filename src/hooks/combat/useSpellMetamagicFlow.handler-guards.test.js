@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
@@ -183,28 +184,120 @@ function makePlayerStats(overrides = {}) {
   };
 }
 
-// ── No-pending guard for handlers ─────────────────────────────────────────────
+// ── Guard behavior: confirm handlers ──────────────────────────────────────────
 
-describe('useSpellMetamagicFlow — no-pending guard', () => {
+describe('useSpellMetamagicFlow — confirm handler guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('does nothing when calling confirm handler without pending state', () => {
+  it('does not call onExecute when confirm handler is invoked without pending state (aid)', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
     );
 
-    // No gateMetamagic call — no pending state set
     act(() => {
       result.current.handleAidConfirm({ targets: ['Goblin A'] });
     });
 
     expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingAid).toBe(null);
   });
 
-  it('does nothing when calling skip handler without pending state', () => {
+  it('does not call onExecute when confirm handler is invoked without pending state (bane)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleBaneConfirm({ targets: ['Goblin A'] });
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingBane).toBe(null);
+  });
+
+  it('does not call onExecute when confirm handler is invoked without pending state (heal)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleHealConfirm({ targetName: 'Goblin A' });
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingHeal).toBe(null);
+  });
+
+  it('does not call onExecute when confirm handler is invoked without pending state (cureWounds)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleCureWoundsConfirm({ targetName: 'Goblin A' });
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingCureWounds).toBe(null);
+  });
+
+  it('does not call onExecute when confirm handler is invoked without pending state (prismaticSpray)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handlePrismaticSprayConfirm(['Goblin A']);
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingPrismaticSpray).toBe(null);
+  });
+
+  // ── Two-stage handlers ──
+
+  it('does not call onExecute when two-stage handler is invoked without pending state (resistanceStage)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleResistanceTargetSelect(['Goblin A']);
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+  });
+
+  it('does not call onExecute when two-stage handler is invoked without pending state (enhanceAbilityStage)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleEnhanceAbilityAbilitySelect('strength');
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+  });
+});
+
+// ── Guard behavior: skip handlers ─────────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — skip handler guards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does not call onExecute when skip handler is invoked without pending state (aid)', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -212,6 +305,61 @@ describe('useSpellMetamagicFlow — no-pending guard', () => {
 
     act(() => {
       result.current.handleAidSkip();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingAid).toBe(null);
+  });
+
+  it('does not call onExecute when skip handler is invoked without pending state (haste)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleHasteSkip();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingHaste).toBe(null);
+  });
+
+  it('does not call onExecute when skip handler is invoked without pending state (invisibility)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleInvisibilitySkip();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(result.current.pendingInvisibility).toBe(null);
+  });
+
+  it('does not call onExecute when skip handler is invoked without pending state (resistanceSkip)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleResistanceSkip();
+    });
+
+    expect(onExecute).not.toHaveBeenCalled();
+  });
+
+  it('does not call onExecute when skip handler is invoked without pending state (enhanceAbilitySkip)', () => {
+    const onExecute = vi.fn();
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    act(() => {
+      result.current.handleEnhanceAbilitySkip();
     });
 
     expect(onExecute).not.toHaveBeenCalled();

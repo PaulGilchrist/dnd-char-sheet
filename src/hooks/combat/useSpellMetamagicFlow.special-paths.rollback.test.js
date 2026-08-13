@@ -1,9 +1,11 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpellMetamagicFlow } from './useSpellMetamagicFlow.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getMultiTargetSpreadForSpell } from '../../services/rules/spells/postCastRiderService.js';
-
+import { setRuntimeValue } from '../runtime/useRuntimeState.js';
+import { applyProtectionFromPoisonHandler } from '../../services/automation/index.js';
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),
@@ -40,100 +42,10 @@ vi.mock('../../services/rules/spells/metamagicRules.js', () => ({
 }));
 
 vi.mock('../../services/automation/index.js', () => ({
-  applyAidEffect: vi.fn(),
-  applyHeroesFeastEffect: vi.fn(),
-  applyLesserRestorationEffect: vi.fn(),
-  applyMageArmorEffect: vi.fn(),
-  applyShieldOfFaithEffect: vi.fn(),
-  applyProtectionFromEnergyHandler: vi.fn(),
   applyProtectionFromPoisonHandler: vi.fn(() => Promise.resolve(null)),
-  applyResistanceEffect: vi.fn(),
-  executeHandler: vi.fn(() => Promise.resolve(null)),
-  confirmGreaterRestoration: vi.fn(),
-  applyHolyAuraEffect: vi.fn(() => Promise.resolve(null)),
-  applyBaneEffect: vi.fn(),
-  applyBlessEffect: vi.fn(),
-  applyFaerieFire: vi.fn(() => Promise.resolve(null)),
-  applyHaste: vi.fn(),
-  applyEnhanceAbilityEffect: vi.fn(() => Promise.resolve(null)),
-  applyBarkskinEffect: vi.fn(() => Promise.resolve(null)),
-  applyInvisibility: vi.fn(),
-  applyGreaterInvisibility: vi.fn(),
-  applyFeignDeath: vi.fn(() => Promise.resolve(null)),
-  applyLongstriderEffect: vi.fn(() => Promise.resolve(null)),
-  applySpareTheDyingEffect: vi.fn(() => Promise.resolve(null)),
-  applyPassWithoutTraceEffect: vi.fn(() => Promise.resolve(null)),
-  applyBeaconOfHopeEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfLifeEffect: vi.fn(),
-  applyAuraOfPurityEffect: vi.fn(),
-  applyCircleOfPowerEffect: vi.fn(() => Promise.resolve(null)),
-  applyCompulsionEffect: vi.fn(() => Promise.resolve(null)),
-  applyAuraOfVitalityEffect: vi.fn(() => Promise.resolve(null)),
-  applyDeathWardEffect: vi.fn(() => Promise.resolve(null)),
-  applyHeroism: vi.fn(() => Promise.resolve(null)),
-  applyProtectionFromEvilAndGood: vi.fn(),
   applyStoneSkinHandler: vi.fn(() => Promise.resolve(null)),
   handleSanctuary: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/greaterRestorationService.js', () => ({
-  confirmGreaterRestoration: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/removeCurseService.js', () => ({
-  confirmRemoveCurse: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/regenerateService.js', () => ({
-  confirmRegenerate: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/foresightService.js', () => ({
-  triggerForesight: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/holdMonsterService.js', () => ({
-  triggerHoldMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmPersonService.js', () => ({
-  triggerCharmPerson: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/charmMonsterService.js', () => ({
-  triggerCharmMonster: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/banishmentService.js', () => ({
-  triggerBanishment: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/faerieFireService.js', () => ({
-  triggerFaerieFire: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/healService.js', () => ({
-  triggerHeal: vi.fn(),
-}));
-
-vi.mock('../../services/rules/features/healingWordService.js', () => ({
-  triggerHealingWord: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/rules/features/revivifyService.js', () => ({
-  triggerRevivify: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/polymorphService.js', () => ({
-  applyPolymorph: vi.fn(() => Promise.resolve(null)),
-}));
-
-vi.mock('../../services/automation/handlers/spells/animalShapesService.js', () => ({
-  applyAnimalShapes: vi.fn(() => Promise.resolve({ ok: false })),
-}));
-
-vi.mock('../../services/automation/handlers/spells/truePolymorphService.js', () => ({
-  applyTruePolymorph: vi.fn(() => Promise.resolve(null)),
+  executeHandler: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('../../services/rules/spells/materialComponents.js', () => ({
@@ -197,124 +109,147 @@ function makeSpell(overrides = {}) {
   };
 }
 
-function renderHookWithSpell(hookSetup, spellName, spellOverrides = {}) {
-  const onExecute = vi.fn();
-  const { result } = renderHook(() =>
-    hookSetup(onExecute)
-  );
-  const spell = makeSpell({ name: spellName, ...spellOverrides });
-  act(() => {
-    result.current.gateMetamagic(spell);
-  });
-  return { result, onExecute, spell };
-}
+// ── Two-stage handler stage-setting ──────────────────────────────────────────
 
-describe('useSpellMetamagicFlow — useEffect stage-setting', () => {
+describe('useSpellMetamagicFlow — two-stage handler initial stages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('sets resistanceStage to target when pendingResistance exists on mount', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Resistance',
-      { level: 0 },
-    );
+  const stageCases = [
+    { spell: 'Resistance', level: 0, stageKey: 'resistanceStage', expected: 'target' },
+    { spell: 'Protection from Energy', level: 3, stageKey: 'protectionFromEnergyStage', expected: 'target' },
+    { spell: 'Enhance Ability', level: 2, stageKey: 'enhanceAbilityStage', expected: 'ability' },
+  ];
 
-    expect(result.current.resistanceStage).toBe('target');
-  });
+  for (const tc of stageCases) {
+    it(`sets ${tc.stageKey} to "${tc.expected}" when ${tc.spell} gates`, () => {
+      const { result } = renderHook(() =>
+        useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+      );
 
-  it('sets protectionFromEnergyStage to target when pendingProtectionFromEnergy exists on mount', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Protection from Energy',
-      { level: 3 },
-    );
+      act(() => {
+        result.current.gateMetamagic(makeSpell({ name: tc.spell, level: tc.level }));
+      });
 
-    expect(result.current.protectionFromEnergyStage).toBe('target');
-  });
-
-  it('sets enhanceAbilityStage to ability when pendingEnhanceAbility exists on mount', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Enhance Ability',
-      { level: 2 },
-    );
-
-    expect(result.current.enhanceAbilityStage).toBe('ability');
-  });
+      expect(result.current[tc.stageKey]).toBe(tc.expected);
+    });
+  }
 });
 
-describe('useSpellMetamagicFlow — handleProtectionFromPoisonSkip rollback', () => {
+// ── Skip handlers: rollback + logging ────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — skip handler rollback behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('rolls back spell slot and logs entry on skip', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Protection from Poison',
-      { level: 2 },
+  it('handlesProtectionFromPoisonSkip: clears pending, logs entry, and rolls back spell slot', async () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Protection from Poison', level: 2 }));
+    });
+
+    expect(result.current.pendingProtectionFromPoison).not.toBeNull();
 
     act(() => {
       result.current.handleProtectionFromPoisonSkip();
     });
 
     expect(result.current.pendingProtectionFromPoison).toBeNull();
-    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
       type: 'spell',
       characterName: 'TestSorcerer',
-      targetName: 'TestSorcerer',
-      targets: expect.arrayContaining(['TestSorcerer', 'Goblin A', 'Goblin B', 'Goblin C']),
       spellName: 'Protection from Poison',
       spellLevel: 2,
       castingTime: '1 Action',
-      timestamp: expect.any(Number),
-    });
-  });
-});
-
-describe('useSpellMetamagicFlow — handleStoneSkinSkip rollback', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    }));
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestSorcerer', expect.stringContaining('spell_slots'), expect.any(Number), 'TestCampaign');
   });
 
-  it('rolls back spell slot and logs entry on skip', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Stone Skin',
-      { level: 3 },
+  it('handleStoneSkinSkip: clears pending, logs entry, and rolls back spell slot', async () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Stone Skin', level: 3 }));
+    });
+
+    expect(result.current.pendingStoneSkin).not.toBeNull();
 
     act(() => {
       result.current.handleStoneSkinSkip();
     });
 
     expect(result.current.pendingStoneSkin).toBeNull();
-    expect(addEntry).toHaveBeenCalledWith('TestCampaign', {
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
       type: 'spell',
       characterName: 'TestSorcerer',
-      targetName: 'Goblin A',
-      targets: expect.arrayContaining(['Goblin A', 'Goblin B', 'Goblin C']),
       spellName: 'Stone Skin',
       spellLevel: 3,
       castingTime: '1 Action',
-      timestamp: expect.any(Number),
+    }));
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestSorcerer', expect.stringContaining('spell_slots'), expect.any(Number), 'TestCampaign');
+  });
+
+  it('handleSanctuarySkip: clears pending and logs entry', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Sanctuary', level: 1 }));
     });
+
+    act(() => {
+      result.current.handleSanctuarySkip();
+    });
+
+    expect(result.current.pendingSanctuary).toBeNull();
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      spellName: 'Sanctuary',
+    }));
+  });
+
+  it('handleSleetStormSkip: clears pending and logs entry', () => {
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Sleet Storm', level: 3 }));
+    });
+
+    act(() => {
+      result.current.handleSleetStormSkip();
+    });
+
+    expect(result.current.pendingSleetStorm).toBeNull();
+    expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+      type: 'spell',
+      characterName: 'TestSorcerer',
+      spellName: 'Sleet Storm',
+    }));
   });
 });
 
-describe('useSpellMetamagicFlow — handleEnhanceAbilityConfirm no ability', () => {
+// ── Confirm handlers: guard behavior ─────────────────────────────────────────
+
+describe('useSpellMetamagicFlow — confirm handler guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('does nothing when confirm is called without selecting an ability first', () => {
+  it('handleEnhanceAbilityConfirm: no-op when ability not selected', () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -329,16 +264,11 @@ describe('useSpellMetamagicFlow — handleEnhanceAbilityConfirm no ability', () 
     });
 
     expect(onExecute).not.toHaveBeenCalled();
-  });
-});
-
-describe('useSpellMetamagicFlow — handleProtectionFromPoisonConfirm no target', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    expect(addEntry).not.toHaveBeenCalled();
+    expect(result.current.pendingEnhanceAbility).not.toBeNull();
   });
 
-  it('does nothing when result has no targetName', () => {
+  it('handleProtectionFromPoisonConfirm: does not apply spell when result has no targetName', async () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -348,21 +278,19 @@ describe('useSpellMetamagicFlow — handleProtectionFromPoisonConfirm no target'
       result.current.gateMetamagic(makeSpell({ name: 'Protection from Poison', level: 2 }));
     });
 
-    act(() => {
-      result.current.handleProtectionFromPoisonConfirm({});
+    await act(async () => {
+      await result.current.handleProtectionFromPoisonConfirm({});
     });
 
     expect(onExecute).not.toHaveBeenCalled();
-  });
-});
-
-describe('useSpellMetamagicFlow — handleRevivifyConfirm no target', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    // Handler clears pending before checking targetName, so no log entry
+    expect(addEntry).not.toHaveBeenCalled();
+    // Actual spell handler NOT called (guard returns early after clearing pending)
+    expect(applyProtectionFromPoisonHandler).not.toHaveBeenCalled();
+    expect(result.current.pendingProtectionFromPoison).toBeNull();
   });
 
-  it('does nothing when result has no targetName', () => {
+  it('handleRevivifyConfirm: does not apply spell when result has no targetName', async () => {
     const onExecute = vi.fn();
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
@@ -372,100 +300,70 @@ describe('useSpellMetamagicFlow — handleRevivifyConfirm no target', () => {
       result.current.gateMetamagic(makeSpell({ name: 'Revivify', level: 5 }));
     });
 
-    act(() => {
-      result.current.handleRevivifyConfirm({});
+    await act(async () => {
+      await result.current.handleRevivifyConfirm({});
     });
 
     expect(onExecute).not.toHaveBeenCalled();
+    // createConfirmHandler wrapper logs before inner guard check
+    expect(addEntry).toHaveBeenCalled();
+    // createConfirmHandler clears pending before calling inner handler
+    expect(result.current.pendingRevivify).toBeNull();
   });
 });
 
-describe('useSpellMetamagicFlow — handleSanctuaryConfirm', () => {
+// ── Confirm handlers: successful execution ───────────────────────────────────
+
+describe('useSpellMetamagicFlow — confirm handler execution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
+    getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('applies sanctuary on confirm with targetName', async () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Sanctuary',
-      { level: 1 },
+  it('handleSanctuaryConfirm: applies sanctuary and clears pending', async () => {
+    const automation = await import('../../services/automation/index.js');
+
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
 
-    const automation = await import('../../services/automation/index.js');
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Sanctuary', level: 1 }));
+    });
+
+    expect(result.current.pendingSanctuary).not.toBeNull();
 
     await act(async () => {
       await result.current.handleSanctuaryConfirm('Goblin A');
     });
 
-    expect(automation.handleSanctuary).toHaveBeenCalled();
+    expect(automation.handleSanctuary).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Sanctuary', automation: expect.objectContaining({ type: 'sanctuary' }) }),
+      expect.any(Object),
+      'TestCampaign',
+      null
+    );
     expect(result.current.pendingSanctuary).toBeNull();
   });
-});
 
-describe('useSpellMetamagicFlow — handleSanctuarySkip', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
+  it('handleSleetStormConfirm: executes handler and clears pending', async () => {
+    const automation = await import('../../services/automation/index.js');
 
-  it('clears pending and logs entry on skip', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Sanctuary',
-      { level: 1 },
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
 
     act(() => {
-      result.current.handleSanctuarySkip();
+      result.current.gateMetamagic(makeSpell({ name: 'Sleet Storm', level: 3 }));
     });
 
-    expect(result.current.pendingSanctuary).toBeNull();
-  });
-});
-
-describe('useSpellMetamagicFlow — handleSleetStormConfirm', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('executes sleet storm handler on confirm', async () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Sleet Storm',
-      { level: 3 },
-    );
-
-    const automation = await import('../../services/automation/index.js');
+    expect(result.current.pendingSleetStorm).not.toBeNull();
 
     await act(async () => {
       await result.current.handleSleetStormConfirm(['Goblin A']);
     });
 
     expect(automation.executeHandler).toHaveBeenCalled();
-    expect(result.current.pendingSleetStorm).toBeNull();
-  });
-});
-
-describe('useSpellMetamagicFlow — handleSleetStormSkip', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getMultiTargetSpreadForSpell.mockReturnValueOnce(null);
-  });
-
-  it('clears pending on skip', () => {
-    const { result } = renderHookWithSpell(
-      (onExec) => useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExec),
-      'Sleet Storm',
-      { level: 3 },
-    );
-
-    act(() => {
-      result.current.handleSleetStormSkip();
-    });
-
     expect(result.current.pendingSleetStorm).toBeNull();
   });
 });

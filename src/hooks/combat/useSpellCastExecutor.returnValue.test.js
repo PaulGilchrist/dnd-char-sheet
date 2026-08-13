@@ -1,14 +1,20 @@
+// @improved-by-ai
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../../services/rules/spells/spellCastService.js', () => ({
   executeSpellCast: vi.fn(),
 }));
 
-import { renderHook } from '@testing-library/react';
+import { executeSpellCast } from '../../services/rules/spells/spellCastService.js';
+import { renderHook, act } from '@testing-library/react';
 import { useSpellCastExecutor } from './useSpellCastExecutor.js';
 
 function makePlayerStats(overrides = {}) {
   return { name: 'TestCaster', ...overrides };
+}
+
+function makeSpell(overrides = {}) {
+  return { name: 'Fireball', ...overrides };
 }
 
 function makeProps(overrides = {}) {
@@ -31,7 +37,7 @@ describe('useSpellCastExecutor', () => {
     vi.clearAllMocks();
   });
 
-  describe('return value', () => {
+  describe('return value — behavior', () => {
     it('returns an object with castAction and cachedPosRef', () => {
       const props = makeProps();
       const { result } = renderHook(() =>
@@ -91,8 +97,91 @@ describe('useSpellCastExecutor', () => {
         )
       );
 
-      expect(result.current.cachedPosRef).not.toBe(null);
+      expect(result.current.cachedPosRef).not.toBeNull();
       expect(result.current.cachedPosRef.current).toBeNull();
+    });
+
+    it('returns the same cachedPosRef object across rerenders when props do not change', () => {
+      const props = makeProps();
+      const { result, rerender } = renderHook(
+        ({ p }) =>
+          useSpellCastExecutor(
+            p.rollAttack,
+            p.rollDamage,
+            p.playerStats,
+            p.getTargetInfo,
+            p.campaignName,
+            p.mapName,
+            p.characters,
+            p.setPopupHtml,
+            p.extraMeta,
+          ),
+        {
+          initialProps: { p: props },
+        }
+      );
+
+      const firstRef = result.current.cachedPosRef;
+
+      rerender({ p: props });
+
+      expect(result.current.cachedPosRef).toBe(firstRef);
+    });
+
+    it('preserves ref.current when executeSpellCast returns a non-promise falsy value (early return)', async () => {
+      const props = makeProps();
+      executeSpellCast.mockReturnValue(undefined);
+
+      const ref = { current: { attackerPos: { x: 1 } } };
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          ref,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(ref.current).toEqual({ attackerPos: { x: 1 } });
+    });
+
+    it('clears ref.current after castAction completes even when executeSpellCast resolves undefined', async () => {
+      const props = makeProps();
+      executeSpellCast.mockResolvedValue(undefined);
+
+      const ref = { current: { attackerPos: { x: 1 } } };
+
+      const { result } = renderHook(() =>
+        useSpellCastExecutor(
+          props.rollAttack,
+          props.rollDamage,
+          props.playerStats,
+          props.getTargetInfo,
+          props.campaignName,
+          props.mapName,
+          props.characters,
+          props.setPopupHtml,
+          props.extraMeta,
+          ref,
+        )
+      );
+
+      await act(async () => {
+        await result.current.castAction(makeSpell(), {});
+      });
+
+      expect(ref.current).toBeNull();
     });
   });
 });

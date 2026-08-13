@@ -9,20 +9,12 @@ vi.mock('../../services/automation/index.js', () => ({
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
   setRuntimeValue: vi.fn(),
   getRuntimeValue: vi.fn(),
 }));
 
 vi.mock('../../services/ui/logService.js', () => ({
   addEntry: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock('../../services/encounters/combatData.js', () => ({
-  loadCombatSummary: vi.fn(),
-  setCombatSummaryCache: vi.fn(),
 }));
 
 vi.mock('../../services/dice/diceRoller.js', () => ({
@@ -79,7 +71,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityReopenSelection', (
   });
 
   describe('successful reopen flow', () => {
-    it('should call executeHandler with forceSelectionMode:true and preserve existing automation fields', async () => {
+    it('should call executeHandler with forceSelectionMode:true merged into existing automation fields', async () => {
       const originalAction = {
         name: 'Combat Superiority',
         automation: {
@@ -231,7 +223,7 @@ describe('useCombatSuperiorityModal - handleCombatSuperiorityReopenSelection', (
   });
 
   describe('error handling', () => {
-    it('should not update modal when executeHandler rejects', async () => {
+    it('should propagate error when executeHandler rejects', async () => {
       const existingPayload = { action: { name: 'Combat Superiority', automation: { type: 'combat_superiority' } }, knownManeuvers: ['Rally'] };
 
       executeHandler.mockRejectedValue(new Error('Network error'));
