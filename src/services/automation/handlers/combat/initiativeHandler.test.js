@@ -1,5 +1,3 @@
-// @cleaned-by-ai
-// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────
@@ -99,8 +97,6 @@ describe('initiativeHandler.handle', () => {
   afterAll(() => {
     vi.unstubAllGlobals();
   });
-
-  // ── bonus_initiative_allies ──────────────────────────────────
 
   describe('effect: bonus_initiative_allies', () => {
     it('returns popup when player is incapacitated', async () => {
@@ -303,8 +299,6 @@ describe('initiativeHandler.handle', () => {
     });
   });
 
-  // ── wild_shape_regen_on_initiative ───────────────────────────
-
   describe('effect: wild_shape_regen_on_initiative', () => {
     function makeDruidStats(overrides = {}) {
       return makePlayerStats({
@@ -392,8 +386,6 @@ describe('initiativeHandler.handle', () => {
       );
     });
   });
-
-  // ── regain_bardic_inspiration_on_initiative ──────────────────
 
   describe('effect: regain_bardic_inspiration_on_initiative', () => {
     function makeBardStats(overrides = {}) {
@@ -498,8 +490,6 @@ describe('initiativeHandler.handle', () => {
       );
     });
   });
-
-  // ── regain_focus_points_and_heal ─────────────────────────────
 
   describe('effect: regain_focus_points_and_heal', () => {
     function makeMonkStats(overrides = {}) {
@@ -727,8 +717,6 @@ describe('initiativeHandler.handle', () => {
       expect(result.payload.formula).toBe('1d4 + 99');
     });
   });
-
-  // ── Unrecognised effect (default fallback) ───────────────────
 
   describe('unrecognised effect', () => {
     it('returns info popup with action description for unknown effects', async () => {
