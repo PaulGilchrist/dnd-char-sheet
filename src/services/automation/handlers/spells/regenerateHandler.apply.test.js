@@ -31,10 +31,8 @@ import { getCombatSummary } from '../../../encounters/combatData.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { addEntry } from '../../../ui/logService.js';
-
 const campaignName = 'TestCampaign';
 const casterName = 'Cleric1';
-
 function makePlayerStats(overrides = {}) {
     return {
         name: casterName,
@@ -218,7 +216,6 @@ describe('applyRegenerateEffect', () => {
         it('should cap healing so target does not exceed maxHp', async () => {
             getCombatSummary.mockReturnValue(baseCombatSummary);
             getRuntimeValue.mockReturnValue(6); // Goblin has maxHp=7, currentHp=6
-            evaluateAutoExpression.mockReturnValue(25);
 
             await applyRegenerateEffect(
                 makeAction(),

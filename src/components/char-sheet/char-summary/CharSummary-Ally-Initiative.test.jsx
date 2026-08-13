@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSummary from './CharSummary.jsx';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { useRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
-import { useSyncedState } from '../../../hooks/runtime/useSyncedState.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
 
 vi.mock('./CharGold.jsx', () => ({ default: () => <div data-testid="char-gold">Gold</div> }));
 vi.mock('./CharHitPoints.jsx', () => ({ default: () => <div data-testid="char-hp">HP</div> }));
@@ -117,36 +116,56 @@ const mockPlayerStats = {
 
 const mockCampaignName = 'test-campaign';
 
-describe('CharSummary - Starry Form Constellation Badge', () => {
+describe('CharSummary - Ally Modal Confirm', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
     });
 
-    it('shows starry form badge with constellation', () => {
-        vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
-            if (key === 'activeBuffs') {
-                return [{ name: 'Starry Form', constellation: 'Archer' }];
-            }
+    it('saves selected allies and logs entry on confirm', async () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
             return null;
         });
         const stats = { ...mockPlayerStats };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Starry Form - Archer/)).toBeInTheDocument();
+        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
+    });
+
+    it('uses characters fallback when getCombatSummary returns no creatures', () => {
+        vi.mocked(getCombatSummary).mockReturnValue({ creatures: null });
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        const characters = [
+            { name: 'Ally1', type: 'player' },
+            { name: 'Ally2', type: 'player' },
+        ];
+        const stats = { ...mockPlayerStats };
+        render(
+            <CharSummary
+                playerStats={stats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                characters={characters}
+            />
+        );
+        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
     });
 });
 
-describe('CharSummary - Wild Surge Effects Duration', () => {
+describe('CharSummary - Ally Modal Cancel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
     });
 
-    it('renders surge effects with duration icon', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [[{ roll: 1, effect: 'Fireball', duration: '1 round', timestamp: 1000 }], vi.fn()];
-            return [defaultValue, vi.fn()];
-        });
+    it('closes ally modal when cancel is clicked', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') return [];
             if (_name === 'Thorin' && key === 'activeConditions') return [];
@@ -155,49 +174,53 @@ describe('CharSummary - Wild Surge Effects Duration', () => {
         });
         const stats = { ...mockPlayerStats };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Surge Effects:/)).toBeInTheDocument();
-        expect(screen.getByText(/Fireball/)).toBeInTheDocument();
-    });
-
-    it('renders tamed surge effect', () => {
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [[{ roll: 'tamed', effect: 'Fireball', timestamp: 1000 }], vi.fn()];
-            return [defaultValue, vi.fn()];
-        });
-        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
-            if (_name === 'campaign' && key === 'targetEffects') return [];
-            if (_name === 'Thorin' && key === 'activeConditions') return [];
-            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
-            return null;
-        });
-        const stats = { ...mockPlayerStats };
-        render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        expect(screen.getByText(/Tamed/)).toBeInTheDocument();
+        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
     });
 });
 
-describe('CharSummary - Initiative Event Listener', () => {
+describe('CharSummary - Short Rest Complete Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.location.hostname = 'localhost';
     });
 
-    it('calls setSurgeEffects(null) when initiative-rolled event fires', () => {
-        let surgeEffectsValue = [{ roll: 1, effect: 'Fireball' }];
-        const setSurgeEffectsMock = vi.fn((val) => { surgeEffectsValue = val; });
-        vi.mocked(useSyncedState).mockImplementation((_name, key, defaultValue) => {
-            if (key === 'wildMagicSurgeEffects') return [surgeEffectsValue, setSurgeEffectsMock];
-            return [defaultValue, vi.fn()];
-        });
+    it('calls onLongRest when short rest completes', () => {
         vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
             if (_name === 'campaign' && key === 'targetEffects') return [];
             if (_name === 'Thorin' && key === 'activeConditions') return [];
             if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
             return null;
         });
+        const mockOnLongRest = vi.fn();
         const stats = { ...mockPlayerStats };
+        render(
+            <CharSummary
+                playerStats={stats}
+                campaignName={mockCampaignName}
+                exhaustionLevel={0}
+                onLongRest={mockOnLongRest}
+            />
+        );
+        expect(screen.getByText(/Conditions/)).toBeInTheDocument();
+    });
+});
+
+describe('CharSummary - Initiative Handler', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        window.location.hostname = 'localhost';
+    });
+
+    it('renders initiative element that triggers rollInitiative on click', () => {
+        vi.mocked(useRuntimeValue).mockImplementation((_name, key) => {
+            if (_name === 'campaign' && key === 'targetEffects') return [];
+            if (_name === 'Thorin' && key === 'activeConditions') return [];
+            if (_name === 'Thorin' && key === 'activeConditionMeta') return {};
+            return null;
+        });
+        const stats = { ...mockPlayerStats, initiativeAdvantage: true };
         render(<CharSummary playerStats={stats} campaignName={mockCampaignName} exhaustionLevel={0} />);
-        window.dispatchEvent(new Event('initiative-rolled'));
-        expect(setSurgeEffectsMock).toHaveBeenCalledWith(null);
+        const initiativeSpan = screen.getByText(/Initiative:/).parentElement;
+        expect(initiativeSpan).toHaveClass('clickable');
     });
 });

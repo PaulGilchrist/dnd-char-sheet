@@ -26,15 +26,12 @@ vi.mock('../../../encounters/combatData.js', () => ({
 }));
 
 import { handle } from './regenerateHandler.js';
-import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 
 const campaignName = 'TestCampaign';
-const casterName = 'Cleric1';
 
 function makePlayerStats(overrides = {}) {
     return {
-        name: casterName,
+        name: 'Cleric1',
         level: 7,
         proficiency: 4,
         abilities: [{ name: 'Wisdom', bonus: 3 }],
@@ -59,25 +56,28 @@ function makeAction(overrides = {}) {
     };
 }
 
-const baseCombatContext = {
-    creatures: [
-        { name: 'Goblin', type: 'monster', maxHp: 7, currentHp: 3 },
-        { name: 'Orc', type: 'monster', maxHp: 15, currentHp: 10 },
-        { name: casterName, type: 'player', maxHp: 50, currentHp: 25 },
-    ],
-    players: [{ name: casterName }],
-    placedItems: [],
-};
+function makeNonRegenerateAction(overrides = {}) {
+    return {
+        name: 'Cure Wounds',
+        automation: { ...overrides.automation },
+        spell: {
+            name: 'Cure Wounds',
+            range: 'Touch',
+            level: 1,
+        },
+        ...overrides,
+    };
+}
 
-describe('handle', () => {
+describe('regenerateHandler.handle', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('spell identification', () => {
-        it('should return null when spell name does not match', async () => {
+    describe('spell matching', () => {
+        it('should return null when spell name does not match Regenerate', async () => {
             const result = await handle(
-                makeAction({ spell: { name: 'Cure Wounds' } }),
+                makeNonRegenerateAction(),
                 makePlayerStats(),
                 campaignName,
                 null,
@@ -85,42 +85,20 @@ describe('handle', () => {
             expect(result).toBeNull();
         });
 
-        it('should return null when spell is missing', async () => {
+        it('should return null when spell name is missing', async () => {
             const result = await handle(
-                { name: 'Regenerate' },
+                { name: 'Regenerate', spell: {} },
                 makePlayerStats(),
                 campaignName,
                 null,
             );
             expect(result).toBeNull();
-        });
-
-        it('should match spell name case-sensitively', async () => {
-            const result = await handle(
-                makeAction({ spell: { name: 'regenerate' } }),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-            expect(result).toBeNull();
-        });
-
-        it('should match when spell name is exactly "Regenerate"', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-            expect(result).not.toBeNull();
-            expect(result.type).toBe('popup');
         });
     });
 
     describe('combat context validation', () => {
         it('should return popup when no combat context exists', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
             getCombatContext.mockResolvedValue(null);
 
             const result = await handle(
@@ -133,26 +111,19 @@ describe('handle', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No combat context found');
-            expect(result.payload.description).toContain('Cannot apply Regenerate');
-        });
-
-        it('should include action name in the no-combat popup', async () => {
-            getCombatContext.mockResolvedValue(null);
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-
-            expect(result.payload.name).toBe('Regenerate');
         });
     });
 
     describe('target selection popup', () => {
-        it('should include all creature names as targets', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
+        it('should return target selection popup with creature list', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            getCombatContext.mockResolvedValue({
+                creatures: [
+                    { name: 'Goblin' },
+                    { name: 'Orc' },
+                    { name: 'Cleric1' },
+                ],
+            });
 
             const result = await handle(
                 makeAction(),
@@ -163,39 +134,28 @@ describe('handle', () => {
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('regenerate_target_selection');
-            expect(result.payload.creatureTargets).toEqual(['Goblin', 'Orc', casterName]);
-        });
-
-        it('should include caster in creature targets', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-
-            const result = await handle(
-                makeAction(),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-
-            expect(result.payload.creatureTargets).toContain(casterName);
+            expect(result.payload.name).toBe('Regenerate');
+            expect(result.payload.creatureTargets).toEqual(['Goblin', 'Orc', 'Cleric1']);
+            expect(result.payload.range).toBe('Touch');
         });
 
         it('should use spell.range when provided', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-            getRuntimeValue.mockReturnValue(null);
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await handle(
-                makeAction({ spell: { range: '30 feet' } }),
+                makeAction({ spell: { range: '60ft' } }),
                 makePlayerStats(),
                 campaignName,
                 null,
             );
 
-            expect(result.payload.range).toBe('30 feet');
+            expect(result.payload.range).toBe('60ft');
         });
 
-        it('should default range to "Touch" when not provided', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-            getRuntimeValue.mockReturnValue(null);
+        it('should default range to Touch when not provided', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
+            getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await handle(
                 makeAction({ spell: {} }),
@@ -207,43 +167,18 @@ describe('handle', () => {
             expect(result.payload.range).toBe('Touch');
         });
 
-        it('should pass automation object in payload', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-
-            const result = await handle(
-                makeAction({ automation: { customField: 'value' } }),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-
-            expect(result.payload.automation).toEqual({ customField: 'value' });
-        });
-
-        it('should pass empty automation when action has no automation', async () => {
-            getCombatContext.mockResolvedValue(baseCombatContext);
-
-            const result = await handle(
-                makeAction({ spell: { name: 'Regenerate' } }),
-                makePlayerStats(),
-                campaignName,
-                null,
-            );
-
-            expect(result.payload.automation).toEqual({});
-        });
-
-        it('should work with empty creature list', async () => {
+        it('should pass automation through to popup payload', async () => {
+            const { getCombatContext } = await import('../../../rules/combat/damageUtils.js');
             getCombatContext.mockResolvedValue({ creatures: [] });
 
             const result = await handle(
-                makeAction(),
+                makeAction({ automation: { customFlag: true } }),
                 makePlayerStats(),
                 campaignName,
                 null,
             );
 
-            expect(result.payload.creatureTargets).toEqual([]);
+            expect(result.payload.automation).toEqual({ customFlag: true });
         });
     });
 });

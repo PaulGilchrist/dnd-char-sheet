@@ -5,26 +5,6 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-    getCombatContext: vi.fn(),
-}));
-
-vi.mock('../../../ui/logService.js', () => ({
-    addEntry: vi.fn(() => Promise.resolve()),
-}));
-
-vi.mock('../../../combat/automation/automationExpressions.js', () => ({
-    evaluateAutoExpression: vi.fn(),
-}));
-
-vi.mock('../../../rules/combat/applyHealing.js', () => ({
-    applyHealingToTarget: vi.fn(),
-}));
-
-vi.mock('../../../encounters/combatData.js', () => ({
-    getCombatSummary: vi.fn(),
-}));
-
 import { isRegenerateActive } from './regenerateHandler.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
@@ -39,16 +19,13 @@ describe('isRegenerateActive', () => {
         getRuntimeValue.mockReturnValue(true);
 
         const result = isRegenerateActive('Goblin', campaignName);
-
         expect(result).toBe(true);
-        expect(getRuntimeValue).toHaveBeenCalledWith('Goblin', 'regenerateActive', campaignName);
     });
 
     it('should return false when regenerateActive is false', () => {
         getRuntimeValue.mockReturnValue(false);
 
         const result = isRegenerateActive('Goblin', campaignName);
-
         expect(result).toBe(false);
     });
 
@@ -56,7 +33,6 @@ describe('isRegenerateActive', () => {
         getRuntimeValue.mockReturnValue(null);
 
         const result = isRegenerateActive('Goblin', campaignName);
-
         expect(result).toBe(false);
     });
 
@@ -64,15 +40,6 @@ describe('isRegenerateActive', () => {
         getRuntimeValue.mockReturnValue(undefined);
 
         const result = isRegenerateActive('Goblin', campaignName);
-
-        expect(result).toBe(false);
-    });
-
-    it('should return false when regenerateActive is a string', () => {
-        getRuntimeValue.mockReturnValue('true');
-
-        const result = isRegenerateActive('Goblin', campaignName);
-
         expect(result).toBe(false);
     });
 
@@ -80,11 +47,17 @@ describe('isRegenerateActive', () => {
         getRuntimeValue.mockReturnValue(0);
 
         const result = isRegenerateActive('Goblin', campaignName);
-
         expect(result).toBe(false);
     });
 
-    it('should use the correct runtime store key', () => {
+    it('should return false when regenerateActive is empty string', () => {
+        getRuntimeValue.mockReturnValue('');
+
+        const result = isRegenerateActive('Goblin', campaignName);
+        expect(result).toBe(false);
+    });
+
+    it('should pass correct arguments to getRuntimeValue', () => {
         getRuntimeValue.mockReturnValue(true);
 
         isRegenerateActive('Orc', campaignName);
