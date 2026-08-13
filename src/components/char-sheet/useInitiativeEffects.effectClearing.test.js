@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -81,21 +82,10 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
         );
     }
 
-    function assertCampaignEffectCleared(effectName, filteredEffects) {
-        expect(setRuntimeValue).toHaveBeenCalledWith(
-            'campaign',
-            'targetEffects',
-            filteredEffects,
-            campaignName,
-            true
-        );
-    }
-
-    function assertCampaignEffectNotCleared() {
-        const calls = vi.mocked(setRuntimeValue).mock.calls.filter(
+    function campaignTargetEffectsCalls() {
+        return vi.mocked(setRuntimeValue).mock.calls.filter(
             call => call[0] === 'campaign' && call[1] === 'targetEffects'
         );
-        expect(calls.length).toBe(0);
     }
 
     describe('Pass Without Trace clearing', () => {
@@ -109,19 +99,60 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('pass_without_trace_bonus', [
-                { effect: 'other_effect', source: 'Ally' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect', source: 'Ally' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no pass_without_trace_bonus exists', () => {
+        it('removes all pass_without_trace_bonus entries when multiple exist', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [
+                    { effect: 'pass_without_trace_bonus', source: 'Ally1' },
+                    { effect: 'other_effect' },
+                    { effect: 'pass_without_trace_bonus', source: 'Ally2' },
+                ];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
+        });
+
+        it('does not call setRuntimeValue when no pass_without_trace_bonus exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect', source: 'Ally' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
+        });
+
+        it('does not call setRuntimeValue when targetEffects is null', () => {
+            getRuntimeValue.mockReturnValue(null);
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(campaignTargetEffectsCalls().length).toBe(0);
+        });
+
+        it('does not call setRuntimeValue when targetEffects is empty', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'targetEffects') return [];
+                return null;
+            });
+            renderHookWithStats();
+            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -136,19 +167,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('blur', [
-                { effect: 'other_effect', source: 'Ally' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect', source: 'Ally' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no blur exists', () => {
+        it('does not call setRuntimeValue when no blur exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -163,19 +198,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('globe_barrier', [
-                { effect: 'other_effect' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no globe_barrier exists', () => {
+        it('does not call setRuntimeValue when no globe_barrier exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -190,19 +229,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('forcecage', [
-                { effect: 'other_effect' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no forcecage exists', () => {
+        it('does not call setRuntimeValue when no forcecage exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -217,19 +260,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('antimagic_field', [
-                { effect: 'other_effect' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no antimagic_field exists', () => {
+        it('does not call setRuntimeValue when no antimagic_field exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -244,19 +291,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('regenerate', [
-                { effect: 'other_effect' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no regenerate exists', () => {
+        it('does not call setRuntimeValue when no regenerate exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 
@@ -271,19 +322,23 @@ describe('useInitiativeEffects - campaign targetEffects clearing', () => {
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectCleared('beacon_of_hope', [
-                { effect: 'other_effect' },
-            ]);
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                [{ effect: 'other_effect' }],
+                campaignName,
+                true
+            );
         });
 
-        it('does nothing when no beacon_of_hope exists', () => {
+        it('does not call setRuntimeValue when no beacon_of_hope exists', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'targetEffects') return [{ effect: 'other_effect' }];
                 return null;
             });
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            assertCampaignEffectNotCleared();
+            expect(campaignTargetEffectsCalls().length).toBe(0);
         });
     });
 });

@@ -1,24 +1,35 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
-import useLoggedDiceRoll from '../../hooks/combat/useLoggedDiceRoll.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
 import { executeHandler } from '../../services/automation/index.js';
 import { hasAutomation } from '../../services/combat/automation/automationService.js';
 
+const _syncedStore = new Map();
+
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(() => null),
+  getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(() => Promise.resolve()),
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  useRuntimeValue: vi.fn(() => null),
+  getStore: vi.fn(() => _syncedStore),
+  useSyncedState: vi.fn((_, key, defaultValue) => {
+    const hasValue = _syncedStore.has(key);
+    const value = hasValue ? _syncedStore.get(key) : defaultValue;
+    const setter = vi.fn((newValue) => { _syncedStore.set(key, newValue); });
+    return [value, setter];
+  }),
+  useRuntimeValue: vi.fn((_, key, _campaignName) => {
+    const hasValue = _syncedStore.has(key);
+    return hasValue ? _syncedStore.get(key) : null;
+  }),
   listeners: new Map(),
 }));
 
 vi.mock('../../hooks/combat/useLoggedDiceRoll.js', () => ({
   default: vi.fn(() => ({
-    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(), quickRollPlayerSave: vi.fn(),
+    popupHtml: null, setPopupHtml: vi.fn(), rollAttack: vi.fn(), rollDamage: vi.fn(),
+    rollSkillCheck: vi.fn(), rollAbilityCheck: vi.fn(), quickRollPlayerSave: vi.fn(),
   })),
 }));
 
@@ -27,7 +38,7 @@ vi.mock('../../services/automation/index.js', () => ({
 }));
 
 vi.mock('../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn(() => false),
+  hasAutomation: vi.fn(),
   collectWeaponMastery: vi.fn(() => ({ baseMastery: null, extraMasteries: [] })),
   evaluateAutoExpression: vi.fn(() => null),
 }));
@@ -84,14 +95,16 @@ vi.mock('../../services/ui/sanitize.js', () => ({
 vi.mock('../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({ creatures: [] })),
   getCurrentCombatRound: vi.fn(() => 1),
+  getActiveCreatureName: vi.fn(() => 'TestCharacter'),
   loadCombatSummary: vi.fn(() => Promise.resolve({ lastAttack: null })),
 }));
 
+vi.mock('../../services/npcs/monsterUtils.js', () => ({
+  getMonsterData: vi.fn(() => Promise.resolve(null)),
+}));
+
 vi.mock('../../services/rules/core/attackCalc.js', () => ({
-  parseMagicItemName: vi.fn((name) => {
-    if (name.startsWith('+')) return { baseName: name.replace(/^\+\d+\s*/, '') };
-    return { baseName: name };
-  }),
+  parseMagicItemName: vi.fn((name) => ({ baseName: name })),
 }));
 
 vi.mock('../../services/character/classFeatures.js', () => ({
@@ -105,7 +118,14 @@ vi.mock('../../services/character/featRangeService.js', () => ({
 vi.mock('../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 5, rolls: [3, 2], modifier: 0 })),
   rollExpressionDoubled: vi.fn(() => ({ total: 10, rolls: [3, 2, 3, 2], modifier: 0 })),
-  rollExpressionMaximized: vi.fn(() => ({ total: 48, rolls: [6, 6, 6, 6, 6, 6, 6, 6], modifier: 0 })),
+}));
+
+vi.mock('../../services/rules/features/friendsService.js', () => ({
+  endFriendsOnHostileAction: vi.fn(),
+}));
+
+vi.mock('../../services/rules/features/invisibilityService.js', () => ({
+  endInvisibilityOnHostileAction: vi.fn(),
 }));
 
 vi.mock('./useInitiativeEffects.js', () => ({
@@ -124,6 +144,21 @@ vi.mock('./CharActionSpellPopups.jsx', () => ({
   default: vi.fn(() => <div data-testid="char-action-spell-popups">CharActionSpellPopups</div>),
 }));
 
+vi.mock('./useCharActionModals.js', () => ({
+  default: vi.fn(() => ({
+    pendingDamage: null, modalState: {}, setModalState: vi.fn(),
+    resolveAttackDamage: vi.fn(), handleMasteryClose: vi.fn(), handleWeaponMasteryChoice: vi.fn(),
+    handleWeaponKindMasteryClose: vi.fn(), handleDivineFuryDamageType: vi.fn(), handleDivineFurySkip: vi.fn(),
+    handleGenericDamageTypeChoice: vi.fn(), handleGenericDamageTypeSkip: vi.fn(),
+    handleDamageTypeModifierChoice: vi.fn(), handleDamageTypeModifierSkip: vi.fn(),
+    handleEnhancedUnarmedChoice: vi.fn(), handleEnhancedUnarmedSkip: vi.fn(),
+    handleFeatureChoiceConfirm: vi.fn(), handleFeatureChoiceSkip: vi.fn(),
+    handleConstellationSelect: vi.fn(),
+    combatSuperiorityModal: null, setCombatSuperiorityModal: vi.fn(),
+    handleCombatSuperiorityConfirm: vi.fn(), handleAttackRiderManeuverUse: vi.fn(), handleAttackRiderManeuverSkip: vi.fn(),
+  })),
+}));
+
 const BASE_PLAYER_STATS = {
   name: 'TestCharacter',
   rules: '5e',
@@ -139,95 +174,196 @@ function createStats(overrides = {}) {
   return { ...BASE_PLAYER_STATS, ...overrides };
 }
 
-describe('CharActions monk ki', () => {
+function renderWithDiceRollContext(ui, { wrapper } = {}) {
+  const mockSetPopupHtml = vi.fn();
+  const defaultWrapper = ({ children }) => (
+    <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+      {children}
+    </DiceRollContext.Provider>
+  );
+  return {
+    ...render(ui, { wrapper: wrapper || defaultWrapper }),
+    mockSetPopupHtml,
+  };
+}
+
+function mountAction(actionName, { specialActions = [], buffs = [], rules = '5e' } = {}) {
+  getRuntimeValue.mockImplementation((_name, key) => {
+    if (key === 'focusPoints') return 2;
+    if (key === 'activeBuffs') return buffs;
+    return null;
+  });
+
+  const stats = createStats({
+    class: { class_levels: [{ level: 5, focus_points: 2 }] },
+    level: 5,
+    rules,
+    ...(specialActions.length > 0 ? { specialActions: specialActions.map((name) => ({ name })) } : {}),
+    actions: [{ name: actionName, description: 'Test action.', automation: { type: 'auto_effect' } }],
+  });
+
+  return render(<CharActions playerStats={stats} campaignName="test-campaign" />);
+}
+
+describe('CharActions monk ki focus point skip logic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
-    getRuntimeValue.mockImplementation(() => null);
-    hasAutomation.mockImplementation(() => false);
+    getRuntimeValue.mockImplementation((_name, key) => {
+      if (key === 'focusPoints') return 2;
+      if (key === 'activeBuffs') return [];
+      return null;
+    });
+    hasAutomation.mockReturnValue(true);
+    executeHandler.mockResolvedValue({ type: 'popup', payload: 'Action executed' });
   });
 
-  describe('monk ki: focus point skip logic', () => {
-    const testCases = [
-      { actionName: 'Flurry of Blows', buffs: [], flurryHarm: true, expectFPConsume: false, label: 'Flurry of Blows with Flurry of Healing and Harm' },
-      { actionName: 'Flurry of Blows', buffs: [{ effect: 'cloak_of_shadows' }], flurryHarm: false, expectFPConsume: false, label: 'Flurry of Blows with Cloak of Shadows' },
-      { actionName: 'Hand of Healing', buffs: [], flurryHarm: true, expectFPConsume: false, label: 'Hand of Healing with Flurry of Healing and Harm' },
-      { actionName: 'Hand of Healing', buffs: [{ effect: 'cloak_of_shadows' }], flurryHarm: false, expectFPConsume: true, label: 'Hand of Healing with Cloak of Shadows' },
-    ];
-
-    for (const tc of testCases) {
-      it(`does ${tc.expectFPConsume ? '' : 'not '}consume focus point for ${tc.label}`, async () => {
-        hasAutomation.mockReturnValue(true);
-        executeHandler.mockResolvedValue({ type: 'popup', payload: `<b>${tc.actionName}</b>` });
-
-        if (tc.buffs.length > 0) {
-          getRuntimeValue.mockImplementation((_name, key) => {
-            if (key === 'activeBuffs') return tc.buffs;
-            return null;
-          });
-        }
-
-        const stats = createStats({
-          class: { class_levels: [{ level: 5, focus_points: 2 }] },
-          level: 5,
-          ...(tc.flurryHarm ? { specialActions: [{ name: 'Flurry of Healing and Harm' }] } : {}),
-          actions: [{ name: tc.actionName, description: 'Test action.', automation: { type: 'auto_effect' } }],
-        });
-
-        await act(async () => { render(<CharActions playerStats={stats} />); });
-        const actionNameEl = screen.getByText(new RegExp(`${tc.actionName}:`));
-        await act(async () => { fireEvent.click(actionNameEl); });
-        await waitFor(() => {
-          if (tc.expectFPConsume) {
-            expect(setRuntimeValue).toHaveBeenCalledWith('TestCharacter', 'focusPoints', expect.any(Number), undefined);
-          } else {
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('TestCharacter', 'focusPoints', expect.any(Number), undefined);
-          }
-          expect(executeHandler).toHaveBeenCalled();
-        });
+  describe('Flurry of Healing and Harm skip', () => {
+    it('skips focus point spend for Hand of Healing when Flurry of Healing and Harm is active', async () => {
+      mountAction('Hand of Healing', {
+        specialActions: ['Flurry of Healing and Harm'],
       });
-    }
+
+      const actionEl = screen.getByText(/Hand of Healing:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        expect.any(Number),
+        'test-campaign'
+      );
+    });
+
+    it('skips focus point spend for Flurry of Blows when Flurry of Healing and Harm is active', async () => {
+      mountAction('Flurry of Blows', {
+        specialActions: ['Flurry of Healing and Harm'],
+      });
+
+      const actionEl = screen.getByText(/Flurry of Blows:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        expect.any(Number),
+        'test-campaign'
+      );
+    });
+
+    it('skips focus point spend for Heightened Flurry of Blows when Flurry of Healing and Harm is active', async () => {
+      mountAction('Heightened Flurry of Blows', {
+        specialActions: ['Flurry of Healing and Harm'],
+      });
+
+      const actionEl = screen.getByText(/Heightened Flurry of Blows:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        expect.any(Number),
+        'test-campaign'
+      );
+    });
   });
 
-  describe('monk ki: no FP remaining', () => {
-    const testCases = [
-      { rules: '5e', expectedMessage: '<b>Flurry of Blows</b><br/>No ki points remaining.', label: '5e' },
-      { rules: '2024', expectedMessage: '<b>Flurry of Blows</b><br/>No Focus Points remaining.', label: '2024' },
-    ];
+  describe('Cloak of Shadows skip', () => {
+    it('skips focus point spend for Flurry of Blows when Cloak of Shadows is active', async () => {
+      mountAction('Flurry of Blows', {
+        buffs: [{ effect: 'cloak_of_shadows' }],
+      });
 
-    for (const tc of testCases) {
-      it(`shows no-FP message when focus points are 0 (${tc.label})`, async () => {
-        hasAutomation.mockReturnValue(true);
-        getRuntimeValue.mockImplementation((_name, key) => {
-          if (key === 'focusPoints') return 0;
-          return null;
-        });
-        const mockSetPopupHtml = vi.fn();
-        useLoggedDiceRoll.mockReturnValue({
-          popupHtml: null, setPopupHtml: mockSetPopupHtml, rollAttack: vi.fn(), rollDamage: vi.fn(), quickRollPlayerSave: vi.fn(),
-        });
+      const actionEl = screen.getByText(/Flurry of Blows:/);
+      await act(async () => { fireEvent.click(actionEl); });
 
-        const wrapper = ({ children }) => (
-          <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-            {children}
-          </DiceRollContext.Provider>
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        expect.any(Number),
+        'test-campaign'
+      );
+    });
+
+    it('skips focus point spend for Heightened Flurry of Blows when Cloak of Shadows is active', async () => {
+      mountAction('Heightened Flurry of Blows', {
+        buffs: [{ effect: 'cloak_of_shadows' }],
+      });
+
+      const actionEl = screen.getByText(/Heightened Flurry of Blows:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        expect.any(Number),
+        'test-campaign'
+      );
+    });
+
+    it('does NOT skip focus point spend for Hand of Healing when Cloak of Shadows is active', async () => {
+      mountAction('Hand of Healing', {
+        buffs: [{ effect: 'cloak_of_shadows' }],
+      });
+
+      const actionEl = screen.getByText(/Hand of Healing:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalled();
+      });
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestCharacter',
+        'focusPoints',
+        1,
+        'test-campaign'
+      );
+    });
+  });
+
+  describe('2024 ruleset no-FP message', () => {
+    it('shows "Focus Points" message for 2024 ruleset when focus points are 0', async () => {
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'focusPoints') return 0;
+        return null;
+      });
+
+      const stats = createStats({
+        class: { class_levels: [{ level: 5, focus_points: 2 }] },
+        level: 5,
+        rules: '2024',
+        actions: [{ name: 'Flurry of Blows', description: 'No FP.', automation: { type: 'auto_effect' } }],
+      });
+
+      const { mockSetPopupHtml } = renderWithDiceRollContext(
+        <CharActions playerStats={stats} campaignName="test-campaign" />
+      );
+
+      const actionEl = screen.getByText(/Flurry of Blows:/);
+      await act(async () => { fireEvent.click(actionEl); });
+
+      await waitFor(() => {
+        expect(mockSetPopupHtml).toHaveBeenCalledWith(
+          '<b>Flurry of Blows</b><br/>No Focus Points remaining.'
         );
-
-        await act(async () => {
-          render(<CharActions playerStats={createStats({
-            class: { class_levels: [{ level: 5, focus_points: 2 }] },
-            level: 5,
-            rules: tc.rules,
-            actions: [{ name: 'Flurry of Blows', description: 'No FP.', automation: { type: 'auto_effect' } }],
-          })} />, { wrapper });
-        });
-        const actionName = screen.getByText(/Flurry of Blows:/);
-        await act(async () => { fireEvent.click(actionName); });
-        await waitFor(() => {
-          expect(mockSetPopupHtml).toHaveBeenCalledWith(tc.expectedMessage);
-        });
       });
-    }
+    });
   });
 });

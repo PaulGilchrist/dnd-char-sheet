@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -274,16 +275,16 @@ const defaultProps = {
 };
 
 // ---------------------------------------------------------------------------
-// Tests — data fetching & player stats
+// Tests — rendering-data: component mounting & prop passing
 // ---------------------------------------------------------------------------
 
-describe('data fetching & player stats', () => {
+describe('char sheet rendering with player data', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.clear();
   });
 
-  it('renders the char sheet when playerStats is loaded', async () => {
+  it('renders the char sheet container when playerStats loads', async () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
@@ -291,15 +292,29 @@ describe('data fetching & player stats', () => {
     });
   });
 
-  it('renders CharSummary with playerStats', async () => {
+  it('renders CharSummary with playerStats and campaignName', async () => {
     const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharSummary).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    expect(CharSummary.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(CharSummary).toHaveBeenCalled();
+    const summaryProps = CharSummary.mock.calls[0][0];
+    expect(summaryProps.playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(summaryProps.campaignName).toBe('test-campaign');
+  });
+
+  it('renders CharSummary with activeMapName prop', async () => {
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(CharSummary.mock.calls[0][0].activeMapName).toBe(null);
   });
 
   it('renders CharAbilities with playerStats', async () => {
@@ -307,21 +322,50 @@ describe('data fetching & player stats', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharAbilities).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
+    expect(CharAbilities).toHaveBeenCalled();
     expect(CharAbilities.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
   });
 
-  it('renders CharActions with playerStats', async () => {
+  it('renders CharAbilities with characters array', async () => {
+    const { default: CharAbilities } = await import('./CharAbilities.jsx');
+    const props = { ...defaultProps, characters: [{ name: 'Test Character', level: 5 }] };
+    render(<CharSheet {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(CharAbilities.mock.calls[0][0].characters).toEqual([{ name: 'Test Character', level: 5 }]);
+  });
+
+  it('renders CharActions with playerStats and campaignName', async () => {
     const { default: CharActions } = await import('./CharActions.jsx');
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharActions).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    expect(CharActions.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(CharActions).toHaveBeenCalled();
+    const actionsProps = CharActions.mock.calls[0][0];
+    expect(actionsProps.playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(actionsProps.campaignName).toBe('test-campaign');
+  });
+
+  it('renders CharActions with cannotAct when paralyzed condition is active', async () => {
+    const { default: CharActions } = await import('./CharActions.jsx');
+    mockStore.set('Test Character:activeConditions', ['paralyzed']);
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(CharActions.mock.calls[0][0].cannotAct).toBe(true);
   });
 
   it('renders CharInventory with playerStats', async () => {
@@ -329,9 +373,10 @@ describe('data fetching & player stats', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharInventory).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
+    expect(CharInventory).toHaveBeenCalled();
     expect(CharInventory.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
   });
 
@@ -340,10 +385,24 @@ describe('data fetching & player stats', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharReactions).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
+    expect(CharReactions).toHaveBeenCalled();
     expect(CharReactions.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+  });
+
+  it('renders CharReactions with cannotAct when paralyzed condition is active', async () => {
+    const { default: CharReactions } = await import('./CharReactions.jsx');
+    mockStore.set('Test Character:activeConditions', ['paralyzed']);
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(CharReactions.mock.calls[0][0].cannotAct).toBe(true);
   });
 
   it('renders CharSpecialActions with playerStats', async () => {
@@ -351,21 +410,25 @@ describe('data fetching & player stats', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharSpecialActions).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
+    expect(CharSpecialActions).toHaveBeenCalled();
     expect(CharSpecialActions.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
   });
 
-  it('renders CharCharacterAdvancement with playerStats', async () => {
+  it('renders CharCharacterAdvancement with playerStats and campaignName', async () => {
     const { default: CharCharacterAdvancement } = await import('./CharCharacterAdvancement.jsx');
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharCharacterAdvancement).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
-    expect(CharCharacterAdvancement.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(CharCharacterAdvancement).toHaveBeenCalled();
+    const advProps = CharCharacterAdvancement.mock.calls[0][0];
+    expect(advProps.playerStats).toEqual(expect.objectContaining({ name: 'Test Character' }));
+    expect(advProps.campaignName).toBe('test-campaign');
   });
 
   it('renders CharSpells with playerStats for 5e ruleset', async () => {
@@ -373,19 +436,50 @@ describe('data fetching & player stats', () => {
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
-      expect(CharSpells).toHaveBeenCalled();
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
 
+    expect(CharSpells).toHaveBeenCalled();
     expect(CharSpells.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ rules: '5e' }));
   });
 
   it('renders CharSpells with 2024 ruleset', async () => {
     vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({ rules: '2024' })));
 
+    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
     render(<CharSheet {...defaultProps} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
     });
+
+    expect(CharSpells).toHaveBeenCalled();
+    expect(CharSpells.mock.calls[0][0].playerStats).toEqual(expect.objectContaining({ rules: '2024' }));
+  });
+
+  it('renders all child components when playerStats loads', async () => {
+    const { default: CharSummary } = await import('./char-summary/CharSummary.jsx');
+    const { default: CharAbilities } = await import('./CharAbilities.jsx');
+    const { default: CharActions } = await import('./CharActions.jsx');
+    const { default: CharInventory } = await import('./CharInventory.jsx');
+    const { default: CharReactions } = await import('./CharReactions.jsx');
+    const { default: CharSpecialActions } = await import('./CharSpecialActions.jsx');
+    const { default: CharCharacterAdvancement } = await import('./CharCharacterAdvancement.jsx');
+    const { default: CharSpells } = await import('./char-spells/CharSpells.jsx');
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(CharSummary).toHaveBeenCalledTimes(1);
+    expect(CharAbilities).toHaveBeenCalledTimes(1);
+    expect(CharActions).toHaveBeenCalledTimes(1);
+    expect(CharInventory).toHaveBeenCalledTimes(1);
+    expect(CharReactions).toHaveBeenCalledTimes(1);
+    expect(CharSpecialActions).toHaveBeenCalledTimes(1);
+    expect(CharCharacterAdvancement).toHaveBeenCalledTimes(1);
+    expect(CharSpells).toHaveBeenCalledTimes(1);
   });
 });

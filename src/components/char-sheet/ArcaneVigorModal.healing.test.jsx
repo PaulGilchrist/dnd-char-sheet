@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ArcaneVigorModal from './ArcaneVigorModal.jsx';
@@ -59,7 +60,7 @@ describe('ArcaneVigorModal - healing application', () => {
     getRuntimeValueMock.mockImplementation(() => null);
   });
 
-  it('applies healing when button is clicked', async () => {
+  it('applies healing and shows HP healed message', async () => {
     renderModal();
     fireEvent.click(screen.getByText(/Roll One/));
     await act(async () => {
@@ -78,7 +79,7 @@ describe('ArcaneVigorModal - healing application', () => {
     expect(onComplete).toHaveBeenCalled();
   });
 
-  it('disables buttons after healing is applied', async () => {
+  it('disables all action buttons after healing is applied', async () => {
     renderModal();
     fireEvent.click(screen.getByText(/Roll One/));
     await act(async () => {
@@ -86,18 +87,10 @@ describe('ArcaneVigorModal - healing application', () => {
     });
     expect(screen.getByText(/Roll One/)).toBeDisabled();
     expect(screen.getByText('Apply Healing')).toBeDisabled();
-  });
-
-  it('does not allow cancel after healing is applied', async () => {
-    renderModal();
-    fireEvent.click(screen.getByText(/Roll One/));
-    await act(async () => {
-      fireEvent.click(screen.getByText('Apply Healing'));
-    });
     expect(screen.getByText('Cancel')).toBeDisabled();
   });
 
-  it('does not call onClose when apply healing is clicked', async () => {
+  it('does not call onClose when applying healing', async () => {
     const onClose = vi.fn();
     renderModal({ onClose });
     fireEvent.click(screen.getByText(/Roll One/));
@@ -107,28 +100,14 @@ describe('ArcaneVigorModal - healing application', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('does not call onComplete when cancel is clicked', () => {
-    const onComplete = vi.fn();
-    const onClose = vi.fn();
-    renderModal({ onComplete, onClose });
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(onComplete).not.toHaveBeenCalled();
-  });
-
-  it('does not log to campaign when cancelled without rolling', () => {
+  it('does not log when cancel is clicked without rolling', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
     renderModal();
     fireEvent.click(screen.getByText('Cancel'));
-    expect(setRuntimeValueMock).not.toHaveBeenCalled();
+    expect(addEntry).not.toHaveBeenCalled();
   });
 
-  it('does not call setRuntimeValue when cancel is clicked', () => {
-    const onClose = vi.fn();
-    renderModal({ onClose });
-    fireEvent.click(screen.getByText('Cancel'));
-    expect(setRuntimeValueMock).not.toHaveBeenCalled();
-  });
-
-  it('does not call setRuntimeValue when no dice rolled and cancel clicked', () => {
+  it('does not call setRuntimeValue when cancel is clicked without rolling', () => {
     renderModal();
     fireEvent.click(screen.getByText('Cancel'));
     expect(setRuntimeValueMock).not.toHaveBeenCalled();

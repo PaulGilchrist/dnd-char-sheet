@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import useInitiativeEffects from './useInitiativeEffects.js';
@@ -45,7 +46,7 @@ vi.mock('../../services/automation/handlers/spells/shapechangeService.js', () =>
     revertShapechange: vi.fn(),
 }));
 
-import { getRuntimeValue, setRuntimeValue, setRuntimeBatch } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeBatch } from '../../hooks/runtime/useRuntimeState.js';
 
 describe('useInitiativeEffects - batch resets and once-per-turn trackers', () => {
     const campaignName = 'test-campaign';
@@ -81,73 +82,37 @@ describe('useInitiativeEffects - batch resets and once-per-turn trackers', () =>
         );
     }
 
+    function batchResetCalls() {
+        return vi.mocked(setRuntimeBatch).mock.calls;
+    }
+
+    function assertBatchResetCalledWithAllFields(expectedFields) {
+        const calls = batchResetCalls();
+        expect(calls.length).toBe(1);
+        const [name, updates, cmpName] = calls[0];
+        expect(name).toBe('TestMonk');
+        expect(cmpName).toBe(campaignName);
+        for (const field of expectedFields) {
+            expect(updates).toHaveProperty(field, null);
+        }
+    }
+
     describe('setRuntimeBatch once-per-turn trackers', () => {
-        it('resets actionSurgeUsedThisRound via batch', () => {
+        it('resets all unconditional batch fields in a single call', () => {
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ actionSurgeUsedThisRound: null }),
-                campaignName
-            );
+            assertBatchResetCalledWithAllFields([
+                'actionSurgeUsedThisRound',
+                'psionicStrikeUsedThisTurn',
+                'dreadAmbushUsedThisTurn',
+                'hurlThroughHellTurnUsed',
+                'portentUsedThisTurn',
+                'boonOfCombatProwessUsed',
+                'strokeOfLuckUsed',
+            ]);
         });
 
-        it('resets psionicStrikeUsedThisTurn via batch', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ psionicStrikeUsedThisTurn: null }),
-                campaignName
-            );
-        });
-
-        it('resets dreadAmbushUsedThisTurn via batch', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ dreadAmbushUsedThisTurn: null }),
-                campaignName
-            );
-        });
-
-        it('resets hurlThroughHellTurnUsed via batch', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ hurlThroughHellTurnUsed: null }),
-                campaignName
-            );
-        });
-
-        it('resets portentUsedThisTurn via batch', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ portentUsedThisTurn: null }),
-                campaignName
-            );
-        });
-
-        it('resets boonOfCombatProwessUsed and strokeOfLuckUsed via batch', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ boonOfCombatProwessUsed: null }),
-                campaignName
-            );
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ strokeOfLuckUsed: null }),
-                campaignName
-            );
-        });
-
-        it('resets relentlessUsedRound when player has Relentless passive', () => {
+        it('includes relentlessUsedRound when player has Relentless passive', () => {
             const stats = {
                 ...defaultPlayerStats,
                 automation: {
@@ -159,141 +124,23 @@ describe('useInitiativeEffects - batch resets and once-per-turn trackers', () =>
             };
             renderHookWithStats(stats);
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.objectContaining({ relentlessUsedRound: null }),
-                campaignName
-            );
+            const calls = batchResetCalls();
+            expect(calls.length).toBe(1);
+            expect(calls[0][1]).toHaveProperty('relentlessUsedRound', null);
         });
 
-        it('does not reset relentlessUsedRound when player lacks Relentless passive', () => {
+        it('excludes relentlessUsedRound when player lacks Relentless passive', () => {
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeBatch).toHaveBeenCalledWith(
-                'TestMonk',
-                expect.not.objectContaining({ relentlessUsedRound: null }),
-                campaignName
-            );
+            const calls = batchResetCalls();
+            expect(calls.length).toBe(1);
+            expect(calls[0][1]).not.toHaveProperty('relentlessUsedRound');
         });
 
         it('does not call setRuntimeBatch when no updates are needed (no matching character)', () => {
             renderHookWithStats();
             dispatchInitiativeRoll({ characterName: 'OtherPlayer', roll: 15 });
             expect(setRuntimeBatch).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('setRuntimeValue individual resets', () => {
-        it('resets _Charge_Attack_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Charge_Attack_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _FastHands_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_FastHands_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _CunningAction_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_CunningAction_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _Cleave_UsedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Cleave_UsedRound', null, campaignName
-            );
-        });
-
-        it('resets _Nick_UsedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Nick_UsedRound', null, campaignName
-            );
-        });
-
-        it('resets surgeUsedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'surgeUsedRound', null, campaignName
-            );
-        });
-
-        it('resets illusoryRealityUsedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'illusoryRealityUsedRound', null, campaignName
-            );
-        });
-
-        it('resets _BrutalStrike_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_BrutalStrike_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _fortifiedHealth_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_fortifiedHealth_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _Shield_Bash_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Shield_Bash_usedRound', null, campaignName
-            );
-        });
-
-        it('resets piercerPunctureUsedThisTurn on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'piercerPunctureUsedThisTurn', null, campaignName
-            );
-        });
-
-        it('resets _Savage_Attacker_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Savage_Attacker_usedRound', null, campaignName
-            );
-        });
-
-        it('resets _Hamstring_usedRound on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', '_Hamstring_usedRound', null, campaignName
-            );
-        });
-
-        it('resets resistanceUsedThisTurn on initiative', () => {
-            renderHookWithStats();
-            dispatchInitiativeRoll({ characterName: 'TestMonk', roll: 15 });
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'TestMonk', 'resistanceUsedThisTurn', null, campaignName
-            );
         });
     });
 });

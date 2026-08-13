@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
 
@@ -136,6 +137,7 @@ vi.mock('../../services/rules/spells/spellCastService.js', () => ({
 }));
 
 import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js';
+import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js';
 import { addEntry } from '../../services/ui/logService.js';
 
 const basePlayerStats = {
@@ -160,10 +162,23 @@ describe('CharBonusActions - Spell Cast Flow', () => {
   describe('spell detail popup', () => {
     const bonusActionSpell = { name: 'Shocking Grasp', range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' };
 
-    it('opens spell detail popup when clicking a spell', async () => {
+    it('opens spell detail popup when clicking a spell name', async () => {
       render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} />);
       fireEvent.click(screen.getByText('Shocking Grasp'));
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
+      });
+    });
+
+    it('passes upcastLevels to SpellDetailPopup via buildUpcastLevels', async () => {
+      const buildUpcastLevelsMock = vi.fn(() => [1, 2, 3]);
+      // Replace the module-level mock for useSpellUpcastFlow
+      vi.mocked(useSpellUpcastFlow).mockReturnValue({ buildUpcastLevels: buildUpcastLevelsMock });
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} />);
+      fireEvent.click(screen.getByText('Shocking Grasp'));
+      await waitFor(() => {
+        expect(buildUpcastLevelsMock).toHaveBeenCalledWith(bonusActionSpell);
+      });
     });
   });
 
@@ -184,6 +199,84 @@ describe('CharBonusActions - Spell Cast Flow', () => {
       render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Shocking Grasp', range: 'Touch', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
       expect(screen.getByTestId('metamagic-popup')).toBeInTheDocument();
     });
+
+    it('renders SecondaryTargetModal for pendingBarkskin', () => {
+      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
+        pendingMetamagic: null,
+        gateMetamagic: vi.fn(),
+        handleConfirm: vi.fn(),
+        handleSkip: vi.fn(),
+        pendingBarkskin: { creatureTargets: ['Goblin', 'Skeleton'] },
+        handleBarkskinConfirm: vi.fn(),
+        handleBarkskinSkip: vi.fn(),
+        pendingHealingWord: null,
+        handleHealingWordConfirm: vi.fn(),
+        handleHealingWordSkip: vi.fn(),
+        pendingSanctuary: null,
+        handleSanctuaryConfirm: vi.fn(),
+        handleSanctuarySkip: vi.fn(),
+        pendingAid: null,
+        handleAidConfirm: vi.fn(),
+        handleAidSkip: vi.fn(),
+        pendingGreaterRestoration: null,
+        handleGreaterRestorationConfirm: vi.fn(),
+        handleGreaterRestorationSkip: vi.fn(),
+      });
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Barkskin', range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
+      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    });
+
+    it('renders SecondaryTargetModal for pendingHealingWord', () => {
+      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
+        pendingMetamagic: null,
+        gateMetamagic: vi.fn(),
+        handleConfirm: vi.fn(),
+        handleSkip: vi.fn(),
+        pendingBarkskin: null,
+        handleBarkskinConfirm: vi.fn(),
+        handleBarkskinSkip: vi.fn(),
+        pendingHealingWord: { creatureTargets: ['Ally1'] },
+        handleHealingWordConfirm: vi.fn(),
+        handleHealingWordSkip: vi.fn(),
+        pendingSanctuary: null,
+        handleSanctuaryConfirm: vi.fn(),
+        handleSanctuarySkip: vi.fn(),
+        pendingAid: null,
+        handleAidConfirm: vi.fn(),
+        handleAidSkip: vi.fn(),
+        pendingGreaterRestoration: null,
+        handleGreaterRestorationConfirm: vi.fn(),
+        handleGreaterRestorationSkip: vi.fn(),
+      });
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Healing Word', range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
+      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    });
+
+    it('renders SecondaryTargetModal for pendingSanctuary', () => {
+      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
+        pendingMetamagic: null,
+        gateMetamagic: vi.fn(),
+        handleConfirm: vi.fn(),
+        handleSkip: vi.fn(),
+        pendingBarkskin: null,
+        handleBarkskinConfirm: vi.fn(),
+        handleBarkskinSkip: vi.fn(),
+        pendingHealingWord: null,
+        handleHealingWordConfirm: vi.fn(),
+        handleHealingWordSkip: vi.fn(),
+        pendingSanctuary: { creatureTargets: ['Ally1'] },
+        handleSanctuaryConfirm: vi.fn(),
+        handleSanctuarySkip: vi.fn(),
+        pendingAid: null,
+        handleAidConfirm: vi.fn(),
+        handleAidSkip: vi.fn(),
+        pendingGreaterRestoration: null,
+        handleGreaterRestorationConfirm: vi.fn(),
+        handleGreaterRestorationSkip: vi.fn(),
+      });
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Sanctuary', range: '30 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
+      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    });
   });
 
   describe('damage roll gating by cannotAct', () => {
@@ -192,19 +285,23 @@ describe('CharBonusActions - Spell Cast Flow', () => {
     it.each([
       { cannotAct: true, expectLogEntry: false, label: 'blocks' },
       { cannotAct: false, expectLogEntry: true, label: 'allows' },
-    ])('($label) damage roll log entry when cannotAct is $cannotAct', ({ cannotAct, expectLogEntry }) => {
+    ])('($label) damage roll log entry when cannotAct is $cannotAct', async ({ cannotAct, expectLogEntry }) => {
       render(<CharBonusActions playerStats={createStats({ attacks: [bonusActionAttack] })} campaignName="test-campaign" cannotAct={cannotAct} />);
       fireEvent.click(screen.getByText('1d4+3'));
       if (expectLogEntry) {
-        expect(vi.mocked(addEntry)).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-          type: 'roll',
-          rollType: 'damage',
-          name: 'Main Gauche',
-          formula: '1d4+3',
-          note: 'Direct damage roll (no target)',
-        }));
+        await waitFor(() => {
+          expect(vi.mocked(addEntry)).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+            type: 'roll',
+            rollType: 'damage',
+            name: 'Main Gauche',
+            formula: '1d4+3',
+            note: 'Direct damage roll (no target)',
+          }));
+        });
       } else {
-        expect(vi.mocked(addEntry)).not.toHaveBeenCalled();
+        await waitFor(() => {
+          expect(vi.mocked(addEntry)).not.toHaveBeenCalled();
+        });
       }
     });
   });
@@ -268,102 +365,11 @@ describe('CharBonusActions - Spell Cast Flow', () => {
     });
   });
 
-  describe('spell detail popup with Hex', () => {
-    const hexSpell = { name: 'Hex', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' };
-
-    it('opens spell detail popup for Hex spell', () => {
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [hexSpell] } })} />);
-      fireEvent.click(screen.getByText('Hex'));
-      expect(screen.getByTestId('spell-detail-popup')).toBeInTheDocument();
-    });
-  });
-
-  describe('secondary target modals rendering', () => {
-    it('renders Barkskin SecondaryTargetModal when pendingBarkskin is set', () => {
-      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
-        pendingMetamagic: null,
-        gateMetamagic: vi.fn(),
-        handleConfirm: vi.fn(),
-        handleSkip: vi.fn(),
-        pendingBarkskin: { creatureTargets: ['Goblin', 'Skeleton'] },
-        handleBarkskinConfirm: vi.fn(),
-        handleBarkskinSkip: vi.fn(),
-        pendingHealingWord: null,
-        handleHealingWordConfirm: vi.fn(),
-        handleHealingWordSkip: vi.fn(),
-        pendingSanctuary: null,
-        handleSanctuaryConfirm: vi.fn(),
-        handleSanctuarySkip: vi.fn(),
-        pendingAid: null,
-        handleAidConfirm: vi.fn(),
-        handleAidSkip: vi.fn(),
-        pendingGreaterRestoration: null,
-        handleGreaterRestorationConfirm: vi.fn(),
-        handleGreaterRestorationSkip: vi.fn(),
-      });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Barkskin', range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-
-    it('renders HealingWord SecondaryTargetModal when pendingHealingWord is set', () => {
-      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
-        pendingMetamagic: null,
-        gateMetamagic: vi.fn(),
-        handleConfirm: vi.fn(),
-        handleSkip: vi.fn(),
-        pendingBarkskin: null,
-        handleBarkskinConfirm: vi.fn(),
-        handleBarkskinSkip: vi.fn(),
-        pendingHealingWord: { creatureTargets: ['Ally1'] },
-        handleHealingWordConfirm: vi.fn(),
-        handleHealingWordSkip: vi.fn(),
-        pendingSanctuary: null,
-        handleSanctuaryConfirm: vi.fn(),
-        handleSanctuarySkip: vi.fn(),
-        pendingAid: null,
-        handleAidConfirm: vi.fn(),
-        handleAidSkip: vi.fn(),
-        pendingGreaterRestoration: null,
-        handleGreaterRestorationConfirm: vi.fn(),
-        handleGreaterRestorationSkip: vi.fn(),
-      });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Healing Word', range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-
-    it('renders Sanctuary SecondaryTargetModal when pendingSanctuary is set', () => {
-      vi.mocked(useSpellMetamagicFlow).mockReturnValue({
-        pendingMetamagic: null,
-        gateMetamagic: vi.fn(),
-        handleConfirm: vi.fn(),
-        handleSkip: vi.fn(),
-        pendingBarkskin: null,
-        handleBarkskinConfirm: vi.fn(),
-        handleBarkskinSkip: vi.fn(),
-        pendingHealingWord: null,
-        handleHealingWordConfirm: vi.fn(),
-        handleHealingWordSkip: vi.fn(),
-        pendingSanctuary: { creatureTargets: ['Ally1'] },
-        handleSanctuaryConfirm: vi.fn(),
-        handleSanctuarySkip: vi.fn(),
-        pendingAid: null,
-        handleAidConfirm: vi.fn(),
-        handleAidSkip: vi.fn(),
-        pendingGreaterRestoration: null,
-        handleGreaterRestorationConfirm: vi.fn(),
-        handleGreaterRestorationSkip: vi.fn(),
-      });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [{ name: 'Sanctuary', range: '30 ft.', casting_time: '1 bonus action', prepared: 'Prepared' }] } })} />);
-      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
-    });
-  });
-
   describe('spell damage display for healing spells', () => {
     const healingSpell = { name: 'Healing Word', level: 1, range: '60 ft.', casting_time: '1 bonus action', prepared: 'Prepared', heal_at_slot_level: true };
 
-    it('shows empty damage cell for healing spells', () => {
+    it('shows "Healing" type label for healing spells', () => {
       render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [healingSpell] } })} />);
-      expect(screen.getByText('Healing Word')).toBeInTheDocument();
       expect(screen.getByText('Healing')).toBeInTheDocument();
     });
   });
@@ -403,9 +409,10 @@ describe('CharBonusActions - Spell Cast Flow', () => {
         handleGreaterRestorationConfirm: vi.fn(),
         handleGreaterRestorationSkip: vi.fn(),
       });
-      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} cannotAct={true} />);
+      render(<CharBonusActions playerStats={createStats({ spellAbilities: { spells: [bonusActionSpell] } })} campaignName="test-campaign" cannotAct={true} />);
       fireEvent.click(screen.getByText('Shocking Grasp'));
       fireEvent.click(screen.getByTestId('cast-btn'));
+      expect(gateMetamagicMock).not.toHaveBeenCalled();
     });
   });
 

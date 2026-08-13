@@ -1,3 +1,15 @@
+// @improved-by-ai
+// Tests for secondary target modal handler callbacks in CharActionModals.
+// Tests verify that the correct handler is invoked with the expected arguments
+// when a user selects a target or skips the modal.
+//
+// Skip handlers are covered in CharActionModals.secondary-target-skips.test.jsx.
+// Target selection confirmations for multi-select modals (Bulwark, Radiance, etc.)
+// are covered in CharActionModals.target-selection-handlers.test.jsx.
+//
+// This file focuses on single-target secondary modal confirmations and the
+// Bastion of Law handler routing.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -267,7 +279,11 @@ vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
             </label>
           );
         })}
-        <button data-testid="secondary-confirm" onClick={() => onTargetSelected(targets[0]?.value || targets[0]?.name)}>{confirmLabel}</button>
+        {confirmLabel && (
+          <button data-testid="secondary-confirm" onClick={() => onTargetSelected(targets[0]?.value || targets[0]?.name)}>
+            {confirmLabel}
+          </button>
+        )}
         <button data-testid="secondary-skip" onClick={onSkip}>Skip</button>
       </div>
     );
@@ -304,7 +320,7 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
   });
 
   describe('Trickster Blessing modal', () => {
-    it('calls handleTricksterBlessingConfirm with selected target', () => {
+    it('calls handleTricksterBlessingConfirm with selected target name on target click', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleTricksterBlessingConfirm: handler })}
@@ -312,6 +328,17 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
         setModalState={vi.fn()}
       />);
       fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
+      expect(handler).toHaveBeenCalledWith('Ally1');
+    });
+
+    it('calls handleTricksterBlessingConfirm with first target on confirm button click', () => {
+      const handler = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ handleTricksterBlessingConfirm: handler })}
+        modalState={{ tricksterBlessingModal: { creatureTargets: [{ name: 'Ally1' }, { name: 'Ally2' }] } }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByTestId('secondary-confirm'));
       expect(handler).toHaveBeenCalledWith('Ally1');
     });
 
@@ -325,10 +352,19 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('secondary-skip'));
       expect(handler).toHaveBeenCalledWith(null);
     });
+
+    it('renders the correct modal title', () => {
+      render(<CharActionModals
+        {...createBaseProps({ handleTricksterBlessingConfirm: vi.fn() })}
+        modalState={{ tricksterBlessingModal: { creatureTargets: [{ name: 'Ally1' }] } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('secondary-title').textContent).toContain('Blessing of the Trickster');
+    });
   });
 
   describe('Bardic Inspiration Target modal', () => {
-    it('calls handleBardicInspirationConfirm with selected target', () => {
+    it('calls handleBardicInspirationConfirm with selected target name', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleBardicInspirationConfirm: handler })}
@@ -349,10 +385,19 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
       fireEvent.click(screen.getByTestId('secondary-skip'));
       expect(handler).toHaveBeenCalledWith(null);
     });
+
+    it('renders the correct modal title', () => {
+      render(<CharActionModals
+        {...createBaseProps({ handleBardicInspirationConfirm: vi.fn() })}
+        modalState={{ bardicInspirationTargetModal: { creatureTargets: [{ name: 'Ally1' }], dieSize: 6 } }}
+        setModalState={vi.fn()}
+      />);
+      expect(screen.getByTestId('secondary-title').textContent).toContain('Bardic Inspiration');
+    });
   });
 
   describe('Inspiring Movement Ally modal', () => {
-    it('calls handleInspiringMovementConfirm with selected target', () => {
+    it('calls handleInspiringMovementConfirm with selected target name', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleInspiringMovementConfirm: handler })}
@@ -402,7 +447,7 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
   });
 
   describe('Bulwark of Force modal', () => {
-    it('calls handleBulwarkOfForceConfirm with selected targets', () => {
+    it('calls handleBulwarkOfForceConfirm with selected targets array', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleBulwarkOfForceConfirm: handler })}
@@ -426,7 +471,7 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
   });
 
   describe('Corona of Enemies modal', () => {
-    it('calls handleCoronaEnemySelectionConfirm with selected enemy', () => {
+    it('calls handleCoronaEnemySelectionConfirm with selected enemy name', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleCoronaEnemySelectionConfirm: handler })}
@@ -450,7 +495,7 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
   });
 
   describe('Radiance of Dawn modal', () => {
-    it('calls handleRadianceOfDawnConfirm with selected targets', () => {
+    it('calls handleRadianceOfDawnConfirm with selected targets array', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleRadianceOfDawnConfirm: handler })}
@@ -474,7 +519,7 @@ describe('CharActionModals — SecondaryTargetModal handlers', () => {
   });
 
   describe('Mantle of Inspiration modal', () => {
-    it('calls handleMantleOfInspirationConfirm with selected targets', () => {
+    it('calls handleMantleOfInspirationConfirm with selected targets array', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleMantleOfInspirationConfirm: handler })}
@@ -563,7 +608,7 @@ describe('CharActionModals — Bastion of Law confirm handler', () => {
   // their own module tests. Note: onConfirm does NOT dismiss the modal — only
   // onClose does.
 
-  it('routes spAmount+selectedTargetName to handleApply', async () => {
+  it('calls handleApply with spAmount and selectedTargetName on apply', async () => {
     const setModalState = vi.fn();
     render(<CharActionModals
       {...createBaseProps({ setModalState })}
@@ -571,7 +616,16 @@ describe('CharActionModals — Bastion of Law confirm handler', () => {
       setModalState={setModalState}
     />);
     fireEvent.click(screen.getByTestId('bastion-apply'));
-    expect(setModalState).not.toHaveBeenCalled();
+    // The modal's onConfirm routes to handleApply — verify the handler was
+    // invoked with the spAmount and selectedTargetName as the last two args.
+    const { handleApply } = await import('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js');
+    expect(handleApply).toHaveBeenCalledWith(
+      expect.objectContaining({ automation: {}, name: 'Bastion of Law' }),
+      expect.objectContaining({ name: 'Test Character' }),
+      'test-campaign',
+      5,
+      'target',
+    );
   });
 
   it('dismisses modal via onClose (close button)', () => {
@@ -583,24 +637,5 @@ describe('CharActionModals — Bastion of Law confirm handler', () => {
     />);
     fireEvent.click(screen.getByTestId('bastion-close'));
     expect(setModalState).toHaveBeenCalledWith({ bastionOfLawModal: null });
-  });
-});
-
-describe('CharActionModals — Divine Intervention cast handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('calls handleDivineInterventionCast with onSelect from modal state', () => {
-    const handler = vi.fn();
-    render(<CharActionModals
-      {...createBaseProps({ handleDivineInterventionCast: handler })}
-      modalState={{ divineInterventionModal: { onSelect: handler } }}
-      setModalState={vi.fn()}
-    />);
-    // The modal passes onSelect to the DivineInterventionModal component
-    // which in turn calls it with the selected intervention.
-    // Here we verify the handler is passed through correctly.
-    expect(handler).toBeDefined();
   });
 });

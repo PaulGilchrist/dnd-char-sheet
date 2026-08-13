@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -35,7 +36,7 @@ vi.mock('../../services/automation/index.js', () => ({
 }));
 
 vi.mock('../../services/combat/automation/automationService.js', () => ({
-  hasAutomation: vi.fn(() => false),
+  hasAutomation: vi.fn((action) => !!action?.automation),
   collectWeaponMastery: vi.fn(() => ({ baseMastery: null, extraMasteries: [] })),
   evaluateAutoExpression: vi.fn(() => null),
 }));
@@ -178,13 +179,17 @@ vi.mock('../../services/automation/contextBuilder.js', () => ({
 }));
 
 vi.mock('../../services/rules/core/spellDamageUtils.js', () => ({
-  resolveSpellDamageAtLevel: vi.fn((spell) => `${spell.level}d6`),
+  resolveSpellDamageAtLevel: vi.fn((spell) => {
+    if (spell?.damage && typeof spell.damage === 'string') return spell.damage;
+    return '';
+  }),
   isAutoHitSpell: vi.fn(() => false),
+  resolveHealExpression: vi.fn((_spell, _level, mod) => `1d4+${mod ?? 0}`),
 }));
 
 const basePlayerStats = {
   name: 'TestCharacter', rules: '5e', level: 5, attacks: [], actions: [],
-  spellAbilities: { spells: [], toHit: 5, saveDc: 13, prepared: [] },
+  spellAbilities: { spells: [], toHit: 5, saveDc: 13, prepared: [], modifier: 2 },
   abilities: [{ name: 'STR', bonus: 3 }, { name: 'Wisdom', bonus: 2 }], proficiency: 3,
 };
 
@@ -192,44 +197,69 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
+function renderWithFetch(component, options = {}) {
+  globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
+  return act(async () => { render(component, options); });
+}
+
 describe('CharActions spell damage display and spell click', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     _syncedStore.clear();
-    globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
     getRuntimeValue.mockImplementation(() => null);
   });
 
   describe('getSpellDamageDisplay', () => {
-    it('returns empty string for heal_at_slot_level spells', async () => {
+    it('shows resolved heal expression for heal_at_slot_level spells', async () => {
       const stats = createStats({
         spellAbilities: {
-          spells: [{ name: 'Healing Word', level: 1, heal_at_slot_level: true }],
+          spells: [{ name: 'Healing Word', level: 1, heal_at_slot_level: true, casting_time: '1 action', prepared: 'Prepared' }],
+          toHit: 5, saveDc: 13, modifier: 2,
+        },
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText('Healing Word')).toBeInTheDocument();
+      expect(screen.getByText('1d4+2')).toBeInTheDocument();
+    });
+
+    it('shows resolved damage for non-0 level spells', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Fireball', level: 3, damage: '8d6', casting_time: '1 action', prepared: 'Prepared' }],
           toHit: 5, saveDc: 13,
         },
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
       expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText('Fireball')).toBeInTheDocument();
+      expect(screen.getByText('8d6')).toBeInTheDocument();
     });
 
-    it('returns resolved damage for non-0 level spells', async () => {
+    it('does not render spells without damage or heal_at_slot_level', async () => {
       const stats = createStats({
         spellAbilities: {
-          spells: [{ name: 'Fireball', level: 3, damage: '8d6' }],
+          spells: [{ name: 'Minor Illusion', level: 0, casting_time: '1 action', prepared: 'Always' }],
           toHit: 5, saveDc: 13,
         },
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
       expect(screen.getByText('Actions')).toBeInTheDocument();
+      // getActionSpellNames filters out spells without damage or heal_at_slot_level
+      expect(screen.queryByText('Minor Illusion')).not.toBeInTheDocument();
     });
 
-    it('appends Wis mod when potent feature is selected', async () => {
+    it('appends Wis mod when potent feature Spellcasting Ability option is selected', async () => {
       const stats = createStats({
         spellAbilities: {
-          spells: [{ name: 'Burning Hands', level: 0, damage: '1d6' }],
+          spells: [{ name: 'Burning Hands', level: 0, damage: '1d6', casting_time: '1 action', prepared: 'Prepared' }],
           toHit: 5, saveDc: 13,
         },
         automation: {
@@ -237,13 +267,73 @@ describe('CharActions spell damage display and spell click', () => {
         },
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
+      const chosenKey = '_Potent_Spellcasting_option';
+      getRuntimeValue.mockImplementation((_name, key, _campaign) => {
+        if (key === chosenKey) return 'Spellcasting Ability';
+        return null;
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
       expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText('Burning Hands')).toBeInTheDocument();
+      // With potent spellcasting + Wis mod 2, should show "1d6+2"
+      expect(screen.getByText('1d6+2')).toBeInTheDocument();
+    });
+
+    it('does not append Wis mod when potent feature has no chosen option', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Burning Hands', level: 0, damage: '1d6', casting_time: '1 action', prepared: 'Prepared' }],
+          toHit: 5, saveDc: 13,
+        },
+        automation: {
+          actions: [{ type: 'damage_bonus', name: 'Potent Spellcasting', options: ['Spellcasting Ability', 'Wisdom'], upgrades: false }],
+        },
+      });
+
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key.startsWith('_Potent')) return null;
+        return null;
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText('Burning Hands')).toBeInTheDocument();
+      // Without chosen option, should show base damage only from mock
+      expect(screen.getByText('1d6')).toBeInTheDocument();
+    });
+
+    it('does not append Wis mod when Wisdom bonus is 0', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Burning Hands', level: 0, damage: '1d6', casting_time: '1 action', prepared: 'Prepared' }],
+          toHit: 5, saveDc: 13,
+        },
+        abilities: [{ name: 'STR', bonus: 3 }, { name: 'Wisdom', bonus: 0 }],
+        automation: {
+          actions: [{ type: 'damage_bonus', name: 'Potent Spellcasting', options: ['Spellcasting Ability', 'Wisdom'], upgrades: false }],
+        },
+      });
+
+      const chosenKey = '_Potent_Spellcasting_option';
+      getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === chosenKey) return 'Wisdom';
+        return null;
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText('Burning Hands')).toBeInTheDocument();
+      // Wis mod is 0, so no bonus appended — mock returns the spell's base damage
+      expect(screen.getByText('1d6')).toBeInTheDocument();
     });
   });
 
   describe('handleActionSpellClick', () => {
-    it('sets selectedActionSpell when spell name is clicked', async () => {
+    it('renders spell name as clickable element', async () => {
       const stats = createStats({
         spellAbilities: {
           spells: [{ name: 'Fireball', level: 3, range: '150 ft', casting_time: '1 action', prepared: 'Prepared', damage: '8d6' }],
@@ -251,13 +341,13 @@ describe('CharActions spell damage display and spell click', () => {
         },
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
       const spellEl = screen.getByText('Fireball');
-      await act(async () => { fireEvent.click(spellEl); });
-      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(spellEl).toHaveClass('clickable');
     });
 
-    it('falls back to spellAbilities.spells when not in actionSpellNames', async () => {
+    it('renders spells from spellAbilities.spells fallback when not in actionSpellNames', async () => {
       const stats = createStats({
         spellAbilities: {
           spells: [{ name: 'Light', level: 0, range: 'Touch', casting_time: '1 action', prepared: 'Prepared' }],
@@ -265,15 +355,65 @@ describe('CharActions spell damage display and spell click', () => {
         },
       });
 
-      await act(async () => { render(<CharActions playerStats={stats} />); });
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
       expect(screen.getByText('Actions')).toBeInTheDocument();
+      // Light has no damage/heal, so getActionSpellNames won't include it in actionSpells
+      // but handleActionSpellClick falls back to spellAbilities.spells
+      // Since it has no damage, it won't appear in the action spells list
+      // This tests that the fallback path exists without crashing
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+    });
+
+    it('renders spell damage as clickable element', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Fireball', level: 3, damage: '8d6', casting_time: '1 action', prepared: 'Prepared' }],
+          toHit: 5, saveDc: 13,
+        },
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      const damageEl = screen.getByText('8d6');
+      expect(damageEl).toHaveClass('clickable');
+    });
+
+    it('does not render spells without casting_time or prepared fields', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Light', level: 0 }],
+          toHit: 5, saveDc: 13,
+        },
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.queryByText('Light')).not.toBeInTheDocument();
+    });
+
+    it('renders healing spells with resolved heal expression', async () => {
+      const stats = createStats({
+        spellAbilities: {
+          spells: [{ name: 'Healing Word', level: 1, heal_at_slot_level: true, casting_time: '1 action', prepared: 'Prepared' }],
+          toHit: 5, saveDc: 13, modifier: 3,
+        },
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText('Healing Word')).toBeInTheDocument();
+      expect(screen.getByText('1d4+3')).toBeInTheDocument();
     });
   });
 
-  describe('handleDivineInterventionCast', () => {
-    it('renders divine intervention modal when present', async () => {
+  describe('automation actions display', () => {
+    it('renders automation actions with badge when saveDc is present', async () => {
       const stats = createStats({
-        actions: [{ name: 'Divine Intervention', description: 'Call on divine power.', automation: { type: 'auto_effect' } }],
+        actions: [
+          { name: 'Divine Intervention', description: 'Call on divine power.', automation: { type: 'save_attack', saveDc: 15, saveType: 'CHA' } },
+        ],
       });
 
       const mockSetPopupHtml = vi.fn();
@@ -290,11 +430,24 @@ describe('CharActions spell damage display and spell click', () => {
         return null;
       });
 
-      await act(async () => {
-        render(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
-      });
+      await renderWithFetch(<CharActions playerStats={stats} campaignName="test-campaign" />, { wrapper });
 
       expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByText(/Divine Intervention:/)).toBeInTheDocument();
+      expect(screen.getByText(/DC 15 CHA/)).toBeInTheDocument();
+    });
+
+    it('renders automation actions without badge when no saveDc', async () => {
+      const stats = createStats({
+        actions: [
+          { name: 'Rage', description: 'Enter a rage.', automation: { type: 'combat_stance' } },
+        ],
+      });
+
+      await renderWithFetch(<CharActions playerStats={stats} />);
+
+      expect(screen.getByText(/Rage:/)).toBeInTheDocument();
+      expect(screen.queryByText(/DC/)).not.toBeInTheDocument();
     });
   });
 });

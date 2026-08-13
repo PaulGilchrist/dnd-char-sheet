@@ -1,8 +1,10 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import './CharSpecialActions.modalMocks.jsx';
 import CharSpecialActions from './CharSpecialActions.jsx';
 import { executeHandler } from '../../services/automation/index.js';
+import { mockRuntimeStore } from './CharSpecialActions.modalMocks.jsx';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -24,117 +26,296 @@ function createPlayerStats(overrides = {}) {
 describe('CharSpecialActions - Elemental modal onClose handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.keys(mockRuntimeStore).forEach(key => delete mockRuntimeStore[key]);
   });
 
-  it('closes ElementalAffinityModal when onClose is called', async () => {
-    executeHandler.mockResolvedValue({
-      type: 'modal',
-      modalName: 'elementalAffinity',
-      payload: { action: { name: 'Elemental Affinity' } },
+  describe('Elemental Affinity modal', () => {
+    it('closes ElementalAffinityModal when onClose is called', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'elementalAffinity',
+        payload: { action: { name: 'Elemental Affinity' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Elemental Affinity', description: 'Boost damage.', automation: { type: 'elemental_affinity' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Elemental Affinity/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('elemental-affinity-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('elemental-affinity-modal')).not.toBeInTheDocument();
+      });
     });
 
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Elemental Affinity', description: 'Boost damage.', automation: { type: 'elemental_affinity' } },
-      ],
-    });
+    it('renders the action name inside the modal', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'elementalAffinity',
+        payload: { action: { name: 'Elemental Affinity' } },
+      });
 
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Elemental Affinity', description: 'Boost damage.', automation: { type: 'elemental_affinity' } },
+        ],
+      });
 
-    fireEvent.click(screen.getByText(/Elemental Affinity/));
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('elemental-affinity-modal')).toBeInTheDocument();
-    });
+      fireEvent.click(screen.getByText(/Elemental Affinity/));
 
-    fireEvent.click(screen.getByText('Close'));
+      await waitFor(() => {
+        expect(screen.getByTestId('elemental-affinity-modal')).toBeInTheDocument();
+      });
 
-    await waitFor(() => {
-      expect(screen.queryByTestId('elemental-affinity-modal')).not.toBeInTheDocument();
-    });
-  });
-
-  it('closes WildMagicSurgeModal when onClose is called', async () => {
-    executeHandler.mockResolvedValue({
-      type: 'modal',
-      modalName: 'wildMagicSurge',
-      payload: {},
-    });
-
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Wild Magic Surge', description: 'Surge with magic.', automation: { type: 'wild_magic_surge' } },
-      ],
-    });
-
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-    fireEvent.click(screen.getByText(/Wild Magic Surge/));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('Close'));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('wild-magic-surge-modal')).not.toBeInTheDocument();
-    });
-  });
-
-  it('closes StrideOfTheElementsModal when onClose is called', async () => {
-    executeHandler.mockResolvedValue({
-      type: 'modal',
-      modalName: 'strideOfTheElements',
-      payload: { action: { name: 'Stride of the Elements' } },
-    });
-
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Stride of the Elements', description: 'Stride elementally.', automation: { type: 'stride_of_the_elements' } },
-      ],
-    });
-
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
-
-    fireEvent.click(screen.getByText(/Stride of the Elements/));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('stride-of-the-elements-modal')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('Close'));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('stride-of-the-elements-modal')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('elemental-affinity-modal')).getByText('Elemental Affinity')).toBeInTheDocument();
     });
   });
 
-  it('closes DestructiveStrideModal when onClose is called', async () => {
-    executeHandler.mockResolvedValue({
-      type: 'modal',
-      modalName: 'destructiveStride',
-      payload: { action: { name: 'Destructive Stride' } },
+  describe('Wild Magic Surge modal', () => {
+    it('closes WildMagicSurgeModal when onClose is called', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'wildMagicSurge',
+        payload: {},
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Wild Magic Surge', description: 'Surge with magic.', automation: { type: 'wild_magic_surge' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Wild Magic Surge/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('wild-magic-surge-modal')).not.toBeInTheDocument();
+      });
     });
 
-    const playerStats = createPlayerStats({
-      specialActions: [
-        { name: 'Destructive Stride', description: 'Stride destructively.', automation: { type: 'destructive_stride' } },
-      ],
+    it('renders the modal title text', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'wildMagicSurge',
+        payload: {},
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Wild Magic Surge', description: 'Surge with magic.', automation: { type: 'wild_magic_surge' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Wild Magic Surge/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+      });
+
+      expect(within(screen.getByTestId('wild-magic-surge-modal')).getByText('Wild Magic Surge')).toBeInTheDocument();
+    });
+  });
+
+  describe('Stride of the Elements modal', () => {
+    it('closes StrideOfTheElementsModal when onClose is called', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'strideOfTheElements',
+        payload: { action: { name: 'Stride of the Elements' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Stride of the Elements', description: 'Stride elementally.', automation: { type: 'stride_of_the_elements' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Stride of the Elements/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stride-of-the-elements-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('stride-of-the-elements-modal')).not.toBeInTheDocument();
+      });
     });
 
-    render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+    it('renders confirm buttons for movement options', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'strideOfTheElements',
+        payload: { action: { name: 'Stride of the Elements' } },
+      });
 
-    fireEvent.click(screen.getByText(/Destructive Stride/));
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Stride of the Elements', description: 'Stride elementally.', automation: { type: 'stride_of_the_elements' } },
+        ],
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Stride of the Elements/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('stride-of-the-elements-modal')).toBeInTheDocument();
+      });
+
+      const modal = screen.getByTestId('stride-of-the-elements-modal');
+      expect(within(modal).getByText('Confirm Ice Walk')).toBeInTheDocument();
+      expect(within(modal).getByText('Confirm Speed')).toBeInTheDocument();
+      expect(within(modal).getByText('Confirm Fly')).toBeInTheDocument();
+      expect(within(modal).getByText('Confirm Teleport')).toBeInTheDocument();
+    });
+  });
+
+  describe('Destructive Stride modal', () => {
+    it('closes DestructiveStrideModal when onClose is called', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'destructiveStride',
+        payload: { action: { name: 'Destructive Stride' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Destructive Stride', description: 'Stride destructively.', automation: { type: 'destructive_stride' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Destructive Stride/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('destructive-stride-modal')).not.toBeInTheDocument();
+      });
     });
 
-    fireEvent.click(screen.getByText('Close'));
+    it('renders confirm buttons for target and popup outcomes', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'destructiveStride',
+        payload: { action: { name: 'Destructive Stride' } },
+      });
 
-    await waitFor(() => {
-      expect(screen.queryByTestId('destructive-stride-modal')).not.toBeInTheDocument();
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Destructive Stride', description: 'Stride destructively.', automation: { type: 'destructive_stride' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Destructive Stride/));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('destructive-stride-modal')).toBeInTheDocument();
+      });
+
+      const modal = screen.getByTestId('destructive-stride-modal');
+      expect(within(modal).getByText('Confirm Target')).toBeInTheDocument();
+      expect(within(modal).getByText('Confirm Popup')).toBeInTheDocument();
+    });
+  });
+
+  describe('Interaction ordering', () => {
+    it('calls executeHandler once when clicking an elemental action', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'elementalAffinity',
+        payload: { action: { name: 'Elemental Affinity' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Elemental Affinity', description: 'Boost damage.', automation: { type: 'elemental_affinity' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      expect(executeHandler).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText(/Elemental Affinity/));
+
+      await waitFor(() => {
+        expect(executeHandler).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('opens a different elemental modal after closing the previous one', async () => {
+      executeHandler.mockResolvedValue({
+        type: 'modal',
+        modalName: 'elementalAffinity',
+        payload: { action: { name: 'Elemental Affinity' } },
+      });
+
+      const playerStats = createPlayerStats({
+        specialActions: [
+          { name: 'Elemental Affinity', description: 'Boost damage.', automation: { type: 'elemental_affinity' } },
+          { name: 'Wild Magic Surge', description: 'Surge with magic.', automation: { type: 'wild_magic_surge' } },
+        ],
+      });
+
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      // Open first modal
+      fireEvent.click(screen.getByText(/Elemental Affinity/));
+      await waitFor(() => {
+        expect(screen.getByTestId('elemental-affinity-modal')).toBeInTheDocument();
+      });
+
+      // Close first modal
+      fireEvent.click(screen.getByText('Close'));
+      await waitFor(() => {
+        expect(screen.queryByTestId('elemental-affinity-modal')).not.toBeInTheDocument();
+      });
+
+      // Set up mock for the second action
+      executeHandler.mockResolvedValueOnce({
+        type: 'modal',
+        modalName: 'wildMagicSurge',
+        payload: {},
+      });
+
+      // Open second modal
+      fireEvent.click(screen.getByText(/Wild Magic Surge/));
+      await waitFor(() => {
+        expect(screen.getByTestId('wild-magic-surge-modal')).toBeInTheDocument();
+      });
     });
   });
 });

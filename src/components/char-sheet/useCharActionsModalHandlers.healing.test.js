@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsModalHandlers from './useCharActionsModalHandlers.js';
 
@@ -86,21 +87,27 @@ const { confirmMassHealingWord } = await import('../../services/automation/handl
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
-const baseModalState = {};
-const baseMergedModalState = {};
-
-function getHandlers(extraModalState = {}, extraMergedModalState = {}) {
+function getHandlers(modalState = {}, mergedModalState = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useCharActionsModalHandlers({
     setPopupHtml: mockSetPopupHtml,
     setModalState: mockSetModalState,
-    modalState: { ...baseModalState, ...extraModalState },
-    mergedModalState: { ...baseMergedModalState, ...extraMergedModalState },
+    modalState,
+    mergedModalState,
   });
 }
 
 function makePlayerStats() {
   return { name: 'TestChar', class: { name: 'Fighter' } };
+}
+
+function makeBaseModalData(overrides = {}) {
+  return {
+    action: { name: 'Test Action' },
+    playerStats: makePlayerStats(),
+    campaignName: 'test-campaign',
+    ...overrides,
+  };
 }
 
 describe('useCharActionsModalHandlers - healing', () => {
@@ -111,38 +118,37 @@ describe('useCharActionsModalHandlers - healing', () => {
   });
 
   describe('handleMassHealConfirm', () => {
-    it('returns early when distribution is missing', async () => {
+    it.each([null, undefined])('returns early when distribution is %s', async (distribution) => {
       const handlers = getHandlers();
-      await handlers.handleMassHealConfirm(null);
+      await handlers.handleMassHealConfirm(distribution);
       expect(confirmMassHeal).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when massHealModal is not in modalState', async () => {
+    it('returns early when massHealModal is absent from modalState', async () => {
       const handlers = getHandlers();
-      await handlers.handleMassHealConfirm({ target: 10 });
+      await handlers.handleMassHealConfirm({ Ally1: 20 });
       expect(confirmMassHeal).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmMassHeal with correct args', async () => {
+    it('delegates to confirmMassHeal and clears the modal', async () => {
       confirmMassHeal.mockResolvedValue({ payload: '<p>Mass heal!</p>' });
       const modalState = {
-        massHealModal: {
-          action: { name: 'Mass Heal' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+        massHealModal: makeBaseModalData({
           totalPool: 50,
           bonusHeal: 10,
           bonusDetails: 'bonus',
-        },
+        }),
       };
       const handlers = getHandlers(modalState);
-      const distribution = { Ally1: 20, Ally2: 30 };
-      await handlers.handleMassHealConfirm(distribution);
+      await handlers.handleMassHealConfirm({ Ally1: 20, Ally2: 30 });
+
       expect(confirmMassHeal).toHaveBeenCalledWith(
         modalState.massHealModal.action,
         modalState.massHealModal.playerStats,
         modalState.massHealModal.campaignName,
-        distribution,
+        { Ally1: 20, Ally2: 30 },
         50,
         10,
         'bonus'
@@ -150,104 +156,92 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ massHealModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
+    it('shows popup when confirmMassHeal returns a payload', async () => {
+      confirmMassHeal.mockResolvedValue({ payload: '<p>Healed 50 HP</p>' });
+      const handlers = getHandlers({
+        massHealModal: makeBaseModalData({ totalPool: 50, bonusHeal: 0, bonusDetails: '' }),
+      });
+      await handlers.handleMassHealConfirm({ Ally1: 50 });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Healed 50 HP</p>');
+    });
+
+    it('skips popup when confirmMassHeal returns no payload', async () => {
       confirmMassHeal.mockResolvedValue({});
-      const modalState = {
-        massHealModal: {
-          action: { name: 'Mass Heal' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          totalPool: 50,
-          bonusHeal: 10,
-          bonusDetails: 'bonus',
-        },
-      };
-      const handlers = getHandlers(modalState);
-      const distribution = { Ally1: 20, Ally2: 30 };
-      await handlers.handleMassHealConfirm(distribution);
+      const handlers = getHandlers({
+        massHealModal: makeBaseModalData({ totalPool: 50, bonusHeal: 0, bonusDetails: '' }),
+      });
+      await handlers.handleMassHealConfirm({ Ally1: 50 });
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
       expect(mockSetModalState).toHaveBeenCalledWith({ massHealModal: null });
     });
   });
 
   describe('handleClockworkCavalcadeHealConfirm', () => {
-    it('returns early when distribution is missing', async () => {
+    it.each([null, undefined])('returns early when distribution is %s', async (distribution) => {
       const handlers = getHandlers();
-      await handlers.handleClockworkCavalcadeHealConfirm(null);
+      await handlers.handleClockworkCavalcadeHealConfirm(distribution);
       expect(confirmClockworkCavalcadeHeal).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when clockworkCavalcadeHealModal is not in mergedModalState', async () => {
+    it('returns early when clockworkCavalcadeHealModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handleClockworkCavalcadeHealConfirm({ target: 10 });
+      await handlers.handleClockworkCavalcadeHealConfirm({ Ally1: 15 });
       expect(confirmClockworkCavalcadeHeal).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmClockworkCavalcadeHeal with correct args', async () => {
+    it('delegates to confirmClockworkCavalcadeHeal and clears the modal', async () => {
       confirmClockworkCavalcadeHeal.mockResolvedValue({ payload: '<p>Healed!</p>' });
       const mergedModalState = {
-        clockworkCavalcadeHealModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          maxHeal: 30,
-        },
+        clockworkCavalcadeHealModal: makeBaseModalData({ maxHeal: 30 }),
       };
       const handlers = getHandlers({}, mergedModalState);
-      const distribution = { Ally1: 15, Ally2: 15 };
-      await handlers.handleClockworkCavalcadeHealConfirm(distribution);
+      await handlers.handleClockworkCavalcadeHealConfirm({ Ally1: 15, Ally2: 15 });
+
       expect(confirmClockworkCavalcadeHeal).toHaveBeenCalledWith(
         mergedModalState.clockworkCavalcadeHealModal.action,
         mergedModalState.clockworkCavalcadeHealModal.playerStats,
         mergedModalState.clockworkCavalcadeHealModal.campaignName,
-        distribution,
+        { Ally1: 15, Ally2: 15 },
         30
       );
       expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmClockworkCavalcadeHeal.mockResolvedValue({});
-      const mergedModalState = {
-        clockworkCavalcadeHealModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          maxHeal: 30,
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
-      const distribution = { Ally1: 15, Ally2: 15 };
-      await handlers.handleClockworkCavalcadeHealConfirm(distribution);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeHealModal: null });
+    it('shows popup when confirmClockworkCavalcadeHeal returns a payload', async () => {
+      confirmClockworkCavalcadeHeal.mockResolvedValue({ payload: '<p>Repaired ally</p>' });
+      const handlers = getHandlers({}, {
+        clockworkCavalcadeHealModal: makeBaseModalData({ maxHeal: 30 }),
+      });
+      await handlers.handleClockworkCavalcadeHealConfirm({ Ally1: 30 });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Repaired ally</p>');
     });
   });
 
   describe('handleClockworkCavalcadeDispelConfirm', () => {
-    it('returns early when targetNames is missing', async () => {
+    it.each([null, undefined])('returns early when targetNames is %s', async (targetNames) => {
       const handlers = getHandlers();
-      await handlers.handleClockworkCavalcadeDispelConfirm(null);
+      await handlers.handleClockworkCavalcadeDispelConfirm(targetNames);
       expect(confirmClockworkCavalcadeDispel).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when clockworkCavalcadeDispelModal is not in mergedModalState', async () => {
+    it('returns early when clockworkCavalcadeDispelModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handleClockworkCavalcadeDispelConfirm(['target']);
+      await handlers.handleClockworkCavalcadeDispelConfirm(['Enemy1']);
       expect(confirmClockworkCavalcadeDispel).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmClockworkCavalcadeDispel with correct args', async () => {
+    it('delegates to confirmClockworkCavalcadeDispel and clears the modal', async () => {
       confirmClockworkCavalcadeDispel.mockResolvedValue({ payload: '<p>Dispel!</p>' });
       const mergedModalState = {
-        clockworkCavalcadeDispelModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        clockworkCavalcadeDispelModal: makeBaseModalData(),
       };
       const handlers = getHandlers({}, mergedModalState);
       await handlers.handleClockworkCavalcadeDispelConfirm(['Enemy1']);
+
       expect(confirmClockworkCavalcadeDispel).toHaveBeenCalledWith(
         mergedModalState.clockworkCavalcadeDispelModal.action,
         mergedModalState.clockworkCavalcadeDispelModal.playerStats,
@@ -257,40 +251,32 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmClockworkCavalcadeDispel.mockResolvedValue({});
-      const mergedModalState = {
-        clockworkCavalcadeDispelModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
+    it('shows popup when confirmClockworkCavalcadeDispel returns a payload', async () => {
+      confirmClockworkCavalcadeDispel.mockResolvedValue({ payload: '<p>Dispel success</p>' });
+      const handlers = getHandlers({}, {
+        clockworkCavalcadeDispelModal: makeBaseModalData(),
+      });
       await handlers.handleClockworkCavalcadeDispelConfirm(['Enemy1']);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeDispelModal: null });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Dispel success</p>');
     });
   });
 
   describe('handleClockworkCavalcadeRepairConfirm', () => {
-    it('returns early when clockworkCavalcadeRepairModal is not in mergedModalState', async () => {
+    it('returns early when clockworkCavalcadeRepairModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
       await handlers.handleClockworkCavalcadeRepairConfirm();
       expect(confirmClockworkCavalcadeRepair).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmClockworkCavalcadeRepair when modal is present', async () => {
+    it('delegates to confirmClockworkCavalcadeRepair and clears the modal', async () => {
       confirmClockworkCavalcadeRepair.mockResolvedValue({ payload: '<p>Repaired!</p>' });
       const mergedModalState = {
-        clockworkCavalcadeRepairModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
+        clockworkCavalcadeRepairModal: makeBaseModalData(),
       };
       const handlers = getHandlers({}, mergedModalState);
       await handlers.handleClockworkCavalcadeRepairConfirm();
+
       expect(confirmClockworkCavalcadeRepair).toHaveBeenCalledWith(
         mergedModalState.clockworkCavalcadeRepairModal.action,
         mergedModalState.clockworkCavalcadeRepairModal.playerStats,
@@ -299,51 +285,45 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmClockworkCavalcadeRepair.mockResolvedValue({});
-      const mergedModalState = {
-        clockworkCavalcadeRepairModal: {
-          action: { name: 'Clockwork Cavalcade' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
+    it('shows popup when confirmClockworkCavalcadeRepair returns a payload', async () => {
+      confirmClockworkCavalcadeRepair.mockResolvedValue({ payload: '<p>Item repaired</p>' });
+      const handlers = getHandlers({}, {
+        clockworkCavalcadeRepairModal: makeBaseModalData(),
+      });
       await handlers.handleClockworkCavalcadeRepairConfirm();
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ clockworkCavalcadeRepairModal: null });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Item repaired</p>');
     });
   });
 
   describe('handleMassCureWoundsConfirm', () => {
-    it('returns early when targetNames is missing', async () => {
+    it.each([null, undefined])('returns early when targetNames is %s', async (targetNames) => {
       const handlers = getHandlers();
-      await handlers.handleMassCureWoundsConfirm(null);
+      await handlers.handleMassCureWoundsConfirm(targetNames);
       expect(confirmMassCureWounds).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when massCureWoundsModal is not in mergedModalState', async () => {
+    it('returns early when massCureWoundsModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handleMassCureWoundsConfirm(['target']);
+      await handlers.handleMassCureWoundsConfirm(['Ally1']);
       expect(confirmMassCureWounds).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmMassCureWounds with all parameters', async () => {
+    it('delegates to confirmMassCureWounds with all parameters and clears the modal', async () => {
       confirmMassCureWounds.mockResolvedValue({ payload: '<p>Healed!</p>' });
       const mergedModalState = {
-        massCureWoundsModal: {
-          action: { name: 'Mass Cure Wounds' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+        massCureWoundsModal: makeBaseModalData({
           healExpression: '3d8',
           maximize: false,
           bonusHeal: 5,
           bonusDetails: 'bonus',
           slotLevel: 5,
-        },
+        }),
       };
       const handlers = getHandlers({}, mergedModalState);
       await handlers.handleMassCureWoundsConfirm(['Ally1', 'Ally2']);
+
       expect(confirmMassCureWounds).toHaveBeenCalledWith(
         mergedModalState.massCureWoundsModal.action,
         mergedModalState.massCureWoundsModal.playerStats,
@@ -358,57 +338,48 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ massCureWoundsModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmMassCureWounds.mockResolvedValue({});
-      const mergedModalState = {
-        massCureWoundsModal: {
-          action: { name: 'Mass Cure Wounds' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          healExpression: '3d8',
-          maximize: false,
-          bonusHeal: 5,
-          bonusDetails: 'bonus',
-          slotLevel: 5,
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
-      await handlers.handleMassCureWoundsConfirm(['Ally1', 'Ally2']);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ massCureWoundsModal: null });
+    it('shows popup when confirmMassCureWounds returns a payload', async () => {
+      confirmMassCureWounds.mockResolvedValue({ payload: '<p>Mass cure success</p>' });
+      const handlers = getHandlers({}, {
+        massCureWoundsModal: makeBaseModalData({
+          healExpression: '3d8', maximize: false, bonusHeal: 0, bonusDetails: '', slotLevel: 3,
+        }),
+      });
+      await handlers.handleMassCureWoundsConfirm(['Ally1']);
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Mass cure success</p>');
     });
   });
 
   describe('handlePrayerOfHealingConfirm', () => {
-    it('returns early when targetNames is missing', async () => {
+    it.each([null, undefined])('returns early when targetNames is %s', async (targetNames) => {
       const handlers = getHandlers();
-      await handlers.handlePrayerOfHealingConfirm(null);
+      await handlers.handlePrayerOfHealingConfirm(targetNames);
       expect(confirmPrayerOfHealing).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when prayerOfHealingModal is not in mergedModalState', async () => {
+    it('returns early when prayerOfHealingModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handlePrayerOfHealingConfirm(['target']);
+      await handlers.handlePrayerOfHealingConfirm(['Ally1']);
       expect(confirmPrayerOfHealing).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmPrayerOfHealing with all parameters', async () => {
+    it('delegates to confirmPrayerOfHealing with all parameters and clears the modal', async () => {
       confirmPrayerOfHealing.mockResolvedValue({ payload: '<p>Prayed!</p>' });
       const mergedModalState = {
-        prayerOfHealingModal: {
-          action: { name: 'Prayer of Healing' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+        prayerOfHealingModal: makeBaseModalData({
           healExpression: '2d4',
           maximize: false,
           bonusHeal: 3,
           bonusDetails: 'bonus',
           slotLevel: 2,
           currentRound: 5,
-        },
+        }),
       };
       const handlers = getHandlers({}, mergedModalState);
       await handlers.handlePrayerOfHealingConfirm(['Ally1']);
+
       expect(confirmPrayerOfHealing).toHaveBeenCalledWith(
         mergedModalState.prayerOfHealingModal.action,
         mergedModalState.prayerOfHealingModal.playerStats,
@@ -424,114 +395,94 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ prayerOfHealingModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmPrayerOfHealing.mockResolvedValue({});
-      const mergedModalState = {
-        prayerOfHealingModal: {
-          action: { name: 'Prayer of Healing' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          healExpression: '2d4',
-          maximize: false,
-          bonusHeal: 3,
-          bonusDetails: 'bonus',
-          slotLevel: 2,
-          currentRound: 5,
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
+    it('shows popup when confirmPrayerOfHealing returns a payload', async () => {
+      confirmPrayerOfHealing.mockResolvedValue({ payload: '<p>Prayer answered</p>' });
+      const handlers = getHandlers({}, {
+        prayerOfHealingModal: makeBaseModalData({
+          healExpression: '2d4', maximize: false, bonusHeal: 0, bonusDetails: '', slotLevel: 1, currentRound: 1,
+        }),
+      });
       await handlers.handlePrayerOfHealingConfirm(['Ally1']);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ prayerOfHealingModal: null });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Prayer answered</p>');
     });
   });
 
   describe('handlePowerWordFortifyConfirm', () => {
-    it('returns early when distribution is missing', async () => {
+    it.each([null, undefined])('returns early when distribution is %s', async (distribution) => {
       const handlers = getHandlers();
-      await handlers.handlePowerWordFortifyConfirm(null);
+      await handlers.handlePowerWordFortifyConfirm(distribution);
       expect(confirmPowerWordFortify).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when powerWordFortifyModal is not in mergedModalState', async () => {
+    it('returns early when powerWordFortifyModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handlePowerWordFortifyConfirm({ target: 10 });
+      await handlers.handlePowerWordFortifyConfirm({ Ally1: 10 });
       expect(confirmPowerWordFortify).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmPowerWordFortify with correct args', async () => {
+    it('delegates to confirmPowerWordFortify and clears the modal', async () => {
       confirmPowerWordFortify.mockResolvedValue({ payload: '<p>Fortified!</p>' });
       const mergedModalState = {
-        powerWordFortifyModal: {
-          action: { name: 'Power Word Fortify' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+        powerWordFortifyModal: makeBaseModalData({
           totalTempHp: 20,
           tempHpExpression: '1d10',
-        },
+        }),
       };
       const handlers = getHandlers({}, mergedModalState);
-      const distribution = { Ally1: 10, Ally2: 10 };
-      await handlers.handlePowerWordFortifyConfirm(distribution);
+      await handlers.handlePowerWordFortifyConfirm({ Ally1: 10, Ally2: 10 });
+
       expect(confirmPowerWordFortify).toHaveBeenCalledWith(
         mergedModalState.powerWordFortifyModal.action,
         mergedModalState.powerWordFortifyModal.playerStats,
         mergedModalState.powerWordFortifyModal.campaignName,
-        distribution,
+        { Ally1: 10, Ally2: 10 },
         20,
         '1d10'
       );
       expect(mockSetModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmPowerWordFortify.mockResolvedValue({});
-      const mergedModalState = {
-        powerWordFortifyModal: {
-          action: { name: 'Power Word Fortify' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          totalTempHp: 20,
-          tempHpExpression: '1d10',
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
-      const distribution = { Ally1: 10, Ally2: 10 };
-      await handlers.handlePowerWordFortifyConfirm(distribution);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ powerWordFortifyModal: null });
+    it('shows popup when confirmPowerWordFortify returns a payload', async () => {
+      confirmPowerWordFortify.mockResolvedValue({ payload: '<p>Temp HP granted</p>' });
+      const handlers = getHandlers({}, {
+        powerWordFortifyModal: makeBaseModalData({ totalTempHp: 20, tempHpExpression: '1d10' }),
+      });
+      await handlers.handlePowerWordFortifyConfirm({ Ally1: 20 });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Temp HP granted</p>');
     });
   });
 
   describe('handleMassHealingWordConfirm', () => {
-    it('returns early when targetNames is missing', async () => {
+    it.each([null, undefined])('returns early when targetNames is %s', async (targetNames) => {
       const handlers = getHandlers();
-      await handlers.handleMassHealingWordConfirm(null);
+      await handlers.handleMassHealingWordConfirm(targetNames);
       expect(confirmMassHealingWord).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('returns early when massHealingWordModal is not in mergedModalState', async () => {
+    it('returns early when massHealingWordModal is absent from mergedModalState', async () => {
       const handlers = getHandlers();
-      await handlers.handleMassHealingWordConfirm(['target']);
+      await handlers.handleMassHealingWordConfirm(['Ally1']);
       expect(confirmMassHealingWord).not.toHaveBeenCalled();
+      expect(mockSetModalState).not.toHaveBeenCalled();
     });
 
-    it('calls confirmMassHealingWord with all parameters', async () => {
+    it('delegates to confirmMassHealingWord with all parameters and clears the modal', async () => {
       confirmMassHealingWord.mockResolvedValue({ payload: '<p>Healed!</p>' });
       const mergedModalState = {
-        massHealingWordModal: {
-          action: { name: 'Mass Healing Word' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
+        massHealingWordModal: makeBaseModalData({
           healExpression: '2d4',
           maximize: false,
           bonusHeal: 3,
           bonusDetails: 'bonus',
           slotLevel: 3,
-        },
+        }),
       };
       const handlers = getHandlers({}, mergedModalState);
       await handlers.handleMassHealingWordConfirm(['Ally1', 'Ally2', 'Ally3']);
+
       expect(confirmMassHealingWord).toHaveBeenCalledWith(
         mergedModalState.massHealingWordModal.action,
         mergedModalState.massHealingWordModal.playerStats,
@@ -546,24 +497,15 @@ describe('useCharActionsModalHandlers - healing', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ massHealingWordModal: null });
     });
 
-    it('does not call setPopupHtml when result has no payload', async () => {
-      confirmMassHealingWord.mockResolvedValue({});
-      const mergedModalState = {
-        massHealingWordModal: {
-          action: { name: 'Mass Healing Word' },
-          playerStats: makePlayerStats(),
-          campaignName: 'test-campaign',
-          healExpression: '2d4',
-          maximize: false,
-          bonusHeal: 3,
-          bonusDetails: 'bonus',
-          slotLevel: 3,
-        },
-      };
-      const handlers = getHandlers({}, mergedModalState);
+    it('shows popup when confirmMassHealingWord returns a payload', async () => {
+      confirmMassHealingWord.mockResolvedValue({ payload: '<p>Mass healing word</p>' });
+      const handlers = getHandlers({}, {
+        massHealingWordModal: makeBaseModalData({
+          healExpression: '2d4', maximize: false, bonusHeal: 0, bonusDetails: '', slotLevel: 3,
+        }),
+      });
       await handlers.handleMassHealingWordConfirm(['Ally1', 'Ally2', 'Ally3']);
-      expect(mockSetPopupHtml).not.toHaveBeenCalled();
-      expect(mockSetModalState).toHaveBeenCalledWith({ massHealingWordModal: null });
+      expect(mockSetPopupHtml).toHaveBeenCalledWith('<p>Mass healing word</p>');
     });
   });
 });

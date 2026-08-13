@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useModalHandlers from './useModalHandlers.js';
 
@@ -83,7 +84,7 @@ describe('useModalHandlers - damage type handlers', () => {
     });
 
     describe('handleDivineFuryDamageType', () => {
-        it('applies chosen damage type, records used round, and proceeds', () => {
+        it('applies chosen damage type, records used round, and proceeds with combined damage', () => {
             const deps = createDeps({
                 pendingDamage: {
                     attack: { name: 'Fury of the Gods' },
@@ -99,6 +100,7 @@ describe('useModalHandlers - damage type handlers', () => {
             const { handleDivineFuryDamageType } = useModalHandlers(deps);
             handleDivineFuryDamageType('Radiant');
             expect(deps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(deps.proceedWithDamage).toHaveBeenCalledWith(
                 expect.any(Object),
                 '1d8 + 1d8 [Radiant]',
@@ -106,7 +108,6 @@ describe('useModalHandlers - damage type handlers', () => {
                 [5, 4],
                 0
             );
-            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestFighter',
                 '_divineFuryUsedRound',
@@ -119,6 +120,77 @@ describe('useModalHandlers - damage type handlers', () => {
             const deps = createDeps();
             const { handleDivineFuryDamageType } = useModalHandlers(deps);
             handleDivineFuryDamageType('Radiant');
+            expect(deps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('uses round from getCurrentCombatRound and player name from playerStats', () => {
+            const deps = createDeps({
+                playerStats: { name: 'PaladinOne' },
+                pendingDamage: {
+                    attack: { name: 'Fury' },
+                    formula: '2d6',
+                    total: 7,
+                    rolls: [3, 4],
+                    modifier: 1,
+                    bonusExpr: '1d6',
+                    bonusTotal: 3,
+                    bonusRolls: [3],
+                },
+            });
+            getCurrentCombatRound.mockReturnValue(3);
+            const { handleDivineFuryDamageType } = useModalHandlers(deps);
+            handleDivineFuryDamageType('Thunder');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'PaladinOne',
+                '_divineFuryUsedRound',
+                3,
+                'test-campaign'
+            );
+            expect(deps.proceedWithDamage).toHaveBeenLastCalledWith(
+                expect.any(Object),
+                '2d6 + 1d6 [Thunder]',
+                10,
+                [3, 4, 3],
+                1
+            );
+        });
+    });
+
+    describe('handleDivineFurySkip', () => {
+        it('proceeds with original damage without bonus when skipping', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Fury of the Gods' },
+                    formula: '1d8+3',
+                    total: 10,
+                    rolls: [5, 5],
+                    modifier: 3,
+                    bonusExpr: '1d8',
+                    bonusTotal: 4,
+                    bonusRolls: [4],
+                },
+            });
+            const { handleDivineFurySkip } = useModalHandlers(deps);
+            handleDivineFurySkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                { name: 'Fury of the Gods' },
+                '1d8+3',
+                10,
+                [5, 5],
+                3
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleDivineFurySkip } = useModalHandlers(deps);
+            handleDivineFurySkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ divineFuryChoice: null });
             expect(deps.proceedWithDamage).not.toHaveBeenCalled();
             expect(deps.setPendingDamage).not.toHaveBeenCalled();
@@ -186,8 +258,40 @@ describe('useModalHandlers - damage type handlers', () => {
             const { handleGenericDamageTypeChoice } = useModalHandlers(deps);
             handleGenericDamageTypeChoice('Fire');
             expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
-            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                expect.any(Object),
+                '1d6 + 1d6 [Fire]',
+                8,
+                [5, 3],
+                0
+            );
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('records the current combat round from getCurrentCombatRound', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Divine Strike' },
+                    formula: '1d8',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    bonusExpr: '1d8',
+                    bonusTotal: 4,
+                    bonusRolls: [4],
+                    oncePerTurnKey: '_DivineStrike_usedRound',
+                },
+            });
+            getCurrentCombatRound.mockReturnValue(5);
+            const { handleGenericDamageTypeChoice } = useModalHandlers(deps);
+            handleGenericDamageTypeChoice('Acid');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_DivineStrike_usedRound',
+                5,
+                'test-campaign'
+            );
         });
     });
 
@@ -205,6 +309,7 @@ describe('useModalHandlers - damage type handlers', () => {
             const { handleGenericDamageTypeSkip } = useModalHandlers(deps);
             handleGenericDamageTypeSkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(deps.proceedWithDamage).toHaveBeenCalledWith(
                 { name: 'Extra Damage' },
                 '1d6',
@@ -212,7 +317,15 @@ describe('useModalHandlers - damage type handlers', () => {
                 [5],
                 0
             );
-            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleGenericDamageTypeSkip } = useModalHandlers(deps);
+            handleGenericDamageTypeSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
         });
     });
 
@@ -231,9 +344,9 @@ describe('useModalHandlers - damage type handlers', () => {
             const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
             const attack = deps.pendingDamage.attack;
             handleDamageTypeModifierChoice('radiant');
+            expect(attack.damageType).toBe('radiant');
             expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
             expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
-            expect(attack.damageType).toBe('radiant');
             expect(deps.proceedWithDamage).toHaveBeenCalled();
             expect(setRuntimeValue).toHaveBeenCalledWith(
                 'TestFighter',
@@ -253,7 +366,7 @@ describe('useModalHandlers - damage type handlers', () => {
             expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('does not set runtime value when _damageTypeModifier is absent', () => {
+        it('does not mutate attack.damageType when _damageTypeModifier is absent', () => {
             const deps = createDeps({
                 pendingDamage: {
                     attack: { name: 'Some Attack', damageType: 'fire' },
@@ -265,6 +378,298 @@ describe('useModalHandlers - damage type handlers', () => {
             });
             const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
             handleDamageTypeModifierChoice('cold');
+            expect(deps.pendingDamage.attack.damageType).toBe('fire');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('uses current combat round for the runtime value', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Test Feature', damageType: 'fire' },
+                    formula: '1d6',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    _damageTypeModifier: { name: 'Test Feature' },
+                },
+            });
+            getCurrentCombatRound.mockReturnValue(7);
+            const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
+            handleDamageTypeModifierChoice('cold');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_Test_Feature_usedRound',
+                7,
+                'test-campaign'
+            );
+        });
+    });
+
+    describe('handleDamageTypeModifierSkip', () => {
+        it('proceeds with original damage and records used round when _damageTypeModifier exists', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Empowered Strikes', damageType: 'slashing' },
+                    formula: '1d8',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    _damageTypeModifier: { name: 'Empowered Strikes' },
+                },
+            });
+            const { handleDamageTypeModifierSkip } = useModalHandlers(deps);
+            handleDamageTypeModifierSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_Empowered_Strikes_usedRound',
+                1,
+                'test-campaign'
+            );
+            expect(deps.pendingDamage.attack.damageType).toBe('slashing');
+        });
+
+        it('does not record used round when _damageTypeModifier is absent', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Some Attack', damageType: 'fire' },
+                    formula: '1d8',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                },
+            });
+            const { handleDamageTypeModifierSkip } = useModalHandlers(deps);
+            handleDamageTypeModifierSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleDamageTypeModifierSkip } = useModalHandlers(deps);
+            handleDamageTypeModifierSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(deps.setPendingDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('handleEnhancedUnarmedChoice', () => {
+        it('applies damage bonus rider when chosen option has damage_bonus', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: null,
+                    _attackRider: {
+                        name: 'Unarmed Fighting',
+                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
+                    },
+                },
+            });
+            rollExpression.mockReturnValue({ total: 3, rolls: [3], modifier: 0 });
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Damage Bonus');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                expect.any(Object),
+                expect.stringContaining('1d4'),
+                expect.any(Number),
+                expect.any(Array),
+                null
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_Unarmed_Fighting_usedRound',
+                1,
+                'test-campaign'
+            );
+        });
+
+        it('proceeds with original damage when option is found but has no damage_bonus effect', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: null,
+                    _attackRider: {
+                        name: 'Unarmed Fighting',
+                        options: [{ name: 'Other Option', effect: 'other' }],
+                    },
+                },
+            });
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Other Option');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                expect.any(Object),
+                '1d4',
+                5,
+                [5],
+                null
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('proceeds with original damage when option is not found in rider options', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: null,
+                    _attackRider: {
+                        name: 'Unarmed Fighting',
+                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
+                    },
+                },
+            });
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Nonexistent Option');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                expect.any(Object),
+                '1d4',
+                5,
+                [5],
+                null
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('proceeds with original damage when rollExpression returns null for damage_bonus', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: null,
+                    _attackRider: {
+                        name: 'Unarmed Fighting',
+                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
+                    },
+                },
+            });
+            rollExpression.mockReturnValue(null);
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Damage Bonus');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                expect.any(Object),
+                '1d4',
+                5,
+                [5],
+                null
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Any Option');
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('passes rider value as the last argument to proceedWithDamage when damage_bonus is applied', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: 'some-rider-value',
+                    _attackRider: {
+                        name: 'Unarmed Fighting',
+                        options: [{ name: 'Damage Bonus', effect: 'damage_bonus', damageExpression: '1d4', damageType: 'force' }],
+                    },
+                },
+            });
+            rollExpression.mockReturnValue({ total: 3, rolls: [3], modifier: 0 });
+            const { handleEnhancedUnarmedChoice } = useModalHandlers(deps);
+            handleEnhancedUnarmedChoice('Damage Bonus');
+            expect(deps.proceedWithDamage).toHaveBeenLastCalledWith(
+                expect.any(Object),
+                expect.stringContaining('1d4'),
+                8,
+                [5, 3],
+                'some-rider-value'
+            );
+        });
+    });
+
+    describe('handleEnhancedUnarmedSkip', () => {
+        it('proceeds with original damage and records used round when skipping', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: null,
+                    _attackRider: { name: 'Unarmed Fighting' },
+                },
+            });
+            const { handleEnhancedUnarmedSkip } = useModalHandlers(deps);
+            handleEnhancedUnarmedSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
+            expect(deps.proceedWithDamage).toHaveBeenCalled();
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestFighter',
+                '_Unarmed_Fighting_usedRound',
+                1,
+                'test-campaign'
+            );
+        });
+
+        it('returns early when no pending damage', () => {
+            const deps = createDeps();
+            const { handleEnhancedUnarmedSkip } = useModalHandlers(deps);
+            handleEnhancedUnarmedSkip();
+            expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
+            expect(deps.proceedWithDamage).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('does not record used round when _attackRider is absent', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike' },
+                    formula: '1d4',
+                    total: 5,
+                    rolls: [5],
+                    modifier: 0,
+                    rider: 'no-rider',
+                },
+            });
+            const { handleEnhancedUnarmedSkip } = useModalHandlers(deps);
+            handleEnhancedUnarmedSkip();
             expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
             expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(deps.proceedWithDamage).toHaveBeenCalled();

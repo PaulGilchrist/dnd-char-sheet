@@ -1,11 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
+// Tests for createBaseProps — the shared test fixture used by all CharActionModals test files.
+// Verifies the fixture's contract: default values, override behavior, isolation guarantees.
+//
+// Note: This file tests the test-utils fixture itself (not the CharActionModals component).
+// Component rendering is covered in CharActionModals.rendering.test.jsx;
+// handler callbacks are covered in CharActionModals.handlers.test.jsx and related files.
+
+import { describe, it, expect, vi } from 'vitest';
 import { createBaseProps } from './CharActionModals.test-utils.jsx';
 
 describe('createBaseProps', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('default values', () => {
     it('returns an object with playerStats defaulting to { name: "Test Character" }', () => {
       const props = createBaseProps();
@@ -17,51 +21,24 @@ describe('createBaseProps', () => {
       expect(props.campaignName).toBe('test-campaign');
     });
 
-    it('returns characters defaulting to empty array', () => {
+    it('returns characters as an empty array', () => {
       const props = createBaseProps();
       expect(props.characters).toEqual([]);
     });
 
-    it('returns pendingDamage defaulting to null', () => {
+    it('returns pendingDamage as null', () => {
       const props = createBaseProps();
       expect(props.pendingDamage).toBeNull();
     });
 
-    it('returns a fresh modalState object each call', () => {
-      const props1 = createBaseProps();
-      const props2 = createBaseProps();
-      expect(props1.modalState).not.toBe(props2.modalState);
-    });
-  });
-
-  describe('setModalState behavior', () => {
-    it('is a vi.fn that spreads plain object into modalState', () => {
+    it('returns modalState as an empty object', () => {
       const props = createBaseProps();
-      props.setModalState({ foo: 'bar' });
-      expect(props.modalState).toEqual({ foo: 'bar' });
-    });
-
-    it('is a vi.fn that calls function arg with modalState', () => {
-      const props = createBaseProps();
-      const updater = vi.fn((state) => ({ ...state, baz: 42 }));
-      props.setModalState(updater);
-      expect(updater).toHaveBeenCalledWith(props.modalState);
-      // The updater returns a new object but setModalState does not apply
-      // the return value — it only uses Object.assign for plain objects
-      expect(updater).toHaveBeenCalled();
-    });
-
-    it('is a vi.fn spy that tracks call count', () => {
-      const props = createBaseProps();
-      expect(typeof props.setModalState).toBe('function');
-      props.setModalState({ a: 1 });
-      props.setModalState({ b: 2 });
-      expect(props.setModalState).toHaveBeenCalledTimes(2);
+      expect(props.modalState).toEqual({});
     });
   });
 
   describe('handler callbacks', () => {
-    const handlerProps = [
+    const handlerNames = [
       'handleMasteryClose',
       'handleWeaponMasteryChoice',
       'handleWeaponKindMasteryClose',
@@ -86,18 +63,16 @@ describe('createBaseProps', () => {
       'handleIllusionSavantConfirm',
     ];
 
-    for (const handlerName of handlerProps) {
-      it(`${handlerName} is a vi.fn spy`, () => {
-        const props = createBaseProps();
-        expect(typeof props[handlerName]).toBe('function');
-        expect(props[handlerName]).toHaveBeenCalledTimes(0);
-      });
-    }
+    it('provides all expected handlers as functions', () => {
+      const props = createBaseProps();
+      for (const name of handlerNames) {
+        expect(typeof props[name]).toBe('function');
+      }
+    });
 
     it('each handler is a unique vi.fn instance', () => {
       const props = createBaseProps();
-      const handlers = handlerProps.map((h) => props[h]);
-      // All handlers should be distinct fn instances
+      const handlers = handlerNames.map((h) => props[h]);
       for (let i = 0; i < handlers.length; i++) {
         for (let j = i + 1; j < handlers.length; j++) {
           expect(handlers[i]).not.toBe(handlers[j]);
@@ -115,6 +90,28 @@ describe('createBaseProps', () => {
     });
   });
 
+  describe('setModalState', () => {
+    it('is a function that accepts a plain object and spreads it into modalState', () => {
+      const props = createBaseProps();
+      props.setModalState({ foo: 'bar' });
+      expect(props.modalState).toEqual({ foo: 'bar' });
+    });
+
+    it('is a function that accepts an updater function and passes modalState to it', () => {
+      const props = createBaseProps();
+      const updater = vi.fn((state) => ({ ...state, baz: 42 }));
+      props.setModalState(updater);
+      expect(updater).toHaveBeenCalledWith(props.modalState);
+    });
+
+    it('tracks call count for the vi.fn', () => {
+      const props = createBaseProps();
+      props.setModalState({ a: 1 });
+      props.setModalState({ b: 2 });
+      expect(props.setModalState).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('overrides', () => {
     it('overrides playerStats when provided', () => {
       const props = createBaseProps({ playerStats: { name: 'Override' } });
@@ -122,8 +119,8 @@ describe('createBaseProps', () => {
     });
 
     it('overrides campaignName when provided', () => {
-      const props = createBaseProps({ campaignName: 'test-campaign' });
-      expect(props.campaignName).toBe('test-campaign');
+      const props = createBaseProps({ campaignName: 'my-campaign' });
+      expect(props.campaignName).toBe('my-campaign');
     });
 
     it('overrides characters when provided', () => {
@@ -174,11 +171,12 @@ describe('createBaseProps', () => {
       expect(typeof props.handleCleaveSkip).toBe('function');
     });
 
-    it('returns a new object each time (no shared reference)', () => {
-      const props1 = createBaseProps();
-      const props2 = createBaseProps();
-      expect(props1).not.toBe(props2);
-      expect(props1.modalState).not.toBe(props2.modalState);
+    it('handler overrides do not affect other handlers', () => {
+      const customHandler = vi.fn();
+      const props = createBaseProps({ handleCleaveAttack: customHandler });
+      expect(props.handleCleaveAttack).toBe(customHandler);
+      expect(typeof props.handleCleaveSkip).toBe('function');
+      expect(typeof props.handleDivineFuryDamageType).toBe('function');
     });
 
     it('allows adding extra custom props via spread', () => {
@@ -187,12 +185,17 @@ describe('createBaseProps', () => {
     });
   });
 
-  describe('modalState isolation', () => {
-    it('each call gets an independent modalState object', () => {
+  describe('isolation', () => {
+    it('returns a new props object each call', () => {
       const props1 = createBaseProps();
       const props2 = createBaseProps();
-      props1.setModalState({ key: 'value1' });
-      expect(props2.modalState).not.toHaveProperty('key');
+      expect(props1).not.toBe(props2);
+    });
+
+    it('returns a new modalState object each call', () => {
+      const props1 = createBaseProps();
+      const props2 = createBaseProps();
+      expect(props1.modalState).not.toBe(props2.modalState);
     });
 
     it('modifying one modalState does not affect another', () => {
@@ -200,6 +203,21 @@ describe('createBaseProps', () => {
       const props2 = createBaseProps();
       props1.modalState.existing = true;
       expect(props2.modalState.existing).toBeUndefined();
+    });
+
+    it('each call gets independent modalState that starts empty', () => {
+      const props1 = createBaseProps();
+      const props2 = createBaseProps();
+      props1.setModalState({ key: 'value1' });
+      expect(props2.modalState).not.toHaveProperty('key');
+    });
+
+    it('overrides are isolated between calls', () => {
+      const customHandler = vi.fn();
+      const props1 = createBaseProps({ handleCleaveAttack: customHandler });
+      const props2 = createBaseProps();
+      expect(props1.handleCleaveAttack).toBe(customHandler);
+      expect(props2.handleCleaveAttack).not.toBe(customHandler);
     });
   });
 });

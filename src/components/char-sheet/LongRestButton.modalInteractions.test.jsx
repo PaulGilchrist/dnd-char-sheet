@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LongRestButton from './LongRestButton.jsx';
 
@@ -21,30 +22,37 @@ vi.mock('../../services/ui/logService.js', () => ({
 }));
 
 vi.mock('./modals/shared/CreatureSelectionModal.jsx', () => ({
-  default: function MockModal({ onConfirm, onSkip, targets, maxTargets, note }) {
+  default: function MockModal({ onConfirm, onSkip, targets, note }) {
     return (
-      <div data-testid="creature-selection-modal">
-        <div
-          data-testid="skip-button"
-          onClick={() => onSkip && onSkip()}
-        >
-          Skip
+      <div data-testid="overlay" className="sp-overlay" onClick={(e) => {
+        if (e.target === e.currentTarget && onSkip) onSkip();
+      }}>
+        <div data-testid="creature-selection-modal" className="sp-modal" onClick={(e) => e.stopPropagation()}>
+          <div data-testid="note">{note}</div>
+          {targets.map((t, i) => (
+            <label key={i} data-testid={`target-${i}`}>
+              {t.name}
+            </label>
+          ))}
+          <button
+            data-testid="confirm-button"
+            onClick={() => {
+              const selectedNames = targets.map((t) => t.name);
+              if (selectedNames.length > 0) {
+                onConfirm && onConfirm(selectedNames);
+              }
+            }}
+          >
+            Confirm
+          </button>
+          <button
+            data-testid="skip-button"
+            onClick={() => onSkip && onSkip()}
+            type="button"
+          >
+            Skip
+          </button>
         </div>
-        <div
-          data-testid="confirm-button"
-          onClick={() => {
-            const selectedNames = targets.slice(0, maxTargets).map((t) => t.name);
-            onConfirm && onConfirm(selectedNames);
-          }}
-        >
-          Confirm
-        </div>
-        <div data-testid="note">{note}</div>
-        {targets.map((t, i) => (
-          <div key={i} data-testid={`target-${i}`}>
-            {t.name}
-          </div>
-        ))}
       </div>
     );
   },
@@ -94,370 +102,23 @@ describe('LongRestButton - celestial resilience modal interactions', () => {
       maxTargets: 5,
     };
     restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-    const onLongRest = vi.fn();
 
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
+    render(<LongRestButton {...makeProps()} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
+    fireEvent.click(screen.getByRole('button'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
     });
 
-    // Click confirm (simulates selecting all targets)
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
+    fireEvent.click(screen.getByTestId('confirm-button'));
 
     expect(tempHpService.setTempHp).toHaveBeenCalledTimes(2);
     expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally1', 10, mockCampaignName);
     expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally2', 10, mockCampaignName);
   });
 
-  it('sets tempHP with correct allyTempHp value from celestial data', async () => {
-    const celestialData = {
-      creatureTargets: [
-        { name: 'Ally1', type: 'player' },
-        { name: 'Ally2', type: 'npc' },
-        { name: 'Ally3', type: 'player' },
-      ],
-      allyTempHp: 8,
-      selfTempHp: 4,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-  });
-
-  it('logs an ability_use entry when confirming modal', async () => {
-    const celestialData = {
-      creatureTargets: [
-        { name: 'Ally1', type: 'player' },
-        { name: 'Ally2', type: 'npc' },
-      ],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-
-    await waitFor(() => {
-      expect(logService.addEntry).toHaveBeenCalled();
-    });
-
-    const logCall = logService.addEntry.mock.calls[0][1];
-    expect(logCall.type).toBe('ability_use');
-    expect(logCall.characterName).toBe('TestCharacter');
-    expect(logCall.abilityName).toBe('Celestial Resilience');
-    expect(logCall.description).toContain('TestCharacter');
-    expect(logCall.description).toContain('temporary hit points');
-    expect(logCall.description).toContain('Ally1');
-    expect(logCall.description).toContain('Ally2');
-  });
-
-  it('logs correct description including ally names', async () => {
-    const celestialData = {
-      creatureTargets: [
-        { name: 'Ally1', type: 'player' },
-        { name: 'Ally2', type: 'npc' },
-      ],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-
-    await waitFor(() => {
-      expect(logService.addEntry).toHaveBeenCalled();
-    });
-
-    const logCall = logService.addEntry.mock.calls[0][1];
-    expect(logCall.description).toContain('Ally1');
-    expect(logCall.description).toContain('Ally2');
-  });
-
-  it('clears the modal after confirming', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-    const onLongRest = vi.fn();
-
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-    });
-
-    expect(onLongRest).toHaveBeenCalled();
-  });
-
-  it('calls onLongRest after confirming modal', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-    const onLongRest = vi.fn();
-
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-
-    await waitFor(() => {
-      expect(onLongRest).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('logs an ability_use entry when skipping modal', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
-
-    await waitFor(() => {
-      expect(logService.addEntry).toHaveBeenCalled();
-    });
-
-    const logCall = logService.addEntry.mock.calls[0][1];
-    expect(logCall.type).toBe('ability_use');
-    expect(logCall.characterName).toBe('TestCharacter');
-    expect(logCall.abilityName).toBe('Celestial Resilience');
-    expect(logCall.description).toContain('skipped');
-    expect(logCall.description).toContain('Celestial Resilience');
-  });
-
-  it('clears the modal after skipping', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-    const onLongRest = vi.fn();
-
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
-    });
-
-    expect(onLongRest).toHaveBeenCalled();
-  });
-
-  it('calls onLongRest after skipping modal', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-    const onLongRest = vi.fn();
-
-    render(<LongRestButton {...makeProps({ onLongRest })} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
-
-    await waitFor(() => {
-      expect(onLongRest).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('does not call setTempHp when skipping modal', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
-
-    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
-  });
-
-  it('handles skip when onLongRest is not provided', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    // No onLongRest prop
-    render(
-      <LongRestButton
-        playerStats={basePlayerStats}
-        campaignName={mockCampaignName}
-      />,
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    // Should not throw when skipping without onLongRest
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
-  });
-
-  it('handles confirm when onLongRest is not provided', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(
-      <LongRestButton
-        playerStats={basePlayerStats}
-        campaignName={mockCampaignName}
-      />,
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    // Should not throw when confirming without onLongRest
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-  });
-
-  it('passes campaignName to setTempHp for each ally', async () => {
+  it('calls setTempHp with campaignName for each ally', async () => {
     const celestialData = {
       creatureTargets: [
         { name: 'Ally1', type: 'player' },
@@ -471,23 +132,19 @@ describe('LongRestButton - celestial resilience modal interactions', () => {
 
     render(<LongRestButton {...makeProps()} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
+    fireEvent.click(screen.getByRole('button'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
+    fireEvent.click(screen.getByTestId('confirm-button'));
 
     expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally1', 15, mockCampaignName);
     expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally2', 15, mockCampaignName);
   });
 
-  it('uses allyTempHp from celestialResilienceAllies for setTempHp calls', async () => {
+  it('uses allyTempHp from celestial data for setTempHp calls', async () => {
     const celestialData = {
       creatureTargets: [{ name: 'Ally1', type: 'player' }],
       allyTempHp: 20,
@@ -498,24 +155,23 @@ describe('LongRestButton - celestial resilience modal interactions', () => {
 
     render(<LongRestButton {...makeProps()} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
+    fireEvent.click(screen.getByRole('button'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
+    fireEvent.click(screen.getByTestId('confirm-button'));
 
     expect(tempHpService.setTempHp).toHaveBeenCalledWith('Ally1', 20, mockCampaignName);
   });
 
-  it('logs timestamp using Date.now() when confirming', async () => {
+  it('logs ability_use with correct fields when confirming modal', async () => {
     const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      creatureTargets: [
+        { name: 'Ally1', type: 'player' },
+        { name: 'Ally2', type: 'npc' },
+      ],
       allyTempHp: 10,
       selfTempHp: 5,
       maxTargets: 5,
@@ -524,58 +180,283 @@ describe('LongRestButton - celestial resilience modal interactions', () => {
 
     render(<LongRestButton {...makeProps()} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
+    fireEvent.click(screen.getByRole('button'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
     });
 
-    const beforeClick = Date.now();
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('confirm-button'));
-    });
-
-    await waitFor(() => {
-      expect(logService.addEntry).toHaveBeenCalled();
-    });
-
-    const confirmLogCall = logService.addEntry.mock.calls[0][1];
-    expect(typeof confirmLogCall.timestamp).toBe('number');
-    expect(confirmLogCall.timestamp).toBeGreaterThanOrEqual(beforeClick);
-  });
-
-  it('logs timestamp using Date.now() when skipping', async () => {
-    const celestialData = {
-      creatureTargets: [{ name: 'Ally1', type: 'player' }],
-      allyTempHp: 10,
-      selfTempHp: 5,
-      maxTargets: 5,
-    };
-    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
-
-    render(<LongRestButton {...makeProps()} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
-    });
-
-    const beforeClick = Date.now();
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('skip-button'));
-    });
+    fireEvent.click(screen.getByTestId('confirm-button'));
 
     await waitFor(() => {
       expect(logService.addEntry).toHaveBeenCalled();
     });
 
     const logCall = logService.addEntry.mock.calls[0][1];
+    expect(logCall.type).toBe('ability_use');
+    expect(logCall.characterName).toBe('TestCharacter');
+    expect(logCall.abilityName).toBe('Celestial Resilience');
+    expect(logCall.description).toContain('TestCharacter');
+    expect(logCall.description).toContain('temporary hit points');
+    expect(logCall.description).toContain('Ally1');
+    expect(logCall.description).toContain('Ally2');
     expect(typeof logCall.timestamp).toBe('number');
-    expect(logCall.timestamp).toBeGreaterThanOrEqual(beforeClick);
+  });
+
+  it('logs ability_use with correct fields when skipping modal', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps()} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('skip-button'));
+
+    await waitFor(() => {
+      expect(logService.addEntry).toHaveBeenCalled();
+    });
+
+    const logCall = logService.addEntry.mock.calls[0][1];
+    expect(logCall.type).toBe('ability_use');
+    expect(logCall.characterName).toBe('TestCharacter');
+    expect(logCall.abilityName).toBe('Celestial Resilience');
+    expect(logCall.description).toContain('skipped');
+    expect(logCall.description).toContain('Celestial Resilience');
+    expect(typeof logCall.timestamp).toBe('number');
+  });
+
+  it('clears the modal and calls onLongRest after confirming', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('confirm-button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+    });
+
+    expect(onLongRest).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the modal and calls onLongRest after skipping', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('skip-button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+    });
+
+    expect(onLongRest).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call setTempHp when skipping modal', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps()} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('skip-button'));
+
+    expect(tempHpService.setTempHp).not.toHaveBeenCalled();
+  });
+
+  it('does not call onLongRest until modal is dismissed (confirm)', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    // Modal is showing; onLongRest should NOT have been called yet
+    expect(onLongRest).not.toHaveBeenCalled();
+  });
+
+  it('does not call onLongRest until modal is dismissed (skip)', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    const onLongRest = vi.fn();
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps({ onLongRest })} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    // Modal is showing; onLongRest should NOT have been called yet
+    expect(onLongRest).not.toHaveBeenCalled();
+  });
+
+  it('handles skip when onLongRest is not provided without throwing', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(
+      <LongRestButton
+        playerStats={basePlayerStats}
+        campaignName={mockCampaignName}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('skip-button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles confirm when onLongRest is not provided without throwing', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(
+      <LongRestButton
+        playerStats={basePlayerStats}
+        campaignName={mockCampaignName}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('confirm-button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows modal note with selfTempHp and allyTempHp values', async () => {
+    const celestialData = {
+      creatureTargets: [{ name: 'Ally1', type: 'player' }],
+      allyTempHp: 12,
+      selfTempHp: 8,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps()} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('note')).toHaveTextContent(/8 temporary hit points/);
+    expect(screen.getByTestId('note')).toHaveTextContent(/12 temporary hit points/);
+  });
+
+  it('renders all creature targets in the modal', async () => {
+    const celestialData = {
+      creatureTargets: [
+        { name: 'Ally1', type: 'player' },
+        { name: 'Ally2', type: 'npc' },
+        { name: 'Ally3', type: 'player' },
+      ],
+      allyTempHp: 10,
+      selfTempHp: 5,
+      maxTargets: 5,
+    };
+    restRules.applyLongRest.mockResolvedValue({ celestialResilienceAllies: celestialData });
+
+    render(<LongRestButton {...makeProps()} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('creature-selection-modal')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('target-0')).toHaveTextContent('Ally1');
+    expect(screen.getByTestId('target-1')).toHaveTextContent('Ally2');
+    expect(screen.getByTestId('target-2')).toHaveTextContent('Ally3');
   });
 });

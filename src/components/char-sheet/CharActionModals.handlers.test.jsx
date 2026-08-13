@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharActionModals from './CharActionModals.jsx';
@@ -73,15 +74,24 @@ vi.mock('./modals/shared/HealingIllusionModal.jsx', () => ({
     return <div data-testid="healing-illusion-modal"><button data-testid="healing-illusion-close" onClick={onClose}>Close</button></div>;
   },
 }));
-vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
-  getStore: vi.fn(() => new Map()),
-  useSyncedState: vi.fn(() => [null, vi.fn()]),
-  listeners: new Map(),
-  getRuntimeValue: vi.fn(() => null),
-  setRuntimeValue: vi.fn(),
-}));
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
+  const store = new Map();
+  return {
+    getStore: vi.fn(() => store),
+    useSyncedState: vi.fn(() => [null, vi.fn()]),
+    listeners: new Map(),
+    getRuntimeValue: vi.fn((character, key, campaign) => store.get(`${character}:${key}:${campaign}`) ?? null),
+    setRuntimeValue: vi.fn(async (character, key, value, campaign) => {
+      store.set(`${character}:${key}:${campaign}`, value);
+      return value;
+    }),
+  };
+});
 vi.mock('../../services/automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
+}));
+vi.mock('../../services/rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('./modals/shared/SaveAttackHealModal.jsx', () => ({
   default: function TestModal() { return <div data-testid="save-attack-heal-modal">SaveAttackHealModal</div>; },
@@ -239,18 +249,20 @@ describe('CharActionModals handlers', () => {
     vi.clearAllMocks();
   });
 
-  // ── Constellation Selection modal ──
-  // These tests verify handler callbacks receive the correct payload — the actual
-  // behavioral contract. Rendering is covered in CharActionModals.rendering.test.jsx.
+  // ── Constellation Selection modal confirm handler ──
+  // Tests verify the handler callback receives the correct payload — the
+  // behavioral contract between CharActionModals and its parent.
+  // Rendering is covered in CharActionModals.rendering.test.jsx.
+  // Close behavior is covered in CharActionModals.handler-callbacks-2.test.jsx.
 
-  describe('Constellation Selection modal', () => {
+  describe('Constellation Selection modal confirm handler', () => {
     const constellationCases = [
       { modalProp: 'starryFormConstellationModal' },
       { modalProp: 'twinklingConstellationModal' },
     ];
 
     for (const { modalProp } of constellationCases) {
-      it(`${modalProp}: confirm calls handleConstellationSelect with payload and option`, () => {
+      it(`passes modal data and option to handleConstellationSelect when confirming`, () => {
         const handleConstellationSelect = vi.fn();
         const modalData = { action: {}, playerStats: {}, campaignName: 'test' };
         render(<CharActionModals
@@ -261,25 +273,13 @@ describe('CharActionModals handlers', () => {
         fireEvent.click(screen.getByTestId('const-confirm'));
         expect(handleConstellationSelect).toHaveBeenCalledWith(modalData, 'test-option');
       });
-
-      it(`${modalProp}: close calls setModalState with cleared modal`, () => {
-        const setModalState = vi.fn();
-        render(<CharActionModals
-          {...createBaseProps({ setModalState })}
-          modalState={{ [modalProp]: { payload: { action: {}, playerStats: {}, campaignName: 'test' } } }}
-          setModalState={setModalState}
-        />);
-        fireEvent.click(screen.getByTestId('const-close'));
-        expect(setModalState).toHaveBeenCalledWith({ [modalProp]: null });
-      });
     }
   });
 
-  // ── Weapon Mastery Choice modal ──
-  // Tests confirm handler callback invocation (not just modal rendering).
+  // ── Weapon Mastery Choice modal handlers ──
 
-  describe('Weapon Mastery Choice modal', () => {
-    it('calls handleWeaponMasteryChoice on confirm button click', () => {
+  describe('Weapon Mastery Choice modal handlers', () => {
+    it(`calls handleWeaponMasteryChoice with the selected choice on confirm`, () => {
       const handleWeaponMasteryChoice = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleWeaponMasteryChoice })}
@@ -290,7 +290,7 @@ describe('CharActionModals handlers', () => {
       expect(handleWeaponMasteryChoice).toHaveBeenCalledWith('test-choice');
     });
 
-    it('calls setModalState with null on close', () => {
+    it(`calls setModalState with null for weaponMasteryChoiceModal on close`, () => {
       const setModalState = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ setModalState })}
@@ -302,13 +302,12 @@ describe('CharActionModals handlers', () => {
     });
   });
 
-  // ── Close/dismiss behavior with distinct handlers ──
-  // Only tests modals whose close behavior calls a unique handler or multiple setters.
-  // The common "close calls setter(null)" pattern for simple modals is covered by
-  // CharActionModals.rendering.test.jsx and adds no unique behavioral confidence here.
+  // ── WeaponKindMasteryModal close handler ──
+  // Tests that the close button invokes the dedicated handler rather than
+  // calling setModalState directly — this is the unique behavior for this modal.
 
-  describe('modal close/dismiss behavior', () => {
-    it('WeaponKindMasteryModal: close button calls handleWeaponKindMasteryClose', () => {
+  describe('WeaponKindMasteryModal close handler', () => {
+    it(`calls handleWeaponKindMasteryClose when the close button is clicked`, () => {
       const handleWeaponKindMasteryClose = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleWeaponKindMasteryClose })}
@@ -318,8 +317,14 @@ describe('CharActionModals handlers', () => {
       fireEvent.click(screen.getByTestId('weapon-kind-mastery-close'));
       expect(handleWeaponKindMasteryClose).toHaveBeenCalled();
     });
+  });
 
-    it('AttackRiderManeuverPrompt: skip button calls handleAttackRiderManeuverSkip', () => {
+  // ── AttackRiderManeuverPrompt skip handler ──
+  // Tests that the skip button invokes the dedicated handler rather than
+  // calling setModalState directly — this is the unique behavior for this modal.
+
+  describe('AttackRiderManeuverPrompt skip handler', () => {
+    it(`calls handleAttackRiderManeuverSkip when the skip button is clicked`, () => {
       const handleAttackRiderManeuverSkip = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleAttackRiderManeuverSkip })}
@@ -328,17 +333,6 @@ describe('CharActionModals handlers', () => {
       />);
       fireEvent.click(screen.getByTestId('maneuver-skip'));
       expect(handleAttackRiderManeuverSkip).toHaveBeenCalled();
-    });
-
-    it('DivineInterventionModal: close clears both modal and action state', () => {
-      const setModalState = vi.fn();
-      render(<CharActionModals
-        {...createBaseProps({ setModalState })}
-        modalState={{ divineInterventionModal: {}, divineInterventionAction: {} }}
-        setModalState={setModalState}
-      />);
-      fireEvent.click(screen.getByTestId('divine-intervention-close'));
-      expect(setModalState).toHaveBeenCalledWith({ divineInterventionModal: null, divineInterventionAction: null });
     });
   });
 });

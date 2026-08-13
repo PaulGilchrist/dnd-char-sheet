@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { createRenderComponent } from './charInventoryTestHelpers.jsx';
@@ -11,7 +12,7 @@ describe('CharInventory rendering', () => {
   });
 
   describe('section rendering', () => {
-    it('should render all sections in correct order', () => {
+    it('should render all sections in correct order when all have items', () => {
       const stats = {
         inventory: {
           magicItems: [{ name: 'Magic Ring', type: 'Ring', rarity: 'Uncommon', description: 'A magic ring.' }],
@@ -20,12 +21,16 @@ describe('CharInventory rendering', () => {
         },
       };
       helpers.renderComponent(stats);
-      expect(screen.getByText(/Magic Items:/)).toBeInTheDocument();
-      expect(screen.getByText(/Equipped:/)).toBeInTheDocument();
-      expect(screen.getByText(/Backpack:/)).toBeInTheDocument();
+      // Verify sections exist in DOM order by checking parent elements' textContent
+      const magicItemsSection = screen.getByText(/Magic Items:/);
+      const equippedSection = screen.getByText(/Equipped:/);
+      const backpackSection = screen.getByText(/Backpack:/);
+      expect(magicItemsSection.parentElement.textContent).toContain('Magic Ring');
+      expect(equippedSection.parentElement.textContent).toContain('Longsword');
+      expect(backpackSection.parentElement.textContent).toContain('Rations');
     });
 
-    it('should render inventory section even when all sub-sections are empty', () => {
+    it('should render inventory section header even when all sub-sections are empty', () => {
       const stats = { inventory: { magicItems: [], equipped: [], backpack: [] } };
       helpers.renderComponent(stats);
       expect(screen.getByText('Inventory')).toBeInTheDocument();
@@ -34,32 +39,70 @@ describe('CharInventory rendering', () => {
       expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
     });
 
-    it('should render magic items with desc array containing empty strings', async () => {
+    it('should not render magic items subsection when array is empty', () => {
+      const stats = {
+        inventory: {
+          magicItems: [],
+          equipped: ['Longsword'],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.queryByText(/Magic Items:/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Equipped:/)).toBeInTheDocument();
+    });
+
+    it('should not render equipped/backpack subsections when arrays are empty', () => {
+      const stats = {
+        inventory: {
+          magicItems: [{ name: 'Ring', type: 'Ring', rarity: 'Common', description: '' }],
+          equipped: [],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.getByText(/Magic Items:/)).toBeInTheDocument();
+      expect(screen.queryByText(/Equipped:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
+    });
+
+    it('should render equipped items when equipped is null without crashing', () => {
+      const stats = { inventory: { magicItems: [], equipped: null, backpack: null } };
+      helpers.renderComponent(stats);
+      expect(screen.getByText('Inventory')).toBeInTheDocument();
+      expect(screen.queryByText(/Equipped:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
+    });
+
+    it('should render equipped items when equipped is undefined without crashing', () => {
+      const stats = { inventory: { magicItems: [], equipped: undefined, backpack: undefined } };
+      helpers.renderComponent(stats);
+      expect(screen.getByText('Inventory')).toBeInTheDocument();
+      expect(screen.queryByText(/Equipped:/)).not.toBeInTheDocument();
+    });
+
+    it('should render equipped items when backpack is null without crashing', () => {
+      const stats = { inventory: { magicItems: [], equipped: [], backpack: null } };
+      helpers.renderComponent(stats);
+      expect(screen.getByText('Inventory')).toBeInTheDocument();
+      expect(screen.queryByText(/Backpack:/)).not.toBeInTheDocument();
+    });
+
+    it('should render popup with description when clicking equipped item with desc array containing empty strings', async () => {
       helpers.setup([
         { name: 'Odd Item', index: 'odd-item', desc: ['', 'Valid description', ''] },
       ]);
       const stats = { inventory: { magicItems: [], equipped: ['Odd Item'], backpack: [] } };
       helpers.renderComponent(stats);
       await helpers.clickItemByText('Odd Item');
-      expect(helpers.setPopupHtmlSpy.mock.calls[0][0]).toContain('<b>Odd Item</b>');
-      expect(helpers.setPopupHtmlSpy.mock.calls[0][0]).toContain('Valid description');
-    });
-
-    it('should not crash when equipped is null', () => {
-      const stats = { inventory: { magicItems: [], equipped: null, backpack: null } };
-      const { container } = helpers.renderComponent(stats);
-      expect(container.querySelector('.char-inventory')).toBeInTheDocument();
-    });
-
-    it('should not crash when backpack is undefined', () => {
-      const stats = { inventory: { magicItems: [], equipped: [], backpack: undefined } };
-      const { container } = helpers.renderComponent(stats);
-      expect(container.querySelector('.char-inventory')).toBeInTheDocument();
+      const popupContent = helpers.setPopupHtmlSpy.mock.calls[0][0];
+      expect(popupContent).toContain('<b>Odd Item</b>');
+      expect(popupContent).toContain('Valid description');
     });
   });
 
   describe('magic items', () => {
-    it('should render magic item without description when description is missing', () => {
+    it('should render magic item name, type, and rarity when description is missing', () => {
       const stats = {
         inventory: {
           magicItems: [{ name: 'Unnamed Ring', type: 'Ring', rarity: 'Uncommon', requiresAttunement: false }],
@@ -73,7 +116,7 @@ describe('CharInventory rendering', () => {
       expect(screen.getByText(/Uncommon/)).toBeInTheDocument();
     });
 
-    it('should render magic item with empty string description', () => {
+    it('should render magic item with empty string description without crashing', () => {
       const stats = {
         inventory: {
           magicItems: [{ name: 'Empty Item', type: 'Wondrous Item', rarity: 'Common', description: '', requiresAttunement: false }],
@@ -95,6 +138,20 @@ describe('CharInventory rendering', () => {
       };
       helpers.renderComponent(stats);
       expect(screen.getByText(/requires attunement/)).toBeInTheDocument();
+      expect(screen.getByText('AC +1')).toBeInTheDocument();
+    });
+
+    it('should NOT display "requires attunement" when requiresAttunement is false', () => {
+      const stats = {
+        inventory: {
+          magicItems: [{ name: 'Common Ring', type: 'Ring', rarity: 'Common', requiresAttunement: false, description: 'A simple ring.' }],
+          equipped: [],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.getByText(/Common Ring/)).toBeInTheDocument();
+      expect(screen.queryByText(/requires attunement/)).not.toBeInTheDocument();
     });
 
     it('should display custom attunement requirements when provided', () => {
@@ -107,9 +164,11 @@ describe('CharInventory rendering', () => {
       };
       helpers.renderComponent(stats);
       expect(screen.getByText(/by a barbarian/)).toBeInTheDocument();
+      expect(screen.queryByText(/requires attunement/)).not.toBeInTheDocument();
+      expect(screen.getByText('Immune to damage')).toBeInTheDocument();
     });
 
-    it('should display magic item quantity when present', () => {
+    it('should display magic item quantity when present and greater than zero', () => {
       const stats = {
         inventory: {
           magicItems: [{ name: 'Potion of Healing', type: 'Potion', rarity: 'Common', quantity: 3, description: 'Heals 2d4+2 HP' }],
@@ -118,7 +177,46 @@ describe('CharInventory rendering', () => {
         },
       };
       helpers.renderComponent(stats);
+      expect(screen.getByText(/Potion of Healing/)).toBeInTheDocument();
       expect(screen.getByText(/qty 3/)).toBeInTheDocument();
+    });
+
+    it('should render subtype in parentheses when present', () => {
+      const stats = {
+        inventory: {
+          magicItems: [{ name: 'Plate Armor', type: 'Armor', subtype: 'Heavy', rarity: 'Rare', description: 'AC 18', requiresAttunement: false }],
+          equipped: [],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.getByText(/Plate Armor/)).toBeInTheDocument();
+      expect(screen.getByText(/Heavy/)).toBeInTheDocument();
+    });
+
+    it('should not render subtype parentheses when subtype is missing', () => {
+      const stats = {
+        inventory: {
+          magicItems: [{ name: 'Ring of Protection', type: 'Ring', rarity: 'Rare', description: 'AC +1', requiresAttunement: false }],
+          equipped: [],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.getByText(/Ring of Protection/)).toBeInTheDocument();
+      expect(screen.getByText(/Ring,/)).toBeInTheDocument();
+    });
+
+    it('should render magic item description as text content', () => {
+      const stats = {
+        inventory: {
+          magicItems: [{ name: 'Sword of Sharpness', type: 'Weapon', rarity: 'Legendary', description: 'This +3 longsword was forged in a dragon\'s breath.', requiresAttunement: false }],
+          equipped: [],
+          backpack: [],
+        },
+      };
+      helpers.renderComponent(stats);
+      expect(screen.getByText(/This \+3 longsword/)).toBeInTheDocument();
     });
   });
 });
