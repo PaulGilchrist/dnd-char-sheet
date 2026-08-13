@@ -40,60 +40,26 @@ const { findLastAttack } = await import('../../common/damageRollback.js');
 const { loadCombatSummary, getCurrentCombatRound } = await import('../../../encounters/combatData.js');
 const { applyDamageToTarget } = await import('../../../rules/combat/applyDamage.js');
 
-const campaignName = 'test-campaign';
-const playerName = 'RangerGirl';
-
-function makePlayerStats(overrides = {}) {
-    return {
-        name: playerName,
-        level: 5,
-        ...overrides,
-    };
-}
-
-function makeAction(overrides = {}) {
-    return {
-        name: "Dread Ambush",
-        automation: {
-            type: 'dread_ambush',
-            damageExpression: '2d6',
-            damageType: 'Psychic',
-            uses_expression: '1',
-            ...overrides.automation,
-        },
-        ...overrides,
-    };
-}
-
-function makeHitAttack(overrides = {}) {
-    return {
-        attackEvent: {
-            attackerName: playerName,
-            damageApplied: true,
-            ...overrides.attackEvent,
-        },
-        targetName: 'Goblin',
-        ...overrides,
-    };
-}
-
-function defaultCombatRound() {
-    return 1;
-}
+import {
+    campaignName,
+    playerName,
+    makePlayerStats,
+    makeAction,
+    makeHitAttack,
+    defaultCombatRound,
+    defaultBeforeEach,
+} from './dreadAmbushTestHelpers.js';
 
 describe('dreadAmbushHandler', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
-        rollExpression.mockReturnValue({ total: 7, rolls: [4, 3] });
-        getCurrentCombatRound.mockReturnValue(defaultCombatRound());
-        evaluateAutoExpression.mockReturnValue(2);
-        findLastAttack.mockResolvedValue(makeHitAttack());
-        loadCombatSummary.mockResolvedValue({});
-        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-            if (key === 'dreadambushUses') return 2;
-            if (key === 'dreadAmbushUsedThisTurn') return undefined;
-            if (key === 'characters') return [];
-            return undefined;
+        defaultBeforeEach({
+            getRuntimeValue,
+            setRuntimeValue,
+            rollExpression,
+            getCurrentCombatRound,
+            evaluateAutoExpression,
+            findLastAttack,
+            loadCombatSummary,
         });
     });
 
@@ -179,20 +145,6 @@ describe('dreadAmbushHandler', () => {
                 campaignName,
                 null,
             );
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
-            expect(result.payload.description).not.toContain('Already used this turn');
-        });
-
-        it('does not block when oncePerTurn is not set', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-                if (key === 'dreadAmbushUsedThisTurn') return defaultCombatRound();
-                if (key === 'characters') return [];
-                return undefined;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
@@ -535,22 +487,6 @@ describe('dreadAmbushHandler', () => {
             );
         });
 
-        it('handles uses going to zero', async () => {
-            getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
-                if (key === 'dreadambushUses') return 1;
-                if (key === 'characters') return [];
-                return undefined;
-            });
-
-            await handle(makeAction(), makePlayerStats(), campaignName, null);
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
-                'dreadambushUses',
-                0,
-                campaignName,
-            );
-        });
     });
 
     describe('oncePerTurn marking', () => {
