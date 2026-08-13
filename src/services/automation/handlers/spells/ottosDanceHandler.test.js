@@ -5,6 +5,15 @@ import {
   processOttoDanceSuccessSave,
 } from './ottosDanceHandler.js';
 
+import {
+  makePlayerStats,
+  makeAction,
+  makeActionNoAutomation,
+  baseCombatContext,
+  createFailedSaveSetup,
+  createSuccessfulSaveSetup,
+} from './__tests__/ottosDance-fixtures.js';
+
 vi.mock('../../common/savePrompt.js', () => ({
   buildSaveDc: vi.fn(),
   createSaveListener: vi.fn(),
@@ -46,42 +55,6 @@ import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollba
 
 const campaignName = 'test-campaign';
 
-function makePlayerStats(overrides = {}) {
-  return {
-    name: 'TestCaster',
-    level: 10,
-    proficiency: 4,
-    abilities: [{ name: 'Charisma', bonus: 3 }],
-    ...overrides,
-  };
-}
-
-function makeAction(automation = {}) {
-  return {
-    name: "Otto's Irresistible Dance",
-    automation: { type: 'ottos_dance', saveType: 'WIS', saveDc: 15, ...automation },
-  };
-}
-
-function makeActionNoAutomation() {
-  return {
-    name: "Otto's Irresistible Dance",
-  };
-}
-
-const baseCombatContext = {
-  creatures: [
-    { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
-    { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
-    { name: 'TestCaster', gridX: 5, gridY: 10 },
-  ],
-  players: [{ name: 'TestCaster', gridX: 5, gridY: 10 }],
-  placedItems: [],
-};
-
-/**
- * Shared beforeEach for all tests: clear all mocked module state.
- */
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -146,19 +119,9 @@ describe('ottosDanceHandler.handle', () => {
   });
 
   describe('initial cast - successful save', () => {
-    function setupSuccessfulSave() {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(20);
-      resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      getRuntimeValue.mockReturnValue([]);
-      createSaveListener.mockReturnValue({
-        promptId: 'otto-success-save',
-        promise: Promise.resolve({ success: true }),
-      });
-    }
-
     it('should return popup describing target dancing when save succeeds', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -167,7 +130,8 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addEntry with condition applied on successful save', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -182,7 +146,8 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should add expiration for speed_zero on successful save', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -197,7 +162,8 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addEntry with ability_use on initial cast', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -212,7 +178,8 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call storeSpellLastAttack with correct parameters', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -226,7 +193,8 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addTargetResult with success details', async () => {
-      setupSuccessfulSave();
+      const setup = createSuccessfulSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -281,24 +249,10 @@ describe('ottosDanceHandler.handle', () => {
   });
 
   describe('initial cast - failed save', () => {
-    function setupFailedSave(existingConditions = [], existingEffects = [], existingMeta = {}) {
-      getCombatContext.mockResolvedValue(baseCombatContext);
-      buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: 'Goblin' } });
-      getRuntimeValue.mockImplementation((_caster, key, _camp) => {
-        if (key === 'activeConditions') return existingConditions;
-        if (key === 'targetEffects') return existingEffects;
-        if (key === 'activeConditionMeta') return existingMeta;
-        return [];
-      });
-      createSaveListener.mockReturnValue({
-        promptId: 'otto-fail',
-        promise: Promise.resolve({ success: false }),
-      });
-    }
-
     it('should apply charmed and speed_zero conditions on failed save', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(result.type).toBe('popup');
@@ -312,7 +266,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should add expiration for charmed and speed_zero conditions', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(addExpiration).toHaveBeenCalledWith(
@@ -324,7 +280,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addEntry on failed save', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(addEntry).toHaveBeenCalledWith(
@@ -339,7 +297,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addEntry with save_result on failed save', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(addEntry).toHaveBeenCalledWith(
@@ -356,7 +316,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should append to existing conditions on failed save', async () => {
-      setupFailedSave(['frightened']);
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener, ['frightened']);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -368,7 +330,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should register the ottos_irresistible_dance targetEffect on failed save', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       const expectedDanceEffect = {
@@ -396,7 +360,9 @@ describe('ottosDanceHandler.handle', () => {
         duration: 'concentration',
         conditions: ['charmed'],
       };
-      setupFailedSave([], [existingEffect]);
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener, [], [existingEffect]);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -408,7 +374,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should call addEntry with ability_use on initial cast', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(addEntry).toHaveBeenCalledWith(
@@ -422,7 +390,9 @@ describe('ottosDanceHandler.handle', () => {
     });
 
     it('should set activeConditionMeta on failed save', async () => {
-      setupFailedSave();
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -439,7 +409,9 @@ describe('ottosDanceHandler.handle', () => {
       const existingMeta = {
         frightened: { dc: 13, ability: 'wis' },
       };
-      setupFailedSave([], [], existingMeta);
+      const setup = createFailedSaveSetup(getCombatContext, buildSaveDc, resolveTarget, getRuntimeValue, createSaveListener, [], [], existingMeta);
+      setup();
+
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
       expect(setRuntimeValue).toHaveBeenCalledWith(
