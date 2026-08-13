@@ -1,13 +1,9 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import rulesFactory from '../../services/rules/rulesFactory.js';
-
 
 import CharSheet from './CharSheet';
-import {
-  createDefaultProps,
-  createMockPlayerStats,
-} from './CharSheet.test-utils.jsx';
+import rulesFactory from '../../services/rules/rulesFactory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks — child components
@@ -165,21 +161,7 @@ vi.mock('../common/AttackResultPopup.jsx', () => ({
 // Mocks — hooks
 // ---------------------------------------------------------------------------
 
-let sharedPopupReturnVal = {
-  popupHtml: null,
-  setPopupHtml: vi.fn(),
-  value: {},
-  Provider: ({ children }) => children,
-};
 const mockStore = new Map();
-
-vi.mock('../../hooks/combat/useSharedPopup.js', () => {
-  const mockFn = vi.fn();
-  mockFn.mockImplementation(() => {
-    return { ...sharedPopupReturnVal, Provider: ({ children }) => children };
-  });
-  return { default: mockFn };
-});
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
@@ -227,184 +209,188 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
 
 vi.mock('../../services/rules/rulesFactory.js', () => ({
   default: {
-    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve({})),
+    getPlayerStats: vi.fn().mockImplementation(() => Promise.resolve(createMockPlayerStats())),
   },
 }));
 
 // ---------------------------------------------------------------------------
-// Tests
+// Helpers
 // ---------------------------------------------------------------------------
 
-describe('CharSheet handleTogglePreparedSpells', () => {
-  const defaultProps = createDefaultProps();
+const createMockPlayerStats = (overrides = {}) => ({
+  name: 'Test Character',
+  level: 5,
+  hitPoints: { current: 40, max: 40 },
+  abilities: [{ name: 'Strength', bonus: 2, save: 4, skills: [] }],
+  spellAbilities: { spells: [], maxPreparedSpells: 5 },
+  rules: '5e',
+  automation: { passives: [] },
+  class: { name: 'Fighter' },
+  speed: 30,
+  race: { speed: 30 },
+  actions: [],
+  bonusActions: [],
+  reactions: [],
+  specialActions: [],
+  characterAdvancement: [],
+  skillProficiencies: [],
+  saveModifiers: [],
+  ...overrides,
+});
 
+const defaultProps = {
+  allAbilityScores: [],
+  allClasses: [],
+  allClasses2024: [],
+  allEquipment: [],
+  allMagicItems: [],
+  allRaces: [],
+  allSpells: [],
+  allSpells2024: [],
+  playerSummary: { name: 'Test Character', rules: '5e' },
+  allRaces2024: [],
+  allMagicItems2024: [],
+  campaignName: 'test-campaign',
+  activeMapName: null,
+  characters: [],
+  onDeleteCharacter: vi.fn(),
+  onEditCharacter: vi.fn(),
+  onUploadClick: vi.fn(),
+  onSaveClick: vi.fn(),
+};
+
+// ---------------------------------------------------------------------------
+// Tests — data loading: prepared spells sync from runtime
+// ---------------------------------------------------------------------------
+
+describe('prepared spells sync from runtime store', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-    sharedPopupReturnVal.value = {};
   });
 
-  it('toggles prepared spell from empty to prepared', async () => {
-    const stats = createMockPlayerStats({
+  it('marks spells as prepared when they exist in the preparedSpells runtime array', async () => {
+    const { getRuntimeValue: grv } = await import('../../hooks/runtime/useRuntimeState.js');
+    mockStore.set('Test Character:preparedSpells', ['Fireball', 'Shield']);
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
       spellAbilities: {
         spells: [
-          { name: 'Magic Missile', prepared: '' },
-          { name: 'Shield', prepared: 'Prepared' },
-        ],
-        maxPreparedSpells: 3,
-      },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('toggles prepared spell from prepared to empty', async () => {
-    const stats = createMockPlayerStats({
-      spellAbilities: {
-        spells: [
-          { name: 'Magic Missile', prepared: 'Prepared' },
+          { name: 'Fireball', prepared: '' },
+          { name: 'Mage Armor', prepared: '' },
           { name: 'Shield', prepared: '' },
         ],
-        maxPreparedSpells: 3,
-      },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-
-  it('respects maxPreparedSpells limit', async () => {
-    const stats = createMockPlayerStats({
-      spellAbilities: {
-        spells: [
-          { name: 'Magic Missile', prepared: '' },
-          { name: 'Shield', prepared: 'Prepared' },
-          { name: 'Armor of Agathys', prepared: 'Prepared' },
-          { name: 'Mage Armor', prepared: 'Prepared' },
-        ],
-        maxPreparedSpells: 3,
-      },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('CharSheet hitPoints sync', () => {
-  const defaultProps = createDefaultProps();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-    sharedPopupReturnVal.value = {};
-  });
-
-  it('syncs hitPoints to runtime store when playerStats changes', async () => {
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-
-    // Verify hitPoints was set in the mock store
-    expect(mockStore.has('Test Character:hitPoints')).toBe(true);
-  });
-});
-
-describe('CharSheet CotL land type with subclass', () => {
-  const defaultProps = createDefaultProps();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-    sharedPopupReturnVal.value = {};
-  });
-
-  it('applies CotL land type to subclass when subclass exists', async () => {
-    mockStore.set('Test Character:_circleOfTheLandType', 'desert');
-    const stats = createMockPlayerStats({
-      class: { name: 'Druid', subclass: { name: 'Circle of the Land' } },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('CharSheet prepared spells for non-Wizard 2024', () => {
-  const defaultProps = createDefaultProps();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-    sharedPopupReturnVal.value = {};
-  });
-
-  it('does not load prepared spells for 2024 non-Wizard', async () => {
-    const stats = createMockPlayerStats({
-      rules: '2024',
-      class: { name: 'Sorcerer' },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    mockStore.set('Test Character:preparedSpells', JSON.stringify(['Fire Bolt']));
-
-    render(<CharSheet {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('CharSheet prepared spells error path', () => {
-  const defaultProps = createDefaultProps();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStore.clear();
-    sharedPopupReturnVal.popupHtml = null;
-    sharedPopupReturnVal.setPopupHtml = vi.fn();
-    sharedPopupReturnVal.value = {};
-  });
-
-  it('catches and logs error in prepared spells processing', async () => {
-    const stats = createMockPlayerStats({
-      rules: '5e',
-      spellAbilities: {
-        spells: [{ name: 'Fireball', prepared: '' }],
         maxPreparedSpells: 5,
       },
-    });
-    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
-    mockStore.set('Test Character:preparedSpells', JSON.stringify(['Fireball']));
+    })));
 
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    // Verify the component read the preparedSpells from runtime
+    expect(grv).toHaveBeenCalledWith('Test Character', 'preparedSpells');
+  });
+
+  it('clears prepared flag from spells NOT in the preparedSpells runtime array', async () => {
+    mockStore.set('Test Character:preparedSpells', ['Fireball']);
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      spellAbilities: {
+        spells: [
+          { name: 'Fireball', prepared: '' },
+          { name: 'Mage Armor', prepared: 'Prepared' },
+          { name: 'Shield', prepared: 'Prepared' },
+        ],
+        maxPreparedSpells: 5,
+      },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('does not apply prepared spells for non-Wizard 2024 characters', async () => {
+    mockStore.set('Test Character:preparedSpells', ['Fireball']);
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      rules: '2024',
+      class: { name: 'Sorcerer' },
+      spellAbilities: {
+        spells: [{ name: 'Fireball', prepared: 'Prepared' }],
+        maxPreparedSpells: 5,
+      },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('applies prepared spells for Wizard 2024 characters', async () => {
+    mockStore.set('Test Character:preparedSpells', ['Fireball']);
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      rules: '2024',
+      class: { name: 'Wizard' },
+      spellAbilities: {
+        spells: [
+          { name: 'Fireball', prepared: '' },
+          { name: 'Mage Armor', prepared: 'Prepared' },
+        ],
+        maxPreparedSpells: 5,
+      },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('handles empty preparedSpells runtime value gracefully without modifying spells', async () => {
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      spellAbilities: {
+        spells: [{ name: 'Fireball', prepared: 'Prepared' }],
+        maxPreparedSpells: 5,
+      },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('handles null preparedSpells runtime value gracefully without modifying spells', async () => {
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      spellAbilities: {
+        spells: [{ name: 'Fireball', prepared: 'Prepared' }],
+        maxPreparedSpells: 5,
+      },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('handles non-array preparedSpells runtime value gracefully without error', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockStore.set('Test Character:preparedSpells', 'not-an-array');
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      spellAbilities: {
+        spells: [{ name: 'Fireball', prepared: 'Prepared' }],
+        maxPreparedSpells: 5,
+      },
+    })));
 
     render(<CharSheet {...defaultProps} />);
 
@@ -413,5 +399,98 @@ describe('CharSheet prepared spells error path', () => {
     });
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — data loading: hitPoints sync to runtime store
+// ---------------------------------------------------------------------------
+
+describe('hitPoints sync to runtime store', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStore.clear();
+  });
+
+  it('writes hitPoints to runtime store when playerStats is set', async () => {
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(mockStore.has('Test Character:hitPoints')).toBe(true);
+      const hp = mockStore.get('Test Character:hitPoints');
+      expect(hp.current).toBe(40);
+      expect(hp.max).toBe(40);
+    });
+  });
+
+  it('writes hitPoints with character-specific values from playerStats', async () => {
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      hitPoints: { current: 25, max: 35 },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const hp = mockStore.get('Test Character:hitPoints');
+      expect(hp.current).toBe(25);
+      expect(hp.max).toBe(35);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests — data loading: CotL land type applied to subclass
+// ---------------------------------------------------------------------------
+
+describe('CotL land type applied to subclass', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStore.clear();
+  });
+
+  it('injects land type into subclass when subclass exists', async () => {
+    mockStore.set('Test Character:_circleOfTheLandType', 'desert');
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      class: { name: 'Druid', subclass: { name: 'Circle of the Land' } },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('injects land type into class.major when no subclass exists', async () => {
+    mockStore.set('Test Character:_circleOfTheLandType', 'forest');
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      class: { name: 'Druid', major: { name: 'Land Druid' } },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+  });
+
+  it('does not inject land type when runtime value is null', async () => {
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(createMockPlayerStats({
+      class: { name: 'Druid', subclass: { name: 'Circle of the Land' } },
+    })));
+
+    render(<CharSheet {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
   });
 });

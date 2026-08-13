@@ -1,8 +1,10 @@
-import { render, screen, act } from '@testing-library/react';
+// @improved-by-ai
+import { render, act, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
 
-// Mutable mock state shared across all tests
+const mockLoadMonsters = vi.fn(() => Promise.resolve([]));
+
 const mockState = {
     mapData: null,
     placedItems: [],
@@ -30,19 +32,30 @@ const mockState = {
     rulerStart: null,
     rulerEnd: null,
     rulerPreview: null,
+    viewingMonster: null,
+    itemsPanelOpen: false,
+    renamePopover: null,
+    spellMode: null,
+    shapeParams: null,
+    spellDragActiveRef: { current: false },
 };
 
 const createMockSetMapData = vi.fn();
 const createMockSetPlacedItems = vi.fn();
 
-// Mock EventSource globally
-globalThis.EventSource = class MockEventSource {
-    constructor() { this.onmessage = null; this.onerror = null; }
+class MockEventSource {
+    static instances = [];
+    constructor() {
+        this.onmessage = null;
+        this.onerror = null;
+        MockEventSource.instances.push(this);
+    }
     close() {}
-};
+}
+globalThis.EventSource = MockEventSource;
 
 vi.mock('../../services/ui/dataLoader.js', () => ({
-    loadMonsters: vi.fn(() => Promise.resolve([])),
+    loadMonsters: () => mockLoadMonsters(),
 }));
 
 vi.mock('../../services/maps/mapsService.js', () => ({
@@ -164,7 +177,7 @@ vi.mock('./hooks/useSpellHandlers.js', () => ({
         spellDraft: mockState.spellDraft,
         dragOverlay: mockState.dragOverlay,
         rotateOverlay: mockState.rotateOverlay,
-        spellDragActiveRef: { current: false },
+        spellDragActiveRef: mockState.spellDragActiveRef,
         handleSpellPointerDown: vi.fn(),
         handleSpellPointerMove: vi.fn(),
         handleSpellPointerUp: vi.fn(),
@@ -217,6 +230,15 @@ vi.mock('./hooks/useMapDrops.js', () => ({
 
 vi.mock('../hex-map/HexMap.jsx', () => ({ default: vi.fn(() => <div data-testid="hex-map" />) }));
 
+vi.mock('../encounter/MonsterCardModal.jsx', () => ({
+    default: ({ monster, onClose }) => (
+        <div data-testid="monster-card-modal">
+            <span>{monster?.name}</span>
+            <button className="mc-close" onClick={onClose}>close</button>
+        </div>
+    ),
+}));
+
 const createMockMapData = (overrides = {}) => ({
     players: [],
     walls: new Set(),
@@ -238,7 +260,46 @@ const renderMap = (overrides = {}) => {
     return render(<Map {...defaultProps} />);
 };
 
-describe('Map - initial rendering and null mapData', () => {
+const resetState = () => {
+    Object.assign(mockState, {
+        mapData: createMockMapData(),
+        placedItems: [],
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        panning: false,
+        rulerMode: false,
+        spellDraft: null,
+        dragOverlay: null,
+        rotateOverlay: null,
+        overlays: [],
+        selectedWalls: new Set(),
+        selectedItems: new Set(),
+        selectionRect: null,
+        moveOffset: null,
+        roomDrawRect: null,
+        selectedRoom: null,
+        painting: false,
+        dragging: null,
+        itemDragging: null,
+        npcImages: {},
+        rulerStart: null,
+        rulerEnd: null,
+        rulerPreview: null,
+        viewingMonster: null,
+        itemsPanelOpen: false,
+        renamePopover: null,
+        spellMode: null,
+        shapeParams: null,
+        spellDragActiveRef: { current: false },
+    });
+    mockState.selectStart.current = null;
+    mockState.moveStartGrid.current = null;
+    mockLoadMonsters.mockReset();
+    mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
+};
+
+describe('Map - loading state (null mapData)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = null;
@@ -247,7 +308,7 @@ describe('Map - initial rendering and null mapData', () => {
         createMockSetPlacedItems.mockClear();
     });
 
-    it('returns null when mapData is null (loading state)', async () => {
+    it('returns null when mapData is null', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.firstChild).toBeNull();
     });
@@ -256,135 +317,68 @@ describe('Map - initial rendering and null mapData', () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('svg')).toBeNull();
     });
+});
 
-    it('does not render map toolbar when mapData is null', async () => {
-        await act(async () => renderMap());
-        expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
+describe('Map - SVG defs registry completeness', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
     });
 
-    it('does not render map container when mapData is null', async () => {
+    it('renders all expected SVG defs groups in the defs element', async () => {
+        const { container } = await act(async () => renderMap());
+        const svg = container.querySelector('svg');
+        expect(svg).toBeTruthy();
+        const defs = svg.querySelector('defs');
+        expect(defs).toBeTruthy();
+        const groupIds = Array.from(defs.querySelectorAll('g')).map(g => g.id);
+        const expectedIds = [
+            'barrel', 'table', 'bed', 'firepit', 'door', 'secretDoor', 'trap',
+            'pillar', 'stairs', 'altar', 'arrowSlitWall', 'bookshelf', 'chair',
+            'chest', 'crate', 'fountain', 'skeleton', 'statue', 'torch', 'web',
+            'tree', 'boulder', 'bush',
+        ];
+        for (const id of expectedIds) {
+            expect(groupIds).toContain(id);
+        }
+    });
+});
+
+describe('Map - outdoor map type returns HexMap', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
+    });
+
+    it('renders HexMap instead of indoor SVG when mapData.type is "outdoor"', async () => {
+        mockState.mapData = createMockMapData({ type: 'outdoor' });
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('[data-testid="hex-map"]')).toBeInTheDocument();
+        expect(container.querySelector('.grid-svg')).toBeNull();
+    });
+
+    it('does not render the indoor map container for outdoor maps', async () => {
+        mockState.mapData = createMockMapData({ type: 'outdoor' });
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeNull();
     });
 });
 
-describe('Map - loaded mapData rendering', () => {
+describe('Map - SVG structure with loaded mapData', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
+        resetState();
     });
 
-    it('renders the map container div when mapData loads', async () => {
+    it('renders the map container div with grid-svg child', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders the SVG element with correct class', async () => {
-        const { container } = await act(async () => renderMap());
         expect(container.querySelector('.grid-svg')).toBeInTheDocument();
     });
 
     it('renders MapToolbar with toolbar class', async () => {
         const { container } = await act(async () => renderMap());
         expect(container.querySelector('.toolbar')).toBeInTheDocument();
-    });
-
-    it('renders GridAndWalls content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders Players content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders PlacedItems content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders FogOverlay content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders SpellOverlayRenderer content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders RulerOverlay content inside SVG', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-
-    it('renders context menus (ItemContextMenu, RoomContextMenu, PlayerContextMenu)', async () => {
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('svg')).toBeTruthy();
-    });
-});
-
-describe('Map - outdoor map type rendering', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('renders HexMap when mapData.type is "outdoor"', async () => {
-        mockState.mapData = createMockMapData({ type: 'outdoor' });
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('[data-testid="hex-map"]')).toBeInTheDocument();
-    });
-
-    it('does not render the indoor SVG when map is outdoor', async () => {
-        mockState.mapData = createMockMapData({ type: 'outdoor' });
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.grid-svg')).toBeNull();
-    });
-
-    it('does not render map container div when map is outdoor', async () => {
-        mockState.mapData = createMockMapData({ type: 'outdoor' });
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeNull();
-    });
-});
-
-describe('Map - SVG structure and attributes', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
-    });
-
-    it('renders SVG element', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg).toBeTruthy();
-    });
-
-    it('renders SVG with grid-svg class', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg.grid-svg');
-        expect(svg).toBeTruthy();
-    });
-
-    it('renders SVG with viewBox attribute', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg).toHaveAttribute('viewBox');
-    });
-
-    it('renders SVG with cursor style', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        expect(svg).toHaveAttribute('style');
     });
 
     it('renders SVG with grid background rect', async () => {
@@ -401,7 +395,7 @@ describe('Map - SVG structure and attributes', () => {
         expect(gridLines.length).toBeGreaterThan(0);
     });
 
-    it('renders SVG with spell overlay layer', async () => {
+    it('renders SVG with spell overlay layer group', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         const spellLayer = svg.querySelector('g.spell-overlay-layer');
@@ -412,22 +406,19 @@ describe('Map - SVG structure and attributes', () => {
 describe('Map - SVG cursor styles', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.panning = false;
-        mockState.rulerMode = false;
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
+        resetState();
     });
 
     it('applies grabbing cursor when panning', async () => {
         mockState.panning = true;
+        mockState.rulerMode = false;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         expect(svg.style.cursor).toBe('grabbing');
     });
 
     it('applies crosshair cursor when rulerMode is active', async () => {
+        mockState.panning = false;
         mockState.rulerMode = true;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
@@ -435,119 +426,141 @@ describe('Map - SVG cursor styles', () => {
     });
 
     it('applies grab cursor when tool is none and not panning', async () => {
+        mockState.panning = false;
+        mockState.rulerMode = false;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         expect(svg.style.cursor).toBe('grab');
     });
 });
 
-describe('Map - SVG defs rendering', () => {
+describe('Map - SVG viewBox calculation', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
+        resetState();
     });
 
-    it('renders SVG defs with all SVG group elements', async () => {
+    it('renders SVG with viewBox reflecting panX and panY', async () => {
+        mockState.panX = 100;
+        mockState.panY = 200;
+        mockState.zoom = 2;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
-        expect(svg).toBeTruthy();
-        // SVG components render as <g> elements directly inside <defs>
-        const defs = svg.querySelector('defs');
-        const groups = defs ? Array.from(defs.children).filter(c => c.tagName === 'g') : [];
-        expect(groups.length).toBe(23);
+        expect(svg.getAttribute('viewBox')).toBe('100 200 600 600');
     });
 
-    it('renders BarrelSVG group with id="barrel"', async () => {
+    it('renders SVG with viewBox dimensions calculated as SVG_SIZE / zoom', async () => {
+        mockState.zoom = 0.5;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
-        const barrelGroup = svg.querySelector('g[id="barrel"]');
-        expect(barrelGroup).toBeTruthy();
+        expect(svg.getAttribute('viewBox')).toBe('0 0 2400 2400');
+    });
+});
+
+describe('Map - non-localhost mode', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
     });
 
-    it('renders DoorSVG group with id="door"', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const doorGroup = svg.querySelector('g[id="door"]');
-        expect(doorGroup).toBeTruthy();
+    it('renders the map for non-localhost clients', async () => {
+        const { container } = await act(async () => renderMap({ isLocalhost: false }));
+        expect(container.querySelector('.map')).toBeInTheDocument();
+        expect(container.querySelector('.grid-svg')).toBeInTheDocument();
+    });
+});
+
+describe('Map - room rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
     });
 
-    it('renders SecretDoorSVG group with id="secretDoor"', async () => {
+    it('renders room highlights with type-based CSS classes', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [
+                { id: 'room1', type: 'entrance', label: 'Entrance', rect: { x: 0, y: 0, w: 10, h: 10 } },
+                { id: 'room2', type: 'private', label: 'Bedroom', rect: { x: 10, y: 10, w: 5, h: 5 } },
+            ],
+        });
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const secretDoorGroup = svg.querySelector('g[id="secretDoor"]');
-        expect(secretDoorGroup).toBeTruthy();
+        expect(container.querySelector('.room-highlight')).toBeTruthy();
+        expect(container.querySelector('.room-type-entrance')).toBeTruthy();
+        expect(container.querySelector('.room-type-private')).toBeTruthy();
     });
 
-    it('renders TrapSVG group with id="trap"', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const trapGroup = svg.querySelector('g[id="trap"]');
-        expect(trapGroup).toBeTruthy();
+    it('renders room labels from room.label property', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', label: 'Great Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
+        await act(async () => renderMap());
+        expect(screen.getByText('Great Hall')).toBeInTheDocument();
     });
 
-    it('renders ChestSVG group with id="chest"', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const chestGroup = svg.querySelector('g[id="chest"]');
-        expect(chestGroup).toBeTruthy();
+    it('falls back to room.type when label is missing', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
+        await act(async () => renderMap());
+        expect(screen.getByText('common')).toBeInTheDocument();
     });
 
-    it('renders TorchSVG group with id="torch"', async () => {
+    it('renders room hit areas when tool is none', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const torchGroup = svg.querySelector('g[id="torch"]');
-        expect(torchGroup).toBeTruthy();
+        expect(container.querySelector('.room-hit-area')).toBeTruthy();
+    });
+});
+
+describe('Map - RulerOverlay rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
     });
 
-    it('renders WebSVG group with id="web"', async () => {
+    it('renders ruler line when rulerStart and rulerEnd are set', async () => {
+        mockState.rulerStart = { gridX: 0, gridY: 0 };
+        mockState.rulerEnd = { gridX: 10, gridY: 10 };
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const webGroup = svg.querySelector('g[id="web"]');
-        expect(webGroup).toBeTruthy();
+        expect(container.querySelector('line.ruler-line')).toBeTruthy();
     });
 
-    it('renders TreeSVG group with id="tree"', async () => {
+    it('renders ruler preview line when rulerPreview is set instead of rulerEnd', async () => {
+        mockState.rulerStart = { gridX: 0, gridY: 0 };
+        mockState.rulerPreview = { gridX: 5, gridY: 5 };
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const treeGroup = svg.querySelector('g[id="tree"]');
-        expect(treeGroup).toBeTruthy();
+        expect(container.querySelector('line.ruler-line')).toBeTruthy();
     });
 
-    it('renders BoulderSVG group with id="boulder"', async () => {
+    it('does not render ruler line when rulerStart is null', async () => {
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const boulderGroup = svg.querySelector('g[id="boulder"]');
-        expect(boulderGroup).toBeTruthy();
+        expect(container.querySelector('line.ruler-line')).toBeNull();
+    });
+});
+
+describe('Map - SpellOverlayRenderer rendering', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetState();
     });
 
-    it('renders BushSVG group with id="bush"', async () => {
+    it('renders spell overlay layer with existing overlays', async () => {
+        mockState.overlays = [
+            { id: 'overlay1', shape: 'sphere', startGridX: 5, startGridY: 5, distanceFt: 30, color: 'rgba(255,80,60,0.35)', radiusFt: 20 },
+        ];
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const bushGroup = svg.querySelector('g[id="bush"]');
-        expect(bushGroup).toBeTruthy();
+        const spellLayer = container.querySelector('g.spell-overlay-layer');
+        expect(spellLayer).toBeTruthy();
     });
 
-    it('renders PillarSVG group with id="pillar"', async () => {
+    it('renders pending overlay when spellDraft exists', async () => {
+        mockState.spellDraft = { startGridX: 5, startGridY: 5, angle: 0 };
+        mockState.spellMode = 'cone';
+        mockState.shapeParams = { sizeFt: 60, angle: 90, color: 'rgba(255,80,60,0.35)' };
         const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const pillarGroup = svg.querySelector('g[id="pillar"]');
-        expect(pillarGroup).toBeTruthy();
-    });
-
-    it('renders StairsSVG group with id="stairs"', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const stairsGroup = svg.querySelector('g[id="stairs"]');
-        expect(stairsGroup).toBeTruthy();
-    });
-
-    it('renders AltarSVG group with id="altar"', async () => {
-        const { container } = await act(async () => renderMap());
-        const svg = container.querySelector('svg');
-        const altarGroup = svg.querySelector('g[id="altar"]');
-        expect(altarGroup).toBeTruthy();
+        const spellLayer = container.querySelector('g.spell-overlay-layer');
+        expect(spellLayer).toBeTruthy();
     });
 });

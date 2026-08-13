@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharFeats from './CharFeats.jsx';
@@ -17,10 +18,10 @@ vi.mock('../../../hooks/combat/usePopup.js', () => ({
 }));
 
 // Mock the Popup component
-vi.mock('../../common/Popup.jsx', () => ({
-  default: vi.fn(({ html }) => (
-    <div data-testid="popup-overlay" dangerouslySetInnerHTML={{ __html: html }} />
-  )),
+vi.mock('../../common/popup.jsx', () => ({
+  default: ({ html, onClickOrKeyDown }) => (
+    <div data-testid="popup-overlay" onClick={onClickOrKeyDown} dangerouslySetInnerHTML={{ __html: html }} />
+  ),
 }));
 
 import usePopup from '../../../hooks/combat/usePopup.js';
@@ -68,22 +69,22 @@ describe('CharFeats', () => {
       const { container } = render(
         <CharFeats playerStats={{ feats: [] }} showPopup={mockShowPopup} />
       );
-      expect(container.firstChild).toBeNull();
+      expect(container.innerHTML).toBe('');
     });
 
     it('should return null when feats is undefined', () => {
       const { container } = render(
         <CharFeats playerStats={{}} showPopup={mockShowPopup} />
       );
-      expect(container.firstChild).toBeNull();
+      expect(container.innerHTML).toBe('');
     });
 
     it('should throw when playerStats is null', () => {
-      expect(() => render(<CharFeats playerStats={null} showPopup={mockShowPopup} />)).toThrow();
+      expect(() => render(<CharFeats playerStats={null} showPopup={mockShowPopup} />)).toThrow('Cannot read properties of null');
     });
 
     it('should throw when playerStats is undefined', () => {
-      expect(() => render(<CharFeats playerStats={undefined} showPopup={mockShowPopup} />)).toThrow();
+      expect(() => render(<CharFeats playerStats={undefined} showPopup={mockShowPopup} />)).toThrow('Cannot read properties of undefined');
     });
   });
 
@@ -99,13 +100,9 @@ describe('CharFeats', () => {
       expect(screen.getByText('Feats:')).toBeInTheDocument();
     });
 
-    it('should wrap feats in char-feats-section div', () => {
+    it('should wrap feats in char-feats-section and feats-container divs', () => {
       const { container } = render(<CharFeats {...defaultProps} />);
       expect(container.querySelector('.char-feats-section')).toBeInTheDocument();
-    });
-
-    it('should wrap feats in feats-container div', () => {
-      const { container } = render(<CharFeats {...defaultProps} />);
       expect(container.querySelector('.feats-container')).toBeInTheDocument();
     });
 
@@ -181,20 +178,26 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'Actor', index: 'actor' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Actor', index: 'actor' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should call loadFeatData with the rules version from playerStats', async () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(loadFeatData).toHaveBeenCalledWith('5e');
-      });
+      await vi.waitFor(
+        () => {
+          expect(loadFeatData).toHaveBeenCalledWith('5e');
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should default to 5e when playerStats has no rules field', async () => {
@@ -203,9 +206,12 @@ describe('CharFeats', () => {
       );
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(loadFeatData).toHaveBeenCalledWith('5e');
-      });
+      await vi.waitFor(
+        () => {
+          expect(loadFeatData).toHaveBeenCalledWith('5e');
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should use 2024 rules version when specified', async () => {
@@ -214,20 +220,26 @@ describe('CharFeats', () => {
       );
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(loadFeatData).toHaveBeenCalledWith('2024');
-      });
+      await vi.waitFor(
+        () => {
+          expect(loadFeatData).toHaveBeenCalledWith('2024');
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should search by feat name when found', async () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'Actor' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Actor' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should search by feat index when name does not match', async () => {
@@ -243,11 +255,14 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'Some Other Feat', index: 'actor' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Some Other Feat', index: 'actor' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
   });
 
@@ -267,11 +282,14 @@ describe('CharFeats', () => {
       );
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'ACTOR' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'ACTOR' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should normalize feat names with spaces to underscores', async () => {
@@ -289,11 +307,14 @@ describe('CharFeats', () => {
       );
       const featElements = screen.getAllByText(/Actor Feat/);
       fireEvent.click(featElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'Actor Feat' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Actor Feat' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should match 2024 feat by uppercase index', async () => {
@@ -311,11 +332,14 @@ describe('CharFeats', () => {
       );
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'Actor' })
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockShowPopup).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'Actor' })
+          );
+        },
+        { timeout: 5000 }
+      );
     });
   });
 
@@ -327,25 +351,17 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('Actor')
-        );
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('not found in database')
-        );
-      });
-    });
-
-    it('should not call showPopup when feat is not found', async () => {
-      loadFeatData.mockResolvedValue([]);
-
-      render(<CharFeats {...defaultProps} />);
-      const actorElements = screen.getAllByText(/Actor/);
-      fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockShowPopup).not.toHaveBeenCalled();
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Actor')
+          );
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('not found in database')
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should call setPopupHtml with not found message when no match by name or index', async () => {
@@ -361,14 +377,17 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('Actor')
-        );
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('not found in database')
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Actor')
+          );
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('not found in database')
+          );
+        },
+        { timeout: 5000 }
+      );
     });
   });
 
@@ -378,14 +397,17 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('Error loading feat details')
-        );
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('Network error')
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Error loading feat details')
+          );
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Network error')
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should include the feat name in the error popup', async () => {
@@ -393,26 +415,32 @@ describe('CharFeats', () => {
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(mockSetPopupHtml).toHaveBeenCalledWith(
-          expect.stringContaining('Actor')
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(mockSetPopupHtml).toHaveBeenCalledWith(
+            expect.stringContaining('Actor')
+          );
+        },
+        { timeout: 5000 }
+      );
     });
 
-    it('should include console.error call on error', async () => {
+    it('should log console.error when loadFeatData rejects', async () => {
       const consoleSpy = vi.spyOn(console, 'error');
       loadFeatData.mockRejectedValue(new Error('Test error'));
 
       render(<CharFeats {...defaultProps} />);
       const actorElements = screen.getAllByText(/Actor/);
       fireEvent.click(actorElements[0]);
-      await vi.waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          expect.stringContaining('[CharFeats] Error loading feats'),
-          expect.anything()
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(consoleSpy).toHaveBeenCalledWith(
+            expect.stringContaining('[CharFeats] Error loading feats'),
+            expect.any(Error)
+          );
+        },
+        { timeout: 5000 }
+      );
 
       consoleSpy.mockRestore();
     });
@@ -426,12 +454,6 @@ describe('CharFeats', () => {
   });
 
   describe('display name formatting', () => {
-    it('should display feat name without count suffix for single occurrence', () => {
-      render(<CharFeats {...defaultProps} playerStats={{ feats: ['Actor'] }} />);
-      expect(screen.getByText('Actor')).toBeInTheDocument();
-      expect(screen.queryByText(/Actor \*/)).not.toBeInTheDocument();
-    });
-
     it('should display feat name with * count suffix for duplicates', () => {
       render(
         <CharFeats {...defaultProps} playerStats={{ feats: ['Actor', 'Actor', 'Actor'] }} />

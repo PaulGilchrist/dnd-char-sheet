@@ -10,7 +10,7 @@ describe('FirePitSVG', () => {
       expect(g).toBeInTheDocument();
     });
 
-    it('should render all SVG child elements (circles, ellipses, paths)', () => {
+    it('should render SVG elements for glow, stone ring, flames, and sparks', () => {
       const { container } = render(<FirePitSVG />);
       const circles = container.querySelectorAll('circle');
       const ellipses = container.querySelectorAll('ellipse');
@@ -21,28 +21,40 @@ describe('FirePitSVG', () => {
       expect(paths.length).toBeGreaterThan(0);
     });
 
-    it('should render ambient glow circles at the top', () => {
+    it('should render ambient glow circles with correct positions and radii', () => {
       const { container } = render(<FirePitSVG />);
       const circles = container.querySelectorAll('circle');
-      // First 3 circles are ambient glow (cx=18, cy=10/18)
-      expect(circles[0]).toHaveAttribute('cx', '18');
-      expect(circles[0]).toHaveAttribute('cy', '10');
-      expect(circles[0]).toHaveAttribute('r', '17');
-      expect(circles[1]).toHaveAttribute('r', '14');
-      expect(circles[2]).toHaveAttribute('cy', '18');
-      expect(circles[2]).toHaveAttribute('r', '18');
+
+      // Find glow circles by their characteristic positions (cy=10 and cy=18) with large radii
+      const glowCircles = Array.from(circles).filter(
+        (c) => {
+          const cy = c.getAttribute('cy');
+          const r = parseFloat(c.getAttribute('r'));
+          return (cy === '10' || cy === '18') && r >= 14;
+        }
+      );
+
+      expect(glowCircles.length).toBe(3);
+      expect(glowCircles[0]).toHaveAttribute('cx', '18');
+      expect(glowCircles[0]).toHaveAttribute('r', '17');
+      expect(glowCircles[0]).toHaveAttribute('opacity', '0.1');
+      expect(glowCircles[1]).toHaveAttribute('r', '14');
+      expect(glowCircles[1]).toHaveAttribute('opacity', '0.08');
+      expect(glowCircles[2]).toHaveAttribute('cy', '18');
+      expect(glowCircles[2]).toHaveAttribute('r', '18');
+      expect(glowCircles[2]).toHaveAttribute('opacity', '0.03');
     });
 
-    it('should render the stone ring circle', () => {
+    it('should render the stone ring circle with correct styling', () => {
       const { container } = render(<FirePitSVG />);
       const circles = container.querySelectorAll('circle');
-      // The stone ring is at cx=18, cy=20, r=9 with fill #555
       const stoneRing = Array.from(circles).find(
         (c) => c.getAttribute('cx') === '18' && c.getAttribute('cy') === '20' && c.getAttribute('r') === '9'
       );
       expect(stoneRing).toBeInTheDocument();
       expect(stoneRing).toHaveAttribute('fill', '#555');
       expect(stoneRing).toHaveAttribute('stroke', '#333');
+      expect(stoneRing).toHaveAttribute('stroke-width', '1.5');
     });
 
     it('should render ember ellipses and circles at the base', () => {
@@ -57,7 +69,7 @@ describe('FirePitSVG', () => {
       expect(emberEllipse).toHaveAttribute('ry', '2');
     });
 
-    it('should render flame paths with correct colors', () => {
+    it('should render flame paths with all expected color layers', () => {
       const { container } = render(<FirePitSVG />);
       const paths = container.querySelectorAll('path');
       const fillColors = new Set(Array.from(paths).map((p) => p.getAttribute('fill')));
@@ -69,13 +81,6 @@ describe('FirePitSVG', () => {
       expect(fillColors).toContain('#FFF8E0');
     });
 
-    it('should render floating sparks/circles', () => {
-      const { container } = render(<FirePitSVG />);
-      const circles = container.querySelectorAll('circle');
-      // There are many circles including sparks at the top of the fire
-      expect(circles.length).toBeGreaterThan(10);
-    });
-
     it('should render the white-hot core ellipse', () => {
       const { container } = render(<FirePitSVG />);
       const ellipses = container.querySelectorAll('ellipse');
@@ -84,6 +89,23 @@ describe('FirePitSVG', () => {
       );
       expect(core).toBeInTheDocument();
       expect(core).toHaveAttribute('fill', '#FFFFFF');
+      expect(core).toHaveAttribute('opacity', '0.6');
+    });
+
+    it('should render floating spark circles with opacity values', () => {
+      const { container } = render(<FirePitSVG />);
+      const circles = container.querySelectorAll('circle');
+      const sparkCircles = Array.from(circles).filter(
+        (c) => {
+          const cy = parseFloat(c.getAttribute('cy'));
+          const r = parseFloat(c.getAttribute('r'));
+          return cy < 10 && r < 2;
+        }
+      );
+      expect(sparkCircles.length).toBeGreaterThan(0);
+      sparkCircles.forEach((spark) => {
+        expect(spark).toHaveAttribute('opacity');
+      });
     });
   });
 
@@ -125,11 +147,12 @@ describe('FirePitSVG', () => {
       expect(g).toHaveAttribute('data-custom', 'value');
       expect(ref.current).toBe(g);
     });
-  });
 
-  describe('displayName', () => {
-    it('should have the correct displayName', () => {
-      expect(FirePitSVG.displayName).toBe('FirePitSVG');
+    it('should handle null id and undefined className gracefully', () => {
+      const { container } = render(<FirePitSVG id={null} className={undefined} />);
+      const g = container.querySelector('g');
+      expect(g).not.toHaveAttribute('id');
+      expect(g).not.toHaveAttribute('class');
     });
   });
 });

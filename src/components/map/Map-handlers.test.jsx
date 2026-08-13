@@ -1,48 +1,10 @@
-import { render, fireEvent, act, screen } from '@testing-library/react';
+// @improved-by-ai
+import { render, fireEvent, act, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
 import { clearRuntimeState } from '../../hooks/runtime/useRuntimeState.js';
 
 const mockLoadMonsters = vi.fn(() => Promise.resolve([]));
-
-const handlers = {
-    setMapData: vi.fn(),
-    setPlacedItems: vi.fn(),
-    setNpcImages: vi.fn(),
-    setSelectedRoom: vi.fn(),
-    gridPointerDown: vi.fn(),
-    gridPointerMove: vi.fn(),
-    gridPointerUp: vi.fn(),
-    gridPointerLeave: vi.fn(),
-    roomPointerDown: vi.fn(),
-    roomPointerMove: vi.fn(),
-    roomPointerUp: vi.fn(),
-    roomClick: vi.fn(),
-    selectPointerDown: vi.fn(),
-    selectPointerMove: vi.fn(),
-    selectPointerUp: vi.fn(),
-    panStart: vi.fn(),
-    panMove: vi.fn(),
-    panEnd: vi.fn(),
-    resetRuler: vi.fn(),
-    setRulerMode: vi.fn(),
-    rulerPointerDown: vi.fn(),
-    rulerPointerMove: vi.fn(),
-    rulerPointerUp: vi.fn(),
-    spellPointerDown: vi.fn(),
-    spellPointerMove: vi.fn(),
-    spellPointerUp: vi.fn(),
-    spellDragMove: vi.fn(),
-    spellDragEnd: vi.fn(),
-    playerPointerMove: vi.fn(),
-    playerPointerUp: vi.fn(),
-    itemPointerMove: vi.fn(),
-    itemPointerUp: vi.fn(),
-    itemPointerLeave: vi.fn(),
-    mapSSE: vi.fn(),
-    spellOverlaySSE: vi.fn(),
-    drop: vi.fn(),
-};
 
 const mockState = {
     mapData: null,
@@ -71,8 +33,8 @@ const mockState = {
     rulerStart: null,
     rulerEnd: null,
     rulerPreview: null,
-    spellDragActiveRef: { current: false },
     viewingMonster: null,
+    spellDragActiveRef: { current: false },
 };
 
 class MockEventSource {
@@ -106,9 +68,15 @@ vi.mock('../../hooks/runtime/useLog.js', () => ({
 vi.mock('./hooks/useMapLoader.js', () => ({
     default: vi.fn(() => ({
         mapData: mockState.mapData,
-        setMapData: handlers.setMapData,
+        setMapData: vi.fn((fn) => {
+            const result = typeof fn === 'function' ? fn(mockState.mapData) : fn;
+            mockState.mapData = result;
+        }),
         placedItems: mockState.placedItems,
-        setPlacedItems: handlers.setPlacedItems,
+        setPlacedItems: vi.fn((fn) => {
+            const result = typeof fn === 'function' ? fn(mockState.placedItems) : fn;
+            mockState.placedItems = result;
+        }),
     })),
 }));
 
@@ -124,9 +92,9 @@ vi.mock('./hooks/useZoomPan.js', () => ({
         gridCenterY: (gy) => gy * 40 + 20,
         getGridFromEvent: vi.fn(() => ({ gridX: 5, gridY: 5 })),
         panning: mockState.panning,
-        handlePanStart: handlers.panStart,
-        handlePanMove: handlers.panMove,
-        handlePanEnd: handlers.panEnd,
+        handlePanStart: vi.fn(),
+        handlePanMove: vi.fn(),
+        handlePanEnd: vi.fn(),
         handleWheel: vi.fn(),
         clientToSVG: vi.fn(),
     })),
@@ -135,10 +103,10 @@ vi.mock('./hooks/useZoomPan.js', () => ({
 vi.mock('./hooks/useWallDrawing.js', () => ({
     default: vi.fn(() => ({
         painting: mockState.painting,
-        handleGridPointerDown: handlers.gridPointerDown,
-        handleGridPointerMove: handlers.gridPointerMove,
-        handleGridPointerUp: handlers.gridPointerUp,
-        handleGridPointerLeave: handlers.gridPointerLeave,
+        handleGridPointerDown: vi.fn(),
+        handleGridPointerMove: vi.fn(),
+        handleGridPointerUp: vi.fn(),
+        handleGridPointerLeave: vi.fn(),
     })),
 }));
 
@@ -146,11 +114,11 @@ vi.mock('./hooks/useRoomDrawing.js', () => ({
     default: vi.fn(() => ({
         roomDrawRect: mockState.roomDrawRect,
         selectedRoom: mockState.selectedRoom,
-        setSelectedRoom: handlers.setSelectedRoom,
-        handleRoomPointerDown: handlers.roomPointerDown,
-        handleRoomPointerMove: handlers.roomPointerMove,
-        handleRoomPointerUp: handlers.roomPointerUp,
-        handleRoomClick: handlers.roomClick,
+        setSelectedRoom: vi.fn(),
+        handleRoomPointerDown: vi.fn(),
+        handleRoomPointerMove: vi.fn(),
+        handleRoomPointerUp: vi.fn(),
+        handleRoomClick: vi.fn(),
     })),
 }));
 
@@ -169,23 +137,23 @@ vi.mock('./hooks/useSelectMove.js', () => ({
         selectionBoundsRef: { current: null },
         placedItemsRef: { current: mockState.placedItems },
         mapDataRef: { current: mockState.mapData },
-        handleSelectPointerDown: handlers.selectPointerDown,
-        handleSelectPointerMove: handlers.selectPointerMove,
-        handleSelectPointerUp: handlers.selectPointerUp,
+        handleSelectPointerDown: vi.fn(),
+        handleSelectPointerMove: vi.fn(),
+        handleSelectPointerUp: vi.fn(),
     })),
 }));
 
 vi.mock('./hooks/useRuler.js', () => ({
     default: vi.fn(() => ({
         rulerMode: mockState.rulerMode,
-        setRulerMode: handlers.setRulerMode,
+        setRulerMode: vi.fn(),
         rulerStart: mockState.rulerStart,
         rulerEnd: mockState.rulerEnd,
         rulerPreview: mockState.rulerPreview,
-        resetRuler: handlers.resetRuler,
-        handleRulerPointerDown: handlers.rulerPointerDown,
-        handleRulerPointerMove: handlers.rulerPointerMove,
-        handleRulerPointerUp: handlers.rulerPointerUp,
+        resetRuler: vi.fn(),
+        handleRulerPointerDown: vi.fn(),
+        handleRulerPointerMove: vi.fn(),
+        handleRulerPointerUp: vi.fn(),
     })),
 }));
 
@@ -197,7 +165,7 @@ vi.mock('./hooks/useSpellOverlay.js', () => ({
         updateOverlayImmediate: vi.fn(),
         removeOverlay: vi.fn(),
         clearOverlays: vi.fn(),
-        handleSSEEvent: handlers.spellOverlaySSE,
+        handleSSEEvent: vi.fn(),
     })),
 }));
 
@@ -206,12 +174,12 @@ vi.mock('./hooks/useSpellHandlers.js', () => ({
         spellDraft: mockState.spellDraft,
         dragOverlay: mockState.dragOverlay,
         rotateOverlay: mockState.rotateOverlay,
-        spellDragActiveRef: mockState.spellDragActiveRef,
-        handleSpellPointerDown: handlers.spellPointerDown,
-        handleSpellPointerMove: handlers.spellPointerMove,
-        handleSpellPointerUp: handlers.spellPointerUp,
-        handleSpellDragMove: handlers.spellDragMove,
-        handleSpellDragEnd: handlers.spellDragEnd,
+        spellDragActiveRef: { current: false },
+        handleSpellPointerDown: vi.fn(),
+        handleSpellPointerMove: vi.fn(),
+        handleSpellPointerUp: vi.fn(),
+        handleSpellDragMove: vi.fn(),
+        handleSpellDragEnd: vi.fn(),
     })),
 }));
 
@@ -219,8 +187,8 @@ vi.mock('./hooks/usePlayerDragging.js', () => ({
     default: vi.fn(() => ({
         dragging: mockState.dragging,
         handlePointerDown: vi.fn(),
-        handlePointerMove: handlers.playerPointerMove,
-        handlePointerUp: handlers.playerPointerUp,
+        handlePointerMove: vi.fn(),
+        handlePointerUp: vi.fn(),
     })),
 }));
 
@@ -228,21 +196,21 @@ vi.mock('./hooks/useItemDragging.js', () => ({
     default: vi.fn(() => ({
         itemDragging: mockState.itemDragging,
         handleItemPointerDown: vi.fn(),
-        handleItemPointerMove: handlers.itemPointerMove,
-        handleItemPointerUp: handlers.itemPointerUp,
-        handleItemPointerLeave: handlers.itemPointerLeave,
+        handleItemPointerMove: vi.fn(),
+        handleItemPointerUp: vi.fn(),
+        handleItemPointerLeave: vi.fn(),
     })),
 }));
 
 vi.mock('./hooks/useNpcImageCache.js', () => ({
     default: vi.fn(() => ({
         npcImages: mockState.npcImages,
-        setNpcImages: handlers.setNpcImages,
+        setNpcImages: vi.fn(),
     })),
 }));
 
 vi.mock('./hooks/useSSESync.js', () => ({
-    default: vi.fn(() => ({ handleSSEEvent: handlers.mapSSE })),
+    default: vi.fn(() => ({ handleSSEEvent: vi.fn() })),
 }));
 
 vi.mock('./hooks/useFogOfWar.js', () => ({
@@ -250,7 +218,7 @@ vi.mock('./hooks/useFogOfWar.js', () => ({
 }));
 
 vi.mock('./hooks/useMapDrops.js', () => ({
-    default: vi.fn(() => ({ handleDrop: handlers.drop })),
+    default: vi.fn(() => ({ handleDrop: vi.fn() })),
 }));
 
 vi.mock('../hex-map/HexMap.jsx', () => ({ default: vi.fn(() => <div data-testid="hex-map" />) }));
@@ -312,18 +280,13 @@ const resetState = () => {
         rulerEnd: null,
         rulerPreview: null,
         viewingMonster: null,
+        spellDragActiveRef: { current: false },
     });
-    mockState.selectStart.current = null;
-    mockState.moveStartGrid.current = null;
-    mockState.spellDragActiveRef.current = false;
     mockLoadMonsters.mockReset();
     mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
-    handlers.setMapData.mockClear();
-    handlers.setPlacedItems.mockClear();
-    handlers.setNpcImages.mockClear();
 };
 
-describe('Map - handleViewStats early return for non-NPC items', () => {
+describe('Map - handleViewStats behavior', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearRuntimeState('test-campaign');
@@ -331,7 +294,26 @@ describe('Map - handleViewStats early return for non-NPC items', () => {
         resetState();
     });
 
-    it('does not open monster card when right-clicking a non-NPC item', async () => {
+    it('opens monster card when right-clicking an NPC with a matching monster entry', async () => {
+        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'Goblin', index: 'goblin' }]));
+        mockState.placedItems = [
+            { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
+        ];
+        const { container } = await act(async () => renderMap());
+        const hitRect = container.querySelector('.npc-group rect');
+        expect(hitRect).toBeTruthy();
+        await act(async () => {
+            fireEvent.contextMenu(hitRect);
+        });
+        await act(async () => {
+            fireEvent.click(screen.getByText('View Stats'));
+        });
+        const modal = screen.getByTestId('monster-card-modal');
+        expect(modal).toBeInTheDocument();
+        expect(within(modal).getByText('Goblin')).toBeInTheDocument();
+    });
+
+    it('does not show View Stats for non-NPC items', async () => {
         mockState.placedItems = [
             { id: 'barrel1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
         ];
@@ -343,11 +325,55 @@ describe('Map - handleViewStats early return for non-NPC items', () => {
             fireEvent.contextMenu(hitRect);
         });
         expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('monster-card-modal')).not.toBeInTheDocument();
+    });
+
+    it('does not show View Stats when NPC has no matching monster in the loaded list', async () => {
+        mockState.placedItems = [
+            { id: 'npc1', type: 'npc', name: 'Zombie', gridX: 5, gridY: 5 },
+        ];
+        const { container } = await act(async () => renderMap());
+        const hitRect = container.querySelector('.npc-group rect');
+        expect(hitRect).toBeTruthy();
+        await act(async () => {
+            fireEvent.contextMenu(hitRect);
+        });
+        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
+    });
+
+    it('matches monster names case-insensitively', async () => {
+        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'goblin', index: 'goblin' }]));
+        mockState.placedItems = [
+            { id: 'npc1', type: 'npc', name: 'GOBLIN', gridX: 5, gridY: 5 },
+        ];
+        const { container } = await act(async () => renderMap());
+        const hitRect = container.querySelector('.npc-group rect');
+        await act(async () => {
+            fireEvent.contextMenu(hitRect);
+        });
+        await act(async () => {
+            fireEvent.click(screen.getByText('View Stats'));
+        });
+        expect(screen.getByTestId('monster-card-modal')).toBeInTheDocument();
+    });
+
+    it('strips trailing numbers from NPC names when matching monsters', async () => {
+        mockLoadMonsters.mockImplementation(() => Promise.resolve([{ name: 'Goblin', index: 'goblin' }]));
+        mockState.placedItems = [
+            { id: 'npc1', type: 'npc', name: 'Goblin 3', gridX: 5, gridY: 5 },
+        ];
+        const { container } = await act(async () => renderMap());
+        const hitRect = container.querySelector('.npc-group rect');
+        await act(async () => {
+            fireEvent.contextMenu(hitRect);
+        });
+        await act(async () => {
+            fireEvent.click(screen.getByText('View Stats'));
+        });
+        expect(screen.getByTestId('monster-card-modal')).toBeInTheDocument();
     });
 });
 
-describe('Map - handleRemovePlayer through PlayerContextMenu', () => {
+describe('Map - handleRemovePlayer behavior', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearRuntimeState('test-campaign');
@@ -355,31 +381,49 @@ describe('Map - handleRemovePlayer through PlayerContextMenu', () => {
         resetState();
     });
 
-    it('removes player when context menu remove action is triggered', async () => {
+    it('removes a player from mapData via the context menu', async () => {
         mockState.mapData = createMockMapData({
             players: [
                 { id: 'player1', name: 'Thorin', gridX: 5, gridY: 5, characterId: 'thorin' },
             ],
         });
         const { container } = await act(async () => renderMap());
-        // Player circles are rendered by the Players component
-        // Right-clicking should open PlayerContextMenu
         const playerCircle = container.querySelector('.player-group circle');
         if (playerCircle) {
             await act(async () => {
                 fireEvent.contextMenu(playerCircle);
             });
-            // The context menu should appear
             expect(screen.getByText('Remove from Map')).toBeInTheDocument();
             await act(async () => {
                 fireEvent.click(screen.getByText('Remove from Map'));
             });
-            expect(handlers.setMapData).toHaveBeenCalled();
+            expect(mockState.mapData.players).toHaveLength(0);
+        }
+    });
+
+    it('handles removing a player when multiple players exist', async () => {
+        mockState.mapData = createMockMapData({
+            players: [
+                { id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 },
+                { id: 'player2', name: 'Legolas', gridX: 6, gridY: 6 },
+                { id: 'player3', name: 'Gimli', gridX: 7, gridY: 7 },
+            ],
+        });
+        const { container } = await act(async () => renderMap());
+        const playerCircle = container.querySelector('.player-group circle');
+        if (playerCircle) {
+            await act(async () => {
+                fireEvent.contextMenu(playerCircle);
+            });
+            await act(async () => {
+                fireEvent.click(screen.getByText('Remove from Map'));
+            });
+            expect(mockState.mapData.players).toHaveLength(2);
         }
     });
 });
 
-describe('Map - handleRenameClicked early return when svgRef is null', () => {
+describe('Map - handleCloseMenu behavior', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         clearRuntimeState('test-campaign');
@@ -387,28 +431,15 @@ describe('Map - handleRenameClicked early return when svgRef is null', () => {
         resetState();
     });
 
-    it('renders the map without triggering rename', async () => {
-        mockState.placedItems = [
-            { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
-        ];
+    it('closes menus when clicking the SVG background', async () => {
+        mockState.mapData = createMockMapData({
+            players: [{ id: 'player1', name: 'Thorin', gridX: 5, gridY: 5 }],
+        });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-});
-
-describe('Map - monsterFound useMemo early return for non-NPC selectedItem', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        clearRuntimeState('test-campaign');
-        MockEventSource.instances.length = 0;
-        resetState();
-    });
-
-    it('returns false from monsterFound when selectedItem is not an NPC item type', async () => {
-        mockState.placedItems = [
-            { id: 'chest1', type: 'chest', name: 'Chest', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const svg = container.querySelector('svg');
+        await act(async () => {
+            fireEvent.click(svg, { button: 0 });
+        });
+        expect(mockState.selectedRoom).toBeNull();
     });
 });

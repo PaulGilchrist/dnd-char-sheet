@@ -1,7 +1,7 @@
+/* @improved-by-ai */
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharActions from './CharActions.jsx';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { DiceRollContext } from '../../hooks/combat/DiceRollContext.js';
 
 const _syncedStore = new Map();
@@ -191,17 +191,34 @@ function createStats(overrides = {}) {
   return { ...basePlayerStats, ...overrides };
 }
 
-describe('CharActions cleave and tactical master', () => {
+describe('CharActions cleave and tactical master modal rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     _syncedStore.clear();
     globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
-    getRuntimeValue.mockImplementation(() => null);
   });
 
-  describe('handleCleaveAttack', () => {
-    it('does nothing when no cleaveTargetName is provided', async () => {
+  describe('Cleave modal rendering', () => {
+    it('renders SecondaryTargetModal when cleavePending is true', async () => {
+      const mockSetPopupHtml = vi.fn();
+      const wrapper = ({ children }) => (
+        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
+          {children}
+        </DiceRollContext.Provider>
+      );
+
+      _syncedStore.set('cleavePending', true);
+      _syncedStore.set('cleaveSecondTargets', [{ name: 'Goblin' }]);
+
+      await act(async () => {
+        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
+      });
+
+      expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument();
+    });
+
+    it('does not render SecondaryTargetModal when cleavePending is false', async () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = ({ children }) => (
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
@@ -216,24 +233,12 @@ describe('CharActions cleave and tactical master', () => {
         render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
       });
 
-      expect(screen.getByText('Actions')).toBeInTheDocument();
-    });
-
-    it('uses weapon damage formula without ability modifier for cleave', async () => {
-      const formula = '1d8+3';
-      const cleaned = formula.replace(/\+\s*\d+/g, '').trim();
-      expect(cleaned).toBe('1d8');
-    });
-
-    it('falls back to original formula when cleaning removes all dice', async () => {
-      const formula = '+3';
-      const cleaned = formula.replace(/\+\s*\d+/g, '').trim();
-      expect(cleaned).toBe('');
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
     });
   });
 
-  describe('handleTacticalMaster', () => {
-    it('dismisses tactical master modal when called with null', async () => {
+  describe('Tactical Master modal rendering', () => {
+    it('renders TacticalMasterModal when tacticalMasterPending is set', async () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = ({ children }) => (
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
@@ -241,47 +246,21 @@ describe('CharActions cleave and tactical master', () => {
         </DiceRollContext.Provider>
       );
 
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        return null;
+      _syncedStore.set('tacticalMasterPending', {
+        attackName: 'Longsword',
+        baseMastery: 'Piercing',
+        replaceOptions: ['Vex', 'Topple'],
+        targetName: 'Goblin',
       });
 
       await act(async () => {
         render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
       });
 
-      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByTestId('tactical-master-modal')).toBeInTheDocument();
     });
 
-    it('Topple mastery applies prone condition on failed save', async () => {
-      const mockSetPopupHtml = vi.fn();
-
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (key === 'lastAttack') return null;
-        return null;
-      });
-
-      const wrapper = ({ children }) => (
-        <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
-          {children}
-        </DiceRollContext.Provider>
-      );
-
-      await act(async () => {
-        render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
-      });
-
-      expect(screen.getByText('Actions')).toBeInTheDocument();
-    });
-  });
-
-  describe('handleTacticalMasterConfirm - non-Topple', () => {
-    it('applies mastery effect for non-Topple masteries', async () => {
+    it('does not render TacticalMasterModal when tacticalMasterPending is null', async () => {
       const mockSetPopupHtml = vi.fn();
       const wrapper = ({ children }) => (
         <DiceRollContext.Provider value={{ popupHtml: null, setPopupHtml: mockSetPopupHtml }}>
@@ -289,19 +268,13 @@ describe('CharActions cleave and tactical master', () => {
         </DiceRollContext.Provider>
       );
 
-      getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'activeBuffs') return [];
-        if (key === 'hasteExtraActionUsed') return false;
-        if (key === 'activeConditions') return [];
-        if (key === 'lastAttack') return { targetName: 'Goblin' };
-        return null;
-      });
+      _syncedStore.set('tacticalMasterPending', null);
 
       await act(async () => {
         render(<CharActions playerStats={createStats()} campaignName="test-campaign" />, { wrapper });
       });
 
-      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('tactical-master-modal')).not.toBeInTheDocument();
     });
   });
 });

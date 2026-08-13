@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
@@ -238,205 +239,186 @@ const renderMap = (overrides = {}) => {
     return render(<Map {...defaultProps} />);
 };
 
-describe('Map - placed items rendering with types', () => {
+describe('Map - PlacedItems integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockState.mapData = createMockMapData();
         mockState.placedItems = [];
+        mockState.itemDragging = null;
+        mockState.npcImages = {};
         createMockSetMapData.mockClear();
         createMockSetPlacedItems.mockClear();
     });
 
-    it('renders NPC placed items', async () => {
-        mockState.placedItems = [
-            { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+    describe('rendering with placed items present', () => {
+        it('renders the map container with placed items in the array', async () => {
+            mockState.placedItems = [
+                { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders the map container with multiple placed items', async () => {
+            mockState.placedItems = [
+                { id: 'furn1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
+                { id: 'furn2', type: 'chest', name: 'Chest', gridX: 6, gridY: 6 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders the map container with placed items that have rotation', async () => {
+            mockState.placedItems = [
+                { id: 'item1', type: 'table', name: 'Table', gridX: 5, gridY: 5, rotation: 90 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders the map container with placed items that have open state', async () => {
+            mockState.placedItems = [
+                { id: 'door1', type: 'door', name: 'Door', gridX: 5, gridY: 5, open: false },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 
-    it('renders furniture placed items', async () => {
-        mockState.placedItems = [
-            { id: 'furn1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
-            { id: 'furn2', type: 'chest', name: 'Chest', gridX: 6, gridY: 6 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+    describe('NPC placed items', () => {
+        it('renders NPC placed items with an image URL', async () => {
+            mockState.placedItems = [
+                { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5, imageUrl: '/goblin.png' },
+            ];
+            mockState.npcImages = {};
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders NPC placed items with npcImages cache entry', async () => {
+            mockState.placedItems = [
+                { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5 },
+            ];
+            mockState.npcImages = { Goblin: '/goblin.png' };
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders NPC placed items with visible=false', async () => {
+            mockState.placedItems = [
+                { id: 'npc1', type: 'npc', name: 'Goblin', gridX: 5, gridY: 5, visible: false },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 
-    it('renders placed items with rotation', async () => {
-        mockState.placedItems = [
-            { id: 'item1', type: 'table', name: 'Table', gridX: 5, gridY: 5, rotation: 90 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+    describe('furniture placed items', () => {
+        it('renders furniture with various properties', async () => {
+            mockState.placedItems = [
+                { id: 'furn1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
+                { id: 'furn2', type: 'chest', name: 'Chest', gridX: 6, gridY: 6 },
+                { id: 'furn3', type: 'table', name: 'Table', gridX: 7, gridY: 7, rotation: 90 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders furniture items with visible=false', async () => {
+            mockState.placedItems = [
+                { id: 'furn1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5, visible: false },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 
-    it('renders door placed items', async () => {
-        mockState.placedItems = [
-            { id: 'door1', type: 'door', name: 'Door', gridX: 5, gridY: 5, open: false },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+    describe('special placed items (doors, traps, secret doors)', () => {
+        it('renders closed door', async () => {
+            mockState.placedItems = [
+                { id: 'door1', type: 'door', name: 'Door', gridX: 5, gridY: 5, open: false },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders open door', async () => {
+            mockState.placedItems = [
+                { id: 'door1', type: 'door', name: 'Door', gridX: 5, gridY: 5, open: true },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders trap', async () => {
+            mockState.placedItems = [
+                { id: 'trap1', type: 'trap', name: 'Trap', gridX: 5, gridY: 5 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
+
+        it('renders secret door', async () => {
+            mockState.placedItems = [
+                { id: 'sdoor1', type: 'secretDoor', name: 'Secret Door', gridX: 5, gridY: 5 },
+            ];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 
-    it('renders trap placed items', async () => {
-        mockState.placedItems = [
-            { id: 'trap1', type: 'trap', name: 'Trap', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders secret door placed items', async () => {
-        mockState.placedItems = [
-            { id: 'sdoor1', type: 'secretDoor', name: 'Secret Door', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders pillar placed items', async () => {
-        mockState.placedItems = [
+    describe('environmental placed items', () => {
+        const environmentalTypes = [
             { id: 'pillar1', type: 'pillar', name: 'Pillar', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders stairs placed items', async () => {
-        mockState.placedItems = [
             { id: 'stairs1', type: 'stairs', name: 'Stairs', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders altar placed items', async () => {
-        mockState.placedItems = [
             { id: 'altar1', type: 'altar', name: 'Altar', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders fire pit placed items', async () => {
-        mockState.placedItems = [
             { id: 'firepit1', type: 'firepit', name: 'Fire Pit', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders bed placed items', async () => {
-        mockState.placedItems = [
             { id: 'bed1', type: 'bed', name: 'Bed', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders table placed items', async () => {
-        mockState.placedItems = [
             { id: 'table1', type: 'table', name: 'Table', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders chest placed items', async () => {
-        mockState.placedItems = [
             { id: 'chest1', type: 'chest', name: 'Crate', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders fountain placed items', async () => {
-        mockState.placedItems = [
             { id: 'fountain1', type: 'fountain', name: 'Fountain', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders skeleton placed items', async () => {
-        mockState.placedItems = [
             { id: 'skeleton1', type: 'skeleton', name: 'Skeleton', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders statue placed items', async () => {
-        mockState.placedItems = [
             { id: 'statue1', type: 'statue', name: 'Statue', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders torch placed items', async () => {
-        mockState.placedItems = [
             { id: 'torch1', type: 'torch', name: 'Torch', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders web placed items', async () => {
-        mockState.placedItems = [
             { id: 'web1', type: 'web', name: 'Web', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders tree placed items', async () => {
-        mockState.placedItems = [
             { id: 'tree1', type: 'tree', name: 'Tree', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders boulder placed items', async () => {
-        mockState.placedItems = [
             { id: 'boulder1', type: 'boulder', name: 'Boulder', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders bush placed items', async () => {
-        mockState.placedItems = [
             { id: 'bush1', type: 'bush', name: 'Bush', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders bookshelf placed items', async () => {
-        mockState.placedItems = [
             { id: 'bookshelf1', type: 'bookshelf', name: 'Bookshelf', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
-    });
-
-    it('renders chair placed items', async () => {
-        mockState.placedItems = [
             { id: 'chair1', type: 'chair', name: 'Chair', gridX: 5, gridY: 5 },
+            { id: 'arrow1', type: 'arrowSlitWall', name: 'Arrow Slit', gridX: 5, gridY: 5 },
         ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+
+        it.each(environmentalTypes)('renders $type placed item', async (item) => {
+            mockState.placedItems = [item];
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 
-    it('renders arrowSlitWall placed items', async () => {
-        mockState.placedItems = [
-            { id: 'arrowSlitWall1', type: 'arrowSlitWall', name: 'Arrow Slit', gridX: 5, gridY: 5 },
-        ];
-        const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+    describe('dragging state', () => {
+        it('renders the map container while an item is being dragged', async () => {
+            mockState.placedItems = [
+                { id: 'item1', type: 'barrel', name: 'Barrel', gridX: 5, gridY: 5 },
+            ];
+            mockState.itemDragging = { itemId: 'item1' };
+            const { container } = await act(async () => renderMap());
+            expect(container.querySelector('.map')).toBeInTheDocument();
+            expect(container.querySelector('svg')).toBeTruthy();
+        });
     });
 });

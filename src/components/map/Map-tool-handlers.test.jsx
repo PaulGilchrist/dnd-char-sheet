@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, fireEvent, act, screen, createEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
@@ -302,10 +303,10 @@ describe('Map - SVG pointer event routing', () => {
             rulerStart: null,
             rulerEnd: null,
             rulerPreview: null,
+            spellDragActiveRef: { current: false },
         });
         mockState.selectStart.current = null;
         mockState.moveStartGrid.current = null;
-        mockState.spellDragActiveRef.current = false;
         mockLoadMonsters.mockReset();
         mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
     });
@@ -374,7 +375,7 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.panStart).not.toHaveBeenCalled();
     });
 
-    it('skips tool routing when spell drag is active', async () => {
+    it('skips tool routing when spell drag is active but still calls spell handlers', async () => {
         mockState.spellDragActiveRef.current = true;
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
@@ -385,9 +386,10 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.gridPointerDown).not.toHaveBeenCalled();
         expect(handlers.selectPointerDown).not.toHaveBeenCalled();
         expect(handlers.roomPointerDown).not.toHaveBeenCalled();
+        expect(handlers.spellPointerDown).toHaveBeenCalled();
     });
 
-    it('calls all pointer move handlers', async () => {
+    it('calls all pointer move handlers with correct arguments', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
@@ -404,7 +406,7 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.rulerPointerMove).toHaveBeenCalled();
     });
 
-    it('calls all pointer up handlers', async () => {
+    it('calls all pointer up handlers with correct arguments', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
@@ -432,7 +434,7 @@ describe('Map - SVG pointer event routing', () => {
         expect(handlers.selectPointerUp).toHaveBeenCalledWith(expect.anything(), mockState.placedItems, mockState.mapData, handlers.setMapData, handlers.setPlacedItems);
     });
 
-    it('closes menus and routes room click on left click', async () => {
+    it('closes menus and routes room click on left click only', async () => {
         const { container } = await act(async () => renderMap());
         const svg = container.querySelector('svg');
         await act(async () => {
@@ -440,6 +442,16 @@ describe('Map - SVG pointer event routing', () => {
         });
         expect(handlers.roomClick).toHaveBeenCalledWith(expect.anything(), mockState.mapData, 'none');
         expect(handlers.setSelectedRoom).toHaveBeenCalledWith(null);
+    });
+
+    it('does not close menus on right click', async () => {
+        const { container } = await act(async () => renderMap());
+        const svg = container.querySelector('svg');
+        await act(async () => {
+            fireEvent.click(svg, { button: 2 });
+        });
+        expect(handlers.roomClick).not.toHaveBeenCalled();
+        expect(handlers.setSelectedRoom).not.toHaveBeenCalled();
     });
 
     it('prevents default context menu on SVG', async () => {
@@ -497,7 +509,7 @@ describe('Map - toolbar interactions', () => {
         mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
     });
 
-    it('enables ruler mode and resets ruler via toolbar', async () => {
+    it('enables ruler mode and resets ruler when toggled on', async () => {
         await act(async () => renderMap());
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: /ruler/i }));
@@ -506,7 +518,7 @@ describe('Map - toolbar interactions', () => {
         expect(handlers.resetRuler).toHaveBeenCalled();
     });
 
-    it('disables ruler mode without resetting ruler', async () => {
+    it('disables ruler mode without resetting ruler when toggled off', async () => {
         mockState.rulerMode = true;
         await act(async () => renderMap());
         await act(async () => {
@@ -558,7 +570,7 @@ describe('Map - selection, room draw and move previews', () => {
         mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
     });
 
-    it('renders selection preview rect while selecting', async () => {
+    it('renders selection preview rect with correct pixel dimensions', async () => {
         mockState.selectStart.current = { gridX: 2, gridY: 3 };
         mockState.selectionRect = { minX: 2, maxX: 4, minY: 3, maxY: 5 };
         const { container } = await act(async () => renderMap());
@@ -570,7 +582,7 @@ describe('Map - selection, room draw and move previews', () => {
         expect(preview).toHaveAttribute('height', String((5 - 3 + 1) * CELL_SIZE));
     });
 
-    it('renders room draw preview rect', async () => {
+    it('renders room draw preview rect with correct pixel dimensions', async () => {
         mockState.roomDrawRect = { minX: 1, maxX: 3, minY: 2, maxY: 4 };
         const { container } = await act(async () => renderMap());
         const preview = container.querySelector('rect.room-draw-preview');
@@ -579,5 +591,20 @@ describe('Map - selection, room draw and move previews', () => {
         expect(preview).toHaveAttribute('y', String(2 * CELL_SIZE));
         expect(preview).toHaveAttribute('width', String((3 - 1 + 1) * CELL_SIZE));
         expect(preview).toHaveAttribute('height', String((4 - 2 + 1) * CELL_SIZE));
+    });
+
+    it('does not render selection preview when selectStart is null', async () => {
+        mockState.selectStart.current = null;
+        mockState.selectionRect = { minX: 2, maxX: 4, minY: 3, maxY: 5 };
+        const { container } = await act(async () => renderMap());
+        const preview = container.querySelector('rect.selection-preview');
+        expect(preview).toBeFalsy();
+    });
+
+    it('does not render room draw preview when roomDrawRect is null', async () => {
+        mockState.roomDrawRect = null;
+        const { container } = await act(async () => renderMap());
+        const preview = container.querySelector('rect.room-draw-preview');
+        expect(preview).toBeFalsy();
     });
 });

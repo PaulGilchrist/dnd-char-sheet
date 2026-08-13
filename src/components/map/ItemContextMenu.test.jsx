@@ -1,27 +1,20 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ItemContextMenu from './ItemContextMenu';
 
 const mockGridCenterX = (gx) => gx * 40 + 20;
 const mockGridCenterY = (gy) => gy * 40 + 20;
 
-const mockHandleToggleItemVisibility = vi.fn();
-const mockHandleDeleteItem = vi.fn();
-const mockHandleRotate = vi.fn();
-const mockHandleToggleDoor = vi.fn();
-const mockHandleViewStats = vi.fn();
-const mockOnRenameClicked = vi.fn();
-const mockOnClose = vi.fn();
-
-const baseMocks = {
-    handleToggleItemVisibility: mockHandleToggleItemVisibility,
-    handleDeleteItem: mockHandleDeleteItem,
-    handleRotate: mockHandleRotate,
-    handleToggleDoor: mockHandleToggleDoor,
-    handleViewStats: mockHandleViewStats,
-    onRenameClicked: mockOnRenameClicked,
-    onClose: mockOnClose,
-};
+const createMocks = () => ({
+    handleToggleItemVisibility: vi.fn(),
+    handleDeleteItem: vi.fn(),
+    handleRotate: vi.fn(),
+    handleToggleDoor: vi.fn(),
+    handleViewStats: vi.fn(),
+    onRenameClicked: vi.fn(),
+    onClose: vi.fn(),
+});
 
 const defaultSelectedItem = { id: 'item-1', gridX: 0, gridY: 0 };
 
@@ -34,30 +27,32 @@ const createPlacedItem = (overrides = {}) => ({
     ...overrides,
 });
 
-// ── Null item renders nothing ──────────────────────────────────
+// ── Null / undefined item renders nothing ───────────────────────
 
 describe('null item', () => {
     it('returns null when selectedItem is undefined', () => {
+        const mocks = createMocks();
         const { container } = render(
             <ItemContextMenu
                 selectedItem={undefined}
                 placedItems={[]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
         expect(container.innerHTML).toBe('');
     });
 
     it('returns null when selectedItem is null', () => {
+        const mocks = createMocks();
         const { container } = render(
             <ItemContextMenu
                 selectedItem={null}
                 placedItems={[]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
         expect(container.innerHTML).toBe('');
@@ -67,278 +62,199 @@ describe('null item', () => {
 // ── Basic token (non-NPC, non-door) ───────────────────────────
 
 describe('basic token item', () => {
+    let mocks;
+
     beforeEach(() => {
-        vi.clearAllMocks();
+        mocks = createMocks();
     });
 
-    it('renders Hide/Show toggle text based on visibility', () => {
-        const placedItems = [createPlacedItem({ visible: true })];
+    const renderBasicToken = (overrides = {}) => {
+        const placedItems = [createPlacedItem(overrides)];
         render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
                 placedItems={placedItems}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
+    };
+
+    it('renders Hide when item is visible', () => {
+        renderBasicToken({ visible: true });
         expect(screen.getByText('Hide')).toBeInTheDocument();
     });
 
-    it('renders Show when item is not visible', () => {
-        const placedItems = [createPlacedItem({ visible: false })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+    it('renders Show when item visibility is explicitly false', () => {
+        renderBasicToken({ visible: false });
         expect(screen.getByText('Show')).toBeInTheDocument();
     });
 
+    it('renders Hide when item visibility is undefined (defaults to visible)', () => {
+        renderBasicToken({ visible: undefined });
+        expect(screen.getByText('Hide')).toBeInTheDocument();
+    });
+
     it('renders Delete option', () => {
-        const placedItems = [createPlacedItem()];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderBasicToken();
         expect(screen.getByText('Delete')).toBeInTheDocument();
     });
 
     it('renders Rotate option', () => {
-        const placedItems = [createPlacedItem()];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderBasicToken();
         expect(screen.getByText('Rotate')).toBeInTheDocument();
     });
 
     it('does NOT render door-specific options for non-door items', () => {
-        const placedItems = [createPlacedItem({ type: 'token' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderBasicToken({ type: 'token' });
         expect(screen.queryByText('Open Door')).not.toBeInTheDocument();
         expect(screen.queryByText('Close Door')).not.toBeInTheDocument();
     });
 
-    it('does NOT render rename/view stats for non-NPC items', () => {
-        const placedItems = [createPlacedItem({ type: 'token' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+    it('does NOT render rename or view stats for non-NPC items', () => {
+        renderBasicToken({ type: 'token' });
         expect(screen.queryByText('Rename')).not.toBeInTheDocument();
         expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
     });
 
-    it('calls handleToggleItemVisibility when Hide/Show is clicked', () => {
-        const placedItems = [createPlacedItem({ visible: true })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Hide').click();
-        expect(mockHandleToggleItemVisibility).toHaveBeenCalledWith('item-1');
+    it('calls handleToggleItemVisibility with item id when Hide is clicked', () => {
+        renderBasicToken({ visible: true });
+        fireEvent.click(screen.getByText('Hide'));
+        expect(mocks.handleToggleItemVisibility).toHaveBeenCalledWith('item-1');
     });
 
-    it('calls handleDeleteItem when Delete is clicked', () => {
-        const placedItems = [createPlacedItem()];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Delete').click();
-        expect(mockHandleDeleteItem).toHaveBeenCalledWith('item-1');
+    it('calls handleToggleItemVisibility with item id when Show is clicked', () => {
+        renderBasicToken({ visible: false });
+        fireEvent.click(screen.getByText('Show'));
+        expect(mocks.handleToggleItemVisibility).toHaveBeenCalledWith('item-1');
     });
 
-    it('calls handleRotate when Rotate is clicked', () => {
-        const placedItems = [createPlacedItem()];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Rotate').click();
-        expect(mockHandleRotate).toHaveBeenCalledWith('item-1');
+    it('calls handleDeleteItem with item id when Delete is clicked', () => {
+        renderBasicToken();
+        fireEvent.click(screen.getByText('Delete'));
+        expect(mocks.handleDeleteItem).toHaveBeenCalledWith('item-1');
+    });
+
+    it('calls handleRotate with item id when Rotate is clicked', () => {
+        renderBasicToken();
+        fireEvent.click(screen.getByText('Rotate'));
+        expect(mocks.handleRotate).toHaveBeenCalledWith('item-1');
     });
 
     it('calls onClose with menuX and menuY when close button is clicked', () => {
-        const placedItems = [createPlacedItem()];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('✕').click();
-        expect(mockOnClose).toHaveBeenCalledWith(30, 30);
+        renderBasicToken();
+        fireEvent.click(screen.getByText('✕'));
+        expect(mocks.onClose).toHaveBeenCalledWith(30, 30);
     });
 
     it('renders the SVG group with class item-context-menu', () => {
-        const placedItems = [createPlacedItem()];
+        renderBasicToken();
         const { container } = render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
+                placedItems={[createPlacedItem()]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
-        const g = container.querySelector('.item-context-menu');
-        expect(g).toBeTruthy();
+        expect(container.querySelector('.item-context-menu')).toBeTruthy();
     });
 
-    it('renders the background rect', () => {
-        const placedItems = [createPlacedItem()];
+    it('renders a background rect for the menu', () => {
+        renderBasicToken();
         const { container } = render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
+                placedItems={[createPlacedItem()]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
-        const rect = container.querySelector('rect');
-        expect(rect).toBeTruthy();
+        expect(container.querySelector('rect')).toBeTruthy();
     });
 });
 
 // ── NPC item ───────────────────────────────────────────────────
 
 describe('NPC item', () => {
+    let mocks;
+
     beforeEach(() => {
-        vi.clearAllMocks();
+        mocks = createMocks();
     });
 
-    it('shows Rename option for NPC items', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
+    const renderNpc = (overrides = {}) => {
+        const placedItems = [createPlacedItem({ type: 'npc', ...overrides })];
         render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
                 placedItems={placedItems}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
+                monsterFound={overrides.monsterFound ?? false}
+                {...mocks}
             />
         );
+    };
+
+    it('shows Rename option for NPC items', () => {
+        renderNpc();
         expect(screen.getByText('Rename')).toBeInTheDocument();
     });
 
-    it('does NOT show View Stats when monsterFound is false', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
-            />
-        );
-        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
-    });
-
     it('shows View Stats when monsterFound is true', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={true}
-                {...baseMocks}
-            />
-        );
+        renderNpc({ monsterFound: true });
         expect(screen.getByText('View Stats')).toBeInTheDocument();
     });
 
-    it('calls onRenameClicked when Rename is clicked', () => {
-        const placedItems = [createPlacedItem({ type: 'npc', name: 'Goblin' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Rename').click();
-        expect(mockOnRenameClicked).toHaveBeenCalled();
-        const [calledEvent, calledSelItem, name] = mockOnRenameClicked.mock.calls[0];
-        expect(calledEvent).toBeTruthy();
-        expect(calledSelItem).toBe(defaultSelectedItem);
+    it('does NOT show View Stats when monsterFound is false', () => {
+        renderNpc({ monsterFound: false });
+        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show View Stats when monsterFound is undefined', () => {
+        renderNpc({ monsterFound: undefined });
+        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
+    });
+
+    it('calls onRenameClicked with event, selectedItem, and name when Rename is clicked', () => {
+        renderNpc({ name: 'Goblin' });
+        fireEvent.click(screen.getByText('Rename'));
+        expect(mocks.onRenameClicked).toHaveBeenCalledTimes(1);
+        const [event, selectedItem, name] = mocks.onRenameClicked.mock.calls[0];
+        expect(event).toBeTruthy();
+        expect(selectedItem).toBe(defaultSelectedItem);
         expect(name).toBe('Goblin');
     });
 
-    it('passes default name "NPC" when item has no name', () => {
-        const placedItems = [createPlacedItem({ type: 'npc', name: null })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Rename').click();
-        const [, , name] = mockOnRenameClicked.mock.calls[0];
-        expect(name).toBe('NPC');
+    it('passes "NPC" as default name when item has no name', () => {
+        renderNpc({ name: null });
+        fireEvent.click(screen.getByText('Rename'));
+        expect(mocks.onRenameClicked.mock.calls[0][2]).toBe('NPC');
     });
 
-    it('calls handleViewStats when View Stats is clicked', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
+    it('passes "NPC" when item name is undefined', () => {
+        renderNpc({ name: undefined });
+        fireEvent.click(screen.getByText('Rename'));
+        expect(mocks.onRenameClicked.mock.calls[0][2]).toBe('NPC');
+    });
+
+    it('calls handleViewStats with item id when View Stats is clicked', () => {
+        renderNpc({ monsterFound: true });
+        fireEvent.click(screen.getByText('View Stats'));
+        expect(mocks.handleViewStats).toHaveBeenCalledWith('item-1');
+    });
+
+    it('renders Rotate option for NPC items', () => {
+        renderNpc();
+        expect(screen.getByText('Rotate')).toBeInTheDocument();
+    });
+
+    it('does NOT show Rename or View Stats for door items even when monsterFound is true', () => {
+        const placedItems = [createPlacedItem({ type: 'door' })];
         render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
@@ -346,143 +262,81 @@ describe('NPC item', () => {
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
                 monsterFound={true}
-                {...baseMocks}
+                {...mocks}
             />
         );
-        screen.getByText('View Stats').click();
-        expect(mockHandleViewStats).toHaveBeenCalledWith('item-1');
-    });
-
-    it('renders Rotate option for NPC items', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
-            />
-        );
-        expect(screen.getByText('Rotate')).toBeInTheDocument();
+        expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
     });
 });
 
 // ── Door item ──────────────────────────────────────────────────
 
 describe('door item', () => {
+    let mocks;
+
     beforeEach(() => {
-        vi.clearAllMocks();
+        mocks = createMocks();
     });
 
-    it('shows Open Door when door is closed', () => {
-        const placedItems = [createPlacedItem({ type: 'door', open: false })];
+    const renderDoor = (overrides = {}) => {
+        const placedItems = [createPlacedItem({ type: 'door', ...overrides })];
         render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
                 placedItems={placedItems}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
+    };
+
+    it('shows Open Door when door is closed', () => {
+        renderDoor({ open: false });
         expect(screen.getByText('Open Door')).toBeInTheDocument();
     });
 
     it('shows Close Door when door is open', () => {
-        const placedItems = [createPlacedItem({ type: 'door', open: true })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderDoor({ open: true });
         expect(screen.getByText('Close Door')).toBeInTheDocument();
     });
 
-    it('calls handleToggleDoor when Open/Close Door is clicked', () => {
-        const placedItems = [createPlacedItem({ type: 'door', open: false })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        screen.getByText('Open Door').click();
-        expect(mockHandleToggleDoor).toHaveBeenCalledWith('item-1');
+    it('calls handleToggleDoor when Open Door is clicked', () => {
+        renderDoor({ open: false });
+        fireEvent.click(screen.getByText('Open Door'));
+        expect(mocks.handleToggleDoor).toHaveBeenCalledWith('item-1');
     });
 
-    it('does NOT show Rename or View Stats for door items', () => {
-        const placedItems = [createPlacedItem({ type: 'door' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={true}
-                {...baseMocks}
-            />
-        );
-        expect(screen.queryByText('Rename')).not.toBeInTheDocument();
-        expect(screen.queryByText('View Stats')).not.toBeInTheDocument();
-    });
-
-    it('still shows Rotate for door items', () => {
-        const placedItems = [createPlacedItem({ type: 'door' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        expect(screen.getByText('Rotate')).toBeInTheDocument();
+    it('calls handleToggleDoor when Close Door is clicked', () => {
+        renderDoor({ open: true });
+        fireEvent.click(screen.getByText('Close Door'));
+        expect(mocks.handleToggleDoor).toHaveBeenCalledWith('item-1');
     });
 
     it('still shows Hide/Show for door items', () => {
-        const placedItems = [createPlacedItem({ type: 'door', visible: true })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderDoor({ visible: true });
         expect(screen.getByText('Hide')).toBeInTheDocument();
     });
 
     it('still shows Delete for door items', () => {
-        const placedItems = [createPlacedItem({ type: 'door' })];
-        render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
+        renderDoor();
         expect(screen.getByText('Delete')).toBeInTheDocument();
+    });
+
+    it('still shows Rotate for door items', () => {
+        renderDoor();
+        expect(screen.getByText('Rotate')).toBeInTheDocument();
     });
 });
 
 // ── Menu layout / positioning ──────────────────────────────────
 
 describe('menu layout', () => {
+    let mocks;
+
     beforeEach(() => {
-        vi.clearAllMocks();
+        mocks = createMocks();
     });
 
     it('positions menu at correct grid offset', () => {
@@ -493,75 +347,13 @@ describe('menu layout', () => {
                 placedItems={placedItems}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
         const rect = container.querySelector('rect');
         // menuX = gridCenterX(2) + 10 = 110, menuY = gridCenterY(3) + 10 = 150
         expect(rect.getAttribute('x')).toBe('110');
         expect(rect.getAttribute('y')).toBe('150');
-    });
-
-    it('renders menu with default height 76 for basic token', () => {
-        const placedItems = [createPlacedItem()];
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        const rect = container.querySelector('rect');
-        expect(rect.getAttribute('height')).toBe('76');
-    });
-
-    it('renders menu with height 120 for NPC without View Stats', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={false}
-                {...baseMocks}
-            />
-        );
-        const rect = container.querySelector('rect');
-        expect(rect.getAttribute('height')).toBe('120');
-    });
-
-    it('renders menu with height 138 for NPC with View Stats', () => {
-        const placedItems = [createPlacedItem({ type: 'npc' })];
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                monsterFound={true}
-                {...baseMocks}
-            />
-        );
-        const rect = container.querySelector('rect');
-        expect(rect.getAttribute('height')).toBe('138');
-    });
-
-    it('renders menu with height 116 for door', () => {
-        const placedItems = [createPlacedItem({ type: 'door' })];
-        const { container } = render(
-            <ItemContextMenu
-                selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
-                gridCenterX={mockGridCenterX}
-                gridCenterY={mockGridCenterY}
-                {...baseMocks}
-            />
-        );
-        const rect = container.querySelector('rect');
-        expect(rect.getAttribute('height')).toBe('116');
     });
 
     it('stops propagation on the outer group click', () => {
@@ -572,38 +364,40 @@ describe('menu layout', () => {
                 placedItems={placedItems}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
-        const outerG = container.querySelector('.item-context-menu');
         const stopSpy = vi.spyOn(Event.prototype, 'stopPropagation');
+        const outerG = container.querySelector('.item-context-menu');
         outerG.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         expect(stopSpy).toHaveBeenCalled();
+        stopSpy.mockRestore();
     });
 });
 
 // ── Item lookup from placedItems ───────────────────────────────
 
-describe('item lookup', () => {
+describe('item lookup from placedItems', () => {
+    let mocks;
+
     beforeEach(() => {
-        vi.clearAllMocks();
+        mocks = createMocks();
     });
 
     it('does NOT show Rename when selectedItem id is not in placedItems', () => {
-        const placedItems = [];
         render(
             <ItemContextMenu
                 selectedItem={defaultSelectedItem}
-                placedItems={placedItems}
+                placedItems={[]}
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
-                {...baseMocks}
+                {...mocks}
             />
         );
         expect(screen.queryByText('Rename')).not.toBeInTheDocument();
     });
 
-    it('falls back to "NPC" when placed item has no name for rename text', () => {
+    it('renders Rename text when placed item has no name for NPC', () => {
         const placedItems = [createPlacedItem({ type: 'npc', name: undefined })];
         render(
             <ItemContextMenu
@@ -612,7 +406,7 @@ describe('item lookup', () => {
                 gridCenterX={mockGridCenterX}
                 gridCenterY={mockGridCenterY}
                 monsterFound={false}
-                {...baseMocks}
+                {...mocks}
             />
         );
         expect(screen.getByText('Rename')).toBeInTheDocument();

@@ -10,19 +10,19 @@ describe('BookshelfSVG', () => {
     expect(g).toBeInTheDocument();
   });
 
-  it('applies the id attribute to the group', () => {
+  it('applies id to the root <g>', () => {
     const { container } = render(<BookshelfSVG id="bookshelf-1" />);
     const g = container.querySelector('g');
     expect(g).toHaveAttribute('id', 'bookshelf-1');
   });
 
-  it('applies the className to the group', () => {
+  it('applies className to the root <g>', () => {
     const { container } = render(<BookshelfSVG className="custom-bookshelf" />);
     const g = container.querySelector('g');
     expect(g).toHaveClass('custom-bookshelf');
   });
 
-  it('forwards custom props as attributes', () => {
+  it('spreads additional props to the root <g>', () => {
     const { container } = render(<BookshelfSVG data-test="bookshelf-test" aria-label="Bookshelf" />);
     const g = container.querySelector('g');
     expect(g).toHaveAttribute('data-test', 'bookshelf-test');
@@ -36,7 +36,7 @@ describe('BookshelfSVG', () => {
     expect(ref.current.tagName.toLowerCase()).toBe('g');
   });
 
-  it('renders the outer frame rect (top half only)', () => {
+  it('renders the outer frame rect', () => {
     const { container } = render(<BookshelfSVG />);
     const frame = container.querySelector('rect[x="2"][y="2"][width="68"][height="16"]');
     expect(frame).toBeInTheDocument();
@@ -53,32 +53,30 @@ describe('BookshelfSVG', () => {
     expect(backPanel).toHaveAttribute('opacity', '0.6');
   });
 
-  it('renders 3 shelf rects', () => {
+  it('renders 3 shelf rects at y=8, y=12, and y=16', () => {
     const { container } = render(<BookshelfSVG />);
-    const shelves = container.querySelectorAll('rect[fill="#8B5E3C"]');
-    expect(shelves.length).toBe(4); // 3 shelves + 1 top frame highlight
-    const shelfOnly = container.querySelectorAll('rect[x="4"][y="8"], rect[x="4"][y="12"], rect[x="4"][y="16"]');
-    expect(shelfOnly).toHaveLength(3);
+    const shelves = container.querySelectorAll('rect[x="4"][y="8"], rect[x="4"][y="12"], rect[x="4"][y="16"]');
+    expect(shelves).toHaveLength(3);
+    shelves.forEach((shelf) => {
+      expect(shelf).toHaveAttribute('fill', '#8B5E3C');
+      expect(shelf).toHaveAttribute('width', '64');
+    });
   });
 
-  it('renders row 1 books (12 upright books + 1 leaning)', () => {
+  it('renders 12 upright books in row 1 with rounded corners', () => {
     const { container } = render(<BookshelfSVG />);
-    // red books: positions at x=6 and x=30 in row 1, plus reds in other rows
-    // Just verify the row 1 book count by checking total rects with row 1 y positions
-    const row1Rects = container.querySelectorAll('rect[x="6"][y="4.5"]');
-    expect(row1Rects).toHaveLength(1);
-    const row1BookRects = container.querySelectorAll('rect[rx="0.3"]');
-    expect(row1BookRects.length).toBeGreaterThanOrEqual(1);
+    // Row 1 books have rx="0.3" and sit between y=4 and y=8
+    const row1Books = container.querySelectorAll('rect[rx="0.3"]');
+    expect(row1Books.length).toBeGreaterThanOrEqual(12);
   });
 
-  it('renders row 1 books with specific colors', () => {
+  it('renders books in all 5 colors across both rows', () => {
     const { container } = render(<BookshelfSVG />);
     const redBooks = container.querySelectorAll('rect[fill="#C0392B"]');
     const blueBooks = container.querySelectorAll('rect[fill="#2980B9"]');
     const greenBooks = container.querySelectorAll('rect[fill="#27AE60"]');
     const purpleBooks = container.querySelectorAll('rect[fill="#8E44AD"]');
     const orangeBooks = container.querySelectorAll('rect[fill="#E67E22"]');
-    // Should have multiple books of each color across all rows
     expect(redBooks.length).toBeGreaterThan(0);
     expect(blueBooks.length).toBeGreaterThan(0);
     expect(greenBooks.length).toBeGreaterThan(0);
@@ -86,35 +84,28 @@ describe('BookshelfSVG', () => {
     expect(orangeBooks.length).toBeGreaterThan(0);
   });
 
-  it('renders a leaning book in row 1 with transform', () => {
+  it('renders a leaning book in row 1 with green fill and rotation', () => {
     const { container } = render(<BookshelfSVG />);
     const leaningBook = container.querySelector('rect[rx="0.2"][transform="rotate(6, 34, 6)"]');
     expect(leaningBook).toBeInTheDocument();
     expect(leaningBook).toHaveAttribute('fill', '#27AE60');
   });
 
-  it('renders row 2 books', () => {
-    const { container } = render(<BookshelfSVG />);
-    const row2Books = container.querySelectorAll('rect[fill="#8E44AD"]');
-    expect(row2Books.length).toBeGreaterThan(0);
-  });
-
-  it('renders leaning books in row 2', () => {
+  it('renders 2 leaning books in row 2 with different angles', () => {
     const { container } = render(<BookshelfSVG />);
     const leaningBooks = container.querySelectorAll('rect[rx="0.2"]');
-    expect(leaningBooks.length).toBe(3); // 1 in row 1 + 2 in row 2
+    expect(leaningBooks).toHaveLength(3); // 1 row 1 + 2 row 2
+    const row2Leans = container.querySelectorAll('rect[transform="rotate(8, 21, 10.5)"], rect[transform="rotate(-6, 56, 10.5)"]');
+    expect(row2Leans).toHaveLength(2);
   });
 
-  it('renders left frame edge highlight', () => {
+  it('renders left and right frame edge highlights', () => {
     const { container } = render(<BookshelfSVG />);
     const leftHighlight = container.querySelector('rect[x="2"][y="2"][width="2.5"][height="16"]');
     expect(leftHighlight).toBeInTheDocument();
     expect(leftHighlight).toHaveAttribute('fill', '#7A4E20');
     expect(leftHighlight).toHaveAttribute('opacity', '0.3');
-  });
 
-  it('renders right frame edge highlight', () => {
-    const { container } = render(<BookshelfSVG />);
     const rightHighlight = container.querySelector('rect[x="67.5"][y="2"][width="2.5"][height="16"]');
     expect(rightHighlight).toBeInTheDocument();
     expect(rightHighlight).toHaveAttribute('fill', '#7A4E20');
@@ -150,13 +141,10 @@ describe('BookshelfSVG', () => {
     expect(BookshelfSVG.displayName).toBe('BookshelfSVG');
   });
 
-  it('renders correct total element count', () => {
+  it('renders 37 child elements inside the root group', () => {
     const { container } = render(<BookshelfSVG />);
     const g = container.querySelector('g');
     const allElements = Array.from(g.children);
-    // 3 shelves + 12 row1 books + 1 lean1 + 12 row2 books + 2 lean2 +
-    // 1 outer frame + 1 back panel + 2 edge highlights + 1 top highlight +
-    // 1 floor shadow + 1 wall shadow line = 37 child elements
     expect(allElements.length).toBe(37);
   });
 

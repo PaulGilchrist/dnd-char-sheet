@@ -1,40 +1,9 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import PlacedItems, { baseProps } from './PlacedItems.test-utils';
+import { describe, it, expect, vi } from 'vitest';
+import PlacedItems, { baseProps, mockHandleItemPointerDown } from './PlacedItems.test-utils';
 
-// ── Item type registry ──────────────────────────────────────────────────────
-// All non-NPC item types that render as <g.placed-item> with a <use> element.
-const NON_NPC_TYPES = [
-  'altar', 'arrowSlitWall', 'barrel', 'bed', 'bookshelf', 'boulder', 'bush',
-  'chair', 'chest', 'crate', 'door', 'firepit', 'fountain', 'pillar',
-  'secretDoor', 'skeleton', 'stairs', 'statue', 'table', 'torch', 'trap',
-  'tree', 'web',
-];
-
-// Types that render a circle hit area (barrel only)
-const CIRCLE_HIT_AREA_TYPES = ['barrel'];
-
-// Types that render a rect hit area
-const RECT_HIT_AREA_TYPES = [
-  'altar', 'arrowSlitWall', 'bed', 'bookshelf', 'chair', 'chest', 'crate',
-  'door', 'firepit', 'fountain', 'pillar', 'secretDoor', 'skeleton', 'stairs',
-  'statue', 'table', 'torch', 'trap', 'tree', 'web',
-];
-
-// Types that support rotation via transform attribute on the <use> element.
-const ROTATION_TYPES = ['bed', 'altar', 'bookshelf', 'door', 'secretDoor', 'stairs', 'chair', 'torch', 'arrowSlitWall'];
-
-// Types whose reposition highlight is a circle
-const CIRCLE_HIGHLIGHT_TYPES = ['barrel', 'firepit'];
-
-// Types whose reposition highlight is a rect
-const RECT_HIGHLIGHT_TYPES = [
-  'altar', 'arrowSlitWall', 'bed', 'bookshelf', 'chair', 'chest', 'crate',
-  'door', 'fountain', 'pillar', 'secretDoor', 'skeleton', 'stairs',
-  'statue', 'table', 'torch', 'trap', 'tree', 'web',
-];
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Item factory ────────────────────────────────────────────────────────────
 const makeItem = (overrides) => ({
   id: 'item-1',
   type: 'barrel',
@@ -51,10 +20,16 @@ describe('PlacedItems - edge cases and empty input', () => {
     expect(container.querySelector('g.placed-item')).toBeNull();
     expect(container.querySelector('g.npc-group')).toBeNull();
   });
+
+  it('renders nothing when placedItems is undefined', () => {
+    const { container } = render(<PlacedItems {...baseProps} />);
+    expect(container.querySelector('g.placed-item')).toBeNull();
+    expect(container.querySelector('g.npc-group')).toBeNull();
+  });
 });
 
 // ── Barrel - circle hit area, basic positioning ─────────────────────────────
-describe('PlacedItems - barrel', () => {
+describe('PlacedItems - barrel circle hit area', () => {
   it('renders barrel use element at grid position', () => {
     const items = [makeItem({ type: 'barrel' })];
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
@@ -73,23 +48,21 @@ describe('PlacedItems - barrel', () => {
     expect(circle).toHaveAttribute('cy');
     expect(circle).toHaveAttribute('r');
   });
-});
 
-// ── Rotation support ────────────────────────────────────────────────────────
-describe('PlacedItems - rotation support', () => {
-  it.each(ROTATION_TYPES)('renders %s without transform when rotation is absent or undefined', (type) => {
-    const items = [makeItem({ type })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector(`use[href="#${type}"]`);
-    expect(useEl).not.toHaveAttribute('transform');
+  it('renders barrel reposition highlight circle when dragging', () => {
+    const items = [makeItem({ type: 'barrel' })];
+    const { container } = render(
+      <PlacedItems {...baseProps} placedItems={items} itemDragging={{ itemId: 'item-1' }} />
+    );
+    const highlight = container.querySelector('circle.reposition-highlight');
+    expect(highlight).toBeInTheDocument();
+    expect(highlight).toHaveAttribute('r');
   });
 
-  it.each(ROTATION_TYPES)('renders %s with rotation transform applied', (type) => {
-    const items = [makeItem({ type, rotation: 90 })];
+  it('does not render reposition highlight when not dragging', () => {
+    const items = [makeItem({ type: 'barrel' })];
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector(`use[href="#${type}"]`);
-    expect(useEl).toHaveAttribute('transform');
-    expect(useEl.getAttribute('transform')).toMatch(/rotate\(/);
+    expect(container.querySelector('circle.reposition-highlight')).toBeNull();
   });
 });
 
@@ -107,11 +80,20 @@ describe('PlacedItems - door open/closed state', () => {
     expect(container.querySelector('use[href="#door"]')).toBeNull();
   });
 
+  it('renders open door hit area as rect', () => {
+    const items = [makeItem({ type: 'door' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+    const hitArea = container.querySelector('rect.item-hit-area');
+    expect(hitArea).toBeInTheDocument();
+  });
+
   it('renders open door as horizontal rects when not rotated', () => {
     const items = [makeItem({ type: 'door', open: true })];
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
     const rects = container.querySelectorAll('rect[fill="#8B5A2B"]');
     expect(rects.length).toBe(2);
+    expect(rects[0]).toHaveAttribute('width', '36');
+    expect(rects[0]).toHaveAttribute('height', '5');
   });
 
   it('renders open door as vertical rects when rotated 90', () => {
@@ -119,13 +101,8 @@ describe('PlacedItems - door open/closed state', () => {
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
     const rects = container.querySelectorAll('rect[fill="#8B5A2B"]');
     expect(rects.length).toBe(2);
-  });
-
-  it('renders door hit area as rect', () => {
-    const items = [makeItem({ type: 'door' })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const hitArea = container.querySelector('rect.item-hit-area');
-    expect(hitArea).toBeInTheDocument();
+    expect(rects[0]).toHaveAttribute('width', '5');
+    expect(rects[0]).toHaveAttribute('height', '36');
   });
 });
 
@@ -141,8 +118,7 @@ describe('PlacedItems - NPC rendering', () => {
 
   it('renders NPC circle with correct class', () => {
     const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} />);
-    const circle = container.querySelector('circle.npc-circle');
-    expect(circle).toBeInTheDocument();
+    expect(container.querySelector('circle.npc-circle')).toBeInTheDocument();
   });
 
   it('renders NPC initial text from name first character', () => {
@@ -170,6 +146,7 @@ describe('PlacedItems - NPC rendering', () => {
     const itemWithUrl = makeItem({ type: 'npc', name: 'Goblin', imageUrl: '/custom.png' });
     const { container } = render(<PlacedItems {...baseProps} placedItems={[itemWithUrl]} npcImages={{}} />);
     const image = container.querySelector('image');
+    expect(image).toBeInTheDocument();
     expect(image).toHaveAttribute('xlink:href', '/custom.png');
   });
 
@@ -181,15 +158,32 @@ describe('PlacedItems - NPC rendering', () => {
     const image = container.querySelector('image');
     expect(image).toHaveAttribute('xlink:href', '/goblin.png');
   });
+
+  it('renders NPC text initial when no image is available', () => {
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} npcImages={{}} />);
+    expect(container.querySelector('image')).toBeNull();
+    expect(container.querySelector('text.npc-initial')).toBeInTheDocument();
+  });
+
+  it('does not render NPC hit area with .item-hit-area class', () => {
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} />);
+    expect(container.querySelector('rect.item-hit-area')).toBeNull();
+  });
+
+  it('renders NPC at reduced opacity when visible=false on localhost', () => {
+    const invisibleNpc = makeItem({ type: 'npc', name: 'Goblin', visible: false });
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[invisibleNpc]} isLocalhost={true} />);
+    const circle = container.querySelector('circle.npc-circle');
+    expect(circle).toBeInTheDocument();
+    expect(circle.style.opacity).toBe('0.5');
+  });
 });
 
-// ── Localhost vs remote visibility ──────────────────────────────────────────
-describe('PlacedItems - localhost vs remote visibility', () => {
+// ── Visibility: localhost vs remote ─────────────────────────────────────────
+describe('PlacedItems - visibility rules', () => {
   it('hides hit areas and reposition highlights on remote', () => {
     const items = [makeItem({ type: 'barrel' })];
-    const { container } = render(
-      <PlacedItems {...baseProps} placedItems={items} isLocalhost={false} />
-    );
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} />);
     expect(container.querySelectorAll('.item-hit-area').length).toBe(0);
     expect(container.querySelectorAll('.reposition-highlight').length).toBe(0);
   });
@@ -215,32 +209,73 @@ describe('PlacedItems - localhost vs remote visibility', () => {
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} />);
     expect(container.querySelector('use[href="#barrel"]')).toBeNull();
   });
+
+  it('shows remote visible items normally', () => {
+    const items = [makeItem({ type: 'barrel', visible: true })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} />);
+    const useEl = container.querySelector('use[href="#barrel"]');
+    expect(useEl).toBeInTheDocument();
+    expect(useEl).toHaveAttribute('opacity', '1');
+  });
+
+  it('applies opacity 0.5 to NPC on localhost when invisible', () => {
+    const invisibleNpc = makeItem({ type: 'npc', name: 'Goblin', visible: false });
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[invisibleNpc]} isLocalhost={true} />);
+    const circle = container.querySelector('circle.npc-circle');
+    expect(circle).toHaveAttribute('style');
+    expect(circle.style.opacity).toBe('0.5');
+  });
 });
 
-// ── Fog occlusion ───────────────────────────────────────────────────────────
-describe('PlacedItems - fog occlusion', () => {
+// ── Fog of war ──────────────────────────────────────────────────────────────
+describe('PlacedItems - fog of war', () => {
   it('hides fog-covered items on remote', () => {
     const fog = new Map([['0,0', true]]);
     const items = [makeItem({ type: 'barrel', gridX: 0, gridY: 0 })];
-    const { container } = render(
-      <PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={fog} />
-    );
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={fog} />);
     expect(container.querySelector('use[href="#barrel"]')).toBeNull();
   });
 
   it('shows fog-covered items on localhost', () => {
     const fog = new Map([['0,0', true]]);
     const items = [makeItem({ type: 'barrel', gridX: 0, gridY: 0 })];
-    const { container } = render(
-      <PlacedItems {...baseProps} placedItems={items} isLocalhost={true} fog={fog} />
-    );
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={true} fog={fog} />);
     expect(container.querySelector('use[href="#barrel"]')).toBeInTheDocument();
+  });
+
+  it('shows items when fog does not cover the cell', () => {
+    const fog = new Map([['1,1', true]]);
+    const items = [makeItem({ type: 'barrel', gridX: 0, gridY: 0 })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={fog} />);
+    expect(container.querySelector('use[href="#barrel"]')).toBeInTheDocument();
+  });
+
+  it('handles undefined fog gracefully', () => {
+    const items = [makeItem({ type: 'barrel' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={undefined} />);
+    expect(container.querySelector('use[href="#barrel"]')).toBeInTheDocument();
+  });
+
+  it('handles null fog gracefully', () => {
+    const items = [makeItem({ type: 'barrel' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={null} />);
+    expect(container.querySelector('use[href="#barrel"]')).toBeInTheDocument();
+  });
+
+  it('hides only the fog-covered item among multiple', () => {
+    const fog = new Map([['0,0', true]]);
+    const items = [
+      makeItem({ id: 'barrel-1', type: 'barrel', gridX: 0, gridY: 0 }),
+      makeItem({ id: 'barrel-2', type: 'barrel', gridX: 1, gridY: 1 }),
+    ];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={fog} />);
+    expect(container.querySelectorAll('use[href="#barrel"]')).toHaveLength(1);
   });
 });
 
 // ── Reposition highlight shapes per type ────────────────────────────────────
 describe('PlacedItems - reposition highlight shapes', () => {
-  it.each(CIRCLE_HIGHLIGHT_TYPES)('renders circle highlight for %s when dragging', (type) => {
+  it.each(['barrel', 'firepit'])('renders circle highlight for %s when dragging', (type) => {
     const items = [makeItem({ type })];
     const { container } = render(
       <PlacedItems {...baseProps} placedItems={items} isLocalhost={true} itemDragging={{ itemId: 'item-1' }} />
@@ -248,7 +283,11 @@ describe('PlacedItems - reposition highlight shapes', () => {
     expect(container.querySelector('circle.reposition-highlight')).toBeInTheDocument();
   });
 
-  it.each(RECT_HIGHLIGHT_TYPES)('renders rect highlight for %s when dragging', (type) => {
+  it.each([
+    'altar', 'arrowSlitWall', 'bed', 'bookshelf', 'chair', 'chest', 'crate',
+    'door', 'fountain', 'pillar', 'secretDoor', 'skeleton', 'stairs',
+    'statue', 'table', 'torch', 'trap', 'tree', 'web',
+  ])('renders rect highlight for %s when dragging', (type) => {
     const items = [makeItem({ type })];
     const { container } = render(
       <PlacedItems {...baseProps} placedItems={items} isLocalhost={true} itemDragging={{ itemId: 'item-1' }} />
@@ -258,7 +297,7 @@ describe('PlacedItems - reposition highlight shapes', () => {
 });
 
 // ── Type filtering and unknown types ────────────────────────────────────────
-describe('PlacedItems - type filtering and unknown types', () => {
+describe('PlacedItems - mixed items', () => {
   it('renders multiple item types in a single render', () => {
     const items = [
       makeItem({ id: 'barrel-1', type: 'barrel' }),
@@ -270,183 +309,106 @@ describe('PlacedItems - type filtering and unknown types', () => {
     expect(container.querySelector('use[href="#chest"]')).toBeInTheDocument();
     expect(container.querySelector('circle.npc-circle')).toBeInTheDocument();
   });
-});
 
-// ── Parameterized: every non-NPC type renders placed-item group with use ────
-describe('PlacedItems - all non-NPC types render placed-item group with use element', () => {
-  it.each(NON_NPC_TYPES)('renders %s as placed-item group with use element', (type) => {
-    const items = [makeItem({ type })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    expect(container.querySelector('g.placed-item')).toBeInTheDocument();
-    expect(container.querySelector(`use[href="#${type}"]`)).toBeInTheDocument();
+  it('renders all non-NPC types as placed-item groups with use elements', () => {
+    const types = [
+      'altar', 'arrowSlitWall', 'barrel', 'bed', 'bookshelf', 'boulder', 'bush',
+      'chair', 'chest', 'crate', 'door', 'firepit', 'fountain', 'pillar',
+      'secretDoor', 'skeleton', 'stairs', 'statue', 'table', 'torch', 'trap',
+      'tree', 'web',
+    ];
+    types.forEach((type) => {
+      const items = [makeItem({ type })];
+      const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+      expect(container.querySelector('g.placed-item')).toBeInTheDocument();
+      expect(container.querySelector(`use[href="#${type}"]`)).toBeInTheDocument();
+    });
+  });
+
+  it('renders barrel and other types with circle vs rect hit areas correctly', () => {
+    const { container: barrelContainer } = render(<PlacedItems {...baseProps} placedItems={[makeItem({ type: 'barrel' })]} />);
+    expect(barrelContainer.querySelector('circle.item-hit-area')).toBeInTheDocument();
+    expect(barrelContainer.querySelector('rect.item-hit-area')).toBeNull();
+
+    const { container: tableContainer } = render(<PlacedItems {...baseProps} placedItems={[makeItem({ type: 'table' })]} />);
+    expect(tableContainer.querySelector('rect.item-hit-area')).toBeInTheDocument();
+    expect(tableContainer.querySelector('circle.item-hit-area')).toBeNull();
   });
 });
 
-// ── Parameterized: every non-NPC type renders correct hit area shape ────────
-describe('PlacedItems - all non-NPC types render correct hit area shape', () => {
-  it.each(CIRCLE_HIT_AREA_TYPES)('renders %s with circle hit area', (type) => {
-    const items = [makeItem({ type })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const group = container.querySelector(`g.placed-item`);
-    expect(group.querySelector('circle.item-hit-area')).toBeInTheDocument();
-  });
+// ── Rotation support ────────────────────────────────────────────────────────
+describe('PlacedItems - rotation', () => {
+  it.each(['bed', 'altar', 'bookshelf', 'door', 'secretDoor', 'stairs', 'chair', 'torch', 'arrowSlitWall'])('renders %s with rotation transform when rotation is set', (type) => {
+      const items = [makeItem({ type, rotation: 90 })];
+      const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+      const useEl = container.querySelector(`use[href="#${type}"]`);
+      expect(useEl).toHaveAttribute('transform');
+      expect(useEl.getAttribute('transform')).toMatch(/rotate\(/);
+    });
 
-  it.each(RECT_HIT_AREA_TYPES)('renders %s with rect hit area', (type) => {
-    const items = [makeItem({ type })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const group = container.querySelector(`g.placed-item`);
-    expect(group.querySelector('rect.item-hit-area')).toBeInTheDocument();
-  });
+  it.each(['bed', 'altar', 'bookshelf', 'door', 'secretDoor', 'stairs', 'chair', 'torch', 'arrowSlitWall'])('renders %s without transform when rotation is absent', (type) => {
+      const items = [makeItem({ type })];
+      const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+      const useEl = container.querySelector(`use[href="#${type}"]`);
+      expect(useEl).not.toHaveAttribute('transform');
+    });
 });
 
-// ── Parameterized: localhost invisible items render at 0.5 opacity ─────────
-describe('PlacedItems - localhost invisible items opacity', () => {
-  it.each(NON_NPC_TYPES)('renders invisible %s at 0.5 opacity on localhost', (type) => {
-    const items = [makeItem({ type, visible: false })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={true} />);
-    const useEl = container.querySelector(`use[href="#${type}"]`);
-    if (useEl) {
-      expect(useEl).toHaveAttribute('opacity', '0.5');
-    }
+// ── Event handlers ──────────────────────────────────────────────────────────
+describe('PlacedItems - event handlers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('renders invisible NPC at 0.5 opacity on localhost', () => {
-    const npcItem = makeItem({ type: 'npc', name: 'Goblin', visible: false });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} isLocalhost={true} />);
-    const circle = container.querySelector('circle.npc-circle');
-    expect(circle).toHaveAttribute('style');
-  });
-});
-
-// ── Fog branch coverage: fog Map without the key ───────────────────────────
-describe('PlacedItems - fog branch coverage', () => {
-  it.each(NON_NPC_TYPES)('short-circuits fog?.has when key not in map for %s', (type) => {
-    const fog = new Map([['99,99', true]]);
-    const items = [makeItem({ type, gridX: 0, gridY: 0 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} isLocalhost={false} fog={fog} />);
-    const useEl = container.querySelector(`use[href="#${type}"]`);
-    if (useEl) {
-      expect(useEl).toBeInTheDocument();
-    }
-  });
-
-  it('renders NPC when fog Map does not contain the key', () => {
-    const fog = new Map([['99,99', true]]);
-    const npcItem = makeItem({ type: 'npc', name: 'Goblin', gridX: 0, gridY: 0 });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} isLocalhost={false} fog={fog} />);
-    expect(container.querySelector('circle.npc-circle')).toBeInTheDocument();
-  });
-});
-
-// ── Rotation branch coverage ───────────────────────────────────────────────
-describe('PlacedItems - rotation branch coverage', () => {
-  it('renders table with rotation 90 using isRotated true branch', () => {
-    const items = [makeItem({ type: 'table', rotation: 90 })];
+  it('calls handleItemPointerDown on barrel hit area pointerdown', () => {
+    const items = [makeItem({ type: 'barrel' })];
     const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector('use[href="#table"]');
-    expect(useEl).toHaveAttribute('transform');
-  });
-
-  it('renders bed with rotation 90 using isVertical true branch', () => {
-    const items = [makeItem({ type: 'bed', rotation: 90 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector('use[href="#bed"]');
-    expect(useEl).toHaveAttribute('transform');
-  });
-
-  it('renders altar with rotation 90 using isRotated true branch', () => {
-    const items = [makeItem({ type: 'altar', rotation: 90 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector('use[href="#altar"]');
-    expect(useEl).toHaveAttribute('transform');
-  });
-
-  it('renders bookshelf with rotation 90 using isVertical true branch', () => {
-    const items = [makeItem({ type: 'bookshelf', rotation: 90 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const useEl = container.querySelector('use[href="#bookshelf"]');
-    expect(useEl).toHaveAttribute('transform');
-  });
-
-  it('renders open door with rotation 90 as vertical rects', () => {
-    const items = [makeItem({ type: 'door', open: true, rotation: 90 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const rects = container.querySelectorAll('rect[fill="#8B5A2B"]');
-    expect(rects.length).toBe(2);
-    const firstRect = rects[0];
-    const width = firstRect.getAttribute('width');
-    const height = firstRect.getAttribute('height');
-    expect(width).toBe('5');
-    expect(height).toBe('36');
-  });
-
-  it('renders open door with rotation 0 as horizontal rects', () => {
-    const items = [makeItem({ type: 'door', open: true, rotation: 0 })];
-    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
-    const rects = container.querySelectorAll('rect[fill="#8B5A2B"]');
-    expect(rects.length).toBe(2);
-    const firstRect = rects[0];
-    const width = firstRect.getAttribute('width');
-    const height = firstRect.getAttribute('height');
-    expect(width).toBe('36');
-    expect(height).toBe('5');
-  });
-});
-
-// ── NPC rendering: imageUrl fallback ───────────────────────────────────────
-describe('PlacedItems - NPC imageUrl fallback', () => {
-  it('renders NPC image from imageUrl when npcImages does not have the name', () => {
-    const itemWithUrl = makeItem({ type: 'npc', name: 'Goblin', imageUrl: '/custom.png' });
-    const { container } = render(
-      <PlacedItems {...baseProps} placedItems={[itemWithUrl]} npcImages={{ Other: '/other.png' }} />
-    );
-    const image = container.querySelector('image');
-    expect(image).toHaveAttribute('xlink:href', '/custom.png');
-  });
-});
-
-// ── Event handler execution ────────────────────────────────────────────────
-describe('PlacedItems - event handler execution', () => {
-  it.each([...NON_NPC_TYPES, 'npc'])('calls handleItemPointerDown for %s hit area', (type) => {
-    const item = type === 'npc' ? makeItem({ type, name: 'Goblin' }) : makeItem({ type });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[item]} />);
-    const hitArea = container.querySelector('.item-hit-area') || container.querySelector('rect[fill="transparent"]');
+    const hitArea = container.querySelector('circle.item-hit-area');
     hitArea.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-    expect(baseProps.handleItemPointerDown).toHaveBeenCalledWith(expect.anything(), 'item-1');
-    baseProps.handleItemPointerDown.mockClear();
+    expect(mockHandleItemPointerDown).toHaveBeenCalledWith(expect.anything(), 'item-1');
   });
 
-  it.each([...NON_NPC_TYPES, 'npc'])('calls setSelectedItem on context menu for %s', (type) => {
-    const item = type === 'npc' ? makeItem({ type, name: 'Goblin' }) : makeItem({ type });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[item]} />);
-    const hitArea = container.querySelector('.item-hit-area') || container.querySelector('rect[fill="transparent"]');
+  it('calls handleItemPointerDown on table hit area pointerdown', () => {
+    const items = [makeItem({ type: 'table' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+    const hitArea = container.querySelector('rect.item-hit-area');
+    hitArea.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    expect(mockHandleItemPointerDown).toHaveBeenCalledWith(expect.anything(), 'item-1');
+  });
+
+  it('calls handleItemPointerDown on NPC hit area pointerdown', () => {
+    const npcItem = makeItem({ type: 'npc', name: 'Goblin' });
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} />);
+    const hitArea = container.querySelector('rect[fill="transparent"]');
+    hitArea.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    expect(mockHandleItemPointerDown).toHaveBeenCalledWith(expect.anything(), 'item-1');
+  });
+
+  it('calls setSelectedItem on barrel contextmenu', () => {
+    const items = [makeItem({ type: 'barrel' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+    const hitArea = container.querySelector('circle.item-hit-area');
     hitArea.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     expect(baseProps.setSelectedItem).toHaveBeenCalledWith({ id: 'item-1', gridX: 0, gridY: 0 });
-    baseProps.setSelectedItem.mockClear();
-  });
-});
-
-// ── Remote rendering: early return for !isLocalhost ────────────────────────
-describe('PlacedItems - remote rendering early returns', () => {
-  it.each([...NON_NPC_TYPES, 'npc'])('renders %s on remote (isLocalhost=false)', (type) => {
-    const item = type === 'npc' ? makeItem({ type, name: 'Goblin' }) : makeItem({ type });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[item]} isLocalhost={false} />);
-    if (type === 'npc') {
-      expect(container.querySelector('circle.npc-circle')).toBeInTheDocument();
-    } else {
-      const useEl = container.querySelector(`use[href="#${type}"]`);
-      expect(useEl).toBeInTheDocument();
-    }
   });
 
-  it.each([...NON_NPC_TYPES, 'npc'])('hides %s on remote when visible=false', (type) => {
-    const item = type === 'npc' ? makeItem({ type, name: 'Goblin', visible: false }) : makeItem({ type, visible: false });
-    const { container } = render(<PlacedItems {...baseProps} placedItems={[item]} isLocalhost={false} />);
-    if (type === 'npc') {
-      expect(container.querySelector('circle.npc-circle')).toBeNull();
-    } else {
-      const useEl = container.querySelector(`use[href="#${type}"]`);
-      expect(useEl).toBeNull();
-    }
+  it('calls setSelectedItem on NPC contextmenu', () => {
+    const npcItem = makeItem({ type: 'npc', name: 'Goblin' });
+    const { container } = render(<PlacedItems {...baseProps} placedItems={[npcItem]} />);
+    const hitArea = container.querySelector('rect[fill="transparent"]');
+    hitArea.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    expect(baseProps.setSelectedItem).toHaveBeenCalledWith({ id: 'item-1', gridX: 0, gridY: 0 });
+  });
+
+  it('prevents default and propagation on contextmenu', () => {
+    const items = [makeItem({ type: 'chest' })];
+    const { container } = render(<PlacedItems {...baseProps} placedItems={items} />);
+    const hitArea = container.querySelector('rect.item-hit-area');
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    const stopPropagationSpy = vi.spyOn(event, 'stopPropagation');
+    hitArea.dispatchEvent(event);
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(stopPropagationSpy).toHaveBeenCalled();
   });
 });

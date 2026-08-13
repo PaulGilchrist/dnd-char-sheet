@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi } from 'vitest';
 import {
     mockGridCenterX,
@@ -20,28 +21,36 @@ import {
 
 describe('mapTestUtils', () => {
     describe('mockGridCenterX', () => {
-        it('should convert grid X to pixel center', () => {
+        it('should convert grid X to pixel center using formula gx * 40 + 20', () => {
             expect(mockGridCenterX(0)).toBe(20);
             expect(mockGridCenterX(1)).toBe(60);
             expect(mockGridCenterX(5)).toBe(220);
             expect(mockGridCenterX(10)).toBe(420);
+            expect(mockGridCenterX(-1)).toBe(-20);
+            expect(mockGridCenterX(2)).toBe(100);
+            expect(mockGridCenterX(-5)).toBe(-180);
         });
 
-        it('should handle negative grid values', () => {
-            expect(mockGridCenterX(-1)).toBe(-20);
+        it('should return consistent values for the same input', () => {
+            const value = mockGridCenterX(7);
+            expect(mockGridCenterX(7)).toBe(value);
         });
     });
 
     describe('mockGridCenterY', () => {
-        it('should convert grid Y to pixel center', () => {
+        it('should convert grid Y to pixel center using formula gy * 40 + 20', () => {
             expect(mockGridCenterY(0)).toBe(20);
             expect(mockGridCenterY(1)).toBe(60);
             expect(mockGridCenterY(5)).toBe(220);
             expect(mockGridCenterY(10)).toBe(420);
+            expect(mockGridCenterY(-1)).toBe(-20);
+            expect(mockGridCenterY(2)).toBe(100);
+            expect(mockGridCenterY(-5)).toBe(-180);
         });
 
-        it('should handle negative grid values', () => {
-            expect(mockGridCenterY(-1)).toBe(-20);
+        it('should return consistent values for the same input', () => {
+            const value = mockGridCenterY(7);
+            expect(mockGridCenterY(7)).toBe(value);
         });
     });
 
@@ -55,14 +64,12 @@ describe('mapTestUtils', () => {
             expect(mocks).toHaveProperty('setPlacedItems');
         });
 
-        it('should initialize mapData with players array, walls Set, and rooms array', () => {
+        it('should initialize mapData with empty players, empty walls Set, and empty rooms', () => {
             const { mapData } = createDefaultMocks();
 
-            expect(mapData).toHaveProperty('players');
             expect(mapData.players).toEqual([]);
             expect(mapData.walls).toBeInstanceOf(Set);
             expect(mapData.walls.size).toBe(0);
-            expect(mapData).toHaveProperty('rooms');
             expect(mapData.rooms).toEqual([]);
         });
 
@@ -71,14 +78,16 @@ describe('mapTestUtils', () => {
             expect(placedItems).toEqual([]);
         });
 
-        it('should create vi.fn() for setMapData and setPlacedItems', () => {
+        it('should create mock functions for setMapData and setPlacedItems', () => {
             const { setMapData, setPlacedItems } = createDefaultMocks();
 
-            expect(typeof setMapData).toBe('function');
-            expect(typeof setPlacedItems).toBe('function');
+            setMapData('test');
+            setPlacedItems([{ id: 'a' }]);
+            expect(setMapData).toHaveBeenCalledWith('test');
+            expect(setPlacedItems).toHaveBeenCalledWith([{ id: 'a' }]);
         });
 
-        it('should accept overrides for mapData', () => {
+        it('should replace mapData when override is provided', () => {
             const overrides = {
                 mapData: { players: [{ name: 'Test' }], walls: new Set(['1,1-2,2']), rooms: [{ id: 'r1' }] },
             };
@@ -89,19 +98,32 @@ describe('mapTestUtils', () => {
             expect(mapData.rooms).toEqual([{ id: 'r1' }]);
         });
 
-        it('should accept overrides for placedItems', () => {
+        it('should replace placedItems when override is provided', () => {
             const overrides = { placedItems: [{ id: 'item1' }] };
             const { placedItems } = createDefaultMocks(overrides);
 
             expect(placedItems).toEqual([{ id: 'item1' }]);
         });
 
-        it('should accept overrides for functions', () => {
+        it('should replace functions when override is provided', () => {
             const customFn = vi.fn();
             const overrides = { setMapData: customFn };
             const { setMapData } = createDefaultMocks(overrides);
 
             expect(setMapData).toBe(customFn);
+        });
+
+        it('should preserve default values for non-overridden properties', () => {
+            const { mapData, placedItems, setMapData, setPlacedItems } = createDefaultMocks({
+                placedItems: [{ id: 'x' }],
+            });
+
+            expect(placedItems).toEqual([{ id: 'x' }]);
+            expect(mapData.players).toEqual([]);
+            expect(mapData.walls.size).toBe(0);
+            expect(mapData.rooms).toEqual([]);
+            expect(setMapData).toBeInstanceOf(Function);
+            expect(setPlacedItems).toBeInstanceOf(Function);
         });
     });
 
@@ -135,18 +157,21 @@ describe('mapTestUtils', () => {
             expect(panning).toBe(false);
         });
 
-        it('should create vi.fn() for all handler functions', () => {
+        it('should create mock functions that track calls for all handler functions', () => {
             const { zoomIn, zoomOut, resetView, getGridFromEvent, handlePanStart, handlePanMove, handlePanEnd, handleWheel, clientToSVG } = createZoomPanMocks();
 
-            expect(typeof zoomIn).toBe('function');
-            expect(typeof zoomOut).toBe('function');
-            expect(typeof resetView).toBe('function');
-            expect(typeof getGridFromEvent).toBe('function');
-            expect(typeof handlePanStart).toBe('function');
-            expect(typeof handlePanMove).toBe('function');
-            expect(typeof handlePanEnd).toBe('function');
-            expect(typeof handleWheel).toBe('function');
-            expect(typeof clientToSVG).toBe('function');
+            zoomIn({ delta: 0.1 });
+            zoomOut();
+            resetView();
+            handlePanStart({ clientX: 10 });
+            handlePanMove({ clientX: 20 });
+            handlePanEnd();
+            handleWheel({ deltaY: 100 });
+            clientToSVG({ clientX: 50, clientY: 50 });
+
+            expect(zoomIn).toHaveBeenCalledTimes(1);
+            expect(getGridFromEvent).not.toHaveBeenCalled();
+            expect(handlePanStart).toHaveBeenCalledWith({ clientX: 10 });
         });
 
         it('should set gridCenterX/gridCenterY to mockGridCenterX/mockGridCenterY', () => {
@@ -171,6 +196,17 @@ describe('mapTestUtils', () => {
             expect(mocks.zoom).toBe(2);
             expect(mocks.getGridFromEvent()).toEqual({ gridX: 10, gridY: 10 });
         });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createZoomPanMocks();
+            const mocksB = createZoomPanMocks();
+
+            expect(mocksA.zoomIn).not.toBe(mocksB.zoomIn);
+            expect(mocksA.panX).toBe(0);
+            expect(mocksB.panX).toBe(0);
+            mocksA.zoomIn();
+            expect(mocksB.zoomIn).not.toHaveBeenCalled();
+        });
     });
 
     describe('createWallDrawingMocks', () => {
@@ -189,13 +225,23 @@ describe('mapTestUtils', () => {
             expect(painting).toBe(false);
         });
 
-        it('should create vi.fn() for all handler functions', () => {
-            const { handleGridPointerDown, handleGridPointerMove, handleGridPointerUp, handleGridPointerLeave } = createWallDrawingMocks();
+        it('should create mock functions that track calls', () => {
+            const { handleGridPointerDown, handleGridPointerMove, handleGridPointerUp } = createWallDrawingMocks();
 
-            expect(typeof handleGridPointerDown).toBe('function');
-            expect(typeof handleGridPointerMove).toBe('function');
-            expect(typeof handleGridPointerUp).toBe('function');
-            expect(typeof handleGridPointerLeave).toBe('function');
+            handleGridPointerDown({ gridX: 1, gridY: 2 });
+            handleGridPointerMove({ gridX: 3, gridY: 4 });
+
+            expect(handleGridPointerDown).toHaveBeenCalledTimes(1);
+            expect(handleGridPointerDown).toHaveBeenCalledWith({ gridX: 1, gridY: 2 });
+            expect(handleGridPointerMove).toHaveBeenCalledTimes(1);
+            expect(handleGridPointerUp).not.toHaveBeenCalled();
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createWallDrawingMocks();
+            const mocksB = createWallDrawingMocks();
+
+            expect(mocksA.handleGridPointerDown).not.toBe(mocksB.handleGridPointerDown);
         });
     });
 
@@ -219,14 +265,22 @@ describe('mapTestUtils', () => {
             expect(selectedRoom).toBeNull();
         });
 
-        it('should create vi.fn() for setSelectedRoom and handlers', () => {
-            const { setSelectedRoom, handleRoomPointerDown, handleRoomPointerMove, handleRoomPointerUp, handleRoomClick } = createRoomDrawingMocks();
+        it('should create mock functions that track calls', () => {
+            const { setSelectedRoom, handleRoomPointerDown, handleRoomClick } = createRoomDrawingMocks();
 
-            expect(typeof setSelectedRoom).toBe('function');
-            expect(typeof handleRoomPointerDown).toBe('function');
-            expect(typeof handleRoomPointerMove).toBe('function');
-            expect(typeof handleRoomPointerUp).toBe('function');
-            expect(typeof handleRoomClick).toBe('function');
+            setSelectedRoom({ id: 'r1' });
+            handleRoomClick({ target: 'room' });
+
+            expect(setSelectedRoom).toHaveBeenCalledWith({ id: 'r1' });
+            expect(handleRoomClick).toHaveBeenCalledWith({ target: 'room' });
+            expect(handleRoomPointerDown).not.toHaveBeenCalled();
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createRoomDrawingMocks();
+            const mocksB = createRoomDrawingMocks();
+
+            expect(mocksA.setSelectedRoom).not.toBe(mocksB.setSelectedRoom);
         });
     });
 
@@ -282,12 +336,32 @@ describe('mapTestUtils', () => {
             expect(mapDataRef.current).toBeNull();
         });
 
-        it('should create vi.fn() for all handler functions', () => {
+        it('should create independent Set instances for selectedWalls and selectedWallsRef', () => {
+            const { selectedWalls, selectedWallsRef } = createSelectMoveMocks();
+
+            selectedWalls.add('wall1');
+            expect(selectedWallsRef.current.has('wall1')).toBe(false);
+        });
+
+        it('should create mock functions that track calls', () => {
             const { handleSelectPointerDown, handleSelectPointerMove, handleSelectPointerUp } = createSelectMoveMocks();
 
-            expect(typeof handleSelectPointerDown).toBe('function');
-            expect(typeof handleSelectPointerMove).toBe('function');
-            expect(typeof handleSelectPointerUp).toBe('function');
+            handleSelectPointerDown({ x: 10, y: 20 });
+            handleSelectPointerMove({ x: 30, y: 40 });
+            handleSelectPointerUp({ x: 50, y: 60 });
+
+            expect(handleSelectPointerDown).toHaveBeenCalledTimes(1);
+            expect(handleSelectPointerDown).toHaveBeenCalledWith({ x: 10, y: 20 });
+            expect(handleSelectPointerMove).toHaveBeenCalledTimes(1);
+            expect(handleSelectPointerUp).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createSelectMoveMocks();
+            const mocksB = createSelectMoveMocks();
+
+            expect(mocksA.handleSelectPointerDown).not.toBe(mocksB.handleSelectPointerDown);
+            expect(mocksA.selectedWalls).not.toBe(mocksB.selectedWalls);
         });
     });
 
@@ -315,14 +389,23 @@ describe('mapTestUtils', () => {
             expect(rulerPreview).toBeNull();
         });
 
-        it('should create vi.fn() for setRulerMode, resetRuler, and handlers', () => {
-            const { setRulerMode, resetRuler, handleRulerPointerDown, handleRulerPointerMove, handleRulerPointerUp } = createRulerMocks();
+        it('should create mock functions that track calls', () => {
+            const { setRulerMode, resetRuler, handleRulerPointerDown } = createRulerMocks();
 
-            expect(typeof setRulerMode).toBe('function');
-            expect(typeof resetRuler).toBe('function');
-            expect(typeof handleRulerPointerDown).toBe('function');
-            expect(typeof handleRulerPointerMove).toBe('function');
-            expect(typeof handleRulerPointerUp).toBe('function');
+            setRulerMode('distance');
+            resetRuler();
+            handleRulerPointerDown({ gridX: 1, gridY: 1 });
+
+            expect(setRulerMode).toHaveBeenCalledWith('distance');
+            expect(resetRuler).toHaveBeenCalledTimes(1);
+            expect(handleRulerPointerDown).toHaveBeenCalledWith({ gridX: 1, gridY: 1 });
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createRulerMocks();
+            const mocksB = createRulerMocks();
+
+            expect(mocksA.setRulerMode).not.toBe(mocksB.setRulerMode);
         });
     });
 
@@ -344,15 +427,36 @@ describe('mapTestUtils', () => {
             expect(overlays).toEqual([]);
         });
 
-        it('should create vi.fn() for all handler functions', () => {
+        it('should create mock functions that track calls', () => {
             const { addOverlay, updateOverlay, updateOverlayImmediate, removeOverlay, clearOverlays, handleSSEEvent } = createSpellOverlayMocks();
 
-            expect(typeof addOverlay).toBe('function');
-            expect(typeof updateOverlay).toBe('function');
-            expect(typeof updateOverlayImmediate).toBe('function');
-            expect(typeof removeOverlay).toBe('function');
-            expect(typeof clearOverlays).toBe('function');
-            expect(typeof handleSSEEvent).toBe('function');
+            addOverlay({ id: 'o1', shape: 'circle' });
+            updateOverlay('o1', { radius: 10 });
+            updateOverlayImmediate('o1', { radius: 15 });
+            removeOverlay('o1');
+            clearOverlays();
+            handleSSEEvent({ type: 'spell', data: {} });
+
+            expect(addOverlay).toHaveBeenCalledWith({ id: 'o1', shape: 'circle' });
+            expect(updateOverlay).toHaveBeenCalledWith('o1', { radius: 10 });
+            expect(updateOverlayImmediate).toHaveBeenCalledWith('o1', { radius: 15 });
+            expect(removeOverlay).toHaveBeenCalledWith('o1');
+            expect(clearOverlays).toHaveBeenCalledTimes(1);
+            expect(handleSSEEvent).toHaveBeenCalledWith({ type: 'spell', data: {} });
+        });
+
+        it('should create distinct mock functions for updateOverlay and updateOverlayImmediate', () => {
+            const { updateOverlay, updateOverlayImmediate } = createSpellOverlayMocks();
+
+            expect(updateOverlay).not.toBe(updateOverlayImmediate);
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createSpellOverlayMocks();
+            const mocksB = createSpellOverlayMocks();
+
+            expect(mocksA.addOverlay).not.toBe(mocksB.addOverlay);
+            expect(mocksA.overlays).not.toBe(mocksB.overlays);
         });
     });
 
@@ -384,14 +488,23 @@ describe('mapTestUtils', () => {
             expect(spellDragActiveRef.current).toBe(false);
         });
 
-        it('should create vi.fn() for all handler functions', () => {
-            const { handleSpellPointerDown, handleSpellPointerMove, handleSpellPointerUp, handleSpellDragMove, handleSpellDragEnd } = createSpellHandlersMocks();
+        it('should create mock functions that track calls', () => {
+            const { handleSpellPointerDown, handleSpellDragMove, handleSpellDragEnd } = createSpellHandlersMocks();
 
-            expect(typeof handleSpellPointerDown).toBe('function');
-            expect(typeof handleSpellPointerMove).toBe('function');
-            expect(typeof handleSpellPointerUp).toBe('function');
-            expect(typeof handleSpellDragMove).toBe('function');
-            expect(typeof handleSpellDragEnd).toBe('function');
+            handleSpellPointerDown({ gridX: 3, gridY: 3 });
+            handleSpellDragMove({ gridX: 5, gridY: 5 });
+            handleSpellDragEnd();
+
+            expect(handleSpellPointerDown).toHaveBeenCalledWith({ gridX: 3, gridY: 3 });
+            expect(handleSpellDragMove).toHaveBeenCalledWith({ gridX: 5, gridY: 5 });
+            expect(handleSpellDragEnd).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createSpellHandlersMocks();
+            const mocksB = createSpellHandlersMocks();
+
+            expect(mocksA.handleSpellPointerDown).not.toBe(mocksB.handleSpellPointerDown);
         });
     });
 
@@ -410,12 +523,23 @@ describe('mapTestUtils', () => {
             expect(dragging).toBeNull();
         });
 
-        it('should create vi.fn() for all handler functions', () => {
+        it('should create mock functions that track calls', () => {
             const { handlePointerDown, handlePointerMove, handlePointerUp } = createPlayerDraggingMocks();
 
-            expect(typeof handlePointerDown).toBe('function');
-            expect(typeof handlePointerMove).toBe('function');
-            expect(typeof handlePointerUp).toBe('function');
+            handlePointerDown({ player: 'p1' });
+            handlePointerMove({ x: 10 });
+            handlePointerUp();
+
+            expect(handlePointerDown).toHaveBeenCalledWith({ player: 'p1' });
+            expect(handlePointerMove).toHaveBeenCalledWith({ x: 10 });
+            expect(handlePointerUp).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createPlayerDraggingMocks();
+            const mocksB = createPlayerDraggingMocks();
+
+            expect(mocksA.handlePointerDown).not.toBe(mocksB.handlePointerDown);
         });
     });
 
@@ -435,13 +559,21 @@ describe('mapTestUtils', () => {
             expect(itemDragging).toBeNull();
         });
 
-        it('should create vi.fn() for all handler functions', () => {
-            const { handleItemPointerDown, handleItemPointerMove, handleItemPointerUp, handleItemPointerLeave } = createItemDraggingMocks();
+        it('should create mock functions that track calls', () => {
+            const { handleItemPointerDown, handleItemPointerLeave } = createItemDraggingMocks();
 
-            expect(typeof handleItemPointerDown).toBe('function');
-            expect(typeof handleItemPointerMove).toBe('function');
-            expect(typeof handleItemPointerUp).toBe('function');
-            expect(typeof handleItemPointerLeave).toBe('function');
+            handleItemPointerDown({ item: 'i1' });
+            handleItemPointerLeave();
+
+            expect(handleItemPointerDown).toHaveBeenCalledWith({ item: 'i1' });
+            expect(handleItemPointerLeave).toHaveBeenCalledTimes(1);
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createItemDraggingMocks();
+            const mocksB = createItemDraggingMocks();
+
+            expect(mocksA.handleItemPointerDown).not.toBe(mocksB.handleItemPointerDown);
         });
     });
 
@@ -458,9 +590,18 @@ describe('mapTestUtils', () => {
             expect(npcImages).toEqual({});
         });
 
-        it('should create vi.fn() for setNpcImages', () => {
+        it('should create a mock function that tracks calls', () => {
             const { setNpcImages } = createNpcImageCacheMocks();
-            expect(typeof setNpcImages).toBe('function');
+
+            setNpcImages({ npc1: 'url1' });
+            expect(setNpcImages).toHaveBeenCalledWith({ npc1: 'url1' });
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createNpcImageCacheMocks();
+            const mocksB = createNpcImageCacheMocks();
+
+            expect(mocksA.setNpcImages).not.toBe(mocksB.setNpcImages);
         });
     });
 
@@ -471,9 +612,18 @@ describe('mapTestUtils', () => {
             expect(mocks).toHaveProperty('handleSSEEvent');
         });
 
-        it('should create vi.fn() for handleSSEEvent', () => {
+        it('should create a mock function that tracks calls', () => {
             const { handleSSEEvent } = createSSESyncMocks();
-            expect(typeof handleSSEEvent).toBe('function');
+
+            handleSSEEvent({ type: 'combat', data: {} });
+            expect(handleSSEEvent).toHaveBeenCalledWith({ type: 'combat', data: {} });
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createSSESyncMocks();
+            const mocksB = createSSESyncMocks();
+
+            expect(mocksA.handleSSEEvent).not.toBe(mocksB.handleSSEEvent);
         });
     });
 
@@ -484,23 +634,23 @@ describe('mapTestUtils', () => {
             expect(mocks).toHaveProperty('handleDrop');
         });
 
-        it('should create vi.fn() for handleDrop', () => {
+        it('should create a mock function that tracks calls', () => {
             const { handleDrop } = createMapDropsMocks();
-            expect(typeof handleDrop).toBe('function');
+
+            handleDrop({ files: ['test.png'] });
+            expect(handleDrop).toHaveBeenCalledWith({ files: ['test.png'] });
+        });
+
+        it('should return independent mock objects on each call', () => {
+            const mocksA = createMapDropsMocks();
+            const mocksB = createMapDropsMocks();
+
+            expect(mocksA.handleDrop).not.toBe(mocksB.handleDrop);
         });
     });
 
     describe('setupMapMocks', () => {
-        it('should be a function', () => {
-            expect(typeof setupMapMocks).toBe('function');
-        });
-
-        it('should have a default empty object parameter', () => {
-            const fnLength = setupMapMocks.length;
-            expect(fnLength).toBe(0);
-        });
-
-        it('should set up MockEventSource on globalThis and it should be instantiable with a close method', () => {
+        it('should set up MockEventSource on globalThis with close method', () => {
             setupMapMocks();
 
             expect(typeof globalThis.EventSource).toBe('function');
@@ -512,71 +662,107 @@ describe('mapTestUtils', () => {
             expect(() => mockES.close()).not.toThrow();
         });
 
-        it('should register vi.mock for dataLoader, mapsService, logService, and all hooks', async () => {
+        it('should allow mocking modules that can be imported and called', async () => {
             setupMapMocks();
 
             const { loadMonsters } = await import('../../services/ui/dataLoader.js');
-            expect(loadMonsters).toBeDefined();
-            expect(typeof loadMonsters).toBe('function');
+            const monsters = await loadMonsters();
+            expect(monsters).toEqual([]);
+        });
+
+        it('should allow mocking mapsService functions that can be called', async () => {
+            setupMapMocks();
 
             const { loadMapData, saveMapData, formatMapName, loadMaps } = await import('../../services/maps/mapsService.js');
-            expect(loadMapData).toBeDefined();
-            expect(saveMapData).toBeDefined();
-            expect(formatMapName).toBeDefined();
-            expect(loadMaps).toBeDefined();
+
+            const mapData = await loadMapData('test');
+            expect(mapData).toBeNull();
+
+            await saveMapData('test', {});
+            expect(formatMapName('Test Map')).toBe('Test Map');
+
+            const maps = await loadMaps();
+            expect(maps).toEqual({ maps: [] });
+        });
+
+        it('should allow mocking logService functions that can be called', async () => {
+            setupMapMocks();
 
             const { getLog, addEntry } = await import('../../services/ui/logService.js');
-            expect(getLog).toBeDefined();
-            expect(addEntry).toBeDefined();
+
+            const entries = await getLog();
+            expect(entries).toEqual([]);
+
+            await addEntry('test', {});
+        });
+
+        it('should allow mocking hooks that return expected defaults', async () => {
+            setupMapMocks();
 
             const useLog = await import('../../hooks/runtime/useLog.js');
-            expect(useLog.default).toBeDefined();
+            const logResult = useLog.default();
+            expect(logResult.logEntries).toEqual([]);
+            expect(logResult.initialized).toBe(true);
+            expect(typeof logResult.addEntry).toBe('function');
 
             const useMapLoader = (await import('./hooks/useMapLoader.js')).default;
-            expect(useMapLoader).toBeDefined();
+            const mapLoaderResult = useMapLoader();
+            expect(mapLoaderResult).toHaveProperty('mapData');
+            expect(mapLoaderResult).toHaveProperty('placedItems');
 
             const useZoomPan = (await import('./hooks/useZoomPan.js')).default;
-            expect(useZoomPan).toBeDefined();
+            const zoomPanResult = useZoomPan();
+            expect(zoomPanResult.zoom).toBe(1);
+            expect(zoomPanResult.panning).toBe(false);
 
             const useWallDrawing = (await import('./hooks/useWallDrawing.js')).default;
-            expect(useWallDrawing).toBeDefined();
+            const wallDrawingResult = useWallDrawing();
+            expect(wallDrawingResult.painting).toBe(false);
 
             const useRoomDrawing = (await import('./hooks/useRoomDrawing.js')).default;
-            expect(useRoomDrawing).toBeDefined();
+            const roomDrawingResult = useRoomDrawing();
+            expect(roomDrawingResult.roomDrawRect).toBeNull();
 
             const useSelectMove = (await import('./hooks/useSelectMove.js')).default;
-            expect(useSelectMove).toBeDefined();
+            const selectMoveResult = useSelectMove();
+            expect(selectMoveResult.selectionRect).toBeNull();
+            expect(selectMoveResult.selectedWalls.size).toBe(0);
 
             const useRuler = (await import('./hooks/useRuler.js')).default;
-            expect(useRuler).toBeDefined();
+            const rulerResult = useRuler();
+            expect(rulerResult.rulerMode).toBe(false);
 
             const useSpellOverlay = (await import('./hooks/useSpellOverlay.js')).default;
-            expect(useSpellOverlay).toBeDefined();
+            const spellOverlayResult = useSpellOverlay();
+            expect(spellOverlayResult.overlays).toEqual([]);
 
             const useSpellHandlers = (await import('./hooks/useSpellHandlers.js')).default;
-            expect(useSpellHandlers).toBeDefined();
+            const spellHandlersResult = useSpellHandlers();
+            expect(spellHandlersResult.spellDraft).toBeNull();
 
             const usePlayerDragging = (await import('./hooks/usePlayerDragging.js')).default;
-            expect(usePlayerDragging).toBeDefined();
+            const playerDraggingResult = usePlayerDragging();
+            expect(playerDraggingResult.dragging).toBeNull();
 
             const useItemDragging = (await import('./hooks/useItemDragging.js')).default;
-            expect(useItemDragging).toBeDefined();
+            const itemDraggingResult = useItemDragging();
+            expect(itemDraggingResult.itemDragging).toBeNull();
 
             const useNpcImageCache = (await import('./hooks/useNpcImageCache.js')).default;
-            expect(useNpcImageCache).toBeDefined();
-            expect(vi.isMockFunction(useNpcImageCache)).toBe(true);
+            const npcImageCacheResult = useNpcImageCache();
+            expect(npcImageCacheResult.npcImages).toEqual({});
 
             const useSSESync = (await import('./hooks/useSSESync.js')).default;
-            expect(useSSESync).toBeDefined();
-            expect(vi.isMockFunction(useSSESync)).toBe(true);
+            const sseSyncResult = useSSESync();
+            expect(sseSyncResult).toHaveProperty('handleSSEEvent');
 
             const fogModule = await import('./hooks/useFogOfWar.js');
-            expect(fogModule.default).toBeDefined();
-            expect(vi.isMockFunction(fogModule.default)).toBe(true);
+            const fogResult = fogModule.default();
+            expect(fogResult).toBeInstanceOf(Set);
 
             const useMapDrops = (await import('./hooks/useMapDrops.js')).default;
-            expect(useMapDrops).toBeDefined();
-            expect(vi.isMockFunction(useMapDrops)).toBe(true);
+            const mapDropsResult = useMapDrops();
+            expect(mapDropsResult).toHaveProperty('handleDrop');
         });
     });
 });

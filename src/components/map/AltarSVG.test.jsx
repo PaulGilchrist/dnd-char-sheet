@@ -1,92 +1,247 @@
+// @improved-by-ai
+import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import AltarSVG from './AltarSVG';
 
 describe('AltarSVG', () => {
-  it('renders a root <g> element', () => {
-    const { container } = render(<AltarSVG />);
-    const g = container.querySelector('g');
-    expect(g).toBeInTheDocument();
+  describe('props', () => {
+    it('renders a <g> element', () => {
+      const { container } = render(<AltarSVG />);
+      const g = container.querySelector('g');
+      expect(g).toBeInTheDocument();
+    });
+
+    it('applies the id prop to the group element', () => {
+      const { container } = render(<AltarSVG id="altar-1" />);
+      const g = container.querySelector('g');
+      expect(g).toHaveAttribute('id', 'altar-1');
+    });
+
+    it('applies the className prop to the group element', () => {
+      const { container } = render(<AltarSVG className="custom-altar" />);
+      const g = container.querySelector('g');
+      expect(g).toHaveClass('custom-altar');
+    });
+
+    it('passes through rest props as attributes', () => {
+      const { container } = render(<AltarSVG data-test="altar-test" aria-label="Altar" />);
+      const g = container.querySelector('g');
+      expect(g).toHaveAttribute('data-test', 'altar-test');
+      expect(g).toHaveAttribute('aria-label', 'Altar');
+    });
+
+    it('forwards ref to the group element', () => {
+      const ref = React.createRef();
+      render(<AltarSVG ref={ref} />);
+      expect(ref.current).toBeTruthy();
+      expect(ref.current.tagName.toLowerCase()).toBe('g');
+    });
+
+    it('combines id, className, rest props, and ref', () => {
+      const ref = React.createRef();
+      const { container } = render(
+        <AltarSVG id="test-altar" className="test-class" data-custom="value" ref={ref} />
+      );
+      const g = container.querySelector('g');
+      expect(g).toHaveAttribute('id', 'test-altar');
+      expect(g).toHaveClass('test-class');
+      expect(g).toHaveAttribute('data-custom', 'value');
+      expect(ref.current).toBe(g);
+    });
   });
 
-  it('applies id to the root <g>', () => {
-    const { container } = render(<AltarSVG id="altar" />);
-    const g = container.querySelector('g');
-    expect(g).toHaveAttribute('id', 'altar');
+  describe('floor shadow', () => {
+    it('renders a shadow rect with correct attributes', () => {
+      const { container } = render(<AltarSVG />);
+      const shadow = container.querySelector('rect[fill="#555"][opacity="0.25"]');
+      expect(shadow).toBeInTheDocument();
+      expect(shadow).toHaveAttribute('transform', 'translate(1, 1)');
+      expect(shadow).toHaveAttribute('rx', '2');
+    });
   });
 
-  it('applies className to the root <g>', () => {
-    const { container } = render(<AltarSVG className="altar-svg" />);
-    const g = container.querySelector('g');
-    expect(g).toHaveClass('altar-svg');
+  describe('stone base', () => {
+    it('renders the main stone block rect', () => {
+      const { container } = render(<AltarSVG />);
+      const stone = container.querySelector('rect[fill="#8A7F70"][stroke="#6B6050"]');
+      expect(stone).toBeInTheDocument();
+      expect(stone).toHaveAttribute('stroke-width', '0.8');
+    });
+
+    it('renders the top surface rect', () => {
+      const { container } = render(<AltarSVG />);
+      const top = container.querySelector('rect[fill="#9B9080"][stroke="#7A6F60"]');
+      expect(top).toBeInTheDocument();
+      expect(top).toHaveAttribute('stroke-width', '0.4');
+    });
+
+    it('renders the decorative border rect', () => {
+      const { container } = render(<AltarSVG />);
+      const border = container.querySelector('rect[fill="none"][stroke="#7A6F60"]');
+      expect(border).toBeInTheDocument();
+      expect(border).toHaveAttribute('stroke-width', '0.5');
+    });
+
+    it('renders edge shadows and top highlight', () => {
+      const { container } = render(<AltarSVG />);
+      const shadows = container.querySelectorAll('rect[fill="#4A4035"]');
+      expect(shadows.length).toBe(2);
+      const highlight = container.querySelector('rect[fill="#B0A090"]');
+      expect(highlight).toBeInTheDocument();
+    });
   });
 
-  it('spreads additional props to the root <g>', () => {
-    const { container } = render(<AltarSVG data-test="altar" role="img" />);
-    const g = container.querySelector('g');
-    expect(g).toHaveAttribute('data-test', 'altar');
-    expect(g).toHaveAttribute('role', 'img');
+  describe('red cloth runner', () => {
+    it('renders the red cloth strip', () => {
+      const { container } = render(<AltarSVG />);
+      const cloth = container.querySelector('rect[fill="#8B0000"]');
+      expect(cloth).toBeInTheDocument();
+    });
+
+    it('renders two gold trim rects', () => {
+      const { container } = render(<AltarSVG />);
+      const trims = container.querySelectorAll('rect[fill="#D4AF37"]');
+      expect(trims.length).toBe(2);
+    });
   });
 
-  it('renders floor shadow rect', () => {
-    const { container } = render(<AltarSVG />);
-    const rects = container.querySelectorAll('rect');
-    expect(rects.length).toBeGreaterThan(0);
+  describe('offering depression', () => {
+    it('renders the depression rect with correct attributes', () => {
+      const { container } = render(<AltarSVG />);
+      const depression = container.querySelector('rect[x="30"][y="10"][width="12"][height="7"]');
+      expect(depression).toBeInTheDocument();
+      expect(depression).toHaveAttribute('stroke', '#6B6050');
+    });
   });
 
-  it('renders stone base rects', () => {
-    const { container } = render(<AltarSVG />);
-    const rects = container.querySelectorAll('rect');
-    // stone base + top surface + decorative border + edge shadows + highlight = at least 5 rects
-    expect(rects.length).toBeGreaterThanOrEqual(5);
+  describe('blood stain', () => {
+    it('renders the main stain path', () => {
+      const { container } = render(<AltarSVG />);
+      const stain = container.querySelector('path[fill="#4A0000"][opacity="0.3"]');
+      expect(stain).toBeInTheDocument();
+      expect(stain).toHaveAttribute('d');
+    });
+
+    it('renders blood spatter circles', () => {
+      const { container } = render(<AltarSVG />);
+      const spatters = container.querySelectorAll('circle[fill="#4A0000"]');
+      expect(spatters.length).toBe(3);
+    });
   });
 
-  it('renders red cloth runner rects', () => {
-    const { container } = render(<AltarSVG />);
-    const rects = container.querySelectorAll('rect');
-    // cloth strip + 2 gold trims = at least 3 more rects
-    expect(rects.length).toBeGreaterThanOrEqual(8);
+  describe('candles', () => {
+    it('renders 4 candle bodies', () => {
+      const { container } = render(<AltarSVG />);
+      const bodies = container.querySelectorAll('rect[fill="#F5F0E0"]');
+      expect(bodies.length).toBe(4);
+    });
+
+    it('renders 4 candle glow circles', () => {
+      const { container } = render(<AltarSVG />);
+      const glows = container.querySelectorAll('circle[fill="#E87A20"][opacity="0.12"]');
+      expect(glows.length).toBe(4);
+    });
+
+    it('renders 4 flame circles', () => {
+      const { container } = render(<AltarSVG />);
+      const flames = container.querySelectorAll('circle[fill="#E87A20"]');
+      // 4 glow (opacity 0.12) + 4 solid flame = 8 total
+      expect(flames.length).toBe(8);
+    });
+
+    it('renders 4 inner flame highlight circles', () => {
+      const { container } = render(<AltarSVG />);
+      // 4 candle inner flames + 1 goblet liquid highlight + 1 rune center dot = 6 total circles with #F5D060
+      const highlights = container.querySelectorAll('circle[fill="#F5D060"]');
+      expect(highlights.length).toBe(6);
+    });
   });
 
-  it('renders offering depression', () => {
-    const { container } = render(<AltarSVG />);
-    const rects = container.querySelectorAll('rect');
-    expect(rects.length).toBeGreaterThanOrEqual(9);
+  describe('central rune symbol', () => {
+    it('renders glow circles behind the symbol', () => {
+      const { container } = render(<AltarSVG />);
+      const glowCircles = container.querySelectorAll('circle[fill="#D4A017"]');
+      // glow circles + goblet rim + inner flame = 3 + 1 + 4 = 8 total
+      expect(glowCircles.length).toBeGreaterThan(0);
+    });
+
+    it('renders the outer ring with correct stroke', () => {
+      const { container } = render(<AltarSVG />);
+      const outerRing = container.querySelector('circle[stroke="#D4A017"][stroke-width="0.8"]');
+      expect(outerRing).toBeInTheDocument();
+      expect(outerRing).toHaveAttribute('r', '6');
+    });
+
+    it('renders the star/sunburst path', () => {
+      const { container } = render(<AltarSVG />);
+      const starPath = container.querySelector('path[fill="#D4A017"][opacity="0.85"]');
+      expect(starPath).toBeInTheDocument();
+      expect(starPath).toHaveAttribute('d');
+    });
+
+    it('renders the diagonal rays path', () => {
+      const { container } = render(<AltarSVG />);
+      const rays = container.querySelector('path[fill="#D4A017"][opacity="0.4"]');
+      expect(rays).toBeInTheDocument();
+      expect(rays).toHaveAttribute('d');
+    });
+
+    it('renders the inner ring and center dot', () => {
+      const { container } = render(<AltarSVG />);
+      const innerRing = container.querySelector('circle[stroke="#D4A017"][stroke-width="0.6"]');
+      expect(innerRing).toBeInTheDocument();
+      const centerDot = container.querySelector('circle[fill="#F5D060"]');
+      expect(centerDot).toBeInTheDocument();
+    });
   });
 
-  it('renders blood stain path and spatter circles', () => {
-    const { container } = render(<AltarSVG />);
-    const paths = container.querySelectorAll('path');
-    const circles = container.querySelectorAll('circle');
-    expect(paths.length).toBeGreaterThan(0);
-    expect(circles.length).toBeGreaterThan(0);
+  describe('offering goblet', () => {
+    it('renders the goblet shadow ellipse', () => {
+      const { container } = render(<AltarSVG />);
+      const shadow = container.querySelector('ellipse[fill="#4A4035"][opacity="0.3"]');
+      expect(shadow).toBeInTheDocument();
+      expect(shadow).toHaveAttribute('cx', '36');
+    });
+
+    it('renders the goblet rim circle', () => {
+      const { container } = render(<AltarSVG />);
+      const rim = container.querySelector('circle[fill="#D4A017"][stroke="#B8960F"]');
+      expect(rim).toBeInTheDocument();
+      expect(rim).toHaveAttribute('r', '2.5');
+    });
+
+    it('renders the goblet interior and liquid highlight', () => {
+      const { container } = render(<AltarSVG />);
+      const interior = container.querySelector('circle[fill="#5C4510"]');
+      expect(interior).toBeInTheDocument();
+      const highlight = container.querySelector('circle[fill="#F5D060"][opacity="0.5"]');
+      expect(highlight).toBeInTheDocument();
+    });
   });
 
-  it('renders 4 candles (each with glow, body, flame outer, flame inner)', () => {
-    const { container } = render(<AltarSVG />);
-    // Each candle group has 1 rect (body) + 3 circles (glow + flame) = 4 elements per candle
-    // 4 candles = 4 rects + 12 circles
-    const candleRects = container.querySelectorAll('rect[fill="#F5F0E0"]');
-    const candleFlames = container.querySelectorAll('circle[fill="#E87A20"]');
-    expect(candleRects.length).toBe(4);
-    expect(candleFlames.length).toBe(8); // glow (opacity 0.12) + flame (solid) = 2 per candle
+  describe('total element count', () => {
+    it('renders the expected number of child elements', () => {
+      const { container } = render(<AltarSVG />);
+      const g = container.querySelector('g');
+      const allElements = Array.from(g.children);
+      // 1 floor shadow rect
+      // + 6 stone base rects (main, top, border, 2 edge shadows, highlight)
+      // + 3 cloth runner rects (red strip + 2 gold trims)
+      // + 1 offering depression rect
+      // + 1 blood stain path
+      // + 3 blood spatter circles
+      // + 4 candle groups
+      // + 1 rune symbol group
+      // + 1 goblet group
+      // total = 1+6+3+1+1+3+4+1+1 = 21
+      expect(allElements.length).toBe(21);
+    });
   });
 
-  it('renders central rune symbol with rings and star paths', () => {
-    const { container } = render(<AltarSVG />);
-    const runePaths = container.querySelectorAll('path[fill="#D4A017"]');
-    const runeCircles = container.querySelectorAll('circle[stroke="#D4A017"]');
-    expect(runePaths.length).toBeGreaterThanOrEqual(2);
-    expect(runeCircles.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('renders offering goblet', () => {
-    const { container } = render(<AltarSVG />);
-    const gobletCircles = container.querySelectorAll('circle[fill="#D4A017"]');
-    expect(gobletCircles.length).toBeGreaterThan(0);
-  });
-
-  it('renders displayName as AltarSVG', () => {
-    expect(AltarSVG.displayName).toBe('AltarSVG');
+  describe('displayName', () => {
+    it('has the correct displayName', () => {
+      expect(AltarSVG.displayName).toBe('AltarSVG');
+    });
   });
 });

@@ -1,3 +1,4 @@
+// @improved-by-ai
 // Additional tests for inline modal rendering paths in CharActionModals.jsx.
 // Covers BastionOfLaw, moonlightStepFallback, attackRiderOptions, naturesSanctuary,
 // inspiringSmite, and clockworkCavalcade modals.
@@ -21,7 +22,7 @@ vi.mock('./modals/EyebiteEffectModal.jsx', () => ({ default: () => <div data-tes
 vi.mock('./modals/shared/AttackRiderModal.jsx', () => ({ default: () => <div data-testid="attack-rider-modal"><button data-testid="attack-rider-close" onClick={vi.fn()}>Close</button></div> }));
 vi.mock('./modals/OpenHandTechniqueModal.jsx', () => ({ default: () => <div data-testid="open-hand-technique-modal"><button data-testid="open-hand-technique-close" onClick={vi.fn()}>Close</button></div> }));
 vi.mock('./modals/WeaponMasteryModal.jsx', () => ({ default: () => <div data-testid="weapon-mastery-modal"><button data-testid="weapon-mastery-close" onClick={vi.fn()}>Close</button></div> }));
-vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({ default: () => <div data-testid="weapon-mastery-choice-modal"><button data-testid="weapon-mastery-choice-close" onClick={vi.fn()}>Close</button><button data-testid="weapon-mastery-choice-confirm" onClick={() => {}}>Confirm</button></div> }));
+vi.mock('./modals/WeaponMasteryChoiceModal.jsx', () => ({ default: () => <div data-testid="weapon-mastery-choice-modal"><button data-testid="weapon-mastery-choice-close" onClick={vi.fn()}>Close</button></div> }));
 vi.mock('./modals/WeaponKindMasteryModal.jsx', () => ({ default: () => <div data-testid="weapon-kind-mastery-modal"><button data-testid="weapon-kind-mastery-close" onClick={vi.fn()}>Close</button></div> }));
 vi.mock('./modals/shared/CombatStanceModal.jsx', () => ({ default: () => <div data-testid="combat-stance-modal"><button data-testid="combat-stance-close" onClick={vi.fn()}>Close</button></div> }));
 vi.mock('./modals/TeleportModal.jsx', () => ({ default: () => <div data-testid="teleport-modal"><button data-testid="teleport-close" onClick={vi.fn()}>Close</button></div> }));
@@ -181,7 +182,7 @@ describe('CharActionModals — inline modals with complex handlers', () => {
   });
 
   describe('BastionOfLawModal onConfirm with setPopupHtml', () => {
-    it('sets popupHtml when handleApply returns payload', async () => {
+    it('calls setPopupHtml with the handler result payload', async () => {
       const setPopupHtml = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml, handleApply: vi.fn() })}
@@ -193,21 +194,36 @@ describe('CharActionModals — inline modals with complex handlers', () => {
         expect(setPopupHtml).toHaveBeenCalledWith('<b>Bastion of Law</b><br/>Applied');
       });
     });
+
+    it('does not call setPopupHtml when handler returns no payload', async () => {
+      vi.mocked((await import('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHandler.js')).handleApply).mockResolvedValue({});
+      const setPopupHtml = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({ setPopupHtml, handleApply: vi.fn() })}
+        modalState={{ bastionOfLawModal: { featureName: 'Bastion', auto: {} } }}
+        setModalState={vi.fn()}
+      />);
+      fireEvent.click(screen.getByTestId('bastion-confirm'));
+      await waitFor(() => {
+        expect(setPopupHtml).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('moonlightStepFallbackModal', () => {
-    it('renders the inline modal with Yes/No buttons', () => {
+    it('renders the inline modal with the expected header text and action buttons', () => {
       render(<CharActionModals
         {...createBaseProps({})}
         modalState={{ moonlightStepFallbackModal: { action: { name: 'Moonlight Step' }, slotLevel: 1 } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByText(/No Moonlight Step uses remaining/)).toBeTruthy();
-      expect(screen.getByText('Yes, Consume Slot')).toBeTruthy();
-      expect(screen.getByText('No')).toBeTruthy();
+      expect(screen.getByText(/No Moonlight Step uses remaining/)).toBeInTheDocument();
+      expect(screen.getByText('Yes, Consume Slot')).toBeInTheDocument();
+      expect(screen.getByText('No')).toBeInTheDocument();
     });
 
-    it('calls confirmTeleport with false on Yes button', async () => {
+    it('calls confirmTeleport and sets popupHtml when consuming a slot', async () => {
+      const { confirmTeleport } = await import('../../services/automation/handlers/class-warlock/tempTeleportHandler.js');
       const setPopupHtml = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ setPopupHtml })}
@@ -218,24 +234,38 @@ describe('CharActionModals — inline modals with complex handlers', () => {
       fireEvent.click(screen.getByText('Yes, Consume Slot'));
 
       await waitFor(() => {
+        expect(confirmTeleport).toHaveBeenCalled();
         expect(setPopupHtml).toHaveBeenCalled();
       });
+    });
+
+    it('dismisses modal without side effects when user clicks No', () => {
+      const setModalState = vi.fn();
+      render(<CharActionModals
+        {...createBaseProps({})}
+        modalState={{ moonlightStepFallbackModal: { action: { name: 'Moonlight Step' }, slotLevel: 2 } }}
+        setModalState={setModalState}
+      />);
+
+      fireEvent.click(screen.getByText('No'));
+
+      expect(setModalState).toHaveBeenCalledWith({ moonlightStepFallbackModal: null });
     });
   });
 
   describe('attackRiderOptionsModal', () => {
-    it('renders the inline modal with rider options', () => {
+    it('renders the inline modal with maneuver name, effect options, and skip button', () => {
       render(<CharActionModals
         {...createBaseProps({ handleAttackRiderOptionSelect: vi.fn() })}
         modalState={{ attackRiderOptionsModal: { maneuver: { name: 'Test Maneuver' }, riderOptions: [{ name: 'Option A', effect: 'disadvantage_on_next_save' }] } }}
         setModalState={vi.fn()}
       />);
-      expect(screen.getByText(/Test Maneuver.*Choose Effect/)).toBeTruthy();
-      expect(screen.getByText('Option A')).toBeTruthy();
-      expect(screen.getByText('Skip')).toBeTruthy();
+      expect(screen.getByText(/Test Maneuver.*Choose Effect/)).toBeInTheDocument();
+      expect(screen.getByText('Option A')).toBeInTheDocument();
+      expect(screen.getByText('Skip')).toBeInTheDocument();
     });
 
-    it('calls handleAttackRiderOptionSelect on option click', () => {
+    it('calls handleAttackRiderOptionSelect with the selected option name and modal state', () => {
       const handler = vi.fn();
       render(<CharActionModals
         {...createBaseProps({ handleAttackRiderOptionSelect: handler })}
@@ -243,7 +273,7 @@ describe('CharActionModals — inline modals with complex handlers', () => {
         setModalState={vi.fn()}
       />);
       fireEvent.click(screen.getByText('Option A'));
-      expect(handler).toHaveBeenCalled();
+      expect(handler).toHaveBeenCalledWith('Option A', expect.objectContaining({ maneuver: expect.any(Object), riderOptions: expect.any(Array) }));
     });
 
     it('dismisses modal on skip', () => {
@@ -264,7 +294,7 @@ describe('CharActionModals — naturesSanctuaryCreaturesModal', () => {
     vi.clearAllMocks();
   });
 
-  it('renders CreatureSelectionModal with correct title and note', () => {
+  it('renders CreatureSelectionModal with correct title and note for non-move sanctuary', () => {
     render(<CharActionModals
       {...createBaseProps({ handleNaturesSanctuaryConfirm: vi.fn() })}
       modalState={{ naturesSanctuaryCreaturesModal: { creatureTargets: [{ name: 'Goblin' }], isMove: false } }}
@@ -283,7 +313,7 @@ describe('CharActionModals — naturesSanctuaryCreaturesModal', () => {
     expect(screen.getByTestId('creature-title').textContent).toContain('Move');
   });
 
-  it('calls handleNaturesSanctuaryConfirm on confirm', () => {
+  it('calls handleNaturesSanctuaryConfirm with the confirmed target list', () => {
     const handler = vi.fn();
     render(<CharActionModals
       {...createBaseProps({ handleNaturesSanctuaryConfirm: handler })}
@@ -291,7 +321,7 @@ describe('CharActionModals — naturesSanctuaryCreaturesModal', () => {
       setModalState={vi.fn()}
     />);
     fireEvent.click(screen.getByTestId('creature-confirm'));
-    expect(handler).toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledWith(['Goblin']);
   });
 });
 

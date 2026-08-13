@@ -1,8 +1,10 @@
+// @improved-by-ai
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Map from './Map.jsx';
 
-// Mutable mock state shared across all tests
+const mockLoadMonsters = vi.fn(() => Promise.resolve([]));
+
 const mockState = {
     mapData: null,
     placedItems: [],
@@ -36,13 +38,19 @@ const mockState = {
 const createMockSetMapData = vi.fn();
 const createMockSetPlacedItems = vi.fn();
 
-globalThis.EventSource = class MockEventSource {
-    constructor() { this.onmessage = null; this.onerror = null; }
+class MockEventSource {
+    static instances = [];
+    constructor() {
+        this.onmessage = null;
+        this.onerror = null;
+        MockEventSource.instances.push(this);
+    }
     close() {}
-};
+}
+globalThis.EventSource = MockEventSource;
 
 vi.mock('../../services/ui/dataLoader.js', () => ({
-    loadMonsters: vi.fn(() => Promise.resolve([])),
+    loadMonsters: () => mockLoadMonsters(),
 }));
 
 vi.mock('../../services/maps/mapsService.js', () => ({
@@ -238,84 +246,169 @@ const renderMap = (overrides = {}) => {
     return render(<Map {...defaultProps} />);
 };
 
+const resetState = () => {
+    mockState.mapData = createMockMapData();
+    mockState.placedItems = [];
+    mockState.selectedRoom = null;
+    mockState.roomDrawRect = null;
+    mockState.selectedWalls = new Set();
+    mockState.selectedItems = new Set();
+    mockState.selectionRect = null;
+    mockState.moveOffset = null;
+    mockState.selectStart.current = null;
+    mockState.moveStartGrid.current = null;
+    mockLoadMonsters.mockReset();
+    mockLoadMonsters.mockImplementation(() => Promise.resolve([]));
+};
+
 describe('Map - room rendering with types', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockState.mapData = createMockMapData();
-        mockState.placedItems = [];
-        createMockSetMapData.mockClear();
-        createMockSetPlacedItems.mockClear();
+        resetState();
     });
 
-    it('renders room with entrance type', async () => {
+    it('renders room-highlight rect with type-based CSS class for entrance type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'entrance', label: 'Entrance', rect: { x: 0, y: 0, w: 10, h: 10 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-entrance');
+        expect(roomRect).toBeTruthy();
+        expect(roomRect.getAttribute('width')).toBe('400');
+        expect(roomRect.getAttribute('height')).toBe('400');
     });
 
-    it('renders room with common type', async () => {
+    it('renders room-highlight rect with type-based CSS class for common type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-common');
+        expect(roomRect).toBeTruthy();
     });
 
-    it('renders room with utility type', async () => {
+    it('renders room-highlight rect with type-based CSS class for utility type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'utility', label: 'Storage', rect: { x: 0, y: 0, w: 5, h: 5 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-utility');
+        expect(roomRect).toBeTruthy();
+        expect(roomRect.getAttribute('width')).toBe('200');
+        expect(roomRect.getAttribute('height')).toBe('200');
     });
 
-    it('renders room with private type', async () => {
+    it('renders room-highlight rect with type-based CSS class for private type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'private', label: 'Bedroom', rect: { x: 0, y: 0, w: 8, h: 8 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-private');
+        expect(roomRect).toBeTruthy();
     });
 
-    it('renders room with grand type', async () => {
+    it('renders room-highlight rect with type-based CSS class for grand type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'grand', label: 'Throne Room', rect: { x: 0, y: 0, w: 20, h: 15 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-grand');
+        expect(roomRect).toBeTruthy();
+        expect(roomRect.getAttribute('width')).toBe('800');
+        expect(roomRect.getAttribute('height')).toBe('600');
     });
 
-    it('renders room with hall type', async () => {
+    it('renders room-highlight rect with type-based CSS class for hall type', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'hall', label: 'Corridor', rect: { x: 0, y: 0, w: 30, h: 5 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight.room-type-hall');
+        expect(roomRect).toBeTruthy();
     });
 
-    it('renders room with no label', async () => {
+    it('renders room label text from room.label property', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', label: 'Great Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
+        await act(async () => renderMap());
+        expect(document.querySelector('.room-label')).toHaveTextContent('Great Hall');
+    });
+
+    it('falls back to room.type when label is missing', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
+        await act(async () => renderMap());
+        expect(document.querySelector('.room-label')).toHaveTextContent('common');
+    });
+
+    it('renders room hit-area rect when tool is none', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        expect(container.querySelector('.room-hit-area')).toBeTruthy();
     });
 
-    it('renders room hit area in none tool', async () => {
+    it('renders room hit-area rect when tool is select', async () => {
         mockState.mapData = createMockMapData({
             rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        expect(container.querySelector('.room-hit-area')).toBeTruthy();
     });
 
-    it('renders room hit area in select tool', async () => {
+    it('renders room at correct grid position offset', async () => {
         mockState.mapData = createMockMapData({
-            rooms: [{ id: 'room1', type: 'common', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+            rooms: [{ id: 'room1', type: 'common', label: 'Off Room', rect: { x: 5, y: 3, w: 4, h: 4 } }],
         });
         const { container } = await act(async () => renderMap());
-        expect(container.querySelector('.map')).toBeInTheDocument();
+        const roomRect = container.querySelector('.room-highlight');
+        expect(roomRect.getAttribute('x')).toBe('200');
+        expect(roomRect.getAttribute('y')).toBe('120');
+        expect(roomRect.getAttribute('width')).toBe('160');
+        expect(roomRect.getAttribute('height')).toBe('160');
+    });
+
+    it('renders multiple rooms with distinct type classes', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [
+                { id: 'room1', type: 'entrance', label: 'Entrance', rect: { x: 0, y: 0, w: 10, h: 10 } },
+                { id: 'room2', type: 'private', label: 'Bedroom', rect: { x: 10, y: 10, w: 5, h: 5 } },
+            ],
+        });
+        const { container } = await act(async () => renderMap());
+        expect(container.querySelector('.room-type-entrance')).toBeTruthy();
+        expect(container.querySelector('.room-type-private')).toBeTruthy();
+        const roomHighlights = container.querySelectorAll('.room-highlight');
+        expect(roomHighlights.length).toBe(2);
+    });
+
+    it('applies room-selected class when selectedRoom matches room id', async () => {
+        const roomData = { id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } };
+        mockState.mapData = createMockMapData({ rooms: [roomData] });
+        mockState.selectedRoom = roomData;
+        const { container } = await act(async () => renderMap());
+        const selectedRect = container.querySelector('.room-highlight.room-selected');
+        expect(selectedRect).toBeTruthy();
+    });
+
+    it('does not apply room-selected class when selectedRoom id does not match', async () => {
+        const roomData = { id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } };
+        mockState.mapData = createMockMapData({ rooms: [roomData] });
+        mockState.selectedRoom = { id: 'room99', rect: { x: 0, y: 0, w: 1, h: 1 } };
+        const { container } = await act(async () => renderMap());
+        const selectedRect = container.querySelector('.room-highlight.room-selected');
+        expect(selectedRect).toBeNull();
+    });
+
+    it('renders room group with correct key attribute', async () => {
+        mockState.mapData = createMockMapData({
+            rooms: [{ id: 'room1', type: 'common', label: 'Hall', rect: { x: 0, y: 0, w: 10, h: 10 } }],
+        });
+        const { container } = await act(async () => renderMap());
+        const roomGroup = container.querySelector('g');
+        expect(roomGroup).toBeTruthy();
     });
 });

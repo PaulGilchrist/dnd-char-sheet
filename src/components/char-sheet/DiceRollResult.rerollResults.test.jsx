@@ -1,9 +1,11 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import DiceRollResult from './DiceRollResult.jsx';
 
 describe('DiceRollResult', () => {
     describe('boon of combat prowess', () => {
         it('shows boon button when autoRerollForAttack is true, not hit, and isD20', () => {
+            const onStrokeOfLuck = vi.fn();
             render(
                 <DiceRollResult
                     name="Longsword"
@@ -13,6 +15,7 @@ describe('DiceRollResult', () => {
                     rollType="attack"
                     hit={false}
                     autoRerollForAttack={true}
+                    onStrokeOfLuck={onStrokeOfLuck}
                 />
             );
             expect(screen.getByText(/Boon of Combat Prowess/)).toBeInTheDocument();
@@ -49,7 +52,8 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText(/Boon of Combat Prowess/)).not.toBeInTheDocument();
         });
 
-        it('hides boon button and shows result after clicking', () => {
+        it('hides boon button and shows result after clicking, calling onStrokeOfLuck callback', () => {
+            const onStrokeOfLuck = vi.fn();
             render(
                 <DiceRollResult
                     name="Longsword"
@@ -59,9 +63,11 @@ describe('DiceRollResult', () => {
                     rollType="attack"
                     hit={false}
                     autoRerollForAttack={true}
+                    onStrokeOfLuck={onStrokeOfLuck}
                 />
             );
             fireEvent.click(screen.getByText(/Boon of Combat Prowess/));
+            expect(onStrokeOfLuck).toHaveBeenCalled();
             expect(screen.getByText(/Miss converted to Hit/)).toBeInTheDocument();
         });
 
@@ -106,7 +112,7 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText(/Empowered Spell/)).not.toBeInTheDocument();
         });
 
-        it('shows empowered spell result after clicking with diff info', async () => {
+        it('shows empowered spell result after clicking with diff info', () => {
             const mockResult = {
                 rerollCount: 2,
                 originalDice: [3, 2],
@@ -128,7 +134,8 @@ describe('DiceRollResult', () => {
                 />
             );
             fireEvent.click(screen.getByText(/Empowered Spell/));
-            await vi.waitFor(() => {
+            return vi.waitFor(() => {
+                expect(onEmpoweredSpell).toHaveBeenCalled();
                 const resultEl = container.querySelector('.dice-roll-reroll-result');
                 expect(resultEl).toBeInTheDocument();
                 expect(resultEl.textContent).toContain('Empowered Spell');
@@ -138,7 +145,7 @@ describe('DiceRollResult', () => {
             });
         });
 
-        it('shows empowered spell result with negative damage difference', async () => {
+        it('shows empowered spell result with negative damage difference', () => {
             const mockResult = {
                 rerollCount: 1,
                 originalDice: [5],
@@ -160,13 +167,14 @@ describe('DiceRollResult', () => {
                 />
             );
             fireEvent.click(screen.getByText(/Empowered Spell/));
-            await vi.waitFor(() => {
+            return vi.waitFor(() => {
+                expect(onEmpoweredSpell).toHaveBeenCalled();
                 const resultEl = container.querySelector('.dice-roll-reroll-result');
                 expect(resultEl.textContent).toContain('-3');
             });
         });
 
-        it('shows empowered spell result with zero damage difference and message', async () => {
+        it('shows empowered spell result with zero damage difference and message', () => {
             const mockResult = {
                 rerollCount: 1,
                 originalDice: [4],
@@ -189,9 +197,32 @@ describe('DiceRollResult', () => {
                 />
             );
             fireEvent.click(screen.getByText(/Empowered Spell/));
-            await vi.waitFor(() => {
+            return vi.waitFor(() => {
+                expect(onEmpoweredSpell).toHaveBeenCalled();
                 const resultEl = container.querySelector('.dice-roll-reroll-result');
                 expect(resultEl.textContent).toContain('No change in damage');
+            });
+        });
+
+        it('does not show empowered spell result when callback returns no result', () => {
+            const onEmpoweredSpell = vi.fn().mockResolvedValue(null);
+            const { container } = render(
+                <DiceRollResult
+                    name="Fire Bolt"
+                    type="damage"
+                    rolls={[6]}
+                    bonus={0}
+                    total={6}
+                    formula="1d6"
+                    empoweredSpell={true}
+                    onEmpoweredSpell={onEmpoweredSpell}
+                />
+            );
+            fireEvent.click(screen.getByText(/Empowered Spell/));
+            return vi.waitFor(() => {
+                expect(onEmpoweredSpell).toHaveBeenCalled();
+                const resultEl = container.querySelector('.dice-roll-reroll-result');
+                expect(resultEl).not.toBeInTheDocument();
             });
         });
     });
@@ -223,7 +254,7 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText(/Piercer - Puncture/)).not.toBeInTheDocument();
         });
 
-        it('shows puncture result after clicking with dice info', () => {
+        it('shows puncture result after clicking with dice info and calls onPuncture callback', () => {
             const mockPuncture = vi.fn().mockResolvedValue(undefined);
             const { container } = render(
                 <DiceRollResult
@@ -238,6 +269,7 @@ describe('DiceRollResult', () => {
                 />
             );
             fireEvent.click(screen.getByText(/Piercer - Puncture/));
+            expect(mockPuncture).toHaveBeenCalled();
             const resultEl = container.querySelector('.dice-roll-reroll-result');
             expect(resultEl.textContent).toContain('Piercer - Puncture');
             expect(resultEl.textContent).toContain('3, 5');
@@ -272,7 +304,7 @@ describe('DiceRollResult', () => {
             expect(screen.queryByText(/Savage Attacker/)).not.toBeInTheDocument();
         });
 
-        it('shows savage attacker result display after clicking', async () => {
+        it('shows savage attacker result display after clicking and calls onSavageAttacker callback', () => {
             const mockSavage = vi.fn().mockResolvedValue(undefined);
             const { container } = render(
                 <DiceRollResult
@@ -286,14 +318,13 @@ describe('DiceRollResult', () => {
                 />
             );
             fireEvent.click(screen.getByText(/Savage Attacker/));
-            await vi.waitFor(() => {
-                const resultEl = container.querySelector('.dice-roll-reroll-result');
-                expect(resultEl.textContent).toContain('Savage Attacker');
-                expect(resultEl.textContent).toContain('2, 3');
-            });
+            expect(mockSavage).toHaveBeenCalled();
+            const resultEl = container.querySelector('.dice-roll-reroll-result');
+            expect(resultEl.textContent).toContain('Savage Attacker');
+            expect(resultEl.textContent).toContain('2, 3');
         });
 
-        it('does not show savage attacker when formula is missing', () => {
+        it('shows savage attacker button regardless of formula presence', () => {
             render(
                 <DiceRollResult
                     name="Greatsword"

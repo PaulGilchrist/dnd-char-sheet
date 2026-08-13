@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
@@ -182,7 +183,13 @@ function createProps(overrides = {}) {
 describe('CharReactions - Dynamic Reactions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        useRuntimeValue.mockReturnValue([]);
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'activeBuffs') return [];
+            if (key === 'powerWordHealStandPermission') return false;
+            if (key === 'bastionOfLawActive') return false;
+            if (key === 'bastionOfLawWardDice') return [];
+            return [];
+        });
         getRuntimeValue.mockReturnValue(null);
         setRuntimeValue.mockReturnValue(undefined);
         hasAutomation.mockReturnValue(false);
@@ -194,7 +201,7 @@ describe('CharReactions - Dynamic Reactions', () => {
     });
 
     it('adds Revivification reaction when buff has reactionSave and not already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'activeBuffs') return [{ reactionSave: { dc: 15, type: 'CON' } }];
             return [];
         });
@@ -203,7 +210,7 @@ describe('CharReactions - Dynamic Reactions', () => {
     });
 
     it('does not add duplicate Revivification if already in reactions', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'activeBuffs') return [{ reactionSave: { dc: 15, type: 'CON' } }];
             return [];
         });
@@ -216,13 +223,31 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const revivificationElements = screen.queryAllByText(/Revivification/);
-        expect(revivificationElements.length).toBe(1);
+        expect(revivificationElements).toHaveLength(1);
+    });
+
+    it('does not add Revivification when multiple buffs have reactionSave', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'activeBuffs') return [
+                { reactionSave: { dc: 15, type: 'CON' } },
+                { reactionSave: { dc: 12, type: 'CHA' } },
+            ];
+            return [];
+        });
+        render(<CharReactions {...createProps()} />);
+        const revivificationElements = screen.queryAllByText(/Revivification/);
+        expect(revivificationElements).toHaveLength(1);
+    });
+
+    it('does not add Stand reaction when pwhStance is falsy', () => {
+        render(<CharReactions {...createProps()} />);
+        expect(screen.queryByText('Stand (Power Word Heal):')).not.toBeInTheDocument();
     });
 
     it('adds Stand (Power Word Heal) reaction when pwhStance is truthy', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'powerWordHealStandPermission') return true;
             if (key === 'activeBuffs') return [];
             return [];
@@ -232,7 +257,7 @@ describe('CharReactions - Dynamic Reactions', () => {
     });
 
     it('does not add duplicate Stand reaction if already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'powerWordHealStandPermission') return true;
             if (key === 'activeBuffs') return [];
             return [];
@@ -246,13 +271,13 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const standElements = screen.queryAllByText(/Stand \(Power Word Heal\)/);
-        expect(standElements.length).toBe(1);
+        expect(standElements).toHaveLength(1);
     });
 
     it('adds Bastion of Law reaction when ward is active with dice', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'bastionOfLawActive') return true;
             if (key === 'bastionOfLawWardDice') return [{ value: 8 }, { value: 8 }];
             if (key === 'activeBuffs') return [];
@@ -264,7 +289,7 @@ describe('CharReactions - Dynamic Reactions', () => {
     });
 
     it('does not add Bastion of Law if already present', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'bastionOfLawActive') return true;
             if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
             if (key === 'activeBuffs') return [];
@@ -279,15 +304,26 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         const bastionElements = screen.queryAllByText(/Bastion of Law/);
-        expect(bastionElements.length).toBe(1);
+        expect(bastionElements).toHaveLength(1);
     });
 
     it('does not add Bastion of Law when no ward dice', () => {
-        useRuntimeValue.mockImplementation((charKey, key) => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'bastionOfLawActive') return true;
             if (key === 'bastionOfLawWardDice') return [];
+            if (key === 'activeBuffs') return [];
+            return [];
+        });
+        render(<CharReactions {...createProps()} />);
+        expect(screen.queryByText("Bastion of Law:")).not.toBeInTheDocument();
+    });
+
+    it('does not add Bastion of Law when ward is not active', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'bastionOfLawActive') return false;
+            if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
             if (key === 'activeBuffs') return [];
             return [];
         });
@@ -305,7 +341,7 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/3 uses remaining/)).toBeInTheDocument();
     });
 
@@ -319,7 +355,7 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
     });
 
@@ -334,12 +370,41 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/2 uses remaining/)).toBeInTheDocument();
     });
 
+    it('falls back to 0 when Stone\'s Endurance uses are missing from both sources', () => {
+        getRuntimeValue.mockReturnValue(null);
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                _trackedResources: {},
+                reactions: [
+                    { name: "Stone's Endurance", description: 'Original desc' },
+                ],
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
+    });
+
+    it('does not update Stone\'s Endurance when reaction is absent', () => {
+        getRuntimeValue.mockReturnValue(5);
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Opportunity Attack', description: '...' },
+                ],
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.queryByText(/5 uses remaining/)).not.toBeInTheDocument();
+    });
+
     it('updates Storm\'s Thunder description when uses > 0', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
+        getRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'stormsThunderUses') return 2;
             return null;
         });
@@ -351,12 +416,12 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/2 uses remaining/)).toBeInTheDocument();
     });
 
     it('updates Storm\'s Thunder description when no uses remaining', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
+        getRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'stormsThunderUses') return 0;
             return null;
         });
@@ -368,12 +433,12 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/No uses remaining/)).toBeInTheDocument();
     });
 
     it('falls back to _trackedResources for Storm\'s Thunder uses', () => {
-        getRuntimeValue.mockImplementation((charKey, key) => {
+        getRuntimeValue.mockImplementation((_charKey, key) => {
             if (key === 'stormsThunderUses') return null;
             return null;
         });
@@ -386,13 +451,58 @@ describe('CharReactions - Dynamic Reactions', () => {
                 ],
             },
         });
-        render(<CharReactions {...createProps(props)} />);
+        render(<CharReactions {...props} />);
         expect(screen.getByText(/1 uses remaining/)).toBeInTheDocument();
+    });
+
+    it('does not update Storm\'s Thunder when reaction is absent', () => {
+        getRuntimeValue.mockReturnValue(3);
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Opportunity Attack', description: '...' },
+                ],
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.queryByText(/3 uses remaining/)).not.toBeInTheDocument();
     });
 
     it('hides reactions in featuresToIgnore list', () => {
         getCategories.mockReturnValue({ featuresToIgnore: ['Opportunity Attack'] });
         render(<CharReactions {...createProps()} />);
         expect(screen.queryByText('Opportunity Attack:')).not.toBeInTheDocument();
+    });
+
+    it('renders dynamic reactions with featuresToIgnore applied', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'activeBuffs') return [{ reactionSave: { dc: 15, type: 'CON' } }];
+            return [];
+        });
+        // Revivification is in the ignore list but Opportunity Attack is not
+        getCategories.mockReturnValue({ featuresToIgnore: ['Revivification'] });
+        render(<CharReactions {...createProps()} />);
+        expect(screen.queryByText('Revivification:')).not.toBeInTheDocument();
+        expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
+    });
+
+    it('renders correctly when activeBuffs is null', () => {
+        useRuntimeValue.mockReturnValue(null);
+        render(<CharReactions {...createProps()} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+        expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
+    });
+
+    it('renders correctly when playerStats.reactions is undefined', () => {
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: undefined,
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+        expect(screen.getByText('Opportunity Attack:')).toBeInTheDocument();
     });
 });

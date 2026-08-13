@@ -1,10 +1,13 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SpellOverlayControls from './SpellOverlayControls.jsx';
-import { OverlayShape } from '../../models/SpellOverlay.js';
+import { OverlayShape, DEFAULTS } from '../../models/SpellOverlay.js';
 
 describe('SpellOverlayControls', () => {
   const mockSetSelectedShape = vi.fn();
+  // Mock that auto-executes updater functions so the component behaves correctly,
+  // while still recording calls for inspection.
   const mockSetShapeParams = vi.fn((fn) => {
     if (typeof fn === 'function') {
       const prev = { radiusFt: 20, sizeFt: 15, distanceFt: 60, coneAngle: 90, widthFt: 5 };
@@ -35,6 +38,14 @@ describe('SpellOverlayControls', () => {
   const renderComponent = (props = {}) =>
     render(<SpellOverlayControls { ...defaultProps } { ...props } />);
 
+  // Helper to extract the result object from a setShapeParams call.
+  // The component passes an updater function; this invokes it with the default prev state.
+  const getShapeParamsResult = () => {
+    const callArg = mockSetShapeParams.mock.calls[0][0];
+    const prev = { radiusFt: 20, sizeFt: 15, distanceFt: 60, coneAngle: 90, widthFt: 5 };
+    return typeof callArg === 'function' ? callArg(prev) : callArg;
+  };
+
   describe('header and shape selector', () => {
     it('renders the header with wand icon', () => {
       renderComponent();
@@ -52,6 +63,12 @@ describe('SpellOverlayControls', () => {
       expect(screen.getByText('Line')).toBeInTheDocument();
     });
 
+    it('selects the current shape in the dropdown', () => {
+      renderComponent({ selectedShape: OverlayShape.CONE });
+      const select = screen.getByRole('combobox');
+      expect(select).toHaveValue(OverlayShape.CONE);
+    });
+
     it('calls setSelectedShape when shape changes', () => {
       renderComponent();
       const select = screen.getByRole('combobox');
@@ -59,12 +76,11 @@ describe('SpellOverlayControls', () => {
       expect(mockSetSelectedShape).toHaveBeenCalledWith(OverlayShape.CONE);
     });
 
-    it('resets shapeParams to defaults when shape changes', () => {
+    it('resets shapeParams to shape defaults when shape changes', () => {
       renderComponent();
       const select = screen.getByRole('combobox');
       fireEvent.change(select, { target: { value: OverlayShape.CONE } });
-      // setShapeParams was called with a function; the mock already returns the new value
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(mockSetShapeParams).toHaveBeenCalledWith(DEFAULTS[OverlayShape.CONE]);
     });
   });
 
@@ -100,7 +116,7 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '30' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 30 }));
     });
 
     it('uses default 20 when shapeParams.radiusFt is undefined', () => {
@@ -120,6 +136,15 @@ describe('SpellOverlayControls', () => {
       const input = screen.getByRole('spinbutton');
       expect(input).toHaveValue(20);
     });
+
+    it('uses default 20 when shapeParams.radiusFt is undefined', () => {
+      renderComponent({
+        selectedShape: OverlayShape.CYLINDER,
+        shapeParams: {},
+      });
+      const input = screen.getByRole('spinbutton');
+      expect(input).toHaveValue(20);
+    });
   });
 
   describe('cube shape params', () => {
@@ -134,7 +159,7 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.CUBE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '20' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ sizeFt: 20 }));
     });
 
     it('uses default 15 when shapeParams.sizeFt is undefined', () => {
@@ -162,14 +187,14 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.CONE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '30' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
     });
 
     it('calls setShapeParams with coneAngle on change', () => {
       renderComponent({ selectedShape: OverlayShape.CONE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '60' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ coneAngle: 60 }));
     });
 
     it('uses defaults when shapeParams is empty', () => {
@@ -198,14 +223,14 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.LINE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[0], { target: { value: '30' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ distanceFt: 30 }));
     });
 
     it('calls setShapeParams with widthFt on change', () => {
       renderComponent({ selectedShape: OverlayShape.LINE });
       const inputs = screen.getAllByRole('spinbutton');
       fireEvent.change(inputs[1], { target: { value: '10' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ widthFt: 10 }));
     });
 
     it('uses defaults when shapeParams is empty', () => {
@@ -224,14 +249,14 @@ describe('SpellOverlayControls', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: 'not-a-number' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
     });
 
     it('treats empty string as 0', () => {
       renderComponent({ selectedShape: OverlayShape.SPHERE });
       const input = screen.getByRole('spinbutton');
       fireEvent.change(input, { target: { value: '' } });
-      expect(mockSetShapeParams).toHaveBeenCalled();
+      expect(getShapeParamsResult()).toEqual(expect.objectContaining({ radiusFt: 0 }));
     });
   });
 
@@ -255,7 +280,6 @@ describe('SpellOverlayControls', () => {
         { id: 'o1', shape: OverlayShape.CUBE },
         { id: 'o2', shape: OverlayShape.CONE },
       ];
-      renderComponent({ overlays, selectedShape: OverlayShape.CUBE });
       const { container } = renderComponent({ overlays, selectedShape: OverlayShape.CUBE });
       const overlayItems = container.querySelectorAll('.spell-overlay-item');
       expect(overlayItems).toHaveLength(2);
@@ -297,7 +321,7 @@ describe('SpellOverlayControls', () => {
   describe('placement hint', () => {
     it('does not show hint when not active', () => {
       renderComponent({ isActive: false });
-      expect(screen.queryByRole('text', { name: /Click map to place/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Click map to place/)).not.toBeInTheDocument();
     });
 
     it('shows basic hint when active with sphere', () => {

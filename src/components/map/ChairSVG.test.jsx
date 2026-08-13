@@ -1,184 +1,235 @@
-import { describe, it, expect } from 'vitest';
+// @improved-by-ai
+import React from 'react';
 import { render } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import ChairSVG from './ChairSVG.jsx';
 
 describe('ChairSVG', () => {
-  describe('rendering', () => {
-    it('should render a <g> element', () => {
+  describe('root element', () => {
+    it('renders a <g> element', () => {
       const { container } = render(<ChairSVG />);
-      const group = container.querySelector('g');
-      expect(group).toBeInTheDocument();
+      expect(container.querySelector('g')).toBeInTheDocument();
     });
 
-    it('should render all SVG child elements (rects and circles)', () => {
-      const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      const circles = container.querySelectorAll('circle');
-      // Total rects: 15 (floor shadow 1, backrest 3, seat 3, left armrest 2, right armrest 2, front frame 1, legs 4)
-      // Total circles: 4 (2 decorative + 2 gold tips)
-      expect(rects.length).toBe(15);
-      expect(circles.length).toBe(4);
+    it('applies id to the root <g>', () => {
+      const { container } = render(<ChairSVG id="chair-1" />);
+      expect(container.querySelector('g')).toHaveAttribute('id', 'chair-1');
     });
 
-    it('should render with no props', () => {
-      const { container } = render(<ChairSVG />);
-      const group = container.querySelector('g');
-      expect(group).not.toHaveAttribute('id');
+    it('applies className to the root <g>', () => {
+      const { container } = render(<ChairSVG className="chair-svg test-class" />);
+      expect(container.querySelector('g')).toHaveAttribute('class', 'chair-svg test-class');
     });
 
-    it('should pass through id prop', () => {
-      render(<ChairSVG id="chair-1" />);
-      const group = document.querySelector('g');
-      expect(group).toHaveAttribute('id', 'chair-1');
+    it('spreads additional props to the root <g>', () => {
+      const { container } = render(
+        <ChairSVG data-testid="my-chair" aria-label="Throne" />,
+      );
+      const g = container.querySelector('g');
+      expect(g).toHaveAttribute('data-testid', 'my-chair');
+      expect(g).toHaveAttribute('aria-label', 'Throne');
     });
 
-    it('should pass through className prop', () => {
-      render(<ChairSVG className="chair-svg test-class" />);
-      const group = document.querySelector('g');
-      expect(group).toHaveAttribute('class', 'chair-svg test-class');
-    });
-
-    it('should pass through additional props via spread', () => {
-      const mockFn = vi.fn();
-      render(<ChairSVG onClick={mockFn} data-testid="my-chair" />);
-      const group = document.querySelector('[data-testid="my-chair"]');
-      expect(group).toHaveAttribute('data-testid', 'my-chair');
-    });
-
-    it('should forward ref to the <g> element', () => {
-      const ref = { current: null };
+    it('accepts a ref via forwardRef', () => {
+      const ref = React.createRef();
       render(<ChairSVG ref={ref} />);
-      expect(ref.current).toBeInstanceOf(Element);
+      expect(ref.current).toBeTruthy();
       expect(ref.current.tagName).toBe('G');
     });
 
-    it('should set displayName to "ChairSVG"', () => {
+    it('sets displayName to "ChairSVG"', () => {
       expect(ChairSVG.displayName).toBe('ChairSVG');
     });
   });
 
-  describe('SVG element attributes', () => {
-    it('should render floor shadow rect with correct attributes', () => {
+  describe('floor shadow', () => {
+    it('renders the shadow rect with correct attributes', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      const shadow = rects[0];
+      const shadow = container.querySelector('rect[fill="#4A2810"][opacity="0.15"]');
+      expect(shadow).toBeInTheDocument();
       expect(shadow).toHaveAttribute('x', '3');
       expect(shadow).toHaveAttribute('y', '3');
       expect(shadow).toHaveAttribute('width', '30');
       expect(shadow).toHaveAttribute('height', '30');
       expect(shadow).toHaveAttribute('rx', '1');
-      expect(shadow).toHaveAttribute('fill', '#4A2810');
-      expect(shadow).toHaveAttribute('opacity', '0.15');
     });
+  });
 
-    it('should render backrest with correct attributes', () => {
+  describe('backrest', () => {
+    it('renders the backrest main rect', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      const backrest = rects[1];
+      const backrest = container.querySelector(
+        'rect[fill="#5C3317"][stroke="#4A2810"][stroke-width="0.6"]',
+      );
+      expect(backrest).toBeInTheDocument();
       expect(backrest).toHaveAttribute('x', '7');
       expect(backrest).toHaveAttribute('y', '4');
       expect(backrest).toHaveAttribute('width', '22');
       expect(backrest).toHaveAttribute('height', '7');
-      expect(backrest).toHaveAttribute('fill', '#5C3317');
-      expect(backrest).toHaveAttribute('stroke', '#4A2810');
-      expect(backrest).toHaveAttribute('stroke-width', '0.6');
+      expect(backrest).toHaveAttribute('rx', '0.8');
     });
 
-    it('should render gold trim on backrest', () => {
+    it('renders the gold trim on the backrest top edge', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      const trim = rects[2];
-      expect(trim).toHaveAttribute('fill', '#D4AF37');
-      expect(trim).toHaveAttribute('opacity', '0.8');
+      const trim = container.querySelector('rect[fill="#D4AF37"][opacity="0.8"]');
+      expect(trim).toBeInTheDocument();
+      expect(trim).toHaveAttribute('x', '7');
+      expect(trim).toHaveAttribute('y', '4');
+      expect(trim).toHaveAttribute('width', '22');
+      expect(trim).toHaveAttribute('height', '1');
     });
 
-    it('should render decorative circles in backrest', () => {
+    it('renders decorative circles in the backrest', () => {
       const { container } = render(<ChairSVG />);
-      const circles = container.querySelectorAll('circle');
-      expect(circles[0]).toHaveAttribute('cx', '18');
-      expect(circles[0]).toHaveAttribute('cy', '7.5');
-      expect(circles[0]).toHaveAttribute('fill', 'none');
-      expect(circles[0]).toHaveAttribute('stroke', '#D4AF37');
-    });
+      const circles = container.querySelectorAll('circle[stroke="#D4AF37"]');
+      expect(circles.length).toBe(2);
 
-    it('should render seat cushion with correct attributes', () => {
+      const outer = circles[0];
+      expect(outer).toHaveAttribute('cx', '18');
+      expect(outer).toHaveAttribute('cy', '7.5');
+      expect(outer).toHaveAttribute('fill', 'none');
+      expect(outer).toHaveAttribute('stroke-width', '0.5');
+
+      const inner = circles[1];
+      expect(inner).toHaveAttribute('r', '0.8');
+      expect(inner).toHaveAttribute('stroke-width', '0.4');
+      expect(inner).toHaveAttribute('opacity', '0.4');
+    });
+  });
+
+  describe('seat cushion', () => {
+    it('renders the cushion main rect', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      // Index 3 is the seat cushion main rect (after shadow, backrest main, backrest trim)
-      const cushion = rects[3];
+      const cushion = container.querySelector('rect[fill="#8B0000"][stroke="#6B0000"]');
+      expect(cushion).toBeInTheDocument();
       expect(cushion).toHaveAttribute('x', '7');
       expect(cushion).toHaveAttribute('y', '11');
       expect(cushion).toHaveAttribute('width', '22');
       expect(cushion).toHaveAttribute('height', '14');
-      expect(cushion).toHaveAttribute('fill', '#8B0000');
-      expect(cushion).toHaveAttribute('stroke', '#6B0000');
+      expect(cushion).toHaveAttribute('rx', '1.2');
     });
 
-    it('should render left armrest with correct attributes', () => {
+    it('renders the cushion inner area highlight', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      // Index 6 is the left armrest main rect (after shadow, backrest 3, seat 3)
-      const leftArmrest = rects[6];
-      expect(leftArmrest).toHaveAttribute('x', '4');
+      const inner = container.querySelector('rect[fill="#A00000"][opacity="0.25"]');
+      expect(inner).toBeInTheDocument();
+      expect(inner).toHaveAttribute('x', '9');
+      expect(inner).toHaveAttribute('y', '13');
+      expect(inner).toHaveAttribute('width', '18');
+      expect(inner).toHaveAttribute('height', '10');
+    });
+
+    it('renders the cushion top edge highlight', () => {
+      const { container } = render(<ChairSVG />);
+      const highlight = container.querySelector('rect[fill="#C00000"][opacity="0.3"]');
+      expect(highlight).toBeInTheDocument();
+      expect(highlight).toHaveAttribute('x', '8');
+      expect(highlight).toHaveAttribute('y', '11.5');
+      expect(highlight).toHaveAttribute('width', '20');
+      expect(highlight).toHaveAttribute('height', '0.6');
+    });
+  });
+
+  describe('armrests', () => {
+    it('renders the left armrest with correct attributes', () => {
+      const { container } = render(<ChairSVG />);
+      const leftArmrest = container.querySelector(
+        'rect[fill="#5C3317"][stroke="#4A2810"][stroke-width="0.4"][x="4"]',
+      );
+      expect(leftArmrest).toBeInTheDocument();
       expect(leftArmrest).toHaveAttribute('y', '11');
       expect(leftArmrest).toHaveAttribute('width', '3');
       expect(leftArmrest).toHaveAttribute('height', '14');
-      expect(leftArmrest).toHaveAttribute('fill', '#5C3317');
     });
 
-    it('should render right armrest with correct attributes', () => {
+    it('renders the right armrest with correct attributes', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      // Index 8 is the right armrest main rect (after shadow 1, backrest 3, seat 3, left armrest 2)
-      const rightArmrest = rects[8];
-      expect(rightArmrest).toHaveAttribute('x', '29');
+      const rightArmrest = container.querySelector(
+        'rect[fill="#5C3317"][stroke="#4A2810"][stroke-width="0.4"][x="29"]',
+      );
+      expect(rightArmrest).toBeInTheDocument();
       expect(rightArmrest).toHaveAttribute('y', '11');
       expect(rightArmrest).toHaveAttribute('width', '3');
       expect(rightArmrest).toHaveAttribute('height', '14');
-      expect(rightArmrest).toHaveAttribute('fill', '#5C3317');
     });
 
-    it('should render front frame with correct attributes', () => {
+    it('renders the left armrest highlight', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      // Index 10 is the front frame rect (after shadow 1, backrest 3, seat 3, left armrest 2, right armrest 2)
-      const frontFrame = rects[10];
-      expect(frontFrame).toHaveAttribute('x', '7');
-      expect(frontFrame).toHaveAttribute('y', '25');
-      expect(frontFrame).toHaveAttribute('width', '22');
-      expect(frontFrame).toHaveAttribute('height', '4');
-      expect(frontFrame).toHaveAttribute('fill', '#5C3317');
+      const highlight = container.querySelector('rect[fill="#7A4E20"][opacity="0.4"]');
+      expect(highlight).toBeInTheDocument();
+      expect(highlight).toHaveAttribute('x', '4');
     });
 
-    it('should render all four legs', () => {
+    it('renders the right armrest highlight', () => {
       const { container } = render(<ChairSVG />);
-      const rects = container.querySelectorAll('rect');
-      // Index 11-14 are the four legs (after front frame at index 10)
-      const legs = Array.from(rects).slice(11, 15);
-      expect(legs[0]).toHaveAttribute('x', '5');
-      expect(legs[0]).toHaveAttribute('y', '5');
-      expect(legs[1]).toHaveAttribute('x', '28');
-      expect(legs[1]).toHaveAttribute('y', '5');
-      expect(legs[2]).toHaveAttribute('x', '5');
-      expect(legs[2]).toHaveAttribute('y', '27');
-      expect(legs[3]).toHaveAttribute('x', '28');
-      expect(legs[3]).toHaveAttribute('y', '27');
-      legs.forEach((leg) => {
-        expect(leg).toHaveAttribute('fill', '#4A2810');
-      });
+      const highlights = Array.from(
+        container.querySelectorAll('rect[fill="#7A4E20"][opacity="0.4"]'),
+      );
+      const rightHighlight = highlights.find((h) => h.getAttribute('x') === '31.5');
+      expect(rightHighlight).toBeInTheDocument();
     });
 
-    it('should render gold tips on armrests', () => {
+    it('renders gold tips on both armrests', () => {
       const { container } = render(<ChairSVG />);
-      const circles = container.querySelectorAll('circle');
-      // Index 2-3 are the gold tips (after 2 decorative circles)
-      const tips = Array.from(circles).slice(2);
+      const tips = container.querySelectorAll('circle[fill="#D4AF37"][stroke="#B8860B"]');
+      expect(tips.length).toBe(2);
+
       expect(tips[0]).toHaveAttribute('cx', '5.5');
       expect(tips[0]).toHaveAttribute('cy', '24.5');
-      expect(tips[0]).toHaveAttribute('fill', '#D4AF37');
+      expect(tips[0]).toHaveAttribute('r', '1.2');
+
       expect(tips[1]).toHaveAttribute('cx', '30.5');
       expect(tips[1]).toHaveAttribute('cy', '24.5');
-      expect(tips[1]).toHaveAttribute('fill', '#D4AF37');
+    });
+  });
+
+  describe('front frame', () => {
+    it('renders the front frame rect below the cushion', () => {
+      const { container } = render(<ChairSVG />);
+      const frame = container.querySelector(
+        'rect[fill="#5C3317"][stroke="#4A2810"][y="25"]',
+      );
+      expect(frame).toBeInTheDocument();
+      expect(frame).toHaveAttribute('x', '7');
+      expect(frame).toHaveAttribute('width', '22');
+      expect(frame).toHaveAttribute('height', '4');
+    });
+  });
+
+  describe('legs', () => {
+    it('renders all four legs at the correct corners', () => {
+      const { container } = render(<ChairSVG />);
+      const legs = container.querySelectorAll('rect[fill="#4A2810"]');
+      // 4 legs + 1 shadow = 5 rects with fill="#4A2810"
+      expect(legs.length).toBe(5);
+
+      const legPositions = [
+        { x: '5', y: '5' },   // back left
+        { x: '28', y: '5' },  // back right
+        { x: '5', y: '27' },  // front left
+        { x: '28', y: '27' }, // front right
+      ];
+
+      legPositions.forEach(({ x, y }) => {
+        const leg = container.querySelector(`rect[fill="#4A2810"][x="${x}"][y="${y}"]`);
+        expect(leg).toBeInTheDocument();
+        expect(leg).toHaveAttribute('width', '3');
+        expect(leg).toHaveAttribute('height', '3');
+        expect(leg).toHaveAttribute('rx', '0.3');
+      });
+    });
+  });
+
+  describe('element counts', () => {
+    it('renders the expected number of child elements', () => {
+      const { container } = render(<ChairSVG />);
+      const g = container.querySelector('g');
+      const rects = g.querySelectorAll('rect');
+      const circles = g.querySelectorAll('circle');
+      // 15 rects: shadow(1) + backrest(3) + seat(3) + left armrest(2) + right armrest(2) + front frame(1) + legs(4)
+      // 4 circles: 2 decorative + 2 gold tips
+      expect(rects.length).toBe(15);
+      expect(circles.length).toBe(4);
     });
   });
 });
