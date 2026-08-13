@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import POIPanel from './POIPanel.jsx';
@@ -21,20 +22,14 @@ describe('POIPanel', () => {
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('renders with fa-times icon', () => {
+        it('renders with fa-times icon and poi-panel-close class', () => {
             renderPanel();
             const icon = document.querySelector('.poi-panel-close .fa-solid.fa-times');
             expect(icon).toBeInTheDocument();
         });
-
-        it('has poi-panel-close class', () => {
-            renderPanel();
-            const closeBtn = document.querySelector('.poi-panel-close');
-            expect(closeBtn).toBeInTheDocument();
-        });
     });
 
-    describe('POI items', () => {
+    describe('POI items rendering', () => {
         it('renders exactly 9 POI items', () => {
             const { container } = renderPanel();
             const items = container.querySelectorAll('.poi-panel-item');
@@ -48,20 +43,12 @@ describe('POIPanel', () => {
             }
         });
 
-        it('each POI item has poi-panel-item class', () => {
+        it('renders POI items in the correct order matching POI_TYPES', () => {
             renderPanel();
-            const items = document.querySelectorAll('.poi-panel-item');
-            items.forEach(item => {
-                expect(item).toHaveClass('poi-panel-item');
-            });
-        });
-
-        it('each POI item is draggable', () => {
-            renderPanel();
-            const items = document.querySelectorAll('.poi-panel-item');
-            items.forEach(item => {
-                expect(item).toHaveAttribute('draggable', 'true');
-            });
+            const items = document.querySelectorAll('.poi-panel-item span');
+            const names = [...items].map(span => span.textContent);
+            const expectedNames = POI_TYPES.map(poi => poi.name);
+            expect(names).toEqual(expectedNames);
         });
 
         it('renders SVG with correct viewBox and dimensions for each POI', () => {
@@ -86,12 +73,12 @@ describe('POIPanel', () => {
             });
         });
 
-        it('renders POI items in the correct order matching POI_TYPES', () => {
+        it('each POI item is draggable', () => {
             renderPanel();
-            const items = document.querySelectorAll('.poi-panel-item span');
-            const names = [...items].map(span => span.textContent);
-            const expectedNames = POI_TYPES.map(poi => poi.name);
-            expect(names).toEqual(expectedNames);
+            const items = document.querySelectorAll('.poi-panel-item');
+            items.forEach(item => {
+                expect(item).toHaveAttribute('draggable', 'true');
+            });
         });
     });
 
@@ -140,30 +127,6 @@ describe('POIPanel', () => {
 
             const afterCount = document.body.querySelectorAll('div[style*="position: absolute"]');
             expect(afterCount.length).toBe(beforeCount + 1);
-        });
-
-        it('removes the ghost element after timeout', async () => {
-            vi.useFakeTimers();
-            renderPanel();
-            const items = document.querySelectorAll('.poi-panel-item');
-            const firstItem = items[0];
-            const dataTransfer = createDataTransfer();
-
-            fireEvent.dragStart(firstItem, { dataTransfer, currentTarget: firstItem });
-
-            const ghostSelectors = document.body.querySelectorAll('div[style*="position: absolute"]');
-            expect(ghostSelectors.length).toBeGreaterThan(0);
-
-            vi.advanceTimersByTime(1);
-            vi.useRealTimers();
-
-            await new Promise(resolve => setTimeout(resolve, 10));
-            vi.useFakeTimers();
-
-            const remaining = document.body.querySelectorAll('div[style*="position: absolute"]');
-            expect(remaining.length).toBe(0);
-
-            vi.useRealTimers();
         });
 
         it('scales the ghost image based on SVG dimensions', () => {

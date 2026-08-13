@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -347,6 +348,7 @@ describe('EncounterBuilder interactions - modals', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    global.window.confirm = vi.fn(() => true);
   });
 
   describe('save encounter flow', () => {
@@ -371,53 +373,6 @@ describe('EncounterBuilder interactions - modals', () => {
         expect(openSaveModal).toHaveBeenCalled();
       });
     });
-
-    it('shows Update instead of Save when an encounter is already loaded', async () => {
-      // currentEncounterName is internal state managed by useState, not exposed by the hook
-      // This is verified by the component's render logic in rendering.test.jsx
-      // Here we verify the hook returns the expected structure
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-        currentEncounterName: 'goblin-ambush',
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
-      // The component manages currentEncounterName internally via useState
-      // The button text depends on whether currentEncounterName is truthy
-      // Since it starts as null, Save button shows. After loading an encounter,
-      // the component sets currentEncounterName and the Update button appears.
-      // This state transition is tested by the reset encounter tests below.
-      expect(screen.getByText(/Save|Update/)).toBeInTheDocument();
-    });
-
-    it('calls updateEncounter when saving an existing encounter', async () => {
-      // currentEncounterName is internal state - we verify the hook is called correctly
-      const updateEncounter = vi.fn();
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter, loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-        currentEncounterName: 'existing-encounter',
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
-      // Verify the button text is either Save or Update depending on internal state
-      const saveOrUpdateBtn = screen.getByText(/Save|Update/);
-      expect(saveOrUpdateBtn).toBeInTheDocument();
-      // The updateEncounter mock is configured above and will be called when the user clicks
-    });
   });
 
   describe('load encounter flow', () => {
@@ -429,7 +384,7 @@ describe('EncounterBuilder interactions - modals', () => {
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
       useEncounterManagement.mockReturnValue({
         modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: openLoadModal, closeModal: vi.fn(),
+        openSaveModal: vi.fn(), openLoadModal, closeModal: vi.fn(),
         saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
         deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
       });
@@ -489,7 +444,7 @@ describe('EncounterBuilder interactions - modals', () => {
       });
     });
 
-    it('closes generator modal after applying a suggestion', async () => {
+    it('adds selected monsters after applying a suggestion', async () => {
       await mount();
       const generateBtn = screen.getByText('Generate');
       fireEvent.click(generateBtn);
@@ -501,54 +456,9 @@ describe('EncounterBuilder interactions - modals', () => {
       const applyBtn = screen.getByTestId('generator-apply');
       fireEvent.click(applyBtn);
 
-      // The generator modal closes via onClose which sets setShowGenerator(false)
-      // Verify the selected monsters panel shows the applied monster
       await waitFor(() => {
         expect(screen.getByTestId('selected-item-suggested-goblin')).toBeInTheDocument();
-      }, { timeout: 3000 });
-    });
-  });
-
-  describe('reset encounter', () => {
-    it('shows Reset button when an encounter is loaded', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-        currentEncounterName: 'saved-encounter',
       });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
-      // currentEncounterName is internal state; it starts as null so Reset is hidden
-      // After loading an encounter, the component sets it and Reset appears
-      // This is verified by the component's conditional rendering logic
-      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
-    });
-
-    it('hides Reset button when no encounter is loaded', async () => {
-      await mount();
-      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
-    });
-
-    it('resets encounter state when Reset button is clicked', async () => {
-      // Reset button only appears when currentEncounterName is truthy (internal state)
-      // Since we can't easily set internal state, we verify the reset handler exists
-      // by checking that clicking Reset would clear the form fields
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-      expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
-
-      // Reset button only shows when there's a loaded encounter (internal state)
-      // The reset handler clears: encounterTitle, currentEncounterName, lootData,
-      // filter, selectedMonsters, searchQuery, description
-      // This is verified by the component's handleReset function
-      expect(screen.queryByText('Reset')).not.toBeInTheDocument();
     });
   });
 
@@ -621,17 +531,6 @@ describe('EncounterBuilder interactions - modals', () => {
       const textarea = screen.getByTestId('description-textarea');
       fireEvent.change(textarea, { target: { value: 'Goblins ambush the party at dawn.' } });
       expect(textarea.value).toBe('Goblins ambush the party at dawn.');
-    });
-
-    it('clears description when reset is clicked', async () => {
-      // Reset button only appears when currentEncounterName is truthy (internal state)
-      // Since we can't easily set internal state, we verify the textarea can be edited
-      await mount();
-      const textarea = screen.getByTestId('description-textarea');
-      fireEvent.change(textarea, { target: { value: 'Some description' } });
-      expect(textarea.value).toBe('Some description');
-      // The reset handler clears description to '' when Reset is clicked
-      // This is verified by the component's handleReset function
     });
   });
 });

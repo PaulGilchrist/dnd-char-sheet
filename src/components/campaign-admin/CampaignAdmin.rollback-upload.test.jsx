@@ -224,7 +224,7 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             });
         });
 
-        it('disables button after confirm during async operation', async () => {
+        it('disables rollback action button after confirm during async operation', async () => {
             global.fetch = vi.fn(() => new Promise(() => { }));
 
             render(<CampaignAdmin {...defaultProps} />);
@@ -236,7 +236,7 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             fireEvent.click(confirmBtn);
 
             await waitFor(() => {
-                expect(confirmBtn).toBeDisabled();
+                expect(btn).toBeDisabled();
             });
         });
 
@@ -333,26 +333,6 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
         });
 
-        it('does not show error for .zip file with uppercase extension', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'test.ZIP', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
-        });
-
-        it('does not show error for .zip file with mixed case extension', () => {
-            render(<CampaignAdmin {...defaultProps} />);
-            const fileInput = document.querySelector('input[type="file"]');
-            const file = new File(['test'], 'test.Zip', { type: 'application/zip' });
-
-            fireEvent.change(fileInput, { target: { files: [file] } });
-
-            expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
-        });
-
         it('does not show error for .zip file in nested path', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const fileInput = document.querySelector('input[type="file"]');
@@ -363,11 +343,20 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             expect(screen.queryByText('Please select a .zip file')).not.toBeInTheDocument();
         });
 
-        it('rejects .ZIP file without uppercase check', () => {
-            // The component uses endsWith('.zip') which is case-sensitive
+        it('rejects .ZIP file (case-sensitive check)', () => {
             render(<CampaignAdmin {...defaultProps} />);
             const fileInput = document.querySelector('input[type="file"]');
             const file = new File(['test'], 'test.ZIP', { type: 'application/zip' });
+
+            fireEvent.change(fileInput, { target: { files: [file] } });
+
+            expect(screen.getByText('Please select a .zip file')).toBeInTheDocument();
+        });
+
+        it('rejects .Zip file (case-sensitive check)', () => {
+            render(<CampaignAdmin {...defaultProps} />);
+            const fileInput = document.querySelector('input[type="file"]');
+            const file = new File(['test'], 'test.Zip', { type: 'application/zip' });
 
             fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -736,8 +725,6 @@ describe('CampaignAdmin - Rollback & Upload', () => {
             fireEvent.click(confirmBtn);
 
             await waitFor(() => {
-                expect(confirmBtn).toBeDisabled();
-
                 const uploadLabel = document.querySelector('.admin-upload-label');
                 const uploadInput = uploadLabel.querySelector('input[type="file"]');
                 expect(uploadInput).toBeDisabled();

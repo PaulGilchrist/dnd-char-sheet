@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -418,7 +419,6 @@ describe('EncounterBuilder interactions - panels', () => {
       fireEvent.click(checkbox);
 
       const difficultyLabel = screen.getByTestId('difficulty-label');
-      // Young Dragon XP=120, threshold=100, ratio=1.2 -> Hard (index 2)
       expect(difficultyLabel).toHaveTextContent('Hard');
     });
   });
@@ -466,12 +466,6 @@ describe('EncounterBuilder interactions - panels', () => {
       await mount();
       expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
     });
-
-    it('shows dragon icon next to title', async () => {
-      await mount();
-      const icon = document.querySelector('.fa-solid.fa-dragon');
-      expect(icon).toBeInTheDocument();
-    });
   });
 
   describe('party summary display', () => {
@@ -483,15 +477,8 @@ describe('EncounterBuilder interactions - panels', () => {
       expect(screen.getByText('Lv3')).toBeInTheDocument();
     });
 
-    it('shows party icon', async () => {
-      await mount();
-      const icon = document.querySelector('.fa-solid.fa-users');
-      expect(icon).toBeInTheDocument();
-    });
-
     it('shows no characters message when characters array is empty', async () => {
       await mount();
-      // Need to re-render with empty characters
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 

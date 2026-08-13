@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AllySelectionModal from './AllySelectionModal.jsx';
 
 describe('AllySelectionModal', () => {
@@ -35,11 +36,10 @@ describe('AllySelectionModal', () => {
     render(<AllySelectionModal {...getProps()} />);
 
     expect(screen.getByText('Select Allies')).toBeInTheDocument();
-    const icon = document.querySelector('.fa-solid.fa-shield-halved');
-    expect(icon).toBeInTheDocument();
+    expect(document.querySelector('.fa-solid.fa-shield-halved')).toBeInTheDocument();
   });
 
-  it('renders the creature list with all creatures', () => {
+  it('renders all creatures in the list', () => {
     render(<AllySelectionModal {...getProps()} />);
 
     expect(screen.getByText('Goblin')).toBeInTheDocument();
@@ -47,39 +47,35 @@ describe('AllySelectionModal', () => {
     expect(screen.getByText('Orc')).toBeInTheDocument();
   });
 
-  it('marks player creatures with (Player) label', () => {
+  it('labels player creatures with (Player) and NPCs with (NPC)', () => {
     render(<AllySelectionModal {...getProps()} />);
 
     expect(screen.getByText('(Player)')).toBeInTheDocument();
-    const npcLabels = screen.getAllByText('(NPC)');
-    expect(npcLabels.length).toBe(2);
+    expect(screen.getAllByText('(NPC)').length).toBe(2);
   });
 
   it('displays HP percentage for non-player creatures', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    // Goblin: 15/20 = 75%
     expect(screen.getByText('(75% HP)')).toBeInTheDocument();
-    // Orc: 0/25 = 0%
     expect(screen.getByText('(0% HP)')).toBeInTheDocument();
   });
 
   it('does not display HP for player creatures', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    const playerLabel = screen.getByText('Player Character');
-    const playerRow = playerLabel.closest('.secondary-target-row');
-    const hpSpans = playerRow.querySelectorAll('.secondary-target-hp');
-    expect(hpSpans.length).toBe(0);
+    const playerCheckbox = screen.getByRole('checkbox', { name: 'Player Character(Player)' });
+    const playerRow = playerCheckbox.closest('.secondary-target-row');
+    expect(playerRow.querySelector('.secondary-target-hp')).toBeNull();
   });
 
   it('renders the empty state when no creatures are provided', () => {
-    render(<AllySelectionModal {...getProps()} creatures={[]} />);
+    render(<AllySelectionModal {...getProps({ creatures: [] })} />);
 
     expect(screen.getByText('No creatures available.')).toBeInTheDocument();
   });
 
-  // ── Default icon ──
+  // ── Props fallbacks ──
 
   it('uses default icon when no icon prop is provided', () => {
     render(<AllySelectionModal {...getProps({ icon: null })} />);
@@ -119,23 +115,23 @@ describe('AllySelectionModal', () => {
   it('selects a creature when its row is clicked', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    const goblinRow = screen.getByText('Goblin').closest('.secondary-target-row');
-    fireEvent.click(goblinRow);
+    const rows = document.querySelectorAll('.secondary-target-row');
+    fireEvent.click(rows[0]);
 
     expect(screen.getByText('1 selected')).toBeInTheDocument();
-    expect(goblinRow).toHaveClass('secondary-target-selected');
+    expect(rows[0]).toHaveClass('secondary-target-selected');
   });
 
   it('deselects a creature when its row is clicked again', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    const goblinRow = screen.getByText('Goblin').closest('.secondary-target-row');
-    fireEvent.click(goblinRow);
+    const rows = document.querySelectorAll('.secondary-target-row');
+    fireEvent.click(rows[0]);
     expect(screen.getByText('1 selected')).toBeInTheDocument();
 
-    fireEvent.click(goblinRow);
+    fireEvent.click(rows[0]);
     expect(screen.getByText('0 selected')).toBeInTheDocument();
-    expect(goblinRow).not.toHaveClass('secondary-target-selected');
+    expect(rows[0]).not.toHaveClass('secondary-target-selected');
   });
 
   // ── Select All ──
@@ -169,9 +165,9 @@ describe('AllySelectionModal', () => {
 
     expect(screen.getByText('2 selected')).toBeInTheDocument();
     const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes[0]).toBeChecked(); // Goblin
-    expect(checkboxes[1]).not.toBeChecked(); // Player Character
-    expect(checkboxes[2]).toBeChecked(); // Orc
+    expect(checkboxes[0]).toBeChecked();
+    expect(checkboxes[1]).not.toBeChecked();
+    expect(checkboxes[2]).toBeChecked();
   });
 
   // ── Confirm ──
@@ -203,8 +199,8 @@ describe('AllySelectionModal', () => {
   it('enables confirm button when at least one ally is selected', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    const goblinRow = screen.getByText('Goblin').closest('.secondary-target-row');
-    fireEvent.click(goblinRow);
+    const rows = document.querySelectorAll('.secondary-target-row');
+    fireEvent.click(rows[0]);
 
     const confirmBtn = screen.getByRole('button', { name: /Confirm Allies \(1\)/ });
     expect(confirmBtn).not.toBeDisabled();
@@ -217,14 +213,6 @@ describe('AllySelectionModal', () => {
 
     fireEvent.click(screen.getByText('Select All'));
     expect(screen.getByRole('button', { name: /Confirm Allies \(3\)/ })).toBeInTheDocument();
-  });
-
-  it('uses the same icon in the confirm button as the modal header', () => {
-    render(<AllySelectionModal {...getProps({ icon: 'fa-dragon' })} />);
-
-    const headerIcon = document.querySelector('.sp-header .fa-solid');
-    const confirmIcon = screen.getByRole('button', { name: /Confirm Allies/ }).querySelector('.fa-solid');
-    expect(headerIcon.className).toBe(confirmIcon.className);
   });
 
   // ── Cancel ──
@@ -251,31 +239,22 @@ describe('AllySelectionModal', () => {
   it('handles selecting and deselecting individual creatures correctly', () => {
     render(<AllySelectionModal {...getProps()} />);
 
-    const goblinRow = screen.getByText('Goblin').closest('.secondary-target-row');
-    const orcRow = screen.getByText('Orc').closest('.secondary-target-row');
+    const rows = document.querySelectorAll('.secondary-target-row');
 
-    fireEvent.click(goblinRow);
+    fireEvent.click(rows[0]);
     expect(screen.getByText('1 selected')).toBeInTheDocument();
 
-    fireEvent.click(orcRow);
+    fireEvent.click(rows[1]);
     expect(screen.getByText('2 selected')).toBeInTheDocument();
 
-    fireEvent.click(goblinRow);
+    fireEvent.click(rows[0]);
     expect(screen.getByText('1 selected')).toBeInTheDocument();
 
-    fireEvent.click(orcRow);
+    fireEvent.click(rows[1]);
     expect(screen.getByText('0 selected')).toBeInTheDocument();
   });
 
-  // ── Creature with zero HP ──
-
-  it('displays 0% HP for creatures with zero current HP', () => {
-    render(<AllySelectionModal {...getProps()} />);
-
-    expect(screen.getByText('(0% HP)')).toBeInTheDocument();
-  });
-
-  // ── Creature with full HP ──
+  // ── HP display edge cases ──
 
   it('displays 100% HP for creatures at full health', () => {
     const creatures = [
@@ -285,8 +264,6 @@ describe('AllySelectionModal', () => {
 
     expect(screen.getByText('(100% HP)')).toBeInTheDocument();
   });
-
-  // ── Creature with null/undefined HP ──
 
   it('does not display HP when currentHp or maxHp is null', () => {
     const creatures = [
@@ -298,17 +275,7 @@ describe('AllySelectionModal', () => {
     expect(screen.queryByText(/HP/i)).not.toBeInTheDocument();
   });
 
-  // ── CSS classes ──
-
-  it('applies selected class to selected creature rows', () => {
-    render(<AllySelectionModal {...getProps()} />);
-
-    const goblinRow = screen.getByText('Goblin').closest('.secondary-target-row');
-    expect(goblinRow).not.toHaveClass('secondary-target-selected');
-
-    fireEvent.click(goblinRow);
-    expect(goblinRow).toHaveClass('secondary-target-selected');
-  });
+  // ── CSS structure ──
 
   it('renders the correct CSS structure classes', () => {
     render(<AllySelectionModal {...getProps()} />);

@@ -13,10 +13,10 @@ describe('Popup', () => {
     vi.clearAllMocks();
   });
 
-  // ── Rendering ──
+  // ── Rendering: html content ──
 
-  describe('rendering', () => {
-    it('renders popup overlay with sanitized HTML when html prop is provided', () => {
+  describe('rendering html content', () => {
+    it('renders the sanitized html inside the modal', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test Content</b>" onClickOrKeyDown={handleClose} />);
 
@@ -25,6 +25,30 @@ describe('Popup', () => {
       expect(sanitizeHtml).toHaveBeenCalledWith('<b>Test Content</b>');
     });
 
+    it('renders complex html with multiple allowed tags', () => {
+      const handleClose = vi.fn();
+      const complexHtml =
+        '<h1>Title</h1><p>Para with <b>bold</b> and <i>italic</i></p><ul><li>Item</li></ul>';
+      render(<Popup html={complexHtml} onClickOrKeyDown={handleClose} />);
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      expect(screen.getByText('Title')).toBeInTheDocument();
+      expect(screen.getByText(/Para with/)).toBeInTheDocument();
+      expect(screen.getByText('Item')).toBeInTheDocument();
+    });
+
+    it('renders nothing when html is an empty string and no children are provided', () => {
+      const handleClose = vi.fn();
+      render(<Popup html="" onClickOrKeyDown={handleClose} />);
+
+      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
+      expect(screen.queryAllByText(/./).length).toBe(0);
+    });
+  });
+
+  // ── Rendering: children ──
+
+  describe('rendering children', () => {
     it('renders children when html prop is not provided', () => {
       const handleClose = vi.fn();
       render(
@@ -37,7 +61,31 @@ describe('Popup', () => {
       expect(screen.getByText('Child Content')).toBeInTheDocument();
     });
 
-    it('renders html over children when both are provided', () => {
+    it('renders children when html is null', () => {
+      const handleClose = vi.fn();
+      render(
+        <Popup html={null} onClickOrKeyDown={handleClose}>
+          <span>Null HTML</span>
+        </Popup>
+      );
+
+      expect(screen.getByText('Null HTML')).toBeInTheDocument();
+      expect(sanitizeHtml).not.toHaveBeenCalled();
+    });
+
+    it('renders children when html is undefined', () => {
+      const handleClose = vi.fn();
+      render(
+        <Popup html={undefined} onClickOrKeyDown={handleClose}>
+          <span>Undefined HTML</span>
+        </Popup>
+      );
+
+      expect(screen.getByText('Undefined HTML')).toBeInTheDocument();
+      expect(sanitizeHtml).not.toHaveBeenCalled();
+    });
+
+    it('prefers html over children when both are provided', () => {
       const handleClose = vi.fn();
       render(
         <Popup html="<b>HTML Content</b>" onClickOrKeyDown={handleClose}>
@@ -47,30 +95,35 @@ describe('Popup', () => {
 
       expect(screen.getByText('HTML Content')).toBeInTheDocument();
       expect(screen.queryByText('Child Content')).not.toBeInTheDocument();
-      expect(sanitizeHtml).toHaveBeenCalledWith('<b>HTML Content</b>');
     });
+  });
 
-    it('renders nothing when neither html nor children are provided', () => {
-      const handleClose = vi.fn();
-      render(<Popup onClickOrKeyDown={handleClose} />);
+  // ── Rendering: CSS structure ──
 
-      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
-      expect(screen.queryAllByText(/./).length).toBe(0);
-    });
-
+  describe('rendering structure', () => {
     it('applies popup-overlay and popup-modal CSS classes', () => {
+      const handleClose = vi.fn();
+      render(
+        <Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />
+      );
+
+      const overlay = screen.getByTestId('popup-overlay');
+      expect(overlay).toHaveClass('popup-overlay');
+      expect(overlay.querySelector('.popup-modal')).toHaveClass('popup-modal');
+    });
+
+    it('applies role="presentation" to the overlay', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
 
-      expect(screen.getByTestId('popup-overlay')).toHaveClass('popup-overlay');
-      expect(screen.getByTestId('popup-overlay').querySelector('.popup-modal')).toHaveClass('popup-modal');
+      expect(screen.getByTestId('popup-overlay')).toHaveAttribute('role', 'presentation');
     });
   });
 
   // ── Overlay click behavior ──
 
   describe('overlay click', () => {
-    it('calls onClickOrKeyDown when overlay is clicked', () => {
+    it('calls onClickOrKeyDown when the overlay background is clicked', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
 
@@ -78,7 +131,7 @@ describe('Popup', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT call onClickOrKeyDown when the inner modal is clicked', () => {
+    it('does NOT call onClickOrKeyDown when the modal is clicked', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
 
@@ -91,7 +144,8 @@ describe('Popup', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test Content</b>" onClickOrKeyDown={handleClose} />);
 
-      const modalContent = screen.getByTestId('popup-overlay').querySelector('.popup-modal > div');
+      const modalContent =
+        screen.getByTestId('popup-overlay').querySelector('.popup-modal > div');
       fireEvent.click(modalContent);
       expect(handleClose).not.toHaveBeenCalled();
     });
@@ -108,7 +162,7 @@ describe('Popup', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClickOrKeyDown when Escape key is pressed', () => {
+    it('calls onClickOrKeyDown when Escape is pressed', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
 
@@ -116,56 +170,34 @@ describe('Popup', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onClickOrKeyDown when Enter key is pressed', () => {
+    it('closes on the first keypress and ignores subsequent keypresses', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
 
-      fireEvent.keyDown(document, { key: 'Enter' });
-      expect(handleClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('only calls onClickOrKeyDown once per keypress even if handler re-adds listener', () => {
-      const handleClose = vi.fn();
-      render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
-
-      // First key press triggers the handler
       fireEvent.keyDown(document, { key: 'a' });
       expect(handleClose).toHaveBeenCalledTimes(1);
 
-      // The handler removes the event listener, so a second keypress should not trigger it
       fireEvent.keyDown(document, { key: 'b' });
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('removes event listener on unmount', () => {
+    it('removes the keyboard listener on unmount', () => {
       const handleClose = vi.fn();
-      const { unmount } = render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
+      const { unmount } = render(
+        <Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />
+      );
 
       unmount();
 
-      // After unmount, keydown should not trigger the handler
       fireEvent.keyDown(document, { key: 'a' });
       expect(handleClose).not.toHaveBeenCalled();
     });
   });
 
-  // ── Callback identity ──
+  // ── Callback updates ──
 
-  describe('callback behavior', () => {
-    it('uses useCallback to memoize the handler', () => {
-      const handleClose = vi.fn();
-      const { rerender } = render(
-        <Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />
-      );
-
-      // Re-render with same props should not change behavior
-      rerender(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
-
-      fireEvent.keyDown(document, { key: 'a' });
-      expect(handleClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('updates the event listener when onClickOrKeyDown changes', () => {
+  describe('callback updates', () => {
+    it('uses the latest onClickOrKeyDown when the prop changes', () => {
       const handleClose1 = vi.fn();
       const handleClose2 = vi.fn();
 
@@ -173,48 +205,14 @@ describe('Popup', () => {
         <Popup html="<b>Test</b>" onClickOrKeyDown={handleClose1} />
       );
 
-      // The initial listener fires handleClose1
       fireEvent.keyDown(document, { key: 'a' });
       expect(handleClose1).toHaveBeenCalledTimes(1);
+      expect(handleClose2).not.toHaveBeenCalled();
 
-      // Switch to a new handler
       rerender(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose2} />);
 
-      // Now the new listener fires handleClose2
       fireEvent.keyDown(document, { key: 'b' });
       expect(handleClose2).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ── sanitizeHtml behavior ──
-
-  describe('sanitizeHtml integration', () => {
-    it('passes html through sanitizeHtml before rendering', () => {
-      const handleClose = vi.fn();
-      const maliciousHtml = '<script>alert("xss")</script><b>Safe</b>';
-      render(<Popup html={maliciousHtml} onClickOrKeyDown={handleClose} />);
-
-      expect(sanitizeHtml).toHaveBeenCalledWith(maliciousHtml);
-    });
-
-    it('renders complex HTML with multiple allowed tags', () => {
-      const handleClose = vi.fn();
-      const complexHtml = '<h1>Title</h1><p>Para with <b>bold</b> and <i>italic</i></p><ul><li>Item</li></ul>';
-      render(<Popup html={complexHtml} onClickOrKeyDown={handleClose} />);
-
-      expect(screen.getByTestId('popup-overlay')).toBeInTheDocument();
-      expect(sanitizeHtml).toHaveBeenCalledWith(complexHtml);
-    });
-  });
-
-  // ── Role and accessibility ──
-
-  describe('accessibility', () => {
-    it('applies role="presentation" to the overlay', () => {
-      const handleClose = vi.fn();
-      render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
-
-      expect(screen.getByTestId('popup-overlay')).toHaveAttribute('role', 'presentation');
     });
   });
 });

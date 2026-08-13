@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import WizardStepSpells from './WizardStepSpells.jsx';
@@ -33,14 +34,16 @@ vi.mock('./SelectableList.jsx', () => ({
   }),
 }));
 
+const defaultSpellLimits = {
+  cantrip: 3,
+  level1: 2, level2: 0, level3: 0, level4: 0,
+  level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
+  spellType: 'known',
+  preparedSpells: null,
+};
+
 vi.mock('../../services/rules/spells/spellLimits.js', () => ({
-  getSpellLimits: vi.fn(() => Promise.resolve({
-    cantrip: 3,
-    level1: 2, level2: 0, level3: 0, level4: 0,
-    level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-    spellType: 'known',
-    preparedSpells: null,
-  })),
+  getSpellLimits: vi.fn(() => Promise.resolve(defaultSpellLimits)),
   validateSpellSelection: vi.fn(() => Promise.resolve({ valid: true, violations: [] })),
 }));
 
@@ -62,13 +65,25 @@ const mockProps = {
   onArrayFieldChange: vi.fn(),
 };
 
+// Shared helper to reduce per-test setup noise
+const setSpellLimits = (overrides = {}) => {
+  spellLimits.getSpellLimits.mockResolvedValueOnce({ ...defaultSpellLimits, ...overrides });
+};
+
 describe('WizardStepSpells', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('Rendering', () => {
-    it('renders spells via renderItem', async () => {
+    it('renders the step title and spells from allSpells', async () => {
+      render(<WizardStepSpells {...mockProps} />);
+      await waitFor(() => {
+        expect(screen.getByText('Step 9: Spells')).toBeInTheDocument();
+      });
+    });
+
+    it('renders all available spells in the list', async () => {
       render(<WizardStepSpells {...mockProps} />);
       await waitFor(() => {
         expect(screen.getByText('Fireball')).toBeInTheDocument();
@@ -107,7 +122,7 @@ describe('WizardStepSpells', () => {
       });
     });
 
-    it('shows exceeded class when cantrip count exceeds limit', async () => {
+    it('highlights exceeded counts with the exceeded class', async () => {
       const overLimitSpells = [
         { name: 'C1', level: 0, school: 'Evocation', classes: ['Wizard'], description: [] },
         { name: 'C2', level: 0, school: 'Evocation', classes: ['Wizard'], description: [] },
@@ -131,7 +146,7 @@ describe('WizardStepSpells', () => {
     };
 
     it('shows prepared spells count instead of per-level breakdown', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce(preparedLimits);
+      setSpellLimits(preparedLimits);
       render(<WizardStepSpells {...mockProps} />);
       await waitFor(() => {
         expect(screen.getByText('Prepared Spells:')).toBeInTheDocument();
@@ -139,8 +154,8 @@ describe('WizardStepSpells', () => {
       });
     });
 
-    it('shows exceeded when prepared spells exceed limit', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({ ...preparedLimits, preparedSpells: 2 });
+    it('highlights exceeded prepared spell count', async () => {
+      setSpellLimits({ ...preparedLimits, preparedSpells: 2 });
       const manySpells = [
         { name: 'S1', level: 1, school: 'Abjuration', classes: ['Wizard'], description: [] },
         { name: 'S2', level: 1, school: 'Abjuration', classes: ['Wizard'], description: [] },
@@ -155,20 +170,24 @@ describe('WizardStepSpells', () => {
   });
 
   describe('Edge cases', () => {
-    it('renders with empty data', async () => {
+    it('renders with empty spells and empty allSpells', async () => {
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: [] }} allSpells={[]} />);
       await waitFor(() => {
         expect(screen.getByText('Step 9: Spells')).toBeInTheDocument();
       });
     });
 
-    it('does not crash when spell name is not found in allSpells', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+    it('does not crash when a selected spell is not found in allSpells', async () => {
+      setSpellLimits();
       render(<WizardStepSpells {...mockProps} allSpells={[]} formData={{ ...mockProps.formData, spells: ['NonExistentSpell'] }} />);
+      await waitFor(() => {
+        expect(screen.getByTestId('selectable-list')).toBeInTheDocument();
+      });
+    });
+
+    it('renders when allSpells is null', async () => {
+      setSpellLimits();
+      render(<WizardStepSpells {...mockProps} allSpells={null} formData={{ ...mockProps.formData, spells: [] }} />);
       await waitFor(() => {
         expect(screen.getByTestId('selectable-list')).toBeInTheDocument();
       });
@@ -183,6 +202,14 @@ describe('WizardStepSpells', () => {
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Fireball', 'Unknown Spell'] }} />);
       await waitFor(() => {
         expect(screen.getByText(/Spell chosen outside/)).toBeInTheDocument();
+      });
+    });
+
+    it('clears warnings when getSpellValidationInfo returns an empty array', async () => {
+      spellValidation.getSpellValidationInfo.mockResolvedValueOnce({ warnings: [] });
+      render(<WizardStepSpells {...mockProps} />);
+      await waitFor(() => {
+        expect(screen.queryByText(/Spell chosen outside/)).not.toBeInTheDocument();
       });
     });
   });
@@ -252,7 +279,7 @@ describe('WizardStepSpells', () => {
 
   describe('Pre-selected spells excluded from counts', () => {
     it('excludes pre-selected spells from spell counts at cantrip and level 1', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 3, level1: 1, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -272,7 +299,7 @@ describe('WizardStepSpells', () => {
 
   describe('All spells available regardless of slot level', () => {
     it('shows all spells regardless of character spell slot level', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 3, level1: 4, level2: 3, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -293,7 +320,7 @@ describe('WizardStepSpells', () => {
     });
 
     it('shows all spell levels even when character has no spell slots', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 2, level1: 0, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -312,7 +339,7 @@ describe('WizardStepSpells', () => {
 
   describe('2024 ruleset support', () => {
     it('uses 2024 ruleset when formData.rules is 2024', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 4, level1: 4, level2: 3, level3: 3, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -326,7 +353,7 @@ describe('WizardStepSpells', () => {
 
   describe('Major name extraction', () => {
     it('uses class.major.name when available, falling back to subclass.name', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -337,7 +364,7 @@ describe('WizardStepSpells', () => {
       });
 
       vi.clearAllMocks();
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -351,11 +378,7 @@ describe('WizardStepSpells', () => {
 
   describe('Class filter Wizard extension', () => {
     it('adds Fighter and Rogue to Wizard spells in class filter', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+      setSpellLimits();
       const wizardFighterSpell = { name: 'Shield', index: 'shield', level: 1, school: 'Abjuration', description: ['Protect self.'], classes: ['Wizard', 'Fighter'] };
       render(<WizardStepSpells {...mockProps} allSpells={[wizardFighterSpell]} formData={{ ...mockProps.formData, spells: [] }} />);
       await waitFor(() => {
@@ -381,7 +404,7 @@ describe('WizardStepSpells', () => {
 
   describe('Known spell mode totalPrepared', () => {
     it('returns 0 for totalPrepared when spellType is known', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
+      setSpellLimits({
         cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
         level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
         spellType: 'known', preparedSpells: null,
@@ -394,12 +417,8 @@ describe('WizardStepSpells', () => {
   });
 
   describe('Spell validation useEffect', () => {
-    it('calls getValidationMessage and sets validation message', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+    it('calls validateSpellSelection during validation', async () => {
+      setSpellLimits();
       spellLimits.validateSpellSelection.mockResolvedValueOnce({ valid: true, violations: [] });
       render(<WizardStepSpells {...mockProps} />);
       await waitFor(() => {
@@ -408,11 +427,7 @@ describe('WizardStepSpells', () => {
     });
 
     it('shows validation error message when spell limit exceeded', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+      setSpellLimits();
       spellLimits.validateSpellSelection.mockResolvedValueOnce({ valid: false, violations: ['Too many level 1 spells'] });
       render(<WizardStepSpells {...mockProps} />);
       await waitFor(() => {
@@ -422,7 +437,7 @@ describe('WizardStepSpells', () => {
   });
 
   describe('Spell validation warnings useEffect', () => {
-    it('clears warnings when formData.spells is empty', async () => {
+    it('does not call getSpellValidationInfo when formData.spells is empty', async () => {
       spellValidation.getSpellValidationInfo.mockResolvedValueOnce({ warnings: [] });
       render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: [] }} />);
       await waitFor(() => {
@@ -431,11 +446,7 @@ describe('WizardStepSpells', () => {
     });
 
     it('passes formData, spells, allSpells, version, and preSelected to getSpellValidationInfo', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+      setSpellLimits();
       spellValidation.getSpellValidationInfo.mockResolvedValueOnce({ warnings: [] });
       render(<WizardStepSpells {...mockProps} preSelectedSpells={['Fireball']} />);
       await waitFor(() => {
@@ -452,11 +463,7 @@ describe('WizardStepSpells', () => {
 
   describe('Spell counts useEffect', () => {
     it('counts spells correctly when allSpells is provided', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+      setSpellLimits();
       const allSpells = [
         { name: 'Fireball', index: 'fireball', level: 3, school: 'Evocation', description: [], classes: ['Wizard'] },
         { name: 'Magic Missile', index: 'magic_missile', level: 0, school: 'Evocation', description: [], classes: ['Wizard'] },
@@ -468,11 +475,7 @@ describe('WizardStepSpells', () => {
     });
 
     it('handles spell not found in allSpells gracefully', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
+      setSpellLimits();
       render(<WizardStepSpells {...mockProps} allSpells={[]} formData={{ ...mockProps.formData, spells: ['UnknownSpell'] }} />);
       await waitFor(() => {
         expect(screen.getByTestId('selectable-list')).toBeInTheDocument();
@@ -481,53 +484,39 @@ describe('WizardStepSpells', () => {
   });
 
   describe('getLevelClass', () => {
-    it('returns cantrip for level 0', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
-      const { container } = render(<WizardStepSpells {...mockProps} />);
+    it('applies cantrip class to level 0 spells', async () => {
+      setSpellLimits();
+      const cantripSpell = { name: 'Fire Bolt', index: 'fire_bolt', level: 0, school: 'Evocation', description: [], classes: ['Wizard'] };
+      const { container } = render(<WizardStepSpells {...mockProps} allSpells={[cantripSpell]} formData={{ ...mockProps.formData, spells: ['Fire Bolt'] }} />);
       await waitFor(() => {
         const levelEl = container.querySelector('.spell-level');
-        expect(levelEl).toBeInTheDocument();
+        expect(levelEl).toHaveClass('cantrip');
       });
     });
 
-    it('returns low for levels 1-3', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
-      const { container } = render(<WizardStepSpells {...mockProps} formData={{ ...mockProps.formData, spells: ['Fireball'] }} />);
+    it('applies low class to levels 1-3', async () => {
+      setSpellLimits();
+      const lowSpell = { name: 'Fireball', index: 'fireball', level: 3, school: 'Evocation', description: [], classes: ['Wizard'] };
+      const { container } = render(<WizardStepSpells {...mockProps} allSpells={[lowSpell]} formData={{ ...mockProps.formData, spells: ['Fireball'] }} />);
       await waitFor(() => {
         const levelEl = container.querySelector('.spell-level');
         expect(levelEl).toHaveClass('low');
       });
     });
 
-    it('returns mid for levels 4-5', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
-      const midSpell = { name: 'Ray of Enfeeblement', index: 'ray_of_enfeeblement', level: 2, school: 'Evocation', description: ['Weaken foe.'], classes: ['Wizard'] };
-      const { container } = render(<WizardStepSpells {...mockProps} allSpells={[midSpell]} formData={{ ...mockProps.formData, spells: ['Ray of Enfeeblement'] }} />);
+    it('applies mid class to levels 4-5', async () => {
+      setSpellLimits();
+      const midSpell = { name: 'Dominate Person', index: 'dominate_person', level: 5, school: 'Enchantment', description: [], classes: ['Wizard'] };
+      const { container } = render(<WizardStepSpells {...mockProps} allSpells={[midSpell]} formData={{ ...mockProps.formData, spells: ['Dominate Person'] }} />);
       await waitFor(() => {
         const levelEl = container.querySelector('.spell-level');
-        expect(levelEl).toHaveClass('low');
+        expect(levelEl).toHaveClass('mid');
       });
     });
 
-    it('returns high for levels 6+', async () => {
-      spellLimits.getSpellLimits.mockResolvedValueOnce({
-        cantrip: 3, level1: 2, level2: 0, level3: 0, level4: 0,
-        level5: 0, level6: 0, level7: 0, level8: 0, level9: 0,
-        spellType: 'known', preparedSpells: null,
-      });
-      const highSpell = { name: 'Power Word Kill', index: 'power_word_kill', level: 9, school: 'Enchantment', description: ['Kill weak foe.'], classes: ['Wizard'] };
+    it('applies high class to levels 6+', async () => {
+      setSpellLimits();
+      const highSpell = { name: 'Power Word Kill', index: 'power_word_kill', level: 9, school: 'Enchantment', description: [], classes: ['Wizard'] };
       const { container } = render(<WizardStepSpells {...mockProps} allSpells={[highSpell]} formData={{ ...mockProps.formData, spells: ['Power Word Kill'] }} />);
       await waitFor(() => {
         const levelEl = container.querySelector('.spell-level');

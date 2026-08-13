@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -413,6 +414,8 @@ async function setupLoadFlow() {
   const loadBtn = screen.getByText('Load');
   fireEvent.click(loadBtn);
 
+  // Click any monster checkbox to trigger a React re-render
+  // (modalOpen is a getter, not setState, so fireEvent alone doesn't flush)
   const checkbox = screen.getByTestId('monster-checkbox-goblin');
   fireEvent.click(checkbox);
 
@@ -430,7 +433,7 @@ describe('EncounterBuilder - handleReset', () => {
     localStorage.clear();
   });
 
-  it('resets encounter state when Reset button is clicked', async () => {
+  it('resets encounter title to default when Reset is clicked', async () => {
     const loadEncounterData = vi.fn().mockResolvedValue({
       selectedMonsters: [{ index: 'goblin', qty: 1 }],
       description: 'Old description',
@@ -444,14 +447,73 @@ describe('EncounterBuilder - handleReset', () => {
       expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Reset')).toBeInTheDocument();
+    const resetBtn = screen.getByText('Reset');
+    fireEvent.click(resetBtn);
+
+    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
+  });
+
+  it('clears all selected monsters when Reset is clicked', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [{ index: 'goblin', qty: 1 }],
+      description: '',
+      effectiveXP: 50,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
+    });
 
     const dragonCheckbox = screen.getByTestId('monster-checkbox-dragon');
     fireEvent.click(dragonCheckbox);
     expect(screen.getByTestId('selected-item-dragon')).toBeInTheDocument();
 
+    const resetBtn = screen.getByText('Reset');
+    fireEvent.click(resetBtn);
+
+    expect(screen.queryByTestId('selected-item-dragon')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+  });
+
+  it('clears search query when Reset is clicked', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [],
+      description: '',
+      effectiveXP: 0,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
+    });
+
     const searchInput = screen.getByTestId('search-input');
     fireEvent.change(searchInput, { target: { value: 'orc' } });
+
+    const resetBtn = screen.getByText('Reset');
+    fireEvent.click(resetBtn);
+
+    expect(searchInput.value).toBe('');
+  });
+
+  it('clears description when Reset is clicked', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [],
+      description: 'Old description',
+      effectiveXP: 50,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
+    });
 
     const textarea = screen.getByTestId('description-textarea');
     fireEvent.change(textarea, { target: { value: 'New description' } });
@@ -459,9 +521,6 @@ describe('EncounterBuilder - handleReset', () => {
     const resetBtn = screen.getByText('Reset');
     fireEvent.click(resetBtn);
 
-    expect(screen.getByText('Encounter Builder')).toBeInTheDocument();
-    expect(screen.queryByTestId('selected-item-dragon')).not.toBeInTheDocument();
-    expect(searchInput.value).toBe('');
     expect(textarea.value).toBe('');
   });
 
@@ -479,11 +538,16 @@ describe('EncounterBuilder - handleReset', () => {
       expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
     });
 
+    // Modify the difficulty filter to verify it resets
+    const difficultySelect = screen.getByTestId('difficulty-select');
+    fireEvent.change(difficultySelect, { target: { value: '2' } });
+
     const resetBtn = screen.getByText('Reset');
     fireEvent.click(resetBtn);
 
     expect(screen.getByTestId('player-level-input-0').value).toBe('5');
     expect(screen.getByTestId('player-level-input-1').value).toBe('3');
+    expect(difficultySelect).toHaveValue('1');
   });
 
   it('resets filter to [1] when no characters are provided', async () => {
@@ -506,6 +570,7 @@ describe('EncounterBuilder - handleReset', () => {
     const loadBtn = screen.getByText('Load');
     fireEvent.click(loadBtn);
 
+    // Trigger a re-render via checkbox click (modalOpen is a getter, not setState)
     const checkbox = screen.getByTestId('monster-checkbox-goblin');
     fireEvent.click(checkbox);
 
@@ -524,5 +589,63 @@ describe('EncounterBuilder - handleReset', () => {
     fireEvent.click(resetBtn);
 
     expect(screen.getByTestId('player-level-input-0').value).toBe('1');
+  });
+
+  it('hides the Reset button after resetting (no currentEncounterName)', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [],
+      description: '',
+      effectiveXP: 0,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Reset')).toBeInTheDocument();
+
+    const resetBtn = screen.getByText('Reset');
+    fireEvent.click(resetBtn);
+
+    expect(screen.queryByText('Reset')).not.toBeInTheDocument();
+  });
+
+  it('resets all filter fields to empty defaults', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [],
+      description: '',
+      effectiveXP: 0,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
+    });
+
+    // Set various filter values
+    const typeFilter = screen.getByTestId('type-filter');
+    fireEvent.change(typeFilter, { target: { value: 'dragon' } });
+
+    const sizeFilter = screen.getByTestId('size-filter');
+    fireEvent.change(sizeFilter, { target: { value: 'medium' } });
+
+    const crMin = screen.getByTestId('cr-min');
+    fireEvent.change(crMin, { target: { value: '0.5' } });
+
+    const crMax = screen.getByTestId('cr-max');
+    fireEvent.change(crMax, { target: { value: '2' } });
+
+    const resetBtn = screen.getByText('Reset');
+    fireEvent.click(resetBtn);
+
+    expect(typeFilter).toHaveValue('');
+    expect(sizeFilter).toHaveValue('');
+    expect(crMin.value).toBe('');
+    expect(crMax.value).toBe('');
   });
 });

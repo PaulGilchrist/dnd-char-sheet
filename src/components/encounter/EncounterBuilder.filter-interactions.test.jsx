@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -350,143 +351,102 @@ describe('EncounterBuilder interactions - filters', () => {
   });
 
   describe('difficulty filter', () => {
-    it('calls onDifficultyChange callback when difficulty select changes', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+    it('renders difficulty select with correct options', async () => {
+      await mount();
+      const select = screen.getByTestId('difficulty-select');
+      expect(select).toBeInTheDocument();
+      expect(select).toHaveValue('1');
+    });
 
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      // Manually render with custom filter panel to capture callback
-      render(
-        <EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />
-      );
-
-      // The real component manages filter state internally, so we verify
-      // the select exists and can be changed
+    it('updates difficulty value when select changes', async () => {
+      await mount();
       const select = screen.getByTestId('difficulty-select');
       fireEvent.change(select, { target: { value: '2' } });
-      // State change is internal to the component, verified by rendering.test.jsx
+      expect(select).toHaveValue('2');
     });
   });
 
   describe('type filter', () => {
-    it('calls onTypeChange when type select changes', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
+    it('renders type filter with correct default value', async () => {
+      await mount();
       const select = screen.getByTestId('type-filter');
-      fireEvent.change(select, { target: { value: 'dragon' } });
-      // State change is internal to the component, verified by rendering.test.jsx
+      expect(select).toBeInTheDocument();
+      expect(select).toHaveValue('');
     });
 
-    it('calls onTypeChange with empty string when reset to All', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
+    it('updates type filter value when changed', async () => {
+      await mount();
       const select = screen.getByTestId('type-filter');
+      fireEvent.change(select, { target: { value: 'dragon' } });
+      expect(select).toHaveValue('dragon');
+    });
+
+    it('resets type filter to empty string when "All Types" is selected', async () => {
+      await mount();
+      const select = screen.getByTestId('type-filter');
+      fireEvent.change(select, { target: { value: 'humanoid' } });
+      expect(select).toHaveValue('humanoid');
       fireEvent.change(select, { target: { value: '' } });
+      expect(select).toHaveValue('');
     });
   });
 
   describe('size filter', () => {
-    it('calls onSizeChange when size select changes', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+    it('renders size filter with correct default value', async () => {
+      await mount();
+      const select = screen.getByTestId('size-filter');
+      expect(select).toBeInTheDocument();
+      expect(select).toHaveValue('');
+    });
 
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
+    it('updates size filter value when changed', async () => {
+      await mount();
       const select = screen.getByTestId('size-filter');
       fireEvent.change(select, { target: { value: 'medium' } });
+      expect(select).toHaveValue('medium');
     });
   });
 
   describe('CR range filter', () => {
-    it('calls onCRMinChange when CR min input changes', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
+    it('renders CR min input as empty by default', async () => {
+      await mount();
       const input = screen.getByTestId('cr-min');
-      fireEvent.change(input, { target: { value: '0.5' } });
+      expect(input).toBeInTheDocument();
+      expect(input.value).toBe('');
     });
 
-    it('calls onCRMaxChange when CR max input changes', async () => {
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName="test-campaign" characters={[{ name: 'Thorin', level: 5 }, { name: 'Elara', level: 3 }]} onJoinEncounter={vi.fn()} />);
+    it('renders CR max input as empty by default', async () => {
+      await mount();
       const input = screen.getByTestId('cr-max');
+      expect(input).toBeInTheDocument();
+      expect(input.value).toBe('');
+    });
+
+    it('updates CR min input value when changed', async () => {
+      await mount();
+      const input = screen.getByTestId('cr-min');
       fireEvent.change(input, { target: { value: '0.5' } });
+      expect(input.value).toBe('0.5');
+    });
+
+    it('updates CR max input value when changed', async () => {
+      await mount();
+      const input = screen.getByTestId('cr-max');
+      fireEvent.change(input, { target: { value: '3' } });
+      expect(input.value).toBe('3');
     });
   });
 
   describe('player management', () => {
-    it('calls onAddPlayer callback when Add Player button is clicked', async () => {
+    it('renders Add Player button', async () => {
       await mount();
-      const addBtn = screen.getByTestId('add-player');
-
-      // The real component manages playerLevels state internally
-      // Verify the button exists and is clickable
-      expect(addBtn).toBeInTheDocument();
-      fireEvent.click(addBtn);
-      // State change is internal to the component, verified by rendering.test.jsx
+      expect(screen.getByTestId('add-player')).toBeInTheDocument();
     });
 
-    it('calls onRemovePlayer callback when Remove button is clicked', async () => {
+    it('renders Remove buttons for each player', async () => {
       await mount();
-      const removeBtn = screen.getByTestId('remove-player-0');
-
-      // The real component manages playerLevels state internally
-      expect(removeBtn).toBeInTheDocument();
-      fireEvent.click(removeBtn);
-      // State change is internal to the component, verified by rendering.test.jsx
+      expect(screen.getByTestId('remove-player-0')).toBeInTheDocument();
+      expect(screen.getByTestId('remove-player-1')).toBeInTheDocument();
     });
 
     it('disables remove button when only one player remains', async () => {
@@ -506,7 +466,27 @@ describe('EncounterBuilder interactions - filters', () => {
       expect(removeBtn.disabled).toBe(true);
     });
 
-    it('updates player level when input changes', async () => {
+    it('does not disable remove button when multiple players exist', async () => {
+      await mount();
+      const removeBtn = screen.getByTestId('remove-player-1');
+      expect(removeBtn.disabled).toBe(false);
+    });
+
+    it('renders player level inputs for each character', async () => {
+      await mount();
+      expect(screen.getByTestId('player-level-input-0')).toBeInTheDocument();
+      expect(screen.getByTestId('player-level-input-1')).toBeInTheDocument();
+    });
+
+    it('displays player level values from characters prop', async () => {
+      await mount();
+      const input0 = screen.getByTestId('player-level-input-0');
+      const input1 = screen.getByTestId('player-level-input-1');
+      expect(input0).toHaveValue(5);
+      expect(input1).toHaveValue(3);
+    });
+
+    it('updates player level input value when changed', async () => {
       await mount();
       const input = screen.getByTestId('player-level-input-0');
       fireEvent.change(input, { target: { value: '10' } });

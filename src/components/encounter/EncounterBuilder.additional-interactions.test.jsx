@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -384,58 +385,38 @@ describe('EncounterBuilder - additional interactions', () => {
     global.window.confirm = vi.fn(() => true);
   });
 
-  describe('sort functionality - additional fields', () => {
-    it('sorts by CR when sort field is changed to cr', async () => {
+  describe('sort field display', () => {
+    it('displays "name" as the default sort field', async () => {
       await mount();
       const sortField = screen.getByTestId('sort-field');
       expect(sortField).toHaveTextContent('name');
-      expect(screen.getByTestId('encounter-monster-table')).toBeInTheDocument();
     });
 
-    it('toggles sort direction when same field is clicked twice', async () => {
+    it('displays "asc" as the default sort direction', async () => {
       await mount();
       const sortDirection = screen.getByTestId('sort-direction');
       expect(sortDirection).toHaveTextContent('asc');
     });
   });
 
-  describe('environment filter', () => {
-    it('calls onEnvironmentChange when environment changes', async () => {
+  describe('sort field and direction rendering', () => {
+    it('renders sort field and direction elements when monster table is present', async () => {
+      await mount();
+      expect(screen.getByTestId('encounter-monster-table')).toBeInTheDocument();
+      expect(screen.getByTestId('sort-field')).toBeInTheDocument();
+      expect(screen.getByTestId('sort-direction')).toBeInTheDocument();
+    });
+  });
+
+  describe('environment filter panel', () => {
+    it('renders the filter panel for environment selection', async () => {
       await mount();
       expect(screen.getByTestId('encounter-filter-panel')).toBeInTheDocument();
     });
   });
 
-  describe('save encounter - existing encounter (update path)', () => {
-    it('calls updateEncounter (not openSaveModal) when currentEncounterName is set', async () => {
-      const updateEncounter = vi.fn();
-      const openSaveModal = vi.fn();
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
-
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockReturnValue({
-        modalOpen: false, modalMode: null, encounters: [], loading: false,
-        openSaveModal, openLoadModal: vi.fn(), closeModal: vi.fn(),
-        saveEncounter: vi.fn(), updateEncounter, loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
-      });
-
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      const saveBtn = screen.getByText(/Save|Update/);
-      fireEvent.click(saveBtn);
-
-      await waitFor(() => {
-        expect(openSaveModal).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('save encounter - new encounter (save path)', () => {
-    it('calls openSaveModal when no currentEncounterName', async () => {
+  describe('save encounter - modal opens for new encounter', () => {
+    it('opens the save modal when Save button is clicked with monsters selected', async () => {
       const openSaveModal = vi.fn();
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });

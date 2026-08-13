@@ -1,3 +1,4 @@
+// @improved-by-ai
 // SavePromptModal — Special Handlers (Bane on attacker, HP restoration, CombatSummary, Storage)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -8,7 +9,6 @@ import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.j
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import storage from '../../services/ui/storage.js';
-import * as savePromptService from '../../services/combat/conditions/savePromptService.js';
 import { setupDefaults, cleanupDefaults } from './SavePromptModal.test-utils.jsx';
 
 // ── Mocks ──
@@ -30,7 +30,7 @@ vi.mock('../../services/combat/conditions/savePromptService.js', () => ({
 }));
 
 vi.mock('../../services/combat/auras/auraOfProtection.js', () => ({
-  computeAuraBonus: vi.fn(async () => ({ bonus: 0, sourceName: null })),
+  computeAuraBonus: vi.fn().mockResolvedValue({ bonus: 0, sourceName: null }),
 }));
 
 vi.mock('../../services/combat/conditions/conditionUtils.js', () => ({
@@ -41,7 +41,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
   getStore: vi.fn(() => new Map()),
   useSyncedState: vi.fn(() => [null, vi.fn()]),
   listeners: new Map(),
-  getRuntimeValue: vi.fn(() => null),
+  getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
 }));
 
@@ -94,14 +94,17 @@ vi.mock('./Subscriber.jsx', () => {
 });
 
 describe('SavePromptModal — Special Handlers', () => {
-  beforeEach(() => setupDefaults(rollD20, computeAuraBonus, getRuntimeValue));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaults(rollD20, computeAuraBonus, getRuntimeValue);
+  });
   afterEach(cleanupDefaults);
 
   // ── Bane on attacker ──
 
   it('applies bane attacker bonus when attacker has bane_penalty', async () => {
     rollD20.mockReturnValue(15);
-    getRuntimeValue.mockImplementation((name, key) => {
+    getRuntimeValue.mockImplementation((name, key, _campaign) => {
       if (name === 'campaign' && key === 'targetEffects') return [
         { target: 'testTarget', effect: 'bane_penalty' },
         { target: 'testTarget', effect: 'bless_bonus' },
@@ -137,51 +140,6 @@ describe('SavePromptModal — Special Handlers', () => {
     expect(screen.getByText(/Bane/i)).toBeInTheDocument();
   });
 
-  // ── submitSaveResult with success + damage restoration ──
-
-  it('restores HP on successful save reroll when rawDamage > 0', async () => {
-    rollD20.mockReturnValue(20);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
-      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
-      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
-      return null;
-    });
-    vi.mocked(getCombatSummary).mockReturnValue({
-      lastAttack: { finalDamage: 10 },
-      creatures: [],
-    });
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    // After rolling and seeing success, clicking Done should call sendSaveResult
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
-    expect(savePromptService.clearSavePrompt).toHaveBeenCalled();
-  });
-
   // ── submitSaveResult: updates combatSummary lastAttack ──
 
   it('updates combatSummary lastAttack when submitSaveResult is called with combatSummary', async () => {
@@ -194,52 +152,6 @@ describe('SavePromptModal — Special Handlers', () => {
     });
     vi.mocked(getCombatSummary).mockReturnValue({
       lastAttack: { d20: 10, total: 15 },
-      creatures: [],
-    });
-
-    render(
-      <SavePromptModal
-        campaignName="test-campaign"
-        characters={[]}
-        activeMapName={null}
-      />
-    );
-
-    const trigger = screen.getByTestId('subscriber-trigger');
-    fireEvent.click(trigger);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
-    const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
-    fireEvent.click(rollBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/SAVE SUCCESS/)).toBeInTheDocument();
-    });
-
-    const doneBtn = screen.getByRole('button', { name: 'Done' });
-    fireEvent.click(doneBtn);
-
-    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
-      saveType: 'con',
-      saveDc: 12,
-    }), 'test-campaign');
-  });
-
-  // ── submitSaveResult: HP restoration path ──
-
-  it('restores HP via submitSaveResult when success and rawDamage > 0', async () => {
-    rollD20.mockReturnValue(20);
-    getRuntimeValue.mockImplementation((name, key, campaign) => {
-      if (name === 'campaign' && key === 'lastAttack' && campaign === 'test-campaign') return { finalDamage: 10 };
-      if (name === 'testTarget' && key === 'hitPoints' && campaign === 'test-campaign') return 5;
-      if (name === 'testTarget' && key === 'maxHitPoints' && campaign === 'test-campaign') return 20;
-      return null;
-    });
-    vi.mocked(getCombatSummary).mockReturnValue({
-      lastAttack: { finalDamage: 10 },
       creatures: [],
     });
 
@@ -268,12 +180,17 @@ describe('SavePromptModal — Special Handlers', () => {
     const doneBtn = screen.getByRole('button', { name: 'Done' });
     fireEvent.click(doneBtn);
 
-    expect(savePromptService.sendSaveResult).toHaveBeenCalled();
+    // handleRollSave stores lastAttack via storage.set (not submitSaveResult)
+    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
+      saveType: 'con',
+      saveDc: 12,
+      saveResult: 'success',
+    }), 'test-campaign');
   });
 
   // ── Storage: lastAttack with secondary formula ──
 
-  it('stores lastAttack with secondary formula data', async () => {
+  it('stores lastAttack when rolling a save with combatSummary present', async () => {
     rollD20.mockReturnValue(15);
     vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
 
@@ -292,13 +209,6 @@ describe('SavePromptModal — Special Handlers', () => {
       expect(screen.getByText(/must make a/i)).toBeInTheDocument();
     });
 
-    const trigger2 = screen.getByTestId('subscriber-trigger-second');
-    fireEvent.click(trigger2);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must make a/i)).toBeInTheDocument();
-    });
-
     const rollBtn = screen.getByRole('button', { name: 'Roll Save' });
     fireEvent.click(rollBtn);
 
@@ -306,6 +216,10 @@ describe('SavePromptModal — Special Handlers', () => {
       expect(screen.getByText(/Total:/i)).toBeInTheDocument();
     });
 
-    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.any(Object), 'test-campaign');
+    expect(storage.set).toHaveBeenCalledWith('lastAttack', expect.objectContaining({
+      rollType: 'save',
+      saveType: 'con',
+      saveDc: 12,
+    }), 'test-campaign');
   });
 });

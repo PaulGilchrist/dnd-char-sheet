@@ -1,4 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+// @improved-by-ai
+
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MonsterCardModal from './MonsterCardModal.jsx';
 import { makeMonster, makeProps } from './MonsterCardModal.test-utils.js';
@@ -115,6 +117,16 @@ vi.mock('../../services/shared/abilityLookup.js', () => ({
   getAbilitySaveModifier: vi.fn((_abilities, _abilityKey) => 0),
 }));
 
+vi.mock('../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => ({
+    creatures: [
+      { name: 'Goblin', type: 'humanoid', currentHp: 7, maxHp: 7 },
+      { name: 'Player A', type: 'player', currentHp: 10, maxHp: 10 },
+      { name: 'Player B', type: 'player', currentHp: 8, maxHp: 8 },
+    ],
+  })),
+}));
+
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
   let _inspiringMoveNoOA = false;
   let _remarkableNoOA = false;
@@ -145,6 +157,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
 import * as conditionEffects from '../../services/combat/conditions/conditionEffects.js';
 import * as damageUtils from '../../services/rules/combat/damageUtils.js';
 import * as useRuntimeState from '../../hooks/runtime/useRuntimeState.js';
+import * as combatData from '../../services/encounters/combatData.js';
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -156,61 +169,90 @@ describe('MonsterCardModal - ally modal interactions', () => {
     useRuntimeState.__setSelectedAllies(null);
   });
 
-  it('renders ally badge with current ally count', () => {
+  it('renders ally badge with monster name as default ally count of 1', () => {
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
-    expect(screen.getByText(/Allies \(\d+\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Allies \(1\)/)).toBeInTheDocument();
   });
 
-  it('opens ally selection modal when ally badge is clicked', () => {
-    render(
-      <MonsterCardModal
-        {...makeProps(makeMonster())}
-        creatures={[{ name: 'Goblin' }, { name: 'Player A' }, { name: 'Player B' }]}
-      />
-    );
-
-    // The ally badge should be clickable
-    const allyBadge = document.querySelector('.mc-ally-badge');
-    expect(allyBadge).toBeTruthy();
-    fireEvent.click(allyBadge);
-
-    // AllySelectionModal should be rendered
-    expect(document.querySelector('.sp-modal')).toBeTruthy();
-  });
-
-  it('shows current allies count as default when storedAllies is set', () => {
+  it('renders ally badge with stored allies count', () => {
     useRuntimeState.__setSelectedAllies(['Goblin', 'Player A']);
     render(<MonsterCardModal {...makeProps(makeMonster())} />);
     expect(screen.getByText(/Allies \(2\)/)).toBeInTheDocument();
   });
 
-  it('defaults to [monsterName] when no stored allies', () => {
+  it('renders ally badge when no stored allies (defaults to monster name)', () => {
     useRuntimeState.__setSelectedAllies(null);
-    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+    render(<MonsterCardModal {...makeProps(makeMonster({ name: 'Ogre' }))} />);
     expect(screen.getByText(/Allies \(1\)/)).toBeInTheDocument();
   });
 
-  it('calls setRuntimeValue with selectedAllies when ally modal confirms', () => {
-    render(
-      <MonsterCardModal
-        {...makeProps(makeMonster())}
-        creatures={[{ name: 'Goblin' }, { name: 'Player A' }, { name: 'Player B' }]}
-      />
-    );
+  it('opens ally selection modal when ally badge is clicked', () => {
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
 
-    // Open the ally modal
-    const allyBadge = document.querySelector('.mc-ally-badge');
+    const allyBadge = screen.getByTitle('Manage allies');
+    expect(allyBadge).toBeInTheDocument();
     fireEvent.click(allyBadge);
 
-    // Click the confirm button
-    const confirmBtn = document.querySelector('.sp-roll-btn');
-    expect(confirmBtn).toBeTruthy();
+    expect(document.querySelector('.sp-modal')).toBeInTheDocument();
+  });
 
-    // Select at least one ally first
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    if (checkboxes.length > 0) {
-      fireEvent.click(checkboxes[0]);
-      fireEvent.click(confirmBtn);
-    }
+  it('passes combat summary creatures to the ally selection modal', () => {
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    const allyBadge = screen.getByTitle('Manage allies');
+    fireEvent.click(allyBadge);
+
+    // The modal should have received creatures from getCombatSummary
+    expect(combatData.getCombatSummary).toHaveBeenCalled();
+  });
+
+  it('calls setRuntimeValue with selected allies on confirm', async () => {
+    const { container } = render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    // Open the ally modal
+    const allyBadge = screen.getByTitle('Manage allies');
+    fireEvent.click(allyBadge);
+
+    // Select at least one ally via checkbox
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    expect(checkboxes.length).toBeGreaterThan(0);
+    fireEvent.click(checkboxes[0]);
+
+    // Click the confirm button
+    const confirmBtn = screen.getByRole('button', { name: /confirm/i });
+    expect(confirmBtn).toBeInTheDocument();
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Goblin',
+        'selectedAllies',
+        expect.any(Array),
+        'test-campaign'
+      );
+    });
+  });
+
+  it('closes the ally modal on cancel', () => {
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    const allyBadge = screen.getByTitle('Manage allies');
+    fireEvent.click(allyBadge);
+
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i });
+    expect(cancelBtn).toBeInTheDocument();
+    fireEvent.click(cancelBtn);
+
+    // Modal should be removed from DOM
+    expect(document.querySelector('.sp-modal')).not.toBeInTheDocument();
+  });
+
+  it('renders ally badge as a clickable element with icon and title', () => {
+    render(<MonsterCardModal {...makeProps(makeMonster())} />);
+
+    const allyBadge = screen.getByTitle('Manage allies');
+    expect(allyBadge).toHaveClass('mc-ally-badge');
+    expect(allyBadge).toHaveClass('clickable');
+    expect(allyBadge.querySelector('i.fa-solid.fa-users')).toBeTruthy();
   });
 });

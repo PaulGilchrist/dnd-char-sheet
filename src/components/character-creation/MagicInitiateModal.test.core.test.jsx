@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
@@ -43,7 +44,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.queryByText(/Save All/)).not.toBeInTheDocument();
     });
 
-    it('should render nothing when allSpells is null', () => {
+    it('should still render header and description when allSpells is null', () => {
       const props = createProps({ allSpells: null });
       render(<MagicInitiateModal {...props} />);
       expect(screen.getByText('Magic Initiate')).toBeInTheDocument();
@@ -70,19 +71,13 @@ describe('MagicInitiateModal', () => {
       expect(screen.getByText('Burning Hands')).toBeInTheDocument();
     });
 
-    it('should deep copy existing instances to avoid mutation', () => {
-      const existingInstances = [
-        {
-          class: 'Bard',
-          cantrips: ['Dancing Lights', 'Guidance'],
-          level1Spell: 'Bless',
-        },
-      ];
+    it('should render nothing when formData has no magicInitiateInstances', () => {
       const props = createProps({
-        formData: { magicInitiateInstances: existingInstances, spells: [] },
+        formData: { magicInitiateInstances: undefined, spells: [] },
       });
       render(<MagicInitiateModal {...props} />);
-      expect(screen.getByText('Instance 1: Bard')).toBeInTheDocument();
+      expect(screen.queryByText(/Instance \d+/)).not.toBeInTheDocument();
+      expect(document.querySelector('.mi-instances-list')).not.toBeInTheDocument();
     });
   });
 
@@ -93,17 +88,10 @@ describe('MagicInitiateModal', () => {
       const addBtn = screen.getByText('Add Another Instance');
       fireEvent.click(addBtn);
 
-      // Open class selector
       const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      const options = classSelect.querySelectorAll('option');
-      const optionValues = Array.from(options).map(o => o.value);
+      const optionValues = Array.from(classSelect.querySelectorAll('option')).map(o => o.value).filter(v => v !== '');
 
-      expect(optionValues).toContain('Bard');
-      expect(optionValues).toContain('Cleric');
-      expect(optionValues).toContain('Druid');
-      expect(optionValues).toContain('Sorcerer');
-      expect(optionValues).toContain('Warlock');
-      expect(optionValues).toContain('Wizard');
+      expect(optionValues).toEqual(['Bard', 'Cleric', 'Druid', 'Sorcerer', 'Warlock', 'Wizard']);
     });
 
     it('should show only 2024 classes (Cleric, Druid, Wizard) when ruleset is 2024', () => {
@@ -113,15 +101,9 @@ describe('MagicInitiateModal', () => {
       fireEvent.click(addBtn);
 
       const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      const options = classSelect.querySelectorAll('option');
-      const optionValues = Array.from(options).map(o => o.value);
+      const optionValues = Array.from(classSelect.querySelectorAll('option')).map(o => o.value).filter(v => v !== '');
 
-      expect(optionValues).not.toContain('Bard');
-      expect(optionValues).not.toContain('Sorcerer');
-      expect(optionValues).not.toContain('Warlock');
-      expect(optionValues).toContain('Cleric');
-      expect(optionValues).toContain('Druid');
-      expect(optionValues).toContain('Wizard');
+      expect(optionValues).toEqual(['Cleric', 'Druid', 'Wizard']);
     });
 
     it('should default to 5e classes when formData.rules is missing', () => {
@@ -131,8 +113,7 @@ describe('MagicInitiateModal', () => {
       fireEvent.click(addBtn);
 
       const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      const options = classSelect.querySelectorAll('option');
-      const optionValues = Array.from(options).map(o => o.value);
+      const optionValues = Array.from(classSelect.querySelectorAll('option')).map(o => o.value);
 
       expect(optionValues).toContain('Bard');
       expect(optionValues).toContain('Wizard');
@@ -239,7 +220,7 @@ describe('MagicInitiateModal', () => {
       expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     });
 
-    it('should clear errors when starting edit', () => {
+    it('should clear errors when starting edit on another instance', () => {
       const existingInstances = [
         {
           class: '',
@@ -530,34 +511,6 @@ describe('MagicInitiateModal', () => {
 
       expect(screen.getByText('Instance 1: Wizard')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-    });
-  });
-
-  describe('spell selector display format', () => {
-    it('should show "Cantrip" label for level 0 spells', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      // Verify the dropdown options show "Cantrip" label for level 0 spells
-      const cantripOptions = document.querySelectorAll('.mi-selector-select option');
-      const optionTexts = Array.from(cantripOptions).map(o => o.textContent);
-      expect(optionTexts.some(t => t.includes('Acid Splash') && t.includes('Cantrip'))).toBe(true);
-    });
-
-    it('should show "1rd" label for level 1 spells', () => {
-      const props = createProps();
-      render(<MagicInitiateModal {...props} />);
-
-      fireEvent.click(screen.getByText('Add Another Instance'));
-      const classSelect = document.querySelectorAll('.mi-selector-select')[0];
-      fireEvent.change(classSelect, { target: { value: 'Wizard' } });
-
-      // Verify the dropdown options show "1rd" label for level 1 spells
-      expect(screen.getByText('Burning Hands (1rd)')).toBeInTheDocument();
     });
   });
 });

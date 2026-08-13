@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -374,150 +375,226 @@ const sampleMonsters = [
   { index: 'dragon', name: 'Young Dragon', xp: 120, challenge_rating: 2, type: 'dragon', environments: ['underground'] },
 ];
 
-async function mount(overrides = {}) {
+function createModalManagement(deleteFn = vi.fn(), renameFn = vi.fn()) {
+  let modalOpen = false;
+  let modalMode = null;
+  const closeModalSpy = vi.fn(() => { modalOpen = false; modalMode = null; });
+
+  return {
+    get modalOpen() { return modalOpen; },
+    get modalMode() { return modalMode; },
+    encounters: [{ name: 'test-encounter' }],
+    loading: false,
+    openSaveModal: vi.fn(() => { modalOpen = true; modalMode = 'save'; }),
+    openLoadModal: vi.fn(() => { modalOpen = true; modalMode = 'load'; }),
+    closeModal: closeModalSpy,
+    saveEncounter: vi.fn(),
+    updateEncounter: vi.fn(),
+    loadEncounterData: vi.fn(),
+    deleteEncounterAction: deleteFn,
+    renameEncounterAction: renameFn,
+  };
+}
+
+async function renderWithManagement(management) {
   const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
   useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
   const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-  useEncounterManagement.mockReturnValue({
-    modalOpen: false,
-    modalMode: null,
-    encounters: [],
-    loading: false,
-    openSaveModal: vi.fn(),
-    openLoadModal: vi.fn(),
-    closeModal: vi.fn(),
-    saveEncounter: vi.fn(),
-    updateEncounter: vi.fn(),
-    loadEncounterData: vi.fn(),
-    deleteEncounterAction: vi.fn(),
-    renameEncounterAction: vi.fn(),
-    ...overrides,
-  });
+  useEncounterManagement.mockReturnValue(management);
 
-  return render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+  render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
 }
 
-describe('EncounterBuilder - uncovered handlers', () => {
+async function openLoadModal(management) {
+  const loadBtn = screen.getByText('Load');
+  fireEvent.click(loadBtn);
+
+  // Select a monster to trigger re-render so the component picks up the getter-based hook state
+  const checkbox = screen.getByTestId('monster-checkbox-goblin');
+  fireEvent.click(checkbox);
+
+  await waitFor(() => {
+    expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
+  });
+
+  return management;
+}
+
+describe('EncounterBuilder - encounter management handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    global.window.confirm = vi.fn(() => true);
   });
 
   describe('handleDeleteEncounter', () => {
     it('calls deleteEncounterAction when user confirms deletion', async () => {
-      const deleteEncounterAction = vi.fn().mockResolvedValue(undefined);
-      let modalOpen = false;
-      let modalMode = null;
-      const encounters = [{ name: 'test-encounter' }];
+      const deleteFn = vi.fn().mockResolvedValue(undefined);
+      global.window.confirm = vi.fn(() => true);
 
-      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
-      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+      const management = createModalManagement(deleteFn);
+      await renderWithManagement(management);
+      await openLoadModal(management);
 
-      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockImplementation(() => ({
-        modalOpen, modalMode, encounters, loading: false,
-        openSaveModal: vi.fn(() => { modalOpen = true; modalMode = 'save'; }),
-        openLoadModal: vi.fn(() => { modalOpen = true; modalMode = 'load'; }),
-        closeModal: vi.fn(() => { modalOpen = false; modalMode = null; }),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction, renameEncounterAction: vi.fn(),
-      }));
-
-      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
-
-      // Open the modal by clicking Load button
-      const loadBtn = screen.getByText('Load');
-      fireEvent.click(loadBtn);
-
-      // Click a monster checkbox to trigger a re-render (changes selectedMonsters state)
-      // After the re-render, the hook is called again and returns modalOpen=true
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
-      });
-
-      // Click the delete button in the modal
       const deleteBtn = screen.getByTestId('delete-encounter-test-encounter');
       fireEvent.click(deleteBtn);
 
       await waitFor(() => {
-        expect(deleteEncounterAction).toHaveBeenCalledWith('test-encounter');
+        expect(deleteFn).toHaveBeenCalledWith('test-encounter');
       });
     });
 
     it('does not call deleteEncounterAction when user cancels confirmation', async () => {
-      const deleteEncounterAction = vi.fn().mockResolvedValue(undefined);
+      const deleteFn = vi.fn();
       global.window.confirm = vi.fn(() => false);
-      let modalOpen = false;
-      let modalMode = null;
-      const encounters = [{ name: 'test-encounter' }];
+
+      const management = createModalManagement(deleteFn);
+      await renderWithManagement(management);
+      await openLoadModal(management);
+
+      const deleteBtn = screen.getByTestId('delete-encounter-test-encounter');
+      fireEvent.click(deleteBtn);
+
+      expect(deleteFn).not.toHaveBeenCalled();
+    });
+
+    it('does not show delete button when encounters list is empty', async () => {
+      const deleteFn = vi.fn();
+      global.window.confirm = vi.fn(() => true);
 
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockImplementation(() => ({
-        modalOpen, modalMode, encounters, loading: false,
-        openSaveModal: vi.fn(() => { modalOpen = true; modalMode = 'save'; }),
-        openLoadModal: vi.fn(() => { modalOpen = true; modalMode = 'load'; }),
-        closeModal: vi.fn(() => { modalOpen = false; modalMode = null; }),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction, renameEncounterAction: vi.fn(),
-      }));
+      useEncounterManagement.mockReturnValue({
+        get modalOpen() { return true; },
+        get modalMode() { return 'load'; },
+        encounters: [],
+        loading: false,
+        openSaveModal: vi.fn(),
+        openLoadModal: vi.fn(),
+        closeModal: vi.fn(),
+        saveEncounter: vi.fn(),
+        updateEncounter: vi.fn(),
+        loadEncounterData: vi.fn(),
+        deleteEncounterAction: deleteFn,
+        renameEncounterAction: vi.fn(),
+      });
 
       render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
 
-      // Open the modal by clicking Load button
-      const loadBtn = screen.getByText('Load');
-      fireEvent.click(loadBtn);
-
-      // Trigger re-render by clicking a monster checkbox
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
-      });
-
-      // Click the delete button in the modal
-      const deleteBtn = screen.getByTestId('delete-encounter-test-encounter');
-      fireEvent.click(deleteBtn);
-
-      expect(deleteEncounterAction).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('delete-encounter-test-encounter')).not.toBeInTheDocument();
+      expect(deleteFn).not.toHaveBeenCalled();
     });
   });
 
   describe('handleRenameEncounter', () => {
-    it('calls renameEncounterAction when rename button is clicked', async () => {
-      const renameEncounterAction = vi.fn().mockResolvedValue(undefined);
-      let modalOpen = false;
-      let modalMode = null;
-      const encounters = [{ name: 'test-encounter' }];
+    it('calls renameEncounterAction with old and new names when rename is clicked', async () => {
+      const renameFn = vi.fn().mockResolvedValue(undefined);
+
+      const management = createModalManagement(vi.fn(), renameFn);
+      await renderWithManagement(management);
+      await openLoadModal(management);
+
+      const renameBtn = screen.getByTestId('rename-encounter-test-encounter');
+      fireEvent.click(renameBtn);
+
+      await waitFor(() => {
+        expect(renameFn).toHaveBeenCalledWith('test-encounter', 'Renamed Encounter');
+      });
+    });
+
+    it('does not call renameEncounterAction when encounters list is empty', async () => {
+      const renameFn = vi.fn();
 
       const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
       useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
 
       const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
-      useEncounterManagement.mockImplementation(() => ({
-        modalOpen, modalMode, encounters, loading: false,
-        openSaveModal: vi.fn(() => { modalOpen = true; modalMode = 'save'; }),
-        openLoadModal: vi.fn(() => { modalOpen = true; modalMode = 'load'; }),
-        closeModal: vi.fn(() => { modalOpen = false; modalMode = null; }),
-        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
-        deleteEncounterAction: vi.fn(), renameEncounterAction,
-      }));
+      useEncounterManagement.mockReturnValue({
+        get modalOpen() { return true; },
+        get modalMode() { return 'load'; },
+        encounters: [],
+        loading: false,
+        openSaveModal: vi.fn(),
+        openLoadModal: vi.fn(),
+        closeModal: vi.fn(),
+        saveEncounter: vi.fn(),
+        updateEncounter: vi.fn(),
+        loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(),
+        renameEncounterAction: renameFn,
+      });
 
       render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
 
-      // Open the modal by clicking Load button
+      expect(screen.queryByTestId('rename-encounter-test-encounter')).not.toBeInTheDocument();
+      expect(renameFn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleEnvironmentChange', () => {
+    it('updates the filter environment state when environment select changes', async () => {
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        modalOpen: false, modalMode: null, encounters: [], loading: false,
+        openSaveModal: vi.fn(), openLoadModal: vi.fn(), closeModal: vi.fn(),
+        saveEncounter: vi.fn(), updateEncounter: vi.fn(), loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(), renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+
+      const envSelect = screen.getByTestId('environment-select');
+      expect(envSelect).toBeInTheDocument();
+
+      // Change to forest
+      fireEvent.change(envSelect, { target: { value: 'forest' } });
+      expect(envSelect.value).toBe('forest');
+
+      // Change to mountain
+      fireEvent.change(envSelect, { target: { value: 'mountain' } });
+      expect(envSelect.value).toBe('mountain');
+
+      // Reset to empty (all environments)
+      fireEvent.change(envSelect, { target: { value: '' } });
+      expect(envSelect.value).toBe('');
+    });
+  });
+
+  describe('handleClose modal behavior', () => {
+    it('calls closeModal when close button is clicked', async () => {
+      let modalOpen = false;
+
+      const { useMonstersData } = await import('../../hooks/ui/useMonstersData.js');
+      useMonstersData.mockReturnValue({ monsters: sampleMonsters, loading: false });
+
+      const closeModalSpy = vi.fn(() => { modalOpen = false; });
+
+      const { default: useEncounterManagement } = await import('../../hooks/management/useEncounterManagement.js');
+      useEncounterManagement.mockReturnValue({
+        get modalOpen() { return modalOpen; },
+        get modalMode() { return 'load'; },
+        encounters: [{ name: 'test-encounter' }],
+        loading: false,
+        openSaveModal: vi.fn(() => { modalOpen = true; }),
+        openLoadModal: vi.fn(() => { modalOpen = true; }),
+        closeModal: closeModalSpy,
+        saveEncounter: vi.fn(),
+        updateEncounter: vi.fn(),
+        loadEncounterData: vi.fn(),
+        deleteEncounterAction: vi.fn(),
+        renameEncounterAction: vi.fn(),
+      });
+
+      render(<EncounterBuilder campaignName={mockCampaignName} characters={defaultCharacters} onJoinEncounter={vi.fn()} />);
+
       const loadBtn = screen.getByText('Load');
       fireEvent.click(loadBtn);
 
-      // Trigger re-render by clicking a monster checkbox
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
 
@@ -525,35 +602,12 @@ describe('EncounterBuilder - uncovered handlers', () => {
         expect(screen.getByTestId('encounter-modal')).toBeInTheDocument();
       });
 
-      // Click the rename button in the modal
-      const renameBtn = screen.getByTestId('rename-encounter-test-encounter');
-      fireEvent.click(renameBtn);
+      const closeBtn = screen.getByTestId('modal-close');
+      fireEvent.click(closeBtn);
 
       await waitFor(() => {
-        expect(renameEncounterAction).toHaveBeenCalledWith('test-encounter', 'Renamed Encounter');
+        expect(closeModalSpy).toHaveBeenCalled();
       });
-    });
-  });
-
-  describe('handleEnvironmentChange', () => {
-    it('updates filter environment when environment select changes', async () => {
-      await mount();
-
-      // The environment select should be present in the filter panel mock
-      const envSelect = screen.getByTestId('environment-select');
-      expect(envSelect).toBeInTheDocument();
-
-      // Change the environment
-      fireEvent.change(envSelect, { target: { value: 'forest' } });
-      expect(envSelect.value).toBe('forest');
-
-      // Change to another environment
-      fireEvent.change(envSelect, { target: { value: 'mountain' } });
-      expect(envSelect.value).toBe('mountain');
-
-      // Change to empty (all environments)
-      fireEvent.change(envSelect, { target: { value: '' } });
-      expect(envSelect.value).toBe('');
     });
   });
 });

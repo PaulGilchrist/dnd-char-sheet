@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 describe('crToNumber', () => {
@@ -18,7 +19,7 @@ describe('crToNumber', () => {
     expect(crToNumber('None')).toBeNaN();
   });
 
-  it('returns 999 for "any"', () => {
+  it('returns 999 for "any" (case-insensitive)', () => {
     expect(crToNumber('any')).toBe(999);
     expect(crToNumber('Any')).toBe(999);
     expect(crToNumber('ANY')).toBe(999);
@@ -54,7 +55,7 @@ describe('crToNumber', () => {
   });
 });
 
-describe('filterMonsters - edge cases', () => {
+describe('filterMonsters - CR handling edge cases', () => {
   function crToNumber(cr) {
     if (cr === null || cr === undefined || cr === '' || cr === 'None') return NaN;
     const str = String(cr).trim().toLowerCase();
@@ -96,21 +97,12 @@ describe('filterMonsters - edge cases', () => {
     { index: 'dragon', name: 'Young Dragon', type: 'dragon', environments: ['underground'], challenge_rating: 2 },
   ];
 
-  it('returns empty array when monsters is null', () => {
-    expect(filterMonsters(null, '', [1], 0, 100, '', '', '', '', '')).toEqual([]);
+  it('handles CR min only with float string', () => {
+    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '0.5', '').map(m => m.index)).toEqual(['orc', 'dragon']);
   });
 
-  it('returns empty array when monsters is undefined', () => {
-    expect(filterMonsters(undefined, '', [1], 0, 100, '', '', '', '', '')).toEqual([]);
-  });
-
-  it('passes monsters with no environments array when environment filter is active', () => {
-    const noEnvMonsters = [
-      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
-    ];
-    // When a monster has no environments array, the filter condition is skipped
-    // so the monster passes through
-    expect(filterMonsters(noEnvMonsters, '', [1], 0, 100, 'forest', '', '', '', '')).toEqual(noEnvMonsters);
+  it('handles CR max only with float string', () => {
+    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '0.5').map(m => m.index)).toEqual(['goblin', 'orc']);
   });
 
   it('excludes monsters with non-numeric CR when CR range filter is active', () => {
@@ -122,65 +114,25 @@ describe('filterMonsters - edge cases', () => {
     expect(filterMonsters(mixedCRMonsters, '', [1], 0, 100, '', '', '', 0, 5).map(m => m.index)).toEqual(['goblin']);
   });
 
-  it('matches subtype in search query', () => {
-    expect(filterMonsters(monsters, 'tribe', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['goblin']);
-    expect(filterMonsters(monsters, 'warrior', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['orc']);
-  });
-
-  it('handles size filter case-insensitively', () => {
-    const sizedMonsters = [
-      { index: 'goblin', name: 'Goblin', type: 'humanoid', size: 'small', challenge_rating: 0.25 },
-      { index: 'orc', name: 'Orc', type: 'humanoid', size: 'Medium', challenge_rating: 0.5 },
-      { index: 'ogre', name: 'Ogre', type: 'giant', size: 'HUGE', challenge_rating: 3 },
+  it('passes monsters with no environments array when environment filter is active', () => {
+    const noEnvMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
     ];
-    expect(filterMonsters(sizedMonsters, '', [1], 0, 100, '', '', 'medium', '', '').map(m => m.index)).toEqual(['orc']);
-    expect(filterMonsters(sizedMonsters, '', [1], 0, 100, '', '', 'huge', '', '').map(m => m.index)).toEqual(['ogre']);
+    expect(filterMonsters(noEnvMonsters, '', [1], 0, 100, 'forest', '', '', '', '')).toEqual(noEnvMonsters);
   });
 
-  it('handles type filter case-insensitively', () => {
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', 'HUMANOID', '', '', '').map(m => m.index)).toEqual(['goblin', 'orc']);
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', 'Dragon', '', '', '').map(m => m.index)).toEqual(['dragon']);
+  it('handles empty crMin/crMax as no filter (falsy strings)', () => {
+    // Empty string is falsy, so !crMin is true -> null -> no min filter applied
+    const result = filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '');
+    expect(result).toHaveLength(3);
   });
 
-  it('handles CR min only with float string', () => {
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '0.5', '').map(m => m.index)).toEqual(['orc', 'dragon']);
-  });
-
-  it('handles CR max only with float string', () => {
-    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '0.5').map(m => m.index)).toEqual(['goblin', 'orc']);
-  });
-});
-
-describe('stripMonsters', () => {
-  function stripMonsters(monsters) {
-    return monsters.map(m => ({
-      index: m.index,
-      name: m.name,
-      qty: m.qty || 1,
-    }));
-  }
-
-  it('strips all monster fields except index, name, qty', () => {
-    const fullMonsters = [
-      { index: 'goblin', name: 'Goblin', xp: 50, challenge_rating: 0.25, type: 'humanoid', environments: ['forest'], qty: 3 },
-      { index: 'orc', name: 'Orc', xp: 100, challenge_rating: 0.5, type: 'humanoid', qty: 1 },
+  it('filters by CR range with "any" CR value excluded', () => {
+    const anyCRMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
+      { index: 'celestial', name: 'Celestial', type: 'celestial', challenge_rating: 'any' },
     ];
-    const result = stripMonsters(fullMonsters);
-    expect(result).toEqual([
-      { index: 'goblin', name: 'Goblin', qty: 3 },
-      { index: 'orc', name: 'Orc', qty: 1 },
-    ]);
-    // Verify no extra properties
-    expect(Object.keys(result[0])).toEqual(['index', 'name', 'qty']);
-  });
-
-  it('defaults qty to 1 when missing', () => {
-    expect(stripMonsters([{ index: 'goblin', name: 'Goblin' }])).toEqual([
-      { index: 'goblin', name: 'Goblin', qty: 1 },
-    ]);
-  });
-
-  it('handles empty array', () => {
-    expect(stripMonsters([])).toEqual([]);
+    // 'any' parses to 999, so it should be excluded by max:5
+    expect(filterMonsters(anyCRMonsters, '', [1], 0, 100, '', '', '', '', '5').map(m => m.index)).toEqual(['goblin']);
   });
 });

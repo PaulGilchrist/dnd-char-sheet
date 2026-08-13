@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EncounterBuilder from './EncounterBuilder.jsx';
@@ -470,7 +471,7 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
     });
   });
 
-  it('updates encounter effectiveXP when it differs after load', async () => {
+  it('calls updateEncounter when effectiveXP differs after load', async () => {
     const updateEncounter = vi.fn();
     const loadEncounterData = vi.fn().mockResolvedValue({
       selectedMonsters: [
@@ -506,7 +507,7 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
     });
   });
 
-  it('handles loadEncounterData returning null/undefined', async () => {
+  it('handles loadEncounterData returning null by keeping current state', async () => {
     const loadEncounterData = vi.fn().mockResolvedValue(null);
 
     await renderWithLoadEncounter(loadEncounterData);
@@ -515,6 +516,9 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
     await waitFor(() => {
       expect(loadEncounterData).toHaveBeenCalled();
     });
+
+    // After load returns null, the selected monsters from the setup flow remain
+    expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
   });
 
   it('handles loadEncounterData returning data with no selectedMonsters', async () => {
@@ -528,6 +532,79 @@ describe('EncounterBuilder - handleLoadEncounter', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('description-textarea').value).toBe('Empty encounter');
+    });
+
+    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+  });
+
+  it('handles loadEncounterData rejecting with an error', async () => {
+    const consoleError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args);
+
+    const loadEncounterData = vi.fn(() => Promise.reject(new Error('Load failed')));
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(loadEncounterData).toHaveBeenCalled();
+    });
+
+    console.error = consoleError;
+  });
+
+  it('handles loadEncounterData returning data with empty selectedMonsters array', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [],
+      description: 'No monsters',
+      effectiveXP: 0,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('description-textarea').value).toBe('No monsters');
+    });
+
+    expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+  });
+
+  it('resolves monster refs from the monsters list when loading', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [
+        { index: 'goblin', name: 'Goblin', qty: 3 },
+      ],
+      description: 'Resolving test',
+      effectiveXP: 150,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
+    });
+
+    // Verify the selected item shows the correct XP (50 * 3 = 150)
+    expect(screen.getByTestId('selected-xp-goblin')).toHaveTextContent('150 XP');
+  });
+
+  it('sets encounter title with formatEncounterName formatting', async () => {
+    const loadEncounterData = vi.fn().mockResolvedValue({
+      selectedMonsters: [
+        { index: 'orc', name: 'Orc', qty: 1 },
+      ],
+      description: '',
+      effectiveXP: 100,
+    });
+
+    await renderWithLoadEncounter(loadEncounterData);
+    await setupLoadFlow();
+
+    await waitFor(() => {
+      expect(screen.getByText('Encounter: test-encounter')).toBeInTheDocument();
     });
   });
 });

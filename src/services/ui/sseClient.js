@@ -54,3 +54,6 @@ export const resetSSEClient = () => {
     sources.forEach(entry => entry.eventSource.close());
     sources.clear();
 };
+
+// Test helper — exposes internal sources Map for test assertions.
+export const __getSources = () => sources;

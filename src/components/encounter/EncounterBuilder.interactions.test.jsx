@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 
@@ -356,7 +357,7 @@ describe('EncounterBuilder interactions - core', () => {
 
       fireEvent.click(checkbox);
       expect(checkbox.checked).toBe(true);
-      expect(screen.getByTestId('monster-row-goblin').classList.contains('monster-row-selected')).toBe(true);
+      expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
     });
 
     it('toggles a monster off when checkbox is clicked again', async () => {
@@ -367,6 +368,7 @@ describe('EncounterBuilder interactions - core', () => {
 
       fireEvent.click(checkbox);
       expect(checkbox.checked).toBe(false);
+      expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
     });
 
     it('shows selected monsters in the selected monsters panel', async () => {
@@ -378,22 +380,22 @@ describe('EncounterBuilder interactions - core', () => {
       expect(screen.getByTestId('selected-name-goblin')).toHaveTextContent('Goblin');
     });
 
-    it('removes selected monster from panel when toggled off', async () => {
-      await mount();
-      const checkbox = screen.getByTestId('monster-checkbox-goblin');
-      fireEvent.click(checkbox);
-      expect(screen.getByTestId('selected-item-goblin')).toBeInTheDocument();
-
-      fireEvent.click(checkbox);
-      expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
-    });
-
     it('toggles monster when row is clicked', async () => {
       await mount();
       const row = screen.getByTestId('monster-row-orc');
       fireEvent.click(row);
 
       expect(screen.getByTestId('monster-checkbox-orc').checked).toBe(true);
+    });
+
+    it('removes monster from selection when its checkbox is toggled off', async () => {
+      await mount();
+      const checkbox = screen.getByTestId('monster-checkbox-orc');
+      fireEvent.click(checkbox);
+      expect(screen.getByTestId('selected-item-orc')).toBeInTheDocument();
+
+      fireEvent.click(checkbox);
+      expect(screen.queryByTestId('selected-item-orc')).not.toBeInTheDocument();
     });
   });
 
@@ -424,7 +426,20 @@ describe('EncounterBuilder interactions - core', () => {
       expect(screen.getByTestId('monster-qty-goblin')).toHaveTextContent('2');
     });
 
-    it('removes monster when remove button is clicked', async () => {
+    it('removes monster from selection when quantity reaches 0 via decrease', async () => {
+      await mount();
+      const checkbox = screen.getByTestId('monster-checkbox-goblin');
+      fireEvent.click(checkbox);
+      // Start at qty=1, decrease removes the monster
+      const decBtn = screen.getByTestId('decrease-qty-goblin');
+      fireEvent.click(decBtn);
+
+      expect(checkbox.checked).toBe(false);
+      expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('monster-qty-goblin')).not.toBeInTheDocument();
+    });
+
+    it('removes monster when remove button is clicked from table row', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
@@ -436,7 +451,7 @@ describe('EncounterBuilder interactions - core', () => {
       expect(screen.queryByTestId('selected-item-goblin')).not.toBeInTheDocument();
     });
 
-    it('removes monster from selected panel when remove is clicked there', async () => {
+    it('removes monster from selection when remove is clicked from selected panel', async () => {
       await mount();
       const checkbox = screen.getByTestId('monster-checkbox-goblin');
       fireEvent.click(checkbox);
@@ -466,15 +481,6 @@ describe('EncounterBuilder interactions - core', () => {
       expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
     });
 
-    it('updates search query in real time', async () => {
-      await mount();
-      const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: 'dra' } });
-
-      expect(screen.getByTestId('monster-name-dragon')).toBeInTheDocument();
-      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
-    });
-
     it('shows all monsters when search is cleared', async () => {
       await mount();
       const searchInput = screen.getByTestId('search-input');
@@ -484,9 +490,18 @@ describe('EncounterBuilder interactions - core', () => {
       fireEvent.change(searchInput, { target: { value: '' } });
       expect(screen.getByTestId('monster-name-orc')).toBeInTheDocument();
     });
+
+    it('filters by monster type in search query', async () => {
+      await mount();
+      const searchInput = screen.getByTestId('search-input');
+      fireEvent.change(searchInput, { target: { value: 'dragon' } });
+
+      expect(screen.getByTestId('monster-name-dragon')).toBeInTheDocument();
+      expect(screen.queryByTestId('monster-name-goblin')).not.toBeInTheDocument();
+    });
   });
 
-  describe('sort functionality', () => {
+  describe('sort defaults', () => {
     it('sorts by name ascending by default', async () => {
       await mount();
       const sortField = screen.getByTestId('sort-field');

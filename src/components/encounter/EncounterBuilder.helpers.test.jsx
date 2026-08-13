@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { describe, it, expect } from 'vitest';
 
 describe('toggleMonster', () => {
@@ -32,6 +33,13 @@ describe('toggleMonster', () => {
     expect(result.find(m => m.index === 'orc')).toEqual({ index: 'orc', name: 'Orc', xp: 100, qty: 1 });
     expect(result.find(m => m.index === 'goblin').qty).toBe(1);
   });
+
+  it('toggles a monster that has no qty property (defaults to 1, then removes)', () => {
+    const monster = { index: 'goblin', name: 'Goblin', xp: 50 };
+    const withoutQty = { index: 'goblin', name: 'Goblin', xp: 50 };
+    expect(toggleMonster([], monster)).toEqual([{ index: 'goblin', name: 'Goblin', xp: 50, qty: 1 }]);
+    expect(toggleMonster([withoutQty], monster)).toEqual([]);
+  });
 });
 
 describe('updateQty', () => {
@@ -61,6 +69,12 @@ describe('updateQty', () => {
     const result = updateQty(selected, 'goblin', 1);
     expect(result).toHaveLength(2);
     expect(result.find(m => m.index === 'orc').qty).toBe(2);
+  });
+
+  it('handles monster with no qty property (defaults to 1 before delta)', () => {
+    const base = [{ index: 'goblin', name: 'Goblin', xp: 50 }];
+    expect(updateQty(base, 'goblin', 1)[0].qty).toBe(2);
+    expect(updateQty(base, 'goblin', -1)).toEqual([]);
   });
 });
 
@@ -130,16 +144,26 @@ describe('calculateDifficultyIndex', () => {
 });
 
 describe('filterMonsters', () => {
+  function crToNumber(cr) {
+    if (cr === null || cr === undefined || cr === '' || cr === 'None') return NaN;
+    const str = String(cr).trim().toLowerCase();
+    if (str === 'any') return 999;
+    const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (match) return parseInt(match[1], 10) / parseInt(match[2], 10);
+    const num = parseFloat(str);
+    return isNaN(num) ? NaN : num;
+  }
+
   function filterMonsters(monsters, searchQuery, playerLevels, difficultyIndex, totalThreshold, environmentFilter, typeFilter, sizeFilter, crMin, crMax) {
     if (!monsters) return [];
     return monsters.filter(m => {
       if (environmentFilter && m.environments && !m.environments.includes(environmentFilter)) return false;
       if (typeFilter && m.type && m.type.toLowerCase() !== typeFilter.toLowerCase()) return false;
       if (sizeFilter && m.size && m.size.toLowerCase() !== sizeFilter.toLowerCase()) return false;
-      const crMinNum = crMin === '' ? null : parseFloat(crMin);
-      const crMaxNum = crMax === '' ? null : parseFloat(crMax);
+      const crMinNum = !crMin ? null : parseFloat(crMin);
+      const crMaxNum = !crMax ? null : parseFloat(crMax);
       if (crMinNum !== null || crMaxNum !== null) {
-        const cr = _crToNumber(m.challenge_rating);
+        const cr = crToNumber(m.challenge_rating);
         if (!isNaN(cr)) {
           if (crMinNum !== null && cr < crMinNum) return false;
           if (crMaxNum !== null && cr > crMaxNum) return false;
@@ -153,16 +177,6 @@ describe('filterMonsters', () => {
         || (m.type && m.type.toLowerCase().includes(q))
         || (m.subtype && m.subtype.toLowerCase().includes(q));
     });
-  }
-
-  function _crToNumber(cr) {
-    if (cr === null || cr === undefined || cr === '' || cr === 'None') return NaN;
-    const str = String(cr).trim().toLowerCase();
-    if (str === 'any') return 999;
-    const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
-    if (match) return parseInt(match[1], 10) / parseInt(match[2], 10);
-    const num = parseFloat(str);
-    return isNaN(num) ? NaN : num;
   }
 
   const monsters = [
@@ -252,6 +266,42 @@ describe('filterMonsters', () => {
   it('returns empty array when monsters is null or no monsters match', () => {
     expect(filterMonsters(null, '', [1], 1, 50, '', '', '', '', '' )).toEqual([]);
     expect(filterMonsters(monsters, 'unicorn', [1, 1, 1], 1, 150, '', '', '', '', '' )).toEqual([]);
+  });
+
+  it('matches search in monster name substrings and partial words', () => {
+    expect(filterMonsters(monsters, 'Young', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['dragon']);
+    expect(filterMonsters(monsters, 'Green', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['slime']);
+    expect(filterMonsters(monsters, 'Sphere', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['flaming-sphere']);
+  });
+
+  it('passes monsters without subtype when searching by type', () => {
+    const noSubtype = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
+      { index: 'orc', name: 'Orc', type: 'dragon', challenge_rating: 0.5 },
+    ];
+    expect(filterMonsters(noSubtype, 'humanoid', [1], 0, 100, '', '', '', '', '').map(m => m.index)).toEqual(['goblin']);
+  });
+
+  it('handles empty string search as no filter', () => {
+    const result = filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '');
+    expect(result).toHaveLength(monsters.length);
+  });
+
+  it('passes monsters without environments array when environment filter is active', () => {
+    const noEnvMonsters = [
+      { index: 'goblin', name: 'Goblin', type: 'humanoid', challenge_rating: 0.25 },
+    ];
+    expect(filterMonsters(noEnvMonsters, '', [1], 0, 100, 'forest', '', '', '', '')).toEqual(noEnvMonsters);
+  });
+
+  it('handles CR min only with float string and CR max only', () => {
+    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '0.5', '').map(m => m.index)).toEqual(['orc', 'dragon', 'slime', 'tiger', 'flaming-sphere', 'shadow']);
+    expect(filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '0.5').map(m => m.index)).toEqual(['goblin', 'orc', 'shadow']);
+  });
+
+  it('treats empty string crMin/crMax as no filter (falsy)', () => {
+    const result = filterMonsters(monsters, '', [1], 0, 100, '', '', '', '', '');
+    expect(result).toHaveLength(monsters.length);
   });
 });
 
@@ -349,6 +399,10 @@ describe('saveFilter', () => {
     const saved = JSON.parse(localStorage.getItem('encounterFilter-2024'));
     expect(saved).toEqual({ difficulty: 1, environment: 'forest', type: 'beast', size: 'medium', crMin: 0, crMax: 2 });
   });
+
+  it('handles undefined filter fields gracefully', () => {
+    saveFilter({ difficulty: 3 });
+    const saved = JSON.parse(localStorage.getItem('encounterFilter-2024'));
+    expect(saved).toEqual({ difficulty: 3, environment: undefined, type: undefined, size: undefined, crMin: undefined, crMax: undefined });
+  });
 });
-
-
